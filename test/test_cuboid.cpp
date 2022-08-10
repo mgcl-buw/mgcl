@@ -2,7 +2,7 @@
 
 #include "../cuboid.hpp"
 
-TEST_CASE("alloc + free")
+TEST_CASE("cuboid alloc + free")
 {
     SECTION("cuboid_alloc")
     {
