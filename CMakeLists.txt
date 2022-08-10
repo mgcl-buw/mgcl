@@ -48,7 +48,7 @@ find_package(Catch2 3 REQUIRED)
 
 # These tests can use the Catch2-provided main
 set(SOURCES_TEST 
-test/test.cpp
+test/test_cuboid.cpp
 )
 
 add_executable(tests ${SOURCES_TEST})
