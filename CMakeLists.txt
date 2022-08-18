@@ -21,6 +21,9 @@ mgcl.hpp
 mgcl.cpp
 stencilcl.hpp
 stencilcl.cpp
+problem.hpp
+problem.cpp
+level.hpp
 )
 
 add_library(mgcl ${SOURCES_LIB})
@@ -50,7 +53,8 @@ find_package(Catch2 3 REQUIRED)
 set(SOURCES_TEST 
 test/test_cuboid.cpp
 test/test_clutil.cpp
-test/test_mgcl_config.cpp
+test/test_mgcl_ecosystem.cpp
+test/test_problem_conf.cpp
 )
 
 add_executable(tests ${SOURCES_TEST})

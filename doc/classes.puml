@@ -1,0 +1,9 @@
+@startuml
+!pragma layout smetana
+class Problem {
+
+}
+
+class Level {}
+Problem "1" -- "1..n" Level
+@enduml

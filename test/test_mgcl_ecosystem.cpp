@@ -2,7 +2,7 @@
 
 #include "../mgcl.hpp"
 
-TEST_CASE("generate config")
+TEST_CASE("mgcl_generate_config")
 {
     mgcl::mgcl_config *conf;
     mgcl::mgcl_generate_config(&conf);
@@ -48,6 +48,54 @@ TEST_CASE("generate config")
         REQUIRE(conf->d_stencil_values == NULL);
         REQUIRE(conf->restrict_prolongate_stencil == 1);
 
+        free(conf);
+    }
+}
+
+TEST_CASE("mgcl_init")
+{
+    mgcl::mgcl_config *conf;
+    mgcl::mgcl_generate_config(&conf);
+    conf->m = 3;
+    conf->n = 3;
+    conf->o = 3;
+
+    mgcl::mgcl_level_data *level_data;
+    int err = EXIT_SUCCESS;
+
+    SECTION("invalid conf.m")
+    {
+        conf->m = 0;
+        err = mgcl::mgcl_init(conf, &level_data);
+        REQUIRE(err == EXIT_FAILURE);
+        free(level_data);
+        free(conf);
+    }
+
+    SECTION("invalid conf.n")
+    {
+        conf->n = 0;
+        err = mgcl::mgcl_init(conf, &level_data);
+        REQUIRE(err == EXIT_FAILURE);
+        free(level_data);
+        free(conf);
+    }
+
+    SECTION("invalid conf.o")
+    {
+        conf->o = 0;
+        err = mgcl::mgcl_init(conf, &level_data);
+        REQUIRE(err == EXIT_FAILURE);
+        free(level_data);
+        free(conf);
+    }
+
+    SECTION("invalid conf.f")
+    {
+        conf->m = 0;
+        err = mgcl::mgcl_init(conf, &level_data);
+        REQUIRE(err == EXIT_FAILURE);
+        free(level_data);
         free(conf);
     }
 }
