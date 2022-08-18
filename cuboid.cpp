@@ -66,4 +66,62 @@ namespace mgcl
 
         return;
     }
+
+    Cuboid::Cuboid(int m_, int n_, int o_)
+        : m(m_),
+          n(n_),
+          o(o_)
+    {
+        int i, j;
+
+        field_1d = (double *)calloc(sizeof(double), m * n * o);
+        field_3d = (double ***)malloc(sizeof(double **) * m);
+        for (i = 0; i < m; i++)
+        {
+            field_3d[i] = (double **)malloc(sizeof(double *) * n);
+            for (j = 0; j < n; j++)
+            {
+                field_3d[i][j] = &field_1d[i * n * o + j * o];
+            }
+        }
+    }
+
+    Cuboid::~Cuboid()
+    {
+        int i;
+
+        free(field_3d[0][0]);
+        for (i = 0; i < m; i++)
+        {
+            free(field_3d[i]);
+        }
+        free(field_3d);
+        field_3d = nullptr;
+        field_1d = nullptr;
+    }
+
+    int Cuboid::getO() const
+    {
+        return o;
+    }
+
+    int Cuboid::getN() const
+    {
+        return n;
+    }
+
+    double ***Cuboid::getData() const
+    {
+        return field_3d;
+    }
+
+    int Cuboid::getM() const
+    {
+        return m;
+    }
+
+    double **Cuboid::operator[](int index)
+    {
+        return field_3d[index];
+    }
 }

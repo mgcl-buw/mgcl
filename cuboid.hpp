@@ -12,6 +12,27 @@
 
 namespace mgcl
 {
+    class Cuboid
+    {
+    private:
+        int m;
+        int n;
+        int o;
+        double *field_1d;
+        double ***field_3d;
+
+    public:
+        Cuboid(int m_, int n_, int o_);
+        ~Cuboid();
+
+        int getO() const;
+        int getN() const;
+        int getM() const;
+        double ***getData() const;
+
+        double **operator[](int index);
+    };
+
     double ***cuboid_alloc(int m, int n, int o);
     double ***cube_alloc(int n);
 

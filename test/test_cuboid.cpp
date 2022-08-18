@@ -18,3 +18,17 @@ TEST_CASE("cuboid alloc + free")
         mgcl::cube_free(c, 3);
     }
 }
+
+TEST_CASE("cuboid class")
+{
+
+    mgcl::Cuboid c(1, 2, 3);
+    REQUIRE(c.getM() == 1);
+    REQUIRE(c.getN() == 2);
+    REQUIRE(c.getO() == 3);
+
+    c[0][1][1] = 3.0;
+    REQUIRE(c[0][0][0] == 0.0);
+    REQUIRE(c[0][1][1] == 3.0);
+    REQUIRE(c[0][0][0 + 1 * 3 + 1] == 3.0);
+}
