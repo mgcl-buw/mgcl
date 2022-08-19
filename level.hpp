@@ -2,11 +2,18 @@
 
 #include <CL/cl.h>
 
+#include "multigrid_engine.hpp"
+#include "opencl_helper.hpp"
+#include "problem.hpp"
+
 namespace mgcl
 {
     class Level
     {
     private:
+        /* Problem that this Level belongs to */
+        Problem *problem;
+
         /* Number of level in given Problem. */
         int num;
 
@@ -15,10 +22,15 @@ namespace mgcl
         double ***f = nullptr;
         double ***r = nullptr;
 
-        /* grid dimensions of ghosted grid */
+        /* grid dimensions of real grid */
         int m;
         int n;
         int o;
+
+        /* grid dimensions of ghosted grid */
+        int mgh;
+        int ngh;
+        int ogh;
 
         /* spacing of real grid on current level */
         double h;
@@ -33,27 +45,20 @@ namespace mgcl
         double ***stencil_values = nullptr;
 
         /* opencl buffers */
-        cl_mem d_v_in = nullptr;
-        cl_mem d_v_out = nullptr;
-        cl_mem d_f = nullptr;
-        cl_mem d_r = nullptr;
-        cl_mem d_stencil_values = nullptr;
+        cl_mem dVIn = nullptr;
+        cl_mem dVOut = nullptr;
+        cl_mem dF = nullptr;
+        cl_mem dR = nullptr;
+        cl_mem dStencilValues = nullptr;
+
+        friend class OpenCLHelper;
+        friend class MultigridEngine;
 
     public:
-        Level(int _num, int _m, int _n, int _o)
-            : num(_num), m(_m), n(_n), o(_o) {}
+        Level(Problem *problem_, int _num, int _m, int _n, int _o);
+        ~Level();
 
-        Level(int _num, int _m, int _n, int _o, double ***_v, double ***_f)
-            : num(_num), m(_m), n(_n), o(_o), v(_v), f(_f) {}
-
-        Level(int _num, int _m, int _n, int _o, double ***_v, double ***_f, double ***_stencil_values)
-            : num(_num), m(_m), n(_n), o(_o), v(_v), f(_f), stencil_values(_stencil_values) {}
-
-        Level(int _num, int _m, int _n, int _o, cl_mem _d_v, cl_mem _d_f)
-            : num(_num), m(_m), n(_n), o(_o), d_v_in(_d_v), d_f(_d_f) {}
-
-        Level(int _num, int _m, int _n, int _o, cl_mem _d_v, cl_mem _d_f, cl_mem _d_stencil_values)
-            : num(_num), m(_m), n(_n), o(_o), d_v_in(_d_v), d_f(_d_f), d_stencil_values(_d_stencil_values) {}
+        int initOpenCLBuffers();
 
         int getNum() const;
 
@@ -77,6 +82,21 @@ namespace mgcl
 
         double getH() const;
         void setH(double h_);
+
+        cl_mem getDVIn() const;
+        void setDVIn(const cl_mem &dVIn_);
+
+        cl_mem getDVOut() const;
+        void setDVOut(const cl_mem &dVOut_);
+
+        cl_mem getDF() const;
+        void setDF(const cl_mem &dF_);
+
+        cl_mem getDR() const;
+        void setDR(const cl_mem &dR_);
+
+        cl_mem getDStencilValues() const;
+        void setDStencilValues(const cl_mem &dStencilValues_);
     };
 
     inline int Level::getNum() const
@@ -114,6 +134,36 @@ namespace mgcl
         return o;
     }
 
+    inline cl_mem Level::getDVIn() const
+    {
+        return dVIn;
+    }
+
+    inline void Level::setDVIn(const cl_mem &dVIn_)
+    {
+        dVIn = dVIn_;
+    }
+
+    inline cl_mem Level::getDF() const
+    {
+        return dF;
+    }
+
+    inline void Level::setDF(const cl_mem &dF_)
+    {
+        dF = dF_;
+    }
+
+    inline cl_mem Level::getDStencilValues() const
+    {
+        return dStencilValues;
+    }
+
+    inline void Level::setDStencilValues(const cl_mem &dStencilValues_)
+    {
+        dStencilValues = dStencilValues_;
+    }
+
     inline double ***Level::getV() const
     {
         return v;
@@ -147,5 +197,25 @@ namespace mgcl
     inline void Level::setH(double h_)
     {
         h = h_;
+    }
+
+    inline cl_mem Level::getDVOut() const
+    {
+        return dVOut;
+    }
+
+    inline void Level::setDVOut(const cl_mem &dVOut_)
+    {
+        dVOut = dVOut_;
+    }
+
+    inline cl_mem Level::getDR() const
+    {
+        return dR;
+    }
+
+    inline void Level::setDR(const cl_mem &dR_)
+    {
+        dR = dR_;
     }
 }

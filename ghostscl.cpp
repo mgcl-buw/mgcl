@@ -1,13 +1,13 @@
-#include "ghostscl.hpp"
 #include "clutil.hpp"
+#include "multigrid_engine.hpp"
+
 #include <CL/cl.h>
 
 namespace mgcl
 {
-    // TODO ghosts parameter
     /* updates ghost cells for periodic boundary condition
      * m,n,o are dimensions of real grid without ghost cells */
-    void update_ghosts_seq(double ***v, int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o)
+    void MultigridEngine::updateGhostsSeq(double ***v, int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o)
     {
         // sending data in x-direction
         for (int i = 0; i < n + 2 * ghosts_n; i++)
@@ -71,17 +71,17 @@ namespace mgcl
     /* updates ghost cells on opencl device.
      * m,n,o must be size of ghosted grid.
      * Only enqueues the kernel. Neither waits for kernel to finish nor reads back results */
-    int mgcl_update_ghosts(mgcl_config *conf, cl_mem d_v, int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o)
+    int MultigridEngine::updateGhosts(Problem &problem, cl_mem dBuffer, int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o)
     {
         int err;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(conf->program, "update_ghosts_2d", &err);
+        cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper()->getProgram(), "update_ghosts_2d", &err);
         mgclCheckError(err, "Creating kernel");
 
         // assign kernel arguments
         int pos = 0;
-        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &d_v);
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dBuffer);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
@@ -102,7 +102,7 @@ namespace mgcl
                 // printf("%ld (multiple of %ld)\n", global[i], local[i]);
             }
 
-        err = clEnqueueNDRangeKernel(conf->commands, kernel, 2, NULL, global, local, 0, NULL, NULL);
+        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper()->getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing kernel");
 
         clReleaseKernel(kernel);
@@ -112,28 +112,28 @@ namespace mgcl
     /* Tests the update of ghost cells on opencl device.
      * m,n,o must be size of ghosted grid.
      * Creates device buffers, enqueues kernel, waits for completion and reads back results */
-    int mgcl_update_ghosts_test(mgcl_config *conf, double ***v, int m, int n, int o, int ghosts_m, int ghosts_n,
-                                int ghosts_o)
+    int MultigridEngine::updateGhostsTest(Problem &problem, double ***v, int m, int n, int o, int ghosts_m, int ghosts_n,
+                                          int ghosts_o)
     {
         int err;
 
         // create device buffers
-        int pointer_flag = conf->device_type == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
+        int pointer_flag = problem.getOpenCLHelper()->getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
         cl_mem d_v =
-            clCreateBuffer(conf->context, CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, v[0][0], &err);
+            clCreateBuffer(problem.getOpenCLHelper()->getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, v[0][0], &err);
 
         // call update ghosts
         auto t_start_iter = std::chrono::steady_clock::now();
-        mgcl_update_ghosts(conf, d_v, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        MultigridEngine::updateGhosts(problem, d_v, m, n, o, ghosts_m, ghosts_n, ghosts_o);
 
         // Wait for the commands to complete before stopping the timer
-        err = clFinish(conf->commands);
+        err = clFinish(problem.getOpenCLHelper()->getCommands());
         mgclCheckError(err, "Waiting for kernel to finish");
         auto t_end_iter = mgcl_since(t_start_iter).count() * 1000.0;
         printf("update ghosts on opencl took %2.5lf s\n", t_end_iter);
 
         // read back results
-        err = clEnqueueReadBuffer(conf->commands, d_v, CL_TRUE, 0, sizeof(double) * m * n * o, v[0][0], 0, NULL, NULL);
+        err = clEnqueueReadBuffer(problem.getOpenCLHelper()->getCommands(), d_v, CL_TRUE, 0, sizeof(double) * m * n * o, v[0][0], 0, NULL, NULL);
         if (err != CL_SUCCESS)
         {
             printf("Error: Failed to read output arrays from device!\n%s\n", mgcl_err_code(err));

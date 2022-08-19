@@ -62,6 +62,9 @@ namespace mgcl
 
         static const char *mgcl_err_code(cl_int err_in);
         static void mgcl_check_error(cl_int err, const char *operation, const char *filename, int line);
+
+        cl_device_id getDeviceId() const;
+        void setDeviceId(const cl_device_id &deviceId_);
     };
 
 #define mgclCheckError(E, S) OpenCLHelper::mgcl_check_error(E, S, __FILE__, __LINE__)

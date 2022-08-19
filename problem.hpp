@@ -13,8 +13,11 @@
 #include <string>
 #include <vector>
 
+#include "cuboid.hpp"
 #include "level.hpp"
 #include "mgcl.hpp"
+#include "multigrid_engine.hpp"
+#include "opencl_helper.hpp"
 
 namespace mgcl
 {
@@ -27,9 +30,9 @@ namespace mgcl
         double ***f = nullptr; /* can be ommited if device buffers are supplied */
 
         /* Buffers for v and f. Only need to be set if buffers already exist on device and should be reused */
-        cl_mem d_v = nullptr;
-        cl_mem d_f = nullptr;
-        cl_mem d_stencil_values = nullptr;
+        cl_mem dV = nullptr;
+        cl_mem dF = nullptr;
+        cl_mem dStencilValues = nullptr;
 
         /* grid dimensions */
         int m;
@@ -37,7 +40,7 @@ namespace mgcl
         int o;
 
         /* Holds level-dependent data for each level */
-        std::vector<std::unique_ptr<Level>> levels;
+        std::vector<std::shared_ptr<Level>> levels;
 
         // TODO check what happens when reuse_buffer and ghosts != ghosts_in
         /* Amount of ghost cells surrounding v and f. If optimized jacobi shall be used it must be greater or equal than
@@ -114,14 +117,12 @@ namespace mgcl
          * Gets automatically decreased if nu1, nu2 or ghosts are smaller. */
         int jacobi_iterations_per_kernel = 3;
 
-        /* OpenCL stuff */
-        std::string kernel_dir = "./";
-        std::string device_name = "";                        /* Use first found device if not set */
-        cl_device_type device_type = CL_DEVICE_TYPE_DEFAULT; /* Defaults to CL_DEVICE_TYPE_DEFAULT */
-        cl_device_id device_id = nullptr;                    /* must be set if a specific device should be reused */
-        cl_context context = nullptr;                        /* must be set if a specific context/device/buffers should be reused */
-        cl_command_queue commands = nullptr;                 /* must be set if a specific context/device/buffers should be reused */
-        cl_program program = nullptr;                        /* compute program, only for internal purposes */
+        /* Manages OpenCL stuff */
+        std::shared_ptr<OpenCLHelper> openCLHelper = nullptr;
+
+        friend class OpenCLHelper;
+        friend class Level;
+        friend class MultigridEngine;
 
     public:
         Problem(int _m, int _n, int _o, Cuboid _f, Cuboid _v);
@@ -133,18 +134,11 @@ namespace mgcl
 
         // TODO implement
         bool checkParameters();
-        bool checkOpenCLParameters();
         int calculateAndSetMaxLevel();
         bool init();
-        void restrict_seq(Level &fine, Level &coarse);
-        void restrict_test(Level &fine, Level &coarse);
-        void restrict(Level &fine, Level &coarse);
-        void prolongate_seq(Level &fine, Level &coarse);
-        void prolongate_test(Level &fine, Level &coarse);
-        void prolongate(Level &fine, Level &coarse);
+
         void finish();
         int correct_error(cl_mem d_v, cl_mem d_r, int m, int n, int o);
-        int readBackResults();
         void mgcl();
         void mgcl_seq();
         double vcycle_seq(Level &level);
@@ -160,12 +154,6 @@ namespace mgcl
 
         double ***getF() const;
         void setF(double ***f_);
-
-        cl_mem dV() const;
-        void setDV(const cl_mem &dV);
-
-        cl_mem dF() const;
-        void setDF(const cl_mem &dF);
 
         int getM() const;
 
@@ -203,58 +191,51 @@ namespace mgcl
         MGCL_STENCIL getStencil() const;
         void setStencil(const MGCL_STENCIL &stencil_);
 
-        double ***stencilValues() const;
+        double ***getStencilValues() const;
         void setStencilValues(double ***stencilValues);
 
-        int stencilSizeMultiplier() const;
+        int getStencilSizeMultiplier() const;
         void setStencilSizeMultiplier(int stencilSizeMultiplier);
 
-        bool restrictProlongateStencil() const;
+        bool getRestrictProlongateStencil() const;
         void setRestrictProlongateStencil(bool restrictProlongateStencil);
 
-        bool reuseOpenclBuffers() const;
+        bool getReuseOpenclBuffers() const;
         void setReuseOpenclBuffers(bool reuseOpenclBuffers);
 
-        bool copyBufferData() const;
+        bool getCopyBufferData() const;
         void setCopyBufferData(bool copyBufferData);
 
         bool getReadResults() const;
         void setReadResults(bool readResults);
 
-        bool useLocalMemory() const;
+        bool getUseLocalMemory() const;
         void setUseLocalMemory(bool useLocalMemory);
 
-        int jacobiWgSizeX() const;
+        int getJacobiWgSizeX() const;
         void setJacobiWgSizeX(int jacobiWgSizeX);
 
-        int jacobiWgSizeY() const;
+        int getJacobiWgSizeY() const;
         void setJacobiWgSizeY(int jacobiWgSizeY);
 
-        int jacobiIterationsPerKernel() const;
+        int getJacobiIterationsPerKernel() const;
         void setJacobiIterationsPerKernel(int jacobiIterationsPerKernel);
 
-        std::string getKernelDir() const;
-        void setKernelDir(const std::string &kernelDir);
-
-        std::string getDeviceName() const;
-        void setDeviceName(const std::string &deviceName);
-
-        cl_device_type getDeviceType() const;
-        void setDeviceType(const cl_device_type &deviceType);
-
-        cl_device_id getDeviceId() const;
-        void setDeviceId(const cl_device_id &deviceId);
-
-        cl_context getContext() const;
-        void setContext(const cl_context &context_);
-
-        cl_command_queue getCommands() const;
-        void setCommands(const cl_command_queue &commands_);
-
-        bool useOpencl() const;
+        bool getUseOpencl() const;
         void setUseOpencl(bool useOpencl);
 
-        cl_mem dStencilValues() const;
+        cl_mem getDStencilValues() const;
         void setDStencilValues(const cl_mem &dStencilValues);
+
+        std::vector<std::shared_ptr<Level>> getLevels() const;
+
+        cl_mem getDV() const;
+        void setDV(const cl_mem &dV_);
+
+        cl_mem getDF() const;
+        void setDF(const cl_mem &dF_);
+
+        std::shared_ptr<OpenCLHelper> getOpenCLHelper() const;
+        void setOpenCLHelper(const std::shared_ptr<OpenCLHelper> &openCLHelper_);
     };
 }

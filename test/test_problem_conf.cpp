@@ -31,6 +31,7 @@ TEST_CASE("Problem conf")
         REQUIRE(p.getResidualNorm() == mgcl::MGCL_L2);
         REQUIRE(p.getStencil() == mgcl::MGCL_7POINT);
 
+        REQUIRE(p.getOpenCLHelper() == nullptr);
         REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
         REQUIRE(p.getKernelDir() == "./");
         REQUIRE(p.getDeviceName() == "");
@@ -39,20 +40,20 @@ TEST_CASE("Problem conf")
         REQUIRE(p.getContext() == nullptr);
         REQUIRE(p.dV() == nullptr);
         REQUIRE(p.dF() == nullptr);
-        REQUIRE(p.useOpencl() == false);
-        REQUIRE(p.reuseOpenclBuffers() == false);
-        REQUIRE(p.copyBufferData() == false);
+        REQUIRE(p.getUseOpencl() == false);
+        REQUIRE(p.getReuseOpenclBuffers() == false);
+        REQUIRE(p.getCopyBufferData() == false);
         REQUIRE(p.getReadResults() == false);
-        REQUIRE(p.useLocalMemory() == false);
+        REQUIRE(p.getUseLocalMemory() == false);
 
-        REQUIRE(p.jacobiWgSizeX() == 16);
-        REQUIRE(p.jacobiWgSizeY() == 16);
-        REQUIRE(p.jacobiIterationsPerKernel() == 3);
+        REQUIRE(p.getJacobiWgSizeX() == 16);
+        REQUIRE(p.getJacobiWgSizeY() == 16);
+        REQUIRE(p.getJacobiIterationsPerKernel() == 3);
 
-        REQUIRE(p.stencilSizeMultiplier() == 1);
-        REQUIRE(p.stencilValues() == nullptr);
-        REQUIRE(p.dStencilValues() == nullptr);
-        REQUIRE(p.restrictProlongateStencil() == true);
+        REQUIRE(p.getStencilSizeMultiplier() == 1);
+        REQUIRE(p.getStencilValues() == nullptr);
+        REQUIRE(p.getDStencilValues() == nullptr);
+        REQUIRE(p.getRestrictProlongateStencil() == true);
     }
 }
 
@@ -104,4 +105,16 @@ TEST_CASE("checkParameters")
         pm.setStencil(mgcl::MGCL_STENCIL::MGCL_19POINT_VARSYM);
         REQUIRE(pm.checkParameters() == false);
     }
+
+    SECTION("all good")
+    {
+        mgcl::Problem pm(8, 8, 8, v.getData(), f.getData());
+        REQUIRE(pm.checkParameters() == true);
+    }
+}
+
+TEST_CASE("checkOpenCLParameters")
+{
+    // TODO OpenCL test environment
+    REQUIRE(1 == 2);
 }

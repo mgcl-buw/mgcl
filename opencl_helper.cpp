@@ -593,4 +593,14 @@ namespace mgcl
     {
         context = context_;
     }
+
+    cl_device_id OpenCLHelper::getDeviceId() const
+    {
+        return deviceId;
+    }
+
+    void OpenCLHelper::setDeviceId(const cl_device_id &deviceId_)
+    {
+        deviceId = deviceId_;
+    }
 }

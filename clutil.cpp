@@ -169,15 +169,15 @@ namespace mgcl
         }
         mgclCheckError(err, "Creating device buffers");
 
-        err = mgcl_update_ghosts(conf, data[0].d_f, data[0].m, data[0].n, data[0].o, conf->ghosts, conf->ghosts,
-                                 conf->ghosts);
+        err = MultigridEngine::updateGhosts(conf, data[0].d_f, data[0].m, data[0].n, data[0].o, conf->ghosts, conf->ghosts,
+                                            conf->ghosts);
         mgclCheckError(err, "Updating ghosts of d_f");
 
         if (data[0].d_stencil_values)
         {
-            err = mgcl_update_ghosts(conf, data[0].d_stencil_values, data[0].m, data[0].n,
-                                     data[0].o * conf->stencil_size_multiplier, conf->ghosts, conf->ghosts,
-                                     conf->ghosts * conf->stencil_size_multiplier);
+            err = MultigridEngine::updateGhosts(conf, data[0].d_stencil_values, data[0].m, data[0].n,
+                                                data[0].o * conf->stencil_size_multiplier, conf->ghosts, conf->ghosts,
+                                                conf->ghosts * conf->stencil_size_multiplier);
             mgclCheckError(err, "Updating ghosts of d_stencil_values");
         }
 

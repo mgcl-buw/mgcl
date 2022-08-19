@@ -1,4 +1,5 @@
 #include <ctgmath>
+#include <string>
 
 #include "clutil.hpp"
 #include "cuboid.hpp"
@@ -18,7 +19,7 @@ namespace mgcl
     }
 
     Problem::Problem(int _m, int _n, int _o, cl_mem _d_f, cl_mem _d_v)
-        : m(_m), n(_n), o(_o), d_f(_d_f), d_v(_d_v)
+        : m(_m), n(_n), o(_o), dF(_d_f), dV(_d_v)
     {
     }
 
@@ -30,8 +31,9 @@ namespace mgcl
      */
     bool Problem::checkParameters()
     {
-        // check mandatory config fields
-        if ((v == nullptr || f == nullptr) && (d_v == nullptr || d_f == nullptr))
+        // TODO opencl
+        //  check mandatory config fields
+        if ((v == nullptr || f == nullptr) && (dV == nullptr || dF == nullptr))
         {
             printf("mgcl: supplied v or f and d_v or d_f is nullptr. Aborting.\n");
             return false;
@@ -56,73 +58,12 @@ namespace mgcl
         }
 
         if (((stencil_values == nullptr && !use_opencl) ||
-             (d_stencil_values == nullptr && reuse_opencl_buffers)) &&
+             (dStencilValues == nullptr && reuse_opencl_buffers)) &&
             (stencil == MGCL_7POINT_VARSYM || stencil == MGCL_19POINT_VARSYM ||
              stencil == MGCL_27POINT_VARSYM))
         {
             printf("stencil is set to be varying symmetric but stencil_values is nullptr! Aborting.\n");
             return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * @brief Checks if OpenCL-Parameters are valid (only useful if reuse_opencl_buffers || copy_buffer_data)
-     *
-     * @return true All good.
-     * @return false Somethings nullptr or buffers d_v or d_f have wrong size if reuse_opencl_buffers.
-     */
-    bool Problem::checkOpenCLParameters()
-    {
-        if (d_v == nullptr || d_f == nullptr)
-        {
-            printf("OpenCL buffers d_v and d_f not set but reuse_opencl_buffers or copy_buffer_data specified. "
-                   "Aborting.\n");
-            return false;
-        }
-
-        if (device_id == nullptr)
-        {
-            printf("reuse_opencl_buffers or copy_buffer_data specified but device ID (mgcl_config.device_id) not set. "
-                   "Aborting.\n");
-            return false;
-        }
-
-        if (commands == nullptr)
-        {
-            printf("reuse_opencl_buffers or copy_buffer_data specified but command queue (mgcl_config.commands) not "
-                   "set. Aborting.\n");
-            return false;
-        }
-
-        if (context == nullptr)
-        {
-            printf("reuse_opencl_buffers or copy_buffer_data specified but context (mgcl_config.context) not set. "
-                   "Aborting.\n");
-            return false;
-        }
-
-        // check size of buffers
-        if (reuse_opencl_buffers)
-        {
-            size_t bufsize;
-            int sizeNeeded = sizeof(double) * (m + 2 * ghosts) * (n + 2 * ghosts) * (o + 2 * ghosts);
-            int err = clGetMemObjectInfo(d_v, CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgclCheckError(err, "Querying buffer size of d_v\n");
-            if (bufsize != sizeNeeded)
-            {
-                printf("OpenCL buffer d_v has wrong size (%ld but need %d)\n", bufsize, sizeNeeded);
-                return false;
-            }
-
-            err = clGetMemObjectInfo(d_f, CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgclCheckError(err, "Querying buffer size of d_f\n");
-            if (bufsize != sizeNeeded)
-            {
-                printf("OpenCL buffer d_f has wrong size (%ld but need %d)\n", bufsize, sizeNeeded);
-                return false;
-            }
         }
 
         return true;
@@ -173,10 +114,18 @@ namespace mgcl
         else if (stencil == MGCL_27POINT_VARSYM)
             stencil_size_multiplier = 8;
 
+        // create opencl environment with default parameters if not done yet
+        if (use_opencl && !openCLHelper)
+        {
+            openCLHelper = std::make_shared<OpenCLHelper>(this);
+            openCLHelper->init();
+        }
+
         // check opencl components if device buffers should be reused
         if (reuse_opencl_buffers || copy_buffer_data)
         {
-            if (!checkOpenCLParameters())
+            bool ret = openCLHelper->checkParameters();
+            if (!ret)
                 return false;
         }
 
@@ -191,7 +140,7 @@ namespace mgcl
                 int ng = n + 2 * ghosts;
                 int og = o + 2 * ghosts;
 
-                auto lv = std::make_unique<Level>(level, mg, ng, og);
+                auto lv = std::make_shared<Level>(level, m, n, o);
 
                 // create ghosted arrays for v and f on host if device buffer should not be reused
                 if (!reuse_opencl_buffers && !copy_buffer_data)
@@ -210,10 +159,10 @@ namespace mgcl
                                     f[i + ghosts_in][j + ghosts_in][k + ghosts_in];
                             }
 
-                    update_ghosts_seq(lv->getF(), m, n, o, ghosts, ghosts, ghosts);
+                    MultigridEngine::updateGhostsSeq(lv->getF(), m, n, o, ghosts, ghosts, ghosts);
 
                     // allocate initial stencil_values, including ghost cells, if varying symmetric stencil shall be used
-                    if (stencil_values || d_stencil_values)
+                    if (stencil_values || dStencilValues)
                     {
                         lv->setStencilValues(cuboid_alloc(mg, ng, og * stencil_size_multiplier));
 
@@ -228,8 +177,8 @@ namespace mgcl
                                                       [k + ghosts_in * stencil_size_multiplier];
                                 }
 
-                        update_ghosts_seq(lv->getStencilValues(), m, n, o * stencil_size_multiplier, ghosts,
-                                          ghosts, ghosts * stencil_size_multiplier);
+                        MultigridEngine::updateGhostsSeq(lv->getStencilValues(), m, n, o * stencil_size_multiplier, ghosts,
+                                                         ghosts, ghosts * stencil_size_multiplier);
                     }
                 }
 
@@ -248,7 +197,7 @@ namespace mgcl
                 int ng = (levels.at(level - 1)->getN() - 2 * ghosts) / 2 + 2 * ghosts;
                 int og = (levels.at(level - 1)->getO() - 2 * ghosts) / 2 + 2 * ghosts;
 
-                auto lv = std::make_unique<Level>(level, mg, ng, og);
+                auto lv = std::make_shared<Level>(level, mg, ng, og);
 
                 if (!use_opencl)
                 {
@@ -268,6 +217,7 @@ namespace mgcl
                 levels.push_back(std::move(lv));
             }
 
+            levels.back()->initOpenCLBuffers();
             levels.back()->setH(1.0 / (m * m));
         }
         return true;
@@ -285,16 +235,6 @@ namespace mgcl
     void Problem::setF(double ***f_)
     {
         f = f_;
-    }
-
-    cl_mem Problem::dF() const
-    {
-        return d_f;
-    }
-
-    void Problem::setDF(const cl_mem &dF)
-    {
-        d_f = dF;
     }
 
     int Problem::getO() const
@@ -352,7 +292,7 @@ namespace mgcl
         stencil = stencil_;
     }
 
-    int Problem::stencilSizeMultiplier() const
+    int Problem::getStencilSizeMultiplier() const
     {
         return stencil_size_multiplier;
     }
@@ -362,7 +302,7 @@ namespace mgcl
         stencil_size_multiplier = stencilSizeMultiplier;
     }
 
-    bool Problem::reuseOpenclBuffers() const
+    bool Problem::getReuseOpenclBuffers() const
     {
         return reuse_opencl_buffers;
     }
@@ -382,7 +322,7 @@ namespace mgcl
         read_results = readResults;
     }
 
-    int Problem::jacobiWgSizeX() const
+    int Problem::getJacobiWgSizeX() const
     {
         return jacobi_wg_size_x;
     }
@@ -392,7 +332,7 @@ namespace mgcl
         jacobi_wg_size_x = jacobiWgSizeX;
     }
 
-    int Problem::jacobiIterationsPerKernel() const
+    int Problem::getJacobiIterationsPerKernel() const
     {
         return jacobi_iterations_per_kernel;
     }
@@ -402,44 +342,34 @@ namespace mgcl
         jacobi_iterations_per_kernel = jacobiIterationsPerKernel;
     }
 
-    std::string Problem::getDeviceName() const
+    cl_mem Problem::getDStencilValues() const
     {
-        return device_name;
+        return dStencilValues;
     }
 
-    void Problem::setDeviceName(const std::string &deviceName)
+    cl_mem Problem::getDV() const
     {
-        device_name = deviceName;
+        return dV;
     }
 
-    cl_device_id Problem::getDeviceId() const
+    void Problem::setDV(const cl_mem &dV_)
     {
-        return device_id;
+        dV = dV_;
     }
 
-    void Problem::setDeviceId(const cl_device_id &deviceId)
+    std::shared_ptr<OpenCLHelper> Problem::getOpenCLHelper() const
     {
-        device_id = deviceId;
+        return openCLHelper;
     }
 
-    cl_command_queue Problem::getCommands() const
+    void Problem::setOpenCLHelper(const std::shared_ptr<OpenCLHelper> &openCLHelper_)
     {
-        return commands;
+        openCLHelper = openCLHelper_;
     }
 
-    void Problem::setCommands(const cl_command_queue &commands_)
+    void Problem::setDStencilValues(const cl_mem &dStencilValues_)
     {
-        commands = commands_;
-    }
-
-    cl_mem Problem::dStencilValues() const
-    {
-        return d_stencil_values;
-    }
-
-    void Problem::setDStencilValues(const cl_mem &dStencilValues)
-    {
-        d_stencil_values = dStencilValues;
+        dStencilValues = dStencilValues_;
     }
 
     int Problem::getN() const
@@ -502,7 +432,7 @@ namespace mgcl
         residual_norm = residualNorm;
     }
 
-    double ***Problem::stencilValues() const
+    double ***Problem::getStencilValues() const
     {
         return stencil_values;
     }
@@ -512,7 +442,7 @@ namespace mgcl
         stencil_values = stencilValues;
     }
 
-    bool Problem::restrictProlongateStencil() const
+    bool Problem::getRestrictProlongateStencil() const
     {
         return restrict_prolongate_stencil;
     }
@@ -522,7 +452,7 @@ namespace mgcl
         restrict_prolongate_stencil = restrictProlongateStencil;
     }
 
-    bool Problem::copyBufferData() const
+    bool Problem::getCopyBufferData() const
     {
         return copy_buffer_data;
     }
@@ -532,7 +462,7 @@ namespace mgcl
         copy_buffer_data = copyBufferData;
     }
 
-    bool Problem::useLocalMemory() const
+    bool Problem::getUseLocalMemory() const
     {
         return use_local_memory;
     }
@@ -542,7 +472,7 @@ namespace mgcl
         use_local_memory = useLocalMemory;
     }
 
-    int Problem::jacobiWgSizeY() const
+    int Problem::getJacobiWgSizeY() const
     {
         return jacobi_wg_size_y;
     }
@@ -552,37 +482,7 @@ namespace mgcl
         jacobi_wg_size_y = jacobiWgSizeY;
     }
 
-    std::string Problem::getKernelDir() const
-    {
-        return kernel_dir;
-    }
-
-    void Problem::setKernelDir(const std::string &kernelDir)
-    {
-        kernel_dir = kernelDir;
-    }
-
-    cl_device_type Problem::getDeviceType() const
-    {
-        return device_type;
-    }
-
-    void Problem::setDeviceType(const cl_device_type &deviceType)
-    {
-        device_type = deviceType;
-    }
-
-    cl_context Problem::getContext() const
-    {
-        return context;
-    }
-
-    void Problem::setContext(const cl_context &context_)
-    {
-        context = context_;
-    }
-
-    bool Problem::useOpencl() const
+    bool Problem::getUseOpencl() const
     {
         return use_opencl;
     }
@@ -590,6 +490,21 @@ namespace mgcl
     void Problem::setUseOpencl(bool useOpencl)
     {
         use_opencl = useOpencl;
+    }
+
+    std::vector<std::shared_ptr<Level>> Problem::getLevels() const
+    {
+        return levels;
+    }
+
+    cl_mem Problem::getDF() const
+    {
+        return dF;
+    }
+
+    void Problem::setDF(const cl_mem &dF_)
+    {
+        dF = dF_;
     }
 
     double ***Problem::getV() const
@@ -600,15 +515,5 @@ namespace mgcl
     void Problem::setV(double ***v_)
     {
         v = v_;
-    }
-
-    cl_mem Problem::dV() const
-    {
-        return d_v;
-    }
-
-    void Problem::setDV(const cl_mem &dV)
-    {
-        d_v = dV;
     }
 }
