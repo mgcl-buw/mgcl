@@ -29,6 +29,8 @@ namespace mgcl
         cl_command_queue commands = nullptr;                /* must be set if a specific context/device/buffers should be reused */
         cl_program program = nullptr;                       /* compute program, only for internal purposes */
 
+        friend class Problem;
+
     public:
         OpenCLHelper(Problem *problem_) : problem(problem_) {}
         ~OpenCLHelper();

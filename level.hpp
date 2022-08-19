@@ -53,6 +53,7 @@ namespace mgcl
 
         friend class OpenCLHelper;
         friend class MultigridEngine;
+        friend class Problem;
 
     public:
         Level(Problem *problem_, int _num, int _m, int _n, int _o);

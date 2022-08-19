@@ -3,7 +3,7 @@
 
 #include "clutil.hpp"
 #include "cuboid.hpp"
-#include "ghostscl.hpp"
+#include "multigrid_engine.hpp"
 #include "problem.hpp"
 
 namespace mgcl
@@ -221,6 +221,138 @@ namespace mgcl
             levels.back()->setH(1.0 / (m * m));
         }
         return true;
+    }
+
+    /* Waits for all running OpenCL kernels to finish and reads back results from device. Creates arrays on host if none
+     * were specified */
+    int Problem::readResults()
+    {
+        int err = clFinish(openCLHelper->getCommands());
+        mgclCheckError(err, "Waiting for kernels to finish");
+
+        if (reuse_opencl_buffers || copy_buffer_data)
+        {
+            levels[0]->v = cuboid_alloc(levels[0]->m, levels[0]->n, levels[0]->o); // gets freed automatically in finish
+            if (v == NULL)
+                v = cuboid_alloc(m + 2 * ghosts_in, n + 2 * ghosts_in,
+                                 o + 2 * ghosts_in);
+        }
+
+        // read back results TODO: only for testing purposes, maybe define TESTING?
+        err = clEnqueueReadBuffer(openCLHelper->getCommands(), levels[0]->dVIn, CL_TRUE, 0,
+                                  sizeof(double) * levels[0]->m * levels[0]->n * levels[0]->o, levels[0]->v[0][0], 0, NULL, NULL);
+        if (err != CL_SUCCESS)
+        {
+            printf("Error: Failed to read output arrays from device!\n%s\n", mgcl_err_code(err));
+            exit(1);
+        }
+
+        // copy result to initial v vector
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                for (int k = 0; k < o; k++)
+                {
+                    v[i + ghosts_in][j + ghosts_in][k + ghosts_in] =
+                        levels[0]->v[i + ghosts][j + ghosts][k + ghosts];
+                }
+
+        return err;
+    }
+
+    /**
+     * @brief Solves problem using multigrid method on OpenCL, if use_opencl is true. Otherwise solveSeq is called.
+     *
+     */
+    void Problem::solve()
+    {
+        // run mgcl_seq if use_opencl is not set
+        if (!conf->use_opencl)
+        {
+            printf("Not using OpenCL (not specified in conf). Running mgcl sequentially.\n");
+            solveSeq();
+            return;
+        }
+        printf("Starting mgcl using OpenCL\n");
+
+        // set up data for each level TODO reuse device buffers in final code
+        if (!init())
+            return;
+        // mgcl_init_opencl(conf, data);
+
+        // calculate initial residual
+        double initres;
+        if (conf->stencil_values)
+            initres = MultigridEngine::stencilResidual(*this, *levels[0], 1);
+        else
+            initres = MultigridEngine::residual(*this, *levels[0], 1);
+        printf("Starting mgcl with initres = %e\n", initres);
+
+        // run vcycle maxiter_vcycles times
+        double res, relres;
+        for (int i = 0; i < conf->maxiter_vcycles; i++)
+        {
+            auto tstart = std::chrono::steady_clock::now();
+            res = MultigridEngine::vcycle(*this, *levels[0]);
+            auto tend = mgcl_since(tstart).count() * 1000.0;
+            relres = initres == 0 ? 0 : res / initres;
+            printf("iter = %d, elapsed time = %2.5lf s, rel. res = %e\n", i, tend, relres);
+
+            if (relres < conf->tol)
+                break;
+        }
+
+        // copy resulting v to conf->d_v on device
+        if (conf->copy_buffer_data)
+            openCLHelper->copyOutputBuffers();
+
+        // write result into conf->v on host
+        if (conf->read_results)
+            readResults();
+    }
+
+    /**
+     * @brief Solves problem sequentially using multigrid method.
+     *
+     */
+    void Problem::solveSeq()
+    {
+        // set up data for each level
+        if (!init())
+            return;
+
+        // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
+        MultigridEngine::updateGhostsSeq(data[0].v, conf->m, conf->n, conf->o, conf->ghosts, conf->ghosts, conf->ghosts);
+        // update_ghosts_seq(data[0].f, conf->m, conf->n, conf->o);
+        double initres;
+        if (conf->stencil_values)
+            initres =
+                MultigridEngine::stencilResidual(*this, *levels[0], 1);
+        else
+            initres = MultigridEngine::residual(*this, *levels[0], 1);
+        printf("Starting mgcl with initres = %e\n", initres);
+
+        // run vcycle maxiter_vcycles times
+        double res, relres;
+        for (int i = 0; i < conf->maxiter_vcycles; i++)
+        {
+            auto tstart = std::chrono::steady_clock::now();
+            res = MultigridEngine::vcycleSeq(*this, *levels[0]);
+            auto tend = mgcl_since(tstart).count() * 1000.0;
+            relres = initres == 0 ? 0 : res / initres;
+            printf("iter = %d, elapsed time = %2.5lf s, rel. res = %e\n", i, tend, relres);
+
+            if (relres < conf->tol)
+                break;
+        }
+
+        // write data to output
+        for (int i = 0; i < conf->m; i++)
+            for (int j = 0; j < conf->n; j++)
+                for (int k = 0; k < conf->o; k++)
+                {
+                    conf->v[i + conf->ghosts_in][j + conf->ghosts_in][k + conf->ghosts_in] =
+                        data[0].v[i + conf->ghosts][j + conf->ghosts][k + conf->ghosts];
+                }
     }
 
     /********************************

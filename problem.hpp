@@ -136,14 +136,10 @@ namespace mgcl
         bool checkParameters();
         int calculateAndSetMaxLevel();
         bool init();
+        int readResults();
 
-        void finish();
-        int correct_error(cl_mem d_v, cl_mem d_r, int m, int n, int o);
-        void mgcl();
-        void mgcl_seq();
-        double vcycle_seq(Level &level);
-        double vcycle(Level &level);
-        void test_read(Level &level);
+        void solve();
+        void solveSeq();
 
         /********************************
          * Getters and Setters

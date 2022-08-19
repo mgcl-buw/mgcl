@@ -32,14 +32,14 @@ TEST_CASE("Problem conf")
         REQUIRE(p.getStencil() == mgcl::MGCL_7POINT);
 
         REQUIRE(p.getOpenCLHelper() == nullptr);
-        REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
-        REQUIRE(p.getKernelDir() == "./");
-        REQUIRE(p.getDeviceName() == "");
-        REQUIRE(p.getDeviceId() == nullptr);
-        REQUIRE(p.getCommands() == nullptr);
-        REQUIRE(p.getContext() == nullptr);
-        REQUIRE(p.dV() == nullptr);
-        REQUIRE(p.dF() == nullptr);
+        // REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
+        // REQUIRE(p.getKernelDir() == "./");
+        // REQUIRE(p.getDeviceName() == "");
+        // REQUIRE(p.getDeviceId() == nullptr);
+        // REQUIRE(p.getCommands() == nullptr);
+        // REQUIRE(p.getContext() == nullptr);
+        REQUIRE(p.getDV() == nullptr);
+        REQUIRE(p.getDF() == nullptr);
         REQUIRE(p.getUseOpencl() == false);
         REQUIRE(p.getReuseOpenclBuffers() == false);
         REQUIRE(p.getCopyBufferData() == false);
