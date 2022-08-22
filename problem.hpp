@@ -130,6 +130,9 @@ namespace mgcl
         Problem(int _m, int _n, int _o, Cuboid _f, Cuboid _v);
         Problem(int _m, int _n, int _o, double ***_f, double ***_v);
         Problem(int _m, int _n, int _o, cl_mem _d_f, cl_mem _d_v);
+        Problem(int _m, int _n, int _o, Cuboid _f, Cuboid _v, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
+        Problem(int _m, int _n, int _o, double ***_f, double ***_v, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
+        Problem(int _m, int _n, int _o, cl_mem _d_f, cl_mem _d_v, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
         Problem(const Problem &) = delete;
         Problem &operator=(const Problem &) = delete;
         ~Problem() = default;
@@ -138,7 +141,7 @@ namespace mgcl
         bool checkParameters();
         int calculateAndSetMaxLevel();
         bool init();
-        int initOpenCL();
+        int initOpenCL(cl_context context = nullptr, cl_command_queue commandQueue = nullptr, cl_device_id deviceId = nullptr);
         int readResults();
 
         void solve();

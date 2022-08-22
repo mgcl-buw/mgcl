@@ -12,14 +12,32 @@ namespace mgcl
     {
     }
 
+    Problem::Problem(int _m, int _n, int _o, Cuboid _f, Cuboid _v, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
+        : Problem(_m, _n, _o, _f, _v)
+    {
+        initOpenCL(context, commandQueue, deviceId);
+    }
+
     Problem::Problem(int _m, int _n, int _o, double ***_f, double ***_v)
         : m(_m), n(_n), o(_o), f(_f), v(_v)
     {
     }
 
+    Problem::Problem(int _m, int _n, int _o, double ***_f, double ***_v, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
+        : Problem(_m, _n, _o, _f, _v)
+    {
+        initOpenCL(context, commandQueue, deviceId);
+    }
+
     Problem::Problem(int _m, int _n, int _o, cl_mem _d_f, cl_mem _d_v)
         : m(_m), n(_n), o(_o), dF(_d_f), dV(_d_v)
     {
+    }
+
+    Problem::Problem(int _m, int _n, int _o, cl_mem _f, cl_mem _v, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
+        : Problem(_m, _n, _o, _f, _v)
+    {
+        initOpenCL(context, commandQueue, deviceId);
     }
 
     /**
@@ -227,12 +245,15 @@ namespace mgcl
      *
      * @return int OpenCL error code
      */
-    int Problem::initOpenCL()
+    int Problem::initOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
     {
         int err = CL_SUCCESS;
         if (!openCLHelper)
         {
             openCLHelper = std::make_shared<OpenCLHelper>(this);
+            openCLHelper->setContext(context);
+            openCLHelper->setCommands(commandQueue);
+            openCLHelper->setDeviceId(deviceId);
             err = openCLHelper->init();
             use_opencl = true;
         }
