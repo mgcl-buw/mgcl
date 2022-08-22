@@ -112,3 +112,54 @@ TEST_CASE("checkParameters")
         REQUIRE(pm.checkParameters() == true);
     }
 }
+
+TEST_CASE("calculateAndSetMaxLevel")
+{
+    double ***f = nullptr;
+    double ***v = nullptr;
+
+    SECTION("m min")
+    {
+        mgcl::Problem p(4, 8, 8, f, v);
+
+        REQUIRE(p.getMaxlevel() == -1);
+        p.calculateAndSetMaxLevel();
+        REQUIRE(p.getMaxlevel() == 3);
+    }
+
+    SECTION("n min")
+    {
+        mgcl::Problem p(16, 8, 16, f, v);
+
+        REQUIRE(p.getMaxlevel() == -1);
+        p.calculateAndSetMaxLevel();
+        REQUIRE(p.getMaxlevel() == 4);
+    }
+
+    SECTION("o min")
+    {
+        mgcl::Problem p(32, 32, 16, f, v);
+
+        REQUIRE(p.getMaxlevel() == -1);
+        p.calculateAndSetMaxLevel();
+        REQUIRE(p.getMaxlevel() == 5);
+    }
+
+    SECTION("user set valid")
+    {
+        mgcl::Problem p(32, 32, 32, f, v);
+        p.setMaxlevel(2);
+
+        p.calculateAndSetMaxLevel();
+        REQUIRE(p.getMaxlevel() == 2);
+    }
+
+    SECTION("user set invalid")
+    {
+        mgcl::Problem p(4, 4, 4, f, v);
+        p.setMaxlevel(8);
+
+        p.calculateAndSetMaxLevel();
+        REQUIRE(p.getMaxlevel() == 3);
+    }
+}
