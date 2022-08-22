@@ -138,6 +138,7 @@ namespace mgcl
         bool checkParameters();
         int calculateAndSetMaxLevel();
         bool init();
+        int initOpenCL();
         int readResults();
 
         void solve();
@@ -235,5 +236,26 @@ namespace mgcl
 
         std::shared_ptr<OpenCLHelper> getOpenCLHelper() const;
         void setOpenCLHelper(const std::shared_ptr<OpenCLHelper> &openCLHelper_);
+
+        std::string getKernelDir() const;
+        void setKernelDir(const std::string &kernelDir_);
+
+        std::string getDeviceName() const;
+        void setDeviceName(const std::string &deviceName_);
+
+        cl_device_type getDeviceType() const;
+        void setDeviceType(const cl_device_type &deviceType_);
+
+        cl_device_id getDeviceId() const;
+        void setDeviceId(const cl_device_id &deviceId_);
+
+        cl_context getContext() const;
+        void setContext(const cl_context &context_);
+
+        cl_command_queue getCommands() const;
+        void setCommands(const cl_command_queue &commands_);
+
+        cl_program getProgram() const;
+        void setProgram(const cl_program &program_);
     };
 }

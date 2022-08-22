@@ -114,10 +114,10 @@ namespace mgcl
             stencil_size_multiplier = 8;
 
         // create opencl environment with default parameters if not done yet
-        if (use_opencl && !openCLHelper)
+        if (use_opencl)
         {
-            openCLHelper = std::make_shared<OpenCLHelper>(this);
-            openCLHelper->init();
+            if (initOpenCL() != CL_SUCCESS)
+                return false;
         }
 
         // check opencl components if device buffers should be reused
@@ -220,6 +220,23 @@ namespace mgcl
             levels.back()->setH(1.0 / (m * m));
         }
         return true;
+    }
+
+    /**
+     * @brief Lazyly initializes OpenCL environment and sets use_opencl to true.
+     *
+     * @return int OpenCL error code
+     */
+    int Problem::initOpenCL()
+    {
+        int err = CL_SUCCESS;
+        if (!openCLHelper)
+        {
+            openCLHelper = std::make_shared<OpenCLHelper>(this);
+            err = openCLHelper->init();
+            use_opencl = true;
+        }
+        return err;
     }
 
     /* Waits for all running OpenCL kernels to finish and reads back results from device. Creates arrays on host if none
@@ -484,16 +501,6 @@ namespace mgcl
         dV = dV_;
     }
 
-    std::shared_ptr<OpenCLHelper> Problem::getOpenCLHelper() const
-    {
-        return openCLHelper;
-    }
-
-    void Problem::setOpenCLHelper(const std::shared_ptr<OpenCLHelper> &openCLHelper_)
-    {
-        openCLHelper = openCLHelper_;
-    }
-
     void Problem::setDStencilValues(const cl_mem &dStencilValues_)
     {
         dStencilValues = dStencilValues_;
@@ -632,6 +639,93 @@ namespace mgcl
     void Problem::setDF(const cl_mem &dF_)
     {
         dF = dF_;
+    }
+
+    std::shared_ptr<OpenCLHelper> Problem::getOpenCLHelper() const
+    {
+        return openCLHelper;
+    }
+
+    void Problem::setOpenCLHelper(const std::shared_ptr<OpenCLHelper> &openCLHelper_)
+    {
+        openCLHelper = openCLHelper_;
+    }
+
+    std::string Problem::getDeviceName() const
+    {
+        return openCLHelper ? openCLHelper->deviceName : "";
+    }
+
+    void Problem::setDeviceName(const std::string &deviceName_)
+    {
+        if (openCLHelper)
+            openCLHelper->deviceName = deviceName_;
+    }
+
+    cl_device_id Problem::getDeviceId() const
+    {
+        return openCLHelper ? openCLHelper->deviceId : nullptr;
+    }
+
+    void Problem::setDeviceId(const cl_device_id &deviceId_)
+    {
+        if (openCLHelper)
+            openCLHelper->deviceId = deviceId_;
+    }
+
+    cl_command_queue Problem::getCommands() const
+    {
+        return openCLHelper ? openCLHelper->commands : nullptr;
+    }
+
+    void Problem::setCommands(const cl_command_queue &commands_)
+    {
+        if (openCLHelper)
+            openCLHelper->commands = commands_;
+    }
+
+    std::string Problem::getKernelDir() const
+    {
+        return openCLHelper ? openCLHelper->kernelDir : "";
+    }
+
+    void Problem::setKernelDir(const std::string &kernelDir_)
+    {
+        if (openCLHelper)
+            openCLHelper->kernelDir = kernelDir_;
+    }
+
+    cl_device_type Problem::getDeviceType() const
+    {
+        return openCLHelper ? openCLHelper->deviceType : CL_DEVICE_TYPE_DEFAULT;
+    }
+
+    void Problem::setDeviceType(const cl_device_type &deviceType_)
+    {
+        if (openCLHelper)
+            openCLHelper->deviceType = deviceType_;
+    }
+
+    cl_context Problem::getContext() const
+    {
+        return openCLHelper ? openCLHelper->context : nullptr;
+    }
+
+    void Problem::setContext(const cl_context &context_)
+    {
+        if (openCLHelper)
+            openCLHelper->context = context_;
+    }
+
+    cl_program Problem::getProgram() const
+    {
+        return openCLHelper ? openCLHelper->program : nullptr;
+    }
+
+    void Problem::setProgram(const cl_program &program_)
+    {
+        if (openCLHelper)
+            openCLHelper->program = program_;
     }
 
     double ***Problem::getV() const

@@ -112,9 +112,3 @@ TEST_CASE("checkParameters")
         REQUIRE(pm.checkParameters() == true);
     }
 }
-
-TEST_CASE("checkOpenCLParameters")
-{
-    // TODO OpenCL test environment
-    REQUIRE(1 == 2);
-}

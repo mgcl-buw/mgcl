@@ -53,8 +53,6 @@ find_package(Catch2 3 REQUIRED)
 # These tests can use the Catch2-provided main
 set(SOURCES_TEST 
 test/test_cuboid.cpp
-test/test_clutil.cpp
-test/test_mgcl_ecosystem.cpp
 test/test_problem_conf.cpp
 )
 
