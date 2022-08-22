@@ -54,6 +54,7 @@ find_package(Catch2 3 REQUIRED)
 set(SOURCES_TEST 
 test/test_cuboid.cpp
 test/test_problem_conf.cpp
+test/test_opencl_helper.cpp
 )
 
 add_executable(tests ${SOURCES_TEST})

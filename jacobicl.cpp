@@ -797,6 +797,7 @@ namespace mgcl
         // clReleaseMemObject(d_f);
         // clReleaseMemObject(dR);
         // return res;
+        return 0;
     }
 
     /* Calculates r = f - A*v using 7-point stencil of 3D laplacian.

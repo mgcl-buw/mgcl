@@ -74,12 +74,31 @@ namespace mgcl
     {
         int i, j;
 
-        field_1d = (double *)calloc(sizeof(double), m * n * o);
-        field_3d = (double ***)malloc(sizeof(double **) * m);
+        field_1d.resize(m * n * o);
+        field_3d = new double **[m];
         for (i = 0; i < m; i++)
         {
-            field_3d[i] = (double **)malloc(sizeof(double *) * n);
+            field_3d[i] = new double *[n];
             for (j = 0; j < n; j++)
+            {
+                field_3d[i][j] = &field_1d[i * n * o + j * o];
+            }
+        }
+    }
+
+    /**
+     * @brief Construct a new Cuboid object allocating memory for field_3d.
+     *
+     * @param c Cuboid to be cloned from.
+     */
+    Cuboid::Cuboid(const Cuboid &c)
+        : m(c.m), n(c.n), o(c.o), field_1d(c.field_1d)
+    {
+        field_3d = new double **[m];
+        for (int i = 0; i < m; i++)
+        {
+            field_3d[i] = new double *[n];
+            for (int j = 0; j < n; j++)
             {
                 field_3d[i][j] = &field_1d[i * n * o + j * o];
             }
@@ -88,16 +107,12 @@ namespace mgcl
 
     Cuboid::~Cuboid()
     {
-        int i;
-
-        free(field_3d[0][0]);
-        for (i = 0; i < m; i++)
+        for (int i = 0; i < m; i++)
         {
-            free(field_3d[i]);
+            delete[] field_3d[i];
         }
-        free(field_3d);
+        delete[] field_3d;
         field_3d = nullptr;
-        field_1d = nullptr;
     }
 
     int Cuboid::getO() const

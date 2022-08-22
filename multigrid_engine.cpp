@@ -230,8 +230,8 @@ namespace mgcl
                                   NULL, NULL);
         mgclCheckError(err, "Error: Failed to read output arrays from device!");
 
-        printf("0 level = %d, v[1,1,1] = %e\n", level, level.v[1][1][1]);
-        printf("0 level = %d, f[1,1,1] = %e\n", level, level.f[1][1][1]);
-        printf("0 level = %d, r[1,1,1] = %e\n", level, level.r[1][1][1]);
+        printf("0 level = %d, v[1,1,1] = %e\n", level.getNum(), level.v[1][1][1]);
+        printf("0 level = %d, f[1,1,1] = %e\n", level.getNum(), level.f[1][1][1]);
+        printf("0 level = %d, r[1,1,1] = %e\n", level.getNum(), level.r[1][1][1]);
     }
 }

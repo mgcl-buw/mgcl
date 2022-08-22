@@ -10,6 +10,8 @@
 #ifndef _CUBOID__H_
 #define _CUBOID__H_
 
+#include <vector>
+
 namespace mgcl
 {
     class Cuboid
@@ -18,11 +20,12 @@ namespace mgcl
         int m;
         int n;
         int o;
-        double *field_1d;
+        std::vector<double> field_1d;
         double ***field_3d;
 
     public:
         Cuboid(int m_, int n_, int o_);
+        Cuboid(const Cuboid &c);
         ~Cuboid();
 
         int getO() const;
