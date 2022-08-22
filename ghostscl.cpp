@@ -1,7 +1,4 @@
-#include "clutil.hpp"
 #include "multigrid_engine.hpp"
-
-#include <CL/cl.h>
 
 namespace mgcl
 {
@@ -134,11 +131,7 @@ namespace mgcl
 
         // read back results
         err = clEnqueueReadBuffer(problem.getOpenCLHelper()->getCommands(), d_v, CL_TRUE, 0, sizeof(double) * m * n * o, v[0][0], 0, NULL, NULL);
-        if (err != CL_SUCCESS)
-        {
-            printf("Error: Failed to read output arrays from device!\n%s\n", mgcl_err_code(err));
-            exit(1);
-        }
+        mgclCheckError(err, "Error: Failed to read output arrays from device!");
 
         clReleaseMemObject(d_v);
         return err;

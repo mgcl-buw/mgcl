@@ -1,7 +1,5 @@
 #pragma once
 
-#include <CL/cl.h>
-
 #include "multigrid_engine.hpp"
 #include "opencl_helper.hpp"
 #include "problem.hpp"

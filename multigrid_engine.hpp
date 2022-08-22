@@ -16,7 +16,7 @@ namespace mgcl
         static double vcycleSeq(Problem &problem, Level &level);
         static double vcycle(Problem &problem, Level &level);
         static int correctError(Problem &problem, cl_mem d_v, cl_mem d_r, int m, int n, int o);
-        void testRead(Problem &problem, Level &level);
+        static void testRead(Problem &problem, Level &level);
 
         static void restrictSeq(Level &fine, Level &coarse, double ***fineVals, double ***coarseVals);
         static void restrictTest(Level &fine, Level &coarse);

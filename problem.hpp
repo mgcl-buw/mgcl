@@ -14,13 +14,15 @@
 #include <vector>
 
 #include "cuboid.hpp"
-#include "level.hpp"
 #include "mgcl.hpp"
-#include "multigrid_engine.hpp"
-#include "opencl_helper.hpp"
 
 namespace mgcl
 {
+    // forward declarations
+    class Level;
+    class OpenCLHelper;
+    class MultigridEngine;
+
     // main interface class for using mgcl. Defines all the problem variables.
     class Problem
     {

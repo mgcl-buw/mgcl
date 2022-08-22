@@ -1,12 +1,6 @@
 #pragma once
 
-#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
-#ifndef CL_TARGET_OPENCL_VERSION
-#define CL_TARGET_OPENCL_VERSION 120
-#endif // CL_TARGET_OPENCL_VERSION
-#include <CL/cl.h>
 #include <chrono>
-#include <string>
 
 namespace mgcl
 {

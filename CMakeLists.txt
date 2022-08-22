@@ -9,21 +9,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 find_package(OpenCL REQUIRED)
 
 set(SOURCES_LIB 
-clutil.hpp
-clutil.cpp
 cuboid.hpp
 cuboid.cpp
-ghostscl.hpp
 ghostscl.cpp
-jacobicl.hpp
 jacobicl.cpp
 mgcl.hpp
-mgcl.cpp
-stencilcl.hpp
 stencilcl.cpp
 problem.hpp
 problem.cpp
 level.hpp
+level.cpp
+opencl_helper.hpp
+opencl_helper.cpp
+multigrid_engine.hpp
+multigrid_engine.cpp
+prolongation.cpp
+restriction.cpp
 )
 
 add_library(mgcl ${SOURCES_LIB})

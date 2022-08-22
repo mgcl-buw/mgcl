@@ -1,4 +1,5 @@
 #include "opencl_helper.hpp"
+#include "level.hpp"
 
 namespace mgcl
 {

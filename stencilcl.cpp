@@ -2,7 +2,6 @@
 #include <cstdio>
 #include <ctgmath>
 
-#include "clutil.hpp"
 #include "cuboid.hpp"
 #include "multigrid_engine.hpp"
 
@@ -91,7 +90,7 @@ namespace mgcl
         int ost = coarse.o * problem.stencil_size_multiplier;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(problem.openCLHelper->getProgram(), "stencil_restrict_to_coarse", &err);
+        cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper()->getProgram(), "stencil_restrict_to_coarse", &err);
         mgclCheckError(err, "Creating kernel");
 
         // assign kernel arguments
@@ -552,11 +551,7 @@ namespace mgcl
 
                 err = clEnqueueReadBuffer(problem.openCLHelper->getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * m * n * o,
                                           rsquares[0][0], 0, NULL, NULL);
-                if (err != CL_SUCCESS)
-                {
-                    printf("Error: Failed to read rsquares array from device!\n%s\n", mgcl_err_code(err));
-                    exit(1);
-                }
+                mgclCheckError(err, "Error: Failed to read rsquares array from device!");
 
                 // sum up residual squares
                 res = 0;
@@ -580,11 +575,7 @@ namespace mgcl
 
                 err = clEnqueueReadBuffer(problem.openCLHelper->getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * m * n * o, rtmp[0][0], 0,
                                           NULL, NULL);
-                if (err != CL_SUCCESS)
-                {
-                    printf("Error: Failed to read rsquares array from device!\n%s\n", mgcl_err_code(err));
-                    exit(1);
-                }
+                mgclCheckError(err, "Error: Failed to read rsquares array from device!");
 
                 // find maximum residual
                 res = 0;
@@ -848,11 +839,7 @@ namespace mgcl
 
                 err = clEnqueueReadBuffer(problem.openCLHelper->getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * m * n * o,
                                           rsquares[0][0], 0, NULL, NULL);
-                if (err != CL_SUCCESS)
-                {
-                    printf("Error: Failed to read rsquares array from device!\n%s\n", mgcl_err_code(err));
-                    exit(1);
-                }
+                mgclCheckError(err, "Error: Failed to read rsquares array from device!");
 
                 // sum up residual squares
                 res = 0;
@@ -876,11 +863,7 @@ namespace mgcl
 
                 err = clEnqueueReadBuffer(problem.openCLHelper->getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * m * n * o, rtmp[0][0], 0,
                                           NULL, NULL);
-                if (err != CL_SUCCESS)
-                {
-                    printf("Error: Failed to read rsquares array from device!\n%s\n", mgcl_err_code(err));
-                    exit(1);
-                }
+                mgclCheckError(err, "Error: Failed to read rsquares array from device!");
 
                 // find maximum residual
                 res = 0;
@@ -949,13 +932,8 @@ namespace mgcl
         // read back results TODO: only for testing purposes, maybe define TESTING?
         err = clEnqueueReadBuffer(problem.openCLHelper->getCommands(), level.dVIn, CL_FALSE, 0, sizeof(double) * m * n * o, v[0][0], 0, NULL,
                                   NULL);
-        err =
-            clEnqueueReadBuffer(problem.openCLHelper->getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * m * n * o, r[0][0], 0, NULL, NULL);
-        if (err != CL_SUCCESS)
-        {
-            printf("Error: Failed to read output arrays from device!\n%s\n", mgcl_err_code(err));
-            exit(1);
-        }
+        err = clEnqueueReadBuffer(problem.openCLHelper->getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * m * n * o, r[0][0], 0, NULL, NULL);
+        mgclCheckError(err, "Error: Failed to read rsquares array from device!");
 
         // clReleaseMemObject(dVIn);
         // clReleaseMemObject(dVOut);
@@ -1068,11 +1046,7 @@ namespace mgcl
 
                 err = clEnqueueReadBuffer(problem.openCLHelper->getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * m * n * o,
                                           rsquares[0][0], 0, NULL, NULL);
-                if (err != CL_SUCCESS)
-                {
-                    printf("Error: Failed to read rsquares array from device!\n%s\n", mgcl_err_code(err));
-                    exit(1);
-                }
+                mgclCheckError(err, "Error: Failed to read rsquares array from device!");
 
                 // sum up residual squares
                 res = 0;
@@ -1096,11 +1070,7 @@ namespace mgcl
 
                 err = clEnqueueReadBuffer(problem.openCLHelper->getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * m * n * o, rtmp[0][0], 0,
                                           NULL, NULL);
-                if (err != CL_SUCCESS)
-                {
-                    printf("Error: Failed to read rsquares array from device!\n%s\n", mgcl_err_code(err));
-                    exit(1);
-                }
+                mgclCheckError(err, "Error: Failed to read rsquares array from device!");
 
                 // find maximum residual
                 res = 0;
