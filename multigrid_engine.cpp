@@ -112,7 +112,7 @@ namespace mgcl
         if (level.getNum() < problem.maxlevel - 1) // if not at highest level
         {
             // reset v to zero for coarser grids (for another possible v-cycle)
-            err = clEnqueueFillBuffer(problem.openCLHelper->getCommands(), levelAbove.dVIn, &zero, sizeof(cl_uint), 0,
+            err = clEnqueueFillBuffer(problem.openCLHelper.getCommands(), levelAbove.dVIn, &zero, sizeof(cl_uint), 0,
                                       sizeof(double) * levelAbove.m * levelAbove.n * levelAbove.o, 0, NULL,
                                       NULL);
             mgclCheckError(err, "resetting dVIn to 0");
@@ -179,7 +179,7 @@ namespace mgcl
         int err;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(problem.openCLHelper->getProgram(), "correct_error", &err);
+        cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), "correct_error", &err);
         mgclCheckError(err, "Creating kernel");
 
         // assign kernel arguments
@@ -205,7 +205,7 @@ namespace mgcl
                 // printf("%ld (multiple of %ld)\n", global[i], local[i]);
             }
 
-        err = clEnqueueNDRangeKernel(problem.openCLHelper->getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
+        err = clEnqueueNDRangeKernel(problem.openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing kernel");
 
         clReleaseKernel(kernel);
@@ -215,17 +215,17 @@ namespace mgcl
     /* Reads values for one level from device for testing purposes */
     void MultigridEngine::testRead(Problem &problem, Level &level)
     {
-        int err = clFinish(problem.openCLHelper->getCommands());
+        int err = clFinish(problem.openCLHelper.getCommands());
         mgclCheckError(err, "Waiting for kernels to finish");
 
         // read back results TODO: only for testing purposes, maybe define TESTING?
-        err = clEnqueueReadBuffer(problem.openCLHelper->getCommands(), level.dVIn, CL_TRUE, 0,
+        err = clEnqueueReadBuffer(problem.openCLHelper.getCommands(), level.dVIn, CL_TRUE, 0,
                                   sizeof(double) * level.m * level.n * level.o, level.v[0][0], 0,
                                   NULL, NULL);
-        err = clEnqueueReadBuffer(problem.openCLHelper->getCommands(), level.dF, CL_TRUE, 0,
+        err = clEnqueueReadBuffer(problem.openCLHelper.getCommands(), level.dF, CL_TRUE, 0,
                                   sizeof(double) * level.m * level.n * level.o, level.f[0][0], 0,
                                   NULL, NULL);
-        err = clEnqueueReadBuffer(problem.openCLHelper->getCommands(), level.dR, CL_TRUE, 0,
+        err = clEnqueueReadBuffer(problem.openCLHelper.getCommands(), level.dR, CL_TRUE, 0,
                                   sizeof(double) * level.m * level.n * level.o, level.r[0][0], 0,
                                   NULL, NULL);
         mgclCheckError(err, "Error: Failed to read output arrays from device!");

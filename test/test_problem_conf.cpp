@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "../cuboid.hpp"
+#include "../opencl_helper.hpp"
 #include "../problem.hpp"
 
 /**
@@ -31,13 +32,10 @@ TEST_CASE("Problem conf")
         REQUIRE(p.getResidualNorm() == mgcl::MGCL_L2);
         REQUIRE(p.getStencil() == mgcl::MGCL_7POINT);
 
-        REQUIRE(p.getOpenCLHelper() == nullptr);
-        // REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
-        // REQUIRE(p.getKernelDir() == "./");
-        // REQUIRE(p.getDeviceName() == "");
-        // REQUIRE(p.getDeviceId() == nullptr);
-        // REQUIRE(p.getCommands() == nullptr);
-        // REQUIRE(p.getContext() == nullptr);
+        REQUIRE(!p.getOpenCLHelper().isInitialized());
+        REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
+        REQUIRE(p.getKernelDir() == "./");
+        REQUIRE(p.getDeviceName() == "");
         REQUIRE(p.getDV() == nullptr);
         REQUIRE(p.getDF() == nullptr);
         REQUIRE(p.getUseOpencl() == false);
@@ -115,12 +113,9 @@ TEST_CASE("checkParameters")
 
 TEST_CASE("calculateAndSetMaxLevel")
 {
-    double ***f = nullptr;
-    double ***v = nullptr;
-
     SECTION("m min")
     {
-        mgcl::Problem p(4, 8, 8, f, v);
+        mgcl::Problem p(4, 8, 8);
 
         REQUIRE(p.getMaxlevel() == -1);
         p.calculateAndSetMaxLevel();
@@ -129,7 +124,7 @@ TEST_CASE("calculateAndSetMaxLevel")
 
     SECTION("n min")
     {
-        mgcl::Problem p(16, 8, 16, f, v);
+        mgcl::Problem p(16, 8, 16);
 
         REQUIRE(p.getMaxlevel() == -1);
         p.calculateAndSetMaxLevel();
@@ -138,7 +133,7 @@ TEST_CASE("calculateAndSetMaxLevel")
 
     SECTION("o min")
     {
-        mgcl::Problem p(32, 32, 16, f, v);
+        mgcl::Problem p(32, 32, 16);
 
         REQUIRE(p.getMaxlevel() == -1);
         p.calculateAndSetMaxLevel();
@@ -147,7 +142,7 @@ TEST_CASE("calculateAndSetMaxLevel")
 
     SECTION("user set valid")
     {
-        mgcl::Problem p(32, 32, 32, f, v);
+        mgcl::Problem p(32, 32, 32);
         p.setMaxlevel(2);
 
         p.calculateAndSetMaxLevel();
@@ -156,10 +151,92 @@ TEST_CASE("calculateAndSetMaxLevel")
 
     SECTION("user set invalid")
     {
-        mgcl::Problem p(4, 4, 4, f, v);
+        mgcl::Problem p(4, 4, 4);
         p.setMaxlevel(8);
 
         p.calculateAndSetMaxLevel();
         REQUIRE(p.getMaxlevel() == 3);
+    }
+}
+
+TEST_CASE("initOpenCL, not reusing environment")
+{
+    mgcl::Problem p(4, 4, 4);
+    REQUIRE(!p.getOpenCLHelper().isInitialized());
+    REQUIRE(p.getUseOpencl() == false);
+
+    p.initOpenCL();
+    REQUIRE(p.getUseOpencl() == true);
+    REQUIRE(p.getOpenCLHelper().isInitialized());
+    REQUIRE(p.getCommands() != nullptr);
+    REQUIRE(p.getContext() != nullptr);
+    REQUIRE(p.getDeviceId() != nullptr);
+}
+
+TEST_CASE("initOpenCL, reusing environment")
+{
+    mgcl::Problem p(4, 4, 4);
+    REQUIRE(!p.getOpenCLHelper().isInitialized());
+    REQUIRE(p.getUseOpencl() == false);
+
+    mgcl::OpenCLHelper openCLHelper(&p);
+    openCLHelper.init();
+
+    p.initOpenCL(openCLHelper.getContext(), openCLHelper.getCommands(), openCLHelper.getDeviceId());
+    REQUIRE(p.getUseOpencl() == true);
+    REQUIRE(p.getOpenCLHelper().isInitialized());
+    REQUIRE(p.getCommands() != nullptr);
+    REQUIRE(p.getContext() != nullptr);
+    REQUIRE(p.getDeviceId() != nullptr);
+}
+
+TEST_CASE("set OpenCLHelper values")
+{
+    mgcl::Problem p(4, 4, 4);
+
+    SECTION("getters, openCLHandler nullptr")
+    {
+        REQUIRE(p.getCommands() == nullptr);
+        REQUIRE(p.getContext() == nullptr);
+        REQUIRE(p.getDeviceId() == nullptr);
+        REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
+        REQUIRE(p.getKernelDir() == "./");
+        REQUIRE(p.getDeviceName() == "");
+    }
+
+    /**
+     * @brief Using setters before OpenCLHelper was initialized should set the values appropriately.
+     *
+     */
+    SECTION("setters, openCLHandler not initialized")
+    {
+        REQUIRE(!p.getOpenCLHelper().isInitialized());
+
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setKernelDir("test/");
+        p.setDeviceName("Quadro");
+
+        REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_GPU);
+        REQUIRE(p.getKernelDir() == "test/");
+        REQUIRE(p.getDeviceName() == "Quadro");
+    }
+
+    /**
+     * @brief Using setters after OpenCLHelper was initialized should not have an effect.
+     *
+     */
+    SECTION("setters, openCLHandler initialized")
+    {
+        REQUIRE(!p.getOpenCLHelper().isInitialized());
+        p.initOpenCL();
+        REQUIRE(p.getOpenCLHelper().isInitialized());
+
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setKernelDir("test/");
+        p.setDeviceName("Quadro");
+
+        REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
+        REQUIRE(p.getKernelDir() == "./");
+        REQUIRE(p.getDeviceName() == "");
     }
 }

@@ -12,10 +12,11 @@
 
 #include <CL/cl.h>
 
-#include "problem.hpp"
-
 namespace mgcl
 {
+    // forward declarations
+    class Problem;
+
     class OpenCLHelper
     {
     private:
@@ -36,6 +37,7 @@ namespace mgcl
         ~OpenCLHelper();
 
         int init();
+        bool isInitialized();
         bool checkParameters();
         int copyInputBuffers();
         int copyOutputBuffers();

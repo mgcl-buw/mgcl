@@ -53,15 +53,15 @@ namespace mgcl
         // int err;
 
         // // create device buffers
-        // int pointer_flag = problem.getOpenCLHelper()->getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
+        // int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
         // cl_mem dVIn =
-        //     clCreateBuffer(problem.getOpenCLHelper()->getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, v[0][0], &err);
+        //     clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, v[0][0], &err);
         // cl_mem dVOut =
-        //     clCreateBuffer(problem.getOpenCLHelper()->getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, v[0][0], &err);
+        //     clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, v[0][0], &err);
         // cl_mem d_f =
-        //     clCreateBuffer(problem.getOpenCLHelper()->getContext(), CL_MEM_READ_ONLY | pointer_flag, sizeof(double) * m * n * o, f[0][0], &err);
+        //     clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_ONLY | pointer_flag, sizeof(double) * m * n * o, f[0][0], &err);
         // cl_mem dR =
-        //     clCreateBuffer(problem.getOpenCLHelper()->getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, r[0][0], &err);
+        //     clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, r[0][0], &err);
 
         // // create level data
         // mgcl_level_data data;
@@ -80,7 +80,7 @@ namespace mgcl
         // jacobi(problem, &data, maxiter, readResults);
 
         // // Wait for the commands to complete before stopping the timer
-        // err = clFinish(problem.getOpenCLHelper()->getCommands());
+        // err = clFinish(problem.getOpenCLHelper().getCommands());
         // mgclCheckError(err, "Waiting for kernel to finish");
         // auto t_end_iter = mgcl_since(t_start_iter).count() * 1000.0;
         // printf("jacobi on opencl took %.3e s\n", t_end_iter);
@@ -90,8 +90,8 @@ namespace mgcl
         // dVOut = data.dVOut;
 
         // // read back results TODO: only for testing purposes, maybe define TESTING?
-        // err = clEnqueueReadBuffer(problem.getOpenCLHelper()->getCommands(), dVIn, CL_FALSE, 0, sizeof(double) * m * n * o, v[0][0], 0, NULL, NULL);
-        // err = clEnqueueReadBuffer(problem.getOpenCLHelper()->getCommands(), dR, CL_TRUE, 0, sizeof(double) * m * n * o, r[0][0], 0, NULL, NULL);
+        // err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dVIn, CL_FALSE, 0, sizeof(double) * m * n * o, v[0][0], 0, NULL, NULL);
+        // err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dR, CL_TRUE, 0, sizeof(double) * m * n * o, r[0][0], 0, NULL, NULL);
         // if (err != CL_SUCCESS)
         // {
         //     printf("Error: Failed to read output arrays from device!\n%s\n", mgcl_err_code(err));
@@ -151,7 +151,7 @@ namespace mgcl
             h2inv = 1.0 / (30.0 * h2);
             dinv = (30.0 * h2) / 128.0;
         }
-        cl_kernel kernel = clCreateKernel(problem.openCLHelper->getProgram(), kernel_name, &err);
+        cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
         mgclCheckError(err, "Creating kernel");
 
         // assign kernel arguments
@@ -213,14 +213,14 @@ namespace mgcl
                 mgclCheckError(err, "Setting kernel arguments");
             }
 
-            err = clEnqueueNDRangeKernel(problem.getOpenCLHelper()->getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
+            err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
             mgclCheckError(err, "Enqueueing kernel");
         }
 
         // copy result into dVIn if needed
         if (maxiter % 2 == 1)
         {
-            err = clEnqueueCopyBuffer(problem.getOpenCLHelper()->getCommands(), level.dVOut, level.dVIn, 0, 0, sizeof(double) * m * n * o, 0,
+            err = clEnqueueCopyBuffer(problem.getOpenCLHelper().getCommands(), level.dVOut, level.dVIn, 0, 0, sizeof(double) * m * n * o, 0,
                                       NULL, NULL);
             mgclCheckError(err, "Update v");
         }
@@ -235,13 +235,13 @@ namespace mgcl
             {
                 // calculate 2-Norm
                 double ***rsquares = cuboid_alloc(m, n, o);
-                int pointer_flag = problem.getOpenCLHelper()->getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
-                cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper()->getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
+                int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
+                cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
                                                   sizeof(double) * m * n * o, rsquares[0][0], &err);
                 mgclCheckError(err, "Creating rsquares buffer");
 
                 // Create the compute kernel from the program
-                cl_kernel kernel_square = clCreateKernel(problem.openCLHelper->getProgram(), "residual_squared", &err);
+                cl_kernel kernel_square = clCreateKernel(problem.openCLHelper.getProgram(), "residual_squared", &err);
                 mgclCheckError(err, "Creating residual squared kernel");
 
                 pos = 0;
@@ -266,13 +266,13 @@ namespace mgcl
                         // printf("%ld (multiple of %ld)\n", global[i], local[i]);
                     }
 
-                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper()->getCommands(), kernel_square, 3, NULL, global3d, local3d, 0, NULL, NULL);
+                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 3, NULL, global3d, local3d, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing residual squared kernel");
 
-                err = clFinish(problem.getOpenCLHelper()->getCommands());
+                err = clFinish(problem.getOpenCLHelper().getCommands());
                 mgclCheckError(err, "Waiting for kernels to finish");
 
-                err = clEnqueueReadBuffer(problem.getOpenCLHelper()->getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * m * n * o,
+                err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * m * n * o,
                                           rsquares[0][0], 0, NULL, NULL);
                 mgclCheckError(err, "Error: Failed to read rsquares array from device!");
 
@@ -291,12 +291,12 @@ namespace mgcl
             else
             {
                 // calculate Infinity-Norm (on host, TODO do on opencl)
-                err = clFinish(problem.getOpenCLHelper()->getCommands());
+                err = clFinish(problem.getOpenCLHelper().getCommands());
                 mgclCheckError(err, "Waiting for kernels to finish");
 
                 double ***rtmp = cuboid_alloc(m, n, o);
 
-                err = clEnqueueReadBuffer(problem.getOpenCLHelper()->getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * m * n * o, rtmp[0][0], 0,
+                err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * m * n * o, rtmp[0][0], 0,
                                           NULL, NULL);
                 mgclCheckError(err, "Error: Failed to read rsquares array from device!");
 
@@ -359,7 +359,7 @@ namespace mgcl
         // check if there is enough local memory available on device for given problem.ghosts = iterations per kernel call
         // TODO do in mgcl_init?
         cl_ulong available_local_mem;
-        err = clGetDeviceInfo(problem.openCLHelper->getDeviceId(), CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), &available_local_mem, 0);
+        err = clGetDeviceInfo(problem.openCLHelper.getDeviceId(), CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), &available_local_mem, 0);
         mgclCheckError(err, "Querying local memory size info");
         mgcl_debug("Available local memory on device: %ld Bytes\n", available_local_mem);
 
@@ -408,7 +408,7 @@ namespace mgcl
             h2inv = 1.0 / (30.0 * h2);
             dinv = (30.0 * h2) / 128.0;
         }
-        cl_kernel kernel = clCreateKernel(problem.openCLHelper->getProgram(), kernel_name, &err);
+        cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
         mgclCheckError(err, "Creating kernel");
 
         // assign kernel arguments
@@ -448,7 +448,7 @@ namespace mgcl
             err = MultigridEngine::updateGhosts(problem, level.dVIn, m, n, o, problem.ghosts, problem.ghosts, problem.ghosts);
             mgclCheckError(err, "Updating ghosts");
 
-            err = clEnqueueNDRangeKernel(problem.getOpenCLHelper()->getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
+            err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
             mgclCheckError(err, "Enqueueing kernel");
 
             // swap pointers so result is in dVIn
@@ -475,7 +475,7 @@ namespace mgcl
                     mgclCheckError(err, "Setting kernel argument store_residual");
                 }
 
-                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper()->getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
+                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing kernel");
 
                 err = MultigridEngine::updateGhosts(problem, level.dVOut, m, n, o, problem.ghosts, problem.ghosts, problem.ghosts);
@@ -502,7 +502,7 @@ namespace mgcl
                 err = clSetKernelArg(kernel, pos - 1, sizeof(int), &iter_rest);
                 mgclCheckError(err, "Setting kernel arguments iter_rest");
 
-                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper()->getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
+                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing kernel");
 
                 err = MultigridEngine::updateGhosts(problem, level.dVOut, m, n, o, problem.ghosts, problem.ghosts, problem.ghosts);
@@ -526,13 +526,13 @@ namespace mgcl
             {
                 // calculate 2-Norm
                 double ***rsquares = cuboid_alloc(m, n, o);
-                int pointer_flag = problem.getOpenCLHelper()->getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
-                cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper()->getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
+                int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
+                cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
                                                   sizeof(double) * m * n * o, rsquares[0][0], &err);
                 mgclCheckError(err, "Creating rsquares buffer");
 
                 // Create the compute kernel from the program
-                cl_kernel kernel_square = clCreateKernel(problem.openCLHelper->getProgram(), "residual_squared", &err);
+                cl_kernel kernel_square = clCreateKernel(problem.openCLHelper.getProgram(), "residual_squared", &err);
                 mgclCheckError(err, "Creating residual squared kernel");
 
                 pos = 0;
@@ -557,13 +557,13 @@ namespace mgcl
                         // printf("%ld (multiple of %ld)\n", global[i], local[i]);
                     }
 
-                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper()->getCommands(), kernel_square, 3, NULL, global3d, local3d, 0, NULL, NULL);
+                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 3, NULL, global3d, local3d, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing residual squared kernel");
 
-                err = clFinish(problem.getOpenCLHelper()->getCommands());
+                err = clFinish(problem.getOpenCLHelper().getCommands());
                 mgclCheckError(err, "Waiting for kernels to finish");
 
-                err = clEnqueueReadBuffer(problem.getOpenCLHelper()->getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * m * n * o,
+                err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * m * n * o,
                                           rsquares[0][0], 0, NULL, NULL);
                 mgclCheckError(err, "Error: Failed to read rsquares array from device!");
 
@@ -582,12 +582,12 @@ namespace mgcl
             else
             {
                 // calculate Infinity-Norm (on host, TODO do on opencl)
-                err = clFinish(problem.getOpenCLHelper()->getCommands());
+                err = clFinish(problem.getOpenCLHelper().getCommands());
                 mgclCheckError(err, "Waiting for kernels to finish");
 
                 double ***rtmp = cuboid_alloc(m, n, o);
 
-                err = clEnqueueReadBuffer(problem.getOpenCLHelper()->getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * m * n * o, rtmp[0][0], 0,
+                err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * m * n * o, rtmp[0][0], 0,
                                           NULL, NULL);
                 mgclCheckError(err, "Error: Failed to read rsquares array from device!");
 
@@ -642,7 +642,7 @@ namespace mgcl
         }
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(problem.openCLHelper->getProgram(), kernel_name, &err);
+        cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
         mgclCheckError(err, "Creating kernel");
 
         // assign kernel arguments
@@ -672,7 +672,7 @@ namespace mgcl
 
         err = MultigridEngine::updateGhosts(problem, level.dVIn, m, n, o, problem.ghosts, problem.ghosts, problem.ghosts);
         mgclCheckError(err, "Updating ghosts");
-        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper()->getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
+        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing residual kernel");
         err = MultigridEngine::updateGhosts(problem, level.dR, m, n, o, problem.ghosts, problem.ghosts, problem.ghosts);
         mgclCheckError(err, "Updating ghosts of r");
@@ -684,13 +684,13 @@ namespace mgcl
             {
                 // calculate 2-Norm
                 double ***rsquares = cuboid_alloc(m, n, o);
-                int pointer_flag = problem.getOpenCLHelper()->getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
-                cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper()->getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
+                int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
+                cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
                                                   sizeof(double) * m * n * o, rsquares[0][0], &err);
                 mgclCheckError(err, "Creating rsquares buffer");
 
                 // Create the compute kernel from the program
-                cl_kernel kernel_square = clCreateKernel(problem.openCLHelper->getProgram(), "residual_squared", &err);
+                cl_kernel kernel_square = clCreateKernel(problem.openCLHelper.getProgram(), "residual_squared", &err);
                 mgclCheckError(err, "Creating residual squared kernel");
 
                 pos = 0;
@@ -702,13 +702,13 @@ namespace mgcl
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &problem.ghosts);
                 mgclCheckError(err, "Setting residual squared kernel arguments");
 
-                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper()->getCommands(), kernel_square, 3, NULL, global, local, 0, NULL, NULL);
+                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 3, NULL, global, local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing residual squared kernel");
 
-                err = clFinish(problem.getOpenCLHelper()->getCommands());
+                err = clFinish(problem.getOpenCLHelper().getCommands());
                 mgclCheckError(err, "Waiting for kernels to finish");
 
-                err = clEnqueueReadBuffer(problem.getOpenCLHelper()->getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * m * n * o,
+                err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * m * n * o,
                                           rsquares[0][0], 0, NULL, NULL);
                 mgclCheckError(err, "Error: Failed to read rsquares array from device!");
 
@@ -727,12 +727,12 @@ namespace mgcl
             else
             {
                 // calculate Infinity-Norm (on host, TODO do on opencl)
-                err = clFinish(problem.getOpenCLHelper()->getCommands());
+                err = clFinish(problem.getOpenCLHelper().getCommands());
                 mgclCheckError(err, "Waiting for kernels to finish");
 
                 double ***rtmp = cuboid_alloc(m, n, o);
 
-                err = clEnqueueReadBuffer(problem.getOpenCLHelper()->getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * m * n * o, rtmp[0][0], 0,
+                err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * m * n * o, rtmp[0][0], 0,
                                           NULL, NULL);
                 mgclCheckError(err, "Error: Failed to read rsquares array from device!");
 
@@ -765,13 +765,13 @@ namespace mgcl
         // int err;
 
         // // create device buffers
-        // int pointer_flag = problem.getOpenCLHelper()->getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
+        // int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
         // cl_mem d_v =
-        //     clCreateBuffer(problem.getOpenCLHelper()->getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, v[0][0], &err);
+        //     clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, v[0][0], &err);
         // cl_mem d_f =
-        //     clCreateBuffer(problem.getOpenCLHelper()->getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, f[0][0], &err);
+        //     clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, f[0][0], &err);
         // cl_mem dR =
-        //     clCreateBuffer(problem.getOpenCLHelper()->getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, r[0][0], &err);
+        //     clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, r[0][0], &err);
 
         // mgcl_level_data data;
         // data.dR = dR;
@@ -784,9 +784,9 @@ namespace mgcl
         // double res = mgcl_residual(problem, &data, 1);
 
         // // read back results
-        // err = clEnqueueReadBuffer(problem.getOpenCLHelper()->getCommands(), d_v, CL_FALSE, 0, sizeof(double) * m * n * o, v[0][0], 0, NULL, NULL);
-        // err = clEnqueueReadBuffer(problem.getOpenCLHelper()->getCommands(), d_f, CL_FALSE, 0, sizeof(double) * m * n * o, f[0][0], 0, NULL, NULL);
-        // err = clEnqueueReadBuffer(problem.getOpenCLHelper()->getCommands(), dR, CL_TRUE, 0, sizeof(double) * m * n * o, r[0][0], 0, NULL, NULL);
+        // err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), d_v, CL_FALSE, 0, sizeof(double) * m * n * o, v[0][0], 0, NULL, NULL);
+        // err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), d_f, CL_FALSE, 0, sizeof(double) * m * n * o, f[0][0], 0, NULL, NULL);
+        // err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dR, CL_TRUE, 0, sizeof(double) * m * n * o, r[0][0], 0, NULL, NULL);
         // if (err != CL_SUCCESS)
         // {
         //     printf("Error: Failed to read output arrays from device!\n%s\n", mgcl_err_code(err));

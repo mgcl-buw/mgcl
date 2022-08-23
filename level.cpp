@@ -47,8 +47,8 @@ namespace mgcl
             return CL_SUCCESS;
 
         int err;
-        auto context = problem->getOpenCLHelper()->getContext();
-        auto deviceType = problem->getOpenCLHelper()->getDeviceType();
+        auto context = problem->getOpenCLHelper().getContext();
+        auto deviceType = problem->getOpenCLHelper().getDeviceType();
 
         // create d_v_in and d_f buffers on level zero and copy data to it only if buffers should not be reused
         if (num == 0)
@@ -66,7 +66,7 @@ namespace mgcl
                 dF = clCreateBuffer(context, CL_MEM_READ_WRITE,
                                     sizeof(double) * m * n * o, NULL, &err);
                 // TODO stencil_values
-                problem->getOpenCLHelper()->copyInputBuffers();
+                problem->getOpenCLHelper().copyInputBuffers();
             }
             else
             {

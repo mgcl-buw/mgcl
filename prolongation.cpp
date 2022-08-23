@@ -55,7 +55,7 @@ namespace mgcl
         auto problem = fine.problem;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(problem->openCLHelper->getProgram(), "prolongate_to_fine", &err);
+        cl_kernel kernel = clCreateKernel(problem->openCLHelper.getProgram(), "prolongate_to_fine", &err);
         mgclCheckError(err, "Creating kernel");
 
         // assign kernel arguments
@@ -85,7 +85,7 @@ namespace mgcl
         err = MultigridEngine::updateGhosts(*problem, coarse.dVIn, coarse.m, coarse.n, coarse.o, problem->ghosts, problem->ghosts,
                                             problem->ghosts);
         mgclCheckError(err, "Updating ghosts coarse");
-        err = clEnqueueNDRangeKernel(problem->openCLHelper->getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
+        err = clEnqueueNDRangeKernel(problem->openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing kernel");
         // err = MultigridEngine::updateGhosts(conf, fine.d_r, fine.m, fine.n, fine.o, conf->ghosts, conf->ghosts, conf->ghosts);
         // mgclCheckError(err, "Updating ghosts fine");

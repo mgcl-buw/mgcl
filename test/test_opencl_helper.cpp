@@ -58,4 +58,11 @@ TEST_CASE("OpenCLHelper")
         REQUIRE(openCLHelper2.getCommands() == openCLHelper.getCommands());
         REQUIRE(openCLHelper2.getDeviceId() == openCLHelper.getDeviceId());
     }
+
+    SECTION("isInitialized")
+    {
+        REQUIRE(!openCLHelper.isInitialized());
+        openCLHelper.init();
+        REQUIRE(openCLHelper.isInitialized());
+    }
 }

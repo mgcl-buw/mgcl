@@ -15,12 +15,12 @@
 
 #include "cuboid.hpp"
 #include "mgcl.hpp"
+#include "opencl_helper.hpp"
 
 namespace mgcl
 {
     // forward declarations
     class Level;
-    class OpenCLHelper;
     class MultigridEngine;
 
     // main interface class for using mgcl. Defines all the problem variables.
@@ -120,19 +120,21 @@ namespace mgcl
         int jacobi_iterations_per_kernel = 3;
 
         /* Manages OpenCL stuff */
-        std::shared_ptr<OpenCLHelper> openCLHelper = nullptr;
+        OpenCLHelper openCLHelper = OpenCLHelper(this);
 
         friend class OpenCLHelper;
         friend class Level;
         friend class MultigridEngine;
 
     public:
-        Problem(int _m, int _n, int _o, Cuboid _f, Cuboid _v);
-        Problem(int _m, int _n, int _o, double ***_f, double ***_v);
-        Problem(int _m, int _n, int _o, cl_mem _d_f, cl_mem _d_v);
-        Problem(int _m, int _n, int _o, Cuboid _f, Cuboid _v, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
-        Problem(int _m, int _n, int _o, double ***_f, double ***_v, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
-        Problem(int _m, int _n, int _o, cl_mem _d_f, cl_mem _d_v, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
+        Problem(int m_, int n_, int o_);
+        Problem(int m_, int n_, int o_, Cuboid &f_, Cuboid &v_);
+        Problem(int m_, int n_, int o_, double ***f_, double ***v_);
+        Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_);
+        Problem(int m_, int n_, int o_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
+        Problem(int m_, int n_, int o_, Cuboid &f_, Cuboid &v_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
+        Problem(int m_, int n_, int o_, double ***f_, double ***v_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
+        Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
         Problem(const Problem &) = delete;
         Problem &operator=(const Problem &) = delete;
         ~Problem() = default;
@@ -141,6 +143,8 @@ namespace mgcl
         bool checkParameters();
         int calculateAndSetMaxLevel();
         bool init();
+
+        // Can be used to reuse an OpenCL environment. Otherwise a default environment is created, when solve is called.
         int initOpenCL(cl_context context = nullptr, cl_command_queue commandQueue = nullptr, cl_device_id deviceId = nullptr);
         int readResults();
 
@@ -237,8 +241,7 @@ namespace mgcl
         cl_mem getDF() const;
         void setDF(const cl_mem &dF_);
 
-        std::shared_ptr<OpenCLHelper> getOpenCLHelper() const;
-        void setOpenCLHelper(const std::shared_ptr<OpenCLHelper> &openCLHelper_);
+        OpenCLHelper &getOpenCLHelper();
 
         std::string getKernelDir() const;
         void setKernelDir(const std::string &kernelDir_);
@@ -250,15 +253,11 @@ namespace mgcl
         void setDeviceType(const cl_device_type &deviceType_);
 
         cl_device_id getDeviceId() const;
-        void setDeviceId(const cl_device_id &deviceId_);
 
         cl_context getContext() const;
-        void setContext(const cl_context &context_);
 
         cl_command_queue getCommands() const;
-        void setCommands(const cl_command_queue &commands_);
 
         cl_program getProgram() const;
-        void setProgram(const cl_program &program_);
     };
 }

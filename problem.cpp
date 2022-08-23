@@ -7,35 +7,46 @@
 
 namespace mgcl
 {
-    Problem::Problem(int _m, int _n, int _o, Cuboid _f, Cuboid _v)
-        : Problem(_m, _n, _o, _f.getData(), _v.getData())
+    Problem::Problem(int m_, int n_, int o_)
+        : m(m_), n(n_), o(o_)
     {
     }
 
-    Problem::Problem(int _m, int _n, int _o, Cuboid _f, Cuboid _v, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
-        : Problem(_m, _n, _o, _f, _v)
-    {
-        initOpenCL(context, commandQueue, deviceId);
-    }
-
-    Problem::Problem(int _m, int _n, int _o, double ***_f, double ***_v)
-        : m(_m), n(_n), o(_o), f(_f), v(_v)
-    {
-    }
-
-    Problem::Problem(int _m, int _n, int _o, double ***_f, double ***_v, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
-        : Problem(_m, _n, _o, _f, _v)
+    Problem::Problem(int m_, int n_, int o_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
+        : Problem(m_, n_, o_)
     {
         initOpenCL(context, commandQueue, deviceId);
     }
 
-    Problem::Problem(int _m, int _n, int _o, cl_mem _d_f, cl_mem _d_v)
-        : m(_m), n(_n), o(_o), dF(_d_f), dV(_d_v)
+    Problem::Problem(int m_, int n_, int o_, Cuboid &f_, Cuboid &v_)
+        : Problem(m_, n_, o_, f_.getData(), v_.getData())
     {
     }
 
-    Problem::Problem(int _m, int _n, int _o, cl_mem _f, cl_mem _v, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
-        : Problem(_m, _n, _o, _f, _v)
+    Problem::Problem(int m_, int n_, int o_, Cuboid &f_, Cuboid &v_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
+        : Problem(m_, n_, o_, f_, v_)
+    {
+        initOpenCL(context, commandQueue, deviceId);
+    }
+
+    Problem::Problem(int m_, int n_, int o_, double ***f_, double ***v_)
+        : m(m_), n(n_), o(o_), f(f_), v(v_)
+    {
+    }
+
+    Problem::Problem(int m_, int n_, int o_, double ***f_, double ***v_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
+        : Problem(m_, n_, o_, f_, v_)
+    {
+        initOpenCL(context, commandQueue, deviceId);
+    }
+
+    Problem::Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_)
+        : m(m_), n(n_), o(o_), dF(d_f_), dV(d_v_)
+    {
+    }
+
+    Problem::Problem(int m_, int n_, int o_, cl_mem f_, cl_mem v_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
+        : Problem(m_, n_, o_, f_, v_)
     {
         initOpenCL(context, commandQueue, deviceId);
     }
@@ -141,7 +152,7 @@ namespace mgcl
         // check opencl components if device buffers should be reused
         if (reuse_opencl_buffers || copy_buffer_data)
         {
-            bool ret = openCLHelper->checkParameters();
+            bool ret = openCLHelper.checkParameters();
             if (!ret)
                 return false;
         }
@@ -248,13 +259,12 @@ namespace mgcl
     int Problem::initOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
     {
         int err = CL_SUCCESS;
-        if (!openCLHelper)
+        if (!openCLHelper.isInitialized())
         {
-            openCLHelper = std::make_shared<OpenCLHelper>(this);
-            openCLHelper->setContext(context);
-            openCLHelper->setCommands(commandQueue);
-            openCLHelper->setDeviceId(deviceId);
-            err = openCLHelper->init();
+            openCLHelper.setContext(context);
+            openCLHelper.setCommands(commandQueue);
+            openCLHelper.setDeviceId(deviceId);
+            err = openCLHelper.init();
             use_opencl = true;
         }
         return err;
@@ -264,7 +274,7 @@ namespace mgcl
      * were specified */
     int Problem::readResults()
     {
-        int err = clFinish(openCLHelper->getCommands());
+        int err = clFinish(openCLHelper.getCommands());
         mgclCheckError(err, "Waiting for kernels to finish");
 
         if (reuse_opencl_buffers || copy_buffer_data)
@@ -276,7 +286,7 @@ namespace mgcl
         }
 
         // read back results TODO: only for testing purposes, maybe define TESTING?
-        err = clEnqueueReadBuffer(openCLHelper->getCommands(), levels[0]->dVIn, CL_TRUE, 0,
+        err = clEnqueueReadBuffer(openCLHelper.getCommands(), levels[0]->dVIn, CL_TRUE, 0,
                                   sizeof(double) * levels[0]->m * levels[0]->n * levels[0]->o, levels[0]->v[0][0], 0, NULL, NULL);
         mgclCheckError(err, "Error: Failed to read output arrays from device!");
 
@@ -336,7 +346,7 @@ namespace mgcl
 
         // copy resulting v to d_v on device
         if (copy_buffer_data)
-            openCLHelper->copyOutputBuffers();
+            openCLHelper.copyOutputBuffers();
 
         // write result into v on host
         if (read_results)
@@ -662,91 +672,62 @@ namespace mgcl
         dF = dF_;
     }
 
-    std::shared_ptr<OpenCLHelper> Problem::getOpenCLHelper() const
+    OpenCLHelper &Problem::getOpenCLHelper()
     {
         return openCLHelper;
     }
 
-    void Problem::setOpenCLHelper(const std::shared_ptr<OpenCLHelper> &openCLHelper_)
-    {
-        openCLHelper = openCLHelper_;
-    }
-
     std::string Problem::getDeviceName() const
     {
-        return openCLHelper ? openCLHelper->deviceName : "";
+        return openCLHelper.deviceName;
     }
 
     void Problem::setDeviceName(const std::string &deviceName_)
     {
-        if (openCLHelper)
-            openCLHelper->deviceName = deviceName_;
+        if (!openCLHelper.isInitialized())
+            openCLHelper.deviceName = deviceName_;
     }
 
     cl_device_id Problem::getDeviceId() const
     {
-        return openCLHelper ? openCLHelper->deviceId : nullptr;
-    }
-
-    void Problem::setDeviceId(const cl_device_id &deviceId_)
-    {
-        if (openCLHelper)
-            openCLHelper->deviceId = deviceId_;
+        return openCLHelper.deviceId;
     }
 
     cl_command_queue Problem::getCommands() const
     {
-        return openCLHelper ? openCLHelper->commands : nullptr;
-    }
-
-    void Problem::setCommands(const cl_command_queue &commands_)
-    {
-        if (openCLHelper)
-            openCLHelper->commands = commands_;
+        return openCLHelper.commands;
     }
 
     std::string Problem::getKernelDir() const
     {
-        return openCLHelper ? openCLHelper->kernelDir : "";
+        return openCLHelper.kernelDir;
     }
 
     void Problem::setKernelDir(const std::string &kernelDir_)
     {
-        if (openCLHelper)
-            openCLHelper->kernelDir = kernelDir_;
+        if (!openCLHelper.isInitialized())
+            openCLHelper.kernelDir = kernelDir_;
     }
 
     cl_device_type Problem::getDeviceType() const
     {
-        return openCLHelper ? openCLHelper->deviceType : CL_DEVICE_TYPE_DEFAULT;
+        return openCLHelper.deviceType;
     }
 
     void Problem::setDeviceType(const cl_device_type &deviceType_)
     {
-        if (openCLHelper)
-            openCLHelper->deviceType = deviceType_;
+        if (!openCLHelper.isInitialized())
+            openCLHelper.deviceType = deviceType_;
     }
 
     cl_context Problem::getContext() const
     {
-        return openCLHelper ? openCLHelper->context : nullptr;
-    }
-
-    void Problem::setContext(const cl_context &context_)
-    {
-        if (openCLHelper)
-            openCLHelper->context = context_;
+        return openCLHelper.context;
     }
 
     cl_program Problem::getProgram() const
     {
-        return openCLHelper ? openCLHelper->program : nullptr;
-    }
-
-    void Problem::setProgram(const cl_program &program_)
-    {
-        if (openCLHelper)
-            openCLHelper->program = program_;
+        return openCLHelper.program;
     }
 
     double ***Problem::getV() const

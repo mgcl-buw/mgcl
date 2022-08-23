@@ -112,6 +112,15 @@ namespace mgcl
     }
 
     /**
+     * @brief Returns true if OpenCL platform is initialized, false otherwise.
+     *
+     */
+    bool OpenCLHelper::isInitialized()
+    {
+        return context && commands && deviceId;
+    }
+
+    /**
      * @brief Checks if OpenCL-Parameters are valid (only useful if reuse_opencl_buffers || copy_buffer_data)
      *
      * @return true All good.

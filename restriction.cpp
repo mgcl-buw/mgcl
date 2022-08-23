@@ -65,7 +65,7 @@ namespace mgcl
         auto problem = fine.problem;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(problem->openCLHelper->getProgram(), "restrict_to_coarse", &err);
+        cl_kernel kernel = clCreateKernel(problem->openCLHelper.getProgram(), "restrict_to_coarse", &err);
         mgclCheckError(err, "Creating kernel");
 
         // assign kernel arguments
@@ -93,7 +93,7 @@ namespace mgcl
 
         err = MultigridEngine::updateGhosts(*problem, fine.dR, fine.m, fine.n, fine.o, problem->ghosts, problem->ghosts, problem->ghosts);
         mgclCheckError(err, "Updating fine ghosts");
-        err = clEnqueueNDRangeKernel(problem->openCLHelper->getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
+        err = clEnqueueNDRangeKernel(problem->openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing restriction kernel");
         err = MultigridEngine::updateGhosts(*problem, coarse.dF, coarse.m, coarse.n, coarse.o, problem->ghosts, problem->ghosts,
                                             problem->ghosts);
