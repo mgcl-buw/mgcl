@@ -320,7 +320,9 @@ namespace mgcl
         // set up data for each level TODO reuse device buffers in final code
         if (!init())
             return;
-        // mgcl_init_opencl(conf, data);
+
+        if (openCLHelper.init() != CL_SUCCESS)
+            return;
 
         // calculate initial residual
         double initres;
