@@ -6,11 +6,9 @@ namespace mgcl
     OpenCLHelper::~OpenCLHelper()
     {
         clReleaseProgram(program);
-        if (!problem->getReuseOpenclBuffers() && !problem->getCopyBufferData())
-        {
-            clReleaseCommandQueue(commands);
-            clReleaseContext(context);
-        }
+        clReleaseCommandQueue(commands);
+        clReleaseContext(context);
+        clReleaseDevice(deviceId);
     }
 
     int OpenCLHelper::init()
@@ -77,6 +75,18 @@ namespace mgcl
             // Create a command queue
             commands = clCreateCommandQueue(context, deviceId, 0, &err);
             mgclCheckError(err, "Creating command queue");
+        }
+        else
+        {
+            // retain OpenCL environment, i.e. make sure, everything is valid while reusing it in mgcl
+            err = clRetainContext(context);
+            mgclCheckError(err, "clRetainContext");
+
+            err = clRetainCommandQueue(commands);
+            mgclCheckError(err, "clRetainCommandQueue");
+
+            err = clRetainDevice(deviceId);
+            mgclCheckError(err, "clRetainDevice");
         }
 
         // read kernel source
