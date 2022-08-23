@@ -24,7 +24,7 @@ namespace mgcl
         double ***field_3d;
 
     public:
-        Cuboid(int m_, int n_, int o_);
+        Cuboid(int m_, int n_, int o_, double value = 0);
         Cuboid(const Cuboid &c);
         ~Cuboid();
 
@@ -32,8 +32,9 @@ namespace mgcl
         int getN() const;
         int getM() const;
         double ***getData() const;
-
         double **operator[](int index);
+        void fillRandom(double low = 0, double high = 0);
+        std::vector<double> &field1d();
     };
 
     double ***cuboid_alloc(int m, int n, int o);

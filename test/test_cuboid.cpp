@@ -48,4 +48,24 @@ TEST_CASE("cuboid class")
         REQUIRE(c2.getData() != c.getData());
         REQUIRE(c2[0][0][0] == c[0][0][0]);
     }
+
+    SECTION("default value")
+    {
+        for (auto v : c.field1d())
+            REQUIRE(v == 0.0);
+
+        mgcl::Cuboid c2(2, 2, 2, 5);
+        for (auto v : c2.field1d())
+            REQUIRE(v == 5.0);
+    }
+
+    SECTION("fillRandom")
+    {
+        c.fillRandom(3.5, 5.5);
+        for (auto v : c.field1d())
+        {
+            REQUIRE(v >= 3.5);
+            REQUIRE(v <= 5.5);
+        }
+    }
 }

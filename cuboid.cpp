@@ -1,18 +1,8 @@
-/*
- *  cuboid.c
- *  mgab
- *
- *  Created by Matthias Bolten on 08.08.06.
- *  Copyright 2006 Matthias Bolten. All rights reserved.
- *
- */
-
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
 #include "cuboid.hpp"
-#include <stdio.h>
-#include <stdlib.h>
+
+#include <cstdio>
+#include <cstdlib>
+#include <random>
 
 namespace mgcl
 {
@@ -67,7 +57,7 @@ namespace mgcl
         return;
     }
 
-    Cuboid::Cuboid(int m_, int n_, int o_)
+    Cuboid::Cuboid(int m_, int n_, int o_, double value)
         : m(m_),
           n(n_),
           o(o_)
@@ -75,6 +65,9 @@ namespace mgcl
         int i, j;
 
         field_1d.resize(m * n * o);
+        for (i = 0; i < field_1d.size(); i++)
+            field_1d[i] = value;
+
         field_3d = new double **[m];
         for (i = 0; i < m; i++)
         {
@@ -138,5 +131,24 @@ namespace mgcl
     double **Cuboid::operator[](int index)
     {
         return field_3d[index];
+    }
+
+    /**
+     * @brief Fills Cuboid with random values between low and high, which default to 0 and 1.
+     *
+     */
+    void Cuboid::fillRandom(double low, double high)
+    {
+        std::random_device dev;
+        std::mt19937 rng(dev());
+        std::uniform_real_distribution<double> dist(low, high);
+
+        for (int i = 0; i < field_1d.size(); i++)
+            field_1d[i] = dist(rng);
+    }
+
+    std::vector<double> &Cuboid::field1d()
+    {
+        return field_1d;
     }
 }
