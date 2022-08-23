@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include "../cuboid.hpp"
 #include "../opencl_helper.hpp"
@@ -277,6 +278,82 @@ TEST_CASE("init")
                 {
                     REQUIRE(v[i][j][k] == p.getLevels()[0]->getV()[i + 1][j + 1][k + 1]);
                     REQUIRE(f[i][j][k] == p.getLevels()[0]->getF()[i + 1][j + 1][k + 1]);
+                }
+
+        for (int lv = 0; lv < p.getMaxlevel(); lv++)
+        {
+            REQUIRE(p.getLevels()[lv]->getM() == m >> lv);
+            REQUIRE(p.getLevels()[lv]->getN() == n >> lv);
+            REQUIRE(p.getLevels()[lv]->getO() == o >> lv);
+
+            REQUIRE(p.getLevels()[lv]->getMgh() == p.getLevels()[lv]->getM() + 2 * p.getGhosts());
+            REQUIRE(p.getLevels()[lv]->getNgh() == p.getLevels()[lv]->getN() + 2 * p.getGhosts());
+            REQUIRE(p.getLevels()[lv]->getOgh() == p.getLevels()[lv]->getO() + 2 * p.getGhosts());
+
+            REQUIRE(p.getLevels()[lv]->getR());
+
+            // TODO check h when used
+        }
+    }
+
+    SECTION("setting ghosts_in")
+    {
+        // run this section for ghosts_in = 0, 1 and 2
+        auto ghosts_in = GENERATE(0, 1, 2);
+        int mgh = m + 2 * ghosts_in;
+        int ngh = n + 2 * ghosts_in;
+        int ogh = o + 2 * ghosts_in;
+
+        mgcl::Cuboid v2(mgh, ngh, ogh);
+        mgcl::Cuboid f2(mgh, ngh, ogh);
+        mgcl::Problem p2(m, n, o, v2, f2);
+
+        p2.setGhostsIn(ghosts_in);
+        REQUIRE(p2.init());
+        REQUIRE(p2.getLevels().size() == p2.getMaxlevel());
+
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                for (int k = 0; k < o; k++)
+                {
+                    REQUIRE(v2[i + ghosts_in][j + ghosts_in][k + ghosts_in] == p2.getLevels()[0]->getV()[i + 1][j + 1][k + 1]);
+                    REQUIRE(f2[i + ghosts_in][j + ghosts_in][k + ghosts_in] == p2.getLevels()[0]->getF()[i + 1][j + 1][k + 1]);
+                }
+
+        for (int lv = 0; lv < p2.getMaxlevel(); lv++)
+        {
+            REQUIRE(p2.getLevels()[lv]->getM() == m >> lv);
+            REQUIRE(p2.getLevels()[lv]->getN() == n >> lv);
+            REQUIRE(p2.getLevels()[lv]->getO() == o >> lv);
+
+            REQUIRE(p2.getLevels()[lv]->getMgh() == p2.getLevels()[lv]->getM() + 2 * p2.getGhosts());
+            REQUIRE(p2.getLevels()[lv]->getNgh() == p2.getLevels()[lv]->getN() + 2 * p2.getGhosts());
+            REQUIRE(p2.getLevels()[lv]->getOgh() == p2.getLevels()[lv]->getO() + 2 * p2.getGhosts());
+
+            REQUIRE(p2.getLevels()[lv]->getR());
+
+            // TODO check h when used
+        }
+    }
+
+    SECTION("setting ghosts")
+    {
+        // run this section for ghosts = 1, 2 and 3
+        auto ghosts = GENERATE(1, 2, 3);
+        int mgh = m + 2 * ghosts;
+        int ngh = n + 2 * ghosts;
+        int ogh = o + 2 * ghosts;
+
+        p.setGhosts(ghosts);
+        REQUIRE(p.init());
+        REQUIRE(p.getLevels().size() == p.getMaxlevel());
+
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                for (int k = 0; k < o; k++)
+                {
+                    REQUIRE(v[i][j][k] == p.getLevels()[0]->getV()[i + ghosts][j + ghosts][k + ghosts]);
+                    REQUIRE(f[i][j][k] == p.getLevels()[0]->getF()[i + ghosts][j + ghosts][k + ghosts]);
                 }
 
         for (int lv = 0; lv < p.getMaxlevel(); lv++)
