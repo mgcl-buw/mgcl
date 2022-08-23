@@ -123,4 +123,139 @@ namespace mgcl
 
         return CL_SUCCESS;
     }
+
+    int Level::getMgh() const
+    {
+        return mgh;
+    }
+
+    int Level::getNgh() const
+    {
+        return ngh;
+    }
+
+    int Level::getOgh() const
+    {
+        return ogh;
+    }
+
+    int Level::getNum() const
+    {
+        return num;
+    }
+
+    double ***Level::getF() const
+    {
+        return f;
+    }
+
+    void Level::setF(double ***f_)
+    {
+        f = f_;
+    }
+
+    double ***Level::getStencilValues() const
+    {
+        return stencil_values;
+    }
+
+    int Level::getN() const
+    {
+        return n;
+    }
+
+    void Level::setStencilValues(double ***stencilValues)
+    {
+        stencil_values = stencilValues;
+    }
+
+    int Level::getO() const
+    {
+        return o;
+    }
+
+    cl_mem Level::getDVIn() const
+    {
+        return dVIn;
+    }
+
+    void Level::setDVIn(const cl_mem &dVIn_)
+    {
+        dVIn = dVIn_;
+    }
+
+    cl_mem Level::getDF() const
+    {
+        return dF;
+    }
+
+    void Level::setDF(const cl_mem &dF_)
+    {
+        dF = dF_;
+    }
+
+    cl_mem Level::getDStencilValues() const
+    {
+        return dStencilValues;
+    }
+
+    void Level::setDStencilValues(const cl_mem &dStencilValues_)
+    {
+        dStencilValues = dStencilValues_;
+    }
+
+    double ***Level::getV() const
+    {
+        return v;
+    }
+
+    void Level::setV(double ***v_)
+    {
+        v = v_;
+    }
+
+    double ***Level::getR() const
+    {
+        return r;
+    }
+
+    void Level::setR(double ***r_)
+    {
+        r = r_;
+    }
+
+    int Level::getM() const
+    {
+        return m;
+    }
+
+    double Level::getH() const
+    {
+        return h;
+    }
+
+    void Level::setH(double h_)
+    {
+        h = h_;
+    }
+
+    cl_mem Level::getDVOut() const
+    {
+        return dVOut;
+    }
+
+    void Level::setDVOut(const cl_mem &dVOut_)
+    {
+        dVOut = dVOut_;
+    }
+
+    cl_mem Level::getDR() const
+    {
+        return dR;
+    }
+
+    void Level::setDR(const cl_mem &dR_)
+    {
+        dR = dR_;
+    }
 }

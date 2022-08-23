@@ -240,3 +240,68 @@ TEST_CASE("set OpenCLHelper values")
         REQUIRE(p.getDeviceName() == "");
     }
 }
+
+/**
+ * @brief Should set maxlevel, create buffers and set h for each level
+ *
+ */
+TEST_CASE("init")
+{
+    int m = 4;
+    int n = 4;
+    int o = 4;
+    mgcl::Cuboid v(m, n, o);
+    mgcl::Cuboid f(m, n, o);
+    mgcl::Problem p(m, n, o, f, v);
+    v.fillRandom();
+    f.fillRandom();
+
+    SECTION("default conf, v and f nullptr")
+    {
+        mgcl::Problem p2(8, 8, 8);
+        REQUIRE(!p2.init());
+    }
+
+    /**
+     * @brief Should create level buffers on host only.
+     *
+     */
+    SECTION("default conf")
+    {
+        REQUIRE(p.init());
+        REQUIRE(p.getLevels().size() == p.getMaxlevel());
+
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                for (int k = 0; k < o; k++)
+                {
+                    REQUIRE(v[i][j][k] == p.getLevels()[0]->getV()[i + 1][j + 1][k + 1]);
+                    REQUIRE(f[i][j][k] == p.getLevels()[0]->getF()[i + 1][j + 1][k + 1]);
+                }
+
+        for (int lv = 0; lv < p.getMaxlevel(); lv++)
+        {
+            REQUIRE(p.getLevels()[lv]->getM() == m >> lv);
+            REQUIRE(p.getLevels()[lv]->getN() == n >> lv);
+            REQUIRE(p.getLevels()[lv]->getO() == o >> lv);
+
+            REQUIRE(p.getLevels()[lv]->getMgh() == p.getLevels()[lv]->getM() + 2 * p.getGhosts());
+            REQUIRE(p.getLevels()[lv]->getNgh() == p.getLevels()[lv]->getN() + 2 * p.getGhosts());
+            REQUIRE(p.getLevels()[lv]->getOgh() == p.getLevels()[lv]->getO() + 2 * p.getGhosts());
+
+            REQUIRE(p.getLevels()[lv]->getR());
+
+            // TODO check h when used
+        }
+    }
+
+    SECTION("reuse OpenCL buffers")
+    {
+        REQUIRE(false);
+    }
+
+    SECTION("copy OpenCL buffers")
+    {
+        REQUIRE(false);
+    }
+}

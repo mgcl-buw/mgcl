@@ -2,10 +2,12 @@
 
 #include "multigrid_engine.hpp"
 #include "opencl_helper.hpp"
-#include "problem.hpp"
 
 namespace mgcl
 {
+    // forward declarations
+    class Problem;
+
     class Level
     {
     private:
@@ -31,6 +33,7 @@ namespace mgcl
         int ogh;
 
         /* spacing of real grid on current level */
+        // TODO not used yet
         double h;
 
         /* Stencil values per grid point. Must be given by the user if a varying symmetric stencil shall be used.
@@ -96,125 +99,11 @@ namespace mgcl
 
         cl_mem getDStencilValues() const;
         void setDStencilValues(const cl_mem &dStencilValues_);
+
+        int getMgh() const;
+
+        int getNgh() const;
+
+        int getOgh() const;
     };
-
-    inline int Level::getNum() const
-    {
-        return num;
-    }
-
-    inline double ***Level::getF() const
-    {
-        return f;
-    }
-
-    inline void Level::setF(double ***f_)
-    {
-        f = f_;
-    }
-
-    inline double ***Level::getStencilValues() const
-    {
-        return stencil_values;
-    }
-
-    inline int Level::getN() const
-    {
-        return n;
-    }
-
-    inline void Level::setStencilValues(double ***stencilValues)
-    {
-        stencil_values = stencilValues;
-    }
-
-    inline int Level::getO() const
-    {
-        return o;
-    }
-
-    inline cl_mem Level::getDVIn() const
-    {
-        return dVIn;
-    }
-
-    inline void Level::setDVIn(const cl_mem &dVIn_)
-    {
-        dVIn = dVIn_;
-    }
-
-    inline cl_mem Level::getDF() const
-    {
-        return dF;
-    }
-
-    inline void Level::setDF(const cl_mem &dF_)
-    {
-        dF = dF_;
-    }
-
-    inline cl_mem Level::getDStencilValues() const
-    {
-        return dStencilValues;
-    }
-
-    inline void Level::setDStencilValues(const cl_mem &dStencilValues_)
-    {
-        dStencilValues = dStencilValues_;
-    }
-
-    inline double ***Level::getV() const
-    {
-        return v;
-    }
-
-    inline void Level::setV(double ***v_)
-    {
-        v = v_;
-    }
-
-    inline double ***Level::getR() const
-    {
-        return r;
-    }
-
-    inline void Level::setR(double ***r_)
-    {
-        r = r_;
-    }
-
-    inline int Level::getM() const
-    {
-        return m;
-    }
-
-    inline double Level::getH() const
-    {
-        return h;
-    }
-
-    inline void Level::setH(double h_)
-    {
-        h = h_;
-    }
-
-    inline cl_mem Level::getDVOut() const
-    {
-        return dVOut;
-    }
-
-    inline void Level::setDVOut(const cl_mem &dVOut_)
-    {
-        dVOut = dVOut_;
-    }
-
-    inline cl_mem Level::getDR() const
-    {
-        return dR;
-    }
-
-    inline void Level::setDR(const cl_mem &dR_)
-    {
-        dR = dR_;
-    }
 }

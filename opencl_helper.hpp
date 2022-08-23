@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #endif // CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -7,8 +9,6 @@
 #ifndef CL_TARGET_OPENCL_VERSION
 #define CL_TARGET_OPENCL_VERSION 120
 #endif // CL_TARGET_OPENCL_VERSION
-
-#include <string>
 
 #include <CL/cl.h>
 

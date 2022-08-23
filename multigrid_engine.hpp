@@ -1,10 +1,22 @@
 #pragma once
 
-#include "level.hpp"
+#ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#endif // CL_USE_DEPRECATED_OPENCL_1_2_APIS
+
+#ifndef CL_TARGET_OPENCL_VERSION
+#define CL_TARGET_OPENCL_VERSION 120
+#endif // CL_TARGET_OPENCL_VERSION
+
+#include <CL/cl.h>
+
+#include "mgcl.hpp"
 #include "problem.hpp"
 
 namespace mgcl
 {
+    // forward declaration
+    class Level;
 
     /**
      * @brief Encapsulates all relevant methods that execute the logic of the multigrid method.

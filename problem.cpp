@@ -225,7 +225,10 @@ namespace mgcl
                 int ng = (levels[level - 1]->getN() - 2 * ghosts) / 2 + 2 * ghosts;
                 int og = (levels[level - 1]->getO() - 2 * ghosts) / 2 + 2 * ghosts;
 
-                auto lv = std::make_shared<Level>(this, level, mg, ng, og);
+                auto lv = std::make_shared<Level>(this, level,
+                                                  levels[level - 1]->getM() / 2,
+                                                  levels[level - 1]->getN() / 2,
+                                                  levels[level - 1]->getO() / 2);
 
                 if (!use_opencl)
                 {
@@ -319,9 +322,6 @@ namespace mgcl
 
         // set up data for each level TODO reuse device buffers in final code
         if (!init())
-            return;
-
-        if (openCLHelper.init() != CL_SUCCESS)
             return;
 
         // calculate initial residual
