@@ -55,6 +55,9 @@ set(SOURCES_TEST
 test/test_cuboid.cpp
 test/test_problem_conf.cpp
 test/test_opencl_helper.cpp
+test/test_utility.hpp
+test/test_utility.cpp
+test/test_test_utility.cpp
 )
 
 add_executable(tests ${SOURCES_TEST})
