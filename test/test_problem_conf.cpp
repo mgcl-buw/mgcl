@@ -4,6 +4,7 @@
 #include "../cuboid.hpp"
 #include "../opencl_helper.hpp"
 #include "../problem.hpp"
+#include "test_utility.hpp"
 
 /**
  * @brief Tests if config parameters of Problem are working correctly, including setting things up.
@@ -56,7 +57,7 @@ TEST_CASE("Problem conf")
     }
 }
 
-TEST_CASE("checkParameters")
+TEST_CASE("Problem::checkParameters")
 {
     mgcl::Cuboid v(8, 8, 8);
     mgcl::Cuboid f(8, 8, 8);
@@ -112,7 +113,7 @@ TEST_CASE("checkParameters")
     }
 }
 
-TEST_CASE("calculateAndSetMaxLevel")
+TEST_CASE("Problem::calculateAndSetMaxLevel")
 {
     SECTION("m min")
     {
@@ -160,12 +161,13 @@ TEST_CASE("calculateAndSetMaxLevel")
     }
 }
 
-TEST_CASE("initOpenCL, not reusing environment")
+TEST_CASE("Problem::initOpenCL, not reusing environment")
 {
     mgcl::Problem p(4, 4, 4);
     REQUIRE(!p.getOpenCLHelper().isInitialized());
     REQUIRE(p.getUseOpencl() == false);
 
+    p.setUseOpencl(true);
     p.initOpenCL();
     REQUIRE(p.getUseOpencl() == true);
     REQUIRE(p.getOpenCLHelper().isInitialized());
@@ -174,7 +176,7 @@ TEST_CASE("initOpenCL, not reusing environment")
     REQUIRE(p.getDeviceId() != nullptr);
 }
 
-TEST_CASE("initOpenCL, reusing environment")
+TEST_CASE("Problem::initOpenCL, reusing environment")
 {
     mgcl::Problem p(4, 4, 4);
     REQUIRE(!p.getOpenCLHelper().isInitialized());
@@ -183,7 +185,7 @@ TEST_CASE("initOpenCL, reusing environment")
     mgcl::OpenCLHelper openCLHelper(&p);
     openCLHelper.init();
 
-    p.initOpenCL(openCLHelper.getContext(), openCLHelper.getCommands(), openCLHelper.getDeviceId());
+    p.reuseOpenCL(openCLHelper.getContext(), openCLHelper.getCommands(), openCLHelper.getDeviceId());
     REQUIRE(p.getUseOpencl() == true);
     REQUIRE(p.getOpenCLHelper().isInitialized());
     REQUIRE(p.getCommands() != nullptr);
@@ -246,7 +248,7 @@ TEST_CASE("set OpenCLHelper values")
  * @brief Should set maxlevel, create buffers and set h for each level
  *
  */
-TEST_CASE("init")
+TEST_CASE("Problem::init")
 {
     int m = 4;
     int n = 4;
@@ -374,7 +376,49 @@ TEST_CASE("init")
 
     SECTION("reuse OpenCL buffers")
     {
-        REQUIRE(false);
+        int ghosts = 1;
+        mgcl::Cuboid vgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
+        mgcl::Cuboid fgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
+
+        mgcl_test::TestUtility tu;
+        cl_mem d_v = tu.createOpenCLBuffer(vgh);
+        cl_mem d_f = tu.createOpenCLBuffer(fgh);
+
+        mgcl::Problem p2(m, n, o, d_f, d_v);
+        p2.setGhostsIn(ghosts);
+        p2.setReuseOpenclBuffers(true);
+        REQUIRE(p2.getDF() == d_f);
+        REQUIRE(p2.getDV() == d_v);
+        REQUIRE(p2.getOpenCLHelper().getProblem() == &p2);
+
+        REQUIRE(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()) == CL_SUCCESS);
+        REQUIRE(p2.init());
+        REQUIRE(p2.getLevels().size() == p2.getMaxlevel());
+
+        // no host data is created
+        REQUIRE(!p2.getV());
+        REQUIRE(!p2.getF());
+        for (int lv = 0; lv < p2.getMaxlevel(); lv++)
+        {
+            REQUIRE(!p2.getLevels()[lv]->getV());
+            REQUIRE(!p2.getLevels()[lv]->getF());
+            REQUIRE(!p2.getLevels()[lv]->getR());
+        }
+
+        // buffers are created
+        REQUIRE(p2.getDV() == d_v);
+        REQUIRE(p2.getDF() == d_f);
+        REQUIRE(p2.getLevels()[0]);
+        REQUIRE(p2.getLevels()[0]->getDVIn() == d_v);
+        REQUIRE(p2.getLevels()[0]->getDF() == d_f);
+        for (int lv = 0; lv < p2.getMaxlevel(); lv++)
+        {
+            REQUIRE(p2.getLevels()[lv]);
+            REQUIRE(p2.getLevels()[lv]->getDVIn());
+            REQUIRE(p2.getLevels()[lv]->getDVOut());
+            REQUIRE(p2.getLevels()[lv]->getDF());
+            REQUIRE(p2.getLevels()[lv]->getDR());
+        }
     }
 
     SECTION("copy OpenCL buffers")

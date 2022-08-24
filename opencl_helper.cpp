@@ -5,20 +5,23 @@ namespace mgcl
 {
     OpenCLHelper::~OpenCLHelper()
     {
-        clReleaseProgram(program);
-        clReleaseCommandQueue(commands);
-        clReleaseContext(context);
-        clReleaseDevice(deviceId);
+        release();
     }
 
+    /**
+     * @brief Initializes or retains OpenCL Environment. If a new environment shall be created subsequently, release
+     * must be called first.
+     *
+     * @return int OpenCL error code.
+     */
     int OpenCLHelper::init()
     {
         int err, i;
         cl_uint numPlatforms;
         cl_device_id device_id_;
 
-        // initialize opencl stuff if buffers should not be reused
-        if (!problem->getReuseOpenclBuffers() && !problem->getCopyBufferData())
+        // initialize opencl stuff if not done yet and if buffers should not be reused
+        if (!isInitialized() && !problem->getReuseOpenclBuffers() && !problem->getCopyBufferData())
         {
             // Find number of platforms
             err = clGetPlatformIDs(0, nullptr, &numPlatforms);
@@ -122,6 +125,46 @@ namespace mgcl
     }
 
     /**
+     * @brief Releases OpenCL environment, i.e. program, context, commandQueue and deviceId.
+     *
+     * @return int OpenCL error code.
+     */
+    int OpenCLHelper::release()
+    {
+        int err = CL_SUCCESS;
+
+        if (program)
+        {
+            err = clReleaseProgram(program);
+            mgclCheckError(err, "clReleaseProgram");
+            program = nullptr;
+        }
+
+        if (context)
+        {
+            err = clReleaseContext(context);
+            mgclCheckError(err, "clReleaseContext");
+            context = nullptr;
+        }
+
+        if (commands)
+        {
+            err = clReleaseCommandQueue(commands);
+            mgclCheckError(err, "clReleaseCommandQueue");
+            commands = nullptr;
+        }
+
+        if (deviceId)
+        {
+            err = clReleaseDevice(deviceId);
+            mgclCheckError(err, "clReleaseDevice");
+            deviceId = nullptr;
+        }
+
+        return err;
+    }
+
+    /**
      * @brief Returns true if OpenCL platform is initialized, false otherwise.
      *
      */
@@ -140,7 +183,7 @@ namespace mgcl
     {
         if (problem->getReuseOpenclBuffers() || problem->getCopyBufferData())
         {
-            if (problem->getLevels()[0]->getDVIn() == nullptr || problem->getLevels()[0]->getF() == nullptr)
+            if (problem->getDV() == nullptr || problem->getDF() == nullptr)
             {
                 printf("OpenCL buffers d_v and d_f not set but reuse_opencl_buffers or copy_buffer_data specified. "
                        "Aborting.\n");
@@ -179,7 +222,7 @@ namespace mgcl
 
             size_t bufsize;
             int sizeNeeded = sizeof(double) * (m + 2 * ghosts) * (n + 2 * ghosts) * (o + 2 * ghosts);
-            int err = clGetMemObjectInfo(problem->getLevels()[0]->getDVIn(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            int err = clGetMemObjectInfo(problem->getDV(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
             mgclCheckError(err, "Querying buffer size of d_v\n");
             if (bufsize != sizeNeeded)
             {
@@ -187,7 +230,7 @@ namespace mgcl
                 return false;
             }
 
-            err = clGetMemObjectInfo(problem->getLevels()[0]->getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            err = clGetMemObjectInfo(problem->getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
             mgclCheckError(err, "Querying buffer size of d_f\n");
             if (bufsize != sizeNeeded)
             {
@@ -552,6 +595,11 @@ namespace mgcl
             fprintf(stderr, "Error code was \"%s\" (%d)\n", mgcl_err_code(err), err);
             exit(EXIT_FAILURE);
         }
+    }
+
+    Problem *OpenCLHelper::getProblem() const
+    {
+        return problem;
     }
 
     cl_command_queue OpenCLHelper::getCommands() const

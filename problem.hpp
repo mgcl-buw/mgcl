@@ -24,7 +24,12 @@ namespace mgcl
     // forward declarations
     class Level;
 
-    // main interface class for using mgcl. Defines all the problem variables.
+    /**
+     * @brief Main interface class for using mgcl. Defines all the parameters which can be set using the appropriate
+     * setters. The problem is then solved using solve (using OpenCL if use_opencl is true, otherwise sequentially).
+     * If an OpenCLEnvironment shall be reused, reuseOpenCL can be used.
+     *
+     */
     class Problem
     {
     private:
@@ -132,10 +137,6 @@ namespace mgcl
         Problem(int m_, int n_, int o_, Cuboid &f_, Cuboid &v_);
         Problem(int m_, int n_, int o_, double ***f_, double ***v_);
         Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_);
-        Problem(int m_, int n_, int o_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
-        Problem(int m_, int n_, int o_, Cuboid &f_, Cuboid &v_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
-        Problem(int m_, int n_, int o_, double ***f_, double ***v_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
-        Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
         Problem(const Problem &) = delete;
         Problem &operator=(const Problem &) = delete;
         ~Problem() = default;
@@ -145,8 +146,8 @@ namespace mgcl
         int calculateAndSetMaxLevel();
         bool init();
 
-        // Can be used to reuse an OpenCL environment. Otherwise a default environment is created, when solve is called.
-        int initOpenCL(cl_context context = nullptr, cl_command_queue commandQueue = nullptr, cl_device_id deviceId = nullptr);
+        int reuseOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
+        int initOpenCL();
         int readResults();
 
         void solve();

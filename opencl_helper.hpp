@@ -37,6 +37,7 @@ namespace mgcl
         ~OpenCLHelper();
 
         int init();
+        int release();
         bool isInitialized();
         bool checkParameters();
         int copyInputBuffers();
@@ -69,6 +70,8 @@ namespace mgcl
 
         cl_device_id getDeviceId() const;
         void setDeviceId(const cl_device_id &deviceId_);
+
+        Problem *getProblem() const;
     };
 
 #define mgclCheckError(E, S) OpenCLHelper::mgcl_check_error(E, S, __FILE__, __LINE__)

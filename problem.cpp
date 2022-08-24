@@ -12,21 +12,9 @@ namespace mgcl
     {
     }
 
-    Problem::Problem(int m_, int n_, int o_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
-        : Problem(m_, n_, o_)
-    {
-        initOpenCL(context, commandQueue, deviceId);
-    }
-
     Problem::Problem(int m_, int n_, int o_, Cuboid &f_, Cuboid &v_)
         : Problem(m_, n_, o_, f_.getData(), v_.getData())
     {
-    }
-
-    Problem::Problem(int m_, int n_, int o_, Cuboid &f_, Cuboid &v_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
-        : Problem(m_, n_, o_, f_, v_)
-    {
-        initOpenCL(context, commandQueue, deviceId);
     }
 
     Problem::Problem(int m_, int n_, int o_, double ***f_, double ***v_)
@@ -34,21 +22,9 @@ namespace mgcl
     {
     }
 
-    Problem::Problem(int m_, int n_, int o_, double ***f_, double ***v_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
-        : Problem(m_, n_, o_, f_, v_)
-    {
-        initOpenCL(context, commandQueue, deviceId);
-    }
-
     Problem::Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_)
         : m(m_), n(n_), o(o_), dF(d_f_), dV(d_v_)
     {
-    }
-
-    Problem::Problem(int m_, int n_, int o_, cl_mem f_, cl_mem v_, cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
-        : Problem(m_, n_, o_, f_, v_)
-    {
-        initOpenCL(context, commandQueue, deviceId);
     }
 
     /**
@@ -152,8 +128,7 @@ namespace mgcl
         // check opencl components if device buffers should be reused
         if (reuse_opencl_buffers || copy_buffer_data)
         {
-            bool ret = openCLHelper.checkParameters();
-            if (!ret)
+            if (!openCLHelper.checkParameters())
                 return false;
         }
 
@@ -255,20 +230,41 @@ namespace mgcl
     }
 
     /**
-     * @brief Lazyly initializes OpenCL environment and sets use_opencl to true.
+     * @brief Releases current OpenCL environment, sets use_opencl to true, assigns OpenCL variables and initializes
+     * or retains new environment.
+     *
+     * @param context OpenCL context to be reused.
+     * @param commandQueue OpenCL command_queue to be reused.
+     * @param deviceId OpenCL device_id to be reused.
+     */
+    int Problem::reuseOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
+    {
+        int err;
+        err = openCLHelper.release();
+        mgclCheckError(err, "openCLHelper.release");
+
+        openCLHelper.setContext(context);
+        openCLHelper.setCommands(commandQueue);
+        openCLHelper.setDeviceId(deviceId);
+        setUseOpencl(true);
+
+        err = openCLHelper.init();
+        mgclCheckError(err, "openCLHelper.init");
+        return err;
+    }
+
+    /**
+     * @brief Lazyly initializes OpenCL environment.
      *
      * @return int OpenCL error code
      */
-    int Problem::initOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
+    int Problem::initOpenCL()
     {
         int err = CL_SUCCESS;
         if (!openCLHelper.isInitialized())
         {
-            openCLHelper.setContext(context);
-            openCLHelper.setCommands(commandQueue);
-            openCLHelper.setDeviceId(deviceId);
             err = openCLHelper.init();
-            use_opencl = true;
+            mgclCheckError(err, "openCLHelper.init");
         }
         return err;
     }
