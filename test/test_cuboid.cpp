@@ -107,12 +107,33 @@ TEST_CASE("cuboid class")
         int ghosts_n_c2 = GENERATE(0, 1, 2);
         int ghosts_o_c2 = GENERATE(0, 1, 2);
 
-        mgcl::Cuboid c2(8 + 2 * ghosts_m_c, 8 + 2 * ghosts_n_c, 8 + 2 * ghosts_o_c);
-        mgcl::Cuboid c3(8 + 2 * ghosts_m_c2, 8 + 2 * ghosts_n_c2, 8 + 2 * ghosts_o_c2);
+        mgcl::Cuboid c2(8, 8, 8, ghosts_m_c, ghosts_n_c, ghosts_o_c);
+        mgcl::Cuboid c3(8, 8, 8, ghosts_m_c2, ghosts_n_c2, ghosts_o_c2);
         mgcl::Cuboid c4(16, 16, 16);
 
-        REQUIRE(c2.isEqual(c3, ghosts_m_c, ghosts_n_c, ghosts_o_c, ghosts_m_c2, ghosts_n_c2, ghosts_o_c2));
-        REQUIRE(c3.isEqual(c2, ghosts_m_c2, ghosts_n_c2, ghosts_o_c2, ghosts_m_c, ghosts_n_c, ghosts_o_c));
-        REQUIRE(!c4.isEqual(c2, 0, 0, 0, ghosts_m_c, ghosts_n_c, ghosts_o_c));
+        REQUIRE(c2.isEqual(c3));
+        REQUIRE(c3.isEqual(c2));
+        REQUIRE(!c4.isEqual(c2));
+    }
+
+    SECTION("ghosts > 0")
+    {
+        int m = 3;
+        int n = 4;
+        int o = 5;
+        int ghosts_m = GENERATE(0, 1, 2);
+        int ghosts_n = GENERATE(0, 1, 2);
+        int ghosts_o = GENERATE(0, 1, 2);
+        mgcl::Cuboid c2(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+
+        REQUIRE(c2.getM() == m);
+        REQUIRE(c2.getN() == n);
+        REQUIRE(c2.getO() == o);
+        REQUIRE(c2.getGhostsM() == ghosts_m);
+        REQUIRE(c2.getGhostsN() == ghosts_n);
+        REQUIRE(c2.getGhostsO() == ghosts_o);
+        REQUIRE(c2.getMgh() == m + 2 * ghosts_m);
+        REQUIRE(c2.getNgh() == n + 2 * ghosts_n);
+        REQUIRE(c2.getOgh() == o + 2 * ghosts_o);
     }
 }

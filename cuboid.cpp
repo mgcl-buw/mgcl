@@ -62,23 +62,34 @@ namespace mgcl
     }
 
     Cuboid::Cuboid(int m_, int n_, int o_, double value)
+        : Cuboid(m_, n_, o_, 0, 0, 0, value)
+    {
+    }
+
+    Cuboid::Cuboid(int m_, int n_, int o_, int ghostsM_, int ghostsN_, int ghostsO_, double value)
         : m(m_),
           n(n_),
-          o(o_)
+          o(o_),
+          mgh(m_ + 2 * ghostsM_),
+          ngh(n_ + 2 * ghostsN_),
+          ogh(o_ + 2 * ghostsO_),
+          ghostsM(ghostsM_),
+          ghostsN(ghostsN_),
+          ghostsO(ghostsO_)
     {
         int i, j;
 
-        field_1d.resize(m * n * o);
+        field_1d.resize(mgh * ngh * ogh);
         for (i = 0; i < field_1d.size(); i++)
             field_1d[i] = value;
 
-        field_3d = new double **[m];
-        for (i = 0; i < m; i++)
+        field_3d = new double **[mgh];
+        for (i = 0; i < mgh; i++)
         {
-            field_3d[i] = new double *[n];
-            for (j = 0; j < n; j++)
+            field_3d[i] = new double *[ngh];
+            for (j = 0; j < ngh; j++)
             {
-                field_3d[i][j] = &field_1d[i * n * o + j * o];
+                field_3d[i][j] = &field_1d[i * ngh * ogh + j * ogh];
             }
         }
     }
@@ -89,22 +100,22 @@ namespace mgcl
      * @param c Cuboid to be cloned from.
      */
     Cuboid::Cuboid(const Cuboid &c)
-        : m(c.m), n(c.n), o(c.o), field_1d(c.field_1d)
+        : m(c.m), n(c.n), o(c.o), mgh(c.mgh), ngh(c.ngh), ogh(c.ogh), field_1d(c.field_1d)
     {
-        field_3d = new double **[m];
-        for (int i = 0; i < m; i++)
+        field_3d = new double **[mgh];
+        for (int i = 0; i < mgh; i++)
         {
-            field_3d[i] = new double *[n];
-            for (int j = 0; j < n; j++)
+            field_3d[i] = new double *[ngh];
+            for (int j = 0; j < ngh; j++)
             {
-                field_3d[i][j] = &field_1d[i * n * o + j * o];
+                field_3d[i][j] = &field_1d[i * ngh * ogh + j * ogh];
             }
         }
     }
 
     Cuboid::~Cuboid()
     {
-        for (int i = 0; i < m; i++)
+        for (int i = 0; i < mgh; i++)
         {
             delete[] field_3d[i];
         }
@@ -130,6 +141,31 @@ namespace mgcl
     int Cuboid::getM() const
     {
         return m;
+    }
+
+    int Cuboid::getGhostsO() const
+    {
+        return ghostsO;
+    }
+    int Cuboid::getGhostsN() const
+    {
+        return ghostsN;
+    }
+    int Cuboid::getGhostsM() const
+    {
+        return ghostsM;
+    }
+    int Cuboid::getOgh() const
+    {
+        return ogh;
+    }
+    int Cuboid::getNgh() const
+    {
+        return ngh;
+    }
+    int Cuboid::getMgh() const
+    {
+        return mgh;
     }
 
     double **Cuboid::operator[](int index)
@@ -161,22 +197,15 @@ namespace mgcl
      * cell amount. Dimensions of real cell amount of this Cuboid and c must be equal (without ghost cells).
      *
      * @param c Other Cuboid
-     * @param ghosts_m_this Ghosts in one x direction of this Cuboid. Defaults to 0.
-     * @param ghosts_n_this Ghosts in one y direction of this Cuboid. Defaults to 0.
-     * @param ghosts_o_this Ghosts in one z direction of this Cuboid. Defaults to 0.
-     * @param ghosts_m_c Ghosts in one x direction of the other Cuboid c. Defaults to 0.
-     * @param ghosts_n_c Ghosts in one y direction of the other Cuboid c. Defaults to 0.
-     * @param ghosts_o_c Ghosts in one z direction of the other Cuboid c. Defaults to 0.
      * @param tol tolerance that is used for checking equality. Defaults to 1e-7.
      * @return true Cuboids equal.
      * @return false Cuboids not equal.
      */
-    bool Cuboid::isEqual(Cuboid &c, int ghosts_m_this, int ghosts_n_this, int ghosts_o_this,
-                         int ghosts_m_c, int ghosts_n_c, int ghosts_o_c, double tol)
+    bool Cuboid::isEqual(Cuboid &c, double tol)
     {
-        if (m - 2 * ghosts_m_this != c.getM() - 2 * ghosts_m_c ||
-            n - 2 * ghosts_n_this != c.getN() - 2 * ghosts_n_c ||
-            o - 2 * ghosts_o_this != c.getO() - 2 * ghosts_o_c)
+        if (m != c.getM() ||
+            n != c.getN() ||
+            o != c.getO())
         {
             std::cout << "Cannot check equality for Cuboids. Dimensions differ." << std::endl;
             return false;
@@ -186,12 +215,12 @@ namespace mgcl
         bool ret = true;
         double diff = 0;
 
-        for (int i = 0; i < m - 2 * ghosts_m_this; i++)
-            for (int j = 0; j < n - 2 * ghosts_n_this; j++)
-                for (int k = 0; k < o - 2 * ghosts_o_this; k++)
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                for (int k = 0; k < o; k++)
                 {
-                    diff = field_3d[i + ghosts_m_this][j + ghosts_n_this][k + ghosts_o_this] -
-                           c[i + ghosts_m_c][j + ghosts_n_c][k + ghosts_o_c];
+                    diff = field_3d[i + ghostsM][j + ghostsN][k + ghostsO] -
+                           c[i + c.getGhostsM()][j + c.getGhostsN()][k + c.getGhostsO()];
                     if (fabs(diff) > tol)
                     {
                         ret = false;
