@@ -59,12 +59,12 @@ TEST_CASE("Problem solving")
                          12 * xs2 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_4);
                 }
 
-        mgcl::Problem pseq(N, N, N, vseq.getData(), fseq.getData());
+        mgcl::Problem pseq(N, N, N, vseq, fseq);
         pseq.solveSeq();
 
         REQUIRE(solution.isEqual(vseq));
 
-        mgcl::Problem pocl(N, N, N, vocl.getData(), focl.getData());
+        mgcl::Problem pocl(N, N, N, vocl, focl);
         // pocl.setDeviceType(CL_DEVICE_TYPE_GPU);
         pocl.solve();
 

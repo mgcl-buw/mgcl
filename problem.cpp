@@ -13,12 +13,7 @@ namespace mgcl
     }
 
     Problem::Problem(int m_, int n_, int o_, Cuboid &f_, Cuboid &v_)
-        : Problem(m_, n_, o_, f_.getData(), v_.getData())
-    {
-    }
-
-    Problem::Problem(int m_, int n_, int o_, double ***f_, double ***v_)
-        : m(m_), n(n_), o(o_), f(f_), v(v_)
+        : m(m_), n(n_), o(o_), f(std::make_shared<Cuboid>(f_)), v(std::make_shared<Cuboid>(v_))
     {
     }
 
@@ -148,8 +143,8 @@ namespace mgcl
                 // create ghosted arrays for v and f on host if device buffer should not be reused
                 if (!reuse_opencl_buffers && !copy_buffer_data)
                 {
-                    lv->setV(cuboid_alloc(mg, ng, og));
-                    lv->setF(cuboid_alloc(mg, ng, og));
+                    lv->setV(std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts));
+                    lv->setF(std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts));
 
                     // copy initial input data from conf into mgcl data struct
                     for (int i = 0; i < m; i++)
@@ -157,17 +152,17 @@ namespace mgcl
                             for (int k = 0; k < o; k++)
                             {
                                 lv->getV()[i + ghosts][j + ghosts][k + ghosts] =
-                                    v[i + ghosts_in][j + ghosts_in][k + ghosts_in];
+                                    (*v)[i + ghosts_in][j + ghosts_in][k + ghosts_in];
                                 lv->getF()[i + ghosts][j + ghosts][k + ghosts] =
-                                    f[i + ghosts_in][j + ghosts_in][k + ghosts_in];
+                                    (*f)[i + ghosts_in][j + ghosts_in][k + ghosts_in];
                             }
 
-                    MultigridEngine::updateGhostsSeq(lv->getF(), m, n, o, ghosts, ghosts, ghosts);
+                    MultigridEngine::updateGhostsSeq(lv->getF());
 
                     // allocate initial stencil_values, including ghost cells, if varying symmetric stencil shall be used
                     if (stencil_values || dStencilValues)
                     {
-                        lv->setStencilValues(cuboid_alloc(mg, ng, og * stencil_size_multiplier));
+                        lv->setStencilValues(std::make_shared<Cuboid>(m, n, o * stencil_size_multiplier, ghosts, ghosts, ghosts));
 
                         // copy initial input stencil data from conf into mgcl data struct
                         for (int i = 0; i < m; i++)
@@ -176,19 +171,18 @@ namespace mgcl
                                 {
                                     lv->getStencilValues()[i + ghosts][j + ghosts]
                                                           [k + ghosts * stencil_size_multiplier] =
-                                        stencil_values[i + ghosts_in][j + ghosts_in]
-                                                      [k + ghosts_in * stencil_size_multiplier];
+                                        (*stencil_values)[i + ghosts_in][j + ghosts_in]
+                                                         [k + ghosts_in * stencil_size_multiplier];
                                 }
 
-                        MultigridEngine::updateGhostsSeq(lv->getStencilValues(), m, n, o * stencil_size_multiplier, ghosts,
-                                                         ghosts, ghosts * stencil_size_multiplier);
+                        MultigridEngine::updateGhostsSeq(lv->getStencilValues());
                     }
                 }
 
                 // r on host is only needed if opencl should not be used
                 if (!use_opencl)
                 {
-                    lv->setR(cuboid_alloc(mg, ng, og));
+                    lv->setR(std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts));
                 }
 
                 levels.push_back(std::move(lv));
@@ -196,9 +190,9 @@ namespace mgcl
             else
             {
                 // ghosted sizes of current level's grid
-                int mg = (levels[level - 1]->getM() - 2 * ghosts) / 2 + 2 * ghosts;
-                int ng = (levels[level - 1]->getN() - 2 * ghosts) / 2 + 2 * ghosts;
-                int og = (levels[level - 1]->getO() - 2 * ghosts) / 2 + 2 * ghosts;
+                int mg = levels[level - 1]->getM() / 2 + 2 * ghosts;
+                int ng = levels[level - 1]->getN() / 2 + 2 * ghosts;
+                int og = levels[level - 1]->getO() / 2 + 2 * ghosts;
 
                 auto lv = std::make_shared<Level>(this, level,
                                                   levels[level - 1]->getM() / 2,
@@ -207,16 +201,16 @@ namespace mgcl
 
                 if (!use_opencl)
                 {
-                    lv->setV(cuboid_alloc(mg, ng, og));
-                    lv->setF(cuboid_alloc(mg, ng, og));
-                    lv->setR(cuboid_alloc(mg, ng, og));
+                    lv->setV(std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts));
+                    lv->setF(std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts));
+                    lv->setR(std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts));
 
                     if (stencil_values != nullptr)
                     {
                         if (restrict_prolongate_stencil)
-                            lv->setStencilValues(cuboid_alloc(mg, ng, og * stencil_size_multiplier));
+                            lv->setStencilValues(std::make_shared<Cuboid>(m, n, o * stencil_size_multiplier, ghosts, ghosts, ghosts));
                         else
-                            lv->setStencilValues(levels[0]->getStencilValues());
+                            lv->setStencilValues(levels[0]->getStencilValuesPtr());
                     }
                 }
 
@@ -278,15 +272,14 @@ namespace mgcl
 
         if (reuse_opencl_buffers || copy_buffer_data)
         {
-            levels[0]->v = cuboid_alloc(levels[0]->m, levels[0]->n, levels[0]->o); // gets freed automatically in finish
+            levels[0]->setV(std::make_shared<Cuboid>(levels[0]->m, levels[0]->n, levels[0]->o, ghosts, ghosts, ghosts));
             if (v == NULL)
-                v = cuboid_alloc(m + 2 * ghosts_in, n + 2 * ghosts_in,
-                                 o + 2 * ghosts_in);
+                v = std::make_shared<Cuboid>(m, n, o, ghosts_in, ghosts_in, ghosts_in);
         }
 
         // read back results TODO: only for testing purposes, maybe define TESTING?
         err = clEnqueueReadBuffer(openCLHelper.getCommands(), levels[0]->dVIn, CL_TRUE, 0,
-                                  sizeof(double) * levels[0]->m * levels[0]->n * levels[0]->o, levels[0]->v[0][0], 0, NULL, NULL);
+                                  sizeof(double) * levels[0]->m * levels[0]->n * levels[0]->o, levels[0]->getV()[0][0], 0, NULL, NULL);
         mgclCheckError(err, "Error: Failed to read output arrays from device!");
 
         // copy result to initial v vector
@@ -294,8 +287,8 @@ namespace mgcl
             for (int j = 0; j < n; j++)
                 for (int k = 0; k < o; k++)
                 {
-                    v[i + ghosts_in][j + ghosts_in][k + ghosts_in] =
-                        levels[0]->v[i + ghosts][j + ghosts][k + ghosts];
+                    (*v)[i + ghosts_in][j + ghosts_in][k + ghosts_in] =
+                        levels[0]->getV()[i + ghosts][j + ghosts][k + ghosts];
                 }
 
         return err;
@@ -362,16 +355,15 @@ namespace mgcl
             return;
 
         // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
-        MultigridEngine::updateGhostsSeq(levels[0]->v, m, n, o, ghosts, ghosts, ghosts);
+        MultigridEngine::updateGhostsSeq(levels[0]->getV());
         // update_ghosts_seq(data[0].f, m, n, o);
         double initres;
         if (stencil_values)
             initres =
-                MultigridEngine::stencilResidualSeq(levels[0]->f, levels[0]->v, levels[0]->r, m, n, o, ghosts,
-                                                    residual_norm, stencil, stencil_values, stencil_size_multiplier);
+                MultigridEngine::stencilResidualSeq(levels[0]->getF().getData(), levels[0]->getV().getData(), levels[0]->getR().getData(), m, n, o, ghosts,
+                                                    residual_norm, stencil, stencil_values->getData(), stencil_size_multiplier);
         else
-            initres = MultigridEngine::residualSeq(levels[0]->f, levels[0]->v, levels[0]->r, m, n, o, ghosts,
-                                                   residual_norm, stencil);
+            initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(), residual_norm, stencil);
         printf("Starting mgcl with initres = %e\n", initres);
 
         // run vcycle maxiter_vcycles times
@@ -393,8 +385,8 @@ namespace mgcl
             for (int j = 0; j < n; j++)
                 for (int k = 0; k < o; k++)
                 {
-                    v[i + ghosts_in][j + ghosts_in][k + ghosts_in] =
-                        levels[0]->v[i + ghosts][j + ghosts][k + ghosts];
+                    (*v)[i + ghosts_in][j + ghosts_in][k + ghosts_in] =
+                        levels[0]->getV()[i + ghosts][j + ghosts][k + ghosts];
                 }
     }
 
@@ -402,12 +394,17 @@ namespace mgcl
      * Getters and Setters
      ********************************/
 
-    double ***Problem::getF() const
+    Cuboid &Problem::getF() const
+    {
+        return *f;
+    }
+
+    std::shared_ptr<Cuboid> Problem::getFPtr() const
     {
         return f;
     }
 
-    void Problem::setF(double ***f_)
+    void Problem::setF(std::shared_ptr<Cuboid> f_)
     {
         f = f_;
     }
@@ -597,12 +594,17 @@ namespace mgcl
         residual_norm = residualNorm;
     }
 
-    double ***Problem::getStencilValues() const
+    Cuboid &Problem::getStencilValues() const
+    {
+        return *stencil_values;
+    }
+
+    std::shared_ptr<Cuboid> Problem::getStencilValuesPtr() const
     {
         return stencil_values;
     }
 
-    void Problem::setStencilValues(double ***stencilValues)
+    void Problem::setStencilValues(std::shared_ptr<Cuboid> stencilValues)
     {
         stencil_values = stencilValues;
     }
@@ -730,12 +732,17 @@ namespace mgcl
         return openCLHelper.program;
     }
 
-    double ***Problem::getV() const
+    Cuboid &Problem::getV() const
+    {
+        return *v;
+    }
+
+    std::shared_ptr<Cuboid> Problem::getVPtr() const
     {
         return v;
     }
 
-    void Problem::setV(double ***v_)
+    void Problem::setV(std::shared_ptr<Cuboid> v_)
     {
         v = v_;
     }

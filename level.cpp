@@ -25,7 +25,7 @@ namespace mgcl
             if (dF)
                 clReleaseMemObject(dF);
 
-            if (dStencilValues && (problem->getStencilValues() || problem->getDStencilValues()))
+            if (dStencilValues && (problem->getStencilValuesPtr() || problem->getDStencilValues()))
                 clReleaseMemObject(dStencilValues);
         }
 
@@ -72,16 +72,16 @@ namespace mgcl
             {
                 int pointer_flag = deviceType == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
                 dVIn = clCreateBuffer(context, CL_MEM_READ_WRITE | pointer_flag,
-                                      sizeof(double) * m * n * o, v[0][0], &err);
+                                      sizeof(double) * m * n * o, (*v)[0][0], &err);
                 dF = clCreateBuffer(context, CL_MEM_READ_WRITE | pointer_flag,
-                                    sizeof(double) * m * n * o, f[0][0], &err);
+                                    sizeof(double) * m * n * o, (*f)[0][0], &err);
 
                 // create buffers for stencil values if no fixed stencil shall be used
-                if (problem->getStencilValues())
+                if (problem->getStencilValuesPtr())
                     dStencilValues =
                         clCreateBuffer(context, CL_MEM_READ_WRITE | pointer_flag,
                                        sizeof(double) * m * n * o * problem->getStencilSizeMultiplier(),
-                                       stencil_values[0][0], &err);
+                                       (*stencil_values)[0][0], &err);
             }
         }
         else
@@ -91,7 +91,7 @@ namespace mgcl
             dF = clCreateBuffer(context, CL_MEM_READ_WRITE,
                                 sizeof(double) * m * n * o, NULL, &err);
 
-            if (problem->getStencilValues())
+            if (problem->getStencilValuesPtr())
             {
                 if (problem->getRestrictProlongateStencil())
                     dStencilValues = clCreateBuffer(context, CL_MEM_READ_WRITE,
@@ -124,9 +124,29 @@ namespace mgcl
         return CL_SUCCESS;
     }
 
+    void Level::setV(const std::shared_ptr<Cuboid> &v_)
+    {
+        v = v_;
+    }
+
     int Level::getMgh() const
     {
         return mgh;
+    }
+
+    Cuboid &Level::getStencilValues() const
+    {
+        return *stencil_values;
+    }
+
+    std::shared_ptr<Cuboid> Level::getStencilValuesPtr() const
+    {
+        return stencil_values;
+    }
+
+    void Level::setStencilValues(const std::shared_ptr<Cuboid> &stencilValues)
+    {
+        stencil_values = stencilValues;
     }
 
     int Level::getNgh() const
@@ -144,29 +164,49 @@ namespace mgcl
         return num;
     }
 
-    double ***Level::getF() const
+    Cuboid &Level::getV()
     {
-        return f;
+        return *v;
     }
 
-    void Level::setF(double ***f_)
+    std::shared_ptr<Cuboid> Level::getVPtr()
+    {
+        return v;
+    }
+
+    void Level::setF(const std::shared_ptr<Cuboid> &f_)
     {
         f = f_;
     }
 
-    double ***Level::getStencilValues() const
+    Cuboid &Level::getF()
     {
-        return stencil_values;
+        return *f;
+    }
+
+    std::shared_ptr<Cuboid> Level::getFPtr()
+    {
+        return f;
+    }
+
+    void Level::setR(const std::shared_ptr<Cuboid> &r_)
+    {
+        r = r_;
+    }
+
+    Cuboid &Level::getR()
+    {
+        return *r;
+    }
+
+    std::shared_ptr<Cuboid> Level::getRPtr()
+    {
+        return r;
     }
 
     int Level::getN() const
     {
         return n;
-    }
-
-    void Level::setStencilValues(double ***stencilValues)
-    {
-        stencil_values = stencilValues;
     }
 
     int Level::getO() const
@@ -202,26 +242,6 @@ namespace mgcl
     void Level::setDStencilValues(const cl_mem &dStencilValues_)
     {
         dStencilValues = dStencilValues_;
-    }
-
-    double ***Level::getV() const
-    {
-        return v;
-    }
-
-    void Level::setV(double ***v_)
-    {
-        v = v_;
-    }
-
-    double ***Level::getR() const
-    {
-        return r;
-    }
-
-    void Level::setR(double ***r_)
-    {
-        r = r_;
     }
 
     int Level::getM() const

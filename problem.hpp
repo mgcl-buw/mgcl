@@ -34,8 +34,8 @@ namespace mgcl
     {
     private:
         /* initial solution and right hand side vectors */
-        double ***v = nullptr; /* can be ommited if device buffers are supplied */
-        double ***f = nullptr; /* can be ommited if device buffers are supplied */
+        std::shared_ptr<Cuboid> v = nullptr; /* can be ommited if device buffers are supplied */
+        std::shared_ptr<Cuboid> f = nullptr; /* can be ommited if device buffers are supplied */
 
         /* Buffers for v and f. Only need to be set if buffers already exist on device and should be reused */
         cl_mem dV = nullptr;
@@ -86,7 +86,7 @@ namespace mgcl
          * -  7-point varsym: size = m*n*o*4
          * - 19-point varsym: size = m*n*o*7
          * - 27-point varsym: size = m*n*o*8 */
-        double ***stencil_values = nullptr;
+        std::shared_ptr<Cuboid> stencil_values = nullptr;
 
         /* Size multiplier for non-fixed stencils. Used internally only. */
         int stencil_size_multiplier = 1;
@@ -135,7 +135,6 @@ namespace mgcl
     public:
         Problem(int m_, int n_, int o_);
         Problem(int m_, int n_, int o_, Cuboid &f_, Cuboid &v_);
-        Problem(int m_, int n_, int o_, double ***f_, double ***v_);
         Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_);
         Problem(const Problem &) = delete;
         Problem &operator=(const Problem &) = delete;
@@ -157,11 +156,13 @@ namespace mgcl
          * Getters and Setters
          ********************************/
 
-        double ***getV() const;
-        void setV(double ***v_);
+        Cuboid &getV() const;
+        std::shared_ptr<Cuboid> getVPtr() const;
+        void setV(std::shared_ptr<Cuboid> v_);
 
-        double ***getF() const;
-        void setF(double ***f_);
+        Cuboid &getF() const;
+        std::shared_ptr<Cuboid> getFPtr() const;
+        void setF(std::shared_ptr<Cuboid> f_);
 
         int getM() const;
 
@@ -199,8 +200,9 @@ namespace mgcl
         MGCL_STENCIL getStencil() const;
         void setStencil(const MGCL_STENCIL &stencil_);
 
-        double ***getStencilValues() const;
-        void setStencilValues(double ***stencilValues);
+        Cuboid &getStencilValues() const;
+        std::shared_ptr<Cuboid> getStencilValuesPtr() const;
+        void setStencilValues(std::shared_ptr<Cuboid> stencilValues);
 
         int getStencilSizeMultiplier() const;
         void setStencilSizeMultiplier(int stencilSizeMultiplier);

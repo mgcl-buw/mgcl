@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cuboid.hpp"
 #include "multigrid_engine.hpp"
 #include "opencl_helper.hpp"
 
@@ -18,9 +19,9 @@ namespace mgcl
         int num;
 
         /* solution, right hand side and residual vectors */
-        double ***v = nullptr;
-        double ***f = nullptr;
-        double ***r = nullptr;
+        std::shared_ptr<Cuboid> v;
+        std::shared_ptr<Cuboid> f;
+        std::shared_ptr<Cuboid> r;
 
         /* grid dimensions of real grid */
         int m;
@@ -43,7 +44,7 @@ namespace mgcl
          * -  7-point varsym: size = (m + 2*ghosts)*(n + 2*ghosts)*(o + 2*ghosts) * 4
          * - 19-point varsym: size = (m + 2*ghosts)*(n + 2*ghosts)*(o + 2*ghosts) * 7
          * - 27-point varsym: size = (m + 2*ghosts)*(n + 2*ghosts)*(o + 2*ghosts) * 8 */
-        double ***stencil_values = nullptr;
+        std::shared_ptr<Cuboid> stencil_values;
 
         /* opencl buffers */
         cl_mem dVIn = nullptr;
@@ -64,22 +65,18 @@ namespace mgcl
 
         int getNum() const;
 
-        double ***getV() const;
-        void setV(double ***v_);
-
-        double ***getF() const;
-        void setF(double ***f_);
-
-        double ***getR() const;
-        void setR(double ***r_);
-
-        double ***getStencilValues() const;
-        void setStencilValues(double ***stencilValues);
+        Cuboid &getV();
+        std::shared_ptr<Cuboid> getVPtr();
+        void setV(const std::shared_ptr<Cuboid> &v_);
+        Cuboid &getF();
+        std::shared_ptr<Cuboid> getFPtr();
+        void setF(const std::shared_ptr<Cuboid> &f_);
+        Cuboid &getR();
+        std::shared_ptr<Cuboid> getRPtr();
+        void setR(const std::shared_ptr<Cuboid> &r_);
 
         int getM() const;
-
         int getN() const;
-
         int getO() const;
 
         double getH() const;
@@ -105,5 +102,9 @@ namespace mgcl
         int getNgh() const;
 
         int getOgh() const;
+
+        Cuboid &getStencilValues() const;
+        std::shared_ptr<Cuboid> getStencilValuesPtr() const;
+        void setStencilValues(const std::shared_ptr<Cuboid> &stencilValues);
     };
 }

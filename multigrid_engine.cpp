@@ -17,18 +17,17 @@ namespace mgcl
             for (int i = problem.ghosts; i < levelAbove.m - problem.ghosts; i++)
                 for (int j = problem.ghosts; j < levelAbove.n - problem.ghosts; j++)
                     for (int k = problem.ghosts; k < levelAbove.o - problem.ghosts; k++)
-                        levelAbove.v[i][j][k] = 0;
+                        levelAbove.getV()[i][j][k] = 0;
         }
 
         // relax nu1 times
         if (problem.stencil_values)
-            res = MultigridEngine::stencilJacobiSeq(level.v, level.f, level.r, level.m - 2 * problem.ghosts,
+            res = MultigridEngine::stencilJacobiSeq(level.getV().getData(), level.getF().getData(), level.getR().getData(), level.m - 2 * problem.ghosts,
                                                     level.n - 2 * problem.ghosts, level.o - 2 * problem.ghosts, problem.ghosts,
-                                                    problem.omega, problem.nu1, problem.residual_norm, problem.stencil, problem.stencil_values,
+                                                    problem.omega, problem.nu1, problem.residual_norm, problem.stencil, problem.getStencilValues().getData(),
                                                     problem.stencil_size_multiplier);
         else
-            res = MultigridEngine::jacobiSeq(level.v, level.f, level.r, level.m - 2 * problem.ghosts,
-                                             level.n - 2 * problem.ghosts, level.o - 2 * problem.ghosts, problem.ghosts,
+            res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
                                              problem.omega, problem.nu1, problem.residual_norm, problem.stencil);
 
         // update residual without D^-1
@@ -36,11 +35,11 @@ namespace mgcl
         // problem.residual_norm, problem.stencil); printf("res on level.getNum() %d, upwards: %e\n", level.getNum(), sqrt(res));
 
         // restrict residual as right hand side on coarser grid
-        MultigridEngine::restrictSeq(level, levelAbove, level.r, levelAbove.f);
+        MultigridEngine::restrictSeq(level, levelAbove, level.getR().getData(), levelAbove.getF().getData());
 
         // restrict stencil values if stencil is not fixed
         if (problem.stencil_values && problem.restrict_prolongate_stencil)
-            MultigridEngine::stencilRestrictSeq(level.stencil_values, levelAbove.stencil_values,
+            MultigridEngine::stencilRestrictSeq(level.getStencilValues().getData(), levelAbove.getStencilValues().getData(),
                                                 levelAbove.m - 2 * problem.ghosts, levelAbove.n - 2 * problem.ghosts,
                                                 levelAbove.o - 2 * problem.ghosts, problem.ghosts, problem.stencil_size_multiplier);
 
@@ -52,30 +51,28 @@ namespace mgcl
                 MultigridEngine::vcycleSeq(problem, levelAbove);
             else
             {
-                // printf(" pre v[0] = %e, f[0] = %e\n", data[level.getNum()+1].v[1][1][1], data[level.getNum()+1].f[1][1][1]);
+                // printf(" pre v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
                 if (problem.stencil_values)
-                    MultigridEngine::stencilJacobiSeq(levelAbove.v, levelAbove.f, levelAbove.r,
+                    MultigridEngine::stencilJacobiSeq(levelAbove.getV().getData(), levelAbove.getF().getData(), levelAbove.getR().getData(),
                                                       levelAbove.m - 2 * problem.ghosts, levelAbove.n - 2 * problem.ghosts,
                                                       levelAbove.o - 2 * problem.ghosts, problem.ghosts, problem.omega,
-                                                      problem.nu1 + problem.nu2, problem.residual_norm, problem.stencil, problem.stencil_values,
+                                                      problem.nu1 + problem.nu2, problem.residual_norm, problem.stencil, problem.getStencilValues().getData(),
                                                       problem.stencil_size_multiplier);
                 else
-                    MultigridEngine::jacobiSeq(levelAbove.v, levelAbove.f, levelAbove.r,
-                                               levelAbove.m - 2 * problem.ghosts, levelAbove.n - 2 * problem.ghosts,
-                                               levelAbove.o - 2 * problem.ghosts, problem.ghosts, problem.omega, problem.nu1 + problem.nu2,
+                    MultigridEngine::jacobiSeq(levelAbove.getV(), levelAbove.getF(), levelAbove.getR(), problem.omega, problem.nu1 + problem.nu2,
                                                problem.residual_norm, problem.stencil);
 
-                // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].v[1][1][1], data[level.getNum()+1].f[1][1][1]);
+                // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
             }
         }
 
         // prolongate from coarser to finer grid
         // r of this level.getNum() is reused here and should actually be called e
-        MultigridEngine::prolongateSeq(level, levelAbove, level.r, levelAbove.v);
+        MultigridEngine::prolongateSeq(level, levelAbove, level.getR().getData(), levelAbove.getV().getData());
 
         // prolongate stencil values if stencil is not fixed
         if (problem.stencil_values && problem.restrict_prolongate_stencil)
-            MultigridEngine::stencilProlongateSeq(level.stencil_values, levelAbove.stencil_values,
+            MultigridEngine::stencilProlongateSeq(level.getStencilValues().getData(), levelAbove.getStencilValues().getData(),
                                                   level.m - 2 * problem.ghosts, level.n - 2 * problem.ghosts,
                                                   level.o - 2 * problem.ghosts, problem.ghosts, problem.stencil_size_multiplier);
 
@@ -83,17 +80,16 @@ namespace mgcl
         for (int i = problem.ghosts; i < level.m - problem.ghosts; i++)
             for (int j = problem.ghosts; j < level.n - problem.ghosts; j++)
                 for (int k = problem.ghosts; k < level.o - problem.ghosts; k++)
-                    level.v[i][j][k] += level.r[i][j][k];
+                    level.getV()[i][j][k] += level.getR()[i][j][k];
 
         // relax nu2 times
         if (problem.stencil_values)
-            res = MultigridEngine::stencilJacobiSeq(level.v, level.f, level.r, level.m - 2 * problem.ghosts,
+            res = MultigridEngine::stencilJacobiSeq(level.getV().getData(), level.getF().getData(), level.getR().getData(), level.m - 2 * problem.ghosts,
                                                     level.n - 2 * problem.ghosts, level.o - 2 * problem.ghosts, problem.ghosts,
-                                                    problem.omega, problem.nu2, problem.residual_norm, problem.stencil, problem.stencil_values,
+                                                    problem.omega, problem.nu2, problem.residual_norm, problem.stencil, problem.getStencilValues().getData(),
                                                     problem.stencil_size_multiplier);
         else
-            res = MultigridEngine::jacobiSeq(level.v, level.f, level.r, level.m - 2 * problem.ghosts,
-                                             level.n - 2 * problem.ghosts, level.o - 2 * problem.ghosts, problem.ghosts,
+            res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
                                              problem.omega, problem.nu2, problem.residual_norm, problem.stencil);
         // printf("res on level.getNum() %d, downwards: %e\n", level.getNum(), sqrt(res));
         return res;
@@ -220,18 +216,18 @@ namespace mgcl
 
         // read back results TODO: only for testing purposes, maybe define TESTING?
         err = clEnqueueReadBuffer(problem.openCLHelper.getCommands(), level.dVIn, CL_TRUE, 0,
-                                  sizeof(double) * level.m * level.n * level.o, level.v[0][0], 0,
+                                  sizeof(double) * level.m * level.n * level.o, level.getV()[0][0], 0,
                                   NULL, NULL);
         err = clEnqueueReadBuffer(problem.openCLHelper.getCommands(), level.dF, CL_TRUE, 0,
-                                  sizeof(double) * level.m * level.n * level.o, level.f[0][0], 0,
+                                  sizeof(double) * level.m * level.n * level.o, level.getF()[0][0], 0,
                                   NULL, NULL);
         err = clEnqueueReadBuffer(problem.openCLHelper.getCommands(), level.dR, CL_TRUE, 0,
-                                  sizeof(double) * level.m * level.n * level.o, level.r[0][0], 0,
+                                  sizeof(double) * level.m * level.n * level.o, level.getR()[0][0], 0,
                                   NULL, NULL);
         mgclCheckError(err, "Error: Failed to read output arrays from device!");
 
-        printf("0 level = %d, v[1,1,1] = %e\n", level.getNum(), level.v[1][1][1]);
-        printf("0 level = %d, f[1,1,1] = %e\n", level.getNum(), level.f[1][1][1]);
-        printf("0 level = %d, r[1,1,1] = %e\n", level.getNum(), level.r[1][1][1]);
+        printf("0 level = %d, v[1,1,1] = %e\n", level.getNum(), level.getV()[1][1][1]);
+        printf("0 level = %d, f[1,1,1] = %e\n", level.getNum(), level.getF()[1][1][1]);
+        printf("0 level = %d, r[1,1,1] = %e\n", level.getNum(), level.getR()[1][1][1]);
     }
 }

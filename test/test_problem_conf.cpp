@@ -14,7 +14,7 @@ TEST_CASE("Problem conf")
 {
     auto v = mgcl::Cuboid(8, 8, 8);
     auto f = mgcl::Cuboid(8, 8, 8);
-    mgcl::Problem p(8, 8, 8, v.getData(), f.getData());
+    mgcl::Problem p(8, 8, 8, v, f);
 
     SECTION("default values")
     {
@@ -51,7 +51,7 @@ TEST_CASE("Problem conf")
         REQUIRE(p.getJacobiIterationsPerKernel() == 3);
 
         REQUIRE(p.getStencilSizeMultiplier() == 1);
-        REQUIRE(p.getStencilValues() == nullptr);
+        REQUIRE(p.getStencilValuesPtr() == nullptr);
         REQUIRE(p.getDStencilValues() == nullptr);
         REQUIRE(p.getRestrictProlongateStencil() == true);
     }
@@ -64,51 +64,39 @@ TEST_CASE("Problem::checkParameters")
 
     SECTION("m,n,o wrong")
     {
-        mgcl::Problem pm(0, 1, 1, v.getData(), f.getData());
-        mgcl::Problem pn(0, 1, 1, v.getData(), f.getData());
-        mgcl::Problem po(0, 1, 1, v.getData(), f.getData());
+        mgcl::Problem pm(0, 1, 1, v, f);
+        mgcl::Problem pn(0, 1, 1, v, f);
+        mgcl::Problem po(0, 1, 1, v, f);
 
         REQUIRE(pm.checkParameters() == false);
         REQUIRE(pn.checkParameters() == false);
         REQUIRE(po.checkParameters() == false);
     }
 
-    SECTION("v nullptr")
-    {
-        mgcl::Problem pm(8, 8, 8, nullptr, f.getData());
-        REQUIRE(pm.checkParameters() == false);
-    }
-
-    SECTION("f nullptr")
-    {
-        mgcl::Problem pm(8, 8, 8, v.getData(), nullptr);
-        REQUIRE(pm.checkParameters() == false);
-    }
-
     SECTION("ghosts 0")
     {
-        mgcl::Problem pm(8, 8, 8, v.getData(), f.getData());
+        mgcl::Problem pm(8, 8, 8, v, f);
         pm.setGhosts(0);
         REQUIRE(pm.checkParameters() == false);
     }
 
     SECTION("ghosts_in -1")
     {
-        mgcl::Problem pm(8, 8, 8, v.getData(), f.getData());
+        mgcl::Problem pm(8, 8, 8, v, f);
         pm.setGhostsIn(-1);
         REQUIRE(pm.checkParameters() == false);
     }
 
     SECTION("stencil_values not set")
     {
-        mgcl::Problem pm(8, 8, 8, v.getData(), f.getData());
+        mgcl::Problem pm(8, 8, 8, v, f);
         pm.setStencil(mgcl::MGCL_STENCIL::MGCL_19POINT_VARSYM);
         REQUIRE(pm.checkParameters() == false);
     }
 
     SECTION("all good")
     {
-        mgcl::Problem pm(8, 8, 8, v.getData(), f.getData());
+        mgcl::Problem pm(8, 8, 8, v, f);
         REQUIRE(pm.checkParameters() == true);
     }
 }
@@ -292,7 +280,7 @@ TEST_CASE("Problem::init")
             REQUIRE(p.getLevels()[lv]->getNgh() == p.getLevels()[lv]->getN() + 2 * p.getGhosts());
             REQUIRE(p.getLevels()[lv]->getOgh() == p.getLevels()[lv]->getO() + 2 * p.getGhosts());
 
-            REQUIRE(p.getLevels()[lv]->getR());
+            REQUIRE(p.getLevels()[lv]->getRPtr());
 
             // TODO check h when used
         }
@@ -332,7 +320,7 @@ TEST_CASE("Problem::init")
             REQUIRE(p2.getLevels()[lv]->getNgh() == p2.getLevels()[lv]->getN() + 2 * p2.getGhosts());
             REQUIRE(p2.getLevels()[lv]->getOgh() == p2.getLevels()[lv]->getO() + 2 * p2.getGhosts());
 
-            REQUIRE(p2.getLevels()[lv]->getR());
+            REQUIRE(p2.getLevels()[lv]->getRPtr());
 
             // TODO check h when used
         }
@@ -368,7 +356,7 @@ TEST_CASE("Problem::init")
             REQUIRE(p.getLevels()[lv]->getNgh() == p.getLevels()[lv]->getN() + 2 * p.getGhosts());
             REQUIRE(p.getLevels()[lv]->getOgh() == p.getLevels()[lv]->getO() + 2 * p.getGhosts());
 
-            REQUIRE(p.getLevels()[lv]->getR());
+            REQUIRE(p.getLevels()[lv]->getRPtr());
 
             // TODO check h when used
         }
@@ -396,13 +384,13 @@ TEST_CASE("Problem::init")
         REQUIRE(p2.getLevels().size() == p2.getMaxlevel());
 
         // no host data is created
-        REQUIRE(!p2.getV());
-        REQUIRE(!p2.getF());
+        REQUIRE(!p2.getVPtr());
+        REQUIRE(!p2.getFPtr());
         for (int lv = 0; lv < p2.getMaxlevel(); lv++)
         {
-            REQUIRE(!p2.getLevels()[lv]->getV());
-            REQUIRE(!p2.getLevels()[lv]->getF());
-            REQUIRE(!p2.getLevels()[lv]->getR());
+            REQUIRE(!p2.getLevels()[lv]->getVPtr());
+            REQUIRE(!p2.getLevels()[lv]->getFPtr());
+            REQUIRE(!p2.getLevels()[lv]->getRPtr());
         }
 
         // buffers are created
@@ -443,13 +431,13 @@ TEST_CASE("Problem::init")
         REQUIRE(p2.getLevels().size() == p2.getMaxlevel());
 
         // no host data is created
-        REQUIRE(!p2.getV());
-        REQUIRE(!p2.getF());
+        REQUIRE(!p2.getVPtr());
+        REQUIRE(!p2.getFPtr());
         for (int lv = 0; lv < p2.getMaxlevel(); lv++)
         {
-            REQUIRE(!p2.getLevels()[lv]->getV());
-            REQUIRE(!p2.getLevels()[lv]->getF());
-            REQUIRE(!p2.getLevels()[lv]->getR());
+            REQUIRE(!p2.getLevels()[lv]->getVPtr());
+            REQUIRE(!p2.getLevels()[lv]->getFPtr());
+            REQUIRE(!p2.getLevels()[lv]->getRPtr());
         }
 
         // buffers are created
