@@ -2,21 +2,16 @@
 
 namespace mgcl
 {
-    void MultigridEngine::prolongateSeq(Level &fine, Level &coarse, Cuboid &fineVals, Cuboid &coarseVals)
-    {
-        prolongateSeq(fine, coarse, fineVals.getData(), coarseVals.getData());
-    }
-
     /* Prolongates from coarse to fine grid.
      * m, n and o must be dimensions of the fine grid without ghost cells. */
-    void MultigridEngine::prolongateSeq(Level &fine, Level &coarse, double ***fineVals, double ***coarseVals)
+    void MultigridEngine::prolongateSeq(Level &fine, Level &coarse, Cuboid &fineVals, Cuboid &coarseVals)
     {
         int ghosts = coarse.problem->getGhosts();
         int m = coarse.m;
         int n = coarse.n;
         int o = coarse.o;
 
-        MultigridEngine::updateGhostsSeq(coarseVals, m / 2, n / 2, o / 2, ghosts, ghosts, ghosts);
+        MultigridEngine::updateGhostsSeq(coarseVals);
         int ioff = 1, joff = 1, koff = 1; // offset grows by 1 for each step
         int i2, j2, k2;
         for (int i = ghosts; i < m / 2 + ghosts; i++, ioff++)

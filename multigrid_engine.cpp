@@ -35,7 +35,7 @@ namespace mgcl
         // problem.residual_norm, problem.stencil); printf("res on level.getNum() %d, upwards: %e\n", level.getNum(), sqrt(res));
 
         // restrict residual as right hand side on coarser grid
-        MultigridEngine::restrictSeq(level, levelAbove, level.getR().getData(), levelAbove.getF().getData());
+        MultigridEngine::restrictSeq(level, levelAbove, level.getR(), levelAbove.getF());
 
         // restrict stencil values if stencil is not fixed
         if (problem.stencil_values && problem.restrict_prolongate_stencil)
@@ -68,7 +68,7 @@ namespace mgcl
 
         // prolongate from coarser to finer grid
         // r of this level.getNum() is reused here and should actually be called e
-        MultigridEngine::prolongateSeq(level, levelAbove, level.getR().getData(), levelAbove.getV().getData());
+        MultigridEngine::prolongateSeq(level, levelAbove, level.getR(), levelAbove.getV());
 
         // prolongate stencil values if stencil is not fixed
         if (problem.stencil_values && problem.restrict_prolongate_stencil)

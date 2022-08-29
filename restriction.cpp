@@ -2,22 +2,16 @@
 
 namespace mgcl
 {
-
-    void MultigridEngine::restrictSeq(Level &fine, Level &coarse, Cuboid &fine_vals, Cuboid &coarse_vals)
-    {
-        restrictSeq(fine, coarse, fine_vals.getData(), coarse_vals.getData());
-    }
-
     /* Restricts residual to coarser grid using full-weighted restriction operator.
      * m, n and o must be the dimensions of the coarser grid without ghost cells. */
-    void MultigridEngine::restrictSeq(Level &fine, Level &coarse, double ***fine_vals, double ***coarse_vals)
+    void MultigridEngine::restrictSeq(Level &fine, Level &coarse, Cuboid &fine_vals, Cuboid &coarse_vals)
     {
         int ghosts = coarse.problem->getGhosts();
         int m = coarse.m;
         int n = coarse.n;
         int o = coarse.o;
 
-        MultigridEngine::updateGhostsSeq(fine_vals, m * 2, n * 2, o * 2, ghosts, ghosts, ghosts);
+        MultigridEngine::updateGhostsSeq(fine_vals);
         int ioff = 1, joff = 1, koff = 1; // offset grows by 1 for each step
         int i2, j2, k2;
         for (int i = ghosts; i < m + ghosts; i++, ioff++)
@@ -58,7 +52,7 @@ namespace mgcl
                 }
             }
         }
-        MultigridEngine::updateGhostsSeq(coarse_vals, m, n, o, ghosts, ghosts, ghosts);
+        MultigridEngine::updateGhostsSeq(coarse_vals);
     }
 
     void MultigridEngine::restrict(Level &fine, Level &coarse)
