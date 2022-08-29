@@ -35,6 +35,8 @@ namespace mgcl
         double **operator[](int index);
         void fillRandom(double low = 0, double high = 0);
         std::vector<double> &field1d();
+        bool isEqual(Cuboid &c, int ghosts_m_this = 0, int ghosts_n_this = 0, int ghosts_o_this = 0,
+                     int ghosts_m_c = 0, int ghosts_n_c = 0, int ghosts_o_c = 0, double tol = 1e-7);
     };
 
     double ***cuboid_alloc(int m, int n, int o);

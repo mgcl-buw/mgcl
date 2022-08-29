@@ -1,8 +1,12 @@
 #include "cuboid.hpp"
 
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <iomanip>
+#include <iostream>
 #include <random>
+#include <tuple>
 
 namespace mgcl
 {
@@ -150,5 +154,62 @@ namespace mgcl
     std::vector<double> &Cuboid::field1d()
     {
         return field_1d;
+    }
+
+    /**
+     * @brief Returns true if this Cuboid is equal to another Cuboid c within a given tolerance tol, respecting ghost
+     * cell amount. Dimensions of real cell amount of this Cuboid and c must be equal (without ghost cells).
+     *
+     * @param c Other Cuboid
+     * @param ghosts_m_this Ghosts in one x direction of this Cuboid. Defaults to 0.
+     * @param ghosts_n_this Ghosts in one y direction of this Cuboid. Defaults to 0.
+     * @param ghosts_o_this Ghosts in one z direction of this Cuboid. Defaults to 0.
+     * @param ghosts_m_c Ghosts in one x direction of the other Cuboid c. Defaults to 0.
+     * @param ghosts_n_c Ghosts in one y direction of the other Cuboid c. Defaults to 0.
+     * @param ghosts_o_c Ghosts in one z direction of the other Cuboid c. Defaults to 0.
+     * @param tol tolerance that is used for checking equality. Defaults to 1e-7.
+     * @return true Cuboids equal.
+     * @return false Cuboids not equal.
+     */
+    bool Cuboid::isEqual(Cuboid &c, int ghosts_m_this, int ghosts_n_this, int ghosts_o_this,
+                         int ghosts_m_c, int ghosts_n_c, int ghosts_o_c, double tol)
+    {
+        if (m - 2 * ghosts_m_this != c.getM() - 2 * ghosts_m_c ||
+            n - 2 * ghosts_n_this != c.getN() - 2 * ghosts_n_c ||
+            o - 2 * ghosts_o_this != c.getO() - 2 * ghosts_o_c)
+        {
+            std::cout << "Cannot check equality for Cuboids. Dimensions differ." << std::endl;
+            return false;
+        }
+
+        std::vector<std::tuple<int, int, int, double>> diffs;
+        bool ret = true;
+        double diff = 0;
+
+        for (int i = 0; i < m - 2 * ghosts_m_this; i++)
+            for (int j = 0; j < n - 2 * ghosts_n_this; j++)
+                for (int k = 0; k < o - 2 * ghosts_o_this; k++)
+                {
+                    diff = field_3d[i + ghosts_m_this][j + ghosts_n_this][k + ghosts_o_this] -
+                           c[i + ghosts_m_c][j + ghosts_n_c][k + ghosts_o_c];
+                    if (fabs(diff) > tol)
+                    {
+                        ret = false;
+                        diffs.push_back(std::make_tuple(i, j, k, fabs(diff)));
+                    }
+                }
+
+        if (!diffs.empty())
+        {
+            std::cout << "Cuboids not equal. Differences: " << std::endl
+                      << "   i   j   k    difference" << std::endl;
+            for (auto d : diffs)
+            {
+                std::cout << std::setw(4) << std::get<0>(d) << std::get<1>(d) << std::get<2>(d)
+                          << std::setw(14) << std::get<3>(d) << std::endl;
+            }
+        }
+
+        return ret;
     }
 }

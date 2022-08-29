@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include "../cuboid.hpp"
 
@@ -67,5 +68,51 @@ TEST_CASE("cuboid class")
             REQUIRE(v >= 3.5);
             REQUIRE(v <= 5.5);
         }
+    }
+
+    SECTION("isEqual false")
+    {
+        mgcl::Cuboid c2(c.getM(), c.getN(), c.getO());
+
+        c[0][0][0] = 3;
+        c2[0][0][0] = 5;
+
+        c[0][0][2] = 7;
+        c2[0][0][2] = 8;
+
+        REQUIRE(!c.isEqual(c2));
+        REQUIRE(!c2.isEqual(c));
+    }
+
+    SECTION("isEqual true")
+    {
+        mgcl::Cuboid c2(c.getM(), c.getN(), c.getO());
+
+        c[0][0][0] = 3;
+        c2[0][0][0] = 3;
+
+        c[0][0][2] = 7;
+        c2[0][0][2] = 7;
+
+        REQUIRE(c.isEqual(c2));
+        REQUIRE(c2.isEqual(c));
+    }
+
+    SECTION("isEqual ghosts")
+    {
+        int ghosts_m_c = GENERATE(0, 1, 2);
+        int ghosts_n_c = GENERATE(0, 1, 2);
+        int ghosts_o_c = GENERATE(0, 1, 2);
+        int ghosts_m_c2 = GENERATE(0, 1, 2);
+        int ghosts_n_c2 = GENERATE(0, 1, 2);
+        int ghosts_o_c2 = GENERATE(0, 1, 2);
+
+        mgcl::Cuboid c2(8 + 2 * ghosts_m_c, 8 + 2 * ghosts_n_c, 8 + 2 * ghosts_o_c);
+        mgcl::Cuboid c3(8 + 2 * ghosts_m_c2, 8 + 2 * ghosts_n_c2, 8 + 2 * ghosts_o_c2);
+        mgcl::Cuboid c4(16, 16, 16);
+
+        REQUIRE(c2.isEqual(c3, ghosts_m_c, ghosts_n_c, ghosts_o_c, ghosts_m_c2, ghosts_n_c2, ghosts_o_c2));
+        REQUIRE(c3.isEqual(c2, ghosts_m_c2, ghosts_n_c2, ghosts_o_c2, ghosts_m_c, ghosts_n_c, ghosts_o_c));
+        REQUIRE(!c4.isEqual(c2, 0, 0, 0, ghosts_m_c, ghosts_n_c, ghosts_o_c));
     }
 }
