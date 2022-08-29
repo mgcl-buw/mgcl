@@ -367,9 +367,11 @@ namespace mgcl
         double initres;
         if (stencil_values)
             initres =
-                MultigridEngine::stencilResidual(*this, *levels[0], 1);
+                MultigridEngine::stencilResidualSeq(levels[0]->f, levels[0]->v, levels[0]->r, m, n, o, ghosts,
+                                                    residual_norm, stencil, stencil_values, stencil_size_multiplier);
         else
-            initres = MultigridEngine::residual(*this, *levels[0], 1);
+            initres = MultigridEngine::residualSeq(levels[0]->f, levels[0]->v, levels[0]->r, m, n, o, ghosts,
+                                                   residual_norm, stencil);
         printf("Starting mgcl with initres = %e\n", initres);
 
         // run vcycle maxiter_vcycles times

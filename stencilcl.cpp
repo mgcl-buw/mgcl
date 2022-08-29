@@ -262,7 +262,7 @@ namespace mgcl
             // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
 
             // r = f - A*v
-            res = stencilResidual(f, v, r, m, n, o, ghosts, resnorm, stencil, stencil_values, stencil_size_multiplier);
+            res = stencilResidualSeq(f, v, r, m, n, o, ghosts, resnorm, stencil, stencil_values, stencil_size_multiplier);
             for (int i = ghosts; i < m + ghosts; i++)
                 for (int j = ghosts; j < n + ghosts; j++)
                     for (int k = ghosts, kst = ghosts * stencil_size_multiplier; k < o + ghosts;
@@ -282,9 +282,9 @@ namespace mgcl
 
     /* Calculates r = f - A*v using 7-point stencil of 3D laplacian.
      * m,n,o is size of real grid */
-    double MultigridEngine::stencilResidual(double ***f, double ***v, double ***r, int m, int n, int o, int ghosts,
-                                            MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil, double ***stencil_values,
-                                            int stencil_size_multiplier)
+    double MultigridEngine::stencilResidualSeq(double ***f, double ***v, double ***r, int m, int n, int o, int ghosts,
+                                               MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil, double ***stencil_values,
+                                               int stencil_size_multiplier)
     {
         double res = 0.0;
         double stencilsum = 0;

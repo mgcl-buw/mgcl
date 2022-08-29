@@ -16,6 +16,7 @@
 namespace mgcl
 {
     // forward declaration
+    class Problem;
     class Level;
 
     /**
@@ -70,9 +71,9 @@ namespace mgcl
         static double stencilJacobiSeq(double ***v, double ***f, double ***r, int m, int n, int o, int ghosts, double omega,
                                        int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil, double ***stencilValues,
                                        int stencilSizeMultiplier);
-        static double stencilResidual(double ***f, double ***v, double ***r, int m, int n, int o, int ghosts,
-                                      MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil, double ***stencilValues,
-                                      int stencilSizeMultiplier);
+        static double stencilResidualSeq(double ***f, double ***v, double ***r, int m, int n, int o, int ghosts,
+                                         MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil, double ***stencilValues,
+                                         int stencilSizeMultiplier);
         static double stencilJacobi(Problem &problem, Level &level, int maxiter, int returnResidual);
         static double stencilJacobiLocalMem(Problem &problem, Level &level, int maxiter, int returnResidual);
         static void stencilJacobiTest(Problem &problem, Level &level, double ***v, double ***r, int m, int n, int o,
