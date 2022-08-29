@@ -62,9 +62,9 @@ namespace mgcl
             else if (problem->getCopyBufferData())
             {
                 dVIn = clCreateBuffer(context, CL_MEM_READ_WRITE,
-                                      sizeof(double) * m * n * o, NULL, &err);
+                                      sizeof(double) * mgh * ngh * ogh, NULL, &err);
                 dF = clCreateBuffer(context, CL_MEM_READ_WRITE,
-                                    sizeof(double) * m * n * o, NULL, &err);
+                                    sizeof(double) * mgh * ngh * ogh, NULL, &err);
                 // TODO stencil_values
                 problem->getOpenCLHelper().copyInputBuffers();
             }

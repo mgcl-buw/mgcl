@@ -423,6 +423,55 @@ TEST_CASE("Problem::init")
 
     SECTION("copy OpenCL buffers")
     {
-        REQUIRE(false);
+        int ghosts = 1;
+        mgcl::Cuboid vgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
+        mgcl::Cuboid fgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
+
+        mgcl_test::TestUtility tu;
+        cl_mem d_v = tu.createOpenCLBuffer(vgh);
+        cl_mem d_f = tu.createOpenCLBuffer(fgh);
+
+        mgcl::Problem p2(m, n, o, d_f, d_v);
+        p2.setGhostsIn(ghosts);
+        p2.setCopyBufferData(true);
+        REQUIRE(p2.getDF() == d_f);
+        REQUIRE(p2.getDV() == d_v);
+        REQUIRE(p2.getOpenCLHelper().getProblem() == &p2);
+
+        REQUIRE(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()) == CL_SUCCESS);
+        REQUIRE(p2.init());
+        REQUIRE(p2.getLevels().size() == p2.getMaxlevel());
+
+        // no host data is created
+        REQUIRE(!p2.getV());
+        REQUIRE(!p2.getF());
+        for (int lv = 0; lv < p2.getMaxlevel(); lv++)
+        {
+            REQUIRE(!p2.getLevels()[lv]->getV());
+            REQUIRE(!p2.getLevels()[lv]->getF());
+            REQUIRE(!p2.getLevels()[lv]->getR());
+        }
+
+        // buffers are created
+        REQUIRE(p2.getDV() == d_v);
+        REQUIRE(p2.getDF() == d_f);
+        REQUIRE(p2.getLevels()[0]);
+        REQUIRE(p2.getLevels()[0]->getDVIn() != d_v);
+        REQUIRE(p2.getLevels()[0]->getDF() != d_f);
+        for (int lv = 0; lv < p2.getMaxlevel(); lv++)
+        {
+            REQUIRE(p2.getLevels()[lv]);
+            REQUIRE(p2.getLevels()[lv]->getDVIn());
+            REQUIRE(p2.getLevels()[lv]->getDVOut());
+            REQUIRE(p2.getLevels()[lv]->getDF());
+            REQUIRE(p2.getLevels()[lv]->getDR());
+        }
+
+        // contents of copied buffer and input buffers are equal
+        auto lv0d = tu.readOpenCLBuffer(p2.getLevels()[0]->getDVIn(), p2.getLevels()[0]->getMgh(), p2.getLevels()[0]->getNgh(), p2.getLevels()[0]->getOgh());
+        auto lv0f = tu.readOpenCLBuffer(p2.getLevels()[0]->getDF(), p2.getLevels()[0]->getMgh(), p2.getLevels()[0]->getNgh(), p2.getLevels()[0]->getOgh());
+
+        REQUIRE(vgh.isEqual(lv0d, ghosts, ghosts, ghosts, p2.getGhosts(), p2.getGhosts(), p2.getGhosts()));
+        REQUIRE(fgh.isEqual(lv0f, ghosts, ghosts, ghosts, p2.getGhosts(), p2.getGhosts(), p2.getGhosts()));
     }
 }

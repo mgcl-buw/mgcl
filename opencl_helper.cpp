@@ -249,12 +249,13 @@ namespace mgcl
      */
     int OpenCLHelper::copyInputBuffers()
     {
+        // TODO respect ghosts?
         int err;
-        int m = problem->getM();
-        int n = problem->getN();
-        int o = problem->getO();
-        int ghosts_in = problem->getGhostsIn();
         auto level0 = problem->getLevels()[0];
+        int m = level0->getMgh();
+        int n = level0->getNgh();
+        int o = level0->getOgh();
+        int ghosts_in = problem->getGhostsIn();
 
         // Create the compute kernel from the program
         cl_kernel kernel = clCreateKernel(program, "copy_input_data", &err);
