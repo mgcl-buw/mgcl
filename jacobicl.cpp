@@ -7,6 +7,13 @@
 namespace mgcl
 {
 
+    double MultigridEngine::jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
+                                      int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil)
+    {
+        return jacobiSeq(v.getData(), f.getData(), r.getData(), v.getM(), v.getN(), r.getO(), v.getGhostsM(), omega,
+                         maxiter, resnorm, stencil);
+    }
+
     /* Runs jacobi method sequentially.
      * v, f and r must be of size [m+2][n+2][o+2] for periodic boundary condition.
      * m,n,o is size of real grid */
@@ -798,6 +805,12 @@ namespace mgcl
         // clReleaseMemObject(dR);
         // return res;
         return 0;
+    }
+
+    double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
+                                        MGCL_STENCIL stencil)
+    {
+        return residualSeq(f.getData(), v.getData(), r.getData(), f.getM(), f.getN(), f.getO(), f.getGhostsM(), resnorm, stencil);
     }
 
     /* Calculates r = f - A*v using 7-point stencil of 3D laplacian.

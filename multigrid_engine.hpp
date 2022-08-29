@@ -40,14 +40,19 @@ namespace mgcl
         static void prolongate(Level &fine, Level &coarse);
 
         static void updateGhostsSeq(double ***v, int m, int n, int o, int ghostsM, int ghostsN, int ghostsO);
+        static void updateGhostsSeq(Cuboid &c);
         static int updateGhosts(Problem &problem, cl_mem dBuffer, int m, int n, int o, int ghostsM, int ghostsN, int ghostsO);
         static int updateGhostsTest(Problem &problem, double ***v, int m, int n, int o, int ghostsM, int ghostsN,
                                     int ghostsO);
 
         static double jacobiSeq(double ***v, double ***f, double ***r, int m, int n, int o, int ghosts, double omega,
                                 int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil);
+        static double jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
+                                int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil);
         static double residual(Problem &problem, Level &level, int returnResidual);
         static double residualSeq(double ***f, double ***v, double ***r, int m, int n, int o, int ghosts, MGCL_RESIDUAL_NORM resnorm,
+                                  MGCL_STENCIL stencil);
+        static double residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
                                   MGCL_STENCIL stencil);
         static double residualTest(Problem &problem, double ***v, double ***f, double ***r, int m, int n, int o,
                                    int returnResidual);

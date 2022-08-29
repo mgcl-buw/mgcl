@@ -2,6 +2,11 @@
 
 namespace mgcl
 {
+    void MultigridEngine::updateGhostsSeq(Cuboid &c)
+    {
+        updateGhostsSeq(c.getData(), c.getM(), c.getN(), c.getO(), c.getGhostsM(), c.getGhostsN(), c.getGhostsO());
+    }
+
     /* updates ghost cells for periodic boundary condition
      * m,n,o are dimensions of real grid without ghost cells */
     void MultigridEngine::updateGhostsSeq(double ***v, int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o)
