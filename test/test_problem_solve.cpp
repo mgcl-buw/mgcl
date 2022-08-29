@@ -65,6 +65,7 @@ TEST_CASE("Problem solving")
         REQUIRE(solution.isEqual(vseq));
 
         mgcl::Problem pocl(N, N, N, vocl, focl);
+        pocl.setUseOpencl(true);
         // pocl.setDeviceType(CL_DEVICE_TYPE_GPU);
         pocl.solve();
 

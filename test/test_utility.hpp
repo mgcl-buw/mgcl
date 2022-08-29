@@ -29,6 +29,7 @@ namespace mgcl_test
         ~TestUtility();
         cl_mem createOpenCLBuffer(mgcl::Cuboid &c);
         mgcl::Cuboid readOpenCLBuffer(cl_mem buf, int m, int n, int o);
+        int finish();
 
         cl_context getContext();
         cl_command_queue getCommands();

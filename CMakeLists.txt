@@ -59,6 +59,7 @@ test/test_opencl_helper.cpp
 test/test_utility.hpp
 test/test_utility.cpp
 test/test_test_utility.cpp
+test/test_ghosts.cpp
 )
 
 add_executable(tests ${SOURCES_TEST})

@@ -35,20 +35,22 @@ cl_mem mgcl_test::TestUtility::createOpenCLBuffer(mgcl::Cuboid &c)
 {
     int err;
     cl_mem buf = clCreateBuffer(problem.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
-                                sizeof(double) * c.getM() * c.getN() * c.getO(), c.field1d().data(), &err);
+                                sizeof(double) * c.getMgh() * c.getNgh() * c.getOgh(), c.field1d().data(), &err);
     mgcl::mgclCheckError(err, "clCreateBuffer");
     openclBuffers.push_back(buf);
     return buf;
 }
 
 /**
- * @brief Reads a buffer into a Cuboid.
+ * @brief Waits for command queue to finish and reads a buffer into a Cuboid.
  *
  * @param buf
  * @return mgcl::Cuboid
  */
 mgcl::Cuboid mgcl_test::TestUtility::readOpenCLBuffer(cl_mem buf, int m, int n, int o)
 {
+    finish();
+
     mgcl::Cuboid c(m, n, o);
     double *tmp = new double[m * n * o];
     if (buf)
@@ -64,6 +66,13 @@ mgcl::Cuboid mgcl_test::TestUtility::readOpenCLBuffer(cl_mem buf, int m, int n, 
         c.field1d()[i] = tmp[i];
     delete[] tmp;
     return c;
+}
+
+int mgcl_test::TestUtility::finish()
+{
+    int err = clFinish(problem.getCommands());
+    mgcl::mgclCheckError(err, "clFinish");
+    return err;
 }
 
 cl_context mgcl_test::TestUtility::getContext()
