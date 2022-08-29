@@ -32,10 +32,12 @@ namespace mgcl
         static void testRead(Problem &problem, Level &level);
 
         static void restrictSeq(Level &fine, Level &coarse, double ***fineVals, double ***coarseVals);
+        static void restrictSeq(Level &fine, Level &coarse, Cuboid &fineVals, Cuboid &coarseVals);
         static void restrictTest(Level &fine, Level &coarse);
         static void restrict(Level &fine, Level &coarse);
 
         static void prolongateSeq(Level &fine, Level &coarse, double ***fineVals, double ***coarseVals);
+        static void prolongateSeq(Level &fine, Level &coarse, Cuboid &fineVals, Cuboid &coarseVals);
         static void prolongateTest(Level &fine, Level &coarse);
         static void prolongate(Level &fine, Level &coarse);
 

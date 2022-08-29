@@ -2,6 +2,11 @@
 
 namespace mgcl
 {
+    void MultigridEngine::prolongateSeq(Level &fine, Level &coarse, Cuboid &fineVals, Cuboid &coarseVals)
+    {
+        prolongateSeq(fine, coarse, fineVals.getData(), coarseVals.getData());
+    }
+
     /* Prolongates from coarse to fine grid.
      * m, n and o must be dimensions of the fine grid without ghost cells. */
     void MultigridEngine::prolongateSeq(Level &fine, Level &coarse, double ***fineVals, double ***coarseVals)
