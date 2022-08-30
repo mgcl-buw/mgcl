@@ -360,8 +360,8 @@ namespace mgcl
         double initres;
         if (stencil_values)
             initres =
-                MultigridEngine::stencilResidualSeq(levels[0]->getF().getData(), levels[0]->getV().getData(), levels[0]->getR().getData(), m, n, o, ghosts,
-                                                    residual_norm, stencil, stencil_values->getData(), stencil_size_multiplier);
+                MultigridEngine::stencilResidualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(), m, n, o, ghosts,
+                                                    residual_norm, stencil, *stencil_values, stencil_size_multiplier);
         else
             initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(), residual_norm, stencil);
         printf("Starting mgcl with initres = %e\n", initres);

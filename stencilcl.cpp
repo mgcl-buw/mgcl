@@ -11,13 +11,12 @@ namespace mgcl
 {
     /* Restricts stencil to coarser grid using full-weighted restriction operator.
      * m, n and o must be the dimensions of the coarser grid without ghost cells. */
-    void MultigridEngine::stencilRestrictSeq(double ***fine, double ***coarse, int m, int n, int o, int ghosts,
+    void MultigridEngine::stencilRestrictSeq(Cuboid &fine, Cuboid &coarse, int m, int n, int o, int ghosts,
                                              int stencil_size_multiplier)
     {
         // mgcl_debug("untested yet\n");
 
-        MultigridEngine::updateGhostsSeq(fine, m * 2, n * 2, o * 2 * stencil_size_multiplier, ghosts, ghosts,
-                                         ghosts * stencil_size_multiplier);
+        MultigridEngine::updateGhostsSeq(fine);
         int ioff = 1, joff = 1,
             koff = stencil_size_multiplier; // offset grows by 1 for each step, or by stencil_size for innermost loop
         int i2, j2, k2;
@@ -69,7 +68,7 @@ namespace mgcl
                 }
             }
         }
-        MultigridEngine::updateGhostsSeq(coarse, m, n, o * stencil_size_multiplier, ghosts, ghosts, ghosts * stencil_size_multiplier);
+        MultigridEngine::updateGhostsSeq(coarse);
     }
 
     void MultigridEngine::stencilRestrictTest(Problem &problem, double ***fine, double ***coarse, int m, int n, int o, int ghosts,
@@ -132,13 +131,12 @@ namespace mgcl
 
     /* Prolongates stencil from coarse to fine grid.
      * m, n and o must be dimensions of the fine grid without ghost cells. */
-    void MultigridEngine::stencilProlongateSeq(double ***fine, double ***coarse, int m, int n, int o, int ghosts,
+    void MultigridEngine::stencilProlongateSeq(Cuboid &fine, Cuboid &coarse, int m, int n, int o, int ghosts,
                                                int stencil_size_multiplier)
     {
         // mgcl_debug("untested yet\n");
 
-        MultigridEngine::updateGhostsSeq(coarse, m / 2, n / 2, (o / 2) * stencil_size_multiplier, ghosts, ghosts,
-                                         ghosts * stencil_size_multiplier);
+        MultigridEngine::updateGhostsSeq(coarse);
         int ioff = 1, joff = 1, koff = 1; // offset grows by 1 for each step
         int i2, j2, k2;
         for (int i = ghosts; i < m / 2 + ghosts; i++, ioff++)
@@ -181,7 +179,7 @@ namespace mgcl
                 }
             }
         }
-        MultigridEngine::updateGhostsSeq(fine, m, n, o * stencil_size_multiplier, ghosts, ghosts, ghosts * stencil_size_multiplier);
+        MultigridEngine::updateGhostsSeq(fine);
     }
 
     void MultigridEngine::stencilProlongateTest(Problem &problem, double ***fine, double ***coarse, int m, int n, int o, int ghosts,
@@ -242,22 +240,16 @@ namespace mgcl
     /* Runs jacobi method sequentially.
      * v, f and r must be of size [m+2][n+2][o+2] for periodic boundary condition.
      * m,n,o is size of real grid */
-    double MultigridEngine::stencilJacobiSeq(double ***v, double ***f, double ***r, int m, int n, int o, int ghosts, double omega,
-                                             int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil, double ***stencil_values,
+    double MultigridEngine::stencilJacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, int m, int n, int o, int ghosts, double omega,
+                                             int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil, Cuboid &stencil_values,
                                              int stencil_size_multiplier)
     {
         double res = 0.0;
 
-        if (!stencil_values)
-        {
-            printf("mgcl_stencil_jacobi_seq: stencil_values is NULL!\n");
-            return -1;
-        }
-
         for (int iter = 0; iter < maxiter; iter++)
         {
             // update ghost cells for periodic boundary condition
-            MultigridEngine::updateGhostsSeq(v, m, n, o, ghosts, ghosts, ghosts);
+            MultigridEngine::updateGhostsSeq(v);
 
             // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
 
@@ -276,14 +268,14 @@ namespace mgcl
                         v[i][j][k] = v[i][j][k] + omega * (1.0 / stencil_values[i][j][kst]) * r[i][j][k];
                     }
         }
-        MultigridEngine::updateGhostsSeq(v, m, n, o, ghosts, ghosts, ghosts);
+        MultigridEngine::updateGhostsSeq(v);
         return res;
     }
 
     /* Calculates r = f - A*v using 7-point stencil of 3D laplacian.
      * m,n,o is size of real grid */
-    double MultigridEngine::stencilResidualSeq(double ***f, double ***v, double ***r, int m, int n, int o, int ghosts,
-                                               MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil, double ***stencil_values,
+    double MultigridEngine::stencilResidualSeq(Cuboid &f, Cuboid &v, Cuboid &r, int m, int n, int o, int ghosts,
+                                               MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil, Cuboid &stencil_values,
                                                int stencil_size_multiplier)
     {
         double res = 0.0;
@@ -379,7 +371,7 @@ namespace mgcl
                     else if (fabs(r[i][j][k]) > res)
                         res = r[i][j][k];
                 }
-        MultigridEngine::updateGhostsSeq(r, m, n, o, ghosts, ghosts, ghosts);
+        MultigridEngine::updateGhostsSeq(r);
         return resnorm == MGCL_L2 ? sqrt(res) : res;
     }
 

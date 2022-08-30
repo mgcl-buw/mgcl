@@ -22,9 +22,9 @@ namespace mgcl
 
         // relax nu1 times
         if (problem.stencil_values)
-            res = MultigridEngine::stencilJacobiSeq(level.getV().getData(), level.getF().getData(), level.getR().getData(), level.m - 2 * problem.ghosts,
+            res = MultigridEngine::stencilJacobiSeq(level.getV(), level.getF(), level.getR(), level.m - 2 * problem.ghosts,
                                                     level.n - 2 * problem.ghosts, level.o - 2 * problem.ghosts, problem.ghosts,
-                                                    problem.omega, problem.nu1, problem.residual_norm, problem.stencil, problem.getStencilValues().getData(),
+                                                    problem.omega, problem.nu1, problem.residual_norm, problem.stencil, problem.getStencilValues(),
                                                     problem.stencil_size_multiplier);
         else
             res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
@@ -39,7 +39,7 @@ namespace mgcl
 
         // restrict stencil values if stencil is not fixed
         if (problem.stencil_values && problem.restrict_prolongate_stencil)
-            MultigridEngine::stencilRestrictSeq(level.getStencilValues().getData(), levelAbove.getStencilValues().getData(),
+            MultigridEngine::stencilRestrictSeq(level.getStencilValues(), levelAbove.getStencilValues(),
                                                 levelAbove.m - 2 * problem.ghosts, levelAbove.n - 2 * problem.ghosts,
                                                 levelAbove.o - 2 * problem.ghosts, problem.ghosts, problem.stencil_size_multiplier);
 
@@ -53,10 +53,10 @@ namespace mgcl
             {
                 // printf(" pre v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
                 if (problem.stencil_values)
-                    MultigridEngine::stencilJacobiSeq(levelAbove.getV().getData(), levelAbove.getF().getData(), levelAbove.getR().getData(),
+                    MultigridEngine::stencilJacobiSeq(levelAbove.getV(), levelAbove.getF(), levelAbove.getR(),
                                                       levelAbove.m - 2 * problem.ghosts, levelAbove.n - 2 * problem.ghosts,
                                                       levelAbove.o - 2 * problem.ghosts, problem.ghosts, problem.omega,
-                                                      problem.nu1 + problem.nu2, problem.residual_norm, problem.stencil, problem.getStencilValues().getData(),
+                                                      problem.nu1 + problem.nu2, problem.residual_norm, problem.stencil, problem.getStencilValues(),
                                                       problem.stencil_size_multiplier);
                 else
                     MultigridEngine::jacobiSeq(levelAbove.getV(), levelAbove.getF(), levelAbove.getR(), problem.omega, problem.nu1 + problem.nu2,
@@ -72,7 +72,7 @@ namespace mgcl
 
         // prolongate stencil values if stencil is not fixed
         if (problem.stencil_values && problem.restrict_prolongate_stencil)
-            MultigridEngine::stencilProlongateSeq(level.getStencilValues().getData(), levelAbove.getStencilValues().getData(),
+            MultigridEngine::stencilProlongateSeq(level.getStencilValues(), levelAbove.getStencilValues(),
                                                   level.m - 2 * problem.ghosts, level.n - 2 * problem.ghosts,
                                                   level.o - 2 * problem.ghosts, problem.ghosts, problem.stencil_size_multiplier);
 
@@ -84,9 +84,9 @@ namespace mgcl
 
         // relax nu2 times
         if (problem.stencil_values)
-            res = MultigridEngine::stencilJacobiSeq(level.getV().getData(), level.getF().getData(), level.getR().getData(), level.m - 2 * problem.ghosts,
+            res = MultigridEngine::stencilJacobiSeq(level.getV(), level.getF(), level.getR(), level.m - 2 * problem.ghosts,
                                                     level.n - 2 * problem.ghosts, level.o - 2 * problem.ghosts, problem.ghosts,
-                                                    problem.omega, problem.nu2, problem.residual_norm, problem.stencil, problem.getStencilValues().getData(),
+                                                    problem.omega, problem.nu2, problem.residual_norm, problem.stencil, problem.getStencilValues(),
                                                     problem.stencil_size_multiplier);
         else
             res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
