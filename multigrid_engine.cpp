@@ -125,7 +125,7 @@ namespace mgcl
         // printf("res on level.getNum() %d, upwards: %e\n", level.getNum(), res);
 
         // restrict to coarser grid
-        restrict(level, levelAbove);
+        restrict(level, levelAbove, level.getDR(), levelAbove.getDF());
 
         // restrict stencil values if stencil is not fixed
         if (problem.stencil_values && problem.restrict_prolongate_stencil)

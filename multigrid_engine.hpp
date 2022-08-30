@@ -33,7 +33,7 @@ namespace mgcl
 
         static void restrictSeq(Level &fine, Level &coarse, Cuboid &fineVals, Cuboid &coarseVals);
         static void restrictTest(Level &fine, Level &coarse);
-        static void restrict(Level &fine, Level &coarse);
+        static void restrict(Level &fine, Level &coarse, cl_mem d_fine_values, cl_mem d_coarse_values);
 
         static void prolongateSeq(Level &fine, Level &coarse, Cuboid &fineVals, Cuboid &coarseVals);
         static void prolongateTest(Level &fine, Level &coarse);

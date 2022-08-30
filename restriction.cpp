@@ -55,12 +55,12 @@ namespace mgcl
         MultigridEngine::updateGhostsSeq(coarse_vals);
     }
 
-    void MultigridEngine::restrict(Level &fine, Level &coarse)
+    void MultigridEngine::restrict(Level &fine, Level &coarse, cl_mem d_fine_values, cl_mem d_coarse_values)
     {
         int err;
-        int mreal = coarse.m - 2 * fine.problem->ghosts;
-        int nreal = coarse.n - 2 * fine.problem->ghosts;
-        int oreal = coarse.o - 2 * fine.problem->ghosts;
+        int mreal = coarse.m;
+        int nreal = coarse.n;
+        int oreal = coarse.o;
         auto problem = fine.problem;
 
         // Create the compute kernel from the program
@@ -69,11 +69,11 @@ namespace mgcl
 
         // assign kernel arguments
         int pos = 0;
-        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &fine.dR);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &coarse.dF);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.m);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.n);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.o);
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &d_fine_values);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_coarse_values);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.mgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.ngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.ogh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem->ghosts);
         mgclCheckError(err, "Setting kernel arguments");
 
@@ -90,11 +90,11 @@ namespace mgcl
                 // printf("%ld (multiple of %ld)\n", global[i], local[i]);
             }
 
-        err = MultigridEngine::updateGhosts(*problem, fine.dR, fine.m, fine.n, fine.o, problem->ghosts, problem->ghosts, problem->ghosts);
+        err = MultigridEngine::updateGhosts(*problem, d_fine_values, fine.mgh, fine.ngh, fine.ogh, problem->ghosts, problem->ghosts, problem->ghosts);
         mgclCheckError(err, "Updating fine ghosts");
         err = clEnqueueNDRangeKernel(problem->openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing restriction kernel");
-        err = MultigridEngine::updateGhosts(*problem, coarse.dF, coarse.m, coarse.n, coarse.o, problem->ghosts, problem->ghosts,
+        err = MultigridEngine::updateGhosts(*problem, d_coarse_values, coarse.mgh, coarse.ngh, coarse.ogh, problem->ghosts, problem->ghosts,
                                             problem->ghosts);
         mgclCheckError(err, "Updating coarse ghosts");
 
