@@ -21,14 +21,15 @@ namespace mgcl_test
     class TestUtility
     {
     private:
-        mgcl::Problem problem;
+        std::shared_ptr<mgcl::Problem> problem;
         std::vector<cl_mem> openclBuffers;
 
     public:
         TestUtility();
+        TestUtility(mgcl::Problem *problem);
         ~TestUtility();
         cl_mem createOpenCLBuffer(mgcl::Cuboid &c);
-        mgcl::Cuboid readOpenCLBuffer(cl_mem buf, int m, int n, int o);
+        mgcl::Cuboid readOpenCLBuffer(cl_mem buf, int m, int n, int o, int ghosts_m = 0, int ghosts_n = 0, int ghosts_o = 0);
         int finish();
 
         cl_context getContext();

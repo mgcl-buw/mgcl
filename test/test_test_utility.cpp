@@ -9,7 +9,7 @@ TEST_CASE("TestUtility setup")
     REQUIRE(tu.getProblem().getOpenCLHelper().isInitialized());
 }
 
-TEST_CASE("TestUtility createOpenCLBuffer")
+TEST_CASE("TestUtility createOpenCLBuffer + readOpenCLBuffer")
 {
     mgcl_test::TestUtility tu;
     REQUIRE(tu.getProblem().getOpenCLHelper().isInitialized());
@@ -21,4 +21,11 @@ TEST_CASE("TestUtility createOpenCLBuffer")
     auto c2 = tu.readOpenCLBuffer(buf, 4, 4, 4);
     for (int i = 0; i < c2.field1d().size(); i++)
         REQUIRE(c2.field1d()[i] == c.field1d()[i]);
+}
+
+TEST_CASE("TestUtility readOpenCLBuffer nullptr")
+{
+    mgcl_test::TestUtility tu;
+    REQUIRE(tu.getProblem().getOpenCLHelper().isInitialized());
+    REQUIRE_THROWS_AS(tu.readOpenCLBuffer(nullptr, 4, 4, 4), std::invalid_argument);
 }
