@@ -61,6 +61,7 @@ test/test_utility.cpp
 test/test_test_utility.cpp
 test/test_ghosts.cpp
 test/test_restriction.cpp
+test/test_prolongation.cpp
 )
 
 add_executable(tests ${SOURCES_TEST})

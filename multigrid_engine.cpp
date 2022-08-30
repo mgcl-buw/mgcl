@@ -147,7 +147,7 @@ namespace mgcl
 
         // prolongate from coarser to finer grid
         // r of this level.getNum() is reused here and should actually be called e
-        prolongate(level, levelAbove);
+        prolongate(level, levelAbove, level.dR, levelAbove.dVIn);
 
         // prolongate stencil values if stencil is not fixed
         if (problem.stencil_values && problem.restrict_prolongate_stencil)

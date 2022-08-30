@@ -37,7 +37,7 @@ namespace mgcl
 
         static void prolongateSeq(Level &fine, Level &coarse, Cuboid &fineVals, Cuboid &coarseVals);
         static void prolongateTest(Level &fine, Level &coarse);
-        static void prolongate(Level &fine, Level &coarse);
+        static void prolongate(Level &fine, Level &coarse, cl_mem d_fine_values, cl_mem d_coarse_values);
 
         static void updateGhostsSeq(double ***v, int m, int n, int o, int ghostsM, int ghostsN, int ghostsO);
         static void updateGhostsSeq(Cuboid &c);

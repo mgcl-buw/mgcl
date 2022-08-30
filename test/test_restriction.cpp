@@ -6,10 +6,10 @@
 #include "../multigrid_engine.hpp"
 #include "test_utility.hpp"
 
-mgcl::Cuboid testInputFine();
-mgcl::Cuboid testInputCoarse();
-mgcl::Cuboid testOutputFine();
-mgcl::Cuboid testOutputCoarse();
+mgcl::Cuboid restrictionTestInputFine();
+mgcl::Cuboid restrictionTestInputCoarse();
+mgcl::Cuboid restrictionTestOutputFine();
+mgcl::Cuboid restrictionTestOutputCoarse();
 
 TEST_CASE("restriction")
 {
@@ -23,10 +23,10 @@ TEST_CASE("restriction")
     int ngh = n + 2 * ghosts_n;
     int ogh = o + 2 * ghosts_o;
 
-    auto c_fine = testInputFine();
-    auto c_coarse = testInputCoarse();
-    auto c_expected_fine = testOutputFine();
-    auto c_expected_coarse = testOutputCoarse();
+    auto c_fine = restrictionTestInputFine();
+    auto c_coarse = restrictionTestInputCoarse();
+    auto c_expected_fine = restrictionTestOutputFine();
+    auto c_expected_coarse = restrictionTestOutputCoarse();
 
     auto p = std::make_shared<mgcl::Problem>(m, n, o);
     mgcl::Level lv_fine(p.get(), 0, m, n, o);
@@ -63,7 +63,7 @@ TEST_CASE("restriction")
  *
  * @return mgcl::Cuboid Cuboid filled with test input from fine grid.
  */
-mgcl::Cuboid testInputFine()
+mgcl::Cuboid restrictionTestInputFine()
 {
     mgcl::Cuboid c(16, 16, 16, 1, 1, 1);
 
@@ -5908,7 +5908,7 @@ mgcl::Cuboid testInputFine()
  *
  * @return mgcl::Cuboid Cuboid filled with test input from coarse grid (zeros).
  */
-mgcl::Cuboid testInputCoarse()
+mgcl::Cuboid restrictionTestInputCoarse()
 {
     mgcl::Cuboid c(8, 8, 8, 1, 1, 1, 0);
     return c;
@@ -5919,7 +5919,7 @@ mgcl::Cuboid testInputCoarse()
  *
  * @return mgcl::Cuboid Cuboid filled with test output from fine grid.
  */
-mgcl::Cuboid testOutputFine()
+mgcl::Cuboid restrictionTestOutputFine()
 {
     mgcl::Cuboid c(16, 16, 16, 1, 1, 1);
 
@@ -11764,7 +11764,7 @@ mgcl::Cuboid testOutputFine()
  *
  * @return mgcl::Cuboid Cuboid filled with test output from coarse grid.
  */
-mgcl::Cuboid testOutputCoarse()
+mgcl::Cuboid restrictionTestOutputCoarse()
 {
     mgcl::Cuboid c(8, 8, 8, 1, 1, 1);
 
