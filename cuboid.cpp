@@ -235,7 +235,9 @@ namespace mgcl
                       << "   i   j   k    difference" << std::endl;
             for (auto d : diffs)
             {
-                std::cout << std::setw(4) << std::get<0>(d) << std::get<1>(d) << std::get<2>(d)
+                std::cout << std::setw(4) << std::get<0>(d)
+                          << std::setw(4) << std::get<1>(d)
+                          << std::setw(4) << std::get<2>(d)
                           << std::setw(14) << std::get<3>(d) << std::endl;
             }
         }
