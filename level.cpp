@@ -2,6 +2,15 @@
 
 namespace mgcl
 {
+    /**
+     * @brief Construct a new Level:: Level object
+     *
+     * @param problem_ Problem this Level belongs to.
+     * @param num_ Number of level in the Problem (finest grid is level 0)
+     * @param m_ Amount of real grid cells in x-direction.
+     * @param n_ Amount of real grid cells in y-direction.
+     * @param o_ Amount of real grid cells in z-direction.
+     */
     Level::Level(Problem *problem_, int num_, int m_, int n_, int o_)
         : problem(problem_),
           num(num_),

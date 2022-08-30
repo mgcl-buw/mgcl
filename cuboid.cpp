@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
 #include <iomanip>
 #include <iostream>
 #include <random>
@@ -200,6 +201,7 @@ namespace mgcl
      * @param tol tolerance that is used for checking equality. Defaults to 1e-7.
      * @return true Cuboids equal.
      * @return false Cuboids not equal.
+     * @throws invalid_argument When dimensions of Cuboids don't match.
      */
     bool Cuboid::isEqual(Cuboid &c, double tol)
     {
@@ -207,8 +209,7 @@ namespace mgcl
             n != c.getN() ||
             o != c.getO())
         {
-            std::cout << "Cannot check equality for Cuboids. Dimensions differ." << std::endl;
-            return false;
+            throw std::invalid_argument("Cannot check equality for Cuboids. Dimensions differ.");
         }
 
         std::vector<std::tuple<int, int, int, double>> diffs;

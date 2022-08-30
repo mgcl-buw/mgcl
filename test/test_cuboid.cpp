@@ -113,7 +113,7 @@ TEST_CASE("cuboid class")
 
         REQUIRE(c2.isEqual(c3));
         REQUIRE(c3.isEqual(c2));
-        REQUIRE(!c4.isEqual(c2));
+        REQUIRE_THROWS_AS(c4.isEqual(c2), std::invalid_argument);
     }
 
     SECTION("ghosts > 0")
