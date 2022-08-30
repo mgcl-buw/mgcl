@@ -9,6 +9,13 @@ TEST_CASE("TestUtility setup")
     REQUIRE(tu.getProblem().getOpenCLHelper().isInitialized());
 }
 
+TEST_CASE("TestUtility setup reusing Problem")
+{
+    auto p = std::make_shared<mgcl::Problem>(4, 4, 4);
+    mgcl_test::TestUtility tu(p);
+    REQUIRE(tu.getProblem().getOpenCLHelper().isInitialized());
+}
+
 TEST_CASE("TestUtility createOpenCLBuffer + readOpenCLBuffer")
 {
     mgcl_test::TestUtility tu;

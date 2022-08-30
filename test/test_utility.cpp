@@ -10,7 +10,7 @@ mgcl_test::TestUtility::TestUtility()
     problem->initOpenCL();
 }
 
-mgcl_test::TestUtility::TestUtility(mgcl::Problem *problem_)
+mgcl_test::TestUtility::TestUtility(std::shared_ptr<mgcl::Problem> problem_)
     : problem(std::shared_ptr<mgcl::Problem>(problem_))
 {
     problem->initOpenCL();
