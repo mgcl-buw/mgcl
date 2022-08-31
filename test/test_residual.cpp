@@ -107,9 +107,9 @@ mgcl::Cuboid residualTestInputV()
 }
 
 /**
- * @brief Test output from pp3mg's restriction test, m = n = o = 16, ghosts = 1.
+ * @brief Test output from pp3mg's residual test, m = n = o = 16, ghosts = 1.
  *
- * @return mgcl::Cuboid Cuboid filled with test output from fine grid.
+ * @return mgcl::Cuboid Cuboid filled with test output of r.
  */
 mgcl::Cuboid residualTestOutputR()
 {
