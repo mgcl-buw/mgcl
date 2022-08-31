@@ -199,11 +199,12 @@ namespace mgcl
      *
      * @param c Other Cuboid
      * @param tol tolerance that is used for checking equality. Defaults to 1e-7.
+     * @param printDiffs If true, differences will be printed to standard output. Defaults to true.
      * @return true Cuboids equal.
      * @return false Cuboids not equal.
      * @throws invalid_argument When dimensions of Cuboids don't match.
      */
-    bool Cuboid::isEqual(Cuboid &c, double tol)
+    bool Cuboid::isEqual(Cuboid &c, double tol, bool printDiffs)
     {
         if (m != c.getM() ||
             n != c.getN() ||
@@ -212,7 +213,7 @@ namespace mgcl
             throw std::invalid_argument("Cannot check equality for Cuboids. Dimensions differ.");
         }
 
-        std::vector<std::tuple<int, int, int, double>> diffs;
+        std::vector<std::tuple<int, int, int, double, double, double>> diffs;
         bool ret = true;
         double diff = 0;
 
@@ -225,20 +226,26 @@ namespace mgcl
                     if (fabs(diff) > tol)
                     {
                         ret = false;
-                        diffs.push_back(std::make_tuple(i, j, k, fabs(diff)));
+                        diffs.push_back(std::make_tuple(i, j, k,
+                                                        field_3d[i + ghostsM][j + ghostsN][k + ghostsO],
+                                                        c[i + c.getGhostsM()][j + c.getGhostsN()][k + c.getGhostsO()],
+                                                        fabs(diff)));
                     }
                 }
 
-        if (!diffs.empty())
+        if (printDiffs && !diffs.empty())
         {
             std::cout << "Cuboids not equal. Differences: " << std::endl
-                      << "   i   j   k    difference" << std::endl;
+                      << "   i   j   k       this      other   difference" << std::endl;
             for (auto d : diffs)
             {
                 std::cout << std::setw(4) << std::get<0>(d)
                           << std::setw(4) << std::get<1>(d)
                           << std::setw(4) << std::get<2>(d)
-                          << std::setw(14) << std::get<3>(d) << std::endl;
+                          << std::scientific << std::setprecision(3) << std::setw(11) << std::get<3>(d)
+                          << std::scientific << std::setprecision(3) << std::setw(11) << std::get<4>(d)
+                          << std::scientific << std::setprecision(3) << std::setw(13) << std::get<5>(d)
+                          << std::endl;
             }
         }
 
