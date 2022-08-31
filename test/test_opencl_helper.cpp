@@ -6,8 +6,8 @@
 
 TEST_CASE("OpenCLHelper")
 {
-    mgcl::Cuboid v(4, 4, 4);
-    mgcl::Cuboid f(4, 4, 4);
+    auto v = std::make_shared<mgcl::Cuboid>(4, 4, 4);
+    auto f = std::make_shared<mgcl::Cuboid>(4, 4, 4);
     mgcl::Problem p(4, 4, 4, f, v);
     mgcl::OpenCLHelper openCLHelper(&p);
 
@@ -41,8 +41,8 @@ TEST_CASE("OpenCLHelper")
         int err = openCLHelper.init();
         REQUIRE(err == CL_SUCCESS);
 
-        mgcl::Cuboid v2(3, 3, 3);
-        mgcl::Cuboid f2(3, 3, 3);
+        auto v2 = std::make_shared<mgcl::Cuboid>(3, 3, 3);
+        auto f2 = std::make_shared<mgcl::Cuboid>(3, 3, 3);
         mgcl::Problem p2(3, 3, 3, f2, v2);
         p2.setReuseOpenclBuffers(true);
         mgcl::OpenCLHelper openCLHelper2(&p2);

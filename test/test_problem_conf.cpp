@@ -12,8 +12,8 @@
  */
 TEST_CASE("Problem conf")
 {
-    auto v = mgcl::Cuboid(8, 8, 8);
-    auto f = mgcl::Cuboid(8, 8, 8);
+    auto v = std::make_shared<mgcl::Cuboid>(8, 8, 8);
+    auto f = std::make_shared<mgcl::Cuboid>(8, 8, 8);
     mgcl::Problem p(8, 8, 8, v, f);
 
     SECTION("default values")
@@ -59,8 +59,8 @@ TEST_CASE("Problem conf")
 
 TEST_CASE("Problem::checkParameters")
 {
-    mgcl::Cuboid v(8, 8, 8);
-    mgcl::Cuboid f(8, 8, 8);
+    auto v = std::make_shared<mgcl::Cuboid>(8, 8, 8);
+    auto f = std::make_shared<mgcl::Cuboid>(8, 8, 8);
 
     SECTION("m,n,o wrong")
     {
@@ -241,11 +241,11 @@ TEST_CASE("Problem::init")
     int m = 4;
     int n = 4;
     int o = 4;
-    mgcl::Cuboid v(m, n, o);
-    mgcl::Cuboid f(m, n, o);
+    auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+    auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
     mgcl::Problem p(m, n, o, f, v);
-    v.fillRandom();
-    f.fillRandom();
+    v->fillRandom();
+    f->fillRandom();
 
     SECTION("default conf, v and f nullptr")
     {
@@ -266,8 +266,8 @@ TEST_CASE("Problem::init")
             for (int j = 0; j < n; j++)
                 for (int k = 0; k < o; k++)
                 {
-                    REQUIRE(v[i][j][k] == p.getLevels()[0]->getV()[i + 1][j + 1][k + 1]);
-                    REQUIRE(f[i][j][k] == p.getLevels()[0]->getF()[i + 1][j + 1][k + 1]);
+                    REQUIRE((*v)[i][j][k] == p.getLevels()[0]->getV()[i + 1][j + 1][k + 1]);
+                    REQUIRE((*f)[i][j][k] == p.getLevels()[0]->getF()[i + 1][j + 1][k + 1]);
                 }
 
         for (int lv = 0; lv < p.getMaxlevel(); lv++)
@@ -294,8 +294,8 @@ TEST_CASE("Problem::init")
         int ngh = n + 2 * ghosts_in;
         int ogh = o + 2 * ghosts_in;
 
-        mgcl::Cuboid v2(mgh, ngh, ogh);
-        mgcl::Cuboid f2(mgh, ngh, ogh);
+        auto v2 = std::make_shared<mgcl::Cuboid>(mgh, ngh, ogh);
+        auto f2 = std::make_shared<mgcl::Cuboid>(mgh, ngh, ogh);
         mgcl::Problem p2(m, n, o, v2, f2);
 
         p2.setGhostsIn(ghosts_in);
@@ -306,8 +306,8 @@ TEST_CASE("Problem::init")
             for (int j = 0; j < n; j++)
                 for (int k = 0; k < o; k++)
                 {
-                    REQUIRE(v2[i + ghosts_in][j + ghosts_in][k + ghosts_in] == p2.getLevels()[0]->getV()[i + 1][j + 1][k + 1]);
-                    REQUIRE(f2[i + ghosts_in][j + ghosts_in][k + ghosts_in] == p2.getLevels()[0]->getF()[i + 1][j + 1][k + 1]);
+                    REQUIRE((*v2)[i + ghosts_in][j + ghosts_in][k + ghosts_in] == p2.getLevels()[0]->getV()[i + 1][j + 1][k + 1]);
+                    REQUIRE((*f2)[i + ghosts_in][j + ghosts_in][k + ghosts_in] == p2.getLevels()[0]->getF()[i + 1][j + 1][k + 1]);
                 }
 
         for (int lv = 0; lv < p2.getMaxlevel(); lv++)
@@ -342,8 +342,8 @@ TEST_CASE("Problem::init")
             for (int j = 0; j < n; j++)
                 for (int k = 0; k < o; k++)
                 {
-                    REQUIRE(v[i][j][k] == p.getLevels()[0]->getV()[i + ghosts][j + ghosts][k + ghosts]);
-                    REQUIRE(f[i][j][k] == p.getLevels()[0]->getF()[i + ghosts][j + ghosts][k + ghosts]);
+                    REQUIRE((*v)[i][j][k] == p.getLevels()[0]->getV()[i + ghosts][j + ghosts][k + ghosts]);
+                    REQUIRE((*f)[i][j][k] == p.getLevels()[0]->getF()[i + ghosts][j + ghosts][k + ghosts]);
                 }
 
         for (int lv = 0; lv < p.getMaxlevel(); lv++)
@@ -401,11 +401,33 @@ TEST_CASE("Problem::init")
         REQUIRE(p2.getLevels()[0]->getDF() == d_f);
         for (int lv = 0; lv < p2.getMaxlevel(); lv++)
         {
+            // check if buffers are not nullptr
             REQUIRE(p2.getLevels()[lv]);
             REQUIRE(p2.getLevels()[lv]->getDVIn());
             REQUIRE(p2.getLevels()[lv]->getDVOut());
             REQUIRE(p2.getLevels()[lv]->getDF());
             REQUIRE(p2.getLevels()[lv]->getDR());
+
+            // check sizes of buffers
+            int err;
+            size_t bufsize;
+            int sizeNeeded = sizeof(double) * p2.getLevels()[lv]->getMgh() * p2.getLevels()[lv]->getNgh() * p2.getLevels()[lv]->getOgh();
+
+            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDVIn(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
+            REQUIRE(sizeNeeded == bufsize);
+
+            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDVOut(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
+            REQUIRE(sizeNeeded == bufsize);
+
+            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
+            REQUIRE(sizeNeeded == bufsize);
+
+            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDR(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
+            REQUIRE(sizeNeeded == bufsize);
         }
     }
 
@@ -453,6 +475,27 @@ TEST_CASE("Problem::init")
             REQUIRE(p2.getLevels()[lv]->getDVOut());
             REQUIRE(p2.getLevels()[lv]->getDF());
             REQUIRE(p2.getLevels()[lv]->getDR());
+
+            // check sizes of buffers
+            int err;
+            size_t bufsize;
+            int sizeNeeded = sizeof(double) * p2.getLevels()[lv]->getMgh() * p2.getLevels()[lv]->getNgh() * p2.getLevels()[lv]->getOgh();
+
+            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDVIn(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
+            REQUIRE(sizeNeeded == bufsize);
+
+            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDVOut(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
+            REQUIRE(sizeNeeded == bufsize);
+
+            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
+            REQUIRE(sizeNeeded == bufsize);
+
+            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDR(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
+            REQUIRE(sizeNeeded == bufsize);
         }
 
         // contents of copied buffer and input buffers are equal

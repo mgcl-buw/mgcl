@@ -1,4 +1,5 @@
 #include <ctgmath>
+#include <exception>
 #include <string>
 
 #include "cuboid.hpp"
@@ -12,8 +13,13 @@ namespace mgcl
     {
     }
 
-    Problem::Problem(int m_, int n_, int o_, Cuboid &f_, Cuboid &v_)
-        : m(m_), n(n_), o(o_), f(std::make_shared<Cuboid>(f_)), v(std::make_shared<Cuboid>(v_))
+    Problem::Problem(int m_, int n_, int o_, Cuboid *f_, Cuboid *v_)
+        : m(m_), n(n_), o(o_), f(std::make_shared<Cuboid>(*f_)), v(std::make_shared<Cuboid>(*v_))
+    {
+    }
+
+    Problem::Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_)
+        : m(m_), n(n_), o(o_), f(f_), v(v_)
     {
     }
 
@@ -347,12 +353,13 @@ namespace mgcl
     /**
      * @brief Solves problem sequentially using multigrid method.
      *
+     * @throws runtime_error When initializing data structures failed.
      */
     void Problem::solveSeq()
     {
         // set up data for each level
         if (!init())
-            return;
+            throw std::runtime_error("Failed to initialize mgcl data structures.");
 
         // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
         MultigridEngine::updateGhostsSeq(levels[0]->getV());

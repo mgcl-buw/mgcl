@@ -134,13 +134,13 @@ namespace mgcl
 
     public:
         Problem(int m_, int n_, int o_);
-        Problem(int m_, int n_, int o_, Cuboid &f_, Cuboid &v_);
+        Problem(int m_, int n_, int o_, Cuboid *f_, Cuboid *v_);
+        Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_);
         Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_);
         Problem(const Problem &) = delete;
         Problem &operator=(const Problem &) = delete;
         ~Problem() = default;
 
-        // TODO implement
         bool checkParameters();
         int calculateAndSetMaxLevel();
         bool init();
