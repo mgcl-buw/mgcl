@@ -109,7 +109,7 @@ namespace mgcl
         {
             // reset v to zero for coarser grids (for another possible v-cycle)
             err = clEnqueueFillBuffer(problem.openCLHelper.getCommands(), levelAbove.dVIn, &zero, sizeof(cl_uint), 0,
-                                      sizeof(double) * levelAbove.m * levelAbove.n * levelAbove.o, 0, NULL,
+                                      sizeof(double) * levelAbove.mgh * levelAbove.ngh * levelAbove.ogh, 0, NULL,
                                       NULL);
             mgclCheckError(err, "resetting dVIn to 0");
         }

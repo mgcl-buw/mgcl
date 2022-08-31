@@ -221,15 +221,15 @@ namespace mgcl
             for (int j = 0; j < n; j++)
                 for (int k = 0; k < o; k++)
                 {
-                    diff = field_3d[i + ghostsM][j + ghostsN][k + ghostsO] -
-                           c[i + c.getGhostsM()][j + c.getGhostsN()][k + c.getGhostsO()];
-                    if (fabs(diff) > tol)
+                    diff = fabs(field_3d[i + ghostsM][j + ghostsN][k + ghostsO] -
+                                c[i + c.getGhostsM()][j + c.getGhostsN()][k + c.getGhostsO()]);
+                    if (diff > tol)
                     {
                         ret = false;
                         diffs.push_back(std::make_tuple(i, j, k,
                                                         field_3d[i + ghostsM][j + ghostsN][k + ghostsO],
                                                         c[i + c.getGhostsM()][j + c.getGhostsN()][k + c.getGhostsO()],
-                                                        fabs(diff)));
+                                                        diff));
                     }
                 }
 
