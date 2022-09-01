@@ -289,11 +289,12 @@ namespace mgcl
 
         if (myfile.is_open())
         {
-            for (int i = 0; i < m; i++)
-                for (int j = 0; j < n; j++)
-                    for (int k = 0; k < o; k++)
+            for (int i = 0; i < mgh; i++)
+                for (int j = 0; j < ngh; j++)
+                    for (int k = 0; k < ogh; k++)
                     {
-                        myfile << i << "\t" << j << "\t" << k << "\t" << field_3d[i][j][k] << std::endl;
+                        myfile << i << "\t" << j << "\t" << k << "\t"
+                               << std::scientific << std::setprecision(17) << field_3d[i][j][k] << std::endl;
                     }
             myfile.close();
         }

@@ -179,14 +179,15 @@ TEST_CASE("cuboid class")
 
     SECTION("dumpToFile")
     {
+        mgcl::Cuboid c2(1, 2, 3, 0, 1, 2, 5.0);
         std::string path = "./test.txt";
-        c.dumpToFile(path);
+        c2.dumpToFile(path);
         std::ifstream f(path.c_str());
         REQUIRE(f.good());
 
         auto lineCount = std::count(std::istreambuf_iterator<char>(f),
                                     std::istreambuf_iterator<char>(), '\n');
-        CHECK(lineCount == c.getMgh() * c.getNgh() * c.getOgh());
+        CHECK(lineCount == c2.getMgh() * c2.getNgh() * c2.getOgh());
 
         f.close();
         CHECK(remove(path.c_str()) == 0);
