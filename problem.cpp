@@ -286,7 +286,7 @@ namespace mgcl
 
         // read back results TODO: only for testing purposes, maybe define TESTING?
         err = clEnqueueReadBuffer(openCLHelper.getCommands(), levels[0]->dVIn, CL_TRUE, 0,
-                                  sizeof(double) * levels[0]->m * levels[0]->n * levels[0]->o, levels[0]->getV()[0][0], 0, NULL, NULL);
+                                  sizeof(double) * levels[0]->mgh * levels[0]->ngh * levels[0]->ogh, levels[0]->getV()[0][0], 0, NULL, NULL);
         mgclCheckError(err, "Error: Failed to read output arrays from device!");
 
         // copy result to initial v vector

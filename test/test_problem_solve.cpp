@@ -112,7 +112,6 @@ TEST_CASE("Problem solving: periodic 4th order")
         auto err = calculateError(solution, *v);
         auto errNorm = calculateErrorNorm(1.0 / (double)N, err);
         auto errMax = calculateMaxError(err);
-        err.dumpToFile("out_error_ocl.txt");
 
         std::cout << std::scientific << "||e||_2 = " << errNorm << std::endl
                   << std::scientific << "e_max = " << errMax << std::endl;

@@ -60,6 +60,7 @@ namespace mgcl
     public:
         Level(Problem *problem_, int _num, int _m, int _n, int _o);
         Level(const Level &) = delete;
+        Level &operator=(const Level &) = delete;
         Level(const Level &&) = delete;
         ~Level();
 
