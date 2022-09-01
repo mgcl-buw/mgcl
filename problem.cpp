@@ -1,5 +1,6 @@
 #include <ctgmath>
 #include <exception>
+#include <iostream>
 #include <string>
 
 #include "cuboid.hpp"
@@ -334,6 +335,7 @@ namespace mgcl
             auto tstart = std::chrono::steady_clock::now();
             res = MultigridEngine::vcycle(*this, *levels[0]);
             auto tend = mgcl_since(tstart).count();
+
             relres = initres == 0 ? 0 : res / initres;
             printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
 

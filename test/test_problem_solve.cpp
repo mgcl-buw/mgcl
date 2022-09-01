@@ -90,8 +90,14 @@ TEST_CASE("Problem solving: periodic 4th order")
 
         CHECK(errNorm < 1e-2);
         CHECK(errMax < 1e-2);
-        CHECK(fabs(errNorm - 3.93115528889639940e-03) < 1e-7);
-        CHECK(fabs(errMax - 3.95723982871564600e-03) < 1e-7);
+
+        // check if error is equal to old mgcl implementation (problem params must match)
+        if (p.getMaxiterVcycles() == 10 && N == 32 && p.getTol() == 1e-14 &&
+            p.getNu1() == 2 && p.getNu2() == 2 && p.getOmega() == 0.8)
+        {
+            CHECK(fabs(errNorm - 3.93115528889639940e-03) < 1e-14);
+            CHECK(fabs(errMax - 3.95723982871564600e-03) < 1e-14);
+        }
     }
 
     SECTION("using OpenCL")
@@ -99,18 +105,29 @@ TEST_CASE("Problem solving: periodic 4th order")
         p.setUseOpencl(true);
         p.setReadResults(true);
         p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setDeviceName("Quadro");
         p.solve();
 
         // check if solution is good
         auto err = calculateError(solution, *v);
         auto errNorm = calculateErrorNorm(1.0 / (double)N, err);
         auto errMax = calculateMaxError(err);
+        err.dumpToFile("out_error_ocl.txt");
 
         std::cout << std::scientific << "||e||_2 = " << errNorm << std::endl
                   << std::scientific << "e_max = " << errMax << std::endl;
 
         CHECK(errNorm < 1e-2);
         CHECK(errMax < 1e-2);
+
+        // check if error is equal to old mgcl implementation (problem params must match)
+        if (p.getMaxiterVcycles() == 10 && N == 32 && p.getTol() == 1e-14 &&
+            p.getNu1() == 2 && p.getNu2() == 2 && p.getOmega() == 0.8 &&
+            p.getDeviceName() == "Quadro" && p.getDeviceType() == CL_DEVICE_TYPE_GPU)
+        {
+            CHECK(fabs(errNorm - 3.93115528889612358e-03) < 1e-14);
+            CHECK(fabs(errMax - 3.95723982871536324e-03) < 1e-14);
+        }
     }
 }
 

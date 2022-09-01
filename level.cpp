@@ -72,8 +72,10 @@ namespace mgcl
             {
                 dVIn = clCreateBuffer(context, CL_MEM_READ_WRITE,
                                       sizeof(double) * mgh * ngh * ogh, NULL, &err);
+                mgclCheckError(err, "clCreateBuffer");
                 dF = clCreateBuffer(context, CL_MEM_READ_WRITE,
                                     sizeof(double) * mgh * ngh * ogh, NULL, &err);
+                mgclCheckError(err, "clCreateBuffer");
                 // TODO stencil_values
                 problem->getOpenCLHelper().copyInputBuffers();
             }
@@ -82,8 +84,10 @@ namespace mgcl
                 int pointer_flag = deviceType == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
                 dVIn = clCreateBuffer(context, CL_MEM_READ_WRITE | pointer_flag,
                                       sizeof(double) * mgh * ngh * ogh, (*v)[0][0], &err);
+                mgclCheckError(err, "clCreateBuffer");
                 dF = clCreateBuffer(context, CL_MEM_READ_WRITE | pointer_flag,
                                     sizeof(double) * mgh * ngh * ogh, (*f)[0][0], &err);
+                mgclCheckError(err, "clCreateBuffer");
 
                 // create buffers for stencil values if no fixed stencil shall be used
                 if (problem->getStencilValuesPtr())
@@ -91,22 +95,28 @@ namespace mgcl
                         clCreateBuffer(context, CL_MEM_READ_WRITE | pointer_flag,
                                        sizeof(double) * mgh * ngh * ogh * problem->getStencilSizeMultiplier(),
                                        (*stencil_values)[0][0], &err);
+                mgclCheckError(err, "clCreateBuffer");
             }
         }
         else
         {
             dVIn = clCreateBuffer(context, CL_MEM_READ_WRITE,
                                   sizeof(double) * mgh * ngh * ogh, NULL, &err);
+            mgclCheckError(err, "clCreateBuffer");
             dF = clCreateBuffer(context, CL_MEM_READ_WRITE,
                                 sizeof(double) * mgh * ngh * ogh, NULL, &err);
+            mgclCheckError(err, "clCreateBuffer");
 
             if (problem->getStencilValuesPtr())
             {
                 if (problem->getRestrictProlongateStencil())
+                {
                     dStencilValues = clCreateBuffer(context, CL_MEM_READ_WRITE,
                                                     sizeof(double) * mgh * ngh *
                                                         ogh * problem->getStencilSizeMultiplier(),
                                                     NULL, &err);
+                    mgclCheckError(err, "clCreateBuffer");
+                }
                 else
                     dStencilValues = problem->getLevels()[0]->getDStencilValues();
             }
@@ -114,9 +124,10 @@ namespace mgcl
 
         dVOut = clCreateBuffer(context, CL_MEM_READ_WRITE,
                                sizeof(double) * mgh * ngh * ogh, NULL, &err);
+        mgclCheckError(err, "clCreateBuffer");
         dR = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(double) * mgh * ngh * ogh,
                             NULL, &err);
-        mgclCheckError(err, "Creating device buffers");
+        mgclCheckError(err, "clCreateBuffer");
 
         err = MultigridEngine::updateGhosts(*problem, dF, mgh, ngh, ogh, problem->ghosts, problem->ghosts,
                                             problem->ghosts);
