@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 
 #include "../cuboid.hpp"
@@ -83,13 +84,14 @@ TEST_CASE("Problem solving: periodic 4th order")
         auto errNorm = calculateErrorNorm(1.0 / (double)N, err);
         auto errMax = calculateMaxError(err);
 
-        std::cout << std::scientific << "||e||_2 = " << errNorm << std::endl
-                  << std::scientific << "e_max = " << errMax << std::endl;
+        std::cout
+            << std::scientific << std::setprecision(17) << "||e||_2 = " << errNorm << std::endl
+            << std::scientific << std::setprecision(17) << "e_max = " << errMax << std::endl;
 
         CHECK(errNorm < 1e-2);
         CHECK(errMax < 1e-2);
-        // CHECK(fabs(errNorm - 3.93115528889639940e-03) < 1e-7);
-        // CHECK(fabs(errMax - 3.95723982871564600e-03) < 1e-7);
+        CHECK(fabs(errNorm - 3.93115528889639940e-03) < 1e-7);
+        CHECK(fabs(errMax - 3.95723982871564600e-03) < 1e-7);
     }
 
     SECTION("using OpenCL")
@@ -145,7 +147,15 @@ mgcl::Cuboid calculateError(mgcl::Cuboid &solution, mgcl::Cuboid &approximation)
  */
 double calculateMaxError(mgcl::Cuboid &error)
 {
-    return *std::max_element(error.field1d().begin(), error.field1d().begin());
+    double max = 0;
+    for (int i = 0; i < error.getM(); i++)
+        for (int j = 0; j < error.getN(); j++)
+            for (int k = 0; k < error.getO(); k++)
+            {
+                if (max < error[i][j][k])
+                    max = error[i][j][k];
+            }
+    return max;
 }
 
 /**

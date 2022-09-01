@@ -1,5 +1,8 @@
 #include "multigrid_engine.hpp"
 
+#include <iomanip>
+#include <iostream>
+
 namespace mgcl
 {
 
@@ -14,16 +17,20 @@ namespace mgcl
         // reset initial guess of coarser grid
         if (level.getNum() < problem.maxlevel - 1)
         {
-            for (int i = problem.ghosts; i < levelAbove.m - problem.ghosts; i++)
-                for (int j = problem.ghosts; j < levelAbove.n - problem.ghosts; j++)
-                    for (int k = problem.ghosts; k < levelAbove.o - problem.ghosts; k++)
-                        levelAbove.getV()[i][j][k] = 0;
+            levelAbove.getV().fill(0);
         }
+
+        // if (level.num == 1)
+        // {
+        //     level.getV().dumpToFile("out_v.txt");
+        //     level.getF().dumpToFile("out_f.txt");
+        //     level.getR().dumpToFile("out_r.txt");
+        // }
 
         // relax nu1 times
         if (problem.stencil_values)
-            res = MultigridEngine::stencilJacobiSeq(level.getV(), level.getF(), level.getR(), level.m - 2 * problem.ghosts,
-                                                    level.n - 2 * problem.ghosts, level.o - 2 * problem.ghosts, problem.ghosts,
+            res = MultigridEngine::stencilJacobiSeq(level.getV(), level.getF(), level.getR(), level.m,
+                                                    level.n, level.o, problem.ghosts,
                                                     problem.omega, problem.nu1, problem.residual_norm, problem.stencil, problem.getStencilValues(),
                                                     problem.stencil_size_multiplier);
         else
@@ -32,7 +39,18 @@ namespace mgcl
 
         // update residual without D^-1
         // res = residual(level.f, level.v, level.r, level.m-2, level.n-2, level.o-2,
-        // problem.residual_norm, problem.stencil); printf("res on level.getNum() %d, upwards: %e\n", level.getNum(), sqrt(res));
+        // problem.residual_norm, problem.stencil);
+        // printf("res on level %d, upwards: %.17e\n", level.getNum(), res);
+        // std::cout << "v[3][3][3] = " << std::scientific << std::setprecision(17) << level.getV()[3][3][3] << std::endl
+        //           << "f[3][3][3] = " << std::scientific << std::setprecision(17) << level.getF()[3][3][3] << std::endl
+        //           << "r[3][3][3] = " << std::scientific << std::setprecision(17) << level.getR()[3][3][3] << std::endl;
+
+        // if (level.num == 0)
+        // {
+        //     level.getV().dumpToFile("out_v.txt");
+        //     level.getF().dumpToFile("out_f.txt");
+        //     level.getR().dumpToFile("out_r.txt");
+        // }
 
         // restrict residual as right hand side on coarser grid
         MultigridEngine::restrictSeq(level, levelAbove, level.getR(), levelAbove.getF());
@@ -40,8 +58,8 @@ namespace mgcl
         // restrict stencil values if stencil is not fixed
         if (problem.stencil_values && problem.restrict_prolongate_stencil)
             MultigridEngine::stencilRestrictSeq(level.getStencilValues(), levelAbove.getStencilValues(),
-                                                levelAbove.m - 2 * problem.ghosts, levelAbove.n - 2 * problem.ghosts,
-                                                levelAbove.o - 2 * problem.ghosts, problem.ghosts, problem.stencil_size_multiplier);
+                                                levelAbove.m, levelAbove.n,
+                                                levelAbove.o, problem.ghosts, problem.stencil_size_multiplier);
 
         // if not at highest level.getNum()...
         if (level.getNum() < problem.maxlevel - 1)
@@ -54,8 +72,8 @@ namespace mgcl
                 // printf(" pre v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
                 if (problem.stencil_values)
                     MultigridEngine::stencilJacobiSeq(levelAbove.getV(), levelAbove.getF(), levelAbove.getR(),
-                                                      levelAbove.m - 2 * problem.ghosts, levelAbove.n - 2 * problem.ghosts,
-                                                      levelAbove.o - 2 * problem.ghosts, problem.ghosts, problem.omega,
+                                                      levelAbove.m, levelAbove.n,
+                                                      levelAbove.o, problem.ghosts, problem.omega,
                                                       problem.nu1 + problem.nu2, problem.residual_norm, problem.stencil, problem.getStencilValues(),
                                                       problem.stencil_size_multiplier);
                 else
@@ -67,31 +85,31 @@ namespace mgcl
         }
 
         // prolongate from coarser to finer grid
-        // r of this level.getNum() is reused here and should actually be called e
+        // r of this level is reused here and should actually be called e
         MultigridEngine::prolongateSeq(level, levelAbove, level.getR(), levelAbove.getV());
 
         // prolongate stencil values if stencil is not fixed
         if (problem.stencil_values && problem.restrict_prolongate_stencil)
             MultigridEngine::stencilProlongateSeq(level.getStencilValues(), levelAbove.getStencilValues(),
-                                                  level.m - 2 * problem.ghosts, level.n - 2 * problem.ghosts,
-                                                  level.o - 2 * problem.ghosts, problem.ghosts, problem.stencil_size_multiplier);
+                                                  level.m, level.n,
+                                                  level.o, problem.ghosts, problem.stencil_size_multiplier);
 
         // correct error
-        for (int i = problem.ghosts; i < level.m - problem.ghosts; i++)
-            for (int j = problem.ghosts; j < level.n - problem.ghosts; j++)
-                for (int k = problem.ghosts; k < level.o - problem.ghosts; k++)
+        for (int i = problem.ghosts; i < level.m + problem.ghosts; i++)
+            for (int j = problem.ghosts; j < level.n + problem.ghosts; j++)
+                for (int k = problem.ghosts; k < level.o + problem.ghosts; k++)
                     level.getV()[i][j][k] += level.getR()[i][j][k];
 
         // relax nu2 times
         if (problem.stencil_values)
-            res = MultigridEngine::stencilJacobiSeq(level.getV(), level.getF(), level.getR(), level.m - 2 * problem.ghosts,
-                                                    level.n - 2 * problem.ghosts, level.o - 2 * problem.ghosts, problem.ghosts,
+            res = MultigridEngine::stencilJacobiSeq(level.getV(), level.getF(), level.getR(), level.m,
+                                                    level.n, level.o, problem.ghosts,
                                                     problem.omega, problem.nu2, problem.residual_norm, problem.stencil, problem.getStencilValues(),
                                                     problem.stencil_size_multiplier);
         else
             res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
                                              problem.omega, problem.nu2, problem.residual_norm, problem.stencil);
-        // printf("res on level.getNum() %d, downwards: %e\n", level.getNum(), sqrt(res));
+        // printf("res on level %d, downwards: %.17e\n", level.getNum(), res);
         return res;
     }
 
@@ -154,7 +172,7 @@ namespace mgcl
             stencilProlongate(problem, level, levelAbove);
 
         // correct error
-        correctError(problem, level.dVIn, level.dR, level.m, level.n, level.o);
+        correctError(problem, level.dVIn, level.dR, level.mgh, level.ngh, level.ogh);
 
         // relax nu2 times
         if (problem.stencil_values)
@@ -170,7 +188,7 @@ namespace mgcl
 
     /* Starts kernel to correct error, e.g. v = v + e
      * m,n,o is size of ghosted grid */
-    int MultigridEngine::correctError(Problem &problem, cl_mem d_v, cl_mem d_r, int m, int n, int o)
+    int MultigridEngine::correctError(Problem &problem, cl_mem d_v, cl_mem d_r, int mgh, int ngh, int ogh)
     {
         int err;
 
@@ -182,16 +200,16 @@ namespace mgcl
         int pos = 0;
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &d_v);
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_r);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
         mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
-        size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
-        const size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m), static_cast<size_t>(n > 4 ? 4 : n),
-                                 static_cast<size_t>(o > 4 ? 4 : o)};
+        size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
+        const size_t local[3] = {static_cast<size_t>(mgh > 4 ? 4 : mgh), static_cast<size_t>(ngh > 4 ? 4 : ngh),
+                                 static_cast<size_t>(ogh > 4 ? 4 : ogh)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
