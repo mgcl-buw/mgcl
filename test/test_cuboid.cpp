@@ -136,4 +136,40 @@ TEST_CASE("cuboid class")
         REQUIRE(c2.getNgh() == n + 2 * ghosts_n);
         REQUIRE(c2.getOgh() == o + 2 * ghosts_o);
     }
+
+    SECTION("fill")
+    {
+        mgcl::Cuboid c2(4, 8, 16, 1, 2, 3, 0);
+
+        for (auto v : c2.field1d())
+            CHECK(v == 0.0);
+
+        // fill real cells only first
+        c2.fill(5.0, true);
+        for (int i = c2.getGhostsM(); i < c2.getM() + c2.getGhostsM(); i++)
+            for (int j = c2.getGhostsN(); j < c2.getN() + c2.getGhostsN(); j++)
+                for (int k = c2.getGhostsO(); k < c2.getO() + c2.getGhostsO(); k++)
+                {
+                    CHECK(c2[i][j][k] == 5.0);
+                }
+
+        for (int i = 0; i < c2.getGhostsM(); i++)
+            for (int j = 0; j < c2.getGhostsN(); j++)
+                for (int k = 0; k < c2.getGhostsO(); k++)
+                {
+                    CHECK(c2[i][j][k] == 0.0);
+                }
+
+        for (int i = c2.getM() + c2.getGhostsM(); i < c2.getMgh(); i++)
+            for (int j = c2.getN() + c2.getGhostsN(); j < c2.getNgh(); j++)
+                for (int k = c2.getO() + c2.getGhostsO(); k < c2.getOgh(); k++)
+                {
+                    CHECK(c2[i][j][k] == 0.0);
+                }
+
+        // fill ghosted cells, too
+        c2.fill(7.0);
+        for (auto v : c2.field1d())
+            CHECK(v == 7.0);
+    }
 }

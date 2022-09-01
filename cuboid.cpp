@@ -194,6 +194,29 @@ namespace mgcl
     }
 
     /**
+     * @brief Fills Cuboid with given value
+     *
+     * @param value Value to fill
+     * @param realCellsOnly If true, only real cells will be set to value.
+     */
+    void Cuboid::fill(double value, bool realCellsOnly)
+    {
+        if (realCellsOnly)
+        {
+            for (int i = ghostsM; i < m + ghostsM; i++)
+                for (int j = ghostsN; j < n + ghostsN; j++)
+                    for (int k = ghostsO; k < o + ghostsO; k++)
+                    {
+                        field_3d[i][j][k] = value;
+                    }
+        }
+        else
+        {
+            std::fill(field_1d.begin(), field_1d.end(), value);
+        }
+    }
+
+    /**
      * @brief Returns true if this Cuboid is equal to another Cuboid c within a given tolerance tol, respecting ghost
      * cell amount. Dimensions of real cell amount of this Cuboid and c must be equal (without ghost cells).
      *
