@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <random>
@@ -273,5 +274,32 @@ namespace mgcl
         }
 
         return ret;
+    }
+
+    /**
+     * @brief Dumps content to file fiven by path overwriting existing files
+     *
+     * @param path Path to file, overwrites existing one.
+     * @throws runtime_error When file could not be opened.
+     */
+    void Cuboid::dumpToFile(std::string path)
+    {
+        std::ofstream myfile;
+        myfile.open(path, std::ios::out | std::ios::trunc);
+
+        if (myfile.is_open())
+        {
+            for (int i = 0; i < m; i++)
+                for (int j = 0; j < n; j++)
+                    for (int k = 0; k < o; k++)
+                    {
+                        myfile << i << "\t" << j << "\t" << k << "\t" << field_3d[i][j][k] << std::endl;
+                    }
+            myfile.close();
+        }
+        else
+        {
+            throw std::runtime_error("Couldn't open file for writing given by: " + path);
+        }
     }
 }

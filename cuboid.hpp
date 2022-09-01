@@ -10,6 +10,7 @@
 #ifndef _CUBOID__H_
 #define _CUBOID__H_
 
+#include <string>
 #include <vector>
 
 namespace mgcl
@@ -41,6 +42,7 @@ namespace mgcl
         void fill(double value, bool realCellsOnly = false);
         std::vector<double> &field1d();
         bool isEqual(Cuboid &c, double tol = 1e-7, bool printDiffs = true);
+        void dumpToFile(std::string path);
 
         int getO() const;
         int getN() const;

@@ -1,6 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include <algorithm>
+#include <cstdio>
+#include <fstream>
+
 #include "../cuboid.hpp"
 
 TEST_CASE("cuboid alloc + free")
@@ -171,5 +175,20 @@ TEST_CASE("cuboid class")
         c2.fill(7.0);
         for (auto v : c2.field1d())
             CHECK(v == 7.0);
+    }
+
+    SECTION("dumpToFile")
+    {
+        std::string path = "./test.txt";
+        c.dumpToFile(path);
+        std::ifstream f(path.c_str());
+        REQUIRE(f.good());
+
+        auto lineCount = std::count(std::istreambuf_iterator<char>(f),
+                                    std::istreambuf_iterator<char>(), '\n');
+        CHECK(lineCount == c.getMgh() * c.getNgh() * c.getOgh());
+
+        f.close();
+        CHECK(remove(path.c_str()) == 0);
     }
 }
