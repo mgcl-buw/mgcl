@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include <iostream>
+
 #include "../cuboid.hpp"
 #include "../opencl_helper.hpp"
 #include "../problem.hpp"
@@ -272,6 +274,8 @@ TEST_CASE("Problem::init")
 
         for (int lv = 0; lv < p.getMaxlevel(); lv++)
         {
+            std::cout << "Checking level " + lv << std::endl;
+
             REQUIRE(p.getLevels()[lv]->getM() == m >> lv);
             REQUIRE(p.getLevels()[lv]->getN() == n >> lv);
             REQUIRE(p.getLevels()[lv]->getO() == o >> lv);
@@ -281,6 +285,37 @@ TEST_CASE("Problem::init")
             REQUIRE(p.getLevels()[lv]->getOgh() == p.getLevels()[lv]->getO() + 2 * p.getGhosts());
 
             REQUIRE(p.getLevels()[lv]->getRPtr());
+
+            // check if cuboids have correct dimensions
+            CHECK(p.getLevels()[lv]->getV().getM() == p.getLevels()[lv]->getM());
+            CHECK(p.getLevels()[lv]->getV().getN() == p.getLevels()[lv]->getN());
+            CHECK(p.getLevels()[lv]->getV().getO() == p.getLevels()[lv]->getO());
+            CHECK(p.getLevels()[lv]->getV().getMgh() == p.getLevels()[lv]->getMgh());
+            CHECK(p.getLevels()[lv]->getV().getNgh() == p.getLevels()[lv]->getNgh());
+            CHECK(p.getLevels()[lv]->getV().getOgh() == p.getLevels()[lv]->getOgh());
+            CHECK(p.getLevels()[lv]->getV().getGhostsM() == p.getGhosts());
+            CHECK(p.getLevels()[lv]->getV().getGhostsN() == p.getGhosts());
+            CHECK(p.getLevels()[lv]->getV().getGhostsO() == p.getGhosts());
+
+            CHECK(p.getLevels()[lv]->getF().getM() == p.getLevels()[lv]->getM());
+            CHECK(p.getLevels()[lv]->getF().getN() == p.getLevels()[lv]->getN());
+            CHECK(p.getLevels()[lv]->getF().getO() == p.getLevels()[lv]->getO());
+            CHECK(p.getLevels()[lv]->getF().getMgh() == p.getLevels()[lv]->getMgh());
+            CHECK(p.getLevels()[lv]->getF().getNgh() == p.getLevels()[lv]->getNgh());
+            CHECK(p.getLevels()[lv]->getF().getOgh() == p.getLevels()[lv]->getOgh());
+            CHECK(p.getLevels()[lv]->getF().getGhostsM() == p.getGhosts());
+            CHECK(p.getLevels()[lv]->getF().getGhostsN() == p.getGhosts());
+            CHECK(p.getLevels()[lv]->getF().getGhostsO() == p.getGhosts());
+
+            CHECK(p.getLevels()[lv]->getR().getM() == p.getLevels()[lv]->getM());
+            CHECK(p.getLevels()[lv]->getR().getN() == p.getLevels()[lv]->getN());
+            CHECK(p.getLevels()[lv]->getR().getO() == p.getLevels()[lv]->getO());
+            CHECK(p.getLevels()[lv]->getR().getMgh() == p.getLevels()[lv]->getMgh());
+            CHECK(p.getLevels()[lv]->getR().getNgh() == p.getLevels()[lv]->getNgh());
+            CHECK(p.getLevels()[lv]->getR().getOgh() == p.getLevels()[lv]->getOgh());
+            CHECK(p.getLevels()[lv]->getR().getGhostsM() == p.getGhosts());
+            CHECK(p.getLevels()[lv]->getR().getGhostsN() == p.getGhosts());
+            CHECK(p.getLevels()[lv]->getR().getGhostsO() == p.getGhosts());
 
             // TODO check h when used
         }

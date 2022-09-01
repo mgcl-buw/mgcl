@@ -3,7 +3,7 @@
 namespace mgcl
 {
     /**
-     * @brief Construct a new Level:: Level object
+     * @brief Construct a new Level:: Level object. m, n and o must be dims of real grid.
      *
      * @param problem_ Problem this Level belongs to.
      * @param num_ Number of level in the Problem (finest grid is level 0)

@@ -207,9 +207,9 @@ namespace mgcl
 
                 if (!use_opencl)
                 {
-                    lv->setV(std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts));
-                    lv->setF(std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts));
-                    lv->setR(std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts));
+                    lv->setV(std::make_shared<Cuboid>(lv->getM(), lv->getN(), lv->getO(), ghosts, ghosts, ghosts));
+                    lv->setF(std::make_shared<Cuboid>(lv->getM(), lv->getN(), lv->getO(), ghosts, ghosts, ghosts));
+                    lv->setR(std::make_shared<Cuboid>(lv->getM(), lv->getN(), lv->getO(), ghosts, ghosts, ghosts));
 
                     if (stencil_values != nullptr)
                     {
@@ -317,7 +317,7 @@ namespace mgcl
 
         // set up data for each level TODO reuse device buffers in final code
         if (!init())
-            return;
+            throw std::runtime_error("Failed to initialize mgcl data structures.");
 
         // calculate initial residual
         double initres;
@@ -333,9 +333,9 @@ namespace mgcl
         {
             auto tstart = std::chrono::steady_clock::now();
             res = MultigridEngine::vcycle(*this, *levels[0]);
-            auto tend = mgcl_since(tstart).count() * 1000.0;
+            auto tend = mgcl_since(tstart).count();
             relres = initres == 0 ? 0 : res / initres;
-            printf("iter = %d, elapsed time = %2.5lf s, rel. res = %e\n", i, tend, relres);
+            printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
 
             if (relres < tol)
                 break;
@@ -379,9 +379,9 @@ namespace mgcl
         {
             auto tstart = std::chrono::steady_clock::now();
             res = MultigridEngine::vcycleSeq(*this, *levels[0]);
-            auto tend = mgcl_since(tstart).count() * 1000.0;
+            auto tend = mgcl_since(tstart).count();
             relres = initres == 0 ? 0 : res / initres;
-            printf("iter = %d, elapsed time = %2.5lf s, rel. res = %e\n", i, tend, relres);
+            printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
 
             if (relres < tol)
                 break;

@@ -63,11 +63,31 @@ namespace mgcl
         return;
     }
 
+    /**
+     * @brief Construct a new Cuboid object having ghosts = 0 and optionally a value which defaults to 0.
+     *
+     * @param m_ Dimension of real grid.
+     * @param n_ Dimension of real grid.
+     * @param o_ Dimension of real grid.
+     * @param value Initial value, defaults to 0.
+     */
     Cuboid::Cuboid(int m_, int n_, int o_, double value)
         : Cuboid(m_, n_, o_, 0, 0, 0, value)
     {
     }
 
+    /**
+     * @brief Construct a new Cuboid object. m, n and o must be size of real grid. ghostsX is amount of ghost cells
+     * in one direction. value is optionally initial value, defaults to 0.
+     *
+     * @param m_ Dimension of real grid.
+     * @param n_ Dimension of real grid.
+     * @param o_ Dimension of real grid.
+     * @param ghostsM_ Amount of ghost cells in one direction.
+     * @param ghostsN_ Amount of ghost cells in one direction.
+     * @param ghostsO_ Amount of ghost cells in one direction.
+     * @param value initial value, defaults to 0.
+     */
     Cuboid::Cuboid(int m_, int n_, int o_, int ghostsM_, int ghostsN_, int ghostsO_, double value)
         : m(m_),
           n(n_),
