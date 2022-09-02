@@ -12,7 +12,7 @@
  * @brief Tests if config parameters of Problem are working correctly, including setting things up.
  *
  */
-TEST_CASE("Level ctor and dtor")
+TEST_CASE("Level constructor")
 {
     SECTION("not using OpenCL")
     {
@@ -27,22 +27,6 @@ TEST_CASE("Level ctor and dtor")
         CHECK(level.getNgh() == 4 + 2 * p.getGhosts());
         CHECK(level.getOgh() == 4 + 2 * p.getGhosts());
     }
-
-    // SECTION("using OpenCL")
-    // {
-    //     mgcl::Problem p(4, 4, 4);
-    //     p.setUseOpencl(true);
-    //     p.setGhosts(2);
-    //     p.init();
-    //     mgcl::Level level(&p, 0, 4, 4, 4);
-
-    //     CHECK(level.getM() == 4);
-    //     CHECK(level.getN() == 4);
-    //     CHECK(level.getO() == 4);
-    //     CHECK(level.getMgh() == 4 + 2 * p.getGhosts());
-    //     CHECK(level.getNgh() == 4 + 2 * p.getGhosts());
-    //     CHECK(level.getOgh() == 4 + 2 * p.getGhosts());
-    // }
 }
 
 TEST_CASE("Level::initOpenCLBuffers")
@@ -127,11 +111,9 @@ TEST_CASE("Level::initOpenCLBuffers")
         CHECK(refCount == 1);
 
         auto p = std::make_shared<mgcl::Problem>(4, 4, 4, d_f, d_v);
-
         p->setUseOpencl(true);
         p->setReuseOpenclBuffers(true);
         p->reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId());
-        // REQUIRE(p->init());
 
         err = clGetMemObjectInfo(d_v, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
         mgcl::mgclCheckError(err, "clGetMemObjectInfo(d_v, CL_MEM_REFERENCE_COUNT)");
@@ -147,7 +129,6 @@ TEST_CASE("Level::initOpenCLBuffers")
         int levelNum = GENERATE(0, 1, 2);
         mgcl::Level *level0 = new mgcl::Level(p.get(), levelNum);
         REQUIRE(level0->init());
-        // REQUIRE(level0->initOpenCLBuffers() == CL_SUCCESS);
 
         // Check if buffers were created
         REQUIRE(level0->getDVIn());
@@ -210,4 +191,37 @@ TEST_CASE("Level::initOpenCLBuffers")
         REQUIRE(err == CL_SUCCESS);
         CHECK(refCount == 1);
     }
+}
+
+TEST_CASE("Level::init")
+{
+    auto v = std::make_shared<mgcl::Cuboid>(4, 4, 4, 1, 1, 1);
+    auto f = std::make_shared<mgcl::Cuboid>(4, 4, 4, 1, 1, 1);
+    v->fillRandom();
+    f->fillRandom();
+
+    auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
+    // REQUIRE(p->init());
+
+    int levelNum = GENERATE(0, 1, 2);
+    mgcl::Level level(p.get(), levelNum);
+    level.init();
+
+    if (levelNum == 0)
+    {
+        CHECK(level.getV().isEqual(*v));
+        CHECK(level.getF().isEqual(*f));
+    }
+
+    CHECK(level.getV().getM() == p->getM() >> levelNum);
+    CHECK(level.getV().getN() == p->getN() >> levelNum);
+    CHECK(level.getV().getO() == p->getO() >> levelNum);
+
+    CHECK(level.getF().getM() == p->getM() >> levelNum);
+    CHECK(level.getF().getN() == p->getN() >> levelNum);
+    CHECK(level.getF().getO() == p->getO() >> levelNum);
+
+    CHECK(level.getR().getM() == p->getM() >> levelNum);
+    CHECK(level.getR().getN() == p->getN() >> levelNum);
+    CHECK(level.getR().getO() == p->getO() >> levelNum);
 }
