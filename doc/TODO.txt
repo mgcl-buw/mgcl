@@ -2,6 +2,7 @@ x test Problem::readResult
 x remove stencil varsym code
 
 - refactor Problem::init to Level
+- retain buffers in level
 - test level
 - add stencil class
 - add stencilarithmetic

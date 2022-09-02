@@ -111,7 +111,7 @@ namespace mgcl
         int jacobi_iterations_per_kernel = 3;
 
         /* Manages OpenCL stuff */
-        OpenCLHelper openCLHelper = OpenCLHelper(this);
+        OpenCLHelper openCLHelper;
 
         friend class OpenCLHelper;
         friend class Level;
@@ -124,6 +124,8 @@ namespace mgcl
         Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_);
         Problem(const Problem &) = delete;
         Problem &operator=(const Problem &) = delete;
+        Problem(const Problem &&) = delete;
+        Problem &operator=(const Problem &&) = delete;
         ~Problem() = default;
 
         bool checkParameters();

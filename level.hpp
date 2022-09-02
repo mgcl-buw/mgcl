@@ -52,8 +52,10 @@ namespace mgcl
         Level(const Level &) = delete;
         Level &operator=(const Level &) = delete;
         Level(const Level &&) = delete;
+        Level &operator=(Level &&) = delete;
         ~Level();
 
+        bool init();
         int initOpenCLBuffers();
 
         int getNum() const;

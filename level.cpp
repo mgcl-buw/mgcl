@@ -43,6 +43,60 @@ namespace mgcl
     }
 
     /**
+     * @brief Initializes data for this level.
+     *
+     * @return true All good.
+     * @return false Something went wrong.
+     */
+    bool Level::init()
+    {
+        if (num == 0)
+        {
+            // create ghosted arrays for v and f on host if device buffer should not be reused
+            if (!problem->reuse_opencl_buffers && !problem->copy_buffer_data)
+            {
+                v = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+                f = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+
+                // copy initial input data from conf into mgcl data struct
+                for (int i = 0; i < m; i++)
+                    for (int j = 0; j < n; j++)
+                        for (int k = 0; k < o; k++)
+                        {
+                            getV()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts] =
+                                problem->getV()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
+                            getF()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts] =
+                                problem->getF()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
+                        }
+
+                MultigridEngine::updateGhostsSeq(getF());
+            }
+
+            // r on host is only needed if opencl should not be used
+            if (!problem->use_opencl)
+            {
+                r = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+            }
+        }
+        else
+        {
+            if (!problem->use_opencl)
+            {
+                v = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+                f = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+                r = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+            }
+        }
+
+        if (initOpenCLBuffers() != CL_SUCCESS)
+            return false;
+
+        setH(1.0 / (m * m));
+
+        return true;
+    }
+
+    /**
      * @brief Initializes OpenCL buffers for this level based on settings. Returns immediately if use_opencl is false.
      *
      * @return int error code from OpenCL calls.

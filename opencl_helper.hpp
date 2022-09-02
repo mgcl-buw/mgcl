@@ -34,6 +34,10 @@ namespace mgcl
 
     public:
         OpenCLHelper(Problem *problem_) : problem(problem_) {}
+        OpenCLHelper(const OpenCLHelper &) = delete;
+        OpenCLHelper &operator=(const OpenCLHelper &) = delete;
+        OpenCLHelper(const OpenCLHelper &&) = delete;
+        OpenCLHelper &operator=(OpenCLHelper &&) = delete;
         ~OpenCLHelper();
 
         int init();

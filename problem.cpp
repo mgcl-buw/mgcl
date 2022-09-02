@@ -10,22 +10,22 @@
 namespace mgcl
 {
     Problem::Problem(int m_, int n_, int o_)
-        : m(m_), n(n_), o(o_)
+        : m(m_), n(n_), o(o_), openCLHelper(this)
     {
     }
 
     Problem::Problem(int m_, int n_, int o_, Cuboid *f_, Cuboid *v_)
-        : m(m_), n(n_), o(o_), f(std::make_shared<Cuboid>(*f_)), v(std::make_shared<Cuboid>(*v_))
+        : m(m_), n(n_), o(o_), f(std::make_shared<Cuboid>(*f_)), v(std::make_shared<Cuboid>(*v_)), openCLHelper(this)
     {
     }
 
     Problem::Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_)
-        : m(m_), n(n_), o(o_), f(f_), v(v_)
+        : m(m_), n(n_), o(o_), f(f_), v(v_), openCLHelper(this)
     {
     }
 
     Problem::Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_)
-        : m(m_), n(n_), o(o_), dF(d_f_), dV(d_v_)
+        : m(m_), n(n_), o(o_), dF(d_f_), dV(d_v_), openCLHelper(this)
     {
     }
 
@@ -120,69 +120,14 @@ namespace mgcl
         calculateAndSetMaxLevel();
         printf("maxlevel = %d\n", maxlevel);
 
+        // initialize levels
         for (int level = 0; level < maxlevel; level++)
         {
-            if (level == 0)
-            {
-                int mg = m + 2 * ghosts;
-                int ng = n + 2 * ghosts;
-                int og = o + 2 * ghosts;
-
-                auto lv = std::make_shared<Level>(this, level, m, n, o);
-
-                // create ghosted arrays for v and f on host if device buffer should not be reused
-                if (!reuse_opencl_buffers && !copy_buffer_data)
-                {
-                    lv->setV(std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts));
-                    lv->setF(std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts));
-
-                    // copy initial input data from conf into mgcl data struct
-                    for (int i = 0; i < m; i++)
-                        for (int j = 0; j < n; j++)
-                            for (int k = 0; k < o; k++)
-                            {
-                                lv->getV()[i + ghosts][j + ghosts][k + ghosts] =
-                                    (*v)[i + ghosts_in][j + ghosts_in][k + ghosts_in];
-                                lv->getF()[i + ghosts][j + ghosts][k + ghosts] =
-                                    (*f)[i + ghosts_in][j + ghosts_in][k + ghosts_in];
-                            }
-
-                    MultigridEngine::updateGhostsSeq(lv->getF());
-                }
-
-                // r on host is only needed if opencl should not be used
-                if (!use_opencl)
-                {
-                    lv->setR(std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts));
-                }
-
-                levels.push_back(std::move(lv));
-            }
-            else
-            {
-                // ghosted sizes of current level's grid
-                int mg = levels[level - 1]->getM() / 2 + 2 * ghosts;
-                int ng = levels[level - 1]->getN() / 2 + 2 * ghosts;
-                int og = levels[level - 1]->getO() / 2 + 2 * ghosts;
-
-                auto lv = std::make_shared<Level>(this, level,
-                                                  levels[level - 1]->getM() / 2,
-                                                  levels[level - 1]->getN() / 2,
-                                                  levels[level - 1]->getO() / 2);
-
-                if (!use_opencl)
-                {
-                    lv->setV(std::make_shared<Cuboid>(lv->getM(), lv->getN(), lv->getO(), ghosts, ghosts, ghosts));
-                    lv->setF(std::make_shared<Cuboid>(lv->getM(), lv->getN(), lv->getO(), ghosts, ghosts, ghosts));
-                    lv->setR(std::make_shared<Cuboid>(lv->getM(), lv->getN(), lv->getO(), ghosts, ghosts, ghosts));
-                }
-
-                levels.push_back(std::move(lv));
-            }
-
-            levels.back()->initOpenCLBuffers();
-            levels.back()->setH(1.0 / (m * m));
+            auto lv = std::make_shared<Level>(this, level, m >> level, n >> level, o >> level);
+            levels.push_back(std::move(lv));
+            levels.back()->init();
         }
+
         return true;
     }
 
