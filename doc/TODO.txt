@@ -1,8 +1,8 @@
 x test Problem::readResult
 x remove stencil varsym code
+x refactor Problem::init to Level
+x retain buffers in level
 
-- refactor Problem::init to Level
-- retain buffers in level
 - test level
 - add stencil class
 - add stencilarithmetic

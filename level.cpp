@@ -25,21 +25,30 @@ namespace mgcl
 
     Level::~Level()
     {
-        // release buffer of v_in and f only if it was not reused
-        if ((!problem->getReuseOpenclBuffers() && num == 0) || num > 0)
+        int err;
+        if (dVIn)
         {
-            if (dVIn)
-                clReleaseMemObject(dVIn);
+            err = clReleaseMemObject(dVIn);
+            mgclCheckError(err, "clReleaseMemObject(dVIn)");
+        }
 
-            if (dF)
-                clReleaseMemObject(dF);
+        if (dF)
+        {
+            err = clReleaseMemObject(dF);
+            mgclCheckError(err, "clReleaseMemObject(dF)");
         }
 
         if (dVOut)
-            clReleaseMemObject(dVOut);
+        {
+            err = clReleaseMemObject(dVOut);
+            mgclCheckError(err, "clReleaseMemObject(dVOut)");
+        }
 
         if (dR)
-            clReleaseMemObject(dR);
+        {
+            err = clReleaseMemObject(dR);
+            mgclCheckError(err, "clReleaseMemObject(dR)");
+        }
     }
 
     /**
@@ -117,6 +126,12 @@ namespace mgcl
             {
                 dVIn = problem->getDV();
                 dF = problem->getDF();
+
+                // retain buffers (i.e. increase internal reference count so they won't be released by accident)
+                err = clRetainMemObject(dVIn);
+                mgclCheckError(err, "clRetainMemObject(dVIn)");
+                err = clRetainMemObject(dF);
+                mgclCheckError(err, "clRetainMemObject(dF)");
             }
             else if (problem->getCopyBufferData())
             {
