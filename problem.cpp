@@ -45,25 +45,29 @@ namespace mgcl
         //  check mandatory config fields
         if ((v == nullptr || f == nullptr) && (dV == nullptr || dF == nullptr))
         {
-            printf("mgcl: supplied v or f and d_v or d_f is nullptr. Aborting.\n");
+            if (!silent)
+                printf("mgcl: supplied v or f and d_v or d_f is nullptr. Aborting.\n");
             return false;
         }
 
         if (m < 1 || n < 1 || o < 1)
         {
-            printf("mgcl: m, n or o not supplied, zero or negative. Aborting.\n");
+            if (!silent)
+                printf("mgcl: m, n or o not supplied, zero or negative. Aborting.\n");
             return false;
         }
 
         if (ghosts < 1)
         {
-            printf("mgcl: ghosts must be >= 1. Aborting.\n");
+            if (!silent)
+                printf("mgcl: ghosts must be >= 1. Aborting.\n");
             return false;
         }
 
         if (ghosts_in < 0)
         {
-            printf("mgcl: ghosts_in must be >= 0. Aborting.\n");
+            if (!silent)
+                printf("mgcl: ghosts_in must be >= 0. Aborting.\n");
             return false;
         }
 
@@ -87,7 +91,8 @@ namespace mgcl
         {
             if (maxlv < maxlevel) // user specified maxlevel is too high
             {
-                printf("user specified maxlevel of %d is too high! Using %d instead.\n", maxlevel, maxlv);
+                if (!silent)
+                    printf("user specified maxlevel of %d is too high! Using %d instead.\n", maxlevel, maxlv);
                 maxlevel = maxlv;
             }
         }
@@ -123,7 +128,8 @@ namespace mgcl
         }
 
         calculateAndSetMaxLevel();
-        printf("maxlevel = %d\n", maxlevel);
+        if (!silent)
+            printf("maxlevel = %d\n", maxlevel);
 
         // initialize levels
         for (int level = 0; level <= maxlevel; level++)
@@ -216,11 +222,13 @@ namespace mgcl
         // run mgcl_seq if use_opencl is not set
         if (!use_opencl)
         {
-            printf("Not using OpenCL (not specified in conf). Running mgcl sequentially.\n");
+            if (!silent)
+                printf("Not using OpenCL (not specified in conf). Running mgcl sequentially.\n");
             solveSeq();
             return;
         }
-        printf("Starting mgcl using OpenCL\n");
+        if (!silent)
+            printf("Starting mgcl using OpenCL\n");
 
         // set up data for each level TODO reuse device buffers in final code
         if (!init())
@@ -228,7 +236,8 @@ namespace mgcl
 
         // calculate initial residual
         double initres = MultigridEngine::residual(*this, *levels[0], 1);
-        printf("Starting mgcl with initres = %e\n", initres);
+        if (!silent)
+            printf("Starting mgcl with initres = %e\n", initres);
 
         // run vcycle maxiter_vcycles times
         double res, relres;
@@ -239,7 +248,8 @@ namespace mgcl
             auto tend = mgcl_since(tstart).count();
 
             relres = initres == 0 ? 0 : res / initres;
-            printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
+            if (!silent)
+                printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
 
             if (relres < tol)
                 break;
@@ -269,7 +279,8 @@ namespace mgcl
         MultigridEngine::updateGhostsSeq(levels[0]->getV());
         // update_ghosts_seq(data[0].f, m, n, o);
         double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(), residual_norm, stencil);
-        printf("Starting mgcl with initres = %e\n", initres);
+        if (!silent)
+            printf("Starting mgcl with initres = %e\n", initres);
 
         // run vcycle maxiter_vcycles times
         double res, relres;
@@ -279,7 +290,8 @@ namespace mgcl
             res = MultigridEngine::vcycleSeq(*this, *levels[0]);
             auto tend = mgcl_since(tstart).count();
             relres = initres == 0 ? 0 : res / initres;
-            printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
+            if (!silent)
+                printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
 
             if (relres < tol)
                 break;
@@ -596,6 +608,16 @@ namespace mgcl
     cl_context Problem::getContext() const
     {
         return openCLHelper.context;
+    }
+
+    bool Problem::getSilent() const
+    {
+        return silent;
+    }
+
+    void Problem::setSilent(bool silent_)
+    {
+        silent = silent_;
     }
 
     cl_program Problem::getProgram() const

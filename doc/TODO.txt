@@ -8,3 +8,6 @@ x test level
 - add stencilarithmetic
 - add galerkin as preliminary step
 - switch to C++ OpenCL api
+- benchmarks
+- throw exceptions in checkParameters
+- gather iteration count and list of residual for checking after solve call

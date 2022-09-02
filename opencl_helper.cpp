@@ -28,7 +28,8 @@ namespace mgcl
             mgclCheckError(err, "Finding platforms");
             if (numPlatforms == 0)
             {
-                printf("Found 0 platforms!\n");
+                if (!problem->silent)
+                    printf("Found 0 platforms!\n");
                 return false;
             }
 
@@ -51,7 +52,8 @@ namespace mgcl
                                               &device_name_available, nullptr);
                         if (err != CL_SUCCESS)
                         {
-                            printf("Error: Failed to access device name!\n");
+                            if (!problem->silent)
+                                printf("Error: Failed to access device name!\n");
                             return false;
                         }
 
@@ -68,8 +70,11 @@ namespace mgcl
             if (deviceId == nullptr)
                 mgclCheckError(err, "Finding a device");
 
-            err = outputDeviceInfo(deviceId);
-            mgclCheckError(err, "Printing device output");
+            if (!problem->silent)
+            {
+                err = outputDeviceInfo(deviceId);
+                mgclCheckError(err, "Printing device output");
+            }
 
             // Create a compute context
             context = clCreateContext(0, 1, &deviceId, nullptr, nullptr, &err);
@@ -117,7 +122,8 @@ namespace mgcl
             clGetProgramBuildInfo(program, deviceId, CL_PROGRAM_BUILD_LOG, log_size, log, nullptr);
 
             // Print the log
-            printf("%s\n", log);
+            if (!problem->silent)
+                printf("%s\n", log);
             return false;
         }
 
@@ -185,29 +191,33 @@ namespace mgcl
         {
             if (problem->getDV() == nullptr || problem->getDF() == nullptr)
             {
-                printf("OpenCL buffers d_v and d_f not set but reuse_opencl_buffers or copy_buffer_data specified. "
-                       "Aborting.\n");
+                if (!problem->silent)
+                    printf("OpenCL buffers d_v and d_f not set but reuse_opencl_buffers or copy_buffer_data specified. "
+                           "Aborting.\n");
                 return false;
             }
 
             if (deviceId == nullptr)
             {
-                printf("reuse_opencl_buffers or copy_buffer_data specified but device ID (mgcl_config.device_id) not set. "
-                       "Aborting.\n");
+                if (!problem->silent)
+                    printf("reuse_opencl_buffers or copy_buffer_data specified but device ID (mgcl_config.device_id) not set. "
+                           "Aborting.\n");
                 return false;
             }
 
             if (commands == nullptr)
             {
-                printf("reuse_opencl_buffers or copy_buffer_data specified but command queue (mgcl_config.commands) not "
-                       "set. Aborting.\n");
+                if (!problem->silent)
+                    printf("reuse_opencl_buffers or copy_buffer_data specified but command queue (mgcl_config.commands) not "
+                           "set. Aborting.\n");
                 return false;
             }
 
             if (context == nullptr)
             {
-                printf("reuse_opencl_buffers or copy_buffer_data specified but context (mgcl_config.context) not set. "
-                       "Aborting.\n");
+                if (!problem->silent)
+                    printf("reuse_opencl_buffers or copy_buffer_data specified but context (mgcl_config.context) not set. "
+                           "Aborting.\n");
                 return false;
             }
         }
@@ -226,7 +236,8 @@ namespace mgcl
             mgclCheckError(err, "Querying buffer size of d_v");
             if (bufsize != sizeNeeded)
             {
-                printf("OpenCL buffer d_v has wrong size (%ld but need %d)\n", bufsize, sizeNeeded);
+                if (!problem->silent)
+                    printf("OpenCL buffer d_v has wrong size (%ld but need %d)\n", bufsize, sizeNeeded);
                 return false;
             }
 
@@ -234,7 +245,8 @@ namespace mgcl
             mgclCheckError(err, "Querying buffer size of d_f");
             if (bufsize != sizeNeeded)
             {
-                printf("OpenCL buffer d_f has wrong size (%ld but need %d)\n", bufsize, sizeNeeded);
+                if (!problem->silent)
+                    printf("OpenCL buffer d_f has wrong size (%ld but need %d)\n", bufsize, sizeNeeded);
                 return false;
             }
         }
@@ -362,10 +374,7 @@ namespace mgcl
             *out = cuboid_alloc(m, n, o);
 
         err = clEnqueueReadBuffer(commands, d_buf, CL_TRUE, 0, sizeof(double) * m * n * o, out[0][0][0], 0, NULL, NULL);
-        if (err != CL_SUCCESS)
-        {
-            printf("Error: Failed to read output arrays from device!\n%s\n", mgcl_err_code(err));
-        }
+        mgclCheckError(err, "clEnqueueReadBuffer");
 
         return err;
     }
@@ -436,19 +445,12 @@ namespace mgcl
         cl_char device_name[1024] = {0}; // string to hold name of compute device
 
         err = clGetDeviceInfo(device_id, CL_DEVICE_NAME, sizeof(device_name), &device_name, NULL);
-        if (err != CL_SUCCESS)
-        {
-            printf("Error: Failed to access device name!\n");
-            return EXIT_FAILURE;
-        }
+        mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
         printf("Using OpenCL device %s ", device_name);
 
         err = clGetDeviceInfo(device_id, CL_DEVICE_TYPE, sizeof(device_type), &device_type, NULL);
-        if (err != CL_SUCCESS)
-        {
-            printf("Error: Failed to access device type information!\n");
-            return EXIT_FAILURE;
-        }
+        mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_TYPE)");
+
         if (device_type == CL_DEVICE_TYPE_GPU)
             printf("GPU from ");
 
@@ -459,19 +461,11 @@ namespace mgcl
             printf("\n non CPU or GPU processor from ");
 
         err = clGetDeviceInfo(device_id, CL_DEVICE_VENDOR, sizeof(vendor_name), &vendor_name, NULL);
-        if (err != CL_SUCCESS)
-        {
-            printf("Error: Failed to access device vendor name!\n");
-            return EXIT_FAILURE;
-        }
+        mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_VENDOR)");
         printf("%s", vendor_name);
 
         err = clGetDeviceInfo(device_id, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &comp_units, NULL);
-        if (err != CL_SUCCESS)
-        {
-            printf("Error: Failed to access device number of compute units !\n");
-            return EXIT_FAILURE;
-        }
+        mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_COMPUTE_UNITS)");
         printf(" with a max of %d compute units \n", comp_units);
 
         return err;
