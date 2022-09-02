@@ -29,8 +29,8 @@ TEST_CASE("prolongation")
     auto c_expected_coarse = prolongationTestOutputCoarse();
 
     auto p = std::make_shared<mgcl::Problem>(m, n, o);
-    mgcl::Level lv_fine(p.get(), 0, m, n, o);
-    mgcl::Level lv_coarse(p.get(), 1, m / 2, n / 2, o / 2);
+    mgcl::Level lv_fine(p.get(), 0);
+    mgcl::Level lv_coarse(p.get(), 1);
 
     SECTION("prolongateSeq")
     {

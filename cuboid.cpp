@@ -238,8 +238,9 @@ namespace mgcl
     }
 
     /**
-     * @brief Returns true if this Cuboid is equal to another Cuboid c within a given tolerance tol, respecting ghost
-     * cell amount. Dimensions of real cell amount of this Cuboid and c must be equal (without ghost cells).
+     * @brief Returns true if real cells contents of this Cuboid is equal to the one of another Cuboid c within a
+     * given tolerance tol, respecting ghost cell amount. Dimensions of real cell amount of this Cuboid and c
+     * must be equal (without ghost cells).
      *
      * @param c Other Cuboid
      * @param tol tolerance that is used for checking equality. Defaults to 1e-7.

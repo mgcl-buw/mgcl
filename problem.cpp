@@ -124,7 +124,7 @@ namespace mgcl
         // initialize levels
         for (int level = 0; level <= maxlevel; level++)
         {
-            auto lv = std::make_shared<Level>(this, level, m >> level, n >> level, o >> level);
+            auto lv = std::make_shared<Level>(this, level);
             levels.push_back(std::move(lv));
             levels.back()->init();
         }

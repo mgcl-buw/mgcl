@@ -1,5 +1,8 @@
 #include "level.hpp"
 
+#include <stdexcept>
+#include <string>
+
 namespace mgcl
 {
     /**
@@ -7,20 +10,23 @@ namespace mgcl
      *
      * @param problem_ Problem this Level belongs to.
      * @param num_ Number of level in the Problem (finest grid is level 0)
-     * @param m_ Amount of real grid cells in x-direction.
-     * @param n_ Amount of real grid cells in y-direction.
-     * @param o_ Amount of real grid cells in z-direction.
+     * @throws invalid_argument When num_ is invalid, i.e. < 0 or > Problem.maxlevel
      */
-    Level::Level(Problem *problem_, int num_, int m_, int n_, int o_)
+    Level::Level(Problem *problem_, int num_)
         : problem(problem_),
           num(num_),
-          m(m_),
-          n(n_),
-          o(o_)
+          m(problem_->getM() >> num_),
+          n(problem_->getN() >> num_),
+          o(problem_->getO() >> num_),
+          mgh(m + 2 * problem->getGhosts()),
+          ngh(n + 2 * problem->getGhosts()),
+          ogh(o + 2 * problem->getGhosts())
     {
-        mgh = m + 2 * problem->getGhosts();
-        ngh = n + 2 * problem->getGhosts();
-        ogh = o + 2 * problem->getGhosts();
+        if (num_ < 0 || num_ > problem->getMaxlevel())
+            throw std::invalid_argument(std::string("num is invalid! num: ")
+                                            .append(std::to_string(num_))
+                                            .append(", problem.maxlevel: ")
+                                            .append(std::to_string(problem->getMaxlevel())));
     }
 
     Level::~Level()

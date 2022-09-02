@@ -63,6 +63,7 @@ test/test_restriction.cpp
 test/test_prolongation.cpp
 test/test_residual.cpp
 test/test_jacobi.cpp
+test/test_level.cpp
 )
 
 add_executable(tests ${SOURCES_TEST})

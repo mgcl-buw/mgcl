@@ -7,3 +7,4 @@ x retain buffers in level
 - add stencil class
 - add stencilarithmetic
 - add galerkin as preliminary step
+- switch to C++ OpenCL api

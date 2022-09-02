@@ -48,7 +48,7 @@ namespace mgcl
         friend class Problem;
 
     public:
-        Level(Problem *problem_, int _num, int _m, int _n, int _o);
+        Level(Problem *problem_, int _num);
         Level(const Level &) = delete;
         Level &operator=(const Level &) = delete;
         Level(const Level &&) = delete;

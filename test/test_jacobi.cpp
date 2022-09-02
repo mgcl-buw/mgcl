@@ -55,7 +55,7 @@ TEST_CASE("jacobi")
         cl_mem d_in_v_out = tu.createOpenCLBuffer(c_in_v);
         cl_mem d_in_r = tu.createOpenCLBuffer(c_in_r);
 
-        mgcl::Level level(p.get(), 0, m, n, o);
+        mgcl::Level level(p.get(), 0);
         level.setDF(d_in_f);
         level.setDVIn(d_in_v);
         level.setDVOut(d_in_v_out);
