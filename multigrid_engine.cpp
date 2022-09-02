@@ -28,14 +28,8 @@ namespace mgcl
         // }
 
         // relax nu1 times
-        if (problem.stencil_values)
-            res = MultigridEngine::stencilJacobiSeq(level.getV(), level.getF(), level.getR(), level.m,
-                                                    level.n, level.o, problem.ghosts,
-                                                    problem.omega, problem.nu1, problem.residual_norm, problem.stencil, problem.getStencilValues(),
-                                                    problem.stencil_size_multiplier);
-        else
-            res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
-                                             problem.omega, problem.nu1, problem.residual_norm, problem.stencil);
+        res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
+                                         problem.omega, problem.nu1, problem.residual_norm, problem.stencil);
 
         // update residual without D^-1
         // res = residual(level.f, level.v, level.r, level.m-2, level.n-2, level.o-2,
@@ -55,12 +49,6 @@ namespace mgcl
         // restrict residual as right hand side on coarser grid
         MultigridEngine::restrictSeq(level, *levelAbove, level.getR(), levelAbove->getF());
 
-        // restrict stencil values if stencil is not fixed
-        if (problem.stencil_values && problem.restrict_prolongate_stencil)
-            MultigridEngine::stencilRestrictSeq(level.getStencilValues(), levelAbove->getStencilValues(),
-                                                levelAbove->m, levelAbove->n,
-                                                levelAbove->o, problem.ghosts, problem.stencil_size_multiplier);
-
         // if not at highest level.getNum()...
         if (level.getNum() < problem.maxlevel - 1)
         {
@@ -69,16 +57,8 @@ namespace mgcl
                 MultigridEngine::vcycleSeq(problem, *levelAbove);
             else
             {
-                // printf(" pre v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
-                if (problem.stencil_values)
-                    MultigridEngine::stencilJacobiSeq(levelAbove->getV(), levelAbove->getF(), levelAbove->getR(),
-                                                      levelAbove->m, levelAbove->n,
-                                                      levelAbove->o, problem.ghosts, problem.omega,
-                                                      problem.nu1 + problem.nu2, problem.residual_norm, problem.stencil, problem.getStencilValues(),
-                                                      problem.stencil_size_multiplier);
-                else
-                    MultigridEngine::jacobiSeq(levelAbove->getV(), levelAbove->getF(), levelAbove->getR(), problem.omega, problem.nu1 + problem.nu2,
-                                               problem.residual_norm, problem.stencil);
+                MultigridEngine::jacobiSeq(levelAbove->getV(), levelAbove->getF(), levelAbove->getR(), problem.omega, problem.nu1 + problem.nu2,
+                                           problem.residual_norm, problem.stencil);
 
                 // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
             }
@@ -88,12 +68,6 @@ namespace mgcl
         // r of this level is reused here and should actually be called e
         MultigridEngine::prolongateSeq(level, *levelAbove, level.getR(), levelAbove->getV());
 
-        // prolongate stencil values if stencil is not fixed
-        if (problem.stencil_values && problem.restrict_prolongate_stencil)
-            MultigridEngine::stencilProlongateSeq(level.getStencilValues(), levelAbove->getStencilValues(),
-                                                  level.m, level.n,
-                                                  level.o, problem.ghosts, problem.stencil_size_multiplier);
-
         // correct error
         for (int i = problem.ghosts; i < level.m + problem.ghosts; i++)
             for (int j = problem.ghosts; j < level.n + problem.ghosts; j++)
@@ -101,14 +75,8 @@ namespace mgcl
                     level.getV()[i][j][k] += level.getR()[i][j][k];
 
         // relax nu2 times
-        if (problem.stencil_values)
-            res = MultigridEngine::stencilJacobiSeq(level.getV(), level.getF(), level.getR(), level.m,
-                                                    level.n, level.o, problem.ghosts,
-                                                    problem.omega, problem.nu2, problem.residual_norm, problem.stencil, problem.getStencilValues(),
-                                                    problem.stencil_size_multiplier);
-        else
-            res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
-                                             problem.omega, problem.nu2, problem.residual_norm, problem.stencil);
+        res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
+                                         problem.omega, problem.nu2, problem.residual_norm, problem.stencil);
         // printf("res on level %d, downwards: %.17e\n", level.getNum(), res);
         return res;
     }
@@ -133,10 +101,7 @@ namespace mgcl
         }
 
         // relax nu1 times
-        if (problem.stencil_values)
-            res = stencilJacobi(problem, level, problem.nu1, 1);
-        else
-            res = jacobi(problem, level, problem.nu1, 1);
+        res = jacobi(problem, level, problem.nu1, 1);
 
         // update residual without D^-1
         // res = residual(problem, level, 1);
@@ -145,10 +110,6 @@ namespace mgcl
         // restrict to coarser grid
         restrict(level, *levelAbove, level.getDR(), levelAbove->getDF());
 
-        // restrict stencil values if stencil is not fixed
-        if (problem.stencil_values && problem.restrict_prolongate_stencil)
-            stencilRestrict(problem, level, *levelAbove);
-
         if (level.getNum() < problem.maxlevel - 1)
         {
             // start next v-cycle iteration
@@ -156,10 +117,7 @@ namespace mgcl
                 vcycle(problem, *levelAbove);
             else
             {
-                if (problem.stencil_values)
-                    res = stencilJacobi(problem, *levelAbove, problem.nu1 + problem.nu2, 0);
-                else
-                    res = jacobi(problem, *levelAbove, problem.nu1 + problem.nu2, 0);
+                res = jacobi(problem, *levelAbove, problem.nu1 + problem.nu2, 0);
             }
         }
 
@@ -167,18 +125,11 @@ namespace mgcl
         // r of this level.getNum() is reused here and should actually be called e
         prolongate(level, *levelAbove, level.dR, levelAbove->dVIn);
 
-        // prolongate stencil values if stencil is not fixed
-        if (problem.stencil_values && problem.restrict_prolongate_stencil)
-            stencilProlongate(problem, level, *levelAbove);
-
         // correct error
         correctError(problem, level.dVIn, level.dR, level.mgh, level.ngh, level.ogh);
 
         // relax nu2 times
-        if (problem.stencil_values)
-            res = stencilJacobi(problem, level, problem.nu2, 1);
-        else
-            res = jacobi(problem, level, problem.nu2, 1);
+        res = jacobi(problem, level, problem.nu2, 1);
 
         // calculate residual again for the norm TODO in jacobi
         // res = residual(problem, level, 1);

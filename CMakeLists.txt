@@ -14,7 +14,6 @@ cuboid.cpp
 ghostscl.cpp
 jacobicl.cpp
 mgcl.hpp
-stencilcl.cpp
 problem.hpp
 problem.cpp
 level.hpp

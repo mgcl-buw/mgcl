@@ -51,11 +51,6 @@ TEST_CASE("Problem conf")
         REQUIRE(p.getJacobiWgSizeX() == 16);
         REQUIRE(p.getJacobiWgSizeY() == 16);
         REQUIRE(p.getJacobiIterationsPerKernel() == 3);
-
-        REQUIRE(p.getStencilSizeMultiplier() == 1);
-        REQUIRE(p.getStencilValuesPtr() == nullptr);
-        REQUIRE(p.getDStencilValues() == nullptr);
-        REQUIRE(p.getRestrictProlongateStencil() == true);
     }
 }
 
@@ -86,13 +81,6 @@ TEST_CASE("Problem::checkParameters")
     {
         mgcl::Problem pm(8, 8, 8, v, f);
         pm.setGhostsIn(-1);
-        REQUIRE(pm.checkParameters() == false);
-    }
-
-    SECTION("stencil_values not set")
-    {
-        mgcl::Problem pm(8, 8, 8, v, f);
-        pm.setStencil(mgcl::MGCL_STENCIL::MGCL_19POINT_VARSYM);
         REQUIRE(pm.checkParameters() == false);
     }
 

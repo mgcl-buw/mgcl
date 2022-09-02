@@ -37,21 +37,11 @@ namespace mgcl
         // TODO not used yet
         double h;
 
-        /* Stencil values per grid point. Must be given by the user if a varying symmetric stencil shall be used.
-         * While mgcl_conf::stencil_values should contain only values for real grid points, mgcl_level_data::stencil_values
-         * contains values of ghosted points per level, too.
-         * Size depends on stencil type:
-         * -  7-point varsym: size = (m + 2*ghosts)*(n + 2*ghosts)*(o + 2*ghosts) * 4
-         * - 19-point varsym: size = (m + 2*ghosts)*(n + 2*ghosts)*(o + 2*ghosts) * 7
-         * - 27-point varsym: size = (m + 2*ghosts)*(n + 2*ghosts)*(o + 2*ghosts) * 8 */
-        std::shared_ptr<Cuboid> stencil_values;
-
         /* opencl buffers */
         cl_mem dVIn = nullptr;
         cl_mem dVOut = nullptr;
         cl_mem dF = nullptr;
         cl_mem dR = nullptr;
-        cl_mem dStencilValues = nullptr;
 
         friend class OpenCLHelper;
         friend class MultigridEngine;
@@ -97,17 +87,10 @@ namespace mgcl
         cl_mem getDR() const;
         void setDR(const cl_mem &dR_);
 
-        cl_mem getDStencilValues() const;
-        void setDStencilValues(const cl_mem &dStencilValues_);
-
         int getMgh() const;
 
         int getNgh() const;
 
         int getOgh() const;
-
-        Cuboid &getStencilValues() const;
-        std::shared_ptr<Cuboid> getStencilValuesPtr() const;
-        void setStencilValues(const std::shared_ptr<Cuboid> &stencilValues);
     };
 }

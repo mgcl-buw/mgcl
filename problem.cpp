@@ -30,7 +30,7 @@ namespace mgcl
     }
 
     /**
-     * @brief Checks mandatory configuration fields: m, n, o, v, f, d_v, d_f, stencil_values, ghosts and ghosts_in.
+     * @brief Checks mandatory configuration fields: m, n, o, v, f, d_v, d_f, ghosts and ghosts_in.
      *
      * @return true All good.
      * @return false Something's wrong.
@@ -60,15 +60,6 @@ namespace mgcl
         if (ghosts_in < 0)
         {
             printf("mgcl: ghosts_in must be >= 0. Aborting.\n");
-            return false;
-        }
-
-        if (((stencil_values == nullptr && !use_opencl) ||
-             (dStencilValues == nullptr && reuse_opencl_buffers)) &&
-            (stencil == MGCL_7POINT_VARSYM || stencil == MGCL_19POINT_VARSYM ||
-             stencil == MGCL_27POINT_VARSYM))
-        {
-            printf("stencil is set to be varying symmetric but stencil_values is nullptr! Aborting.\n");
             return false;
         }
 
@@ -111,14 +102,6 @@ namespace mgcl
     {
         if (!checkParameters())
             return false;
-
-        // set stencil size if stencil is set to a varying symmetric one
-        if (stencil == MGCL_7POINT_VARSYM)
-            stencil_size_multiplier = 4;
-        else if (stencil == MGCL_19POINT_VARSYM)
-            stencil_size_multiplier = 7;
-        else if (stencil == MGCL_27POINT_VARSYM)
-            stencil_size_multiplier = 8;
 
         // create opencl environment with default parameters if not done yet
         if (use_opencl)
@@ -165,25 +148,6 @@ namespace mgcl
                             }
 
                     MultigridEngine::updateGhostsSeq(lv->getF());
-
-                    // allocate initial stencil_values, including ghost cells, if varying symmetric stencil shall be used
-                    if (stencil_values || dStencilValues)
-                    {
-                        lv->setStencilValues(std::make_shared<Cuboid>(m, n, o * stencil_size_multiplier, ghosts, ghosts, ghosts));
-
-                        // copy initial input stencil data from conf into mgcl data struct
-                        for (int i = 0; i < m; i++)
-                            for (int j = 0; j < n; j++)
-                                for (int k = 0; k < o * stencil_size_multiplier; k++)
-                                {
-                                    lv->getStencilValues()[i + ghosts][j + ghosts]
-                                                          [k + ghosts * stencil_size_multiplier] =
-                                        (*stencil_values)[i + ghosts_in][j + ghosts_in]
-                                                         [k + ghosts_in * stencil_size_multiplier];
-                                }
-
-                        MultigridEngine::updateGhostsSeq(lv->getStencilValues());
-                    }
                 }
 
                 // r on host is only needed if opencl should not be used
@@ -211,14 +175,6 @@ namespace mgcl
                     lv->setV(std::make_shared<Cuboid>(lv->getM(), lv->getN(), lv->getO(), ghosts, ghosts, ghosts));
                     lv->setF(std::make_shared<Cuboid>(lv->getM(), lv->getN(), lv->getO(), ghosts, ghosts, ghosts));
                     lv->setR(std::make_shared<Cuboid>(lv->getM(), lv->getN(), lv->getO(), ghosts, ghosts, ghosts));
-
-                    if (stencil_values != nullptr)
-                    {
-                        if (restrict_prolongate_stencil)
-                            lv->setStencilValues(std::make_shared<Cuboid>(m, n, o * stencil_size_multiplier, ghosts, ghosts, ghosts));
-                        else
-                            lv->setStencilValues(levels[0]->getStencilValuesPtr());
-                    }
                 }
 
                 levels.push_back(std::move(lv));
@@ -321,11 +277,7 @@ namespace mgcl
             throw std::runtime_error("Failed to initialize mgcl data structures.");
 
         // calculate initial residual
-        double initres;
-        if (stencil_values)
-            initres = MultigridEngine::stencilResidual(*this, *levels[0], 1);
-        else
-            initres = MultigridEngine::residual(*this, *levels[0], 1);
+        double initres = MultigridEngine::residual(*this, *levels[0], 1);
         printf("Starting mgcl with initres = %e\n", initres);
 
         // run vcycle maxiter_vcycles times
@@ -366,13 +318,7 @@ namespace mgcl
         // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
         MultigridEngine::updateGhostsSeq(levels[0]->getV());
         // update_ghosts_seq(data[0].f, m, n, o);
-        double initres;
-        if (stencil_values)
-            initres =
-                MultigridEngine::stencilResidualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(), m, n, o, ghosts,
-                                                    residual_norm, stencil, *stencil_values, stencil_size_multiplier);
-        else
-            initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(), residual_norm, stencil);
+        double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(), residual_norm, stencil);
         printf("Starting mgcl with initres = %e\n", initres);
 
         // run vcycle maxiter_vcycles times
@@ -471,16 +417,6 @@ namespace mgcl
     void Problem::setStencil(const MGCL_STENCIL &stencil_)
     {
         stencil = stencil_;
-    }
-
-    int Problem::getStencilSizeMultiplier() const
-    {
-        return stencil_size_multiplier;
-    }
-
-    void Problem::setStencilSizeMultiplier(int stencilSizeMultiplier)
-    {
-        stencil_size_multiplier = stencilSizeMultiplier;
     }
 
     bool Problem::getReuseOpenclBuffers() const
@@ -601,31 +537,6 @@ namespace mgcl
     void Problem::setResidualNorm(const MGCL_RESIDUAL_NORM &residualNorm)
     {
         residual_norm = residualNorm;
-    }
-
-    Cuboid &Problem::getStencilValues() const
-    {
-        return *stencil_values;
-    }
-
-    std::shared_ptr<Cuboid> Problem::getStencilValuesPtr() const
-    {
-        return stencil_values;
-    }
-
-    void Problem::setStencilValues(std::shared_ptr<Cuboid> stencilValues)
-    {
-        stencil_values = stencilValues;
-    }
-
-    bool Problem::getRestrictProlongateStencil() const
-    {
-        return restrict_prolongate_stencil;
-    }
-
-    void Problem::setRestrictProlongateStencil(bool restrictProlongateStencil)
-    {
-        restrict_prolongate_stencil = restrictProlongateStencil;
     }
 
     bool Problem::getCopyBufferData() const

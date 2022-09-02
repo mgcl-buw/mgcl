@@ -33,9 +33,6 @@ namespace mgcl
 
             if (dF)
                 clReleaseMemObject(dF);
-
-            if (dStencilValues && (problem->getStencilValuesPtr() || problem->getDStencilValues()))
-                clReleaseMemObject(dStencilValues);
         }
 
         if (dVOut)
@@ -66,7 +63,6 @@ namespace mgcl
             {
                 dVIn = problem->getDV();
                 dF = problem->getDF();
-                dStencilValues = problem->getDStencilValues();
             }
             else if (problem->getCopyBufferData())
             {
@@ -76,7 +72,6 @@ namespace mgcl
                 dF = clCreateBuffer(context, CL_MEM_READ_WRITE,
                                     sizeof(double) * mgh * ngh * ogh, NULL, &err);
                 mgclCheckError(err, "clCreateBuffer");
-                // TODO stencil_values
                 problem->getOpenCLHelper().copyInputBuffers();
             }
             else
@@ -88,14 +83,6 @@ namespace mgcl
                 dF = clCreateBuffer(context, CL_MEM_READ_WRITE | pointer_flag,
                                     sizeof(double) * mgh * ngh * ogh, (*f)[0][0], &err);
                 mgclCheckError(err, "clCreateBuffer");
-
-                // create buffers for stencil values if no fixed stencil shall be used
-                if (problem->getStencilValuesPtr())
-                    dStencilValues =
-                        clCreateBuffer(context, CL_MEM_READ_WRITE | pointer_flag,
-                                       sizeof(double) * mgh * ngh * ogh * problem->getStencilSizeMultiplier(),
-                                       (*stencil_values)[0][0], &err);
-                mgclCheckError(err, "clCreateBuffer");
             }
         }
         else
@@ -106,20 +93,6 @@ namespace mgcl
             dF = clCreateBuffer(context, CL_MEM_READ_WRITE,
                                 sizeof(double) * mgh * ngh * ogh, NULL, &err);
             mgclCheckError(err, "clCreateBuffer");
-
-            if (problem->getStencilValuesPtr())
-            {
-                if (problem->getRestrictProlongateStencil())
-                {
-                    dStencilValues = clCreateBuffer(context, CL_MEM_READ_WRITE,
-                                                    sizeof(double) * mgh * ngh *
-                                                        ogh * problem->getStencilSizeMultiplier(),
-                                                    NULL, &err);
-                    mgclCheckError(err, "clCreateBuffer");
-                }
-                else
-                    dStencilValues = problem->getLevels()[0]->getDStencilValues();
-            }
         }
 
         dVOut = clCreateBuffer(context, CL_MEM_READ_WRITE,
@@ -133,14 +106,6 @@ namespace mgcl
                                             problem->ghosts);
         mgclCheckError(err, "Updating ghosts of d_f");
 
-        if (dStencilValues)
-        {
-            err = MultigridEngine::updateGhosts(*problem, dStencilValues, mgh, ngh,
-                                                ogh * problem->getStencilSizeMultiplier(), problem->getGhosts(), problem->getGhosts(),
-                                                problem->getGhosts() * problem->getStencilSizeMultiplier());
-            mgclCheckError(err, "Updating ghosts of d_stencil_values");
-        }
-
         return CL_SUCCESS;
     }
 
@@ -152,21 +117,6 @@ namespace mgcl
     int Level::getMgh() const
     {
         return mgh;
-    }
-
-    Cuboid &Level::getStencilValues() const
-    {
-        return *stencil_values;
-    }
-
-    std::shared_ptr<Cuboid> Level::getStencilValuesPtr() const
-    {
-        return stencil_values;
-    }
-
-    void Level::setStencilValues(const std::shared_ptr<Cuboid> &stencilValues)
-    {
-        stencil_values = stencilValues;
     }
 
     int Level::getNgh() const
@@ -252,16 +202,6 @@ namespace mgcl
     void Level::setDF(const cl_mem &dF_)
     {
         dF = dF_;
-    }
-
-    cl_mem Level::getDStencilValues() const
-    {
-        return dStencilValues;
-    }
-
-    void Level::setDStencilValues(const cl_mem &dStencilValues_)
-    {
-        dStencilValues = dStencilValues_;
     }
 
     int Level::getM() const

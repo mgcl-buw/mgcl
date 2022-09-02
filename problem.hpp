@@ -80,21 +80,6 @@ namespace mgcl
         /* Type of stencil that will be used in jacobi's method */
         MGCL_STENCIL stencil = MGCL_7POINT;
 
-        /* Stencil values per grid point. Must be given by the user if a varying symmetric stencil shall be used.
-         * This array is only used as input, mgcl_level_data::stencil_values will be used internally for each level.
-         * Size depends on stencil type:
-         * -  7-point varsym: size = m*n*o*4
-         * - 19-point varsym: size = m*n*o*7
-         * - 27-point varsym: size = m*n*o*8 */
-        std::shared_ptr<Cuboid> stencil_values = nullptr;
-
-        /* Size multiplier for non-fixed stencils. Used internally only. */
-        int stencil_size_multiplier = 1;
-
-        /* Wether to restrict and prolongate varsym stencil or just keep the values as is on each level. Defaults to true.
-         */
-        bool restrict_prolongate_stencil = true;
-
         /* Whether to use opencl or not. Defaults to 0 (not using opencl) */
         // TODO needed?
         bool use_opencl = false;

@@ -1,6 +1,6 @@
 x test Problem::readResult
+x remove stencil varsym code
 
-- remove stencil varsym code
 - refactor Problem::init to Level
 - test level
 - add stencil class
