@@ -187,16 +187,6 @@ namespace mgcl
         MGCL_STENCIL getStencil() const;
         void setStencil(const MGCL_STENCIL &stencil_);
 
-        Cuboid &getStencilValues() const;
-        std::shared_ptr<Cuboid> getStencilValuesPtr() const;
-        void setStencilValues(std::shared_ptr<Cuboid> stencilValues);
-
-        int getStencilSizeMultiplier() const;
-        void setStencilSizeMultiplier(int stencilSizeMultiplier);
-
-        bool getRestrictProlongateStencil() const;
-        void setRestrictProlongateStencil(bool restrictProlongateStencil);
-
         bool getReuseOpenclBuffers() const;
         void setReuseOpenclBuffers(bool reuseOpenclBuffers);
 

@@ -47,17 +47,17 @@ TEST_CASE("Level ctor and dtor")
 
 TEST_CASE("Level::initOpenCLBuffers")
 {
-    auto v = std::make_shared<mgcl::Cuboid>(4, 4, 4);
-    auto f = std::make_shared<mgcl::Cuboid>(4, 4, 4);
+    auto v = std::make_shared<mgcl::Cuboid>(4, 4, 4, 1, 1, 1);
+    auto f = std::make_shared<mgcl::Cuboid>(4, 4, 4, 1, 1, 1);
     v->fillRandom();
     f->fillRandom();
 
-    auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
-    p->setUseOpencl(true);
-    REQUIRE(p->init());
-
     SECTION("default conf")
     {
+        auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
+        p->setUseOpencl(true);
+        REQUIRE(p->init());
+
         int levelNum = GENERATE(0, 1, 2);
         mgcl::Level level0(p.get(), levelNum);
         REQUIRE(level0.init());
@@ -104,5 +104,110 @@ TEST_CASE("Level::initOpenCLBuffers")
             CHECK(v->isEqual(dvin));
             CHECK(f->isEqual(df));
         }
+    }
+
+    SECTION("reuse_opencl_buffers")
+    {
+        mgcl_test::TestUtility tu;
+        auto d_v = tu.createOpenCLBuffer(*v);
+        auto d_f = tu.createOpenCLBuffer(*f);
+
+        // check ref count of buffers
+        cl_uint refCount;
+        int err;
+
+        err = clGetMemObjectInfo(d_v, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+        mgcl::mgclCheckError(err, "clGetMemObjectInfo(d_v, CL_MEM_REFERENCE_COUNT)");
+        REQUIRE(err == CL_SUCCESS);
+        CHECK(refCount == 1);
+
+        err = clGetMemObjectInfo(d_f, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+        mgcl::mgclCheckError(err, "clGetMemObjectInfo(d_f, CL_MEM_REFERENCE_COUNT)");
+        REQUIRE(err == CL_SUCCESS);
+        CHECK(refCount == 1);
+
+        auto p = std::make_shared<mgcl::Problem>(4, 4, 4, d_f, d_v);
+
+        p->setUseOpencl(true);
+        p->setReuseOpenclBuffers(true);
+        p->reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId());
+        // REQUIRE(p->init());
+
+        err = clGetMemObjectInfo(d_v, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+        mgcl::mgclCheckError(err, "clGetMemObjectInfo(d_v, CL_MEM_REFERENCE_COUNT)");
+        REQUIRE(err == CL_SUCCESS);
+        CHECK(refCount == 1);
+
+        err = clGetMemObjectInfo(d_f, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+        mgcl::mgclCheckError(err, "clGetMemObjectInfo(d_f, CL_MEM_REFERENCE_COUNT)");
+        REQUIRE(err == CL_SUCCESS);
+        CHECK(refCount == 1);
+
+        // Test for levels 0, 1 and 2
+        int levelNum = GENERATE(0, 1, 2);
+        mgcl::Level *level0 = new mgcl::Level(p.get(), levelNum);
+        REQUIRE(level0->init());
+        // REQUIRE(level0->initOpenCLBuffers() == CL_SUCCESS);
+
+        // Check if buffers were created
+        REQUIRE(level0->getDVIn());
+        REQUIRE(level0->getDVOut());
+        REQUIRE(level0->getDF());
+        REQUIRE(level0->getDR());
+
+        // Check if size of buffers is correct
+        size_t bufsize;
+        int sizeNeeded = sizeof(double) * (level0->getMgh()) * (level0->getNgh()) * (level0->getOgh());
+
+        err = clGetMemObjectInfo(level0->getDVIn(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+        mgcl::mgclCheckError(err, "clGetMemObjectInfo(level0->dVIn)");
+        REQUIRE(err == CL_SUCCESS);
+        CHECK(bufsize == sizeNeeded);
+
+        err = clGetMemObjectInfo(level0->getDVOut(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+        mgcl::mgclCheckError(err, "clGetMemObjectInfo(level0->dVOut)");
+        REQUIRE(err == CL_SUCCESS);
+        CHECK(bufsize == sizeNeeded);
+
+        err = clGetMemObjectInfo(level0->getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+        mgcl::mgclCheckError(err, "clGetMemObjectInfo(level0->dF)");
+        REQUIRE(err == CL_SUCCESS);
+        CHECK(bufsize == sizeNeeded);
+
+        err = clGetMemObjectInfo(level0->getDR(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+        mgcl::mgclCheckError(err, "clGetMemObjectInfo(level0->dR)");
+        REQUIRE(err == CL_SUCCESS);
+        CHECK(bufsize == sizeNeeded);
+
+        // Check if content of dVIn and dV is correct if levelNum = 0
+        if (levelNum == 0)
+        {
+            CHECK(d_v == level0->getDVIn());
+            CHECK(d_f == level0->getDF());
+        }
+
+        // Check ref count again, buffers should've been retained
+        err = clGetMemObjectInfo(d_v, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+        mgcl::mgclCheckError(err, "clGetMemObjectInfo(d_v, CL_MEM_REFERENCE_COUNT)");
+        REQUIRE(err == CL_SUCCESS);
+        CHECK(refCount == (levelNum == 0 ? 2 : 1));
+
+        err = clGetMemObjectInfo(d_f, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+        mgcl::mgclCheckError(err, "clGetMemObjectInfo(d_f, CL_MEM_REFERENCE_COUNT)");
+        REQUIRE(err == CL_SUCCESS);
+        CHECK(refCount == (levelNum == 0 ? 2 : 1));
+
+        delete level0;
+
+        // Check ref count again, buffers should've been released in Level dtor
+        err = clGetMemObjectInfo(d_v, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+        mgcl::mgclCheckError(err, "clGetMemObjectInfo(d_v, CL_MEM_REFERENCE_COUNT)");
+        REQUIRE(err == CL_SUCCESS);
+        CHECK(refCount == 1);
+
+        err = clGetMemObjectInfo(d_f, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+        mgcl::mgclCheckError(err, "clGetMemObjectInfo(d_f, CL_MEM_REFERENCE_COUNT)");
+        REQUIRE(err == CL_SUCCESS);
+        CHECK(refCount == 1);
     }
 }

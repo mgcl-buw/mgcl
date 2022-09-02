@@ -12,21 +12,25 @@ namespace mgcl
     Problem::Problem(int m_, int n_, int o_)
         : m(m_), n(n_), o(o_), openCLHelper(this)
     {
+        calculateAndSetMaxLevel();
     }
 
     Problem::Problem(int m_, int n_, int o_, Cuboid *f_, Cuboid *v_)
         : m(m_), n(n_), o(o_), f(std::make_shared<Cuboid>(*f_)), v(std::make_shared<Cuboid>(*v_)), openCLHelper(this)
     {
+        calculateAndSetMaxLevel();
     }
 
     Problem::Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_)
         : m(m_), n(n_), o(o_), f(f_), v(v_), openCLHelper(this)
     {
+        calculateAndSetMaxLevel();
     }
 
     Problem::Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_)
         : m(m_), n(n_), o(o_), dF(d_f_), dV(d_v_), openCLHelper(this)
     {
+        calculateAndSetMaxLevel();
     }
 
     /**
@@ -453,6 +457,7 @@ namespace mgcl
     void Problem::setMaxlevel(int maxlevel_)
     {
         maxlevel = maxlevel_;
+        calculateAndSetMaxLevel();
     }
 
     int Problem::getNu1() const
