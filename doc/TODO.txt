@@ -1,0 +1,8 @@
+x test Problem::readResult
+
+- remove stencil varsym code
+- refactor Problem::init to Level
+- test level
+- add stencil class
+- add stencilarithmetic
+- add galerkin as preliminary step

@@ -121,12 +121,12 @@ namespace mgcl
         // problem.maxlevel = 3;
         double res;
         int err;
-        cl_uint zero = 0;
+        cl_double zero = 0;
 
         if (level.getNum() < problem.maxlevel - 1) // if not at highest level
         {
             // reset v to zero for coarser grids (for another possible v-cycle)
-            err = clEnqueueFillBuffer(problem.openCLHelper.getCommands(), levelAbove->dVIn, &zero, sizeof(cl_uint), 0,
+            err = clEnqueueFillBuffer(problem.openCLHelper.getCommands(), levelAbove->dVIn, &zero, sizeof(cl_double), 0,
                                       sizeof(double) * levelAbove->mgh * levelAbove->ngh * levelAbove->ogh, 0, NULL,
                                       NULL);
             mgclCheckError(err, "resetting dVIn to 0");

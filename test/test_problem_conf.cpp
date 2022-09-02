@@ -541,3 +541,40 @@ TEST_CASE("Problem::init")
         REQUIRE(fgh.isEqual(lv0f));
     }
 }
+
+TEST_CASE("Problem::readResults")
+{
+    auto v = std::make_shared<mgcl::Cuboid>(4, 5, 6, 2, 2, 2);
+    auto f = std::make_shared<mgcl::Cuboid>(4, 5, 6, 2, 2, 2);
+    v->fillRandom();
+    f->fillRandom();
+
+    mgcl::Problem p(4, 5, 6, f, v);
+    p.setGhostsIn(2);
+    p.setUseOpencl(true);
+
+    SECTION("default conf")
+    {
+        p.init();
+        REQUIRE(p.getVPtr() == v);
+
+        // alter values of dVIn on lowest level
+        cl_double one = 1.0;
+        int err = clEnqueueFillBuffer(p.getOpenCLHelper().getCommands(), p.getLevels()[0]->getDVIn(), &one,
+                                      sizeof(cl_double), 0,
+                                      sizeof(double) * p.getLevels()[0]->getMgh() * p.getLevels()[0]->getNgh() * p.getLevels()[0]->getOgh(),
+                                      0, NULL, NULL);
+        mgcl::mgclCheckError(err, "clEnqueueFillBuffer");
+        REQUIRE(err == CL_SUCCESS);
+
+        // read back and check if values were copied successfully
+        REQUIRE(p.readResults() == CL_SUCCESS);
+        REQUIRE(p.getVPtr() == v);
+        for (int i = 0; i < v->getM(); i++)
+            for (int j = 0; j < v->getN(); j++)
+                for (int k = 0; k < v->getO(); k++)
+                {
+                    CHECK((*v)[i + v->getGhostsM()][j + v->getGhostsN()][k + v->getGhostsO()] == 1);
+                }
+    }
+}
