@@ -58,7 +58,7 @@ namespace mgcl
         /* Amount of ghost cells of input data. Defaults to 0. Only relevant if buffers are not reused. */
         int ghosts_in = 0;
 
-        /* maximum grid level */
+        /* maximum grid level, starting from 0 as the finest level */
         int maxlevel = -1;
 
         /* maximum v-cycle iteration count */

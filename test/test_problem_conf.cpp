@@ -99,7 +99,7 @@ TEST_CASE("Problem::calculateAndSetMaxLevel")
 
         REQUIRE(p.getMaxlevel() == -1);
         p.calculateAndSetMaxLevel();
-        REQUIRE(p.getMaxlevel() == 3);
+        REQUIRE(p.getMaxlevel() == 2);
     }
 
     SECTION("n min")
@@ -108,7 +108,7 @@ TEST_CASE("Problem::calculateAndSetMaxLevel")
 
         REQUIRE(p.getMaxlevel() == -1);
         p.calculateAndSetMaxLevel();
-        REQUIRE(p.getMaxlevel() == 4);
+        REQUIRE(p.getMaxlevel() == 3);
     }
 
     SECTION("o min")
@@ -117,7 +117,7 @@ TEST_CASE("Problem::calculateAndSetMaxLevel")
 
         REQUIRE(p.getMaxlevel() == -1);
         p.calculateAndSetMaxLevel();
-        REQUIRE(p.getMaxlevel() == 5);
+        REQUIRE(p.getMaxlevel() == 4);
     }
 
     SECTION("user set valid")
@@ -135,7 +135,7 @@ TEST_CASE("Problem::calculateAndSetMaxLevel")
         p.setMaxlevel(8);
 
         p.calculateAndSetMaxLevel();
-        REQUIRE(p.getMaxlevel() == 3);
+        REQUIRE(p.getMaxlevel() == 2);
     }
 }
 
@@ -250,7 +250,7 @@ TEST_CASE("Problem::init")
     SECTION("default conf")
     {
         REQUIRE(p.init());
-        REQUIRE(p.getLevels().size() == p.getMaxlevel());
+        REQUIRE(p.getLevels().size() == p.getMaxlevel() + 1);
 
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)
@@ -260,7 +260,7 @@ TEST_CASE("Problem::init")
                     REQUIRE((*f)[i][j][k] == p.getLevels()[0]->getF()[i + 1][j + 1][k + 1]);
                 }
 
-        for (int lv = 0; lv < p.getMaxlevel(); lv++)
+        for (int lv = 0; lv <= p.getMaxlevel(); lv++)
         {
             std::cout << "Checking level " + lv << std::endl;
 
@@ -323,7 +323,7 @@ TEST_CASE("Problem::init")
 
         p2.setGhostsIn(ghosts_in);
         REQUIRE(p2.init());
-        REQUIRE(p2.getLevels().size() == p2.getMaxlevel());
+        REQUIRE(p2.getLevels().size() == p2.getMaxlevel() + 1);
 
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)
@@ -333,7 +333,7 @@ TEST_CASE("Problem::init")
                     REQUIRE((*f2)[i + ghosts_in][j + ghosts_in][k + ghosts_in] == p2.getLevels()[0]->getF()[i + 1][j + 1][k + 1]);
                 }
 
-        for (int lv = 0; lv < p2.getMaxlevel(); lv++)
+        for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
         {
             REQUIRE(p2.getLevels()[lv]->getM() == m >> lv);
             REQUIRE(p2.getLevels()[lv]->getN() == n >> lv);
@@ -359,7 +359,7 @@ TEST_CASE("Problem::init")
 
         p.setGhosts(ghosts);
         REQUIRE(p.init());
-        REQUIRE(p.getLevels().size() == p.getMaxlevel());
+        REQUIRE(p.getLevels().size() == p.getMaxlevel() + 1);
 
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)
@@ -369,7 +369,7 @@ TEST_CASE("Problem::init")
                     REQUIRE((*f)[i][j][k] == p.getLevels()[0]->getF()[i + ghosts][j + ghosts][k + ghosts]);
                 }
 
-        for (int lv = 0; lv < p.getMaxlevel(); lv++)
+        for (int lv = 0; lv <= p.getMaxlevel(); lv++)
         {
             REQUIRE(p.getLevels()[lv]->getM() == m >> lv);
             REQUIRE(p.getLevels()[lv]->getN() == n >> lv);
@@ -404,12 +404,12 @@ TEST_CASE("Problem::init")
 
         REQUIRE(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()) == CL_SUCCESS);
         REQUIRE(p2.init());
-        REQUIRE(p2.getLevels().size() == p2.getMaxlevel());
+        REQUIRE(p2.getLevels().size() == p2.getMaxlevel() + 1);
 
         // no host data is created
         REQUIRE(!p2.getVPtr());
         REQUIRE(!p2.getFPtr());
-        for (int lv = 0; lv < p2.getMaxlevel(); lv++)
+        for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
         {
             REQUIRE(!p2.getLevels()[lv]->getVPtr());
             REQUIRE(!p2.getLevels()[lv]->getFPtr());
@@ -422,7 +422,7 @@ TEST_CASE("Problem::init")
         REQUIRE(p2.getLevels()[0]);
         REQUIRE(p2.getLevels()[0]->getDVIn() == d_v);
         REQUIRE(p2.getLevels()[0]->getDF() == d_f);
-        for (int lv = 0; lv < p2.getMaxlevel(); lv++)
+        for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
         {
             // check if buffers are not nullptr
             REQUIRE(p2.getLevels()[lv]);
@@ -473,12 +473,12 @@ TEST_CASE("Problem::init")
 
         REQUIRE(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()) == CL_SUCCESS);
         REQUIRE(p2.init());
-        REQUIRE(p2.getLevels().size() == p2.getMaxlevel());
+        REQUIRE(p2.getLevels().size() == p2.getMaxlevel() + 1);
 
         // no host data is created
         REQUIRE(!p2.getVPtr());
         REQUIRE(!p2.getFPtr());
-        for (int lv = 0; lv < p2.getMaxlevel(); lv++)
+        for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
         {
             REQUIRE(!p2.getLevels()[lv]->getVPtr());
             REQUIRE(!p2.getLevels()[lv]->getFPtr());
@@ -491,7 +491,7 @@ TEST_CASE("Problem::init")
         REQUIRE(p2.getLevels()[0]);
         REQUIRE(p2.getLevels()[0]->getDVIn() != d_v);
         REQUIRE(p2.getLevels()[0]->getDF() != d_f);
-        for (int lv = 0; lv < p2.getMaxlevel(); lv++)
+        for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
         {
             REQUIRE(p2.getLevels()[lv]);
             REQUIRE(p2.getLevels()[lv]->getDVIn());

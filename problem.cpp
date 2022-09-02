@@ -67,16 +67,17 @@ namespace mgcl
     }
 
     /**
-     * @brief Calculates max level using grid dimensions
+     * @brief Calculates 0-based max level using the minimum of real grid dimensions or uses user set max level if
+     * it's valid.
      *
-     * @return int max level
+     * @return int 0-based max level, i.e. log2(min(m,n,o)) or valid user set maxlevel
      */
     int Problem::calculateAndSetMaxLevel()
     {
         // find max level or use user specified one
         int minsize = m < n ? m : n;
         minsize = minsize < o ? minsize : o;
-        int maxlv = log2(minsize) + 1;
+        int maxlv = log2(minsize);
 
         if (maxlevel >= 0) // user has specified a maxlevel
         {
@@ -121,7 +122,7 @@ namespace mgcl
         printf("maxlevel = %d\n", maxlevel);
 
         // initialize levels
-        for (int level = 0; level < maxlevel; level++)
+        for (int level = 0; level <= maxlevel; level++)
         {
             auto lv = std::make_shared<Level>(this, level, m >> level, n >> level, o >> level);
             levels.push_back(std::move(lv));

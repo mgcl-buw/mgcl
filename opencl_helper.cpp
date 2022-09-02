@@ -223,7 +223,7 @@ namespace mgcl
             size_t bufsize;
             int sizeNeeded = sizeof(double) * (m + 2 * ghosts) * (n + 2 * ghosts) * (o + 2 * ghosts);
             int err = clGetMemObjectInfo(problem->getDV(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgclCheckError(err, "Querying buffer size of d_v\n");
+            mgclCheckError(err, "Querying buffer size of d_v");
             if (bufsize != sizeNeeded)
             {
                 printf("OpenCL buffer d_v has wrong size (%ld but need %d)\n", bufsize, sizeNeeded);
@@ -231,7 +231,7 @@ namespace mgcl
             }
 
             err = clGetMemObjectInfo(problem->getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgclCheckError(err, "Querying buffer size of d_f\n");
+            mgclCheckError(err, "Querying buffer size of d_f");
             if (bufsize != sizeNeeded)
             {
                 printf("OpenCL buffer d_f has wrong size (%ld but need %d)\n", bufsize, sizeNeeded);

@@ -15,7 +15,7 @@ namespace mgcl
         double res;
 
         // reset initial guess of coarser grid
-        if (level.getNum() < problem.maxlevel - 1)
+        if (level.getNum() < problem.maxlevel)
         {
             levelAbove->getV().fill(0);
         }
@@ -49,19 +49,15 @@ namespace mgcl
         // restrict residual as right hand side on coarser grid
         MultigridEngine::restrictSeq(level, *levelAbove, level.getR(), levelAbove->getF());
 
-        // if not at highest level.getNum()...
+        // start next v-cycle iteration if not at highest level
         if (level.getNum() < problem.maxlevel - 1)
+            MultigridEngine::vcycleSeq(problem, *levelAbove);
+        else
         {
-            // start next v-cycle iteration
-            if (level.getNum() < problem.maxlevel - 2)
-                MultigridEngine::vcycleSeq(problem, *levelAbove);
-            else
-            {
-                MultigridEngine::jacobiSeq(levelAbove->getV(), levelAbove->getF(), levelAbove->getR(), problem.omega, problem.nu1 + problem.nu2,
-                                           problem.residual_norm, problem.stencil);
+            MultigridEngine::jacobiSeq(levelAbove->getV(), levelAbove->getF(), levelAbove->getR(), problem.omega, problem.nu1 + problem.nu2,
+                                       problem.residual_norm, problem.stencil);
 
-                // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
-            }
+            // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
         }
 
         // prolongate from coarser to finer grid
@@ -91,7 +87,7 @@ namespace mgcl
         int err;
         cl_double zero = 0;
 
-        if (level.getNum() < problem.maxlevel - 1) // if not at highest level
+        if (level.getNum() < problem.maxlevel) // if not at highest level
         {
             // reset v to zero for coarser grids (for another possible v-cycle)
             err = clEnqueueFillBuffer(problem.openCLHelper.getCommands(), levelAbove->dVIn, &zero, sizeof(cl_double), 0,
@@ -110,15 +106,12 @@ namespace mgcl
         // restrict to coarser grid
         restrict(level, *levelAbove, level.getDR(), levelAbove->getDF());
 
+        // start next v-cycle iteration if not at highest level
         if (level.getNum() < problem.maxlevel - 1)
+            vcycle(problem, *levelAbove);
+        else
         {
-            // start next v-cycle iteration
-            if (level.getNum() < problem.maxlevel - 2)
-                vcycle(problem, *levelAbove);
-            else
-            {
-                res = jacobi(problem, *levelAbove, problem.nu1 + problem.nu2, 0);
-            }
+            res = jacobi(problem, *levelAbove, problem.nu1 + problem.nu2, 0);
         }
 
         // prolongate from coarser to finer grid
