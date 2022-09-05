@@ -32,7 +32,7 @@ TEST_CASE("Problem conf")
         REQUIRE(p.getOmega() == 0.8);
         REQUIRE(p.getMaxiterVcycles() == 5);
         REQUIRE(p.getTol() == 1e-7);
-        REQUIRE(p.getMaxlevel() == -1);
+        REQUIRE(p.getMaxlevel() == 3);
         REQUIRE(p.getResidualNorm() == mgcl::MGCL_L2);
         REQUIRE(p.getStencil() == mgcl::MGCL_7POINT);
 
@@ -97,7 +97,7 @@ TEST_CASE("Problem::calculateAndSetMaxLevel")
     {
         mgcl::Problem p(4, 8, 8);
 
-        REQUIRE(p.getMaxlevel() == -1);
+        REQUIRE(p.getMaxlevel() == 2);
         p.calculateAndSetMaxLevel();
         REQUIRE(p.getMaxlevel() == 2);
     }
@@ -106,7 +106,7 @@ TEST_CASE("Problem::calculateAndSetMaxLevel")
     {
         mgcl::Problem p(16, 8, 16);
 
-        REQUIRE(p.getMaxlevel() == -1);
+        REQUIRE(p.getMaxlevel() == 3);
         p.calculateAndSetMaxLevel();
         REQUIRE(p.getMaxlevel() == 3);
     }
@@ -115,7 +115,7 @@ TEST_CASE("Problem::calculateAndSetMaxLevel")
     {
         mgcl::Problem p(32, 32, 16);
 
-        REQUIRE(p.getMaxlevel() == -1);
+        REQUIRE(p.getMaxlevel() == 4);
         p.calculateAndSetMaxLevel();
         REQUIRE(p.getMaxlevel() == 4);
     }

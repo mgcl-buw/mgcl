@@ -41,7 +41,7 @@ void runSeq(ankerl::nanobench::Bench *b, std::string name, int grid)
     f->fillRandom();
 
     mgcl::Problem p(m, n, o, f, v);
-    p.setSilent(true);
+    // p.setSilent(true);
     p.init();
 
     b->run(name, [&]
@@ -62,7 +62,7 @@ void runGpu(ankerl::nanobench::Bench *b, std::string name, int grid)
     mgcl::Problem p(m, n, o, f, v);
     p.setUseOpencl(true);
     p.setDeviceType(CL_DEVICE_TYPE_GPU);
-    p.setSilent(true);
+    // p.setSilent(true);
     p.init();
     b->run(name, [&]
            { p.solve(); });
