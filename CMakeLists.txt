@@ -56,9 +56,6 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-# installing catch2: https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md#installing-catch2-from-git-repository
-find_package(Catch2 3 REQUIRED)
-
 # These tests can use the Catch2-provided main
 set(SOURCES_TEST 
 test/test_cuboid.cpp
