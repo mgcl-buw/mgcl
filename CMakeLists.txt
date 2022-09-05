@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.17)
 project(MGCL VERSION 0.1.0)
 
 # specify the C++ standard
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # find_package(CUDAToolkit 8.0 REQUIRED)
@@ -70,3 +70,14 @@ test/benchmarks.cpp
 add_executable(tests ${SOURCES_TEST})
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(tests PRIVATE mgcl)
+
+# Nanobench configuration
+set(SOURCES_NANOBENCH 
+test/benchmarks_nanobench.cpp
+)
+
+add_executable(benchmarks_nanobench ${SOURCES_NANOBENCH})
+target_include_directories(benchmarks_nanobench PRIVATE include/)
+target_link_libraries(benchmarks_nanobench PRIVATE mgcl)
+# target_link_libraries(benchmarks_nanobench PRIVATE nanobench)
+

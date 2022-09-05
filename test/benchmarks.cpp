@@ -7,12 +7,13 @@
 
 TEST_CASE("mgcl benchmarks", "[!benchmark]")
 {
-    int N = GENERATE(16, 32, 64, 128);
+    // int N = GENERATE(16, 32, 64, 128);
+    int N = 16;
     int m = N;
     int n = N;
     int o = N;
 
-    BENCHMARK_ADVANCED("sequential random values")
+    BENCHMARK_ADVANCED(std::string("sequential random values, N = ").append(std::to_string(N)).c_str())
     (Catch::Benchmark::Chronometer meter)
     {
         auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
@@ -27,7 +28,7 @@ TEST_CASE("mgcl benchmarks", "[!benchmark]")
                       { return p.solveSeq(); });
     };
 
-    BENCHMARK_ADVANCED("OpenCL random values")
+    BENCHMARK_ADVANCED(std::string("OpenCL random values, N = ").append(std::to_string(N)).c_str())
     (Catch::Benchmark::Chronometer meter)
     {
         auto v = std::make_shared<mgcl::Cuboid>(m, n, o);

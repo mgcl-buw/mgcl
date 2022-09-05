@@ -11,3 +11,4 @@ x test level
 - benchmarks
 - throw exceptions in checkParameters
 - gather iteration count and list of residual for checking after solve call
+- add kernel code as raw string to code so it will be included with compilation
