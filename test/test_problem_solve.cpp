@@ -105,7 +105,7 @@ TEST_CASE("Problem solving: periodic 4th order")
         p.setUseOpencl(true);
         p.setReadResults(true);
         p.setDeviceType(CL_DEVICE_TYPE_GPU);
-        p.setDeviceName("Quadro");
+        // p.setDeviceName("Quadro");
         p.solve();
 
         // check if solution is good
