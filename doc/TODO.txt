@@ -8,7 +8,9 @@ x test level
 - add stencilarithmetic
 - add galerkin as preliminary step
 - switch to C++ OpenCL api
-- benchmarks
+- benchmarks solve
+- benchmark steps
+- test use_local_memory
 - throw exceptions in checkParameters
 - gather iteration count and list of residual for checking after solve call
 - add kernel code as raw string to code so it will be included with compilation
