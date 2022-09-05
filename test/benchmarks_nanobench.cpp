@@ -1,5 +1,5 @@
 #define ANKERL_NANOBENCH_IMPLEMENT
-#include "../include/nanobench.h"
+#include "nanobench.h"
 
 #include <chrono>
 #include <vector>

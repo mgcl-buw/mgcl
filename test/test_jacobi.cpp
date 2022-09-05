@@ -32,7 +32,7 @@ TEST_CASE("jacobi")
     auto c_expected_out_v = jacobiTestOutputV();
     auto c_expected_out_r = jacobiTestOutputR();
 
-    SECTION("restrictSeq L2-norm 7point")
+    SECTION("jacobiSeq L2-norm 7point")
     {
         double res = mgcl::MultigridEngine::jacobiSeq(c_in_v, c_in_f, c_in_r, omega, maxiter, mgcl::MGCL_L2, mgcl::MGCL_7POINT);
 
@@ -41,7 +41,7 @@ TEST_CASE("jacobi")
         CHECK(c_in_r.isEqual(c_expected_out_r));
     }
 
-    SECTION("restrict OpenCL L2-norm 7point")
+    SECTION("jacobi OpenCL L2-norm 7point")
     {
         auto p = std::make_shared<mgcl::Problem>(m, n, o);
         p->setResidualNorm(mgcl::MGCL_L2);

@@ -46,6 +46,16 @@ add_custom_target(copy_kernels DEPENDS "${CMAKE_BINARY_DIR}/mgcl.cl")
 # Whenever target 'mgcl' is requested, the custom target will be evaluated.
 add_dependencies(mgcl copy_kernels)
 
+Include(FetchContent)
+
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.0.1 # or a later release
+)
+
+FetchContent_MakeAvailable(Catch2)
+
 # installing catch2: https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md#installing-catch2-from-git-repository
 find_package(Catch2 3 REQUIRED)
 
@@ -72,12 +82,20 @@ target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(tests PRIVATE mgcl)
 
 # Nanobench configuration
+FetchContent_Declare(
+    nanobench
+    GIT_REPOSITORY https://github.com/martinus/nanobench.git
+    GIT_TAG v4.1.0
+    GIT_SHALLOW TRUE)
+
+FetchContent_MakeAvailable(nanobench)
+
 set(SOURCES_NANOBENCH 
 test/benchmarks_nanobench.cpp
 )
 
 add_executable(benchmarks_nanobench ${SOURCES_NANOBENCH})
-target_include_directories(benchmarks_nanobench PRIVATE include/)
+# target_include_directories(benchmarks_nanobench PRIVATE include/)
 target_link_libraries(benchmarks_nanobench PRIVATE mgcl)
-# target_link_libraries(benchmarks_nanobench PRIVATE nanobench)
+target_link_libraries(benchmarks_nanobench PRIVATE nanobench)
 
