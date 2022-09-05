@@ -40,6 +40,7 @@ TEST_CASE("Level::initOpenCLBuffers")
     {
         auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
         p->setUseOpencl(true);
+        p->setGhostsIn(1);
         REQUIRE(p->init());
 
         int levelNum = GENERATE(0, 1, 2);
@@ -201,6 +202,7 @@ TEST_CASE("Level::init")
     f->fillRandom();
 
     auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
+    p->setGhostsIn(1);
     // REQUIRE(p->init());
 
     int levelNum = GENERATE(0, 1, 2);
