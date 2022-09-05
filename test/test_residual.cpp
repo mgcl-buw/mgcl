@@ -27,7 +27,7 @@ TEST_CASE("residual")
     mgcl::Cuboid c_in_r(m, n, o, ghosts_m, ghosts_n, ghosts_o);
     auto c_expected_out_r = residualTestOutputR();
 
-    SECTION("restrictSeq L2-norm 7point")
+    SECTION("residualSeq L2-norm 7point")
     {
         double res = mgcl::MultigridEngine::residualSeq(c_in_f, c_in_v, c_in_r, mgcl::MGCL_L2, mgcl::MGCL_7POINT);
 
@@ -35,7 +35,7 @@ TEST_CASE("residual")
         REQUIRE(c_in_r.isEqual(c_expected_out_r));
     }
 
-    SECTION("restrict OpenCL L2-norm 7point")
+    SECTION("residual OpenCL L2-norm 7point")
     {
         auto p = std::make_shared<mgcl::Problem>(m, n, o);
         p->setResidualNorm(mgcl::MGCL_L2);
