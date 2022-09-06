@@ -71,6 +71,74 @@ TEST_CASE("jacobi")
         CHECK(c_v_out.isEqual(c_expected_out_v));
         CHECK(c_r_out.isEqual(c_expected_out_r));
     }
+
+    SECTION("jacobi OpenCL L2-norm 7point localMemory", "[!localmem]")
+    {
+        int ghosts = 3;
+
+        auto p = std::make_shared<mgcl::Problem>(m, n, o);
+        p->setResidualNorm(mgcl::MGCL_L2);
+        p->setStencil(mgcl::MGCL_7POINT);
+        p->setGhosts(ghosts);
+        p->setOmega(omega);
+        p->setUseLocalMemory(true);
+        p->setJacobiWgSizeX(8);
+        p->setJacobiWgSizeY(8);
+
+        mgcl_test::TestUtility *tu_tmp = new mgcl_test::TestUtility();
+        if (tu_tmp->deviceAvailable("Quadro", p->getDeviceType()))
+            p->setDeviceName("Quadro");
+        delete tu_tmp;
+
+        // create input Cuboids with different ghost cell count
+        mgcl::Cuboid c_in_f_gh3(c_in_f.getM(), c_in_f.getN(), c_in_f.getO(), ghosts, ghosts, ghosts);
+        mgcl::Cuboid c_in_v_gh3(c_in_v.getM(), c_in_v.getN(), c_in_v.getO(), ghosts, ghosts, ghosts);
+        mgcl::Cuboid c_in_r_gh3(c_in_r.getM(), c_in_r.getN(), c_in_r.getO(), ghosts, ghosts, ghosts);
+        for (int i = 0; i < c_in_f.getM(); i++)
+            for (int j = 0; j < c_in_f.getN(); j++)
+                for (int k = 0; k < c_in_f.getO(); k++)
+                {
+                    c_in_f_gh3[i + ghosts][j + ghosts][k + ghosts] = c_in_f[i + 1][j + 1][k + 1];
+                    c_in_v_gh3[i + ghosts][j + ghosts][k + ghosts] = c_in_v[i + 1][j + 1][k + 1];
+                    c_in_r_gh3[i + ghosts][j + ghosts][k + ghosts] = c_in_r[i + 1][j + 1][k + 1];
+                }
+        mgcl::MultigridEngine::updateGhostsSeq(c_in_f_gh3);
+        mgcl::MultigridEngine::updateGhostsSeq(c_in_v_gh3);
+        mgcl::MultigridEngine::updateGhostsSeq(c_in_r_gh3);
+
+        mgcl_test::TestUtility tu(p);
+        cl_mem d_in_f = tu.createOpenCLBuffer(c_in_f_gh3);
+        cl_mem d_in_v = tu.createOpenCLBuffer(c_in_v_gh3);
+        cl_mem d_in_v_out = tu.createOpenCLBuffer(c_in_v_gh3);
+        cl_mem d_in_r = tu.createOpenCLBuffer(c_in_r_gh3);
+
+        mgcl::Level level(p.get(), 0);
+        level.setDF(d_in_f);
+        level.setDVIn(d_in_v);
+        level.setDVOut(d_in_v_out);
+        level.setDR(d_in_r);
+
+        double res = mgcl::MultigridEngine::jacobi(*p, level, maxiter, 1);
+        tu.finish();
+
+        // read back from device and copy to Cuboid with ghosts = 1
+        auto c_r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts, ghosts, ghosts);
+        auto c_v_out = tu.readOpenCLBuffer(d_in_v, m, n, o, ghosts, ghosts, ghosts);
+        for (int i = 0; i < c_in_f.getM(); i++)
+            for (int j = 0; j < c_in_f.getN(); j++)
+                for (int k = 0; k < c_in_f.getO(); k++)
+                {
+                    c_in_v[i + 1][j + 1][k + 1] = c_v_out[i + ghosts][j + ghosts][k + ghosts];
+                    c_in_r[i + 1][j + 1][k + 1] = c_r_out[i + ghosts][j + ghosts][k + ghosts];
+                }
+
+        c_in_r.dumpToFile("c_in_r.txt");
+        c_expected_out_r.dumpToFile("c_expected_out_r.txt");
+
+        CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
+        CHECK(c_in_v.isEqual(c_expected_out_v));
+        CHECK(c_in_r.isEqual(c_expected_out_r));
+    }
 }
 
 /**

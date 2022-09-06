@@ -335,10 +335,10 @@ namespace mgcl
         int ipk = problem.jacobi_iterations_per_kernel;
         int wg_size = problem.jacobi_wg_size_x;
 
-        if (ngh - 2 * problem.ghosts < wg_size)
-            wg_size = ngh - 2 * problem.ghosts;
+        if (level.n < wg_size)
+            wg_size = level.n;
         if (ogh < ngh)
-            wg_size = ogh - 2 * problem.ghosts;
+            wg_size = level.o;
         mgcl_debug("Using wg_size = %d (problem.jacobi_wg_size_x = %d)\n", wg_size, problem.jacobi_wg_size_x);
 
         if (problem.ghosts < problem.jacobi_iterations_per_kernel)

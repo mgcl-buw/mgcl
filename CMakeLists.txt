@@ -32,6 +32,9 @@ add_library(mgcl ${SOURCES_LIB})
 # target_link_options(main PRIVATE -lOpenCL)
 target_link_libraries(mgcl PRIVATE "-lOpenCL")
 
+# Uncomment this to get Debug output in mgcl
+# target_compile_definitions(mgcl PRIVATE MGCL_DEBUG)
+
 # copy kernel file to build directory
 add_custom_command(
   OUTPUT "${CMAKE_BINARY_DIR}/mgcl.cl"
@@ -95,4 +98,3 @@ add_executable(benchmarks_nanobench ${SOURCES_NANOBENCH})
 # target_include_directories(benchmarks_nanobench PRIVATE include/)
 target_link_libraries(benchmarks_nanobench PRIVATE mgcl)
 target_link_libraries(benchmarks_nanobench PRIVATE nanobench)
-
