@@ -51,7 +51,7 @@ Include(FetchContent)
 FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        v3.0.1 # or a later release
+  GIT_TAG        v3.1.0 # or a later release
 )
 
 FetchContent_MakeAvailable(Catch2)
@@ -82,7 +82,7 @@ target_link_libraries(tests PRIVATE mgcl)
 FetchContent_Declare(
     nanobench
     GIT_REPOSITORY https://github.com/martinus/nanobench.git
-    GIT_TAG v4.1.0
+    GIT_TAG v4.3.7
     GIT_SHALLOW TRUE)
 
 FetchContent_MakeAvailable(nanobench)
