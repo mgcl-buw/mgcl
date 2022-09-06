@@ -11,6 +11,7 @@ x benchmarks solve
 - switch to C++ OpenCL api
 - benchmarks solve localMem
 - benchmark steps
+- add mustache template for plotting benchmark results
 - test + fix use_local_memory
 - throw exceptions in checkParameters
 - gather iteration count and list of residual for checking after solve call
