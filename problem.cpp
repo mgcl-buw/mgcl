@@ -41,7 +41,6 @@ namespace mgcl
      */
     bool Problem::checkParameters()
     {
-        // TODO opencl
         //  check mandatory config fields
         if ((v == nullptr || f == nullptr) && (dV == nullptr || dF == nullptr))
         {

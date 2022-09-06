@@ -91,10 +91,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(nanobench)
 
 set(SOURCES_NANOBENCH 
+test/test_utility.hpp
+test/test_utility.cpp
 test/benchmarks_nanobench.cpp
 )
 
 add_executable(benchmarks_nanobench ${SOURCES_NANOBENCH})
 # target_include_directories(benchmarks_nanobench PRIVATE include/)
+target_link_libraries(benchmarks_nanobench PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(benchmarks_nanobench PRIVATE mgcl)
 target_link_libraries(benchmarks_nanobench PRIVATE nanobench)

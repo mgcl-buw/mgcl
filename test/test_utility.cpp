@@ -7,12 +7,14 @@
 mgcl_test::TestUtility::TestUtility()
 {
     problem = std::make_shared<mgcl::Problem>(2, 2, 2);
+    problem->setSilent(true);
     problem->initOpenCL();
 }
 
 mgcl_test::TestUtility::TestUtility(std::shared_ptr<mgcl::Problem> problem_)
     : problem(std::shared_ptr<mgcl::Problem>(problem_))
 {
+    problem->setSilent(true);
     problem->initOpenCL();
 }
 
