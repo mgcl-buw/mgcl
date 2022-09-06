@@ -36,3 +36,20 @@ TEST_CASE("TestUtility readOpenCLBuffer nullptr")
     REQUIRE(tu.getProblem().getOpenCLHelper().isInitialized());
     REQUIRE_THROWS_AS(tu.readOpenCLBuffer(nullptr, 4, 4, 4), std::invalid_argument);
 }
+
+TEST_CASE("TestUtility deviceAvailable")
+{
+    mgcl_test::TestUtility tu;
+    int err;
+    cl_char device_name[1024] = {0};
+    cl_device_type device_type;
+
+    err = clGetDeviceInfo(tu.getDeviceId(), CL_DEVICE_NAME, sizeof(device_name), &device_name, NULL);
+    mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
+
+    err = clGetDeviceInfo(tu.getDeviceId(), CL_DEVICE_TYPE, sizeof(device_type), &device_type, NULL);
+    mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_TYPE)");
+
+    REQUIRE(tu.deviceAvailable(std::string((char *)device_name), device_type));
+    REQUIRE_FALSE(tu.deviceAvailable("akljshnfklfha", device_type));
+}

@@ -83,6 +83,57 @@ int mgcl_test::TestUtility::finish()
     return err;
 }
 
+/**
+ * @brief Returns true if a device whose name does contain deviceName is available on this machine. Code taken from
+ * mgcl::OpenCLHelper.
+ *
+ */
+bool mgcl_test::TestUtility::deviceAvailable(std::string deviceName, cl_device_type deviceType)
+{
+    int err, i;
+    cl_uint numPlatforms;
+    cl_device_id device_id_;
+
+    // Find number of platforms
+    err = clGetPlatformIDs(0, nullptr, &numPlatforms);
+    mgcl::mgclCheckError(err, "Finding platforms");
+    if (numPlatforms == 0)
+    {
+        printf("Found 0 platforms!\n");
+        return false;
+    }
+
+    // Get all platforms
+    cl_platform_id Platform[numPlatforms];
+    err = clGetPlatformIDs(numPlatforms, Platform, nullptr);
+    mgcl::mgclCheckError(err, "Getting platforms");
+
+    cl_char device_name_available[1024] = {0}; // string to hold name of compute device
+
+    // take first device that conforms given device_type and name
+    for (i = 0; i < numPlatforms; i++)
+    {
+        err = clGetDeviceIDs(Platform[i], deviceType, 1, &device_id_, nullptr);
+        if (err == CL_SUCCESS)
+        {
+
+            err = clGetDeviceInfo(device_id_, CL_DEVICE_NAME, sizeof(device_name_available),
+                                  &device_name_available, nullptr);
+            if (err != CL_SUCCESS)
+            {
+                printf("Error: Failed to access device name!\n");
+                return false;
+            }
+
+            // return true if a device was found
+            if (std::string((char *)device_name_available).find(deviceName) != std::string::npos)
+                return true;
+        }
+    }
+
+    return false;
+}
+
 cl_context mgcl_test::TestUtility::getContext()
 {
     return problem->getContext();
