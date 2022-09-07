@@ -10,7 +10,7 @@ using namespace std::chrono_literals;
 
 #include "../cuboid.hpp"
 #include "../problem.hpp"
-#include "test_utility.hpp"
+#include "../test/test_utility.hpp"
 
 namespace mgcl_test
 {

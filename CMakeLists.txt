@@ -55,6 +55,7 @@ FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
   GIT_TAG        v3.1.0 # or a later release
+  GIT_SHALLOW TRUE
 )
 
 FetchContent_MakeAvailable(Catch2)
@@ -93,11 +94,11 @@ FetchContent_MakeAvailable(nanobench)
 set(SOURCES_NANOBENCH 
 test/test_utility.hpp
 test/test_utility.cpp
-test/benchmarks_nanobench.cpp
+benchmarks/bench_solve.cpp
 )
 
-add_executable(benchmarks_nanobench ${SOURCES_NANOBENCH})
+add_executable(benchmarks ${SOURCES_NANOBENCH})
 # target_include_directories(benchmarks_nanobench PRIVATE include/)
-target_link_libraries(benchmarks_nanobench PRIVATE Catch2::Catch2WithMain)
-target_link_libraries(benchmarks_nanobench PRIVATE mgcl)
-target_link_libraries(benchmarks_nanobench PRIVATE nanobench)
+target_link_libraries(benchmarks PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(benchmarks PRIVATE mgcl)
+target_link_libraries(benchmarks PRIVATE nanobench)
