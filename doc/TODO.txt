@@ -4,6 +4,7 @@ x refactor Problem::init to Level
 x retain buffers in level
 x test level
 x benchmarks solve
+x readme added
 
 - add stencil class
 - add stencilarithmetic
@@ -11,8 +12,9 @@ x benchmarks solve
 - switch to C++ OpenCL api
 - benchmarks solve localMem
 - benchmark steps
+- remove use_opencl and do use OpenCL if solve is called, otherwise solve sequentially if solveSeq is called
 - add mustache template for plotting benchmark results
-- test + fix use_local_memory
+- test + fix use_local_memory (does not work with intel GPU)
 - throw exceptions in checkParameters
 - gather iteration count and list of residual for checking after solve call
 - add kernel code as raw string to code so it will be included with compilation
