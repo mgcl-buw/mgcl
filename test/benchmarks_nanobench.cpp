@@ -46,6 +46,8 @@ namespace mgcl_test
         let N;
         let isSeq;
         let isOcl;
+        let allNs = new Set();
+
         {{#result}}
         name = '{{name}}'.toLowerCase();
         N = null;
@@ -57,10 +59,12 @@ namespace mgcl_test
         isOcl = !!name.match(/.*opencl.*/);
 
         if (isSeq && N) {
+            allNs.add(N);
             seq.x.push(N);
             seq.y.push({{minimum(elapsed)}});
         }
         else if (isOcl && N) {
+            allNs.add(N);
             ocl.x.push(N);
             ocl.y.push({{minimum(elapsed)}});
         }
@@ -70,7 +74,7 @@ namespace mgcl_test
         var data = [seq, ocl];
         var title = 'Absolute';
         var layout = { title: { text: title }, showlegend: true, 
-            xaxis: { title: 'grid size' },
+            xaxis: { title: 'grid size', tickvals: [...allNs] },
             yaxis: { title: 'time per unit', rangemode: 'tozero', autorange: true, type: 'log' }
         };
         Plotly.newPlot('myDivAbs', data, layout, {responsive: true});
@@ -90,10 +94,10 @@ namespace mgcl_test
 
         title = 'Relative';
         layout = { title: { text: title }, showlegend: true, 
-            xaxis: { title: 'grid size' },
+            xaxis: { title: 'grid size', tickvals: [...allNs] },
             yaxis: { title: 'Sequential / OpenCL', rangemode: 'tozero', autorange: true }
         };
-        Plotly.newPlot('myDivRel', dataRel, layout);
+        Plotly.newPlot('myDivRel', [dataRel], layout);
     </script>
 </body>
 </html>)DELIM";
@@ -158,11 +162,9 @@ TEST_CASE("mgcl benchmarks lineplot", "[!benchmark]")
         .warmup(3)
         .minEpochTime(100ms);
 
-    std::vector<int> grids{16, 32, 64};
+    std::vector<int> grids{16, 32, 64, 128};
     for (auto N : grids)
     {
-        // int N = GENERATE(16, 32, 64, 128);
-        // int N = 16;
         int m = N;
         int n = N;
         int o = N;
