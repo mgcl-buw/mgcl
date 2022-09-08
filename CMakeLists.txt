@@ -24,6 +24,8 @@ multigrid_engine.hpp
 multigrid_engine.cpp
 prolongation.cpp
 restriction.cpp
+stencil.hpp
+stencil.cpp
 )
 
 add_library(mgcl ${SOURCES_LIB})
@@ -75,6 +77,7 @@ test/test_prolongation.cpp
 test/test_residual.cpp
 test/test_jacobi.cpp
 test/test_level.cpp
+test/test_stencil.cpp
 test/benchmarks.cpp
 )
 
