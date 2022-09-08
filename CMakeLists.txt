@@ -26,6 +26,8 @@ prolongation.cpp
 restriction.cpp
 stencil.hpp
 stencil.cpp
+hypercube.hpp
+hypercube.cpp
 )
 
 add_library(mgcl ${SOURCES_LIB})
@@ -78,6 +80,7 @@ test/test_residual.cpp
 test/test_jacobi.cpp
 test/test_level.cpp
 test/test_stencil.cpp
+test/test_hypercube.cpp
 test/benchmarks.cpp
 )
 

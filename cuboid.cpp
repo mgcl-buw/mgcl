@@ -218,7 +218,7 @@ namespace mgcl
      * @brief Fills Cuboid with given value
      *
      * @param value Value to fill
-     * @param realCellsOnly If true, only real cells will be set to value.
+     * @param realCellsOnly If true, only real cells will be set to value. Defaults to false.
      */
     void Cuboid::fill(double value, bool realCellsOnly)
     {
