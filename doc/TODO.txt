@@ -5,8 +5,11 @@ x retain buffers in level
 x test level
 x benchmarks solve
 x readme added
+x 4d stencil values class (like Cuboid with a 4th dim)
 
-- add stencil class
+- incorporate stencil class into residual
+- incorporate varying stencil code Seq
+- incorporate varying stencil code OpenCL
 - add stencilarithmetic
 - add galerkin as preliminary step
 - switch to C++ OpenCL api
