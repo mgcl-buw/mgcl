@@ -32,9 +32,11 @@ TEST_CASE("jacobi")
     auto c_expected_out_v = jacobiTestOutputV();
     auto c_expected_out_r = jacobiTestOutputR();
 
+    auto stencil = std::make_shared<mgcl::StencilLaplace7p>(1.0 / (double)m);
+
     SECTION("jacobiSeq L2-norm 7point")
     {
-        double res = mgcl::MultigridEngine::jacobiSeq(c_in_v, c_in_f, c_in_r, omega, maxiter, mgcl::MGCL_L2, mgcl::MGCL_7POINT);
+        double res = mgcl::MultigridEngine::jacobiSeq(c_in_v, c_in_f, c_in_r, omega, maxiter, mgcl::MGCL_L2, *stencil);
 
         CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
         CHECK(c_in_v.isEqual(c_expected_out_v));
@@ -45,7 +47,7 @@ TEST_CASE("jacobi")
     {
         auto p = std::make_shared<mgcl::Problem>(m, n, o);
         p->setResidualNorm(mgcl::MGCL_L2);
-        p->setStencil(mgcl::MGCL_7POINT);
+        p->setStencil(stencil);
         p->setGhosts(1);
         p->setOmega(omega);
 
@@ -78,7 +80,7 @@ TEST_CASE("jacobi")
 
         auto p = std::make_shared<mgcl::Problem>(m, n, o);
         p->setResidualNorm(mgcl::MGCL_L2);
-        p->setStencil(mgcl::MGCL_7POINT);
+        p->setStencil(stencil);
         p->setGhosts(ghosts);
         p->setOmega(omega);
         p->setUseLocalMemory(true);

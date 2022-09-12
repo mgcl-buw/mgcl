@@ -10,25 +10,35 @@
 namespace mgcl
 {
     Problem::Problem(int m_, int n_, int o_)
-        : m(m_), n(n_), o(o_), openCLHelper(this)
+        : m(m_), n(n_), o(o_),
+          openCLHelper(this),
+          stencil(std::make_shared<StencilLaplace7p>(1.0 / (double)m))
     {
         calculateAndSetMaxLevel();
     }
 
     Problem::Problem(int m_, int n_, int o_, Cuboid *f_, Cuboid *v_)
-        : m(m_), n(n_), o(o_), f(std::make_shared<Cuboid>(*f_)), v(std::make_shared<Cuboid>(*v_)), openCLHelper(this)
+        : m(m_), n(n_), o(o_),
+          f(std::make_shared<Cuboid>(*f_)),
+          v(std::make_shared<Cuboid>(*v_)),
+          openCLHelper(this),
+          stencil(std::make_shared<StencilLaplace7p>(1.0 / (double)m))
     {
         calculateAndSetMaxLevel();
     }
 
     Problem::Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_)
-        : m(m_), n(n_), o(o_), f(f_), v(v_), openCLHelper(this)
+        : m(m_), n(n_), o(o_), f(f_), v(v_),
+          openCLHelper(this),
+          stencil(std::make_shared<StencilLaplace7p>(1.0 / (double)m))
     {
         calculateAndSetMaxLevel();
     }
 
     Problem::Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_)
-        : m(m_), n(n_), o(o_), dF(d_f_), dV(d_v_), openCLHelper(this)
+        : m(m_), n(n_), o(o_), dF(d_f_), dV(d_v_),
+          openCLHelper(this),
+          stencil(std::make_shared<StencilLaplace7p>(1.0 / (double)m))
     {
         calculateAndSetMaxLevel();
     }
@@ -276,8 +286,7 @@ namespace mgcl
 
         // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
         MultigridEngine::updateGhostsSeq(levels[0]->getV());
-        // update_ghosts_seq(data[0].f, m, n, o);
-        double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(), residual_norm, stencil);
+        double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(), residual_norm, *stencil);
         if (!silent)
             printf("Starting mgcl with initres = %e\n", initres);
 
@@ -370,12 +379,12 @@ namespace mgcl
         tol = tol_;
     }
 
-    MGCL_STENCIL Problem::getStencil() const
+    std::shared_ptr<Stencil> Problem::getStencil() const
     {
         return stencil;
     }
 
-    void Problem::setStencil(const MGCL_STENCIL &stencil_)
+    void Problem::setStencil(std::shared_ptr<Stencil> stencil_)
     {
         stencil = stencil_;
     }

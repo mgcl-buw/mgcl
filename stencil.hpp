@@ -6,6 +6,7 @@
 
 #include "cuboid.hpp"
 #include "hypercube.hpp"
+#include "mgcl.hpp"
 
 namespace mgcl
 {
@@ -17,12 +18,20 @@ namespace mgcl
     class Stencil
     {
     protected:
-        std::shared_ptr<Cuboid> v = nullptr;
+        MGCL_STENCIL type;
 
     public:
-        Stencil(std::shared_ptr<Cuboid> v_) : v(v_) {}
+        Stencil() = default;
+        virtual ~Stencil() {}
+        Stencil(const Stencil &) = delete;
+        Stencil &operator=(const Stencil &) = delete;
+        Stencil(const Stencil &&) = delete;
+        Stencil &operator=(const Stencil &&) = delete;
 
-        virtual double apply(int i, int j, int k) = 0;
+        virtual double apply(Cuboid &v, int i, int j, int k) = 0;
+        virtual std::shared_ptr<Stencil> clone(int m, int n, int o, double h) = 0;
+
+        MGCL_STENCIL getType() const;
     };
 
     /**
@@ -35,7 +44,8 @@ namespace mgcl
         double stencilFactor = 1;
 
     public:
-        FixedStencil(std::shared_ptr<Cuboid> v_) : Stencil(v_) {}
+        FixedStencil() : Stencil() {}
+        virtual ~FixedStencil() {}
 
         double getStencilFactor() const;
     };
@@ -47,11 +57,20 @@ namespace mgcl
     class StencilLaplace7p : public FixedStencil
     {
     public:
-        StencilLaplace7p(std::shared_ptr<Cuboid> v_) : FixedStencil(v_)
+        /**
+         * @brief Construct a new Stencil Laplace 7p object. h is cell width and is used to calculate the stencilFactor.
+         *
+         * @param h cell width
+         */
+        StencilLaplace7p(double h) : FixedStencil()
         {
-            stencilFactor = (double)(v->getM() * v->getM()); // h2inv
+            type = MGCL_LAPLACE_7POINT;
+            stencilFactor = 1.0 / (h * h); // h2inv
         }
-        double apply(int i, int j, int k);
+        ~StencilLaplace7p() = default;
+
+        double apply(Cuboid &v, int i, int j, int k);
+        std::shared_ptr<Stencil> clone(int m, int n, int o, double h);
     };
 
     /**
@@ -61,11 +80,15 @@ namespace mgcl
     class StencilLaplace19p : public FixedStencil
     {
     public:
-        StencilLaplace19p(std::shared_ptr<Cuboid> v_) : FixedStencil(v_)
+        StencilLaplace19p(double h) : FixedStencil()
         {
-            stencilFactor = ((double)(v->getM() * v->getM())) / 6.0;
+            type = MGCL_LAPLACE_19POINT;
+            stencilFactor = 1.0 / (6.0 * h * h);
         }
-        double apply(int i, int j, int k);
+        ~StencilLaplace19p() = default;
+
+        double apply(Cuboid &v, int i, int j, int k);
+        std::shared_ptr<Stencil> clone(int m, int n, int o, double h);
     };
 
     /**
@@ -75,11 +98,15 @@ namespace mgcl
     class StencilLaplace27p : public FixedStencil
     {
     public:
-        StencilLaplace27p(std::shared_ptr<Cuboid> v_) : FixedStencil(v_)
+        StencilLaplace27p(double h) : FixedStencil()
         {
-            stencilFactor = ((double)(v->getM() * v->getM())) / 30.0;
+            type = MGCL_LAPLACE_27POINT;
+            stencilFactor = 1.0 / (30.0 * h * h);
         }
-        double apply(int i, int j, int k);
+        ~StencilLaplace27p() = default;
+
+        double apply(Cuboid &v, int i, int j, int k);
+        std::shared_ptr<Stencil> clone(int m, int n, int o, double h);
     };
 
     /**
@@ -140,29 +167,31 @@ namespace mgcl
          * @param v_ Cuboid that this stencil shall be applied on.
          * @param stencilValues_
          */
-        VaryingStencil(std::shared_ptr<Cuboid> v_)
-            : Stencil(v_) {}
+        VaryingStencil(int m, int n, int o) : Stencil() {}
+        virtual ~VaryingStencil() {}
 
-        virtual double apply(int i, int j, int k) = 0;
+        virtual double apply(Cuboid &v, int i, int j, int k) = 0;
         std::shared_ptr<Hypercube4d> getStencilValues() const;
     };
 
     /**
      * @brief Applies a varying 7-point stencil, i.e. the stencil can differ for each grid point.
-     * stencilValues is created with dimensions (v.m, v.n, v.o, 7) and can be filled using the getter.
+     * stencilValues is created with dimensions (m, n, o, 7) and can be filled using the getter.
      *
      */
     class StencilVarying7p : public VaryingStencil
     {
     public:
-        StencilVarying7p(std::shared_ptr<Cuboid> v_)
-            : VaryingStencil(v_)
+        StencilVarying7p(int m, int n, int o) : VaryingStencil(m, n, o)
         {
+            type = MGCL_VARYING_7POINT;
             stencilSizePerGridPoint = 7;
-            stencilValues = std::make_shared<Hypercube4d>(v_->getM(), v_->getN(), v_->getO(), stencilSizePerGridPoint);
+            stencilValues = std::make_shared<Hypercube4d>(m, n, o, stencilSizePerGridPoint);
         }
+        ~StencilVarying7p() = default;
 
-        double apply(int i, int j, int k);
+        double apply(Cuboid &v, int i, int j, int k);
+        std::shared_ptr<Stencil> clone(int m, int n, int o, double stencilFactor);
     };
 
     /**
@@ -172,14 +201,16 @@ namespace mgcl
     class StencilVarying19p : public VaryingStencil
     {
     public:
-        StencilVarying19p(std::shared_ptr<Cuboid> v_)
-            : VaryingStencil(v_)
+        StencilVarying19p(int m, int n, int o) : VaryingStencil(m, n, o)
         {
+            type = MGCL_VARYING_19POINT;
             stencilSizePerGridPoint = 19;
-            stencilValues = std::make_shared<Hypercube4d>(v_->getM(), v_->getN(), v_->getO(), stencilSizePerGridPoint);
+            stencilValues = std::make_shared<Hypercube4d>(m, n, o, stencilSizePerGridPoint);
         }
+        ~StencilVarying19p() = default;
 
-        double apply(int i, int j, int k);
+        double apply(Cuboid &v, int i, int j, int k);
+        std::shared_ptr<Stencil> clone(int m, int n, int o, double stencilFactor);
     };
 
     /**
@@ -189,14 +220,16 @@ namespace mgcl
     class StencilVarying27p : public VaryingStencil
     {
     public:
-        StencilVarying27p(std::shared_ptr<Cuboid> v_)
-            : VaryingStencil(v_)
+        StencilVarying27p(int m, int n, int o) : VaryingStencil(m, n, o)
         {
+            type = MGCL_VARYING_27POINT;
             stencilSizePerGridPoint = 27;
-            stencilValues = std::make_shared<Hypercube4d>(v_->getM(), v_->getN(), v_->getO(), stencilSizePerGridPoint);
+            stencilValues = std::make_shared<Hypercube4d>(m, n, o, stencilSizePerGridPoint);
         }
+        ~StencilVarying27p() = default;
 
-        double apply(int i, int j, int k);
+        double apply(Cuboid &v, int i, int j, int k);
+        std::shared_ptr<Stencil> clone(int m, int n, int o, double stencilFactor);
     };
 
 }

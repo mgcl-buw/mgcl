@@ -27,9 +27,11 @@ TEST_CASE("residual")
     mgcl::Cuboid c_in_r(m, n, o, ghosts_m, ghosts_n, ghosts_o);
     auto c_expected_out_r = residualTestOutputR();
 
+    auto stencil = std::make_shared<mgcl::StencilLaplace7p>(1.0 / (double)(m));
+
     SECTION("residualSeq L2-norm 7point")
     {
-        double res = mgcl::MultigridEngine::residualSeq(c_in_f, c_in_v, c_in_r, mgcl::MGCL_L2, mgcl::MGCL_7POINT);
+        double res = mgcl::MultigridEngine::residualSeq(c_in_f, c_in_v, c_in_r, mgcl::MGCL_L2, *stencil);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_in_r.isEqual(c_expected_out_r));
@@ -39,7 +41,7 @@ TEST_CASE("residual")
     {
         auto p = std::make_shared<mgcl::Problem>(m, n, o);
         p->setResidualNorm(mgcl::MGCL_L2);
-        p->setStencil(mgcl::MGCL_7POINT);
+        p->setStencil(stencil);
         p->setGhosts(1);
 
         mgcl_test::TestUtility tu(p);

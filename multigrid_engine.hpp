@@ -12,6 +12,7 @@
 
 #include "mgcl.hpp"
 #include "problem.hpp"
+#include "stencil.hpp"
 
 namespace mgcl
 {
@@ -45,10 +46,10 @@ namespace mgcl
                                     int ghostsO);
 
         static double jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
-                                int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil);
+                                int maxiter, MGCL_RESIDUAL_NORM resnorm, Stencil &stencil);
         static double residual(Problem &problem, Level &level, int returnResidual);
         static double residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
-                                  MGCL_STENCIL stencil);
+                                  Stencil &stencil);
         static double residualTest(Problem &problem, double ***v, double ***f, double ***r, int m, int n, int o,
                                    int returnResidual);
         static void jacobiTest(Problem &problem, double ***v, double ***f, double ***r, int m, int n, int o, int maxiter,
@@ -57,27 +58,5 @@ namespace mgcl
         static double jacobiLocalMem(Problem &problem, Level &level, int maxiter, int returnResidual);
         static void print7point(Cuboid &v, int i, int j, int k);
         static void print19point(Cuboid &v, int i, int j, int k);
-
-        static void stencilRestrictSeq(Cuboid &fine, Cuboid &coarse, int m, int n, int o, int ghosts,
-                                       int stencilSizeMultiplier);
-        static void stencilRestrictTest(Problem &problem, double ***fine, double ***coarse, int m, int n, int o, int ghosts,
-                                        int stencilSizeMultiplier);
-        static void stencilRestrict(Problem &problem, Level &fine, Level &coarse);
-        static void stencilProlongateSeq(Cuboid &fine, Cuboid &coarse, int m, int n, int o, int ghosts,
-                                         int stencilSizeMultiplier);
-        static void stencilProlongateTest(Problem &problem, double ***fine, double ***coarse, int m, int n, int o, int ghosts,
-                                          int stencilSizeMultiplier);
-        static void stencilProlongate(Problem &problem, Level &fine, Level &coarse);
-        static double stencilJacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, int m, int n, int o, int ghosts, double omega,
-                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil, Cuboid &stencilValues,
-                                       int stencilSizeMultiplier);
-        static double stencilResidualSeq(Cuboid &f, Cuboid &v, Cuboid &r, int m, int n, int o, int ghosts,
-                                         MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil, Cuboid &stencilValues,
-                                         int stencilSizeMultiplier);
-        static double stencilJacobi(Problem &problem, Level &level, int maxiter, int returnResidual);
-        static double stencilJacobiLocalMem(Problem &problem, Level &level, int maxiter, int returnResidual);
-        static void stencilJacobiTest(Problem &problem, Level &level, double ***v, double ***r, int m, int n, int o,
-                                      int maxiter);
-        static double stencilResidual(Problem &problem, Level &level, int returnResidual);
     };
 }

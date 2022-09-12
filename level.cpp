@@ -103,10 +103,13 @@ namespace mgcl
             }
         }
 
+        setH(1.0 / (double)m);
+
+        // Clone stencil from problem that will be applied to the v of this level.
+        stencil = problem->stencil->clone(m, n, o, h);
+
         if (initOpenCLBuffers() != CL_SUCCESS)
             return false;
-
-        setH(1.0 / (m * m));
 
         return true;
     }
@@ -192,6 +195,16 @@ namespace mgcl
     int Level::getMgh() const
     {
         return mgh;
+    }
+
+    std::shared_ptr<Stencil> Level::getStencil() const
+    {
+        return stencil;
+    }
+
+    void Level::setStencil(const std::shared_ptr<Stencil> &stencil_)
+    {
+        stencil = stencil_;
     }
 
     int Level::getNgh() const

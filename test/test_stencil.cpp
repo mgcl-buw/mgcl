@@ -17,13 +17,14 @@ TEST_CASE("StencilLaplace7p")
     (*c)[0][1][1] = 1;
     (*c)[2][1][1] = 2;
 
-    mgcl::StencilLaplace7p stencil(c);
+    double h = 1.0 / 4.0;
+    mgcl::StencilLaplace7p stencil(h);
 
     double expectedFactor = 4.0 * 4.0;
     REQUIRE(expectedFactor == stencil.getStencilFactor());
 
     double expected = expectedFactor * (6.0 * 8 - 4 - 16 - 4 - 2 - 1 - 2);
-    double sum = stencil.apply(1, 1, 1);
+    double sum = stencil.apply(*c, 1, 1, 1);
     REQUIRE(sum == Catch::Approx(expected));
 }
 
@@ -53,13 +54,14 @@ TEST_CASE("StencilLaplace19p")
     (*c)[2][0][1] = 2;
     (*c)[2][2][1] = 1;
 
-    mgcl::StencilLaplace19p stencil(c);
+    double h = 1.0 / 4.0;
+    mgcl::StencilLaplace19p stencil(h);
 
     double expectedFactor = (4.0 * 4.0) / 6.0;
     REQUIRE(expectedFactor == stencil.getStencilFactor());
 
     double expected = expectedFactor * (24.0 * 8 - 2.0 * (4 + 16 + 4 + 2 + 1 + 2) - 8 - 4 - 1 - 2 - 16 - 32 - 8 - 4 - 4 - 4 - 2 - 1);
-    double sum = stencil.apply(1, 1, 1);
+    double sum = stencil.apply(*c, 1, 1, 1);
     REQUIRE(sum == Catch::Approx(expected));
 }
 
@@ -98,7 +100,8 @@ TEST_CASE("StencilLaplace27p")
     (*c)[2][2][0] = 8;
     (*c)[2][2][2] = 2;
 
-    mgcl::StencilLaplace27p stencil(c);
+    double h = 1.0 / 4.0;
+    mgcl::StencilLaplace27p stencil(h);
 
     double expectedFactor = (4.0 * 4.0) / 30.0;
     REQUIRE(expectedFactor == stencil.getStencilFactor());
@@ -106,7 +109,7 @@ TEST_CASE("StencilLaplace27p")
     double expected = expectedFactor * (128.0 * 8 - 14.0 * (4 + 16 + 4 + 2 + 1 + 2) -
                                         3.0 * (8 + 4 + 1 + 2 + 16 + 32 + 8 + 4 + 4 + 4 + 2 + 1) -
                                         8 - 4 - 1 - 2 - 16 - 4 - 8 - 2);
-    double sum = stencil.apply(1, 1, 1);
+    double sum = stencil.apply(*c, 1, 1, 1);
     REQUIRE(sum == Catch::Approx(expected));
 }
 
@@ -121,7 +124,7 @@ TEST_CASE("StencilVarying7p")
     (*c)[0][1][1] = 1;
     (*c)[2][1][1] = 2;
 
-    mgcl::StencilVarying7p stencil(c);
+    mgcl::StencilVarying7p stencil(c->getM(), c->getN(), c->getO());
     auto vals = stencil.getStencilValues();
     REQUIRE(vals->getDim1() == c->getM());
     REQUIRE(vals->getDim2() == c->getM());
@@ -144,7 +147,7 @@ TEST_CASE("StencilVarying7p")
             }
 
     double expected = h2inv * (6.0 * 8 - 4 - 16 - 4 - 2 - 1 - 2);
-    double sum = stencil.apply(1, 1, 1);
+    double sum = stencil.apply(*c, 1, 1, 1);
     REQUIRE(sum == Catch::Approx(expected));
 }
 
@@ -174,7 +177,7 @@ TEST_CASE("StencilVarying19p")
     (*c)[2][0][1] = 2;
     (*c)[2][2][1] = 1;
 
-    mgcl::StencilVarying19p stencil(c);
+    mgcl::StencilVarying19p stencil(c->getM(), c->getN(), c->getO());
     auto vals = stencil.getStencilValues();
     REQUIRE(vals->getDim1() == c->getM());
     REQUIRE(vals->getDim2() == c->getM());
@@ -209,7 +212,7 @@ TEST_CASE("StencilVarying19p")
             }
 
     double expected = h2inv * (24.0 * 8 - 2.0 * (4 + 16 + 4 + 2 + 1 + 2) - 8 - 4 - 1 - 2 - 16 - 32 - 8 - 4 - 4 - 4 - 2 - 1);
-    double sum = stencil.apply(1, 1, 1);
+    double sum = stencil.apply(*c, 1, 1, 1);
     REQUIRE(sum == Catch::Approx(expected));
 }
 
@@ -248,7 +251,7 @@ TEST_CASE("StencilVarying27p")
     (*c)[2][2][0] = 8;
     (*c)[2][2][2] = 2;
 
-    mgcl::StencilVarying27p stencil(c);
+    mgcl::StencilVarying27p stencil(c->getM(), c->getN(), c->getO());
     auto vals = stencil.getStencilValues();
     REQUIRE(vals->getDim1() == c->getM());
     REQUIRE(vals->getDim2() == c->getM());
@@ -293,6 +296,93 @@ TEST_CASE("StencilVarying27p")
     double expected = h2inv * (128.0 * 8 - 14.0 * (4 + 16 + 4 + 2 + 1 + 2) -
                                3.0 * (8 + 4 + 1 + 2 + 16 + 32 + 8 + 4 + 4 + 4 + 2 + 1) -
                                8 - 4 - 1 - 2 - 16 - 4 - 8 - 2);
-    double sum = stencil.apply(1, 1, 1);
+    double sum = stencil.apply(*c, 1, 1, 1);
     REQUIRE(sum == Catch::Approx(expected));
+}
+
+TEST_CASE("Stencil::clone")
+{
+    auto c = std::make_shared<mgcl::Cuboid>(8, 8, 8);
+    (*c)[1][1][1] = 8;
+
+    auto c2 = std::make_shared<mgcl::Cuboid>(4, 4, 4);
+    (*c)[1][1][1] = 32;
+
+    double h1 = 1.0 / c->getM();
+    double h2 = 1.0 / c2->getM();
+
+    SECTION("StencilLaplace7p")
+    {
+        mgcl::StencilLaplace7p stencil(h1);
+        auto s2 = stencil.clone(c2->getM(), c2->getN(), c2->getO(), h2);
+
+        REQUIRE(s2->getType() == mgcl::MGCL_LAPLACE_7POINT);
+        REQUIRE(std::dynamic_pointer_cast<mgcl::StencilLaplace7p>(s2));
+        REQUIRE(stencil.apply(*c, 1, 1, 1) != Catch::Approx(s2->apply(*c2, 1, 1, 1)));
+    }
+
+    SECTION("StencilLaplace19p")
+    {
+        mgcl::StencilLaplace19p stencil(h1);
+        auto s2 = stencil.clone(c2->getM(), c2->getN(), c2->getO(), h2);
+
+        REQUIRE(s2->getType() == mgcl::MGCL_LAPLACE_19POINT);
+        REQUIRE(std::dynamic_pointer_cast<mgcl::StencilLaplace19p>(s2).get());
+        REQUIRE(stencil.apply(*c, 1, 1, 1) != Catch::Approx(s2->apply(*c2, 1, 1, 1)));
+    }
+
+    SECTION("StencilLaplace27p")
+    {
+        mgcl::StencilLaplace27p stencil(h1);
+        auto s2 = stencil.clone(c2->getM(), c2->getN(), c2->getO(), h2);
+
+        REQUIRE(s2->getType() == mgcl::MGCL_LAPLACE_27POINT);
+        REQUIRE(std::dynamic_pointer_cast<mgcl::StencilLaplace27p>(s2).get());
+        REQUIRE(stencil.apply(*c, 1, 1, 1) != Catch::Approx(s2->apply(*c2, 1, 1, 1)));
+    }
+
+    SECTION("StencilVarying7p")
+    {
+        mgcl::StencilVarying7p stencil(c->getM(), c->getN(), c->getO());
+        auto s2 = stencil.clone(c2->getM(), c2->getN(), c2->getO(), 1);
+
+        REQUIRE(s2->getType() == mgcl::MGCL_VARYING_7POINT);
+        REQUIRE(std::dynamic_pointer_cast<mgcl::StencilVarying7p>(s2).get());
+
+        auto s2casted = std::dynamic_pointer_cast<mgcl::StencilVarying7p>(s2).get();
+        (*stencil.getStencilValues())[1][1][1][0] = 3.0;
+        (*s2casted->getStencilValues())[1][1][1][0] = 5.0;
+
+        REQUIRE(stencil.apply(*c, 1, 1, 1) != Catch::Approx(s2->apply(*c2, 1, 1, 1)));
+    }
+
+    SECTION("StencilVarying19p")
+    {
+        mgcl::StencilVarying19p stencil(c->getM(), c->getN(), c->getO());
+        auto s2 = stencil.clone(c2->getM(), c2->getN(), c2->getO(), 1);
+
+        REQUIRE(s2->getType() == mgcl::MGCL_VARYING_19POINT);
+        REQUIRE(std::dynamic_pointer_cast<mgcl::StencilVarying19p>(s2).get());
+
+        auto s2casted = std::dynamic_pointer_cast<mgcl::StencilVarying19p>(s2).get();
+        (*stencil.getStencilValues())[1][1][1][0] = 3.0;
+        (*s2casted->getStencilValues())[1][1][1][0] = 5.0;
+
+        REQUIRE(stencil.apply(*c, 1, 1, 1) != Catch::Approx(s2->apply(*c2, 1, 1, 1)));
+    }
+
+    SECTION("StencilVarying27p")
+    {
+        mgcl::StencilVarying27p stencil(c->getM(), c->getN(), c->getO());
+        auto s2 = stencil.clone(c2->getM(), c2->getN(), c2->getO(), 1);
+
+        REQUIRE(s2->getType() == mgcl::MGCL_VARYING_27POINT);
+        REQUIRE(std::dynamic_pointer_cast<mgcl::StencilVarying27p>(s2).get());
+
+        auto s2casted = std::dynamic_pointer_cast<mgcl::StencilVarying27p>(s2).get();
+        (*stencil.getStencilValues())[1][1][1][0] = 3.0;
+        (*s2casted->getStencilValues())[1][1][1][0] = 5.0;
+
+        REQUIRE(stencil.apply(*c, 1, 1, 1) != Catch::Approx(s2->apply(*c2, 1, 1, 1)));
+    }
 }

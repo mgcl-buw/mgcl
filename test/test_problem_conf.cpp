@@ -2,10 +2,12 @@
 #include <catch2/generators/catch_generators.hpp>
 
 #include <iostream>
+#include <memory>
 
 #include "../cuboid.hpp"
 #include "../opencl_helper.hpp"
 #include "../problem.hpp"
+#include "../stencil.hpp"
 #include "test_utility.hpp"
 
 /**
@@ -34,7 +36,8 @@ TEST_CASE("Problem conf")
         REQUIRE(p.getTol() == 1e-7);
         REQUIRE(p.getMaxlevel() == 3);
         REQUIRE(p.getResidualNorm() == mgcl::MGCL_L2);
-        REQUIRE(p.getStencil() == mgcl::MGCL_7POINT);
+        REQUIRE(p.getStencil());
+        REQUIRE(p.getStencil()->getType() == mgcl::MGCL_LAPLACE_7POINT);
 
         REQUIRE(!p.getOpenCLHelper().isInitialized());
         REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
@@ -251,6 +254,9 @@ TEST_CASE("Problem::init")
     {
         REQUIRE(p.init());
         REQUIRE(p.getLevels().size() == p.getMaxlevel() + 1);
+
+        // check that default stencil is 7p Laplace stencil. Result of dynamic_pointer_cast is empty on failure.
+        REQUIRE(std::dynamic_pointer_cast<mgcl::StencilLaplace7p>(p.getStencil()).get());
 
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)

@@ -7,11 +7,14 @@ x benchmarks solve
 x readme added
 x 4d stencil values class (like Cuboid with a 4th dim)
 
+- rework jacobi kernels and calls to properly use stencil polymorphism
+- include cl_mem into Cuboid?
 - incorporate stencil class into residual
 - incorporate varying stencil code Seq
 - incorporate varying stencil code OpenCL
 - add stencilarithmetic
 - add galerkin as preliminary step
+- replace shared_ptr with unique_ptr for performance improvement + maybe replace with bare pointers in function arguments and use ptr.get() in call
 - switch to C++ OpenCL api
 - benchmarks solve localMem
 - benchmark steps
@@ -21,3 +24,9 @@ x 4d stencil values class (like Cuboid with a 4th dim)
 - throw exceptions in checkParameters
 - gather iteration count and list of residual for checking after solve call
 - add kernel code as raw string to code so it will be included with compilation
+- calculate residual norm on GPU and check how costly reading back the result is 
+
+- benchmark init
+- benchmark auch mit 256^3, 512^3, gleicher startwert, feste anzahl iterationen
+- benchmark vergleich mit CPU OpenCL
+- vergleich mit pmg

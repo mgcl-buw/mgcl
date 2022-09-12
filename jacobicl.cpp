@@ -10,14 +10,14 @@ namespace mgcl
      * v, f and r must be of size [m+2][n+2][o+2] for periodic boundary condition.
      * m,n,o is size of real grid */
     double MultigridEngine::jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
-                                      int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil)
+                                      int maxiter, MGCL_RESIDUAL_NORM resnorm, Stencil &stencil)
     {
         double res = 0.0;
         double h2 = 1.0 / ((double)(v.getM() * v.getM()));
         double dinv = h2 / 6.0;
-        if (stencil == MGCL_19POINT)
+        if (stencil.getType() == MGCL_LAPLACE_19POINT)
             dinv = (6.0 * h2) / 24.0;
-        else if (stencil == MGCL_27POINT)
+        else if (stencil.getType() == MGCL_LAPLACE_27POINT)
             dinv = (30.0 * h2) / 128.0;
 
         for (int iter = 0; iter < maxiter; iter++)
@@ -136,15 +136,15 @@ namespace mgcl
 
         // Create the compute kernel from the program
         const char *kernel_name;
-        if (problem.stencil == MGCL_7POINT)
+        if (problem.stencil->getType() == MGCL_LAPLACE_7POINT)
             kernel_name = "jacobi_iter_7point";
-        else if (problem.stencil == MGCL_19POINT)
+        else if (problem.stencil->getType() == MGCL_LAPLACE_19POINT)
         {
             kernel_name = "jacobi_iter_19point";
             h2inv = 1.0 / (6.0 * h2);
             dinv = (6.0 * h2) / 24.0;
         }
-        else if (problem.stencil == MGCL_27POINT)
+        else if (problem.stencil->getType() == MGCL_LAPLACE_27POINT)
         {
             kernel_name = "jacobi_iter_27point";
             h2inv = 1.0 / (30.0 * h2);
@@ -393,15 +393,15 @@ namespace mgcl
 
         // Create the compute kernel from the program
         const char *kernel_name;
-        if (problem.stencil == MGCL_7POINT)
+        if (problem.stencil->getType() == MGCL_LAPLACE_7POINT)
             kernel_name = "jacobi_stream_shmem_7point";
-        else if (problem.stencil == MGCL_19POINT)
+        else if (problem.stencil->getType() == MGCL_LAPLACE_19POINT)
         {
             kernel_name = "jacobi_stream_shmem_19point";
             h2inv = 1.0 / (6.0 * h2);
             dinv = (6.0 * h2) / 24.0;
         }
-        else if (problem.stencil == MGCL_27POINT)
+        else if (problem.stencil->getType() == MGCL_LAPLACE_27POINT)
         {
             kernel_name = "jacobi_stream_shmem_27point";
             h2inv = 1.0 / (30.0 * h2);
@@ -629,13 +629,13 @@ namespace mgcl
 
         // Create the compute kernel from the program
         const char *kernel_name;
-        if (problem.stencil == MGCL_7POINT)
+        if (problem.stencil->getType() == MGCL_LAPLACE_7POINT)
             kernel_name = "residual_7point";
-        else if (problem.stencil == MGCL_19POINT)
+        else if (problem.stencil->getType() == MGCL_LAPLACE_19POINT)
         {
             kernel_name = "residual_19point";
         }
-        else if (problem.stencil == MGCL_27POINT)
+        else if (problem.stencil->getType() == MGCL_LAPLACE_27POINT)
         {
             kernel_name = "residual_27point";
         }
@@ -802,62 +802,17 @@ namespace mgcl
     /* Calculates r = f - A*v using 7-point stencil of 3D laplacian.
      * m,n,o is size of real grid */
     double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
-                                        MGCL_STENCIL stencil)
+                                        Stencil &stencil)
     {
         double res = 0.0;
-        double h2 = 1.0 / ((double)(f.getM() * f.getM()));
         double stencilsum = 0;
-        double h2inv = 1.0 / h2;
-        if (stencil == MGCL_19POINT)
-            h2inv = 1.0 / (6.0 * h2);
-        else if (stencil == MGCL_27POINT)
-            h2inv = 1.0 / (30.0 * h2);
 
         for (int i = f.getGhostsM(); i < f.getM() + f.getGhostsM(); i++)
             for (int j = f.getGhostsN(); j < f.getN() + f.getGhostsN(); j++)
                 for (int k = f.getGhostsO(); k < f.getO() + f.getGhostsO(); k++)
                 {
                     // A*v
-                    if (stencil == MGCL_7POINT)
-                        stencilsum = (6.0 * v[i][j][k] - v[i][j][k - 1] - v[i][j][k + 1] - v[i][j - 1][k] - v[i][j + 1][k] -
-                                      v[i - 1][j][k] - v[i + 1][j][k]) *
-                                     h2inv;
-                    else if (stencil == MGCL_19POINT)
-                        stencilsum =
-                            (24.0 * v[i][j][k] - 2.0 * v[i][j][k - 1] - 2.0 * v[i][j][k + 1] - 2.0 * v[i][j - 1][k] -
-                             2.0 * v[i][j + 1][k] - 2.0 * v[i - 1][j][k] - 2.0 * v[i + 1][j][k] - v[i][j - 1][k - 1] -
-                             v[i][j - 1][k + 1] - v[i][j + 1][k - 1] - v[i][j + 1][k + 1] - v[i - 1][j][k - 1] -
-                             v[i - 1][j][k + 1] - v[i + 1][j][k - 1] - v[i + 1][j][k + 1] - v[i - 1][j - 1][k] -
-                             v[i - 1][j + 1][k] - v[i + 1][j - 1][k] - v[i + 1][j + 1][k]) *
-                            h2inv;
-                    else if (stencil == MGCL_27POINT)
-                        stencilsum =
-                            (128.0 * v[i][j][k] - 14.0 * v[i][j][k - 1] - 14.0 * v[i][j][k + 1] - 14.0 * v[i][j - 1][k] -
-                             14.0 * v[i][j + 1][k] - 14.0 * v[i - 1][j][k] - 14.0 * v[i + 1][j][k]
-
-                             - 3.0 * v[i][j - 1][k - 1] - 3.0 * v[i][j - 1][k + 1] - 3.0 * v[i][j + 1][k - 1] -
-                             3.0 * v[i][j + 1][k + 1] - 3.0 * v[i - 1][j][k - 1] - 3.0 * v[i - 1][j][k + 1] -
-                             3.0 * v[i + 1][j][k - 1] - 3.0 * v[i + 1][j][k + 1] - 3.0 * v[i - 1][j - 1][k] -
-                             3.0 * v[i - 1][j + 1][k] - 3.0 * v[i + 1][j - 1][k] - 3.0 * v[i + 1][j + 1][k]
-
-                             - v[i - 1][j - 1][k - 1] - v[i - 1][j - 1][k + 1] - v[i - 1][j + 1][k - 1] -
-                             v[i - 1][j + 1][k + 1] - v[i + 1][j - 1][k - 1] - v[i + 1][j - 1][k + 1] -
-                             v[i + 1][j + 1][k - 1] - v[i + 1][j + 1][k + 1]) *
-                            h2inv;
-
-                    // if (i == 1 && j == 1 && k == 2)
-                    //     printf("stencilsum = %e\n", stencilsum);
-                    // if (i >= 0 && i <= 6 && j >= 0 && j <= 6 && k >= 0 && k <= 6 && m > 4 && stencil == MGCL_19POINT)
-                    //     print_19point(v, i, j, k);
-
-                    // if (i == ghosts && j == ghosts && k == ghosts)
-                    // {
-                    //     print_7point(v, i, j, k);
-                    //     printf("stencil = %d\n", stencil);
-                    //     printf("stencil_values[i][j][kst] = %e, stencilsum = %e\n", 6.0 * h2inv, stencilsum);
-                    //     printf("stencil_values: %f, %f, %f, %f\n", 6.0 * h2inv, -1.0 * h2inv, -1.0 * h2inv, -1.0 *
-                    //     h2inv);
-                    // }
+                    stencilsum = stencil.apply(v, i, j, k);
 
                     // r = f - A*v
                     r[i][j][k] = f[i][j][k] - stencilsum;

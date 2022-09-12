@@ -3,6 +3,7 @@
 #include "cuboid.hpp"
 #include "multigrid_engine.hpp"
 #include "opencl_helper.hpp"
+#include "stencil.hpp"
 
 namespace mgcl
 {
@@ -19,9 +20,12 @@ namespace mgcl
         int num;
 
         /* solution, right hand side and residual vectors */
-        std::shared_ptr<Cuboid> v;
-        std::shared_ptr<Cuboid> f;
-        std::shared_ptr<Cuboid> r;
+        std::shared_ptr<Cuboid> v = nullptr;
+        std::shared_ptr<Cuboid> f = nullptr;
+        std::shared_ptr<Cuboid> r = nullptr;
+
+        /* Stencil for this Level that will be applied on v */
+        std::shared_ptr<Stencil> stencil = nullptr;
 
         /* grid dimensions of real grid */
         int m;
@@ -94,5 +98,8 @@ namespace mgcl
         int getNgh() const;
 
         int getOgh() const;
+
+        std::shared_ptr<Stencil> getStencil() const;
+        void setStencil(const std::shared_ptr<Stencil> &stencil_);
     };
 }

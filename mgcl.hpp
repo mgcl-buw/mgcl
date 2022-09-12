@@ -32,9 +32,11 @@ namespace mgcl
 
     typedef enum
     {
-        // fixed laplacian stencils
-        MGCL_7POINT,
-        MGCL_19POINT,
-        MGCL_27POINT
+        MGCL_LAPLACE_7POINT,
+        MGCL_LAPLACE_19POINT,
+        MGCL_LAPLACE_27POINT,
+        MGCL_VARYING_7POINT,
+        MGCL_VARYING_19POINT,
+        MGCL_VARYING_27POINT
     } MGCL_STENCIL;
 }
