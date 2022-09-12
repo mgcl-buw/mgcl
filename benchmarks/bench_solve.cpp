@@ -1,10 +1,10 @@
-#define ANKERL_NANOBENCH_IMPLEMENT
 #include "nanobench.h"
 
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/generators/catch_generators.hpp"
 
 #include <chrono>
+#include <fstream>
 #include <vector>
 using namespace std::chrono_literals;
 
@@ -103,7 +103,7 @@ namespace mgcl_test
 </html>)DELIM";
 }
 
-TEST_CASE("mgcl benchmarks console", "[!benchmark]")
+TEST_CASE("mgcl benchmarks console: solve", "[!benchmark]")
 {
     int N = GENERATE(16, 32, 64, 128);
     // int N = 16;
@@ -155,7 +155,7 @@ TEST_CASE("mgcl benchmarks console", "[!benchmark]")
     }
 }
 
-TEST_CASE("mgcl benchmarks lineplot", "[!benchmark]")
+TEST_CASE("mgcl benchmarks lineplot: solve", "[!benchmark]")
 {
     ankerl::nanobench::Bench b;
     b.timeUnit(1ms, "ms")

@@ -81,7 +81,6 @@ test/test_jacobi.cpp
 test/test_level.cpp
 test/test_stencil.cpp
 test/test_hypercube.cpp
-test/benchmarks.cpp
 )
 
 add_executable(tests ${SOURCES_TEST})
@@ -101,10 +100,12 @@ set(SOURCES_NANOBENCH
 test/test_utility.hpp
 test/test_utility.cpp
 benchmarks/bench_solve.cpp
+benchmarks/bench_init.cpp
 )
 
 add_executable(benchmarks ${SOURCES_NANOBENCH})
 # target_include_directories(benchmarks_nanobench PRIVATE include/)
+target_link_libraries(benchmarks PRIVATE nanobench)
 target_link_libraries(benchmarks PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(benchmarks PRIVATE mgcl)
-target_link_libraries(benchmarks PRIVATE nanobench)
+
