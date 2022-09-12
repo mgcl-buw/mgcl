@@ -103,7 +103,7 @@ namespace mgcl_test
 </html>)DELIM";
 }
 
-TEST_CASE("mgcl benchmarks console: solve", "[!benchmark]")
+TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
 {
     int N = GENERATE(16, 32, 64, 128);
     // int N = 16;
@@ -113,7 +113,6 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark]")
 
     ankerl::nanobench::Bench b;
     b.timeUnit(1ms, "ms")
-        .warmup(3)
         .minEpochTime(100ms)
         .relative(true);
 
@@ -159,11 +158,10 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark]")
     }
 }
 
-TEST_CASE("mgcl benchmarks lineplot: solve", "[!benchmark]")
+TEST_CASE("mgcl benchmarks lineplot: solve", "[!benchmark][solve][plot]")
 {
     ankerl::nanobench::Bench b;
     b.timeUnit(1ms, "ms")
-        .warmup(3)
         .minEpochTime(100ms);
 
     std::vector<int> grids{16, 32, 64, 128};

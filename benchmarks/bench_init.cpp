@@ -12,7 +12,7 @@ using namespace std::chrono_literals;
 #include "../problem.hpp"
 #include "../test/test_utility.hpp"
 
-TEST_CASE("mgcl benchmarks console: init", "[!benchmark]")
+TEST_CASE("mgcl benchmarks console: init", "[!benchmark][init][console]")
 {
     int N = GENERATE(16, 32, 64, 128);
     // int N = 16;
