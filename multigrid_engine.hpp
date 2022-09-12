@@ -46,10 +46,10 @@ namespace mgcl
                                     int ghostsO);
 
         static double jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
-                                int maxiter, MGCL_RESIDUAL_NORM resnorm, Stencil &stencil);
-        static double residual(Problem &problem, Level &level, int returnResidual);
+                                int maxiter, MGCL_RESIDUAL_NORM resnorm, Stencil &stencil, bool returnResidualNorm);
+        static double residual(Problem &problem, Level &level, bool returnResidual);
         static double residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
-                                  Stencil &stencil);
+                                  Stencil &stencil, bool returnResidualNorm);
         static double residualTest(Problem &problem, double ***v, double ***f, double ***r, int m, int n, int o,
                                    int returnResidual);
         static void jacobiTest(Problem &problem, double ***v, double ***f, double ***r, int m, int n, int o, int maxiter,

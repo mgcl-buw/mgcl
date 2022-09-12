@@ -29,7 +29,7 @@ namespace mgcl
 
         // relax nu1 times
         res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
-                                         problem.omega, problem.nu1, problem.residual_norm, *level.stencil);
+                                         problem.omega, problem.nu1, problem.residual_norm, *level.stencil, false);
 
         // update residual without D^-1
         // res = residual(level.f, level.v, level.r, level.m-2, level.n-2, level.o-2,
@@ -55,7 +55,7 @@ namespace mgcl
         else
         {
             MultigridEngine::jacobiSeq(levelAbove->getV(), levelAbove->getF(), levelAbove->getR(), problem.omega, problem.nu1 + problem.nu2,
-                                       problem.residual_norm, *level.stencil);
+                                       problem.residual_norm, *level.stencil, false);
 
             // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
         }
@@ -72,7 +72,7 @@ namespace mgcl
 
         // relax nu2 times
         res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
-                                         problem.omega, problem.nu2, problem.residual_norm, *level.stencil);
+                                         problem.omega, problem.nu2, problem.residual_norm, *level.stencil, !problem.ignoreTol);
         // printf("res on level %d, downwards: %.17e\n", level.getNum(), res);
         return res;
     }
@@ -97,7 +97,7 @@ namespace mgcl
         }
 
         // relax nu1 times
-        res = jacobi(problem, level, problem.nu1, 1);
+        jacobi(problem, level, problem.nu1, 0);
 
         // update residual without D^-1
         // res = residual(problem, level, 1);
@@ -111,7 +111,7 @@ namespace mgcl
             vcycle(problem, *levelAbove);
         else
         {
-            res = jacobi(problem, *levelAbove, problem.nu1 + problem.nu2, 0);
+            jacobi(problem, *levelAbove, problem.nu1 + problem.nu2, 0);
         }
 
         // prolongate from coarser to finer grid
@@ -122,7 +122,7 @@ namespace mgcl
         correctError(problem, level.dVIn, level.dR, level.mgh, level.ngh, level.ogh);
 
         // relax nu2 times
-        res = jacobi(problem, level, problem.nu2, 1);
+        res = jacobi(problem, level, problem.nu2, !problem.ignoreTol);
 
         // calculate residual again for the norm TODO in jacobi
         // res = residual(problem, level, 1);

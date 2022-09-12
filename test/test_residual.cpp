@@ -31,7 +31,7 @@ TEST_CASE("residual")
 
     SECTION("residualSeq L2-norm 7point")
     {
-        double res = mgcl::MultigridEngine::residualSeq(c_in_f, c_in_v, c_in_r, mgcl::MGCL_L2, *stencil);
+        double res = mgcl::MultigridEngine::residualSeq(c_in_f, c_in_v, c_in_r, mgcl::MGCL_L2, *stencil, true);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_in_r.isEqual(c_expected_out_r));

@@ -122,10 +122,12 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark]")
         {
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
             auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
-            v->fillRandom(0, 10);
+            // v->fillRandom(0, 10);
             f->fillRandom(0, 10);
 
             mgcl::Problem p(m, n, o, f, v);
+            p.setMaxiterVcycles(10);
+            p.setIgnoreTol(true);
             p.setSilent(true);
             p.init();
 
@@ -136,10 +138,12 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark]")
         {
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
             auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
-            v->fillRandom(0, 10);
+            // v->fillRandom(0, 10);
             f->fillRandom(0, 10);
 
             mgcl::Problem p(m, n, o, f, v);
+            p.setMaxiterVcycles(10);
+            p.setIgnoreTol(true);
             p.setUseOpencl(true);
             p.setDeviceType(CL_DEVICE_TYPE_GPU);
             p.setSilent(true);
@@ -176,6 +180,8 @@ TEST_CASE("mgcl benchmarks lineplot: solve", "[!benchmark]")
             f->fillRandom(0, 10);
 
             mgcl::Problem p(m, n, o, f, v);
+            p.setMaxiterVcycles(10);
+            p.setIgnoreTol(true);
             p.setSilent(true);
             p.init();
 
@@ -190,6 +196,8 @@ TEST_CASE("mgcl benchmarks lineplot: solve", "[!benchmark]")
             f->fillRandom(0, 10);
 
             mgcl::Problem p(m, n, o, f, v);
+            p.setMaxiterVcycles(10);
+            p.setIgnoreTol(true);
             p.setUseOpencl(true);
             p.setDeviceType(CL_DEVICE_TYPE_GPU);
             p.setSilent(true);

@@ -75,6 +75,11 @@ namespace mgcl
         /* tolerance */
         double tol = 1e-7;
 
+        /* If true, tolerance will be ignored, thus maxiter_vcycles v-cycle iterations will be done for sure.
+         * Defaults to false.
+         * Set this to true if you are using OpenCL and don't need to know the relative residual each v-cycle iteration. */
+        bool ignoreTol = false;
+
         /* Type of norm of the residual which will be used as termination criterium */
         MGCL_RESIDUAL_NORM residual_norm = MGCL_L2;
 
@@ -247,5 +252,8 @@ namespace mgcl
 
         bool getSilent() const;
         void setSilent(bool silent_);
+
+        bool getIgnoreTol() const;
+        void setIgnoreTol(bool ignoreTol_);
     };
 }

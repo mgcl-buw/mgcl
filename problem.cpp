@@ -244,8 +244,8 @@ namespace mgcl
             throw std::runtime_error("Failed to initialize mgcl data structures.");
 
         // calculate initial residual
-        double initres = MultigridEngine::residual(*this, *levels[0], 1);
-        if (!silent)
+        double initres = MultigridEngine::residual(*this, *levels[0], !ignoreTol);
+        if (!silent && !ignoreTol)
             printf("Starting mgcl with initres = %e\n", initres);
 
         // run vcycle maxiter_vcycles times
@@ -256,11 +256,16 @@ namespace mgcl
             res = MultigridEngine::vcycle(*this, *levels[0]);
             auto tend = mgcl_since(tstart).count();
 
-            relres = initres == 0 ? 0 : res / initres;
-            if (!silent)
-                printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
+            if (!ignoreTol)
+                relres = initres == 0 ? 0 : res / initres;
 
-            if (relres < tol)
+            if (!silent)
+                if (ignoreTol)
+                    printf("iter = %d, elapsed time = %ld ms\n", i, tend);
+                else
+                    printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
+
+            if (!ignoreTol && relres < tol)
                 break;
         }
 
@@ -286,8 +291,8 @@ namespace mgcl
 
         // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
         MultigridEngine::updateGhostsSeq(levels[0]->getV());
-        double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(), residual_norm, *stencil);
-        if (!silent)
+        double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(), residual_norm, *stencil, !ignoreTol);
+        if (!silent && !ignoreTol)
             printf("Starting mgcl with initres = %e\n", initres);
 
         // run vcycle maxiter_vcycles times
@@ -297,11 +302,17 @@ namespace mgcl
             auto tstart = std::chrono::steady_clock::now();
             res = MultigridEngine::vcycleSeq(*this, *levels[0]);
             auto tend = mgcl_since(tstart).count();
-            relres = initres == 0 ? 0 : res / initres;
-            if (!silent)
-                printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
 
-            if (relres < tol)
+            if (!ignoreTol)
+                relres = initres == 0 ? 0 : res / initres;
+
+            if (!silent)
+                if (ignoreTol)
+                    printf("iter = %d, elapsed time = %ld ms\n", i, tend);
+                else
+                    printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
+
+            if (!ignoreTol && relres < tol)
                 break;
         }
 
@@ -631,6 +642,16 @@ namespace mgcl
     cl_program Problem::getProgram() const
     {
         return openCLHelper.program;
+    }
+
+    bool Problem::getIgnoreTol() const
+    {
+        return ignoreTol;
+    }
+
+    void Problem::setIgnoreTol(bool ignoreTol_)
+    {
+        ignoreTol = ignoreTol_;
     }
 
     Cuboid &Problem::getV() const

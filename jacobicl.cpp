@@ -10,7 +10,7 @@ namespace mgcl
      * v, f and r must be of size [m+2][n+2][o+2] for periodic boundary condition.
      * m,n,o is size of real grid */
     double MultigridEngine::jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
-                                      int maxiter, MGCL_RESIDUAL_NORM resnorm, Stencil &stencil)
+                                      int maxiter, MGCL_RESIDUAL_NORM resnorm, Stencil &stencil, bool returnResidualNorm)
     {
         double res = 0.0;
         double h2 = 1.0 / ((double)(v.getM() * v.getM()));
@@ -28,7 +28,7 @@ namespace mgcl
             // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
 
             // r = f - A*v
-            res = residualSeq(f, v, r, resnorm, stencil);
+            res = residualSeq(f, v, r, resnorm, stencil, returnResidualNorm);
             for (int i = f.getGhostsM(); i < f.getM() + f.getGhostsM(); i++)
                 for (int j = f.getGhostsN(); j < f.getN() + f.getGhostsN(); j++)
                     for (int k = f.getGhostsO(); k < f.getO() + f.getGhostsO(); k++)
@@ -615,7 +615,7 @@ namespace mgcl
      * It's not
      * really performant to do so because we have to wait for all kernels to complete and reading a buffer to host is slow.
      */
-    double MultigridEngine::residual(Problem &problem, Level &level, int return_residual)
+    double MultigridEngine::residual(Problem &problem, Level &level, bool return_residual)
     {
         int err;
         int mgh = level.mgh;
@@ -802,7 +802,7 @@ namespace mgcl
     /* Calculates r = f - A*v using 7-point stencil of 3D laplacian.
      * m,n,o is size of real grid */
     double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
-                                        Stencil &stencil)
+                                        Stencil &stencil, bool returnResidualNorm)
     {
         double res = 0.0;
         double stencilsum = 0;
@@ -816,13 +816,17 @@ namespace mgcl
 
                     // r = f - A*v
                     r[i][j][k] = f[i][j][k] - stencilsum;
-                    if (resnorm == MGCL_L2)
-                        res += r[i][j][k] * r[i][j][k];
-                    else if (fabs(r[i][j][k]) > res)
-                        res = r[i][j][k];
+
+                    if (returnResidualNorm)
+                    {
+                        if (resnorm == MGCL_L2)
+                            res += r[i][j][k] * r[i][j][k];
+                        else if (fabs(r[i][j][k]) > res)
+                            res = r[i][j][k];
+                    }
                 }
         MultigridEngine::updateGhostsSeq(r);
-        return resnorm == MGCL_L2 ? sqrt(res) : res;
+        return (returnResidualNorm && resnorm == MGCL_L2) ? sqrt(res) : res;
     }
 
     /* Prints components of 7-point laplacian stencil for debugging purposes */
