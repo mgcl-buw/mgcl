@@ -111,21 +111,28 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
     int n = N;
     int o = N;
 
+    int maxIterVCycles = 100;
+
     ankerl::nanobench::Bench b;
     b.timeUnit(1ms, "ms")
-        .minEpochTime(100ms)
+        .epochs(11)
+        .epochIterations(1)
+        // .minEpochTime(100ms)
         .relative(true);
 
     SECTION(std::string("N = ").append(std::to_string(N)).c_str())
     {
+        auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
+        f->fillRandom(0, 10);
+
+        if (N >= 128)
+            b.epochs(3);
+
         {
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
-            auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
-            // v->fillRandom(0, 10);
-            f->fillRandom(0, 10);
 
             mgcl::Problem p(m, n, o, f, v);
-            p.setMaxiterVcycles(10);
+            p.setMaxiterVcycles(maxIterVCycles);
             p.setIgnoreTol(true);
             p.setSilent(true);
             p.init();
@@ -136,12 +143,9 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
 
         {
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
-            auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
-            // v->fillRandom(0, 10);
-            f->fillRandom(0, 10);
 
             mgcl::Problem p(m, n, o, f, v);
-            p.setMaxiterVcycles(10);
+            p.setMaxiterVcycles(maxIterVCycles);
             p.setIgnoreTol(true);
             p.setUseOpencl(true);
             p.setDeviceType(CL_DEVICE_TYPE_GPU);
@@ -155,6 +159,9 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
             b.run(std::string("opencl random values, N = ").append(std::to_string(N)).c_str(), [&]
                   { p.solve(); });
         }
+
+        std::ofstream renderOut(std::string("solvingBoxplot_").append(std::to_string(N)).append(".html"));
+        b.render(ankerl::nanobench::templates::htmlBoxplot(), renderOut);
     }
 }
 

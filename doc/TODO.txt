@@ -9,6 +9,7 @@ x 4d stencil values class (like Cuboid with a 4th dim)
 x incorporate stencil class into residual
 
 High prio:
+- benchmark setup / teardown? reset v between iterations
 x benchmark init
 x benchmark solve gleicher startwert, feste anzahl Iterationen
 - benchmark solve different vcycle iteration count seq vs ocl
