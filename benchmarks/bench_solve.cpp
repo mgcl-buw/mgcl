@@ -25,7 +25,7 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
 
     ankerl::nanobench::Bench b;
     b.timeUnit(1ms, "ms")
-        // .epochs(11)
+        // .epochs(1)
         // .epochIterations(1)
         .minEpochTime(100ms)
         .maxEpochTime(5s)
@@ -52,6 +52,7 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
                   { p.solveSeq(); });
         }
 
+        if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
         {
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
 
@@ -62,8 +63,7 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
             p.setDeviceType(CL_DEVICE_TYPE_GPU);
             p.setSilent(true);
 
-            mgcl_test::TestUtility tu;
-            if (tu.deviceAvailable("Quadro", p.getDeviceType()))
+            if (mgcl_test::TestUtility::deviceAvailable("Quadro", p.getDeviceType()))
                 p.setDeviceName("Quadro");
 
             p.init();
@@ -71,24 +71,25 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
                   { p.solve(); });
         }
 
+        if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_CPU))
         {
-            mgcl_test::TestUtility tu;
-            if (tu.deviceAvailable("i7-10875H", CL_DEVICE_TYPE_CPU))
-            {
-                auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+            b.epochs(1).epochIterations(1);
 
-                mgcl::Problem p(m, n, o, f, v);
-                p.setMaxiterVcycles(maxIterVCycles);
-                p.setIgnoreTol(true);
-                p.setUseOpencl(true);
-                p.setDeviceType(CL_DEVICE_TYPE_CPU);
-                p.setSilent(true);
+            auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+
+            mgcl::Problem p(m, n, o, f, v);
+            p.setMaxiterVcycles(maxIterVCycles);
+            p.setIgnoreTol(true);
+            p.setUseOpencl(true);
+            p.setDeviceType(CL_DEVICE_TYPE_CPU);
+            p.setSilent(true);
+
+            if (mgcl_test::TestUtility::deviceAvailable("i7-10875H", p.getDeviceType()))
                 p.setDeviceName("i7-10875H");
 
-                p.init();
-                b.run(std::string("opencl cpu random values, N = ").append(std::to_string(N)).c_str(), [&]
-                      { p.solve(); });
-            }
+            p.init();
+            b.run(std::string("opencl cpu random values, N = ").append(std::to_string(N)).c_str(), [&]
+                  { p.solve(); });
         }
 
         std::ofstream renderOut(std::string("solvingBoxplot_").append(std::to_string(N)).append(".html"));
