@@ -3,11 +3,43 @@
 #include "../mgcl.hpp"
 
 #include <iostream>
+#include <stdexcept>
 
 mgcl_test::TestUtility::TestUtility()
 {
     problem = std::make_shared<mgcl::Problem>(2, 2, 2);
     problem->setSilent(true);
+    problem->initOpenCL();
+}
+
+mgcl_test::TestUtility::TestUtility(std::string deviceName)
+{
+    if (!deviceAvailable(deviceName, CL_DEVICE_TYPE_ALL))
+        throw std::runtime_error("OpenCL device is not available. deviceName: " + deviceName);
+
+    problem = std::make_shared<mgcl::Problem>(2, 2, 2);
+    problem->setSilent(true);
+    problem->setDeviceName(deviceName);
+    problem->initOpenCL();
+}
+
+mgcl_test::TestUtility::TestUtility(cl_device_type deviceType)
+{
+    if (!deviceAvailable("", deviceType))
+    {
+        std::string typeName = "CL_DEVICE_TYPE_DEFAULT";
+        if (deviceType == CL_DEVICE_TYPE_CPU)
+            typeName = "CL_DEVICE_TYPE_CPU";
+        else if (deviceType == CL_DEVICE_TYPE_GPU)
+            typeName = "CL_DEVICE_TYPE_GPU";
+        else if (deviceType == CL_DEVICE_TYPE_ACCELERATOR)
+            typeName = "CL_DEVICE_TYPE_ACCELERATOR";
+        throw std::runtime_error("OpenCL device is not available. deviceType: " + typeName);
+    }
+
+    problem = std::make_shared<mgcl::Problem>(2, 2, 2);
+    problem->setSilent(true);
+    problem->setDeviceType(deviceType);
     problem->initOpenCL();
 }
 

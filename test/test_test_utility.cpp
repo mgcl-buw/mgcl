@@ -50,6 +50,28 @@ TEST_CASE("TestUtility deviceAvailable")
     err = clGetDeviceInfo(tu.getDeviceId(), CL_DEVICE_TYPE, sizeof(device_type), &device_type, NULL);
     mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_TYPE)");
 
-    REQUIRE(tu.deviceAvailable(std::string((char *)device_name), device_type));
-    REQUIRE_FALSE(tu.deviceAvailable("akljshnfklfha", device_type));
+    REQUIRE(mgcl_test::TestUtility::deviceAvailable(std::string((char *)device_name), device_type));
+    REQUIRE_FALSE(mgcl_test::TestUtility::deviceAvailable("akljshnfklfha", device_type));
+}
+
+TEST_CASE("TestUtility setup deviceName")
+{
+    if (mgcl_test::TestUtility::deviceAvailable("Quadro", CL_DEVICE_TYPE_ALL))
+    {
+        REQUIRE_NOTHROW(mgcl_test::TestUtility("Quadro"));
+    }
+    REQUIRE_THROWS(mgcl_test::TestUtility("aksnhjisagnfsif"));
+}
+
+TEST_CASE("TestUtility setup deviceType")
+{
+    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+        REQUIRE_NOTHROW(mgcl_test::TestUtility(CL_DEVICE_TYPE_GPU));
+    else
+        REQUIRE_THROWS(mgcl_test::TestUtility(CL_DEVICE_TYPE_GPU));
+
+    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_CPU))
+        REQUIRE_NOTHROW(mgcl_test::TestUtility(CL_DEVICE_TYPE_CPU));
+    else
+        REQUIRE_THROWS(mgcl_test::TestUtility(CL_DEVICE_TYPE_CPU));
 }
