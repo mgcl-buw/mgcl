@@ -280,6 +280,8 @@ namespace mgcl
     void Level::setDVIn(const cl_mem &dVIn_)
     {
         dVIn = dVIn_;
+        if (dVIn_)
+            mgclCheckError(clRetainMemObject(dVIn_), "clRetainMemObject(dVIn)");
     }
 
     cl_mem Level::getDF() const
@@ -290,6 +292,8 @@ namespace mgcl
     void Level::setDF(const cl_mem &dF_)
     {
         dF = dF_;
+        if (dF_)
+            mgclCheckError(clRetainMemObject(dF_), "clRetainMemObject(dF)");
     }
 
     int Level::getM() const
@@ -315,6 +319,8 @@ namespace mgcl
     void Level::setDVOut(const cl_mem &dVOut_)
     {
         dVOut = dVOut_;
+        if (dVOut_)
+            mgclCheckError(clRetainMemObject(dVOut_), "clRetainMemObject(dVOut)");
     }
 
     cl_mem Level::getDR() const
@@ -325,5 +331,7 @@ namespace mgcl
     void Level::setDR(const cl_mem &dR_)
     {
         dR = dR_;
+        if (dR_)
+            mgclCheckError(clRetainMemObject(dR_), "clRetainMemObject(dR)");
     }
 }
