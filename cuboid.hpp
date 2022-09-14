@@ -41,7 +41,7 @@ namespace mgcl
         void fillRandom(double low = 0, double high = 1);
         void fill(double value, bool realCellsOnly = false);
         std::vector<double> &field1d();
-        bool isEqual(Cuboid &c, double tol = 1e-7, bool printDiffs = true);
+        bool isEqual(Cuboid &c, double tol = 1e-7, bool printDiffs = false);
         void dumpToFile(std::string path);
 
         int getO() const;
