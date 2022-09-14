@@ -53,7 +53,7 @@ mgcl_test::TestUtility::TestUtility(std::shared_ptr<mgcl::Problem> problem_)
 mgcl_test::TestUtility::~TestUtility()
 {
     for (auto buf : openclBuffers)
-        clReleaseMemObject(buf);
+        mgcl::mgclCheckError(clReleaseMemObject(buf), "clReleaseMemObject");
 }
 
 /**

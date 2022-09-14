@@ -144,11 +144,21 @@ TEST_CASE("Problem::calculateAndSetMaxLevel")
 
 TEST_CASE("Problem::initOpenCL, not reusing environment")
 {
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    {
+        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+        return;
+    }
+
     mgcl::Problem p(4, 4, 4);
     REQUIRE(!p.getOpenCLHelper().isInitialized());
     REQUIRE(p.getUseOpencl() == false);
 
     p.setUseOpencl(true);
+    p.setDeviceType(deviceType);
     p.initOpenCL();
     REQUIRE(p.getUseOpencl() == true);
     REQUIRE(p.getOpenCLHelper().isInitialized());
@@ -159,11 +169,21 @@ TEST_CASE("Problem::initOpenCL, not reusing environment")
 
 TEST_CASE("Problem::initOpenCL, reusing environment")
 {
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    {
+        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+        return;
+    }
+
     mgcl::Problem p(4, 4, 4);
     REQUIRE(!p.getOpenCLHelper().isInitialized());
     REQUIRE(p.getUseOpencl() == false);
 
     mgcl::OpenCLHelper openCLHelper(&p);
+    openCLHelper.setDeviceType(deviceType);
     openCLHelper.init();
 
     p.reuseOpenCL(openCLHelper.getContext(), openCLHelper.getCommands(), openCLHelper.getDeviceId());
@@ -212,14 +232,15 @@ TEST_CASE("set OpenCLHelper values")
     SECTION("setters, openCLHandler initialized")
     {
         REQUIRE(!p.getOpenCLHelper().isInitialized());
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.initOpenCL();
         REQUIRE(p.getOpenCLHelper().isInitialized());
 
-        p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setDeviceType(CL_DEVICE_TYPE_CPU);
         p.setKernelDir("test/");
         p.setDeviceName("Quadro");
 
-        REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
+        REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_GPU);
         REQUIRE(p.getKernelDir() == "./");
         REQUIRE(p.getDeviceName() == "");
     }
@@ -393,11 +414,20 @@ TEST_CASE("Problem::init")
 
     SECTION("reuse OpenCL buffers")
     {
+        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+        {
+            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+            return;
+        }
+
         int ghosts = 1;
         mgcl::Cuboid vgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
         mgcl::Cuboid fgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
 
-        mgcl_test::TestUtility tu;
+        mgcl_test::TestUtility tu(deviceType);
         cl_mem d_v = tu.createOpenCLBuffer(vgh);
         cl_mem d_f = tu.createOpenCLBuffer(fgh);
 
@@ -410,6 +440,7 @@ TEST_CASE("Problem::init")
 
         REQUIRE(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()) == CL_SUCCESS);
         REQUIRE(p2.init());
+        REQUIRE(p2.getDeviceType() == deviceType);
         REQUIRE(p2.getLevels().size() == p2.getMaxlevel() + 1);
 
         // no host data is created
@@ -462,11 +493,20 @@ TEST_CASE("Problem::init")
 
     SECTION("copy OpenCL buffers")
     {
+        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+        {
+            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+            return;
+        }
+
         int ghosts = 1;
         mgcl::Cuboid vgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
         mgcl::Cuboid fgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
 
-        mgcl_test::TestUtility tu;
+        mgcl_test::TestUtility tu(deviceType);
         cl_mem d_v = tu.createOpenCLBuffer(vgh);
         cl_mem d_f = tu.createOpenCLBuffer(fgh);
 
@@ -479,6 +519,7 @@ TEST_CASE("Problem::init")
 
         REQUIRE(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()) == CL_SUCCESS);
         REQUIRE(p2.init());
+        REQUIRE(p2.getDeviceType() == deviceType);
         REQUIRE(p2.getLevels().size() == p2.getMaxlevel() + 1);
 
         // no host data is created
@@ -538,6 +579,15 @@ TEST_CASE("Problem::init")
 
 TEST_CASE("Problem::readResults")
 {
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    {
+        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+        return;
+    }
+
     auto v = std::make_shared<mgcl::Cuboid>(4, 5, 6, 2, 2, 2);
     auto f = std::make_shared<mgcl::Cuboid>(4, 5, 6, 2, 2, 2);
     v->fillRandom();
@@ -546,6 +596,7 @@ TEST_CASE("Problem::readResults")
     mgcl::Problem p(4, 5, 6, f, v);
     p.setGhostsIn(2);
     p.setUseOpencl(true);
+    p.setDeviceType(deviceType);
 
     SECTION("default conf")
     {

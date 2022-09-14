@@ -21,13 +21,14 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
     int n = N;
     int o = N;
 
-    int maxIterVCycles = 100;
+    int maxIterVCycles = 30;
 
     ankerl::nanobench::Bench b;
     b.timeUnit(1ms, "ms")
-        .epochs(11)
-        .epochIterations(1)
-        // .minEpochTime(100ms)
+        // .epochs(11)
+        // .epochIterations(1)
+        .minEpochTime(100ms)
+        .maxEpochTime(5s)
         .relative(true);
 
     SECTION(std::string("N = ").append(std::to_string(N)).c_str())
@@ -35,8 +36,8 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
         auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
         f->fillRandom(0, 10);
 
-        if (N >= 128)
-            b.epochs(3);
+        // if (N >= 128)
+        //     b.epochs(3);
 
         {
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
@@ -66,8 +67,28 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
                 p.setDeviceName("Quadro");
 
             p.init();
-            b.run(std::string("opencl random values, N = ").append(std::to_string(N)).c_str(), [&]
+            b.run(std::string("opencl gpu random values, N = ").append(std::to_string(N)).c_str(), [&]
                   { p.solve(); });
+        }
+
+        {
+            mgcl_test::TestUtility tu;
+            if (tu.deviceAvailable("i7-10875H", CL_DEVICE_TYPE_CPU))
+            {
+                auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+
+                mgcl::Problem p(m, n, o, f, v);
+                p.setMaxiterVcycles(maxIterVCycles);
+                p.setIgnoreTol(true);
+                p.setUseOpencl(true);
+                p.setDeviceType(CL_DEVICE_TYPE_CPU);
+                p.setSilent(true);
+                p.setDeviceName("i7-10875H");
+
+                p.init();
+                b.run(std::string("opencl cpu random values, N = ").append(std::to_string(N)).c_str(), [&]
+                      { p.solve(); });
+            }
         }
 
         std::ofstream renderOut(std::string("solvingBoxplot_").append(std::to_string(N)).append(".html"));

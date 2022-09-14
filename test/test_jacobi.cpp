@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <cmath>
+#include <iostream>
 
 #include "../cuboid.hpp"
 #include "../multigrid_engine.hpp"
@@ -34,7 +36,7 @@ TEST_CASE("jacobi")
 
     auto stencil = std::make_shared<mgcl::StencilLaplace7p>(1.0 / (double)m);
 
-    SECTION("jacobiSeq L2-norm 7point")
+    SECTION("seq L2-norm 7point")
     {
         double res = mgcl::MultigridEngine::jacobiSeq(c_in_v, c_in_f, c_in_r, omega, maxiter, mgcl::MGCL_L2, *stencil, true);
 
@@ -43,13 +45,23 @@ TEST_CASE("jacobi")
         CHECK(c_in_r.isEqual(c_expected_out_r));
     }
 
-    SECTION("jacobi OpenCL L2-norm 7point")
+    SECTION("OpenCL GPU L2-norm 7point")
     {
+        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+        {
+            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+            return;
+        }
+
         auto p = std::make_shared<mgcl::Problem>(m, n, o);
         p->setResidualNorm(mgcl::MGCL_L2);
         p->setStencil(stencil);
         p->setGhosts(1);
         p->setOmega(omega);
+        p->setDeviceType(deviceType);
 
         mgcl_test::TestUtility tu(p);
         cl_mem d_in_f = tu.createOpenCLBuffer(c_in_f);

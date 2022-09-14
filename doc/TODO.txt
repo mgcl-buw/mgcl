@@ -21,6 +21,8 @@ x benchmark auch mit 256^3, 512^3
 - add galerkin as preliminary step
 
 Mid prio:
+- stencil test opencl
+- which flag for memory buffers? Currently in use is CL_MEM_COPY_HOST_PTR
 - benchmark setup / teardown? reset v between iterations
 - calculate dinv and h2inv for jacobi only once per level, not in each jacobi call
 - actually use Level::h (+ add h2inv?)
@@ -32,6 +34,7 @@ Mid prio:
 - calculate residual norm on GPU and check how costly reading back the result is 
 
 Low prio:
+- more robust init OpenCL (e.g. when no platform is available)
 - include cl_mem into Cuboid?
 - switch to C++ OpenCL api
 - remove use_opencl and do use OpenCL if solve is called, otherwise solve sequentially if solveSeq is called

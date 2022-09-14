@@ -8,6 +8,7 @@
 
 #include "../cuboid.hpp"
 #include "../problem.hpp"
+#include "test_utility.hpp"
 
 mgcl::Cuboid calculateError(mgcl::Cuboid &solution, mgcl::Cuboid &approximation);
 double calculateMaxError(mgcl::Cuboid &error);
@@ -104,11 +105,20 @@ TEST_CASE("Problem solving: periodic 4th order")
         }
     }
 
-    SECTION("using OpenCL")
+    SECTION("OpenCL")
     {
+        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+        {
+            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+            return;
+        }
+
         p.setUseOpencl(true);
         p.setReadResults(true);
-        p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setDeviceType(deviceType);
         // p.setDeviceName("Quadro");
         p.solve();
 

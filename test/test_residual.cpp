@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <cmath>
+#include <iostream>
 
 #include "../cuboid.hpp"
 #include "../multigrid_engine.hpp"
@@ -39,10 +41,20 @@ TEST_CASE("residual")
 
     SECTION("residual OpenCL L2-norm 7point")
     {
+        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+        {
+            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+            return;
+        }
+
         auto p = std::make_shared<mgcl::Problem>(m, n, o);
         p->setResidualNorm(mgcl::MGCL_L2);
         p->setStencil(stencil);
         p->setGhosts(1);
+        p->setDeviceType(deviceType);
 
         mgcl_test::TestUtility tu(p);
         cl_mem d_in_f = tu.createOpenCLBuffer(c_in_f);

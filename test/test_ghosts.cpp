@@ -6,7 +6,7 @@
 #include "../multigrid_engine.hpp"
 #include "test_utility.hpp"
 
-TEST_CASE("updating ghosts")
+TEST_CASE("updateGhosts")
 {
     int m = 16;
     int n = 8;
@@ -21,7 +21,7 @@ TEST_CASE("updating ghosts")
     mgcl::Cuboid c1(m, n, o, ghosts_m, ghosts_n, ghosts_o);
     c1.fillRandom();
 
-    SECTION("updateGhostsSeq")
+    SECTION("seq")
     {
         mgcl::MultigridEngine::updateGhostsSeq(c1);
         for (int i = 0; i < ghosts_m; i++)
@@ -33,23 +33,49 @@ TEST_CASE("updating ghosts")
                 }
     }
 
-    SECTION("updateGhosts OpenCL")
+    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
     {
-        mgcl_test::TestUtility tu;
-        cl_mem d_c1 = tu.createOpenCLBuffer(c1);
+        SECTION("openclgpu")
+        {
+            mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+            cl_mem d_c1 = tu.createOpenCLBuffer(c1);
 
-        mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o);
-        tu.finish();
+            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o);
+            tu.finish();
 
-        auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
+            auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
 
-        double tol = 1e-7;
-        for (int i = 0; i < ghosts_m; i++)
-            for (int j = 0; j < ghosts_n; j++)
-                for (int k = 0; k < ghosts_o; k++)
-                {
-                    REQUIRE(fabs(c2[i][j][k] - c2[i + m][j + n][k + o]) < tol);
-                    REQUIRE(fabs(c2[i + ghosts_m][j + ghosts_n][k + ghosts_o] - c2[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
-                }
+            double tol = 1e-7;
+            for (int i = 0; i < ghosts_m; i++)
+                for (int j = 0; j < ghosts_n; j++)
+                    for (int k = 0; k < ghosts_o; k++)
+                    {
+                        REQUIRE(fabs(c2[i][j][k] - c2[i + m][j + n][k + o]) < tol);
+                        REQUIRE(fabs(c2[i + ghosts_m][j + ghosts_n][k + ghosts_o] - c2[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
+                    }
+        }
+    }
+
+    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_CPU))
+    {
+        SECTION("openclcpu")
+        {
+            mgcl_test::TestUtility tu(CL_DEVICE_TYPE_CPU);
+            cl_mem d_c1 = tu.createOpenCLBuffer(c1);
+
+            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o);
+            tu.finish();
+
+            auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
+
+            double tol = 1e-7;
+            for (int i = 0; i < ghosts_m; i++)
+                for (int j = 0; j < ghosts_n; j++)
+                    for (int k = 0; k < ghosts_o; k++)
+                    {
+                        REQUIRE(fabs(c2[i][j][k] - c2[i + m][j + n][k + o]) < tol);
+                        REQUIRE(fabs(c2[i + ghosts_m][j + ghosts_n][k + ghosts_o] - c2[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
+                    }
+        }
     }
 }

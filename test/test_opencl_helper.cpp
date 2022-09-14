@@ -1,19 +1,25 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
+
+#include <iostream>
 
 #include "../cuboid.hpp"
 #include "../opencl_helper.hpp"
 #include "../problem.hpp"
+#include "test_utility.hpp"
 
 TEST_CASE("OpenCLHelper")
 {
     auto v = std::make_shared<mgcl::Cuboid>(4, 4, 4);
     auto f = std::make_shared<mgcl::Cuboid>(4, 4, 4);
-    mgcl::Problem p(4, 4, 4, f, v);
-    mgcl::OpenCLHelper openCLHelper(&p);
+    auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
+    mgcl::OpenCLHelper openCLHelper(p.get());
 
     SECTION("init default conf")
     {
+        REQUIRE_FALSE(openCLHelper.isInitialized());
         int err = openCLHelper.init();
+        REQUIRE(openCLHelper.isInitialized());
 
         REQUIRE(err == CL_SUCCESS);
         REQUIRE(openCLHelper.getCommands() != nullptr);
@@ -31,14 +37,29 @@ TEST_CASE("OpenCLHelper")
         std::string dirPath = filePath.substr(0, filePath.rfind("/"));
         openCLHelper.setKernelDir(dirPath.append("/../build/"));
 
+        REQUIRE_FALSE(openCLHelper.isInitialized());
         int err = openCLHelper.init();
+        REQUIRE(openCLHelper.isInitialized());
         REQUIRE(err == CL_SUCCESS);
         REQUIRE(openCLHelper.getProgram() != nullptr);
     }
 
     SECTION("reusing OpenCL platform")
     {
+        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+        {
+            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+            return;
+        }
+
+        openCLHelper.setDeviceType(deviceType);
+
+        REQUIRE_FALSE(openCLHelper.isInitialized());
         int err = openCLHelper.init();
+        REQUIRE(openCLHelper.isInitialized());
         REQUIRE(err == CL_SUCCESS);
 
         auto v2 = std::make_shared<mgcl::Cuboid>(3, 3, 3);

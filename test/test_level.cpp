@@ -31,6 +31,11 @@ TEST_CASE("Level constructor")
 
 TEST_CASE("Level::initOpenCLBuffers")
 {
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+        return;
+
     auto v = std::make_shared<mgcl::Cuboid>(4, 4, 4, 1, 1, 1);
     auto f = std::make_shared<mgcl::Cuboid>(4, 4, 4, 1, 1, 1);
     v->fillRandom();
@@ -41,6 +46,7 @@ TEST_CASE("Level::initOpenCLBuffers")
         auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
         p->setUseOpencl(true);
         p->setGhostsIn(1);
+        p->setDeviceType(deviceType);
         REQUIRE(p->init());
 
         int levelNum = GENERATE(0, 1, 2);
@@ -93,7 +99,7 @@ TEST_CASE("Level::initOpenCLBuffers")
 
     SECTION("reuse_opencl_buffers")
     {
-        mgcl_test::TestUtility tu;
+        mgcl_test::TestUtility tu(deviceType);
         auto d_v = tu.createOpenCLBuffer(*v);
         auto d_f = tu.createOpenCLBuffer(*f);
 

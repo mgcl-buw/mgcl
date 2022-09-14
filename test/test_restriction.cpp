@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <cmath>
+#include <iostream>
 
 #include "../cuboid.hpp"
 #include "../multigrid_engine.hpp"
@@ -42,6 +44,17 @@ TEST_CASE("restriction")
 
     SECTION("restrict OpenCL")
     {
+        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+        {
+            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+            return;
+        }
+
+        p->setDeviceType(deviceType);
+
         mgcl_test::TestUtility tu(p);
         cl_mem d_c_fine = tu.createOpenCLBuffer(c_fine);
         cl_mem d_c_coarse = tu.createOpenCLBuffer(c_coarse);

@@ -50,12 +50,7 @@ namespace mgcl
                     {
                         err = clGetDeviceInfo(device_id_, CL_DEVICE_NAME, sizeof(device_name_available),
                                               &device_name_available, nullptr);
-                        if (err != CL_SUCCESS)
-                        {
-                            if (!problem->silent)
-                                printf("Error: Failed to access device name!\n");
-                            return false;
-                        }
+                        mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
 
                         // continue to next device if name doesn't fit
                         if (std::string((char *)device_name_available).find(deviceName) == std::string::npos)
@@ -68,7 +63,7 @@ namespace mgcl
             }
 
             if (deviceId == nullptr)
-                mgclCheckError(err, "Finding a device");
+                mgclCheckError(-1, "Finding a device");
 
             if (!problem->silent)
             {
@@ -96,6 +91,10 @@ namespace mgcl
             err = clRetainDevice(deviceId);
             mgclCheckError(err, "clRetainDevice");
         }
+
+        // Update device type that is in use
+        err = clGetDeviceInfo(deviceId, CL_DEVICE_TYPE, sizeof(deviceType), &deviceType, nullptr);
+        mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
 
         // read kernel source
         std::string filename = kernelDir + "mgcl.cl";
