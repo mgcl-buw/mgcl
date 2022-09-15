@@ -87,6 +87,37 @@ add_executable(tests ${SOURCES_TEST})
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(tests PRIVATE mgcl)
 
+# pmg configuration for comparison in benchmarks
+set (SOURCES_PMG
+thirdparty/pmg/cuboid.c
+thirdparty/pmg/cuboid.h
+thirdparty/pmg/galerkin.c
+thirdparty/pmg/galerkin.h
+thirdparty/pmg/ghosts.c
+thirdparty/pmg/ghosts.h
+thirdparty/pmg/interpolate.c
+thirdparty/pmg/interpolate.h
+thirdparty/pmg/jacobi.c
+thirdparty/pmg/jacobi.h
+thirdparty/pmg/lueqf.c
+thirdparty/pmg/lueqf.h
+thirdparty/pmg/mg.c
+thirdparty/pmg/mg.h
+thirdparty/pmg/rectangle.c
+thirdparty/pmg/rectangle.h
+thirdparty/pmg/restrict.c
+thirdparty/pmg/restrict.h
+thirdparty/pmg/stencil.c
+thirdparty/pmg/stencil.h
+)
+
+add_library(pmg ${SOURCES_PMG})
+
+find_package(MPI)
+include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+add_definitions(-DOMPI_SKIP_MPICXX)
+target_link_libraries(pmg PRIVATE MPI::MPI_C)
+
 # Nanobench configuration
 FetchContent_Declare(
     nanobench
@@ -108,4 +139,5 @@ add_executable(benchmarks ${SOURCES_NANOBENCH})
 target_link_libraries(benchmarks PRIVATE nanobench)
 target_link_libraries(benchmarks PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(benchmarks PRIVATE mgcl)
+target_link_libraries(benchmarks PRIVATE pmg)
 
