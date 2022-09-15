@@ -43,15 +43,15 @@ TEST_CASE("updateGhosts")
             mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o);
             tu.finish();
 
-            auto &c2 = *tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
+            auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
 
             double tol = 1e-7;
             for (int i = 0; i < ghosts_m; i++)
                 for (int j = 0; j < ghosts_n; j++)
                     for (int k = 0; k < ghosts_o; k++)
                     {
-                        REQUIRE(fabs(c2[i][j][k] - c2[i + m][j + n][k + o]) < tol);
-                        REQUIRE(fabs(c2[i + ghosts_m][j + ghosts_n][k + ghosts_o] - c2[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
+                        REQUIRE(fabs((*c2)[i][j][k] - (*c2)[i + m][j + n][k + o]) < tol);
+                        REQUIRE(fabs((*c2)[i + ghosts_m][j + ghosts_n][k + ghosts_o] - (*c2)[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
                     }
         }
     }
@@ -66,15 +66,15 @@ TEST_CASE("updateGhosts")
             mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o);
             tu.finish();
 
-            auto &c2 = *tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
+            auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
 
             double tol = 1e-7;
             for (int i = 0; i < ghosts_m; i++)
                 for (int j = 0; j < ghosts_n; j++)
                     for (int k = 0; k < ghosts_o; k++)
                     {
-                        REQUIRE(fabs(c2[i][j][k] - c2[i + m][j + n][k + o]) < tol);
-                        REQUIRE(fabs(c2[i + ghosts_m][j + ghosts_n][k + ghosts_o] - c2[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
+                        REQUIRE(fabs((*c2)[i][j][k] - (*c2)[i + m][j + n][k + o]) < tol);
+                        REQUIRE(fabs((*c2)[i + ghosts_m][j + ghosts_n][k + ghosts_o] - (*c2)[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
                     }
         }
     }

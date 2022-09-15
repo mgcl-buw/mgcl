@@ -24,19 +24,19 @@ TEST_CASE("residual")
     int ngh = n + 2 * ghosts_n;
     int ogh = o + 2 * ghosts_o;
 
-    auto &c_in_f = *residualTestInputF();
-    auto &c_in_v = *residualTestInputV();
-    mgcl::Cuboid c_in_r(m, n, o, ghosts_m, ghosts_n, ghosts_o);
-    auto &c_expected_out_r = *residualTestOutputR();
+    auto c_in_f = residualTestInputF();
+    auto c_in_v = residualTestInputV();
+    auto c_in_r = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+    auto c_expected_out_r = residualTestOutputR();
 
     auto stencil = std::make_shared<mgcl::StencilLaplace7p>(1.0 / (double)(m));
 
     SECTION("residualSeq L2-norm 7point")
     {
-        double res = mgcl::MultigridEngine::residualSeq(c_in_f, c_in_v, c_in_r, mgcl::MGCL_L2, *stencil, true);
+        double res = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r, mgcl::MGCL_L2, *stencil, true);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
-        REQUIRE(c_in_r.isEqual(c_expected_out_r));
+        REQUIRE(c_in_r->isEqual(*c_expected_out_r));
     }
 
     SECTION("residual OpenCL L2-norm 7point")
@@ -57,9 +57,9 @@ TEST_CASE("residual")
         p->setDeviceType(deviceType);
 
         mgcl_test::TestUtility tu(p);
-        cl_mem d_in_f = tu.createOpenCLBuffer(c_in_f);
-        cl_mem d_in_v = tu.createOpenCLBuffer(c_in_v);
-        cl_mem d_in_r = tu.createOpenCLBuffer(c_in_r);
+        cl_mem d_in_f = tu.createOpenCLBuffer(*c_in_f);
+        cl_mem d_in_v = tu.createOpenCLBuffer(*c_in_v);
+        cl_mem d_in_r = tu.createOpenCLBuffer(*c_in_r);
 
         mgcl::Level level(p.get(), 0);
         level.setDF(d_in_f);
@@ -69,10 +69,10 @@ TEST_CASE("residual")
         double res = mgcl::MultigridEngine::residual(*p, level, 1);
         tu.finish();
 
-        auto &c_r_out = *tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        auto c_r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
-        REQUIRE(c_r_out.isEqual(c_expected_out_r));
+        REQUIRE(c_r_out->isEqual(*c_expected_out_r));
     }
 }
 

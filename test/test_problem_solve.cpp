@@ -81,9 +81,9 @@ TEST_CASE("Problem solving: periodic 4th order")
         REQUIRE(v->isEqual(p.getV()));
 
         // check if solution is good
-        auto &err = *calculateError(solution, *v);
-        auto errNorm = calculateErrorNorm(1.0 / (double)N, err);
-        auto errMax = calculateMaxError(err);
+        auto err = calculateError(solution, *v);
+        auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+        auto errMax = calculateMaxError(*err);
 
         solution.dumpToFile("out_solution.txt");
         (*v).dumpToFile("out_v.txt");
@@ -123,9 +123,9 @@ TEST_CASE("Problem solving: periodic 4th order")
         p.solve();
 
         // check if solution is good
-        auto &err = *calculateError(solution, *v);
-        auto errNorm = calculateErrorNorm(1.0 / (double)N, err);
-        auto errMax = calculateMaxError(err);
+        auto err = calculateError(solution, *v);
+        auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+        auto errMax = calculateMaxError(*err);
 
         std::cout << std::scientific << "||e||_2 = " << errNorm << std::endl
                   << std::scientific << "e_max = " << errMax << std::endl;

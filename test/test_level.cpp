@@ -89,11 +89,11 @@ TEST_CASE("Level::initOpenCLBuffers")
         if (levelNum == 0)
         {
             mgcl_test::TestUtility tu(p);
-            auto &dvin = *tu.readOpenCLBuffer(level0.getDVIn(), level0.getM(), level0.getN(), level0.getO(), p->getGhosts(), p->getGhosts(), p->getGhosts());
-            auto &df = *tu.readOpenCLBuffer(level0.getDF(), level0.getM(), level0.getN(), level0.getO(), p->getGhosts(), p->getGhosts(), p->getGhosts());
+            auto dvin = tu.readOpenCLBuffer(level0.getDVIn(), level0.getM(), level0.getN(), level0.getO(), p->getGhosts(), p->getGhosts(), p->getGhosts());
+            auto df = tu.readOpenCLBuffer(level0.getDF(), level0.getM(), level0.getN(), level0.getO(), p->getGhosts(), p->getGhosts(), p->getGhosts());
 
-            CHECK(v->isEqual(dvin));
-            CHECK(f->isEqual(df));
+            CHECK(v->isEqual(*dvin));
+            CHECK(f->isEqual(*df));
         }
     }
 

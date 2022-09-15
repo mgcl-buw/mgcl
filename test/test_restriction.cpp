@@ -25,10 +25,10 @@ TEST_CASE("restriction")
     int ngh = n + 2 * ghosts_n;
     int ogh = o + 2 * ghosts_o;
 
-    auto &c_fine = *restrictionTestInputFine();
-    auto &c_coarse = *restrictionTestInputCoarse();
-    auto &c_expected_fine = *restrictionTestOutputFine();
-    auto &c_expected_coarse = *restrictionTestOutputCoarse();
+    auto c_fine = restrictionTestInputFine();
+    auto c_coarse = restrictionTestInputCoarse();
+    auto c_expected_fine = restrictionTestOutputFine();
+    auto c_expected_coarse = restrictionTestOutputCoarse();
 
     auto p = std::make_shared<mgcl::Problem>(m, n, o);
     mgcl::Level lv_fine(p.get(), 0);
@@ -36,10 +36,10 @@ TEST_CASE("restriction")
 
     SECTION("restrictSeq")
     {
-        mgcl::MultigridEngine::restrictSeq(lv_fine, lv_coarse, c_fine, c_coarse);
+        mgcl::MultigridEngine::restrictSeq(lv_fine, lv_coarse, *c_fine, *c_coarse);
 
-        REQUIRE(c_fine.isEqual(c_expected_fine));
-        REQUIRE(c_coarse.isEqual(c_expected_coarse));
+        REQUIRE(c_fine->isEqual(*c_expected_fine));
+        REQUIRE(c_coarse->isEqual(*c_expected_coarse));
     }
 
     SECTION("restrict OpenCL")
@@ -56,18 +56,18 @@ TEST_CASE("restriction")
         p->setDeviceType(deviceType);
 
         mgcl_test::TestUtility tu(p);
-        cl_mem d_c_fine = tu.createOpenCLBuffer(c_fine);
-        cl_mem d_c_coarse = tu.createOpenCLBuffer(c_coarse);
+        cl_mem d_c_fine = tu.createOpenCLBuffer(*c_fine);
+        cl_mem d_c_coarse = tu.createOpenCLBuffer(*c_coarse);
 
         mgcl::MultigridEngine::restrict(lv_fine, lv_coarse, d_c_fine, d_c_coarse);
         tu.finish();
 
-        auto &c_fine_out = *tu.readOpenCLBuffer(d_c_fine, m, n, o, ghosts_m, ghosts_n, ghosts_o);
-        auto &c_coarse_out = *tu.readOpenCLBuffer(d_c_coarse, c_expected_coarse.getM(), c_expected_coarse.getN(),
-                                                  c_expected_coarse.getO(), ghosts_m, ghosts_n, ghosts_o);
+        auto c_fine_out = tu.readOpenCLBuffer(d_c_fine, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        auto c_coarse_out = tu.readOpenCLBuffer(d_c_coarse, c_expected_coarse->getM(), c_expected_coarse->getN(),
+                                                c_expected_coarse->getO(), ghosts_m, ghosts_n, ghosts_o);
 
-        REQUIRE(c_fine_out.isEqual(c_expected_fine));
-        REQUIRE(c_coarse_out.isEqual(c_expected_coarse));
+        REQUIRE(c_fine_out->isEqual(*c_expected_fine));
+        REQUIRE(c_coarse_out->isEqual(*c_expected_coarse));
     }
 }
 

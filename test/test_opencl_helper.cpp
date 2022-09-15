@@ -26,7 +26,6 @@ TEST_CASE("OpenCLHelper")
         REQUIRE(openCLHelper.getContext() != nullptr);
         REQUIRE(openCLHelper.getDeviceId() != nullptr);
         REQUIRE(openCLHelper.getDeviceName() == "");
-        REQUIRE(openCLHelper.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
         REQUIRE(openCLHelper.getKernelDir() == "./");
         REQUIRE(openCLHelper.getProgram() != nullptr);
     }
