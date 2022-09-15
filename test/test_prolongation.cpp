@@ -8,10 +8,10 @@
 #include "../multigrid_engine.hpp"
 #include "test_utility.hpp"
 
-mgcl::Cuboid prolongationTestInputFine();
-mgcl::Cuboid prolongationTestInputCoarse();
-mgcl::Cuboid prolongationTestOutputFine();
-mgcl::Cuboid prolongationTestOutputCoarse();
+std::shared_ptr<mgcl::Cuboid> prolongationTestInputFine();
+std::shared_ptr<mgcl::Cuboid> prolongationTestInputCoarse();
+std::shared_ptr<mgcl::Cuboid> prolongationTestOutputFine();
+std::shared_ptr<mgcl::Cuboid> prolongationTestOutputCoarse();
 
 TEST_CASE("prolongation")
 {
@@ -25,10 +25,10 @@ TEST_CASE("prolongation")
     int ngh = n + 2 * ghosts_n;
     int ogh = o + 2 * ghosts_o;
 
-    auto c_fine = prolongationTestInputFine();
-    auto c_coarse = prolongationTestInputCoarse();
-    auto c_expected_fine = prolongationTestOutputFine();
-    auto c_expected_coarse = prolongationTestOutputCoarse();
+    auto &c_fine = *prolongationTestInputFine();
+    auto &c_coarse = *prolongationTestInputCoarse();
+    auto &c_expected_fine = *prolongationTestOutputFine();
+    auto &c_expected_coarse = *prolongationTestOutputCoarse();
 
     auto p = std::make_shared<mgcl::Problem>(m, n, o);
     mgcl::Level lv_fine(p.get(), 0);
@@ -61,9 +61,9 @@ TEST_CASE("prolongation")
         mgcl::MultigridEngine::prolongate(lv_fine, lv_coarse, d_c_fine, d_c_coarse);
         tu.finish();
 
-        auto c_fine_out = tu.readOpenCLBuffer(d_c_fine, m, n, o, ghosts_m, ghosts_n, ghosts_o);
-        auto c_coarse_out = tu.readOpenCLBuffer(d_c_coarse, c_expected_coarse.getM(), c_expected_coarse.getN(),
-                                                c_expected_coarse.getO(), ghosts_m, ghosts_n, ghosts_o);
+        auto &c_fine_out = *tu.readOpenCLBuffer(d_c_fine, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        auto &c_coarse_out = *tu.readOpenCLBuffer(d_c_coarse, c_expected_coarse.getM(), c_expected_coarse.getN(),
+                                                  c_expected_coarse.getO(), ghosts_m, ghosts_n, ghosts_o);
 
         REQUIRE(c_fine_out.isEqual(c_expected_fine));
         REQUIRE(c_coarse_out.isEqual(c_expected_coarse));
@@ -75,9 +75,9 @@ TEST_CASE("prolongation")
  *
  * @return mgcl::Cuboid Cuboid filled with test input from fine grid.
  */
-mgcl::Cuboid prolongationTestInputFine()
+std::shared_ptr<mgcl::Cuboid> prolongationTestInputFine()
 {
-    return mgcl::Cuboid(16, 16, 16, 1, 1, 1, 0);
+    return std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1, 0);
 }
 
 /**
@@ -85,9 +85,10 @@ mgcl::Cuboid prolongationTestInputFine()
  *
  * @return mgcl::Cuboid Cuboid filled with test input from coarse grid (zeros).
  */
-mgcl::Cuboid prolongationTestInputCoarse()
+std::shared_ptr<mgcl::Cuboid> prolongationTestInputCoarse()
 {
-    mgcl::Cuboid c(8, 8, 8, 1, 1, 1, 0);
+    auto cret = std::make_shared<mgcl::Cuboid>(8, 8, 8, 1, 1, 1, 0);
+    auto &c = *cret;
 
     c[0][0][0] = 6.000000e+00;
     c[0][0][1] = 2.000000e+00;
@@ -819,7 +820,7 @@ mgcl::Cuboid prolongationTestInputCoarse()
     c[8][8][7] = 3.000000e+00;
     c[8][8][8] = 3.000000e+00;
 
-    return c;
+    return cret;
 }
 
 /**
@@ -827,9 +828,10 @@ mgcl::Cuboid prolongationTestInputCoarse()
  *
  * @return mgcl::Cuboid Cuboid filled with test output from fine grid.
  */
-mgcl::Cuboid prolongationTestOutputFine()
+std::shared_ptr<mgcl::Cuboid> prolongationTestOutputFine()
 {
-    mgcl::Cuboid c(16, 16, 16, 1, 1, 1);
+    auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
+    auto &c = *cret;
 
     c[0][0][0] = 0.000000e+00;
     c[0][0][1] = 0.000000e+00;
@@ -6664,7 +6666,7 @@ mgcl::Cuboid prolongationTestOutputFine()
     c[17][17][16] = 0.000000e+00;
     c[17][17][17] = 0.000000e+00;
 
-    return c;
+    return cret;
 }
 
 /**
@@ -6672,9 +6674,10 @@ mgcl::Cuboid prolongationTestOutputFine()
  *
  * @return mgcl::Cuboid Cuboid filled with test output from coarse grid.
  */
-mgcl::Cuboid prolongationTestOutputCoarse()
+std::shared_ptr<mgcl::Cuboid> prolongationTestOutputCoarse()
 {
-    mgcl::Cuboid c(8, 8, 8, 1, 1, 1);
+    auto cret = std::make_shared<mgcl::Cuboid>(8, 8, 8, 1, 1, 1);
+    auto &c = *cret;
 
     c[0][0][0] = 3.000000e+00;
     c[0][0][1] = 2.000000e+00;
@@ -7406,5 +7409,5 @@ mgcl::Cuboid prolongationTestOutputCoarse()
     c[8][8][7] = 3.000000e+00;
     c[8][8][8] = 3.000000e+00;
 
-    return c;
+    return cret;
 }

@@ -116,25 +116,6 @@ namespace mgcl
         }
     }
 
-    /**
-     * @brief Construct a new Cuboid object allocating memory for field_3d.
-     *
-     * @param c Cuboid to be cloned from.
-     */
-    Cuboid::Cuboid(const Cuboid &c)
-        : m(c.m), n(c.n), o(c.o), mgh(c.mgh), ngh(c.ngh), ogh(c.ogh), field_1d(c.field_1d)
-    {
-        field_3d = new double **[mgh];
-        for (int i = 0; i < mgh; i++)
-        {
-            field_3d[i] = new double *[ngh];
-            for (int j = 0; j < ngh; j++)
-            {
-                field_3d[i][j] = &field_1d[i * ngh * ogh + j * ogh];
-            }
-        }
-    }
-
     Cuboid::~Cuboid()
     {
         for (int i = 0; i < mgh; i++)

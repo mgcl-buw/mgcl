@@ -569,8 +569,8 @@ TEST_CASE("Problem::init")
         }
 
         // contents of copied buffer and input buffers are equal
-        auto lv0d = tu.readOpenCLBuffer(p2.getLevels()[0]->getDVIn(), p2.getLevels()[0]->getMgh(), p2.getLevels()[0]->getNgh(), p2.getLevels()[0]->getOgh());
-        auto lv0f = tu.readOpenCLBuffer(p2.getLevels()[0]->getDF(), p2.getLevels()[0]->getMgh(), p2.getLevels()[0]->getNgh(), p2.getLevels()[0]->getOgh());
+        auto &lv0d = *tu.readOpenCLBuffer(p2.getLevels()[0]->getDVIn(), p2.getLevels()[0]->getMgh(), p2.getLevels()[0]->getNgh(), p2.getLevels()[0]->getOgh());
+        auto &lv0f = *tu.readOpenCLBuffer(p2.getLevels()[0]->getDF(), p2.getLevels()[0]->getMgh(), p2.getLevels()[0]->getNgh(), p2.getLevels()[0]->getOgh());
 
         REQUIRE(vgh.isEqual(lv0d));
         REQUIRE(fgh.isEqual(lv0f));

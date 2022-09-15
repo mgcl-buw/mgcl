@@ -44,16 +44,6 @@ TEST_CASE("cuboid class")
         REQUIRE(c[0][0][0 + 1 * 3 + 1] == 3.0);
     }
 
-    SECTION("copy constructor")
-    {
-        mgcl::Cuboid c2(c);
-        REQUIRE(c2.getM() == c.getM());
-        REQUIRE(c2.getN() == c.getN());
-        REQUIRE(c2.getO() == c.getO());
-        REQUIRE(c2.getData() != c.getData());
-        REQUIRE(c2[0][0][0] == c[0][0][0]);
-    }
-
     SECTION("default value")
     {
         for (auto v : c.field1d())

@@ -19,6 +19,9 @@ x vergleich mit pmg
 - incorporate varying stencil code OpenCL
 - add stencilarithmetic
 - add galerkin as preliminary step
+- bench Stencil::apply vs direct
+- bench different Stencils
+- pmg in different benchmark target, excluded from all?
 
 Mid prio:
 - stencil test opencl

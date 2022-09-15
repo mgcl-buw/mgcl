@@ -10,7 +10,7 @@
 #include "../problem.hpp"
 #include "test_utility.hpp"
 
-mgcl::Cuboid calculateError(mgcl::Cuboid &solution, mgcl::Cuboid &approximation);
+std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid &solution, mgcl::Cuboid &approximation);
 double calculateMaxError(mgcl::Cuboid &error);
 double calculateErrorNorm(double h, mgcl::Cuboid &error);
 
@@ -81,7 +81,7 @@ TEST_CASE("Problem solving: periodic 4th order")
         REQUIRE(v->isEqual(p.getV()));
 
         // check if solution is good
-        auto err = calculateError(solution, *v);
+        auto &err = *calculateError(solution, *v);
         auto errNorm = calculateErrorNorm(1.0 / (double)N, err);
         auto errMax = calculateMaxError(err);
 
@@ -123,7 +123,7 @@ TEST_CASE("Problem solving: periodic 4th order")
         p.solve();
 
         // check if solution is good
-        auto err = calculateError(solution, *v);
+        auto &err = *calculateError(solution, *v);
         auto errNorm = calculateErrorNorm(1.0 / (double)N, err);
         auto errMax = calculateMaxError(err);
 
@@ -149,21 +149,21 @@ TEST_CASE("Problem solving: periodic 4th order")
  *
  * @param solution
  * @param approximation
- * @return mgcl::Cuboid
+ * @return std::shared_ptr<mgcl::Cuboid>
  */
-mgcl::Cuboid calculateError(mgcl::Cuboid &solution, mgcl::Cuboid &approximation)
+std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid &solution, mgcl::Cuboid &approximation)
 {
     if (solution.getM() != approximation.getM() ||
         solution.getN() != approximation.getN() ||
         solution.getO() != approximation.getO())
         throw std::invalid_argument("Dimensions do not match.");
 
-    mgcl::Cuboid ret(solution.getM(), solution.getN(), solution.getO());
+    auto ret = std::make_shared<mgcl::Cuboid>(solution.getM(), solution.getN(), solution.getO());
     for (int i = 0; i < solution.getM(); i++)
         for (int j = 0; j < solution.getN(); j++)
             for (int k = 0; k < solution.getO(); k++)
             {
-                ret[i][j][k] = fabs(solution[i][j][k] - approximation[i][j][k]);
+                (*ret)[i][j][k] = fabs(solution[i][j][k] - approximation[i][j][k]);
             }
 
     return ret;

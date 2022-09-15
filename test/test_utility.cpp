@@ -91,16 +91,16 @@ cl_mem mgcl_test::TestUtility::createOpenCLBuffer(mgcl::Cuboid &c)
  * @param ghosts_o Amount of ghost cells in one z-direction.
  * @return mgcl::Cuboid
  */
-mgcl::Cuboid mgcl_test::TestUtility::readOpenCLBuffer(cl_mem buf, int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o)
+std::shared_ptr<mgcl::Cuboid> mgcl_test::TestUtility::readOpenCLBuffer(cl_mem buf, int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o)
 {
     if (!buf)
         throw std::invalid_argument("Can't read OpenCL buffer, buf is null!");
 
     finish();
 
-    mgcl::Cuboid c(m, n, o, ghosts_m, ghosts_n, ghosts_o);
-    int size = c.getMgh() * c.getNgh() * c.getOgh();
-    double *tmp = c.field1d().data();
+    auto c = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+    int size = c->getMgh() * c->getNgh() * c->getOgh();
+    double *tmp = c->field1d().data();
 
     int err;
     err = clEnqueueReadBuffer(problem->getCommands(), buf, CL_TRUE, 0,

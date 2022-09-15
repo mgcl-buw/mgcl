@@ -33,7 +33,8 @@ namespace mgcl
     public:
         Cuboid(int m_, int n_, int o_, double value = 0);
         Cuboid(int m_, int n_, int o_, int ghostsM_, int ghostsN_, int ghostsO_, double value = 0);
-        Cuboid(const Cuboid &c);
+        Cuboid(const Cuboid &) = delete;
+        Cuboid &operator=(const Cuboid &) = delete;
         ~Cuboid();
 
         double ***getData() const;

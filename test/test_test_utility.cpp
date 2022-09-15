@@ -25,7 +25,7 @@ TEST_CASE("TestUtility createOpenCLBuffer + readOpenCLBuffer")
     auto buf = tu.createOpenCLBuffer(c);
     REQUIRE(buf);
 
-    auto c2 = tu.readOpenCLBuffer(buf, 4, 4, 4);
+    auto &c2 = *tu.readOpenCLBuffer(buf, 4, 4, 4);
     for (int i = 0; i < c2.field1d().size(); i++)
         REQUIRE(c2.field1d()[i] == c.field1d()[i]);
 }

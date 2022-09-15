@@ -8,11 +8,11 @@
 #include "../multigrid_engine.hpp"
 #include "test_utility.hpp"
 
-mgcl::Cuboid jacobiTestInputF();
-mgcl::Cuboid jacobiTestInputV();
-mgcl::Cuboid jacobiTestInputR();
-mgcl::Cuboid jacobiTestOutputV();
-mgcl::Cuboid jacobiTestOutputR();
+std::shared_ptr<mgcl::Cuboid> jacobiTestInputF();
+std::shared_ptr<mgcl::Cuboid> jacobiTestInputV();
+std::shared_ptr<mgcl::Cuboid> jacobiTestInputR();
+std::shared_ptr<mgcl::Cuboid> jacobiTestOutputV();
+std::shared_ptr<mgcl::Cuboid> jacobiTestOutputR();
 
 TEST_CASE("jacobi")
 {
@@ -28,11 +28,11 @@ TEST_CASE("jacobi")
     double omega = 0.8;
     int maxiter = 5;
 
-    auto c_in_f = jacobiTestInputF();
-    auto c_in_v = jacobiTestInputV();
-    auto c_in_r = jacobiTestInputR();
-    auto c_expected_out_v = jacobiTestOutputV();
-    auto c_expected_out_r = jacobiTestOutputR();
+    auto &c_in_f = *jacobiTestInputF();
+    auto &c_in_v = *jacobiTestInputV();
+    auto &c_in_r = *jacobiTestInputR();
+    auto &c_expected_out_v = *jacobiTestOutputV();
+    auto &c_expected_out_r = *jacobiTestOutputR();
 
     auto stencil = std::make_shared<mgcl::StencilLaplace7p>(1.0 / (double)m);
 
@@ -78,8 +78,8 @@ TEST_CASE("jacobi")
         double res = mgcl::MultigridEngine::jacobi(*p, level, maxiter, 1);
         tu.finish();
 
-        auto c_r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
-        auto c_v_out = tu.readOpenCLBuffer(d_in_v, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        auto &c_r_out = *tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        auto &c_v_out = *tu.readOpenCLBuffer(d_in_v, m, n, o, ghosts_m, ghosts_n, ghosts_o);
 
         CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
         CHECK(c_v_out.isEqual(c_expected_out_v));
@@ -101,11 +101,11 @@ TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
     double omega = 0.8;
     int maxiter = 5;
 
-    auto c_in_f = jacobiTestInputF();
-    auto c_in_v = jacobiTestInputV();
-    auto c_in_r = jacobiTestInputR();
-    auto c_expected_out_v = jacobiTestOutputV();
-    auto c_expected_out_r = jacobiTestOutputR();
+    auto &c_in_f = *jacobiTestInputF();
+    auto &c_in_v = *jacobiTestInputV();
+    auto &c_in_r = *jacobiTestInputR();
+    auto &c_expected_out_v = *jacobiTestOutputV();
+    auto &c_expected_out_r = *jacobiTestOutputR();
 
     auto stencil = std::make_shared<mgcl::StencilLaplace7p>(1.0 / (double)m);
     int ghosts = 3;
@@ -156,8 +156,8 @@ TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
     tu.finish();
 
     // read back from device and copy to Cuboid with ghosts = 1
-    auto c_r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts, ghosts, ghosts);
-    auto c_v_out = tu.readOpenCLBuffer(d_in_v, m, n, o, ghosts, ghosts, ghosts);
+    auto &c_r_out = *tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts, ghosts, ghosts);
+    auto &c_v_out = *tu.readOpenCLBuffer(d_in_v, m, n, o, ghosts, ghosts, ghosts);
     for (int i = 0; i < c_in_f.getM(); i++)
         for (int j = 0; j < c_in_f.getN(); j++)
             for (int k = 0; k < c_in_f.getO(); k++)
@@ -179,10 +179,10 @@ TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
  *
  * @return mgcl::Cuboid Cuboid filled with test input.
  */
-mgcl::Cuboid jacobiTestInputF()
+std::shared_ptr<mgcl::Cuboid> jacobiTestInputF()
 {
     int n = 16;
-    return mgcl::Cuboid(n, n, n, 1, 1, 1, 0);
+    return std::make_shared<mgcl::Cuboid>(n, n, n, 1, 1, 1, 0);
 }
 
 /**
@@ -190,10 +190,11 @@ mgcl::Cuboid jacobiTestInputF()
  *
  * @return mgcl::Cuboid Cuboid filled with test input.
  */
-mgcl::Cuboid jacobiTestInputV()
+std::shared_ptr<mgcl::Cuboid> jacobiTestInputV()
 {
     int n = 16;
-    mgcl::Cuboid c(n, n, n, 1, 1, 1);
+    auto cret = std::make_shared<mgcl::Cuboid>(n, n, n, 1, 1, 1);
+    auto &c = *cret;
 
     for (int i = 0; i < n + 2; i++)
         for (int j = 0; j < n + 2; j++)
@@ -203,7 +204,7 @@ mgcl::Cuboid jacobiTestInputV()
             }
 
     mgcl::MultigridEngine::updateGhostsSeq(c);
-    return c;
+    return cret;
 }
 
 /**
@@ -211,10 +212,10 @@ mgcl::Cuboid jacobiTestInputV()
  *
  * @return mgcl::Cuboid Cuboid filled with test output of r.
  */
-mgcl::Cuboid jacobiTestInputR()
+std::shared_ptr<mgcl::Cuboid> jacobiTestInputR()
 {
     int n = 16;
-    return mgcl::Cuboid(n, n, n, 1, 1, 1, 0);
+    return std::make_shared<mgcl::Cuboid>(n, n, n, 1, 1, 1, 0);
 }
 
 /**
@@ -222,9 +223,10 @@ mgcl::Cuboid jacobiTestInputR()
  *
  * @return mgcl::Cuboid Cuboid filled with test output of r.
  */
-mgcl::Cuboid jacobiTestOutputV()
+std::shared_ptr<mgcl::Cuboid> jacobiTestOutputV()
 {
-    mgcl::Cuboid c(16, 16, 16, 1, 1, 1);
+    auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
+    auto &c = *cret;
 
     c[0][0][0] = 3.26221748148148123e+01;
     c[0][0][1] = 2.78740582716049374e+01;
@@ -6059,7 +6061,7 @@ mgcl::Cuboid jacobiTestOutputV()
     c[17][17][16] = 2.31259417283950661e+01;
     c[17][17][17] = 1.83778251851851842e+01;
 
-    return c;
+    return cret;
 }
 
 /**
@@ -6067,9 +6069,10 @@ mgcl::Cuboid jacobiTestOutputV()
  *
  * @return mgcl::Cuboid Cuboid filled with test output of r.
  */
-mgcl::Cuboid jacobiTestOutputR()
+std::shared_ptr<mgcl::Cuboid> jacobiTestOutputR()
 {
-    mgcl::Cuboid c(16, 16, 16, 1, 1, 1);
+    auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
+    auto &c = *cret;
 
     c[0][0][0] = -2.14593991111113064e+03;
     c[0][0][1] = -7.15313303703703241e+02;
@@ -11904,5 +11907,5 @@ mgcl::Cuboid jacobiTestOutputR()
     c[17][17][16] = 7.15313303703708698e+02;
     c[17][17][17] = 2.14593991111111291e+03;
 
-    return c;
+    return cret;
 }

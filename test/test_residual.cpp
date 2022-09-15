@@ -8,9 +8,9 @@
 #include "../multigrid_engine.hpp"
 #include "test_utility.hpp"
 
-mgcl::Cuboid residualTestInputF();
-mgcl::Cuboid residualTestInputV();
-mgcl::Cuboid residualTestOutputR();
+std::shared_ptr<mgcl::Cuboid> residualTestInputF();
+std::shared_ptr<mgcl::Cuboid> residualTestInputV();
+std::shared_ptr<mgcl::Cuboid> residualTestOutputR();
 
 TEST_CASE("residual")
 {
@@ -24,10 +24,10 @@ TEST_CASE("residual")
     int ngh = n + 2 * ghosts_n;
     int ogh = o + 2 * ghosts_o;
 
-    auto c_in_f = residualTestInputF();
-    auto c_in_v = residualTestInputV();
+    auto &c_in_f = *residualTestInputF();
+    auto &c_in_v = *residualTestInputV();
     mgcl::Cuboid c_in_r(m, n, o, ghosts_m, ghosts_n, ghosts_o);
-    auto c_expected_out_r = residualTestOutputR();
+    auto &c_expected_out_r = *residualTestOutputR();
 
     auto stencil = std::make_shared<mgcl::StencilLaplace7p>(1.0 / (double)(m));
 
@@ -69,7 +69,7 @@ TEST_CASE("residual")
         double res = mgcl::MultigridEngine::residual(*p, level, 1);
         tu.finish();
 
-        auto c_r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        auto &c_r_out = *tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_r_out.isEqual(c_expected_out_r));
@@ -82,10 +82,11 @@ TEST_CASE("residual")
  *
  * @return mgcl::Cuboid Cuboid filled with test input.
  */
-mgcl::Cuboid residualTestInputF()
+std::shared_ptr<mgcl::Cuboid> residualTestInputF()
 {
     int n = 16;
-    mgcl::Cuboid c(n, n, n, 1, 1, 1);
+    auto cret = std::make_shared<mgcl::Cuboid>(n, n, n, 1, 1, 1);
+    auto &c = *cret;
 
     for (int i = 0; i < n + 2; i++)
         for (int j = 0; j < n + 2; j++)
@@ -95,7 +96,7 @@ mgcl::Cuboid residualTestInputF()
             }
 
     mgcl::MultigridEngine::updateGhostsSeq(c);
-    return c;
+    return cret;
 }
 
 /**
@@ -104,10 +105,11 @@ mgcl::Cuboid residualTestInputF()
  *
  * @return mgcl::Cuboid Cuboid filled with test input.
  */
-mgcl::Cuboid residualTestInputV()
+std::shared_ptr<mgcl::Cuboid> residualTestInputV()
 {
     int n = 16;
-    mgcl::Cuboid c(n, n, n, 1, 1, 1);
+    auto cret = std::make_shared<mgcl::Cuboid>(n, n, n, 1, 1, 1);
+    auto &c = *cret;
 
     for (int i = 0; i < n + 2; i++)
         for (int j = 0; j < n + 2; j++)
@@ -117,7 +119,7 @@ mgcl::Cuboid residualTestInputV()
             }
 
     mgcl::MultigridEngine::updateGhostsSeq(c);
-    return c;
+    return cret;
 }
 
 /**
@@ -125,9 +127,11 @@ mgcl::Cuboid residualTestInputV()
  *
  * @return mgcl::Cuboid Cuboid filled with test output of r.
  */
-mgcl::Cuboid residualTestOutputR()
+std::shared_ptr<mgcl::Cuboid> residualTestOutputR()
 {
-    mgcl::Cuboid c(16, 16, 16, 1, 1, 1);
+    auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
+    ;
+    auto &c = *cret;
 
     c[0][0][0] = -1.399440e+06;
     c[0][0][1] = -1.391263e+06;
@@ -5962,5 +5966,5 @@ mgcl::Cuboid residualTestOutputR()
     c[17][17][16] = 1.397094e+06;
     c[17][17][17] = 1.405271e+06;
 
-    return c;
+    return cret;
 }

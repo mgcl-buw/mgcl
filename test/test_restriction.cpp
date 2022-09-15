@@ -8,10 +8,10 @@
 #include "../multigrid_engine.hpp"
 #include "test_utility.hpp"
 
-mgcl::Cuboid restrictionTestInputFine();
-mgcl::Cuboid restrictionTestInputCoarse();
-mgcl::Cuboid restrictionTestOutputFine();
-mgcl::Cuboid restrictionTestOutputCoarse();
+std::shared_ptr<mgcl::Cuboid> restrictionTestInputFine();
+std::shared_ptr<mgcl::Cuboid> restrictionTestInputCoarse();
+std::shared_ptr<mgcl::Cuboid> restrictionTestOutputFine();
+std::shared_ptr<mgcl::Cuboid> restrictionTestOutputCoarse();
 
 TEST_CASE("restriction")
 {
@@ -25,10 +25,10 @@ TEST_CASE("restriction")
     int ngh = n + 2 * ghosts_n;
     int ogh = o + 2 * ghosts_o;
 
-    auto c_fine = restrictionTestInputFine();
-    auto c_coarse = restrictionTestInputCoarse();
-    auto c_expected_fine = restrictionTestOutputFine();
-    auto c_expected_coarse = restrictionTestOutputCoarse();
+    auto &c_fine = *restrictionTestInputFine();
+    auto &c_coarse = *restrictionTestInputCoarse();
+    auto &c_expected_fine = *restrictionTestOutputFine();
+    auto &c_expected_coarse = *restrictionTestOutputCoarse();
 
     auto p = std::make_shared<mgcl::Problem>(m, n, o);
     mgcl::Level lv_fine(p.get(), 0);
@@ -62,9 +62,9 @@ TEST_CASE("restriction")
         mgcl::MultigridEngine::restrict(lv_fine, lv_coarse, d_c_fine, d_c_coarse);
         tu.finish();
 
-        auto c_fine_out = tu.readOpenCLBuffer(d_c_fine, m, n, o, ghosts_m, ghosts_n, ghosts_o);
-        auto c_coarse_out = tu.readOpenCLBuffer(d_c_coarse, c_expected_coarse.getM(), c_expected_coarse.getN(),
-                                                c_expected_coarse.getO(), ghosts_m, ghosts_n, ghosts_o);
+        auto &c_fine_out = *tu.readOpenCLBuffer(d_c_fine, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        auto &c_coarse_out = *tu.readOpenCLBuffer(d_c_coarse, c_expected_coarse.getM(), c_expected_coarse.getN(),
+                                                  c_expected_coarse.getO(), ghosts_m, ghosts_n, ghosts_o);
 
         REQUIRE(c_fine_out.isEqual(c_expected_fine));
         REQUIRE(c_coarse_out.isEqual(c_expected_coarse));
@@ -76,9 +76,10 @@ TEST_CASE("restriction")
  *
  * @return mgcl::Cuboid Cuboid filled with test input from fine grid.
  */
-mgcl::Cuboid restrictionTestInputFine()
+std::shared_ptr<mgcl::Cuboid> restrictionTestInputFine()
 {
-    mgcl::Cuboid c(16, 16, 16, 1, 1, 1);
+    auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
+    auto &c = *cret;
 
     c[0][0][0] = 4.000000e+00;
     c[0][0][1] = 4.000000e+00;
@@ -5913,7 +5914,7 @@ mgcl::Cuboid restrictionTestInputFine()
     c[17][17][16] = 0.000000e+00;
     c[17][17][17] = 5.000000e+00;
 
-    return c;
+    return cret;
 }
 
 /**
@@ -5921,10 +5922,9 @@ mgcl::Cuboid restrictionTestInputFine()
  *
  * @return mgcl::Cuboid Cuboid filled with test input from coarse grid (zeros).
  */
-mgcl::Cuboid restrictionTestInputCoarse()
+std::shared_ptr<mgcl::Cuboid> restrictionTestInputCoarse()
 {
-    mgcl::Cuboid c(8, 8, 8, 1, 1, 1, 0);
-    return c;
+    return std::make_shared<mgcl::Cuboid>(8, 8, 8, 1, 1, 1, 0);
 }
 
 /**
@@ -5932,9 +5932,10 @@ mgcl::Cuboid restrictionTestInputCoarse()
  *
  * @return mgcl::Cuboid Cuboid filled with test output from fine grid.
  */
-mgcl::Cuboid restrictionTestOutputFine()
+std::shared_ptr<mgcl::Cuboid> restrictionTestOutputFine()
 {
-    mgcl::Cuboid c(16, 16, 16, 1, 1, 1);
+    auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
+    auto &c = *cret;
 
     c[0][0][0] = 8.000000e+00;
     c[0][0][1] = 4.000000e+00;
@@ -11769,7 +11770,7 @@ mgcl::Cuboid restrictionTestOutputFine()
     c[17][17][16] = 6.000000e+00;
     c[17][17][17] = 2.000000e+00;
 
-    return c;
+    return cret;
 }
 
 /**
@@ -11777,9 +11778,10 @@ mgcl::Cuboid restrictionTestOutputFine()
  *
  * @return mgcl::Cuboid Cuboid filled with test output from coarse grid.
  */
-mgcl::Cuboid restrictionTestOutputCoarse()
+std::shared_ptr<mgcl::Cuboid> restrictionTestOutputCoarse()
 {
-    mgcl::Cuboid c(8, 8, 8, 1, 1, 1);
+    auto cret = std::make_shared<mgcl::Cuboid>(8, 8, 8, 1, 1, 1, 0);
+    auto &c = *cret;
 
     c[0][0][0] = 5.640625e+00;
     c[0][0][1] = 3.343750e+00;
@@ -12511,5 +12513,5 @@ mgcl::Cuboid restrictionTestOutputCoarse()
     c[8][8][7] = 5.671875e+00;
     c[8][8][8] = 5.640625e+00;
 
-    return c;
+    return cret;
 }

@@ -18,9 +18,7 @@ namespace mgcl
     }
 
     Problem::Problem(int m_, int n_, int o_, Cuboid *f_, Cuboid *v_)
-        : m(m_), n(n_), o(o_),
-          f(std::make_shared<Cuboid>(*f_)),
-          v(std::make_shared<Cuboid>(*v_)),
+        : m(m_), n(n_), o(o_), f(f_), v(v_),
           openCLHelper(this),
           stencil(std::make_shared<StencilLaplace7p>(1.0 / (double)m))
     {

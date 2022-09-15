@@ -43,7 +43,7 @@ TEST_CASE("updateGhosts")
             mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o);
             tu.finish();
 
-            auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
+            auto &c2 = *tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
 
             double tol = 1e-7;
             for (int i = 0; i < ghosts_m; i++)
@@ -66,7 +66,7 @@ TEST_CASE("updateGhosts")
             mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o);
             tu.finish();
 
-            auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
+            auto &c2 = *tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
 
             double tol = 1e-7;
             for (int i = 0; i < ghosts_m; i++)
