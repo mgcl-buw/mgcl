@@ -13,8 +13,8 @@ x benchmark init
 x benchmark solve gleicher startwert, feste anzahl Iterationen
 x benchmark solve different vcycle iteration count seq vs ocl
 x benchmark auch mit 256^3, 512^3
-- benchmark vergleich mit CPU OpenCL
-- vergleich mit pmg
+x benchmark vergleich mit CPU OpenCL
+x vergleich mit pmg
 - incorporate varying stencil code Seq
 - incorporate varying stencil code OpenCL
 - add stencilarithmetic
