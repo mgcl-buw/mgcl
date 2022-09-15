@@ -151,7 +151,7 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
                 b.run(std::string("pmg random values, N = ").append(std::to_string(N)).c_str(), [&]
                       { mg(v->getData(), f->getData(), maxIterVCycles, tol, m, n, o,
                            0, m - 1, 0, n - 1, 0, o - 1,
-                           1, nu1, nu2, omega, size, values, xoff, yoff, zoff, mpi_comm_cart); });
+                           1, nu1, nu2, omega, size, values, xoff, yoff, zoff, mpi_comm_cart, 1); });
             }
         }
 

@@ -83,7 +83,7 @@ extern "C"
     double mg(double ***u, double ***f, int maxiter, double tol, int m, int n, int o,
               int xstart, int xend, int ystart, int yend, int zstart, int zend,
               int p, int nu1, int nu2, double omega, int size, double *values,
-              int *xoff, int *yoff, int *zoff, MPI_Comm cart_comm);
+              int *xoff, int *yoff, int *zoff, MPI_Comm cart_comm, int ignoreTol);
 
 #ifdef __cplusplus
 }

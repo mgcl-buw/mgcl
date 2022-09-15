@@ -671,7 +671,7 @@ double mg_vcycle(mg_data *data, int level, int maxlevel)
 double mg(double ***u, double ***f, int maxiter, double tol, int m, int n, int o,
           int xstart, int xend, int ystart, int yend, int zstart, int zend,
           int p, int nu1, int nu2, double omega, int size, double *values,
-          int *xoff, int *yoff, int *zoff, MPI_Comm cart_comm)
+          int *xoff, int *yoff, int *zoff, MPI_Comm cart_comm, int ignoreTol)
 {
 
     /* MPI variables */
@@ -747,7 +747,8 @@ double mg(double ***u, double ***f, int maxiter, double tol, int m, int n, int o
 
         res_l = mg_vcycle(data, 0, maxlevel);
         MPI_Allreduce(&res_l, &res, 1, MPI_DOUBLE, MPI_SUM, cart_comm);
-        res = sqrt(res);
+        if (!ignoreTol)
+            res = sqrt(res);
 
         /* Stop date */
         gettimeofday(&stop, 0);
@@ -758,7 +759,7 @@ double mg(double ***u, double ***f, int maxiter, double tol, int m, int n, int o
         //   printf("| %5d | %9.3e | %8.6f |\n", iter, initres == 0.0 ? 0.0 : res/initres, elapsed);
         // }
 
-        if (res / initres < tol)
+        if (!ignoreTol && res / initres < tol)
             break;
     }
 
