@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <fstream>
+#include <iostream>
 #include <vector>
 using namespace std::chrono_literals;
 
@@ -13,26 +14,28 @@ using namespace std::chrono_literals;
 #include "../test/test_utility.hpp"
 #include "bench_render_templates.hpp"
 
+#include "../thirdparty/pmg/mg.h"
+
 TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
 {
-    int N = GENERATE(16, 32, 64, 128);
-    // int N = 16;
-    int m = N;
-    int n = N;
-    int o = N;
-
-    int maxIterVCycles = 30;
-
-    ankerl::nanobench::Bench b;
-    b.timeUnit(1ms, "ms")
-        // .epochs(1)
-        // .epochIterations(1)
-        .minEpochTime(100ms)
-        .maxEpochTime(5s)
-        .relative(true);
-
-    SECTION(std::string("N = ").append(std::to_string(N)).c_str())
+    std::vector grids{16, 32, 64, 128};
+    for (auto N : grids)
     {
+        // int N = 16;
+        int m = N;
+        int n = N;
+        int o = N;
+
+        int maxIterVCycles = 30;
+
+        ankerl::nanobench::Bench b;
+        b.timeUnit(1ms, "ms")
+            // .epochs(1)
+            // .epochIterations(1)
+            .minEpochTime(100ms)
+            .maxEpochTime(5s)
+            .relative(true);
+
         auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
         f->fillRandom(0, 10);
 
@@ -71,30 +74,112 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
                   { p.solve(); });
         }
 
-        if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_CPU))
         {
-            b.epochs(1).epochIterations(1);
+            // pmg
 
-            auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+            // setup MPI
+            int mpi_size;
+            int mpi_rank;
+            int mpi_dims[3] = {0, 0, 0};
+            int mpi_periods[3];
+            int mpi_coords[3];
+            MPI_Comm mpi_comm_cart;
+            int argcMock = 0;
 
-            mgcl::Problem p(m, n, o, f, v);
-            p.setMaxiterVcycles(maxIterVCycles);
-            p.setIgnoreTol(true);
-            p.setUseOpencl(true);
-            p.setDeviceType(CL_DEVICE_TYPE_CPU);
-            p.setSilent(true);
+            char arg0[] = "programName";
+            char *argv[] = {&arg0[0], NULL};
+            int argc = (int)(sizeof(argv) / sizeof(argv[0])) - 1;
+            char **argvPtr = &argv[0];
 
-            if (mgcl_test::TestUtility::deviceAvailable("i7-10875H", p.getDeviceType()))
-                p.setDeviceName("i7-10875H");
+            // init only once
+            int initialized;
+            MPI_Initialized(&initialized);
 
-            p.init();
-            b.run(std::string("opencl cpu random values, N = ").append(std::to_string(N)).c_str(), [&]
-                  { p.solve(); });
+            if (!initialized)
+                MPI_Init(&argc, &argvPtr);
+
+            MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+            MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+            MPI_Dims_create(mpi_size, 3, mpi_dims);
+            MPI_Cart_create(MPI_COMM_WORLD, 3, mpi_dims, mpi_periods, 1, &mpi_comm_cart);
+            MPI_Cart_coords(mpi_comm_cart, mpi_rank, 3, mpi_coords);
+
+            if (mpi_comm_cart == MPI_COMM_NULL)
+            {
+                std::cout << "mpi_comm_cart is null! Cannot test against pmg." << std::endl;
+            }
+            else
+            {
+                // Problem parameters
+                auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+                double tol = 1e-20;
+                int nu1 = 2;
+                int nu2 = 2;
+                double omega = 0.8;
+
+                // init 7-point stencil for pmg's jacobi
+                int size = 7;
+                double h2 = 1.0 / (double)(N * N);
+                double *values = new double[size]();
+                int *xoff = new int[size]();
+                int *yoff = new int[size]();
+                int *zoff = new int[size]();
+
+                values[0] = 6.0 / h2;
+                for (int i = 1; i <= 6; i++)
+                    values[i] = (-1.0) / h2;
+
+                xoff[0] = 0;
+                xoff[1] = 1;
+                xoff[2] = -1;
+                for (int i = 3; i <= 6; i++)
+                    xoff[i] = 0;
+
+                for (int i = 0; i <= 2; i++)
+                    yoff[i] = 0;
+                yoff[3] = 1;
+                yoff[4] = -1;
+                yoff[5] = 0;
+                yoff[6] = 0;
+
+                for (int i = 0; i <= 4; i++)
+                    zoff[i] = 0;
+                zoff[5] = 1;
+                zoff[6] = -1;
+
+                // run with a tolerance that will never be reached thus all vcycle iters are executed
+                b.run(std::string("pmg random values, N = ").append(std::to_string(N)).c_str(), [&]
+                      { mg(v->getData(), f->getData(), maxIterVCycles, tol, m, n, o,
+                           0, m - 1, 0, n - 1, 0, o - 1,
+                           1, nu1, nu2, omega, size, values, xoff, yoff, zoff, mpi_comm_cart, 1); });
+            }
         }
+
+        // if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_CPU))
+        // {
+        //     b.epochs(1).epochIterations(1);
+
+        //     auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+
+        //     mgcl::Problem p(m, n, o, f, v);
+        //     p.setMaxiterVcycles(maxIterVCycles);
+        //     p.setIgnoreTol(true);
+        //     p.setUseOpencl(true);
+        //     p.setDeviceType(CL_DEVICE_TYPE_CPU);
+        //     p.setSilent(true);
+
+        //     if (mgcl_test::TestUtility::deviceAvailable("i7-10875H", p.getDeviceType()))
+        //         p.setDeviceName("i7-10875H");
+
+        //     p.init();
+        //     b.run(std::string("opencl cpu random values, N = ").append(std::to_string(N)).c_str(), [&]
+        //           { p.solve(); });
+        // }
 
         std::ofstream renderOut(std::string("solvingBoxplot_").append(std::to_string(N)).append(".html"));
         b.render(ankerl::nanobench::templates::htmlBoxplot(), renderOut);
     }
+    MPI_Finalize();
 }
 
 TEST_CASE("mgcl benchmarks lineplot: solve", "[!benchmark][solve][plot]")
