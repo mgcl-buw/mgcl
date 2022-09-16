@@ -133,6 +133,7 @@ test/test_utility.cpp
 benchmarks/bench_solve.cpp
 benchmarks/bench_init.cpp
 benchmarks/bench_steps.cpp
+benchmarks/bench_stencil.cpp
 )
 
 add_executable(benchmarks ${SOURCES_NANOBENCH})
