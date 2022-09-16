@@ -262,7 +262,7 @@ namespace mgcl
     {
         // TODO respect ghosts?
         int err;
-        auto level0 = problem->getLevels()[0];
+        auto &level0 = problem->levels[0];
         int m = level0->getMgh();
         int n = level0->getNgh();
         int o = level0->getOgh();

@@ -148,6 +148,9 @@ namespace mgcl
         void solve();
         void solveSeq();
 
+        Level &getLevelAt(int index) const;
+        int getLevelsSize() const;
+
         /********************************
          * Getters and Setters
          ********************************/
@@ -222,8 +225,6 @@ namespace mgcl
 
         cl_mem getDStencilValues() const;
         void setDStencilValues(const cl_mem &dStencilValues);
-
-        std::vector<std::shared_ptr<Level>> getLevels() const;
 
         cl_mem getDV() const;
         void setDV(const cl_mem &dV_);

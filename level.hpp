@@ -64,14 +64,14 @@ namespace mgcl
 
         int getNum() const;
 
-        Cuboid &getV();
-        std::shared_ptr<Cuboid> getVPtr();
+        Cuboid &getV() const;
+        std::shared_ptr<Cuboid> getVPtr() const;
         void setV(const std::shared_ptr<Cuboid> &v_);
-        Cuboid &getF();
-        std::shared_ptr<Cuboid> getFPtr();
+        Cuboid &getF() const;
+        std::shared_ptr<Cuboid> getFPtr() const;
         void setF(const std::shared_ptr<Cuboid> &f_);
-        Cuboid &getR();
-        std::shared_ptr<Cuboid> getRPtr();
+        Cuboid &getR() const;
+        std::shared_ptr<Cuboid> getRPtr() const;
         void setR(const std::shared_ptr<Cuboid> &r_);
 
         int getM() const;

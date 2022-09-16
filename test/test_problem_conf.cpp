@@ -274,7 +274,7 @@ TEST_CASE("Problem::init")
     SECTION("default conf")
     {
         REQUIRE(p.init());
-        REQUIRE(p.getLevels().size() == p.getMaxlevel() + 1);
+        REQUIRE(p.getLevelsSize() == p.getMaxlevel() + 1);
 
         // check that default stencil is 7p Laplace stencil. Result of dynamic_pointer_cast is empty on failure.
         REQUIRE(std::dynamic_pointer_cast<mgcl::StencilLaplace7p>(p.getStencil()).get());
@@ -283,54 +283,54 @@ TEST_CASE("Problem::init")
             for (int j = 0; j < n; j++)
                 for (int k = 0; k < o; k++)
                 {
-                    REQUIRE((*v)[i][j][k] == p.getLevels()[0]->getV()[i + 1][j + 1][k + 1]);
-                    REQUIRE((*f)[i][j][k] == p.getLevels()[0]->getF()[i + 1][j + 1][k + 1]);
+                    REQUIRE((*v)[i][j][k] == p.getLevelAt(0).getV()[i + 1][j + 1][k + 1]);
+                    REQUIRE((*f)[i][j][k] == p.getLevelAt(0).getF()[i + 1][j + 1][k + 1]);
                 }
 
         for (int lv = 0; lv <= p.getMaxlevel(); lv++)
         {
             std::cout << "Checking level " + lv << std::endl;
 
-            REQUIRE(p.getLevels()[lv]->getM() == m >> lv);
-            REQUIRE(p.getLevels()[lv]->getN() == n >> lv);
-            REQUIRE(p.getLevels()[lv]->getO() == o >> lv);
+            REQUIRE(p.getLevelAt(lv).getM() == m >> lv);
+            REQUIRE(p.getLevelAt(lv).getN() == n >> lv);
+            REQUIRE(p.getLevelAt(lv).getO() == o >> lv);
 
-            REQUIRE(p.getLevels()[lv]->getMgh() == p.getLevels()[lv]->getM() + 2 * p.getGhosts());
-            REQUIRE(p.getLevels()[lv]->getNgh() == p.getLevels()[lv]->getN() + 2 * p.getGhosts());
-            REQUIRE(p.getLevels()[lv]->getOgh() == p.getLevels()[lv]->getO() + 2 * p.getGhosts());
+            REQUIRE(p.getLevelAt(lv).getMgh() == p.getLevelAt(lv).getM() + 2 * p.getGhosts());
+            REQUIRE(p.getLevelAt(lv).getNgh() == p.getLevelAt(lv).getN() + 2 * p.getGhosts());
+            REQUIRE(p.getLevelAt(lv).getOgh() == p.getLevelAt(lv).getO() + 2 * p.getGhosts());
 
-            REQUIRE(p.getLevels()[lv]->getRPtr());
+            REQUIRE(p.getLevelAt(lv).getRPtr());
 
             // check if cuboids have correct dimensions
-            CHECK(p.getLevels()[lv]->getV().getM() == p.getLevels()[lv]->getM());
-            CHECK(p.getLevels()[lv]->getV().getN() == p.getLevels()[lv]->getN());
-            CHECK(p.getLevels()[lv]->getV().getO() == p.getLevels()[lv]->getO());
-            CHECK(p.getLevels()[lv]->getV().getMgh() == p.getLevels()[lv]->getMgh());
-            CHECK(p.getLevels()[lv]->getV().getNgh() == p.getLevels()[lv]->getNgh());
-            CHECK(p.getLevels()[lv]->getV().getOgh() == p.getLevels()[lv]->getOgh());
-            CHECK(p.getLevels()[lv]->getV().getGhostsM() == p.getGhosts());
-            CHECK(p.getLevels()[lv]->getV().getGhostsN() == p.getGhosts());
-            CHECK(p.getLevels()[lv]->getV().getGhostsO() == p.getGhosts());
+            CHECK(p.getLevelAt(lv).getV().getM() == p.getLevelAt(lv).getM());
+            CHECK(p.getLevelAt(lv).getV().getN() == p.getLevelAt(lv).getN());
+            CHECK(p.getLevelAt(lv).getV().getO() == p.getLevelAt(lv).getO());
+            CHECK(p.getLevelAt(lv).getV().getMgh() == p.getLevelAt(lv).getMgh());
+            CHECK(p.getLevelAt(lv).getV().getNgh() == p.getLevelAt(lv).getNgh());
+            CHECK(p.getLevelAt(lv).getV().getOgh() == p.getLevelAt(lv).getOgh());
+            CHECK(p.getLevelAt(lv).getV().getGhostsM() == p.getGhosts());
+            CHECK(p.getLevelAt(lv).getV().getGhostsN() == p.getGhosts());
+            CHECK(p.getLevelAt(lv).getV().getGhostsO() == p.getGhosts());
 
-            CHECK(p.getLevels()[lv]->getF().getM() == p.getLevels()[lv]->getM());
-            CHECK(p.getLevels()[lv]->getF().getN() == p.getLevels()[lv]->getN());
-            CHECK(p.getLevels()[lv]->getF().getO() == p.getLevels()[lv]->getO());
-            CHECK(p.getLevels()[lv]->getF().getMgh() == p.getLevels()[lv]->getMgh());
-            CHECK(p.getLevels()[lv]->getF().getNgh() == p.getLevels()[lv]->getNgh());
-            CHECK(p.getLevels()[lv]->getF().getOgh() == p.getLevels()[lv]->getOgh());
-            CHECK(p.getLevels()[lv]->getF().getGhostsM() == p.getGhosts());
-            CHECK(p.getLevels()[lv]->getF().getGhostsN() == p.getGhosts());
-            CHECK(p.getLevels()[lv]->getF().getGhostsO() == p.getGhosts());
+            CHECK(p.getLevelAt(lv).getF().getM() == p.getLevelAt(lv).getM());
+            CHECK(p.getLevelAt(lv).getF().getN() == p.getLevelAt(lv).getN());
+            CHECK(p.getLevelAt(lv).getF().getO() == p.getLevelAt(lv).getO());
+            CHECK(p.getLevelAt(lv).getF().getMgh() == p.getLevelAt(lv).getMgh());
+            CHECK(p.getLevelAt(lv).getF().getNgh() == p.getLevelAt(lv).getNgh());
+            CHECK(p.getLevelAt(lv).getF().getOgh() == p.getLevelAt(lv).getOgh());
+            CHECK(p.getLevelAt(lv).getF().getGhostsM() == p.getGhosts());
+            CHECK(p.getLevelAt(lv).getF().getGhostsN() == p.getGhosts());
+            CHECK(p.getLevelAt(lv).getF().getGhostsO() == p.getGhosts());
 
-            CHECK(p.getLevels()[lv]->getR().getM() == p.getLevels()[lv]->getM());
-            CHECK(p.getLevels()[lv]->getR().getN() == p.getLevels()[lv]->getN());
-            CHECK(p.getLevels()[lv]->getR().getO() == p.getLevels()[lv]->getO());
-            CHECK(p.getLevels()[lv]->getR().getMgh() == p.getLevels()[lv]->getMgh());
-            CHECK(p.getLevels()[lv]->getR().getNgh() == p.getLevels()[lv]->getNgh());
-            CHECK(p.getLevels()[lv]->getR().getOgh() == p.getLevels()[lv]->getOgh());
-            CHECK(p.getLevels()[lv]->getR().getGhostsM() == p.getGhosts());
-            CHECK(p.getLevels()[lv]->getR().getGhostsN() == p.getGhosts());
-            CHECK(p.getLevels()[lv]->getR().getGhostsO() == p.getGhosts());
+            CHECK(p.getLevelAt(lv).getR().getM() == p.getLevelAt(lv).getM());
+            CHECK(p.getLevelAt(lv).getR().getN() == p.getLevelAt(lv).getN());
+            CHECK(p.getLevelAt(lv).getR().getO() == p.getLevelAt(lv).getO());
+            CHECK(p.getLevelAt(lv).getR().getMgh() == p.getLevelAt(lv).getMgh());
+            CHECK(p.getLevelAt(lv).getR().getNgh() == p.getLevelAt(lv).getNgh());
+            CHECK(p.getLevelAt(lv).getR().getOgh() == p.getLevelAt(lv).getOgh());
+            CHECK(p.getLevelAt(lv).getR().getGhostsM() == p.getGhosts());
+            CHECK(p.getLevelAt(lv).getR().getGhostsN() == p.getGhosts());
+            CHECK(p.getLevelAt(lv).getR().getGhostsO() == p.getGhosts());
 
             // TODO check h when used
         }
@@ -350,27 +350,27 @@ TEST_CASE("Problem::init")
 
         p2.setGhostsIn(ghosts_in);
         REQUIRE(p2.init());
-        REQUIRE(p2.getLevels().size() == p2.getMaxlevel() + 1);
+        REQUIRE(p2.getLevelsSize() == p2.getMaxlevel() + 1);
 
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)
                 for (int k = 0; k < o; k++)
                 {
-                    REQUIRE((*v2)[i + ghosts_in][j + ghosts_in][k + ghosts_in] == p2.getLevels()[0]->getV()[i + 1][j + 1][k + 1]);
-                    REQUIRE((*f2)[i + ghosts_in][j + ghosts_in][k + ghosts_in] == p2.getLevels()[0]->getF()[i + 1][j + 1][k + 1]);
+                    REQUIRE((*v2)[i + ghosts_in][j + ghosts_in][k + ghosts_in] == p2.getLevelAt(0).getV()[i + 1][j + 1][k + 1]);
+                    REQUIRE((*f2)[i + ghosts_in][j + ghosts_in][k + ghosts_in] == p2.getLevelAt(0).getF()[i + 1][j + 1][k + 1]);
                 }
 
         for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
         {
-            REQUIRE(p2.getLevels()[lv]->getM() == m >> lv);
-            REQUIRE(p2.getLevels()[lv]->getN() == n >> lv);
-            REQUIRE(p2.getLevels()[lv]->getO() == o >> lv);
+            REQUIRE(p2.getLevelAt(lv).getM() == m >> lv);
+            REQUIRE(p2.getLevelAt(lv).getN() == n >> lv);
+            REQUIRE(p2.getLevelAt(lv).getO() == o >> lv);
 
-            REQUIRE(p2.getLevels()[lv]->getMgh() == p2.getLevels()[lv]->getM() + 2 * p2.getGhosts());
-            REQUIRE(p2.getLevels()[lv]->getNgh() == p2.getLevels()[lv]->getN() + 2 * p2.getGhosts());
-            REQUIRE(p2.getLevels()[lv]->getOgh() == p2.getLevels()[lv]->getO() + 2 * p2.getGhosts());
+            REQUIRE(p2.getLevelAt(lv).getMgh() == p2.getLevelAt(lv).getM() + 2 * p2.getGhosts());
+            REQUIRE(p2.getLevelAt(lv).getNgh() == p2.getLevelAt(lv).getN() + 2 * p2.getGhosts());
+            REQUIRE(p2.getLevelAt(lv).getOgh() == p2.getLevelAt(lv).getO() + 2 * p2.getGhosts());
 
-            REQUIRE(p2.getLevels()[lv]->getRPtr());
+            REQUIRE(p2.getLevelAt(lv).getRPtr());
 
             // TODO check h when used
         }
@@ -386,27 +386,27 @@ TEST_CASE("Problem::init")
 
         p.setGhosts(ghosts);
         REQUIRE(p.init());
-        REQUIRE(p.getLevels().size() == p.getMaxlevel() + 1);
+        REQUIRE(p.getLevelsSize() == p.getMaxlevel() + 1);
 
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)
                 for (int k = 0; k < o; k++)
                 {
-                    REQUIRE((*v)[i][j][k] == p.getLevels()[0]->getV()[i + ghosts][j + ghosts][k + ghosts]);
-                    REQUIRE((*f)[i][j][k] == p.getLevels()[0]->getF()[i + ghosts][j + ghosts][k + ghosts]);
+                    REQUIRE((*v)[i][j][k] == p.getLevelAt(0).getV()[i + ghosts][j + ghosts][k + ghosts]);
+                    REQUIRE((*f)[i][j][k] == p.getLevelAt(0).getF()[i + ghosts][j + ghosts][k + ghosts]);
                 }
 
         for (int lv = 0; lv <= p.getMaxlevel(); lv++)
         {
-            REQUIRE(p.getLevels()[lv]->getM() == m >> lv);
-            REQUIRE(p.getLevels()[lv]->getN() == n >> lv);
-            REQUIRE(p.getLevels()[lv]->getO() == o >> lv);
+            REQUIRE(p.getLevelAt(lv).getM() == m >> lv);
+            REQUIRE(p.getLevelAt(lv).getN() == n >> lv);
+            REQUIRE(p.getLevelAt(lv).getO() == o >> lv);
 
-            REQUIRE(p.getLevels()[lv]->getMgh() == p.getLevels()[lv]->getM() + 2 * p.getGhosts());
-            REQUIRE(p.getLevels()[lv]->getNgh() == p.getLevels()[lv]->getN() + 2 * p.getGhosts());
-            REQUIRE(p.getLevels()[lv]->getOgh() == p.getLevels()[lv]->getO() + 2 * p.getGhosts());
+            REQUIRE(p.getLevelAt(lv).getMgh() == p.getLevelAt(lv).getM() + 2 * p.getGhosts());
+            REQUIRE(p.getLevelAt(lv).getNgh() == p.getLevelAt(lv).getN() + 2 * p.getGhosts());
+            REQUIRE(p.getLevelAt(lv).getOgh() == p.getLevelAt(lv).getO() + 2 * p.getGhosts());
 
-            REQUIRE(p.getLevels()[lv]->getRPtr());
+            REQUIRE(p.getLevelAt(lv).getRPtr());
 
             // TODO check h when used
         }
@@ -441,51 +441,49 @@ TEST_CASE("Problem::init")
         REQUIRE(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()) == CL_SUCCESS);
         REQUIRE(p2.init());
         REQUIRE(p2.getDeviceType() == deviceType);
-        REQUIRE(p2.getLevels().size() == p2.getMaxlevel() + 1);
+        REQUIRE(p2.getLevelsSize() == p2.getMaxlevel() + 1);
 
         // no host data is created
         REQUIRE(!p2.getVPtr());
         REQUIRE(!p2.getFPtr());
         for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
         {
-            REQUIRE(!p2.getLevels()[lv]->getVPtr());
-            REQUIRE(!p2.getLevels()[lv]->getFPtr());
-            REQUIRE(!p2.getLevels()[lv]->getRPtr());
+            REQUIRE(!p2.getLevelAt(lv).getVPtr());
+            REQUIRE(!p2.getLevelAt(lv).getFPtr());
+            REQUIRE(!p2.getLevelAt(lv).getRPtr());
         }
 
         // buffers are created
         REQUIRE(p2.getDV() == d_v);
         REQUIRE(p2.getDF() == d_f);
-        REQUIRE(p2.getLevels()[0]);
-        REQUIRE(p2.getLevels()[0]->getDVIn() == d_v);
-        REQUIRE(p2.getLevels()[0]->getDF() == d_f);
+        REQUIRE(p2.getLevelAt(0).getDVIn() == d_v);
+        REQUIRE(p2.getLevelAt(0).getDF() == d_f);
         for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
         {
             // check if buffers are not nullptr
-            REQUIRE(p2.getLevels()[lv]);
-            REQUIRE(p2.getLevels()[lv]->getDVIn());
-            REQUIRE(p2.getLevels()[lv]->getDVOut());
-            REQUIRE(p2.getLevels()[lv]->getDF());
-            REQUIRE(p2.getLevels()[lv]->getDR());
+            REQUIRE(p2.getLevelAt(lv).getDVIn());
+            REQUIRE(p2.getLevelAt(lv).getDVOut());
+            REQUIRE(p2.getLevelAt(lv).getDF());
+            REQUIRE(p2.getLevelAt(lv).getDR());
 
             // check sizes of buffers
             int err;
             size_t bufsize;
-            int sizeNeeded = sizeof(double) * p2.getLevels()[lv]->getMgh() * p2.getLevels()[lv]->getNgh() * p2.getLevels()[lv]->getOgh();
+            int sizeNeeded = sizeof(double) * p2.getLevelAt(lv).getMgh() * p2.getLevelAt(lv).getNgh() * p2.getLevelAt(lv).getOgh();
 
-            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDVIn(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDVIn(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
             mgcl::mgclCheckError(err, "clGetMemObjectInfo");
             REQUIRE(sizeNeeded == bufsize);
 
-            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDVOut(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDVOut(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
             mgcl::mgclCheckError(err, "clGetMemObjectInfo");
             REQUIRE(sizeNeeded == bufsize);
 
-            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
             mgcl::mgclCheckError(err, "clGetMemObjectInfo");
             REQUIRE(sizeNeeded == bufsize);
 
-            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDR(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDR(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
             mgcl::mgclCheckError(err, "clGetMemObjectInfo");
             REQUIRE(sizeNeeded == bufsize);
         }
@@ -520,57 +518,55 @@ TEST_CASE("Problem::init")
         REQUIRE(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()) == CL_SUCCESS);
         REQUIRE(p2.init());
         REQUIRE(p2.getDeviceType() == deviceType);
-        REQUIRE(p2.getLevels().size() == p2.getMaxlevel() + 1);
+        REQUIRE(p2.getLevelsSize() == p2.getMaxlevel() + 1);
 
         // no host data is created
         REQUIRE(!p2.getVPtr());
         REQUIRE(!p2.getFPtr());
         for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
         {
-            REQUIRE(!p2.getLevels()[lv]->getVPtr());
-            REQUIRE(!p2.getLevels()[lv]->getFPtr());
-            REQUIRE(!p2.getLevels()[lv]->getRPtr());
+            REQUIRE(!p2.getLevelAt(lv).getVPtr());
+            REQUIRE(!p2.getLevelAt(lv).getFPtr());
+            REQUIRE(!p2.getLevelAt(lv).getRPtr());
         }
 
         // buffers are created
         REQUIRE(p2.getDV() == d_v);
         REQUIRE(p2.getDF() == d_f);
-        REQUIRE(p2.getLevels()[0]);
-        REQUIRE(p2.getLevels()[0]->getDVIn() != d_v);
-        REQUIRE(p2.getLevels()[0]->getDF() != d_f);
+        REQUIRE(p2.getLevelAt(0).getDVIn() != d_v);
+        REQUIRE(p2.getLevelAt(0).getDF() != d_f);
         for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
         {
-            REQUIRE(p2.getLevels()[lv]);
-            REQUIRE(p2.getLevels()[lv]->getDVIn());
-            REQUIRE(p2.getLevels()[lv]->getDVOut());
-            REQUIRE(p2.getLevels()[lv]->getDF());
-            REQUIRE(p2.getLevels()[lv]->getDR());
+            REQUIRE(p2.getLevelAt(lv).getDVIn());
+            REQUIRE(p2.getLevelAt(lv).getDVOut());
+            REQUIRE(p2.getLevelAt(lv).getDF());
+            REQUIRE(p2.getLevelAt(lv).getDR());
 
             // check sizes of buffers
             int err;
             size_t bufsize;
-            int sizeNeeded = sizeof(double) * p2.getLevels()[lv]->getMgh() * p2.getLevels()[lv]->getNgh() * p2.getLevels()[lv]->getOgh();
+            int sizeNeeded = sizeof(double) * p2.getLevelAt(lv).getMgh() * p2.getLevelAt(lv).getNgh() * p2.getLevelAt(lv).getOgh();
 
-            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDVIn(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDVIn(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
             mgcl::mgclCheckError(err, "clGetMemObjectInfo");
             REQUIRE(sizeNeeded == bufsize);
 
-            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDVOut(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDVOut(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
             mgcl::mgclCheckError(err, "clGetMemObjectInfo");
             REQUIRE(sizeNeeded == bufsize);
 
-            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
             mgcl::mgclCheckError(err, "clGetMemObjectInfo");
             REQUIRE(sizeNeeded == bufsize);
 
-            err = clGetMemObjectInfo(p2.getLevels()[lv]->getDR(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
+            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDR(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
             mgcl::mgclCheckError(err, "clGetMemObjectInfo");
             REQUIRE(sizeNeeded == bufsize);
         }
 
         // contents of copied buffer and input buffers are equal
-        auto lv0d = tu.readOpenCLBuffer(p2.getLevels()[0]->getDVIn(), p2.getLevels()[0]->getMgh(), p2.getLevels()[0]->getNgh(), p2.getLevels()[0]->getOgh());
-        auto lv0f = tu.readOpenCLBuffer(p2.getLevels()[0]->getDF(), p2.getLevels()[0]->getMgh(), p2.getLevels()[0]->getNgh(), p2.getLevels()[0]->getOgh());
+        auto lv0d = tu.readOpenCLBuffer(p2.getLevelAt(0).getDVIn(), p2.getLevelAt(0).getMgh(), p2.getLevelAt(0).getNgh(), p2.getLevelAt(0).getOgh());
+        auto lv0f = tu.readOpenCLBuffer(p2.getLevelAt(0).getDF(), p2.getLevelAt(0).getMgh(), p2.getLevelAt(0).getNgh(), p2.getLevelAt(0).getOgh());
 
         REQUIRE(vgh.isEqual(*lv0d));
         REQUIRE(fgh.isEqual(*lv0f));
@@ -605,9 +601,9 @@ TEST_CASE("Problem::readResults")
 
         // alter values of dVIn on lowest level
         cl_double one = 1.0;
-        int err = clEnqueueFillBuffer(p.getOpenCLHelper().getCommands(), p.getLevels()[0]->getDVIn(), &one,
+        int err = clEnqueueFillBuffer(p.getOpenCLHelper().getCommands(), p.getLevelAt(0).getDVIn(), &one,
                                       sizeof(cl_double), 0,
-                                      sizeof(double) * p.getLevels()[0]->getMgh() * p.getLevels()[0]->getNgh() * p.getLevels()[0]->getOgh(),
+                                      sizeof(double) * p.getLevelAt(0).getMgh() * p.getLevelAt(0).getNgh() * p.getLevelAt(0).getOgh(),
                                       0, NULL, NULL);
         mgcl::mgclCheckError(err, "clEnqueueFillBuffer");
         REQUIRE(err == CL_SUCCESS);

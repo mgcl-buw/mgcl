@@ -324,6 +324,16 @@ namespace mgcl
                 }
     }
 
+    Level &Problem::getLevelAt(int index) const
+    {
+        return *levels[index];
+    }
+
+    int Problem::getLevelsSize() const
+    {
+        return levels.size();
+    }
+
     /********************************
      * Getters and Setters
      ********************************/
@@ -557,11 +567,6 @@ namespace mgcl
     void Problem::setUseOpencl(bool useOpencl)
     {
         use_opencl = useOpencl;
-    }
-
-    std::vector<std::shared_ptr<Level>> Problem::getLevels() const
-    {
-        return levels;
     }
 
     cl_mem Problem::getDF() const

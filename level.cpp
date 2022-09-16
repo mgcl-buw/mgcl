@@ -222,12 +222,12 @@ namespace mgcl
         return num;
     }
 
-    Cuboid &Level::getV()
+    Cuboid &Level::getV() const
     {
         return *v;
     }
 
-    std::shared_ptr<Cuboid> Level::getVPtr()
+    std::shared_ptr<Cuboid> Level::getVPtr() const
     {
         return v;
     }
@@ -237,12 +237,12 @@ namespace mgcl
         f = f_;
     }
 
-    Cuboid &Level::getF()
+    Cuboid &Level::getF() const
     {
         return *f;
     }
 
-    std::shared_ptr<Cuboid> Level::getFPtr()
+    std::shared_ptr<Cuboid> Level::getFPtr() const
     {
         return f;
     }
@@ -252,12 +252,12 @@ namespace mgcl
         r = r_;
     }
 
-    Cuboid &Level::getR()
+    Cuboid &Level::getR() const
     {
         return *r;
     }
 
-    std::shared_ptr<Cuboid> Level::getRPtr()
+    std::shared_ptr<Cuboid> Level::getRPtr() const
     {
         return r;
     }
