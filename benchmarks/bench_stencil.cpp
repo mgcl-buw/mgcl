@@ -170,3 +170,128 @@ TEST_CASE("bench_stencil apply vs direct", "[!benchmark][stencil][console][apply
     }
     std::cout << "---------" << std::endl;
 }
+
+TEST_CASE("bench_stencil types", "[!benchmark][stencil][console][types]")
+{
+    int N = GENERATE(16, 32, 64);
+    // int N = 16;
+    int m = N;
+    int n = N;
+    int o = N;
+    double h = 1.0 / (double)N;
+
+    ankerl::nanobench::Bench b;
+    b.timeUnit(1us, "us")
+        .epochs(11)
+        // .epochIterations(1)
+        .minEpochTime(100ms)
+        .relative(true);
+
+    mgcl::Cuboid v(m, n, o);
+    v.fillRandom();
+
+    {
+        mgcl::Stencil *stencil = new mgcl::StencilLaplace7p(h);
+
+        b.run(std::string("Laplace 7p, N = ").append(std::to_string(N)).c_str(),
+              [&]
+              {
+                  for (int i = 1; i < m - 1; i++)
+                      for (int j = 1; j < n - 1; j++)
+                          for (int k = 1; k < o - 1; k++)
+                          {
+                              ankerl::nanobench::doNotOptimizeAway(stencil->apply(v, i, j, k));
+                          }
+              });
+
+        delete stencil;
+    }
+
+    {
+        mgcl::Stencil *stencil = new mgcl::StencilLaplace19p(h);
+
+        b.run(std::string("Laplace 19p, N = ").append(std::to_string(N)).c_str(),
+              [&]
+              {
+                  for (int i = 1; i < m - 1; i++)
+                      for (int j = 1; j < n - 1; j++)
+                          for (int k = 1; k < o - 1; k++)
+                          {
+                              ankerl::nanobench::doNotOptimizeAway(stencil->apply(v, i, j, k));
+                          }
+              });
+
+        delete stencil;
+    }
+
+    {
+        mgcl::Stencil *stencil = new mgcl::StencilLaplace27p(h);
+
+        b.run(std::string("Laplace 27p, N = ").append(std::to_string(N)).c_str(),
+              [&]
+              {
+                  for (int i = 1; i < m - 1; i++)
+                      for (int j = 1; j < n - 1; j++)
+                          for (int k = 1; k < o - 1; k++)
+                          {
+                              ankerl::nanobench::doNotOptimizeAway(stencil->apply(v, i, j, k));
+                          }
+              });
+
+        delete stencil;
+    }
+
+    {
+        mgcl::StencilVarying7p *stencil = new mgcl::StencilVarying7p(m, n, o);
+        stencil->getStencilValues()->fillRandom();
+
+        b.run(std::string("Varying 7p, N = ").append(std::to_string(N)).c_str(),
+              [&]
+              {
+                  for (int i = 1; i < m - 1; i++)
+                      for (int j = 1; j < n - 1; j++)
+                          for (int k = 1; k < o - 1; k++)
+                          {
+                              ankerl::nanobench::doNotOptimizeAway(stencil->apply(v, i, j, k));
+                          }
+              });
+
+        delete stencil;
+    }
+
+    {
+        mgcl::StencilVarying19p *stencil = new mgcl::StencilVarying19p(m, n, o);
+        stencil->getStencilValues()->fillRandom();
+
+        b.run(std::string("Varying 19p, N = ").append(std::to_string(N)).c_str(),
+              [&]
+              {
+                  for (int i = 1; i < m - 1; i++)
+                      for (int j = 1; j < n - 1; j++)
+                          for (int k = 1; k < o - 1; k++)
+                          {
+                              ankerl::nanobench::doNotOptimizeAway(stencil->apply(v, i, j, k));
+                          }
+              });
+
+        delete stencil;
+    }
+
+    {
+        mgcl::StencilVarying27p *stencil = new mgcl::StencilVarying27p(m, n, o);
+        stencil->getStencilValues()->fillRandom();
+
+        b.run(std::string("Varying 27p, N = ").append(std::to_string(N)).c_str(),
+              [&]
+              {
+                  for (int i = 1; i < m - 1; i++)
+                      for (int j = 1; j < n - 1; j++)
+                          for (int k = 1; k < o - 1; k++)
+                          {
+                              ankerl::nanobench::doNotOptimizeAway(stencil->apply(v, i, j, k));
+                          }
+              });
+
+        delete stencil;
+    }
+}
