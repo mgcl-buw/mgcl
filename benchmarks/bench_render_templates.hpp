@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __BENCH_RENDER_TEMPLATES_H__
+#define __BENCH_RENDER_TEMPLATES_H__
 
 #include <string>
 
@@ -10,7 +11,9 @@ namespace mgcl_test
      * match "sequential" or "opencl" respectively.
      *
      */
-    std::string htmlLineComparingN = R"DELIM(<html>
+    inline std::string htmlLineComparingN()
+    {
+        return R"DELIM(<html>
 <head>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
@@ -91,6 +94,7 @@ namespace mgcl_test
     </script>
 </body>
 </html>)DELIM";
+    }
 
     /**
      * @brief Mustache template for generating a line plot of sequential vs. opencl for varying vcycle iteration counts.
@@ -98,7 +102,9 @@ namespace mgcl_test
      * differentiating between seq and ocl it tries to match "sequential" or "opencl" respectively.
      *
      */
-    std::string htmlLineComparingVcycleIters = R"DELIM(<html>
+    inline std::string htmlLineComparingVcycleIters()
+    {
+        return R"DELIM(<html>
 <head>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/regression/2.0.1/regression.min.js"></script>
@@ -222,4 +228,6 @@ namespace mgcl_test
     </script>
 </body>
 </html>)DELIM";
+    }
 }
+#endif // __BENCH_RENDER_TEMPLATES_H__
