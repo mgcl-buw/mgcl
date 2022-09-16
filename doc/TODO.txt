@@ -24,6 +24,7 @@ x vergleich mit pmg
 - pmg in different benchmark target, excluded from all?
 
 Mid prio:
+- updateGhosts using clEnqueueWriteRect
 - stencil test opencl
 - which flag for memory buffers? Currently in use is CL_MEM_COPY_HOST_PTR
 - benchmark setup / teardown? reset v between iterations
@@ -32,7 +33,7 @@ Mid prio:
 - rework jacobi kernels and calls to properly use stencil polymorphism
 - replace shared_ptr with unique_ptr for performance improvement + maybe replace with bare pointers in function arguments and use ptr.get() in call
 - benchmarks solve localMem
-- benchmark steps
+x benchmark steps
 - test + fix use_local_memory (does not work with intel GPU)
 - calculate residual norm on GPU and check how costly reading back the result is 
 
