@@ -262,10 +262,10 @@ namespace mgcl
     {
         // TODO respect ghosts?
         int err;
-        auto &level0 = problem->levels[0];
-        int m = level0->getMgh();
-        int n = level0->getNgh();
-        int o = level0->getOgh();
+        auto &level0 = problem->getLevelAt(0);
+        int m = level0.getMgh();
+        int n = level0.getNgh();
+        int o = level0.getOgh();
         int ghosts_in = problem->getGhostsIn();
 
         // Create the compute kernel from the program
@@ -275,9 +275,9 @@ namespace mgcl
         // assign kernel arguments
         int pos = 0;
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &problem->dV);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level0->dVIn);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level0.dVIn);
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &problem->dF);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level0->dF);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level0.dF);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
@@ -313,10 +313,10 @@ namespace mgcl
     int OpenCLHelper::copyOutputBuffers()
     {
         int err;
-        auto level0 = problem->levels[0];
-        int m = level0->m;
-        int n = level0->n;
-        int o = level0->o;
+        auto &level0 = problem->getLevelAt(0);
+        int m = level0.m;
+        int n = level0.n;
+        int o = level0.o;
         int ghosts_in = problem->ghosts_in;
 
         // Create the compute kernel from the program
@@ -326,7 +326,7 @@ namespace mgcl
         // assign kernel arguments
         int pos = 0;
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &problem->dV);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level0->dVIn);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level0.dVIn);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);

@@ -9,7 +9,7 @@ namespace mgcl
     /* Runs V-cycle recursively and sequentially */
     double MultigridEngine::vcycleSeq(Problem &problem, Level &level)
     {
-        auto levelAbove = problem.levels[level.num + 1];
+        auto &levelAbove = problem.getLevelAt(level.num + 1);
         // printf("level.getNum() = %d, m = %3.d\n", level.getNum(), level.m-2);
         // problem.maxlevel = 7;
         double res;
@@ -17,7 +17,7 @@ namespace mgcl
         // reset initial guess of coarser grid
         if (level.getNum() < problem.maxlevel)
         {
-            levelAbove->getV().fill(0);
+            levelAbove.getV().fill(0);
         }
 
         // if (level.num == 1)
@@ -47,14 +47,14 @@ namespace mgcl
         // }
 
         // restrict residual as right hand side on coarser grid
-        MultigridEngine::restrictSeq(level, *levelAbove, level.getR(), levelAbove->getF());
+        MultigridEngine::restrictSeq(level, levelAbove, level.getR(), levelAbove.getF());
 
         // start next v-cycle iteration if not at highest level
         if (level.getNum() < problem.maxlevel - 1)
-            MultigridEngine::vcycleSeq(problem, *levelAbove);
+            MultigridEngine::vcycleSeq(problem, levelAbove);
         else
         {
-            MultigridEngine::jacobiSeq(levelAbove->getV(), levelAbove->getF(), levelAbove->getR(), problem.omega, problem.nu1 + problem.nu2,
+            MultigridEngine::jacobiSeq(levelAbove.getV(), levelAbove.getF(), levelAbove.getR(), problem.omega, problem.nu1 + problem.nu2,
                                        problem.residual_norm, *level.stencil, false);
 
             // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
@@ -62,7 +62,7 @@ namespace mgcl
 
         // prolongate from coarser to finer grid
         // r of this level is reused here and should actually be called e
-        MultigridEngine::prolongateSeq(level, *levelAbove, level.getR(), levelAbove->getV());
+        MultigridEngine::prolongateSeq(level, levelAbove, level.getR(), levelAbove.getV());
 
         // correct error
         for (int i = problem.ghosts; i < level.m + problem.ghosts; i++)
@@ -80,7 +80,7 @@ namespace mgcl
     /* Runs V-cycle recursively using ocl */
     double MultigridEngine::vcycle(Problem &problem, Level &level)
     {
-        auto levelAbove = problem.levels[level.num + 1];
+        auto &levelAbove = problem.getLevelAt(level.num + 1);
         // printf("level.getNum() = %d, m = %3.d\n", level.getNum(), level.m-2);
         // problem.maxlevel = 3;
         double res;
@@ -90,8 +90,8 @@ namespace mgcl
         if (level.getNum() < problem.maxlevel) // if not at highest level
         {
             // reset v to zero for coarser grids (for another possible v-cycle)
-            err = clEnqueueFillBuffer(problem.openCLHelper.getCommands(), levelAbove->dVIn, &zero, sizeof(cl_double), 0,
-                                      sizeof(double) * levelAbove->mgh * levelAbove->ngh * levelAbove->ogh, 0, NULL,
+            err = clEnqueueFillBuffer(problem.openCLHelper.getCommands(), levelAbove.dVIn, &zero, sizeof(cl_double), 0,
+                                      sizeof(double) * levelAbove.mgh * levelAbove.ngh * levelAbove.ogh, 0, NULL,
                                       NULL);
             mgclCheckError(err, "resetting dVIn to 0");
         }
@@ -104,19 +104,19 @@ namespace mgcl
         // printf("res on level.getNum() %d, upwards: %e\n", level.getNum(), res);
 
         // restrict to coarser grid
-        restrict(level, *levelAbove, level.getDR(), levelAbove->getDF());
+        restrict(level, levelAbove, level.getDR(), levelAbove.getDF());
 
         // start next v-cycle iteration if not at highest level
         if (level.getNum() < problem.maxlevel - 1)
-            vcycle(problem, *levelAbove);
+            vcycle(problem, levelAbove);
         else
         {
-            jacobi(problem, *levelAbove, problem.nu1 + problem.nu2, 0);
+            jacobi(problem, levelAbove, problem.nu1 + problem.nu2, 0);
         }
 
         // prolongate from coarser to finer grid
         // r of this level.getNum() is reused here and should actually be called e
-        prolongate(level, *levelAbove, level.dR, levelAbove->dVIn);
+        prolongate(level, levelAbove, level.dR, levelAbove.dVIn);
 
         // correct error
         correctError(problem, level.dVIn, level.dR, level.mgh, level.ngh, level.ogh);

@@ -49,7 +49,7 @@ namespace mgcl
         int o;
 
         /* Holds level-dependent data for each level */
-        std::vector<std::shared_ptr<Level>> levels;
+        std::vector<std::unique_ptr<Level>> levels;
 
         // TODO check what happens when reuse_buffer and ghosts != ghosts_in
         /* Amount of ghost cells surrounding v and f. If optimized jacobi shall be used it must be greater or equal than
