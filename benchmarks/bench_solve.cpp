@@ -192,6 +192,7 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
             conf->silent = 1;
             conf->ignoreTol = 1;
             conf->use_opencl = 1;
+            conf->read_results = 1;
 
             b.run(std::string("old mgcl_c ocl random values, N = ").append(std::to_string(N)).c_str(), [&]
                   { mgcl_c_mgcl(conf); });
