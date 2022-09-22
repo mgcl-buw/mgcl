@@ -224,6 +224,107 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
     MPI_Finalize();
 }
 
+TEST_CASE("mgcl old vs new: solve equality", "[!benchmark][solve][console][equality]")
+{
+    std::vector grids{16};
+    for (auto N : grids)
+    {
+        // int N = 16;
+        int m = N;
+        int n = N;
+        int o = N;
+
+        // Problem parameters
+        double tol = 1e-20;
+        int nu1 = 2;
+        int nu2 = 2;
+        double omega = 0.8;
+        int maxIterVCycles = 30;
+
+        auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
+        f->fillRandom(0, 10);
+
+        // new mgcl seq
+        auto vseq = std::make_shared<mgcl::Cuboid>(m, n, o);
+
+        mgcl::Problem p(m, n, o, f, vseq);
+        p.setMaxiterVcycles(maxIterVCycles);
+        p.setIgnoreTol(true);
+        p.setSilent(true);
+        p.setNu1(nu1);
+        p.setNu2(nu2);
+        p.setOmega(omega);
+        // p.init();
+        p.solveSeq();
+
+        // new mgcl ocl
+        auto vocl = std::make_shared<mgcl::Cuboid>(m, n, o);
+
+        mgcl::Problem pocl(m, n, o, f, vocl);
+        pocl.setMaxiterVcycles(maxIterVCycles);
+        pocl.setIgnoreTol(true);
+        pocl.setSilent(true);
+        pocl.setNu1(nu1);
+        pocl.setNu2(nu2);
+        pocl.setOmega(omega);
+        pocl.solveSeq();
+
+        // old mgcl c implementation seq
+        auto vold = std::make_shared<mgcl::Cuboid>(m, n, o);
+
+        mgcl_config *conf;
+        mgcl_generate_config(&conf);
+
+        conf->v = vold->getData();
+        conf->f = f->getData();
+        conf->m = N;
+        conf->n = N;
+        conf->o = N;
+        conf->ghosts_in = 0;
+        conf->nu1 = nu1;
+        conf->nu2 = nu2;
+        conf->omega = omega;
+        conf->maxiter_vcycles = maxIterVCycles;
+        conf->silent = 1;
+        conf->ignoreTol = 1;
+
+        mgcl_c_mgcl_seq(conf);
+
+        // old mgcl c implementation ocl
+        auto voldocl = std::make_shared<mgcl::Cuboid>(m, n, o);
+
+        mgcl_config *conf_ocl;
+        mgcl_generate_config(&conf_ocl);
+
+        conf_ocl->v = voldocl->getData();
+        conf_ocl->f = f->getData();
+        conf_ocl->m = N;
+        conf_ocl->n = N;
+        conf_ocl->o = N;
+        conf_ocl->ghosts_in = 0;
+        conf_ocl->nu1 = nu1;
+        conf_ocl->nu2 = nu2;
+        conf_ocl->omega = omega;
+        conf_ocl->maxiter_vcycles = maxIterVCycles;
+        conf_ocl->silent = 1;
+        conf_ocl->ignoreTol = 1;
+        conf_ocl->use_opencl = 1;
+        conf_ocl->device_type = CL_DEVICE_TYPE_GPU;
+        conf_ocl->read_results = 1;
+
+        if (mgcl_test::TestUtility::deviceAvailable("Quadro", CL_DEVICE_TYPE_GPU))
+            conf_ocl->device_name = "Quadro";
+
+        mgcl_c_mgcl(conf_ocl);
+
+        // vocl->dumpToFile("out_vocl.txt");
+        // voldocl->dumpToFile("out_voldocl.txt");
+
+        REQUIRE(vseq->isEqual(*vold));
+        REQUIRE(vocl->isEqual(*voldocl));
+    }
+}
+
 TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solveWithoutInit][console]")
 {
     std::vector grids{16, 32, 64, 128};
