@@ -3,7 +3,7 @@
 
 #include "mpi.h"
 
-MPI_Comm *init_mpi_for_pmg()
+inline MPI_Comm *init_mpi_for_pmg()
 {
     // setup MPI
     int mpi_size;

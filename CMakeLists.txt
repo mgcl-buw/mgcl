@@ -168,6 +168,7 @@ set(SOURCES_NANOBENCH
 test/test_utility.hpp
 test/test_utility.cpp
 benchmarks/bench_solve.cpp
+benchmarks/bench_solve_catch2.cpp
 benchmarks/bench_init.cpp
 benchmarks/bench_steps.cpp
 benchmarks/bench_stencil.cpp

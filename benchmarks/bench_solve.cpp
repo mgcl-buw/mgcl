@@ -198,27 +198,6 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
                   { mgcl_c_mgcl(conf); });
         }
 
-        // if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_CPU))
-        // {
-        //     b.epochs(1).epochIterations(1);
-
-        //     auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
-
-        //     mgcl::Problem p(m, n, o, f, v);
-        //     p.setMaxiterVcycles(maxIterVCycles);
-        //     p.setIgnoreTol(true);
-        //     p.setUseOpencl(true);
-        //     p.setDeviceType(CL_DEVICE_TYPE_CPU);
-        //     p.setSilent(true);
-
-        //     if (mgcl_test::TestUtility::deviceAvailable("i7-10875H", p.getDeviceType()))
-        //         p.setDeviceName("i7-10875H");
-
-        //     p.init();
-        //     b.run(std::string("opencl cpu random values, N = ").append(std::to_string(N)).c_str(), [&]
-        //           { p.solve(); });
-        // }
-
         std::ofstream renderOut(std::string("solvingBoxplot_").append(std::to_string(N)).append(".html"));
         b.render(ankerl::nanobench::templates::htmlBoxplot(), renderOut);
     }
