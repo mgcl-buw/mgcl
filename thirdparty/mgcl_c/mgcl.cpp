@@ -902,7 +902,7 @@ void mgcl_c_mgcl(mgcl_config *conf)
         printf("Starting mgcl with initres = %e\n", initres);
 
     // run vcycle maxiter_vcycles times
-    double tstart, tend, res, relres;
+    double tstart, tend, res = -1, relres = -1;
     for (int i = 0; i < conf->maxiter_vcycles; i++)
     {
         tstart = MPI_Wtime();
@@ -960,7 +960,7 @@ void mgcl_c_mgcl_seq(mgcl_config *conf)
         printf("Starting mgcl with initres = %e\n", initres);
 
     // run vcycle maxiter_vcycles times
-    double res, relres;
+    double res = -1, relres = -1;
     double tstart, tend;
     for (int i = 0; i < conf->maxiter_vcycles; i++)
     {
