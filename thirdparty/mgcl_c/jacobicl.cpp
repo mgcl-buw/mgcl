@@ -383,7 +383,7 @@ double mgcl_jacobi_local_mem(mgcl_config *conf, mgcl_level_data *data, int maxit
             return -2;
         }
 
-        wg_size >> 1;
+        wg_size >>= 1;
         locmem_size_wg = 3 * ipk * (wg_size + 2 * ipk) * (wg_size + 2 * ipk) * sizeof(double);
         mgcl_debug("reducing wg_size from %d to %d (now %d Bytes of local memory needed)\n", wg_size << 1, wg_size,
                    locmem_size_wg);
@@ -641,7 +641,7 @@ double mgcl_residual(mgcl_config *conf, mgcl_level_data *data, int return_residu
 
     double h2 = (1.0 / (double)(m - 2 * conf->ghosts)) *
                 (1.0 / (double)(m - 2 * conf->ghosts)); // TODO minimum of m,n,o when not cube?
-    double h2inv = 1.0 / h2; // divisor of the stencil, inverted to use * instead of / in kernel
+    double h2inv = 1.0 / h2;                            // divisor of the stencil, inverted to use * instead of / in kernel
 
     // Create the compute kernel from the program
     const char *kernel_name;

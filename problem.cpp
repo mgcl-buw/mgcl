@@ -258,10 +258,12 @@ namespace mgcl
                 relres = initres == 0 ? 0 : res / initres;
 
             if (!silent)
+            {
                 if (ignoreTol)
                     printf("iter = %d, elapsed time = %ld ms\n", i, tend);
                 else
                     printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
+            }
 
             if (!ignoreTol && relres < tol)
                 break;
@@ -305,10 +307,12 @@ namespace mgcl
                 relres = initres == 0 ? 0 : res / initres;
 
             if (!silent)
+            {
                 if (ignoreTol)
                     printf("iter = %d, elapsed time = %ld ms\n", i, tend);
                 else
                     printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
+            }
 
             if (!ignoreTol && relres < tol)
                 break;

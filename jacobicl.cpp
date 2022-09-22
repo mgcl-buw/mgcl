@@ -375,7 +375,7 @@ namespace mgcl
                 return -2;
             }
 
-            wg_size >> 1;
+            wg_size >>= 1;
             locmem_size_wg = 3 * ipk * (wg_size + 2 * ipk) * (wg_size + 2 * ipk) * sizeof(double);
             mgcl_debug("reducing wg_size from %d to %d (now %d Bytes of local memory needed)\n", wg_size << 1, wg_size,
                        locmem_size_wg);

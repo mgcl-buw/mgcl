@@ -289,7 +289,7 @@ TEST_CASE("Problem::init")
 
         for (int lv = 0; lv <= p.getMaxlevel(); lv++)
         {
-            std::cout << "Checking level " + lv << std::endl;
+            std::cout << "Checking level " << lv << std::endl;
 
             REQUIRE(p.getLevelAt(lv).getM() == m >> lv);
             REQUIRE(p.getLevelAt(lv).getN() == n >> lv);
