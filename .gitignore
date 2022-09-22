@@ -3,3 +3,4 @@ build/
 main
 *.o
 *.html
+slurm*.out
