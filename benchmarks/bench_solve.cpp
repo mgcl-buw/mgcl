@@ -164,6 +164,7 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
                   { mgcl_c_mgcl_seq(conf); });
         }
 
+        if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
         {
             // old mgcl c implementation ocl
 
