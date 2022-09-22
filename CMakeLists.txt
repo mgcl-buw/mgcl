@@ -118,6 +118,43 @@ include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 add_definitions(-DOMPI_SKIP_MPICXX)
 target_link_libraries(pmg PRIVATE MPI::MPI_C)
 
+# old mgcl c configuration for comparison in benchmarks
+set (SOURCES_MGCL_C
+thirdparty/mgcl_c/clutil.cpp
+thirdparty/mgcl_c/clutil.hpp
+thirdparty/mgcl_c/cuboid.cpp
+thirdparty/mgcl_c/cuboid.hpp
+thirdparty/mgcl_c/ghostscl.cpp
+thirdparty/mgcl_c/ghostscl.hpp
+thirdparty/mgcl_c/jacobicl.cpp
+thirdparty/mgcl_c/jacobicl.hpp
+thirdparty/mgcl_c/mgcl.cpp
+thirdparty/mgcl_c/mgcl.hpp
+thirdparty/mgcl_c/stencilcl.cpp
+thirdparty/mgcl_c/stencilcl.hpp
+)
+
+add_library(mgcl_c ${SOURCES_MGCL_C})
+
+find_package(MPI)
+include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+add_definitions(-DOMPI_SKIP_MPICXX)
+target_link_libraries(mgcl_c PRIVATE MPI::MPI_C)
+
+# copy kernel file to build directory
+add_custom_command(
+  OUTPUT "${CMAKE_BINARY_DIR}/mgcl_old.cl"
+  COMMAND ${CMAKE_COMMAND} -E copy
+  "${CMAKE_SOURCE_DIR}/thirdparty/mgcl_c/mgcl_old.cl" "${CMAKE_BINARY_DIR}"
+  DEPENDS "${CMAKE_SOURCE_DIR}/thirdparty/mgcl_c/mgcl_old.cl"
+)
+
+# Custom target for activate the custom command above
+add_custom_target(copy_kernels_mgcl_c DEPENDS "${CMAKE_BINARY_DIR}/mgcl_old.cl")
+
+# Whenever target 'mgcl' is requested, the custom target will be evaluated.
+add_dependencies(mgcl_c copy_kernels_mgcl_c)
+
 # Nanobench configuration
 FetchContent_Declare(
     nanobench
@@ -142,4 +179,5 @@ target_link_libraries(benchmarks PRIVATE nanobench)
 target_link_libraries(benchmarks PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(benchmarks PRIVATE mgcl)
 target_link_libraries(benchmarks PRIVATE pmg)
+target_link_libraries(benchmarks PRIVATE mgcl_c)
 
