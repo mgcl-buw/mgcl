@@ -198,8 +198,11 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
                   { mgcl_c_mgcl(conf); });
         }
 
-        std::ofstream renderOut(std::string("solvingBoxplot_").append(std::to_string(N)).append(".html"));
-        b.render(ankerl::nanobench::templates::htmlBoxplot(), renderOut);
+        // std::ofstream renderOut(std::string("solvingBoxplot_").append(std::to_string(N)).append(".html"));
+        // b.render(ankerl::nanobench::templates::htmlBoxplot(), renderOut);
+
+        std::ofstream renderOutCsv(std::string("solvingCsv_").append(std::to_string(N)).append(".csv"));
+        b.render(ankerl::nanobench::templates::csv(), renderOutCsv);
     }
     MPI_Finalize();
 }
