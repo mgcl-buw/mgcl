@@ -55,6 +55,7 @@ add_custom_target(copy_kernels DEPENDS "${CMAKE_BINARY_DIR}/mgcl.cl")
 # Whenever target 'mgcl' is requested, the custom target will be evaluated.
 add_dependencies(mgcl copy_kernels)
 
+# ==========================
 Include(FetchContent)
 
 FetchContent_Declare(
@@ -89,6 +90,7 @@ add_executable(tests ${SOURCES_TEST})
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(tests PRIVATE mgcl)
 
+# ==========================
 # pmg configuration for comparison in benchmarks
 set (SOURCES_PMG
 thirdparty/pmg/cuboid.c
@@ -120,6 +122,7 @@ include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 add_definitions(-DOMPI_SKIP_MPICXX)
 target_link_libraries(pmg PRIVATE MPI::MPI_C)
 
+# ==========================
 # old mgcl c configuration for comparison in benchmarks
 set (SOURCES_MGCL_C
 thirdparty/mgcl_c/clutil.cpp
@@ -157,6 +160,7 @@ add_custom_target(copy_kernels_mgcl_c DEPENDS "${CMAKE_BINARY_DIR}/mgcl_old.cl")
 # Whenever target 'mgcl' is requested, the custom target will be evaluated.
 add_dependencies(mgcl_c copy_kernels_mgcl_c)
 
+# ==========================
 # Nanobench configuration
 FetchContent_Declare(
     nanobench
@@ -184,3 +188,18 @@ target_link_libraries(benchmarks PRIVATE mgcl)
 target_link_libraries(benchmarks PRIVATE pmg)
 target_link_libraries(benchmarks PRIVATE mgcl_c)
 
+# ==========================
+# example main that can be profiled using e.g. gprof
+set(SOURCES_EXAMPLE_MAIN
+test/test_utility.hpp
+test/test_utility.cpp
+benchmarks/example_main.cpp
+)
+
+add_executable(example_main ${SOURCES_EXAMPLE_MAIN})
+target_link_libraries(example_main PRIVATE mgcl_c)
+target_link_libraries(example_main PRIVATE mgcl)
+add_dependencies(example_main copy_kernels)
+add_dependencies(example_main copy_kernels_mgcl_c)
+target_compile_options(example_main PRIVATE "-pg")
+target_link_options(example_main PRIVATE "-pg")
