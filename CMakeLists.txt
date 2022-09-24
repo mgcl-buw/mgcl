@@ -5,6 +5,14 @@ project(MGCL VERSION 0.1.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# use link time optimization if using gcc (should definitely be used!)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  add_compile_options("-flto")
+  add_link_options("-flto")
+else()
+  message(WARNING "Link Time Optimization can only be used with gcc!")
+endif()
+
 # set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
 
 # find_package(CUDAToolkit 8.0 REQUIRED)

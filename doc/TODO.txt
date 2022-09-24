@@ -22,6 +22,7 @@ x vergleich mit pmg
 - bench Stencil::apply vs direct
 - bench different Stencils
 - pmg in different benchmark target, excluded from all?
+- replace dynamic polymorphism (virtual function) with static polymorphism (template function)
 
 Mid prio:
 - updateGhosts using clEnqueueWriteRect
