@@ -85,6 +85,8 @@ namespace mgcl
 
         /* Stencil that will be used in Jacobi's method */
         std::shared_ptr<Stencil> stencil = nullptr;
+        MGCL_STENCIL stencilType = MGCL_LAPLACE_7POINT;
+        std::unique_ptr<Hypercube4d> stencilValues = nullptr;
 
         /* Whether to use opencl or not. Defaults to 0 (not using opencl) */
         // TODO needed?
@@ -256,5 +258,9 @@ namespace mgcl
 
         bool getIgnoreTol() const;
         void setIgnoreTol(bool ignoreTol_);
+
+        MGCL_STENCIL getStencilType() const;
+
+        std::unique_ptr<Hypercube4d> &getStencilValues();
     };
 }

@@ -291,7 +291,8 @@ namespace mgcl
 
         // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
         MultigridEngine::updateGhostsSeq(levels[0]->getV());
-        double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(), residual_norm, *stencil, !ignoreTol);
+        double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(),
+                                                      residual_norm, stencilType, *stencilValues, !ignoreTol);
         if (!silent && !ignoreTol)
             printf("Starting mgcl with initres = %e\n", initres);
 
@@ -646,6 +647,11 @@ namespace mgcl
         silent = silent_;
     }
 
+    MGCL_STENCIL Problem::getStencilType() const
+    {
+        return stencilType;
+    }
+
     cl_program Problem::getProgram() const
     {
         return openCLHelper.program;
@@ -654,6 +660,11 @@ namespace mgcl
     bool Problem::getIgnoreTol() const
     {
         return ignoreTol;
+    }
+
+    std::unique_ptr<Hypercube4d> &Problem::getStencilValues()
+    {
+        return stencilValues;
     }
 
     void Problem::setIgnoreTol(bool ignoreTol_)

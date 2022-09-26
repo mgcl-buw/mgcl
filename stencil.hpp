@@ -119,6 +119,7 @@ namespace mgcl
         std::shared_ptr<Hypercube4d> stencilValues = nullptr;
         int stencilSizePerGridPoint = 0;
 
+    public:
         enum Pos
         {
             // clang-format off
@@ -158,7 +159,6 @@ namespace mgcl
             // clang-format on
         };
 
-    public:
         /**
          * @brief Construct a new VaryingStencil object for Cuboid v_. stencilValues will be created as a 4d Hypercube
          * in concrete subclasses having values of the stencil per grid point with dimensions

@@ -2,6 +2,7 @@
 #include <ctgmath>
 
 #include "cuboid.hpp"
+#include "hypercube.hpp"
 #include "multigrid_engine.hpp"
 
 namespace mgcl
@@ -10,14 +11,15 @@ namespace mgcl
      * v, f and r must be of size [m+2][n+2][o+2] for periodic boundary condition.
      * m,n,o is size of real grid */
     double MultigridEngine::jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
-                                      int maxiter, MGCL_RESIDUAL_NORM resnorm, Stencil &stencil, bool returnResidualNorm)
+                                      int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
+                                      Hypercube4d &stencilValuesCuboid, bool returnResidualNorm)
     {
         double res = 0.0;
         double h2 = 1.0 / ((double)(v.getM() * v.getM()));
         double dinv = h2 / 6.0;
-        if (stencil.getType() == MGCL_LAPLACE_19POINT)
+        if (stencilType == MGCL_LAPLACE_19POINT)
             dinv = (6.0 * h2) / 24.0;
-        else if (stencil.getType() == MGCL_LAPLACE_27POINT)
+        else if (stencilType == MGCL_LAPLACE_27POINT)
             dinv = (30.0 * h2) / 128.0;
 
         for (int iter = 0; iter < maxiter; iter++)
@@ -28,7 +30,7 @@ namespace mgcl
             // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
 
             // r = f - A*v
-            res = residualSeq(f, v, r, resnorm, stencil, returnResidualNorm);
+            res = residualSeq(f, v, r, resnorm, stencilType, stencilValuesCuboid, returnResidualNorm);
             for (int i = f.getGhostsM(); i < f.getM() + f.getGhostsM(); i++)
                 for (int j = f.getGhostsN(); j < f.getN() + f.getGhostsN(); j++)
                     for (int k = f.getGhostsO(); k < f.getO() + f.getGhostsO(); k++)
@@ -802,17 +804,149 @@ namespace mgcl
     /* Calculates r = f - A*v using 7-point stencil of 3D laplacian.
      * m,n,o is size of real grid */
     double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
-                                        Stencil &stencil, bool returnResidualNorm)
+                                        MGCL_STENCIL stencilType, Hypercube4d &stencilValuesCuboid, bool returnResidualNorm)
     {
         double res = 0.0;
         double stencilsum = 0;
+        double h = 1.0 / f.getM();
+        double stencilFactor;
+        double ****stencilValues;
+
+        if (stencilType == MGCL_LAPLACE_7POINT)
+            stencilFactor = 1.0 / (h * h);
+        else if (stencilType == MGCL_LAPLACE_19POINT)
+            stencilFactor = 1.0 / (6.0 * h * h);
+        else if (stencilType == MGCL_LAPLACE_27POINT)
+            stencilFactor = 1.0 / (30.0 * h * h);
+        else if (stencilType == MGCL_VARYING_7POINT || stencilType == MGCL_VARYING_19POINT || stencilType == MGCL_VARYING_27POINT)
+            stencilValues = stencilValuesCuboid.getData();
 
         for (int i = f.getGhostsM(); i < f.getM() + f.getGhostsM(); i++)
             for (int j = f.getGhostsN(); j < f.getN() + f.getGhostsN(); j++)
                 for (int k = f.getGhostsO(); k < f.getO() + f.getGhostsO(); k++)
                 {
                     // A*v
-                    stencilsum = stencil.apply(v, i, j, k);
+                    // stencilsum = stencil.apply(v, i, j, k);
+                    if (stencilType == MGCL_LAPLACE_7POINT)
+                    {
+                        // clang-format off
+                        return (6.0 * v[i][j][k]
+                            - v[i][j][k - 1] - v[i][j][k + 1]
+                            - v[i][j - 1][k] - v[i][j + 1][k]
+                            - v[i - 1][j][k] - v[i + 1][j][k]
+                            ) * stencilFactor;
+                        // clang-format on
+                    }
+                    else if (stencilType == MGCL_LAPLACE_19POINT)
+                    {
+                        // clang-format off
+                        return (24.0 * v[i][j][k]
+                                - 2.0 * v[i][j][k - 1] - 2.0 * v[i][j][k + 1]
+                                - 2.0 * v[i][j - 1][k] - 2.0 * v[i][j + 1][k]
+                                - 2.0 * v[i - 1][j][k] - 2.0 * v[i + 1][j][k]
+                                
+                                - v[i][j - 1][k - 1] - v[i][j - 1][k + 1]
+                                - v[i][j + 1][k - 1] - v[i][j + 1][k + 1]
+                                - v[i - 1][j][k - 1] - v[i - 1][j][k + 1]
+                                - v[i + 1][j][k - 1] - v[i + 1][j][k + 1]
+                                - v[i - 1][j - 1][k] - v[i - 1][j + 1][k]
+                                - v[i + 1][j - 1][k] - v[i + 1][j + 1][k]
+                                ) * stencilFactor;
+                        // clang-format on
+                    }
+                    else if (stencilType == MGCL_LAPLACE_27POINT)
+                    {
+                        // clang-format off
+                        return (128.0 * v[i][j][k]
+                                - 14.0 * v[i][j][k - 1] - 14.0 * v[i][j][k + 1]
+                                - 14.0 * v[i][j - 1][k] - 14.0 * v[i][j + 1][k]
+                                - 14.0 * v[i - 1][j][k] - 14.0 * v[i + 1][j][k]
+
+                                - 3.0 * v[i][j - 1][k - 1] - 3.0 * v[i][j - 1][k + 1]
+                                - 3.0 * v[i][j + 1][k - 1] - 3.0 * v[i][j + 1][k + 1]
+                                - 3.0 * v[i - 1][j][k - 1] - 3.0 * v[i - 1][j][k + 1]
+                                - 3.0 * v[i + 1][j][k - 1] - 3.0 * v[i + 1][j][k + 1]
+                                - 3.0 * v[i - 1][j - 1][k] - 3.0 * v[i - 1][j + 1][k]
+                                - 3.0 * v[i + 1][j - 1][k] - 3.0 * v[i + 1][j + 1][k]
+
+                                - v[i - 1][j - 1][k - 1] - v[i - 1][j - 1][k + 1]
+                                - v[i - 1][j + 1][k - 1] - v[i - 1][j + 1][k + 1]
+                                - v[i + 1][j - 1][k - 1] - v[i + 1][j - 1][k + 1]
+                                - v[i + 1][j + 1][k - 1] - v[i + 1][j + 1][k + 1]
+                                ) * stencilFactor;
+                        // clang-format on
+                    }
+                    else if (stencilType == MGCL_VARYING_7POINT)
+                    {
+                        // clang-format off
+                        return stencilValues[i][j][k][VaryingStencil::SELF]  * v[i][j][k]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT]  * v[i][j][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK]   * v[i][j][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::TOP]    * v[i][j - 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::BOTTOM] * v[i][j + 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::LEFT]   * v[i - 1][j][k]
+                            + stencilValues[i][j][k][VaryingStencil::RIGHT]  * v[i + 1][j][k];
+                        // clang-format on
+                    }
+                    else if (stencilType == MGCL_VARYING_7POINT)
+                    {
+                        // clang-format off
+                        return stencilValues[i][j][k][VaryingStencil::SELF]  * v[i][j][k]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT]  * v[i][j][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK]   * v[i][j][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::TOP]    * v[i][j - 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::BOTTOM] * v[i][j + 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::LEFT]   * v[i - 1][j][k]
+                            + stencilValues[i][j][k][VaryingStencil::RIGHT]  * v[i + 1][j][k]
+                            
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_TOP]    * v[i][j - 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_TOP]     * v[i][j - 1][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_BOTTOM] * v[i][j + 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_BOTTOM]  * v[i][j + 1][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_LEFT]   * v[i - 1][j][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_LEFT]    * v[i - 1][j][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_RIGHT]  * v[i + 1][j][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_RIGHT]   * v[i + 1][j][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::LEFT_TOP]     * v[i - 1][j - 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::LEFT_BOTTOM]  * v[i - 1][j + 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::RIGHT_TOP]    * v[i + 1][j - 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::RIGHT_BOTTOM] * v[i + 1][j + 1][k];
+                        // clang-format on
+                    }
+                    else if (stencilType == MGCL_VARYING_7POINT)
+                    {
+                        // clang-format off
+                        return stencilValues[i][j][k][VaryingStencil::SELF]  * v[i][j][k]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT]  * v[i][j][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK]   * v[i][j][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::TOP]    * v[i][j - 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::BOTTOM] * v[i][j + 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::LEFT]   * v[i - 1][j][k]
+                            + stencilValues[i][j][k][VaryingStencil::RIGHT]  * v[i + 1][j][k]
+                            
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_TOP]    * v[i][j - 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_TOP]     * v[i][j - 1][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_BOTTOM] * v[i][j + 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_BOTTOM]  * v[i][j + 1][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_LEFT]   * v[i - 1][j][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_LEFT]    * v[i - 1][j][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_RIGHT]  * v[i + 1][j][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_RIGHT]   * v[i + 1][j][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::LEFT_TOP]     * v[i - 1][j - 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::LEFT_BOTTOM]  * v[i - 1][j + 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::RIGHT_TOP]    * v[i + 1][j - 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::RIGHT_BOTTOM] * v[i + 1][j + 1][k]
+                            
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_TOP_LEFT]     * v[i - 1][j - 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_TOP_LEFT]      * v[i - 1][j - 1][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_BOTTOM_LEFT]  * v[i - 1][j + 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_BOTTOM_LEFT]   * v[i - 1][j + 1][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_TOP_RIGHT]    * v[i + 1][j - 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_TOP_RIGHT]     * v[i + 1][j - 1][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_BOTTOM_RIGHT] * v[i + 1][j + 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_BOTTOM_RIGHT]  * v[i + 1][j + 1][k + 1];
+                        // clang-format on
+                    }
 
                     // r = f - A*v
                     r[i][j][k] = f[i][j][k] - stencilsum;
