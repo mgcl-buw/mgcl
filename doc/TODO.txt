@@ -23,6 +23,7 @@ x vergleich mit pmg
 - bench different Stencils
 - pmg in different benchmark target, excluded from all?
 - replace dynamic polymorphism (virtual function) with static polymorphism (template function)
+- varying stencil dinv in jacobi?
 
 Mid prio:
 - updateGhosts using clEnqueueWriteRect
