@@ -247,6 +247,18 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
             auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
             f->fillRandom(0, 10);
 
+            std::string stencilName = "Laplace7p";
+            if (stencil == mgcl::MGCL_LAPLACE_19POINT)
+                stencilName = "Laplace19p";
+            else if (stencil == mgcl::MGCL_LAPLACE_27POINT)
+                stencilName = "Laplace27p";
+            else if (stencil == mgcl::MGCL_VARYING_7POINT)
+                stencilName = "Varying7p";
+            else if (stencil == mgcl::MGCL_VARYING_19POINT)
+                stencilName = "Varying19p";
+            else if (stencil == mgcl::MGCL_VARYING_27POINT)
+                stencilName = "Varying27p";
+
             // auto stencilValues;
 
             // if (N >= 128)
@@ -265,7 +277,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
                 p.setStencilType(stencil);
                 // p.init();
 
-                b.run(std::string("sequential random values, N = ").append(std::to_string(N)).c_str(), [&]
+                b.run(std::string("sequential random values, N = ").append(std::to_string(N)).append(", ").append(stencilName).c_str(), [&]
                       { p.solveSeq(); });
             }
 
@@ -288,7 +300,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
                     p.setDeviceName("Quadro");
 
                 // p.init();
-                b.run(std::string("opencl gpu random values, N = ").append(std::to_string(N)).c_str(), [&]
+                b.run(std::string("opencl gpu random values, N = ").append(std::to_string(N)).append(", ").append(stencilName).c_str(), [&]
                       { p.solve(); });
             }
 
