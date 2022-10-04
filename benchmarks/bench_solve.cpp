@@ -18,7 +18,7 @@ using namespace std::chrono_literals;
 #include "../thirdparty/mgcl_c/mgcl.hpp"
 #include "../thirdparty/pmg/mg.h"
 
-TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
+TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console][Laplace7p]")
 {
     std::vector grids{16, 32, 64, 128};
     for (auto N : grids)
@@ -205,6 +205,100 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console]")
         b.render(ankerl::nanobench::templates::csv(), renderOutCsv);
     }
     MPI_Finalize();
+}
+
+TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allStencils]")
+{
+    // TODO add varying stencils
+    std::vector grids{16, 32, 64, 128};
+    std::vector stencils{
+        mgcl::MGCL_LAPLACE_7POINT,
+        mgcl::MGCL_LAPLACE_19POINT,
+        mgcl::MGCL_LAPLACE_27POINT
+        // mgcl::MGCL_VARYING_7POINT,
+        // mgcl::MGCL_VARYING_19POINT,
+        // mgcl::MGCL_VARYING_27POINT,
+    };
+
+    for (auto N : grids)
+    {
+        for (auto stencil : stencils)
+        {
+            // int N = 16;
+            int m = N;
+            int n = N;
+            int o = N;
+
+            // Problem parameters
+            double tol = 1e-20;
+            int nu1 = 2;
+            int nu2 = 2;
+            double omega = 0.8;
+            int maxIterVCycles = 30;
+
+            ankerl::nanobench::Bench b;
+            b.timeUnit(1ms, "ms")
+                // .epochs(1)
+                // .epochIterations(1)
+                .minEpochTime(100ms)
+                .maxEpochTime(5s)
+                .relative(true);
+
+            auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
+            f->fillRandom(0, 10);
+
+            // auto stencilValues;
+
+            // if (N >= 128)
+            //     b.epochs(3);
+
+            {
+                auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+
+                mgcl::Problem p(m, n, o, f, v);
+                p.setMaxiterVcycles(maxIterVCycles);
+                p.setIgnoreTol(true);
+                p.setSilent(true);
+                p.setNu1(nu1);
+                p.setNu2(nu2);
+                p.setOmega(omega);
+                p.setStencilType(stencil);
+                // p.init();
+
+                b.run(std::string("sequential random values, N = ").append(std::to_string(N)).c_str(), [&]
+                      { p.solveSeq(); });
+            }
+
+            if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+            {
+                auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+
+                mgcl::Problem p(m, n, o, f, v);
+                p.setMaxiterVcycles(maxIterVCycles);
+                p.setIgnoreTol(true);
+                p.setUseOpencl(true);
+                p.setDeviceType(CL_DEVICE_TYPE_GPU);
+                p.setSilent(true);
+                p.setNu1(nu1);
+                p.setNu2(nu2);
+                p.setOmega(omega);
+                p.setStencilType(stencil);
+
+                if (mgcl_test::TestUtility::deviceAvailable("Quadro", p.getDeviceType()))
+                    p.setDeviceName("Quadro");
+
+                // p.init();
+                b.run(std::string("opencl gpu random values, N = ").append(std::to_string(N)).c_str(), [&]
+                      { p.solve(); });
+            }
+
+            // std::ofstream renderOut(std::string("solvingBoxplot_").append(std::to_string(N)).append(".html"));
+            // b.render(ankerl::nanobench::templates::htmlBoxplot(), renderOut);
+
+            // std::ofstream renderOutCsv(std::string("solvingCsv_").append(std::to_string(N)).append(".csv"));
+            // b.render(ankerl::nanobench::templates::csv(), renderOutCsv);
+        }
+    }
 }
 
 TEST_CASE("mgcl old vs new: solve equality", "[!benchmark][solve][console][equality]")
