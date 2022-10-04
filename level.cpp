@@ -106,7 +106,10 @@ namespace mgcl
         setH(1.0 / (double)m);
 
         // Clone stencil from problem that will be applied to the v of this level.
-        stencil = problem->stencil->clone(m, n, o, h);
+        // TODO remove polymorphism
+        // stencil = problem->stencil->clone(m, n, o, h);
+
+        // TODO generate stencilValues if varying
 
         if (initOpenCLBuffers() != CL_SUCCESS)
             return false;

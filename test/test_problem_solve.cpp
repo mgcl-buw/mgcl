@@ -98,7 +98,7 @@ TEST_CASE("Problem solving: periodic 4th order")
         // check if error is equal to old mgcl implementation (problem params must match)
         if (p.getMaxiterVcycles() == 10 && N == 32 && p.getTol() == 1e-14 &&
             p.getNu1() == 2 && p.getNu2() == 2 && p.getOmega() == 0.8 &&
-            p.getStencil()->getType() == mgcl::MGCL_LAPLACE_7POINT)
+            p.getStencilType() == mgcl::MGCL_LAPLACE_7POINT)
         {
             CHECK(fabs(errNorm - 3.93115528889639940e-03) < 1e-14);
             CHECK(fabs(errMax - 3.95723982871564600e-03) < 1e-14);

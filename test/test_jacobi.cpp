@@ -34,7 +34,7 @@ TEST_CASE("jacobi")
     auto c_expected_out_v = jacobiTestOutputV();
     auto c_expected_out_r = jacobiTestOutputR();
 
-    auto stencil = std::make_shared<mgcl::StencilLaplace7p>(1.0 / (double)m);
+    auto stencil = mgcl::MGCL_LAPLACE_7POINT;
 
     SECTION("seq L2-norm 7point")
     {
@@ -60,7 +60,7 @@ TEST_CASE("jacobi")
 
         auto p = std::make_shared<mgcl::Problem>(m, n, o);
         p->setResidualNorm(mgcl::MGCL_L2);
-        p->setStencil(stencil);
+        p->setStencilType(stencil);
         p->setGhosts(1);
         p->setOmega(omega);
         p->setDeviceType(deviceType);
@@ -109,12 +109,12 @@ TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
     auto c_expected_out_v = jacobiTestOutputV();
     auto c_expected_out_r = jacobiTestOutputR();
 
-    auto stencil = std::make_shared<mgcl::StencilLaplace7p>(1.0 / (double)m);
+    auto stencil = mgcl::MGCL_LAPLACE_7POINT;
     int ghosts = 3;
 
     auto p = std::make_shared<mgcl::Problem>(m, n, o);
     p->setResidualNorm(mgcl::MGCL_L2);
-    p->setStencil(stencil);
+    p->setStencilType(stencil);
     p->setGhosts(ghosts);
     p->setOmega(omega);
     p->setUseLocalMemory(true);

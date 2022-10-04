@@ -84,7 +84,6 @@ namespace mgcl
         MGCL_RESIDUAL_NORM residual_norm = MGCL_L2;
 
         /* Stencil that will be used in Jacobi's method */
-        std::shared_ptr<Stencil> stencil = nullptr;
         MGCL_STENCIL stencilType = MGCL_LAPLACE_7POINT;
         std::unique_ptr<Hypercube4d> stencilValues = nullptr;
 
@@ -198,9 +197,6 @@ namespace mgcl
         MGCL_RESIDUAL_NORM getResidualNorm() const;
         void setResidualNorm(const MGCL_RESIDUAL_NORM &residualNorm);
 
-        std::shared_ptr<Stencil> getStencil() const;
-        void setStencil(std::shared_ptr<Stencil> stencil_);
-
         bool getReuseOpenclBuffers() const;
         void setReuseOpenclBuffers(bool reuseOpenclBuffers);
 
@@ -260,6 +256,7 @@ namespace mgcl
         void setIgnoreTol(bool ignoreTol_);
 
         MGCL_STENCIL getStencilType() const;
+        void setStencilType(const MGCL_STENCIL &stencilType_);
 
         std::unique_ptr<Hypercube4d> &getStencilValues();
     };

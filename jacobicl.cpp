@@ -138,15 +138,15 @@ namespace mgcl
 
         // Create the compute kernel from the program
         const char *kernel_name;
-        if (problem.stencil->getType() == MGCL_LAPLACE_7POINT)
+        if (problem.stencilType == MGCL_LAPLACE_7POINT)
             kernel_name = "jacobi_iter_7point";
-        else if (problem.stencil->getType() == MGCL_LAPLACE_19POINT)
+        else if (problem.stencilType == MGCL_LAPLACE_19POINT)
         {
             kernel_name = "jacobi_iter_19point";
             h2inv = 1.0 / (6.0 * h2);
             dinv = (6.0 * h2) / 24.0;
         }
-        else if (problem.stencil->getType() == MGCL_LAPLACE_27POINT)
+        else if (problem.stencilType == MGCL_LAPLACE_27POINT)
         {
             kernel_name = "jacobi_iter_27point";
             h2inv = 1.0 / (30.0 * h2);
@@ -395,15 +395,15 @@ namespace mgcl
 
         // Create the compute kernel from the program
         const char *kernel_name;
-        if (problem.stencil->getType() == MGCL_LAPLACE_7POINT)
+        if (problem.stencilType == MGCL_LAPLACE_7POINT)
             kernel_name = "jacobi_stream_shmem_7point";
-        else if (problem.stencil->getType() == MGCL_LAPLACE_19POINT)
+        else if (problem.stencilType == MGCL_LAPLACE_19POINT)
         {
             kernel_name = "jacobi_stream_shmem_19point";
             h2inv = 1.0 / (6.0 * h2);
             dinv = (6.0 * h2) / 24.0;
         }
-        else if (problem.stencil->getType() == MGCL_LAPLACE_27POINT)
+        else if (problem.stencilType == MGCL_LAPLACE_27POINT)
         {
             kernel_name = "jacobi_stream_shmem_27point";
             h2inv = 1.0 / (30.0 * h2);
@@ -631,13 +631,13 @@ namespace mgcl
 
         // Create the compute kernel from the program
         const char *kernel_name;
-        if (problem.stencil->getType() == MGCL_LAPLACE_7POINT)
+        if (problem.stencilType == MGCL_LAPLACE_7POINT)
             kernel_name = "residual_7point";
-        else if (problem.stencil->getType() == MGCL_LAPLACE_19POINT)
+        else if (problem.stencilType == MGCL_LAPLACE_19POINT)
         {
             kernel_name = "residual_19point";
         }
-        else if (problem.stencil->getType() == MGCL_LAPLACE_27POINT)
+        else if (problem.stencilType == MGCL_LAPLACE_27POINT)
         {
             kernel_name = "residual_27point";
         }
@@ -830,7 +830,7 @@ namespace mgcl
                     if (stencilType == MGCL_LAPLACE_7POINT)
                     {
                         // clang-format off
-                        return (6.0 * v[i][j][k]
+                        stencilsum = (6.0 * v[i][j][k]
                             - v[i][j][k - 1] - v[i][j][k + 1]
                             - v[i][j - 1][k] - v[i][j + 1][k]
                             - v[i - 1][j][k] - v[i + 1][j][k]
@@ -840,7 +840,7 @@ namespace mgcl
                     else if (stencilType == MGCL_LAPLACE_19POINT)
                     {
                         // clang-format off
-                        return (24.0 * v[i][j][k]
+                        stencilsum = (24.0 * v[i][j][k]
                                 - 2.0 * v[i][j][k - 1] - 2.0 * v[i][j][k + 1]
                                 - 2.0 * v[i][j - 1][k] - 2.0 * v[i][j + 1][k]
                                 - 2.0 * v[i - 1][j][k] - 2.0 * v[i + 1][j][k]
@@ -857,7 +857,7 @@ namespace mgcl
                     else if (stencilType == MGCL_LAPLACE_27POINT)
                     {
                         // clang-format off
-                        return (128.0 * v[i][j][k]
+                        stencilsum = (128.0 * v[i][j][k]
                                 - 14.0 * v[i][j][k - 1] - 14.0 * v[i][j][k + 1]
                                 - 14.0 * v[i][j - 1][k] - 14.0 * v[i][j + 1][k]
                                 - 14.0 * v[i - 1][j][k] - 14.0 * v[i + 1][j][k]
@@ -879,7 +879,7 @@ namespace mgcl
                     else if (stencilType == MGCL_VARYING_7POINT)
                     {
                         // clang-format off
-                        return stencilValues[i][j][k][VaryingStencil::SELF]  * v[i][j][k]
+                        stencilsum = stencilValues[i][j][k][VaryingStencil::SELF]  * v[i][j][k]
                             + stencilValues[i][j][k][VaryingStencil::FRONT]  * v[i][j][k - 1]
                             + stencilValues[i][j][k][VaryingStencil::BACK]   * v[i][j][k + 1]
                             + stencilValues[i][j][k][VaryingStencil::TOP]    * v[i][j - 1][k]
@@ -888,10 +888,10 @@ namespace mgcl
                             + stencilValues[i][j][k][VaryingStencil::RIGHT]  * v[i + 1][j][k];
                         // clang-format on
                     }
-                    else if (stencilType == MGCL_VARYING_7POINT)
+                    else if (stencilType == MGCL_VARYING_19POINT)
                     {
                         // clang-format off
-                        return stencilValues[i][j][k][VaryingStencil::SELF]  * v[i][j][k]
+                        stencilsum = stencilValues[i][j][k][VaryingStencil::SELF]  * v[i][j][k]
                             + stencilValues[i][j][k][VaryingStencil::FRONT]  * v[i][j][k - 1]
                             + stencilValues[i][j][k][VaryingStencil::BACK]   * v[i][j][k + 1]
                             + stencilValues[i][j][k][VaryingStencil::TOP]    * v[i][j - 1][k]
@@ -913,10 +913,10 @@ namespace mgcl
                             + stencilValues[i][j][k][VaryingStencil::RIGHT_BOTTOM] * v[i + 1][j + 1][k];
                         // clang-format on
                     }
-                    else if (stencilType == MGCL_VARYING_7POINT)
+                    else if (stencilType == MGCL_VARYING_27POINT)
                     {
                         // clang-format off
-                        return stencilValues[i][j][k][VaryingStencil::SELF]  * v[i][j][k]
+                        stencilsum = stencilValues[i][j][k][VaryingStencil::SELF]  * v[i][j][k]
                             + stencilValues[i][j][k][VaryingStencil::FRONT]  * v[i][j][k - 1]
                             + stencilValues[i][j][k][VaryingStencil::BACK]   * v[i][j][k + 1]
                             + stencilValues[i][j][k][VaryingStencil::TOP]    * v[i][j - 1][k]

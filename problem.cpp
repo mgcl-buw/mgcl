@@ -11,32 +11,28 @@ namespace mgcl
 {
     Problem::Problem(int m_, int n_, int o_)
         : m(m_), n(n_), o(o_),
-          openCLHelper(this),
-          stencil(std::make_shared<StencilLaplace7p>(1.0 / (double)m))
+          openCLHelper(this)
     {
         calculateAndSetMaxLevel();
     }
 
     Problem::Problem(int m_, int n_, int o_, Cuboid *f_, Cuboid *v_)
         : m(m_), n(n_), o(o_), f(f_), v(v_),
-          openCLHelper(this),
-          stencil(std::make_shared<StencilLaplace7p>(1.0 / (double)m))
+          openCLHelper(this)
     {
         calculateAndSetMaxLevel();
     }
 
     Problem::Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_)
         : m(m_), n(n_), o(o_), f(f_), v(v_),
-          openCLHelper(this),
-          stencil(std::make_shared<StencilLaplace7p>(1.0 / (double)m))
+          openCLHelper(this)
     {
         calculateAndSetMaxLevel();
     }
 
     Problem::Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_)
         : m(m_), n(n_), o(o_), dF(d_f_), dV(d_v_),
-          openCLHelper(this),
-          stencil(std::make_shared<StencilLaplace7p>(1.0 / (double)m))
+          openCLHelper(this)
     {
         calculateAndSetMaxLevel();
     }
@@ -403,16 +399,6 @@ namespace mgcl
         tol = tol_;
     }
 
-    std::shared_ptr<Stencil> Problem::getStencil() const
-    {
-        return stencil;
-    }
-
-    void Problem::setStencil(std::shared_ptr<Stencil> stencil_)
-    {
-        stencil = stencil_;
-    }
-
     bool Problem::getReuseOpenclBuffers() const
     {
         return reuse_opencl_buffers;
@@ -660,6 +646,12 @@ namespace mgcl
     bool Problem::getIgnoreTol() const
     {
         return ignoreTol;
+    }
+
+    void Problem::setStencilType(const MGCL_STENCIL &stencilType_)
+    {
+        // TODO regenerate stencilValues?
+        stencilType = stencilType_;
     }
 
     std::unique_ptr<Hypercube4d> &Problem::getStencilValues()

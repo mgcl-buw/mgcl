@@ -36,8 +36,7 @@ TEST_CASE("Problem conf")
         REQUIRE(p.getTol() == 1e-7);
         REQUIRE(p.getMaxlevel() == 3);
         REQUIRE(p.getResidualNorm() == mgcl::MGCL_L2);
-        REQUIRE(p.getStencil());
-        REQUIRE(p.getStencil()->getType() == mgcl::MGCL_LAPLACE_7POINT);
+        REQUIRE(p.getStencilType() == mgcl::MGCL_LAPLACE_7POINT);
 
         REQUIRE(!p.getOpenCLHelper().isInitialized());
         REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
@@ -276,8 +275,8 @@ TEST_CASE("Problem::init")
         REQUIRE(p.init());
         REQUIRE(p.getLevelsSize() == p.getMaxlevel() + 1);
 
-        // check that default stencil is 7p Laplace stencil. Result of dynamic_pointer_cast is empty on failure.
-        REQUIRE(std::dynamic_pointer_cast<mgcl::StencilLaplace7p>(p.getStencil()).get());
+        // check that default stencil is 7p Laplace stencil.
+        REQUIRE(p.getStencilType() == mgcl::MGCL_LAPLACE_7POINT);
 
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)

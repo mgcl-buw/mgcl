@@ -29,7 +29,7 @@ TEST_CASE("residual")
     auto c_in_r = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
     auto c_expected_out_r = residualTestOutputR();
 
-    auto stencil = std::make_shared<mgcl::StencilLaplace7p>(1.0 / (double)(m));
+    auto stencil = mgcl::MGCL_LAPLACE_7POINT;
 
     SECTION("residualSeq L2-norm 7point")
     {
@@ -54,7 +54,7 @@ TEST_CASE("residual")
 
         auto p = std::make_shared<mgcl::Problem>(m, n, o);
         p->setResidualNorm(mgcl::MGCL_L2);
-        p->setStencil(stencil);
+        p->setStencilType(stencil);
         p->setGhosts(1);
         p->setDeviceType(deviceType);
 
