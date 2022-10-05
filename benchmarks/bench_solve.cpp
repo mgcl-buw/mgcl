@@ -241,8 +241,10 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
                 // .epochs(1)
                 // .epochIterations(1)
                 .minEpochTime(100ms)
-                .maxEpochTime(5s)
                 .relative(true);
+
+            if (N <= 16)
+                b.minEpochIterations(20);
 
             auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
             f->fillRandom(0, 10);

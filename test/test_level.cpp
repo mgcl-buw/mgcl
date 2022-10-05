@@ -26,6 +26,7 @@ TEST_CASE("Level constructor")
         CHECK(level.getMgh() == 4 + 2 * p.getGhosts());
         CHECK(level.getNgh() == 4 + 2 * p.getGhosts());
         CHECK(level.getOgh() == 4 + 2 * p.getGhosts());
+        CHECK(level.getStencilType() == p.getStencilType());
     }
 }
 

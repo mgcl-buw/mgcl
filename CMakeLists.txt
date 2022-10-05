@@ -35,7 +35,6 @@ multigrid_engine.cpp
 prolongation.cpp
 restriction.cpp
 stencil.hpp
-stencil.cpp
 hypercube.hpp
 hypercube.cpp
 )

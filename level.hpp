@@ -25,7 +25,9 @@ namespace mgcl
         std::shared_ptr<Cuboid> r = nullptr;
 
         /* Stencil for this Level that will be applied on v */
-        std::shared_ptr<Stencil> stencil = nullptr;
+        // TODO init
+        MGCL_STENCIL stencilType;
+        std::unique_ptr<Hypercube4d> stencilValues = nullptr;
 
         /* grid dimensions of real grid */
         int m;
@@ -99,7 +101,6 @@ namespace mgcl
 
         int getOgh() const;
 
-        std::shared_ptr<Stencil> getStencil() const;
-        void setStencil(const std::shared_ptr<Stencil> &stencil_);
+        MGCL_STENCIL getStencilType() const;
     };
 }

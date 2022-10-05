@@ -20,8 +20,16 @@ namespace mgcl
           o(problem_->getO() >> num_),
           mgh(m + 2 * problem->getGhosts()),
           ngh(n + 2 * problem->getGhosts()),
-          ogh(o + 2 * problem->getGhosts())
+          ogh(o + 2 * problem->getGhosts()),
+          stencilType(problem_->stencilType)
     {
+        if (stencilType == MGCL_VARYING_7POINT)
+            stencilValues = std::make_unique<Hypercube4d>(m, n, o, 7, problem->ghosts, problem->ghosts, problem->ghosts, 0);
+        else if (stencilType == MGCL_VARYING_19POINT)
+            stencilValues = std::make_unique<Hypercube4d>(m, n, o, 19, problem->ghosts, problem->ghosts, problem->ghosts, 0);
+        else if (stencilType == MGCL_VARYING_27POINT)
+            stencilValues = std::make_unique<Hypercube4d>(m, n, o, 27, problem->ghosts, problem->ghosts, problem->ghosts, 0);
+
         if (num_ < 0 || num_ > problem->getMaxlevel())
             throw std::invalid_argument(std::string("num is invalid! num: ")
                                             .append(std::to_string(num_))
@@ -200,14 +208,9 @@ namespace mgcl
         return mgh;
     }
 
-    std::shared_ptr<Stencil> Level::getStencil() const
+    MGCL_STENCIL Level::getStencilType() const
     {
-        return stencil;
-    }
-
-    void Level::setStencil(const std::shared_ptr<Stencil> &stencil_)
-    {
-        stencil = stencil_;
+        return stencilType;
     }
 
     int Level::getNgh() const
