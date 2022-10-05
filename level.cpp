@@ -10,6 +10,7 @@ namespace mgcl
      *
      * @param problem_ Problem this Level belongs to.
      * @param num_ Number of level in the Problem (finest grid is level 0)
+     * @param stencilType_ Type of stencil that shall be used on this level
      * @throws invalid_argument When num_ is invalid, i.e. < 0 or > Problem.maxlevel
      */
     Level::Level(Problem *problem_, int num_)
@@ -21,15 +22,9 @@ namespace mgcl
           mgh(m + 2 * problem->getGhosts()),
           ngh(n + 2 * problem->getGhosts()),
           ogh(o + 2 * problem->getGhosts()),
+          h(1.0 / (double)m),
           stencilType(problem_->stencilType)
     {
-        if (stencilType == MGCL_VARYING_7POINT)
-            stencilValues = std::make_unique<Hypercube4d>(m, n, o, 7, problem->ghosts, problem->ghosts, problem->ghosts, 0);
-        else if (stencilType == MGCL_VARYING_19POINT)
-            stencilValues = std::make_unique<Hypercube4d>(m, n, o, 19, problem->ghosts, problem->ghosts, problem->ghosts, 0);
-        else if (stencilType == MGCL_VARYING_27POINT)
-            stencilValues = std::make_unique<Hypercube4d>(m, n, o, 27, problem->ghosts, problem->ghosts, problem->ghosts, 0);
-
         if (num_ < 0 || num_ > problem->getMaxlevel())
             throw std::invalid_argument(std::string("num is invalid! num: ")
                                             .append(std::to_string(num_))
@@ -75,6 +70,12 @@ namespace mgcl
     {
         if (num == 0)
         {
+            // move stencilsValues pointer from Problem to first Level
+            if (stencilType == MGCL_VARYING_7POINT ||
+                stencilType == MGCL_VARYING_19POINT ||
+                stencilType == MGCL_VARYING_27POINT)
+                stencilValues = std::move(problem->stencilValues);
+
             // create ghosted arrays for v and f on host if device buffer should not be reused
             if (!problem->reuse_opencl_buffers && !problem->copy_buffer_data)
             {
@@ -108,16 +109,21 @@ namespace mgcl
                 v = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
                 f = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
                 r = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+
+                // Create stencilsValues if a varying stencil shall be used. Stencil is always 27 point since
+                // for varying stencils the Galerkin operator is used.
+                if (stencilType == MGCL_VARYING_7POINT ||
+                    stencilType == MGCL_VARYING_19POINT ||
+                    stencilType == MGCL_VARYING_27POINT)
+                {
+                    stencilType = MGCL_VARYING_27POINT;
+                    stencilValues = std::make_unique<Hypercube4d>(m, n, o, 27, problem->ghosts, problem->ghosts, problem->ghosts, 0);
+                }
             }
         }
 
-        setH(1.0 / (double)m);
-
-        // Clone stencil from problem that will be applied to the v of this level.
-        // TODO remove polymorphism
-        // stencil = problem->stencil->clone(m, n, o, h);
-
-        // TODO generate stencilValues if varying
+        // Apply Galerkin operator if stencil is varying and we're not on level 0.
+        galerkin();
 
         if (initOpenCLBuffers() != CL_SUCCESS)
             return false;
@@ -132,6 +138,7 @@ namespace mgcl
      */
     int Level::initOpenCLBuffers()
     {
+        // TODO create stencilValues
         if (!problem->getUseOpencl())
             return CL_SUCCESS;
 
@@ -198,6 +205,14 @@ namespace mgcl
         return CL_SUCCESS;
     }
 
+    /**
+     * @brief Creates stencilValues by applying the Galerkin operator for levels above 0.
+     * TODO implement
+     */
+    void Level::galerkin()
+    {
+    }
+
     void Level::setV(const std::shared_ptr<Cuboid> &v_)
     {
         v = v_;
@@ -216,6 +231,11 @@ namespace mgcl
     int Level::getNgh() const
     {
         return ngh;
+    }
+
+    std::unique_ptr<Hypercube4d> &Level::getStencilValues()
+    {
+        return stencilValues;
     }
 
     int Level::getOgh() const

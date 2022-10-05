@@ -210,6 +210,8 @@ TEST_CASE("Level::init")
 
     auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
     p->setGhostsIn(1);
+    p->setStencilType(mgcl::MGCL_VARYING_7POINT);
+    p->getStencilValues()->fillRandom();
     // REQUIRE(p->init());
 
     int levelNum = GENERATE(0, 1, 2);
@@ -233,4 +235,14 @@ TEST_CASE("Level::init")
     CHECK(level.getR().getM() == p->getM() >> levelNum);
     CHECK(level.getR().getN() == p->getN() >> levelNum);
     CHECK(level.getR().getO() == p->getO() >> levelNum);
+
+    REQUIRE(level.getStencilValues());
+    CHECK(level.getStencilValues()->getDim1() == level.getM());
+    CHECK(level.getStencilValues()->getDim2() == level.getN());
+    CHECK(level.getStencilValues()->getDim3() == level.getO());
+
+    if (levelNum == 0)
+        CHECK(level.getStencilValues()->getDim4() == 7);
+    else
+        CHECK(level.getStencilValues()->getDim4() == 27);
 }

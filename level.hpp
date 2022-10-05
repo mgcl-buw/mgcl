@@ -63,6 +63,7 @@ namespace mgcl
 
         bool init();
         int initOpenCLBuffers();
+        void galerkin();
 
         int getNum() const;
 
@@ -102,5 +103,7 @@ namespace mgcl
         int getOgh() const;
 
         MGCL_STENCIL getStencilType() const;
+
+        std::unique_ptr<Hypercube4d> &getStencilValues();
     };
 }
