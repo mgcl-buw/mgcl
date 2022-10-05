@@ -618,3 +618,55 @@ TEST_CASE("Problem::readResults")
                 }
     }
 }
+
+/**
+ * @brief If stencilType is changed to a varying stencil, stencilValues should be created accordingly.
+ *
+ */
+TEST_CASE("Problem::setStencilType")
+{
+    mgcl::Problem p(2, 2, 2);
+    CHECK(p.getStencilValues() == nullptr);
+
+    p.setStencilType(mgcl::MGCL_LAPLACE_19POINT);
+    CHECK(p.getStencilValues() == nullptr);
+
+    p.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
+    CHECK(p.getStencilValues() == nullptr);
+
+    p.setStencilType(mgcl::MGCL_LAPLACE_7POINT);
+    CHECK(p.getStencilValues() == nullptr);
+
+    p.setStencilType(mgcl::MGCL_VARYING_7POINT);
+    REQUIRE(p.getStencilValues() != nullptr);
+    CHECK(p.getStencilValues()->getDim1() == p.getM());
+    CHECK(p.getStencilValues()->getDim2() == p.getN());
+    CHECK(p.getStencilValues()->getDim3() == p.getO());
+    CHECK(p.getStencilValues()->getDim4() == 7);
+    CHECK(p.getStencilValues()->getDim1gh() == p.getM() + 2 * p.getGhosts());
+    CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 2 * p.getGhosts());
+    CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 2 * p.getGhosts());
+    CHECK(p.getStencilValues()->getDim4gh() == 7);
+
+    p.setStencilType(mgcl::MGCL_VARYING_19POINT);
+    REQUIRE(p.getStencilValues() != nullptr);
+    CHECK(p.getStencilValues()->getDim1() == p.getM());
+    CHECK(p.getStencilValues()->getDim2() == p.getN());
+    CHECK(p.getStencilValues()->getDim3() == p.getO());
+    CHECK(p.getStencilValues()->getDim4() == 19);
+    CHECK(p.getStencilValues()->getDim1gh() == p.getM() + 2 * p.getGhosts());
+    CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 2 * p.getGhosts());
+    CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 2 * p.getGhosts());
+    CHECK(p.getStencilValues()->getDim4gh() == 19);
+
+    p.setStencilType(mgcl::MGCL_VARYING_27POINT);
+    REQUIRE(p.getStencilValues() != nullptr);
+    CHECK(p.getStencilValues()->getDim1() == p.getM());
+    CHECK(p.getStencilValues()->getDim2() == p.getN());
+    CHECK(p.getStencilValues()->getDim3() == p.getO());
+    CHECK(p.getStencilValues()->getDim4() == 27);
+    CHECK(p.getStencilValues()->getDim1gh() == p.getM() + 2 * p.getGhosts());
+    CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 2 * p.getGhosts());
+    CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 2 * p.getGhosts());
+    CHECK(p.getStencilValues()->getDim4gh() == 27);
+}

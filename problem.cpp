@@ -650,8 +650,13 @@ namespace mgcl
 
     void Problem::setStencilType(const MGCL_STENCIL &stencilType_)
     {
-        // TODO regenerate stencilValues?
         stencilType = stencilType_;
+        if (stencilType == MGCL_VARYING_7POINT)
+            stencilValues = std::make_unique<Hypercube4d>(m, n, o, 7, ghosts, ghosts, ghosts, 0);
+        else if (stencilType == MGCL_VARYING_19POINT)
+            stencilValues = std::make_unique<Hypercube4d>(m, n, o, 19, ghosts, ghosts, ghosts, 0);
+        else if (stencilType == MGCL_VARYING_27POINT)
+            stencilValues = std::make_unique<Hypercube4d>(m, n, o, 27, ghosts, ghosts, ghosts, 0);
     }
 
     std::unique_ptr<Hypercube4d> &Problem::getStencilValues()
