@@ -11,12 +11,26 @@
 namespace mgcl
 {
     /**
-     * @brief Class for varying stencils, i.e. stencil can differ for each grid point.
-     *
+     * @brief Fixed 3x3x3 stencil (same stencil entries for each grid point).
      */
-    class VaryingStencil
+    class FixedStencil : Cuboid
     {
     public:
+        FixedStencil() : Cuboid(3, 3, 3, 0, 0, 0) {}
+    };
+
+    /**
+     * @brief Class for 3x3x3 varying stencils, i.e. stencil can differ for each grid point.
+     *
+     */
+    class VaryingStencil : Hypercube6d
+    {
+    public:
+        VaryingStencil(int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o)
+            : Hypercube6d(m, n, o, 3, 3, 3, ghosts_m, ghosts_n, ghosts_o, 0, 0, 0) {}
+
+        std::unique_ptr<VaryingStencil> multiply(VaryingStencil &b);
+
         enum Pos
         {
             // clang-format off

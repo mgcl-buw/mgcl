@@ -330,3 +330,22 @@ TEST_CASE("StencilVarying27p")
                                8 - 4 - 1 - 2 - 16 - 4 - 8 - 2);
     REQUIRE(-r[1][1][1] == Catch::Approx(expected));
 }
+
+TEST_CASE("VaryingStencil::multiply")
+{
+    int m = 4;
+    int n = 4;
+    int o = 4;
+    int ghm = 1;
+    int ghn = 1;
+    int gho = 1;
+
+    mgcl::VaryingStencil a(m, n, o, ghm, ghn, gho);
+    mgcl::VaryingStencil b(m, n, o, ghm, ghn, gho);
+
+    // fill a and b
+
+    auto c = a.multiply(b);
+
+    // expected results?
+}

@@ -11,7 +11,7 @@ namespace mgcl
      */
     class Hypercube4d
     {
-    private:
+    protected:
         int dim1;
         int dim2;
         int dim3;
@@ -64,7 +64,7 @@ namespace mgcl
      */
     class Hypercube6d
     {
-    private:
+    protected:
         int dim1;
         int dim2;
         int dim3;
