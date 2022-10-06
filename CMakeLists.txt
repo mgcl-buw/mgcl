@@ -6,7 +6,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # use link time optimization if using gcc (should definitely be used!)
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+# can be skipped if cmake is invoked with NO_LTO, i.e. cmake . -DNO_LTO=True
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT DEFINED NO_LTO)
   add_compile_options("-flto")
   add_link_options("-flto")
 else()
@@ -35,6 +36,7 @@ multigrid_engine.cpp
 prolongation.cpp
 restriction.cpp
 stencil.hpp
+stencil.cpp
 hypercube.hpp
 hypercube.cpp
 )
@@ -91,6 +93,9 @@ test/test_jacobi.cpp
 test/test_level.cpp
 test/test_stencil.cpp
 test/test_hypercube.cpp
+test/matrix2d.hpp
+test/matrix2d.cpp
+test/test_matrix2d.cpp
 )
 
 add_executable(tests ${SOURCES_TEST})
