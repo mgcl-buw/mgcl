@@ -28,17 +28,6 @@ TEST_CASE("Hypercube4d")
         REQUIRE(c[0][0][0][0 + 1 * 3 * 4 + 2 * 4 + 3] == 3.0);
     }
 
-    SECTION("copy constructor")
-    {
-        mgcl::Hypercube4d c2(c);
-        REQUIRE(c.getDim1() == c2.getDim1());
-        REQUIRE(c.getDim2() == c2.getDim2());
-        REQUIRE(c.getDim3() == c2.getDim3());
-        REQUIRE(c.getDim4() == c2.getDim4());
-        REQUIRE(c2.getData() != c.getData());
-        REQUIRE(c2[0][0][0][0] == c[0][0][0][0]);
-    }
-
     SECTION("default value")
     {
         for (auto v : c.field1d())

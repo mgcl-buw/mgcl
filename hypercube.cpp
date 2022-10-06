@@ -75,35 +75,35 @@ namespace mgcl
      *
      * @param c Hypercube to clone.
      */
-    Hypercube4d::Hypercube4d(const Hypercube4d &c)
-        : dim1(c.dim1),
-          dim2(c.dim2),
-          dim3(c.dim3),
-          dim4(c.dim4),
-          dim1gh(c.dim1gh),
-          dim2gh(c.dim2gh),
-          dim3gh(c.dim3gh),
-          dim4gh(c.dim4gh),
-          ghostsDim1(c.ghostsDim1),
-          ghostsDim2(c.ghostsDim2),
-          ghostsDim3(c.ghostsDim3),
-          ghostsDim4(c.ghostsDim4),
-          field_1d(c.field_1d)
-    {
-        field_4d = new double ***[dim1gh];
-        for (int i = 0; i < dim1gh; i++)
-        {
-            field_4d[i] = new double **[dim2gh];
-            for (int j = 0; j < dim2gh; j++)
-            {
-                field_4d[i][j] = new double *[dim3gh];
-                for (int k = 0; k < dim3gh; k++)
-                {
-                    field_4d[i][j][k] = &field_1d[i * dim2gh * dim3gh * dim4gh + j * dim3gh * dim4gh + k * dim4gh];
-                }
-            }
-        }
-    }
+    // Hypercube4d::Hypercube4d(const Hypercube4d &c)
+    //     : dim1(c.dim1),
+    //       dim2(c.dim2),
+    //       dim3(c.dim3),
+    //       dim4(c.dim4),
+    //       dim1gh(c.dim1gh),
+    //       dim2gh(c.dim2gh),
+    //       dim3gh(c.dim3gh),
+    //       dim4gh(c.dim4gh),
+    //       ghostsDim1(c.ghostsDim1),
+    //       ghostsDim2(c.ghostsDim2),
+    //       ghostsDim3(c.ghostsDim3),
+    //       ghostsDim4(c.ghostsDim4),
+    //       field_1d(c.field_1d)
+    // {
+    //     field_4d = new double ***[dim1gh];
+    //     for (int i = 0; i < dim1gh; i++)
+    //     {
+    //         field_4d[i] = new double **[dim2gh];
+    //         for (int j = 0; j < dim2gh; j++)
+    //         {
+    //             field_4d[i][j] = new double *[dim3gh];
+    //             for (int k = 0; k < dim3gh; k++)
+    //             {
+    //                 field_4d[i][j][k] = &field_1d[i * dim2gh * dim3gh * dim4gh + j * dim3gh * dim4gh + k * dim4gh];
+    //             }
+    //         }
+    //     }
+    // }
 
     /**
      * @brief Destroy the Hypercube4d object, freeing memory.
@@ -324,4 +324,352 @@ namespace mgcl
         return ghostsDim3;
     }
 
+    /****************************************************************
+     * Hypercube6d
+     * **************************************************************/
+
+    /**
+     * @brief Construct a new Hypercube6d object having ghosts = 0 and optionally a value which defaults to 0.
+     *
+     * @param dim1_ Dimension of real grid.
+     * @param dim2_ Dimension of real grid.
+     * @param dim3_ Dimension of real grid.
+     * @param dim4_ Dimension of real grid.
+     * @param value Initial value, defaults to 0.
+     */
+    Hypercube6d::Hypercube6d(int dim1_, int dim2_, int dim3_, int dim4_, int dim5_, int dim6_, double value)
+        : Hypercube6d(dim1_, dim2_, dim3_, dim4_, dim5_, dim6_, 0, 0, 0, 0, 0, 0, value) {}
+
+    /**
+     * @brief Construct a new ghosted Hypercube6d object, optionally having a value which defaults to 0.
+     *
+     * @param dim1_ Dimension of real grid.
+     * @param dim2_ Dimension of real grid.
+     * @param dim3_ Dimension of real grid.
+     * @param dim4_ Dimension of real grid.
+     * @param ghostsDim1_ Amount of ghost cells in one direction.
+     * @param ghostsDim2_ Amount of ghost cells in one direction.
+     * @param ghostsDim3_ Amount of ghost cells in one direction.
+     * @param ghostsDim4_ Amount of ghost cells in one direction.
+     * @param value Initial value, defaults to 0.
+     */
+    Hypercube6d::Hypercube6d(int dim1_, int dim2_, int dim3_, int dim4_, int dim5_, int dim6_,
+                             int ghostsDim1_, int ghostsDim2_, int ghostsDim3_, int ghostsDim4_, int ghostsDim5_, int ghostsDim6_, double value)
+        : dim1(dim1_),
+          dim2(dim2_),
+          dim3(dim3_),
+          dim4(dim4_),
+          dim5(dim5_),
+          dim6(dim6_),
+          dim1gh(dim1_ + 2 * ghostsDim1_),
+          dim2gh(dim2_ + 2 * ghostsDim2_),
+          dim3gh(dim3_ + 2 * ghostsDim3_),
+          dim4gh(dim4_ + 2 * ghostsDim4_),
+          dim5gh(dim5_ + 2 * ghostsDim5_),
+          dim6gh(dim6_ + 2 * ghostsDim6_),
+          ghostsDim1(ghostsDim1_),
+          ghostsDim2(ghostsDim2_),
+          ghostsDim3(ghostsDim3_),
+          ghostsDim4(ghostsDim4_),
+          ghostsDim5(ghostsDim5_),
+          ghostsDim6(ghostsDim6_)
+    {
+        field_1d.resize(dim1gh * dim2gh * dim3gh * dim4gh * dim5gh * dim6gh);
+        for (int i = 0; i < field_1d.size(); i++)
+            field_1d[i] = value;
+
+        field_6d = new double *****[dim1gh];
+        int size5gh = dim6gh;
+        int size4gh = size5gh * dim5gh;
+        int size3gh = size4gh * dim4gh;
+        int size2gh = size3gh * dim3gh;
+        int size1gh = size2gh * dim2gh;
+        for (int d1 = 0; d1 < dim1gh; d1++)
+        {
+            field_6d[d1] = new double ****[dim2gh];
+            for (int d2 = 0; d2 < dim2gh; d2++)
+            {
+                field_6d[d1][d2] = new double ***[dim3gh];
+                for (int d3 = 0; d3 < dim3gh; d3++)
+                {
+                    field_6d[d1][d2][d3] = new double **[dim4gh];
+                    for (int d4 = 0; d4 < dim4gh; d4++)
+                    {
+                        field_6d[d1][d2][d3][d4] = new double *[dim5gh];
+                        for (int d5 = 0; d5 < dim5gh; d5++)
+                        {
+                            field_6d[d1][d2][d3][d4][d5] = &field_1d[d1 * size1gh + d2 * size2gh + d3 * size3gh + d4 * size4gh + d5 * size5gh];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * @brief Destroy the Hypercube6d object, freeing memory.
+     */
+    Hypercube6d::~Hypercube6d()
+    {
+        for (int d1 = 0; d1 < dim1gh; d1++)
+        {
+            for (int d2 = 0; d2 < dim2gh; d2++)
+            {
+                for (int d3 = 0; d3 < dim3gh; d3++)
+                {
+                    for (int d4 = 0; d4 < dim4gh; d4++)
+                    {
+                        delete[] field_6d[d1][d2][d3][d4];
+                    }
+                    delete[] field_6d[d1][d2][d3];
+                }
+                delete[] field_6d[d1][d2];
+            }
+            delete[] field_6d[d1];
+        }
+        delete[] field_6d;
+        field_6d = nullptr;
+    }
+
+    double ******Hypercube6d::getData() const
+    {
+        return field_6d;
+    }
+
+    double *****Hypercube6d::operator[](int index)
+    {
+        return field_6d[index];
+    }
+
+    /**
+     * @brief Fills Hypercube6d with random values between low and high, which default to 0 and 1.
+     *
+     */
+    void Hypercube6d::fillRandom(double low, double high)
+    {
+        std::random_device dev;
+        std::mt19937 rng(dev());
+        std::uniform_real_distribution<double> dist(low, high);
+
+        for (int i = 0; i < field_1d.size(); i++)
+            field_1d[i] = dist(rng);
+    }
+
+    /**
+     * @brief Fills Hypercube6d with given value
+     *
+     * @param value Value to fill
+     * @param realCellsOnly If true, only real cells will be set to value. Defaults to false.
+     */
+    void Hypercube6d::fill(double value, bool realCellsOnly)
+    {
+        if (realCellsOnly)
+        {
+            for (int d1 = ghostsDim1; d1 < dim1 + ghostsDim1; d1++)
+                for (int d2 = ghostsDim2; d2 < dim2 + ghostsDim2; d2++)
+                    for (int d3 = ghostsDim3; d3 < dim3 + ghostsDim3; d3++)
+                        for (int d4 = ghostsDim4; d4 < dim4 + ghostsDim4; d4++)
+                            for (int d5 = ghostsDim5; d5 < dim5 + ghostsDim5; d5++)
+                                for (int d6 = ghostsDim6; d6 < dim6 + ghostsDim6; d6++)
+                                {
+                                    field_6d[d1][d2][d3][d4][d5][d6] = value;
+                                }
+        }
+        else
+        {
+            std::fill(field_1d.begin(), field_1d.end(), value);
+        }
+    }
+
+    std::vector<double> &Hypercube6d::field1d()
+    {
+        return field_1d;
+    }
+
+    /**
+     * @brief Returns true if real cells contents of this Hypercube6d is equal to the one of another Hypercube6d c
+     * within a given tolerance tol, respecting ghost cell amount. Dimensions of real cell amount of this Hypercube6d
+     *  and c must be equal (without ghost cells).
+     *
+     * @param c Other Hypercube6d
+     * @param tol tolerance that is used for checking equality. Defaults to 1e-7.
+     * @param printDiffs If true, differences will be printed to standard output. Defaults to true.
+     * @return true Cuboids equal.
+     * @return false Cuboids not equal.
+     * @throws invalid_argument When dimensions of Cuboids don't match.
+     */
+    bool Hypercube6d::isEqual(Hypercube6d &c, double tol, bool printDiffs)
+    {
+        if (dim1 != c.getDim1() ||
+            dim2 != c.getDim2() ||
+            dim3 != c.getDim3() ||
+            dim4 != c.getDim4() ||
+            dim5 != c.getDim5() ||
+            dim6 != c.getDim6())
+        {
+            throw std::invalid_argument("Cannot check equality for Hypercube6d. Dimensions differ.");
+        }
+
+        std::vector<std::tuple<int, int, int, int, int, int, double, double, double>> diffs;
+        bool ret = true;
+        double diff = 0;
+
+        for (int d1 = 0; d1 < dim1; d1++)
+            for (int d2 = 0; d2 < dim2; d2++)
+                for (int d3 = 0; d3 < dim3; d3++)
+                    for (int d4 = 0; d4 < dim4; d4++)
+                        for (int d5 = 0; d5 < dim5; d5++)
+                            for (int d6 = 0; d6 < dim6; d6++)
+                            {
+                                diff = fabs(field_6d[d1 + ghostsDim1][d2 + ghostsDim2][d3 + ghostsDim3][d4 + ghostsDim4][d5 + ghostsDim5][d6 + ghostsDim6] -
+                                            c[d1 + c.getGhostsDim1()][d2 + c.getGhostsDim2()][d3 + c.getGhostsDim3()][d4 + c.getGhostsDim4()][d5 + c.getGhostsDim5()][d6 + c.getGhostsDim6()]);
+                                if (diff > tol)
+                                {
+                                    ret = false;
+                                    diffs.push_back(std::make_tuple(d1, d2, d3, d4, d5, d6,
+                                                                    field_6d[d1 + ghostsDim1][d2 + ghostsDim2][d3 + ghostsDim3][d4 + ghostsDim4][d5 + ghostsDim5][d6 + ghostsDim6],
+                                                                    c[d1 + c.getGhostsDim1()][d2 + c.getGhostsDim2()][d3 + c.getGhostsDim3()][d4 + c.getGhostsDim4()][d5 + c.getGhostsDim5()][d6 + c.getGhostsDim6()],
+                                                                    diff));
+                                }
+                            }
+
+        if (printDiffs && !diffs.empty())
+        {
+            std::cout << "Hypercube4ds not equal. Differences: " << std::endl
+                      << "   d1  d2  d3  d4  d5  d6       this      other   difference" << std::endl;
+            for (auto d : diffs)
+            {
+                std::cout << std::setw(4) << std::get<0>(d)
+                          << std::setw(4) << std::get<1>(d)
+                          << std::setw(4) << std::get<2>(d)
+                          << std::setw(4) << std::get<3>(d)
+                          << std::setw(4) << std::get<4>(d)
+                          << std::setw(4) << std::get<5>(d)
+                          << std::scientific << std::setprecision(3) << std::setw(11) << std::get<6>(d)
+                          << std::scientific << std::setprecision(3) << std::setw(11) << std::get<7>(d)
+                          << std::scientific << std::setprecision(3) << std::setw(13) << std::get<8>(d)
+                          << std::endl;
+            }
+        }
+
+        return ret;
+    }
+
+    /**
+     * @brief Dumps content to file fiven by path overwriting existing files
+     *
+     * @param path Path to file, overwrites existing one.
+     * @throws runtime_error When file could not be opened.
+     */
+    void Hypercube6d::dumpToFile(std::string path)
+    {
+        std::ofstream myfile;
+        myfile.open(path, std::ios::out | std::ios::trunc);
+
+        if (myfile.is_open())
+        {
+            for (int d1 = 0; d1 < dim1gh; d1++)
+                for (int d2 = 0; d2 < dim2gh; d2++)
+                    for (int d3 = 0; d3 < dim3gh; d3++)
+                        for (int d4 = 0; d4 < dim4gh; d4++)
+                            for (int d5 = 0; d5 < dim5gh; d5++)
+                                for (int d6 = 0; d6 < dim6gh; d6++)
+                                {
+                                    myfile << d1 << "\t" << d2 << "\t" << d3 << "\t" << d4 << "\t" << d5 << "\t" << d6 << "\t"
+                                           << std::scientific << std::setprecision(17) << field_6d[d1][d2][d3][d4][d5][d6] << std::endl;
+                                }
+            myfile.close();
+        }
+        else
+        {
+            throw std::runtime_error("Couldn't open file for writing given by: " + path);
+        }
+    }
+
+    int Hypercube6d::getDim1() const
+    {
+        return dim1;
+    }
+    int Hypercube6d::getDim4() const
+    {
+        return dim4;
+    }
+    int Hypercube6d::getDim3gh() const
+    {
+        return dim3gh;
+    }
+    int Hypercube6d::getGhostsDim2() const
+    {
+        return ghostsDim2;
+    }
+
+    int Hypercube6d::getDim5() const
+    {
+        return dim5;
+    }
+
+    int Hypercube6d::getDim6gh() const
+    {
+        return dim6gh;
+    }
+
+    int Hypercube6d::getDim3() const
+    {
+        return dim3;
+    }
+
+    int Hypercube6d::getDim2gh() const
+    {
+        return dim2gh;
+    }
+
+    int Hypercube6d::getGhostsDim1() const
+    {
+        return ghostsDim1;
+    }
+
+    int Hypercube6d::getGhostsDim4() const
+    {
+        return ghostsDim4;
+    }
+
+    int Hypercube6d::getDim5gh() const
+    {
+        return dim5gh;
+    }
+
+    int Hypercube6d::getGhostsDim6() const
+    {
+        return ghostsDim6;
+    }
+
+    int Hypercube6d::getDim2() const
+    {
+        return dim2;
+    }
+
+    int Hypercube6d::getDim1gh() const
+    {
+        return dim1gh;
+    }
+
+    int Hypercube6d::getDim4gh() const
+    {
+        return dim4gh;
+    }
+
+    int Hypercube6d::getGhostsDim3() const
+    {
+        return ghostsDim3;
+    }
+
+    int Hypercube6d::getDim6() const
+    {
+        return dim6;
+    }
+
+    int Hypercube6d::getGhostsDim5() const
+    {
+        return ghostsDim5;
+    }
 }

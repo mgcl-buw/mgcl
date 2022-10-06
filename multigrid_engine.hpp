@@ -50,13 +50,16 @@ namespace mgcl
                                 Hypercube4d &stencilValuesCuboid, bool returnResidualNorm);
         static double residual(Problem &problem, Level &level, bool returnResidual);
         static double residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
-                                  MGCL_STENCIL stencilType, Hypercube4d &stencilValuesCuboid, bool returnResidualNorm);
+                                  MGCL_STENCIL stencilType, Hypercube4d &stencilValues, bool returnResidualNorm);
         static double residualTest(Problem &problem, double ***v, double ***f, double ***r, int m, int n, int o,
                                    int returnResidual);
         static void jacobiTest(Problem &problem, double ***v, double ***f, double ***r, int m, int n, int o, int maxiter,
                                int readResults);
         static double jacobi(Problem &problem, Level &level, int maxiter, int returnResidual);
         static double jacobiLocalMem(Problem &problem, Level &level, int maxiter, int returnResidual);
+
+        static void galerkin(Level &level);
+
         static void print7point(Cuboid &v, int i, int j, int k);
         static void print19point(Cuboid &v, int i, int j, int k);
     };
