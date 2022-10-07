@@ -151,6 +151,14 @@ namespace mgcl_test
         return ret;
     }
 
+    /**
+     * @brief Generates 3d Laplace matrix.
+     *
+     * @param m
+     * @param n
+     * @param o
+     * @return Matrix2d
+     */
     Matrix2d Matrix2d::laplace3d(int m, int n, int o)
     {
         std::vector<std::tuple<double, int>> vals{{-2, 0}, {1, -1}, {1, 1}};
@@ -161,6 +169,24 @@ namespace mgcl_test
         return Dzz.kronecker(eye(n)).kronecker(eye(m)) +
                eye(o).kronecker(Dyy).kronecker(eye(n)) +
                eye(o).kronecker(eye(n)).kronecker(Dxx);
+    }
+
+    /**
+     * @brief Generates full-weight restriction matrix scaled by 64.
+     *
+     * @param m
+     * @param n
+     * @param o
+     * @return Matrix2d
+     */
+    Matrix2d Matrix2d::restrictionFullWeight(int m, int n, int o)
+    {
+        std::vector<std::tuple<double, int>> vals{{2, 0}, {1, -1}, {1, 1}};
+        auto Dxx = diag(vals, m, m);
+        auto Dyy = diag(vals, n, n);
+        auto Dzz = diag(vals, o, o);
+
+        return Dyy.kronecker(Dzz).kronecker(Dxx);
     }
 
 } // namespace mgcl
