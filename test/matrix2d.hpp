@@ -24,18 +24,26 @@ namespace mgcl_test
             }
         }
 
-        Matrix2d kronecker(Matrix2d &b);
-        Matrix2d operator+(Matrix2d &b);
-        void operator+=(Matrix2d &b);
+        Matrix2d(std::vector<std::vector<double>> &&vec)
+            : m(vec.size()), n(vec.at(0).size()), values(std::move(vec)) {}
+
+        Matrix2d kronecker(const Matrix2d &b);
+        Matrix2d operator+(const Matrix2d &b);
+        void operator+=(const Matrix2d &b);
+        bool operator==(const Matrix2d &b) const;
+        bool operator!=(const Matrix2d &b) const;
 
         std::vector<double> &operator[](int index);
+        const std::vector<double> &operator[](int index) const;
         std::vector<double> &at(int index);
+        const std::vector<double> &at(int index) const;
 
         int getM() const;
         int getN() const;
 
-        static Matrix2d eye(int n);
-        static Matrix2d diag(double value, int n, int off);
+        static Matrix2d eye(int m);
+        static Matrix2d eye(int m, int n);
+        static Matrix2d diag(std::vector<std::tuple<double, int>> valuesAndOffsets, int m, int n);
     };
 }
 
