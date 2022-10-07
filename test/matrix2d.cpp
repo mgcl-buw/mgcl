@@ -180,7 +180,7 @@ namespace mgcl_test
      * @param o
      * @return Matrix2d
      */
-    Matrix2d Matrix2d::laplace3d(int m, int n, int o)
+    Matrix2d Matrix2d::laplace7p3d(int m, int n, int o)
     {
         std::vector<std::tuple<double, int>> vals{{-2, 0}, {1, -1}, {1, 1}};
         auto Dxx = diag(vals, m, m);
@@ -208,6 +208,48 @@ namespace mgcl_test
         auto Dzz = diag(vals, o, o);
 
         return Dyy.kronecker(Dzz).kronecker(Dxx);
+    }
+
+    Matrix2d Matrix2d::fromVaryingStencil(mgcl::VaryingStencil &s)
+    {
+        int m = s.getDim1();
+        int n = s.getDim2();
+        int o = s.getDim3();
+        Matrix2d c(m * n * o, m * n * o);
+
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                for (int k = 0; k < o; k++)
+                    for (int ii = 0; ii < 3; ii++)
+                        for (int jj = 0; jj < 3; jj++)
+                            for (int kk = 0; kk < 3; kk++)
+                                if (i + ii - 1 >= 0 &&
+                                    i + ii - 1 < m &&
+                                    j + jj - 1 >= 0 &&
+                                    j + jj - 1 < n &&
+                                    k + kk - 1 >= 0 &&
+                                    k + kk - 1 < o)
+                                    c[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] =
+                                        s[i + s.getGhostsDim1()][j + s.getGhostsDim2()][k + s.getGhostsDim3()][ii][jj][kk];
+
+        return c;
+    }
+
+    std::ostream &operator<<(std::ostream &os, Matrix2d const &value)
+    {
+        {
+            os << std::scientific;
+            for (int i = 0; i < value.getM(); i++)
+            {
+                for (int j = 0; j < value.getN(); j++)
+                {
+                    os << value[i][j] << "  ";
+                }
+                os << "\n";
+            }
+
+            return os;
+        }
     }
 
 } // namespace mgcl

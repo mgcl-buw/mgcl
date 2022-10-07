@@ -11,6 +11,7 @@ namespace mgcl
         int ghn = ghostsDim2;
         int gho = ghostsDim3;
 
+        // TODO must be 5x5x5
         auto c = std::make_unique<VaryingStencil>(m, n, o, ghm, ghn, gho);
 
         // clang-format off

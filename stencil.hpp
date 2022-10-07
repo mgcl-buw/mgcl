@@ -13,7 +13,7 @@ namespace mgcl
     /**
      * @brief Fixed 3x3x3 stencil (same stencil entries for each grid point).
      */
-    class FixedStencil : Cuboid
+    class FixedStencil : public Cuboid
     {
     public:
         FixedStencil() : Cuboid(3, 3, 3, 0, 0, 0) {}
@@ -23,7 +23,7 @@ namespace mgcl
      * @brief Class for 3x3x3 varying stencils, i.e. stencil can differ for each grid point.
      *
      */
-    class VaryingStencil : Hypercube6d
+    class VaryingStencil : public Hypercube6d
     {
     public:
         VaryingStencil(int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o)

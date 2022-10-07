@@ -2,7 +2,11 @@
 #define MATRIX2D_HPP
 
 #include <algorithm>
+#include <iomanip>
+#include <iostream>
 #include <vector>
+
+#include "../stencil.hpp"
 
 namespace mgcl_test
 {
@@ -45,9 +49,13 @@ namespace mgcl_test
         static Matrix2d eye(int m);
         static Matrix2d eye(int m, int n);
         static Matrix2d diag(std::vector<std::tuple<double, int>> valuesAndOffsets, int m, int n);
-        static Matrix2d laplace3d(int m, int n, int o);
+        static Matrix2d laplace7p3d(int m, int n, int o);
         static Matrix2d restrictionFullWeight(int m, int n, int o);
+        static Matrix2d fromVaryingStencil(mgcl::VaryingStencil &s);
     };
+
+    std::ostream &operator<<(std::ostream &os, Matrix2d const &value);
+
 }
 
 #endif // MATRIX2D_HPP

@@ -1,3 +1,5 @@
+#include "matrix2d.hpp"
+
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -5,8 +7,6 @@
 #include <cstdio>
 #include <fstream>
 #include <iostream>
-
-#include "matrix2d.hpp"
 
 TEST_CASE("Matrix2d::constructor")
 {
@@ -278,6 +278,34 @@ TEST_CASE("Matrix2d::diag")
         }
 }
 
+TEST_CASE("Matrix2d::fromVaryingStencil")
+{
+    int m = 2; // GENERATE(1, 2, 3);
+    int n = 1; // GENERATE(1, 2, 3);
+    int o = 1; // GENERATE(1, 2, 3);
+    int gh = 1;
+
+    // TODO laplace7p3d does not work for m,n,o = 2,1,1
+    auto a = mgcl_test::Matrix2d::laplace7p3d(m, n, o);
+    mgcl::VaryingStencil s(m, n, o, gh, gh, gh);
+    for (int i = 0; i < m + 2 * gh; i++)
+        for (int j = 0; j < n + 2 * gh; j++)
+            for (int k = 0; k < o + 2 * gh; k++)
+            {
+                // 7-point Laplace
+                s[i][j][k][0][1][1] = 1;
+                s[i][j][k][1][0][1] = 1;
+                s[i][j][k][1][1][0] = 1;
+                s[i][j][k][1][1][1] = -6;
+                s[i][j][k][1][1][2] = 1;
+                s[i][j][k][1][2][1] = 1;
+                s[i][j][k][2][1][1] = 1;
+            }
+
+    auto c = mgcl_test::Matrix2d::fromVaryingStencil(s);
+    CHECK(a == c);
+}
+
 TEST_CASE("Matrix2d::diag Laplace")
 {
     int m = 3;
@@ -303,7 +331,7 @@ TEST_CASE("Matrix2d 3d-Laplace")
     int n = 3;
     int o = 3;
 
-    auto a = mgcl_test::Matrix2d::laplace3d(m, n, o);
+    auto a = mgcl_test::Matrix2d::laplace7p3d(m, n, o);
 
     REQUIRE(a.getM() == m * n * o);
     REQUIRE(a.getN() == m * n * o);
