@@ -151,4 +151,16 @@ namespace mgcl_test
         return ret;
     }
 
+    Matrix2d Matrix2d::laplace3d(int m, int n, int o)
+    {
+        std::vector<std::tuple<double, int>> vals{{-2, 0}, {1, -1}, {1, 1}};
+        auto Dxx = diag(vals, m, m);
+        auto Dyy = diag(vals, n, n);
+        auto Dzz = diag(vals, o, o);
+
+        return Dzz.kronecker(eye(n)).kronecker(eye(m)) +
+               eye(o).kronecker(Dyy).kronecker(eye(n)) +
+               eye(o).kronecker(eye(n)).kronecker(Dxx);
+    }
+
 } // namespace mgcl

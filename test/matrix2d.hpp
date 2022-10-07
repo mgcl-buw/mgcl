@@ -44,6 +44,7 @@ namespace mgcl_test
         static Matrix2d eye(int m);
         static Matrix2d eye(int m, int n);
         static Matrix2d diag(std::vector<std::tuple<double, int>> valuesAndOffsets, int m, int n);
+        static Matrix2d laplace3d(int m, int n, int o);
     };
 }
 
