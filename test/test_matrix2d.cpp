@@ -249,6 +249,11 @@ TEST_CASE("Matrix2d::operator*")
         CHECK(c[0][0] == 50);
         CHECK(c[1][0] == 122);
     }
+
+    SECTION("throws")
+    {
+        REQUIRE_THROWS(mgcl_test::Matrix2d(1, 1) * mgcl_test::Matrix2d(3, 1));
+    }
 }
 
 TEST_CASE("Matrix2d::diag")
