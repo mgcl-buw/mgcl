@@ -32,6 +32,7 @@ namespace mgcl_test
         void operator+=(const Matrix2d &b);
         bool operator==(const Matrix2d &b) const;
         bool operator!=(const Matrix2d &b) const;
+        Matrix2d operator*(const Matrix2d &b) const;
 
         std::vector<double> &operator[](int index);
         const std::vector<double> &operator[](int index) const;

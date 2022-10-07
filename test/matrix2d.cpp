@@ -62,6 +62,27 @@ namespace mgcl_test
         return !operator==(b);
     }
 
+    Matrix2d Matrix2d::operator*(const Matrix2d &b) const
+    {
+        if (n != b.getM())
+            throw "Dimensions do not fit!";
+
+        Matrix2d c(m, b.getN());
+        auto &a = *this;
+
+        for (int ci = 0; ci < c.getM(); ci++)
+            for (int cj = 0; cj < c.getN(); cj++)
+            {
+                double sum = 0;
+                for (int idx = 0; idx < n; idx++)
+                    sum += a[ci][idx] * b[idx][cj];
+
+                c[ci][cj] = sum;
+            }
+
+        return c;
+    }
+
     std::vector<double> &Matrix2d::operator[](int index)
     {
         return values[index];

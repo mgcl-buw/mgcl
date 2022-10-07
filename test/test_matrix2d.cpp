@@ -144,6 +144,113 @@ TEST_CASE("Matrix2d::operator== and Matrix2d::operator!=")
     CHECK(d != a);
 }
 
+TEST_CASE("Matrix2d::operator*")
+{
+    SECTION("m,n = 1,1")
+    {
+        mgcl_test::Matrix2d a(1, 1);
+        mgcl_test::Matrix2d b(1, 1);
+
+        a[0][0] = 3;
+        b[0][0] = 2;
+
+        auto c = a * b;
+
+        REQUIRE(c.getM() == a.getM());
+        REQUIRE(c.getN() == b.getN());
+
+        CHECK(c[0][0] == 6);
+    }
+
+    SECTION("m,n = 2,2")
+    {
+        mgcl_test::Matrix2d a(2, 2);
+        mgcl_test::Matrix2d b(2, 2);
+
+        a[0][0] = 1;
+        a[0][1] = 2;
+        a[1][0] = 3;
+        a[1][1] = 4;
+        b[0][0] = 5;
+        b[0][1] = 6;
+        b[1][0] = 7;
+        b[1][1] = 8;
+
+        auto c = a * b;
+
+        REQUIRE(c.getM() == a.getM());
+        REQUIRE(c.getN() == b.getN());
+
+        CHECK(c[0][0] == 19);
+        CHECK(c[0][1] == 22);
+        CHECK(c[1][0] == 43);
+        CHECK(c[1][1] == 50);
+    }
+
+    SECTION("a m,n = 3,2; b m,n = 2,4")
+    {
+        mgcl_test::Matrix2d a(3, 2);
+        mgcl_test::Matrix2d b(2, 4);
+
+        a[0][0] = 1;
+        a[0][1] = 2;
+        a[1][0] = 3;
+        a[1][1] = 4;
+        a[2][0] = 5;
+        a[2][1] = 6;
+        b[0][0] = 7;
+        b[0][1] = 8;
+        b[0][2] = 9;
+        b[0][3] = 10;
+        b[1][0] = 11;
+        b[1][1] = 12;
+        b[1][2] = 13;
+        b[1][3] = 14;
+
+        auto c = a * b;
+
+        REQUIRE(c.getM() == a.getM());
+        REQUIRE(c.getN() == b.getN());
+
+        CHECK(c[0][0] == 29);
+        CHECK(c[0][1] == 32);
+        CHECK(c[0][2] == 35);
+        CHECK(c[0][3] == 38);
+        CHECK(c[1][0] == 65);
+        CHECK(c[1][1] == 72);
+        CHECK(c[1][2] == 79);
+        CHECK(c[1][3] == 86);
+        CHECK(c[2][0] == 101);
+        CHECK(c[2][1] == 112);
+        CHECK(c[2][2] == 123);
+        CHECK(c[2][3] == 134);
+    }
+
+    SECTION("a m,n = 2,3; b m,n = 3,1")
+    {
+        mgcl_test::Matrix2d a(2, 3);
+        mgcl_test::Matrix2d b(3, 1);
+
+        a[0][0] = 1;
+        a[0][1] = 2;
+        a[0][2] = 3;
+        a[1][0] = 4;
+        a[1][1] = 5;
+        a[1][2] = 6;
+        b[0][0] = 7;
+        b[1][0] = 8;
+        b[2][0] = 9;
+
+        auto c = a * b;
+
+        REQUIRE(c.getM() == a.getM());
+        REQUIRE(c.getN() == b.getN());
+
+        CHECK(c[0][0] == 50);
+        CHECK(c[1][0] == 122);
+    }
+}
+
 TEST_CASE("Matrix2d::diag")
 {
     int m = GENERATE(1, 2, 3);
