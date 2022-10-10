@@ -342,8 +342,8 @@ TEST_CASE("VaryingStencil::multiply", "[.]")
     int ghn = 1;
     int gho = 1;
 
-    mgcl::VaryingStencil a(m, n, o, ghm, ghn, gho);
-    mgcl::VaryingStencil b(m, n, o, ghm, ghn, gho);
+    mgcl::VaryingStencil3x3x3 a(m, n, o, ghm, ghn, gho);
+    mgcl::VaryingStencil3x3x3 b(m, n, o, ghm, ghn, gho);
 
     // fill a and b
     for (int i = ghm; i < m + ghm; i++)

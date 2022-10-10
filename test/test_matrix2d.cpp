@@ -337,7 +337,7 @@ TEST_CASE("Matrix2d::fromVaryingStencil", "[.]")
     int gh = 1;
 
     auto a = mgcl_test::Matrix2d::laplace7p3d(m, n, o);
-    mgcl::VaryingStencil s(m, n, o, gh, gh, gh);
+    mgcl::VaryingStencil3x3x3 s(m, n, o, gh, gh, gh);
     for (int i = 0; i < m + 2 * gh; i++)
         for (int j = 0; j < n + 2 * gh; j++)
             for (int k = 0; k < o + 2 * gh; k++)

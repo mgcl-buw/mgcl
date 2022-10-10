@@ -216,13 +216,15 @@ namespace mgcl_test
         return Dyy.kronecker(Dzz).kronecker(Dxx);
     }
 
-    Matrix2d Matrix2d::fromVaryingStencil(mgcl::VaryingStencil &s)
+    template <int N>
+    Matrix2d Matrix2d::fromVaryingStencil(mgcl::VaryingStencil<N> &s)
     {
         int m = s.getDim1();
         int n = s.getDim2();
         int o = s.getDim3();
         Matrix2d c(m * n * o, m * n * o);
 
+        // TODO check integrating N
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)
                 for (int k = 0; k < o; k++)
@@ -240,6 +242,10 @@ namespace mgcl_test
 
         return c;
     }
+
+    // instantiate template functions to avoid linker errors
+    template Matrix2d Matrix2d::fromVaryingStencil(mgcl::VaryingStencil3x3x3 &s);
+    template Matrix2d Matrix2d::fromVaryingStencil(mgcl::VaryingStencil5x5x5 &s);
 
     std::ostream &operator<<(std::ostream &os, Matrix2d const &value)
     {

@@ -2,7 +2,8 @@
 
 namespace mgcl
 {
-    std::unique_ptr<VaryingStencil> VaryingStencil::multiply(VaryingStencil &b)
+    template <int N>
+    std::unique_ptr<VaryingStencil<N + 2>> VaryingStencil<N>::multiply(VaryingStencil<N> &b)
     {
         int m = dim1;
         int n = dim2;
@@ -12,7 +13,7 @@ namespace mgcl
         int gho = ghostsDim3;
 
         // TODO must be 5x5x5
-        auto c = std::make_unique<VaryingStencil>(m, n, o, ghm, ghn, gho);
+        auto c = std::make_unique<VaryingStencil<N + 2>>(m, n, o, ghm, ghn, gho);
 
         // clang-format off
         for (int x = 0; x < m; x++)
@@ -38,4 +39,8 @@ namespace mgcl
 
         return c;
     }
+
+    // instantiate template classes to avoid linker errors
+    template class VaryingStencil<3>;
+    template class VaryingStencil<5>;
 }
