@@ -38,7 +38,7 @@ namespace mgcl
         ~Cuboid();
 
         double ***getData() const;
-        double **operator[](int index);
+        inline double **operator[](int index) { return field_3d[index]; }
         void fillRandom(double low = 0, double high = 1);
         void fill(double value, bool realCellsOnly = false);
         std::vector<double> &field1d();

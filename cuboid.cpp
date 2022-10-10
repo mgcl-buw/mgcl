@@ -171,11 +171,6 @@ namespace mgcl
         return mgh;
     }
 
-    double **Cuboid::operator[](int index)
-    {
-        return field_3d[index];
-    }
-
     /**
      * @brief Fills Cuboid with random values between low and high, which default to 0 and 1.
      *
