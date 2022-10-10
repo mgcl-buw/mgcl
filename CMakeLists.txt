@@ -5,13 +5,17 @@ project(MGCL VERSION 0.1.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# use link time optimization if using gcc (should definitely be used!)
-# can be skipped if cmake is invoked with NO_LTO, i.e. cmake . -DNO_LTO=True
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT DEFINED NO_LTO)
-  add_compile_options("-flto")
-  add_link_options("-flto")
-else()
-  message(WARNING "Link Time Optimization can only be used with gcc!")
+# enable link time optimization (LTO) if supported for Release build type
+if(CMAKE_BUILD_TYPE MATCHES Release OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT supported OUTPUT error)
+
+  if(supported)
+      message(STATUS "IPO / LTO enabled")
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+  else()
+      message(STATUS "IPO / LTO not supported: <${error}>")
+  endif()
 endif()
 
 # set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
