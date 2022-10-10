@@ -29,7 +29,8 @@ namespace mgcl
 
         // relax nu1 times
         res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
-                                         problem.omega, problem.nu1, problem.residual_norm, problem.stencilType, *problem.stencilValues, false);
+                                         problem.omega, problem.nu1, problem.residual_norm, problem.stencilType,
+                                         level.stencilFactor, *problem.stencilValues, false);
 
         // update residual without D^-1
         // res = residual(level.f, level.v, level.r, level.m-2, level.n-2, level.o-2,
@@ -55,7 +56,7 @@ namespace mgcl
         else
         {
             MultigridEngine::jacobiSeq(levelAbove.getV(), levelAbove.getF(), levelAbove.getR(), problem.omega, problem.nu1 + problem.nu2,
-                                       problem.residual_norm, problem.stencilType, *problem.stencilValues, false);
+                                       problem.residual_norm, problem.stencilType, level.stencilFactor, *problem.stencilValues, false);
 
             // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
         }
@@ -72,7 +73,8 @@ namespace mgcl
 
         // relax nu2 times
         res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
-                                         problem.omega, problem.nu2, problem.residual_norm, problem.stencilType, *problem.stencilValues, !problem.ignoreTol);
+                                         problem.omega, problem.nu2, problem.residual_norm, problem.stencilType,
+                                         level.stencilFactor, *problem.stencilValues, !problem.ignoreTol);
         // printf("res on level %d, downwards: %.17e\n", level.getNum(), res);
         return res;
     }

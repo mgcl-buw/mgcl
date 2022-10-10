@@ -27,6 +27,7 @@ namespace mgcl
         /* Stencil for this Level that will be applied on v */
         // TODO init
         MGCL_STENCIL stencilType;
+        double stencilFactor = 1;
         std::unique_ptr<Hypercube4d> stencilValues = nullptr;
 
         /* grid dimensions of real grid */
@@ -40,7 +41,6 @@ namespace mgcl
         int ogh;
 
         /* spacing of real grid on current level */
-        // TODO not used yet
         double h;
 
         /* opencl buffers */
@@ -105,5 +105,7 @@ namespace mgcl
         MGCL_STENCIL getStencilType() const;
 
         std::unique_ptr<Hypercube4d> &getStencilValues();
+
+        double getStencilFactor() const;
     };
 }
