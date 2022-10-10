@@ -12,6 +12,6 @@
 # cd ~/output/ || exit
 
 cmake -DCMAKE_BUILD_TYPE=Release "$HOME"/projects/mgcl/build
-cmake --build --clean-first  "$HOME"/projects/mgcl/build
+cmake --build "$HOME"/projects/mgcl/build --clean-first
 
 # cd "$HOME"/projects/mgcl || exit
