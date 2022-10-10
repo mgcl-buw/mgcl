@@ -811,6 +811,7 @@ namespace mgcl
         double h = 1.0 / f.getM();
         double stencilFactor;
         double ****stencilValues;
+        double ***vraw = v.getData();
 
         if (stencilType == MGCL_LAPLACE_7POINT)
             stencilFactor = 1.0 / (h * h);
@@ -830,121 +831,121 @@ namespace mgcl
                     if (stencilType == MGCL_LAPLACE_7POINT)
                     {
                         // clang-format off
-                        stencilsum = (6.0 * v[i][j][k]
-                            - v[i][j][k - 1] - v[i][j][k + 1]
-                            - v[i][j - 1][k] - v[i][j + 1][k]
-                            - v[i - 1][j][k] - v[i + 1][j][k]
+                        stencilsum = (6.0 * vraw[i][j][k]
+                            - vraw[i][j][k - 1] - vraw[i][j][k + 1]
+                            - vraw[i][j - 1][k] - vraw[i][j + 1][k]
+                            - vraw[i - 1][j][k] - vraw[i + 1][j][k]
                             ) * stencilFactor;
                         // clang-format on
                     }
                     else if (stencilType == MGCL_LAPLACE_19POINT)
                     {
                         // clang-format off
-                        stencilsum = (24.0 * v[i][j][k]
-                                - 2.0 * v[i][j][k - 1] - 2.0 * v[i][j][k + 1]
-                                - 2.0 * v[i][j - 1][k] - 2.0 * v[i][j + 1][k]
-                                - 2.0 * v[i - 1][j][k] - 2.0 * v[i + 1][j][k]
+                        stencilsum = (24.0 * vraw[i][j][k]
+                                - 2.0 * vraw[i][j][k - 1] - 2.0 * vraw[i][j][k + 1]
+                                - 2.0 * vraw[i][j - 1][k] - 2.0 * vraw[i][j + 1][k]
+                                - 2.0 * vraw[i - 1][j][k] - 2.0 * vraw[i + 1][j][k]
                                 
-                                - v[i][j - 1][k - 1] - v[i][j - 1][k + 1]
-                                - v[i][j + 1][k - 1] - v[i][j + 1][k + 1]
-                                - v[i - 1][j][k - 1] - v[i - 1][j][k + 1]
-                                - v[i + 1][j][k - 1] - v[i + 1][j][k + 1]
-                                - v[i - 1][j - 1][k] - v[i - 1][j + 1][k]
-                                - v[i + 1][j - 1][k] - v[i + 1][j + 1][k]
+                                - vraw[i][j - 1][k - 1] - vraw[i][j - 1][k + 1]
+                                - vraw[i][j + 1][k - 1] - vraw[i][j + 1][k + 1]
+                                - vraw[i - 1][j][k - 1] - vraw[i - 1][j][k + 1]
+                                - vraw[i + 1][j][k - 1] - vraw[i + 1][j][k + 1]
+                                - vraw[i - 1][j - 1][k] - vraw[i - 1][j + 1][k]
+                                - vraw[i + 1][j - 1][k] - vraw[i + 1][j + 1][k]
                                 ) * stencilFactor;
                         // clang-format on
                     }
                     else if (stencilType == MGCL_LAPLACE_27POINT)
                     {
                         // clang-format off
-                        stencilsum = (128.0 * v[i][j][k]
-                                - 14.0 * v[i][j][k - 1] - 14.0 * v[i][j][k + 1]
-                                - 14.0 * v[i][j - 1][k] - 14.0 * v[i][j + 1][k]
-                                - 14.0 * v[i - 1][j][k] - 14.0 * v[i + 1][j][k]
+                        stencilsum = (128.0 * vraw[i][j][k]
+                                - 14.0 * vraw[i][j][k - 1] - 14.0 * vraw[i][j][k + 1]
+                                - 14.0 * vraw[i][j - 1][k] - 14.0 * vraw[i][j + 1][k]
+                                - 14.0 * vraw[i - 1][j][k] - 14.0 * vraw[i + 1][j][k]
 
-                                - 3.0 * v[i][j - 1][k - 1] - 3.0 * v[i][j - 1][k + 1]
-                                - 3.0 * v[i][j + 1][k - 1] - 3.0 * v[i][j + 1][k + 1]
-                                - 3.0 * v[i - 1][j][k - 1] - 3.0 * v[i - 1][j][k + 1]
-                                - 3.0 * v[i + 1][j][k - 1] - 3.0 * v[i + 1][j][k + 1]
-                                - 3.0 * v[i - 1][j - 1][k] - 3.0 * v[i - 1][j + 1][k]
-                                - 3.0 * v[i + 1][j - 1][k] - 3.0 * v[i + 1][j + 1][k]
+                                - 3.0 * vraw[i][j - 1][k - 1] - 3.0 * vraw[i][j - 1][k + 1]
+                                - 3.0 * vraw[i][j + 1][k - 1] - 3.0 * vraw[i][j + 1][k + 1]
+                                - 3.0 * vraw[i - 1][j][k - 1] - 3.0 * vraw[i - 1][j][k + 1]
+                                - 3.0 * vraw[i + 1][j][k - 1] - 3.0 * vraw[i + 1][j][k + 1]
+                                - 3.0 * vraw[i - 1][j - 1][k] - 3.0 * vraw[i - 1][j + 1][k]
+                                - 3.0 * vraw[i + 1][j - 1][k] - 3.0 * vraw[i + 1][j + 1][k]
 
-                                - v[i - 1][j - 1][k - 1] - v[i - 1][j - 1][k + 1]
-                                - v[i - 1][j + 1][k - 1] - v[i - 1][j + 1][k + 1]
-                                - v[i + 1][j - 1][k - 1] - v[i + 1][j - 1][k + 1]
-                                - v[i + 1][j + 1][k - 1] - v[i + 1][j + 1][k + 1]
+                                - vraw[i - 1][j - 1][k - 1] - vraw[i - 1][j - 1][k + 1]
+                                - vraw[i - 1][j + 1][k - 1] - vraw[i - 1][j + 1][k + 1]
+                                - vraw[i + 1][j - 1][k - 1] - vraw[i + 1][j - 1][k + 1]
+                                - vraw[i + 1][j + 1][k - 1] - vraw[i + 1][j + 1][k + 1]
                                 ) * stencilFactor;
                         // clang-format on
                     }
                     else if (stencilType == MGCL_VARYING_7POINT)
                     {
                         // clang-format off
-                        stencilsum = stencilValues[i][j][k][VaryingStencil::SELF]  * v[i][j][k]
-                            + stencilValues[i][j][k][VaryingStencil::FRONT]  * v[i][j][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK]   * v[i][j][k + 1]
-                            + stencilValues[i][j][k][VaryingStencil::TOP]    * v[i][j - 1][k]
-                            + stencilValues[i][j][k][VaryingStencil::BOTTOM] * v[i][j + 1][k]
-                            + stencilValues[i][j][k][VaryingStencil::LEFT]   * v[i - 1][j][k]
-                            + stencilValues[i][j][k][VaryingStencil::RIGHT]  * v[i + 1][j][k];
+                        stencilsum = stencilValues[i][j][k][VaryingStencil::SELF]  * vraw[i][j][k]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT]  * vraw[i][j][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK]   * vraw[i][j][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::TOP]    * vraw[i][j - 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::BOTTOM] * vraw[i][j + 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::LEFT]   * vraw[i - 1][j][k]
+                            + stencilValues[i][j][k][VaryingStencil::RIGHT]  * vraw[i + 1][j][k];
                         // clang-format on
                     }
                     else if (stencilType == MGCL_VARYING_19POINT)
                     {
                         // clang-format off
-                        stencilsum = stencilValues[i][j][k][VaryingStencil::SELF]  * v[i][j][k]
-                            + stencilValues[i][j][k][VaryingStencil::FRONT]  * v[i][j][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK]   * v[i][j][k + 1]
-                            + stencilValues[i][j][k][VaryingStencil::TOP]    * v[i][j - 1][k]
-                            + stencilValues[i][j][k][VaryingStencil::BOTTOM] * v[i][j + 1][k]
-                            + stencilValues[i][j][k][VaryingStencil::LEFT]   * v[i - 1][j][k]
-                            + stencilValues[i][j][k][VaryingStencil::RIGHT]  * v[i + 1][j][k]
+                        stencilsum = stencilValues[i][j][k][VaryingStencil::SELF]  * vraw[i][j][k]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT]  * vraw[i][j][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK]   * vraw[i][j][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::TOP]    * vraw[i][j - 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::BOTTOM] * vraw[i][j + 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::LEFT]   * vraw[i - 1][j][k]
+                            + stencilValues[i][j][k][VaryingStencil::RIGHT]  * vraw[i + 1][j][k]
                             
-                            + stencilValues[i][j][k][VaryingStencil::FRONT_TOP]    * v[i][j - 1][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK_TOP]     * v[i][j - 1][k + 1]
-                            + stencilValues[i][j][k][VaryingStencil::FRONT_BOTTOM] * v[i][j + 1][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK_BOTTOM]  * v[i][j + 1][k + 1]
-                            + stencilValues[i][j][k][VaryingStencil::FRONT_LEFT]   * v[i - 1][j][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK_LEFT]    * v[i - 1][j][k + 1]
-                            + stencilValues[i][j][k][VaryingStencil::FRONT_RIGHT]  * v[i + 1][j][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK_RIGHT]   * v[i + 1][j][k + 1]
-                            + stencilValues[i][j][k][VaryingStencil::LEFT_TOP]     * v[i - 1][j - 1][k]
-                            + stencilValues[i][j][k][VaryingStencil::LEFT_BOTTOM]  * v[i - 1][j + 1][k]
-                            + stencilValues[i][j][k][VaryingStencil::RIGHT_TOP]    * v[i + 1][j - 1][k]
-                            + stencilValues[i][j][k][VaryingStencil::RIGHT_BOTTOM] * v[i + 1][j + 1][k];
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_TOP]    * vraw[i][j - 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_TOP]     * vraw[i][j - 1][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_BOTTOM] * vraw[i][j + 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_BOTTOM]  * vraw[i][j + 1][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_LEFT]   * vraw[i - 1][j][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_LEFT]    * vraw[i - 1][j][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_RIGHT]  * vraw[i + 1][j][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_RIGHT]   * vraw[i + 1][j][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::LEFT_TOP]     * vraw[i - 1][j - 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::LEFT_BOTTOM]  * vraw[i - 1][j + 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::RIGHT_TOP]    * vraw[i + 1][j - 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::RIGHT_BOTTOM] * vraw[i + 1][j + 1][k];
                         // clang-format on
                     }
                     else if (stencilType == MGCL_VARYING_27POINT)
                     {
                         // clang-format off
-                        stencilsum = stencilValues[i][j][k][VaryingStencil::SELF]  * v[i][j][k]
-                            + stencilValues[i][j][k][VaryingStencil::FRONT]  * v[i][j][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK]   * v[i][j][k + 1]
-                            + stencilValues[i][j][k][VaryingStencil::TOP]    * v[i][j - 1][k]
-                            + stencilValues[i][j][k][VaryingStencil::BOTTOM] * v[i][j + 1][k]
-                            + stencilValues[i][j][k][VaryingStencil::LEFT]   * v[i - 1][j][k]
-                            + stencilValues[i][j][k][VaryingStencil::RIGHT]  * v[i + 1][j][k]
+                        stencilsum = stencilValues[i][j][k][VaryingStencil::SELF]  * vraw[i][j][k]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT]  * vraw[i][j][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK]   * vraw[i][j][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::TOP]    * vraw[i][j - 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::BOTTOM] * vraw[i][j + 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::LEFT]   * vraw[i - 1][j][k]
+                            + stencilValues[i][j][k][VaryingStencil::RIGHT]  * vraw[i + 1][j][k]
                             
-                            + stencilValues[i][j][k][VaryingStencil::FRONT_TOP]    * v[i][j - 1][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK_TOP]     * v[i][j - 1][k + 1]
-                            + stencilValues[i][j][k][VaryingStencil::FRONT_BOTTOM] * v[i][j + 1][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK_BOTTOM]  * v[i][j + 1][k + 1]
-                            + stencilValues[i][j][k][VaryingStencil::FRONT_LEFT]   * v[i - 1][j][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK_LEFT]    * v[i - 1][j][k + 1]
-                            + stencilValues[i][j][k][VaryingStencil::FRONT_RIGHT]  * v[i + 1][j][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK_RIGHT]   * v[i + 1][j][k + 1]
-                            + stencilValues[i][j][k][VaryingStencil::LEFT_TOP]     * v[i - 1][j - 1][k]
-                            + stencilValues[i][j][k][VaryingStencil::LEFT_BOTTOM]  * v[i - 1][j + 1][k]
-                            + stencilValues[i][j][k][VaryingStencil::RIGHT_TOP]    * v[i + 1][j - 1][k]
-                            + stencilValues[i][j][k][VaryingStencil::RIGHT_BOTTOM] * v[i + 1][j + 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_TOP]    * vraw[i][j - 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_TOP]     * vraw[i][j - 1][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_BOTTOM] * vraw[i][j + 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_BOTTOM]  * vraw[i][j + 1][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_LEFT]   * vraw[i - 1][j][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_LEFT]    * vraw[i - 1][j][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_RIGHT]  * vraw[i + 1][j][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_RIGHT]   * vraw[i + 1][j][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::LEFT_TOP]     * vraw[i - 1][j - 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::LEFT_BOTTOM]  * vraw[i - 1][j + 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::RIGHT_TOP]    * vraw[i + 1][j - 1][k]
+                            + stencilValues[i][j][k][VaryingStencil::RIGHT_BOTTOM] * vraw[i + 1][j + 1][k]
                             
-                            + stencilValues[i][j][k][VaryingStencil::FRONT_TOP_LEFT]     * v[i - 1][j - 1][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK_TOP_LEFT]      * v[i - 1][j - 1][k + 1]
-                            + stencilValues[i][j][k][VaryingStencil::FRONT_BOTTOM_LEFT]  * v[i - 1][j + 1][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK_BOTTOM_LEFT]   * v[i - 1][j + 1][k + 1]
-                            + stencilValues[i][j][k][VaryingStencil::FRONT_TOP_RIGHT]    * v[i + 1][j - 1][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK_TOP_RIGHT]     * v[i + 1][j - 1][k + 1]
-                            + stencilValues[i][j][k][VaryingStencil::FRONT_BOTTOM_RIGHT] * v[i + 1][j + 1][k - 1]
-                            + stencilValues[i][j][k][VaryingStencil::BACK_BOTTOM_RIGHT]  * v[i + 1][j + 1][k + 1];
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_TOP_LEFT]     * vraw[i - 1][j - 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_TOP_LEFT]      * vraw[i - 1][j - 1][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_BOTTOM_LEFT]  * vraw[i - 1][j + 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_BOTTOM_LEFT]   * vraw[i - 1][j + 1][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_TOP_RIGHT]    * vraw[i + 1][j - 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_TOP_RIGHT]     * vraw[i + 1][j - 1][k + 1]
+                            + stencilValues[i][j][k][VaryingStencil::FRONT_BOTTOM_RIGHT] * vraw[i + 1][j + 1][k - 1]
+                            + stencilValues[i][j][k][VaryingStencil::BACK_BOTTOM_RIGHT]  * vraw[i + 1][j + 1][k + 1];
                         // clang-format on
                     }
 
