@@ -25,6 +25,13 @@ namespace mgcl
           h(1.0 / (double)m),
           stencilType(problem_->stencilType)
     {
+        if (stencilType == MGCL_LAPLACE_7POINT)
+            stencilFactor = 1.0 / (h * h);
+        else if (stencilType == MGCL_LAPLACE_19POINT)
+            stencilFactor = 1.0 / (6.0 * h * h);
+        else if (stencilType == MGCL_LAPLACE_27POINT)
+            stencilFactor = 1.0 / (30.0 * h * h);
+
         if (num_ < 0 || num_ > problem->getMaxlevel())
             throw std::invalid_argument(std::string("num is invalid! num: ")
                                             .append(std::to_string(num_))
@@ -241,6 +248,11 @@ namespace mgcl
     int Level::getOgh() const
     {
         return ogh;
+    }
+
+    double Level::getStencilFactor() const
+    {
+        return stencilFactor;
     }
 
     int Level::getNum() const

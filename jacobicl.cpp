@@ -12,7 +12,7 @@ namespace mgcl
      * m,n,o is size of real grid */
     double MultigridEngine::jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
-                                      Hypercube4d &stencilValuesCuboid, bool returnResidualNorm)
+                                      double stencilFactor, Hypercube4d &stencilValuesCuboid, bool returnResidualNorm)
     {
         double res = 0.0;
         double h2 = 1.0 / ((double)(v.getM() * v.getM()));
@@ -30,7 +30,7 @@ namespace mgcl
             // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
 
             // r = f - A*v
-            res = residualSeq(f, v, r, resnorm, stencilType, stencilValuesCuboid, returnResidualNorm);
+            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValuesCuboid, returnResidualNorm);
             for (int i = f.getGhostsM(); i < f.getM() + f.getGhostsM(); i++)
                 for (int j = f.getGhostsN(); j < f.getN() + f.getGhostsN(); j++)
                     for (int k = f.getGhostsO(); k < f.getO() + f.getGhostsO(); k++)
@@ -134,7 +134,7 @@ namespace mgcl
         double h2 = (1.0 / (double)level.m) *
                     (1.0 / (double)level.m); // TODO minimum of m,n,o when not cube?
         double dinv = h2 / 6.0;
-        double h2inv = 1.0 / h2; // divisor of the stencil, inverted to use * instead of / in kernel
+        double h2inv = level.stencilFactor; // divisor of the stencil, inverted to use * instead of / in kernel
 
         // Create the compute kernel from the program
         const char *kernel_name;
@@ -143,13 +143,11 @@ namespace mgcl
         else if (problem.stencilType == MGCL_LAPLACE_19POINT)
         {
             kernel_name = "jacobi_iter_19point";
-            h2inv = 1.0 / (6.0 * h2);
             dinv = (6.0 * h2) / 24.0;
         }
         else if (problem.stencilType == MGCL_LAPLACE_27POINT)
         {
             kernel_name = "jacobi_iter_27point";
-            h2inv = 1.0 / (30.0 * h2);
             dinv = (30.0 * h2) / 128.0;
         }
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
@@ -391,7 +389,7 @@ namespace mgcl
         double h2 = (1.0 / (double)level.m) *
                     (1.0 / (double)level.m); // TODO minimum of m,n,o when not cube?
         double dinv = h2 / 6.0;
-        double h2inv = 1 / h2; // divisor of the stencil, inverted to use * instead of / in kernel
+        double h2inv = level.stencilFactor; // divisor of the stencil, inverted to use * instead of / in kernel
 
         // Create the compute kernel from the program
         const char *kernel_name;
@@ -400,13 +398,11 @@ namespace mgcl
         else if (problem.stencilType == MGCL_LAPLACE_19POINT)
         {
             kernel_name = "jacobi_stream_shmem_19point";
-            h2inv = 1.0 / (6.0 * h2);
             dinv = (6.0 * h2) / 24.0;
         }
         else if (problem.stencilType == MGCL_LAPLACE_27POINT)
         {
             kernel_name = "jacobi_stream_shmem_27point";
-            h2inv = 1.0 / (30.0 * h2);
             dinv = (30.0 * h2) / 128.0;
         }
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
@@ -804,22 +800,14 @@ namespace mgcl
     /* Calculates r = f - A*v using 7-point stencil of 3D laplacian.
      * m,n,o is size of real grid */
     double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
-                                        MGCL_STENCIL stencilType, Hypercube4d &stencilValuesCuboid, bool returnResidualNorm)
+                                        MGCL_STENCIL stencilType, double stencilFactor, Hypercube4d &stencilValuesCuboid, bool returnResidualNorm)
     {
         double res = 0.0;
         double stencilsum = 0;
-        double h = 1.0 / f.getM();
-        double stencilFactor;
         double ****stencilValues;
         double ***vraw = v.getData();
 
-        if (stencilType == MGCL_LAPLACE_7POINT)
-            stencilFactor = 1.0 / (h * h);
-        else if (stencilType == MGCL_LAPLACE_19POINT)
-            stencilFactor = 1.0 / (6.0 * h * h);
-        else if (stencilType == MGCL_LAPLACE_27POINT)
-            stencilFactor = 1.0 / (30.0 * h * h);
-        else if (stencilType == MGCL_VARYING_7POINT || stencilType == MGCL_VARYING_19POINT || stencilType == MGCL_VARYING_27POINT)
+        if (stencilType == MGCL_VARYING_7POINT || stencilType == MGCL_VARYING_19POINT || stencilType == MGCL_VARYING_27POINT)
             stencilValues = stencilValuesCuboid.getData();
 
         for (int i = f.getGhostsM(); i < f.getM() + f.getGhostsM(); i++)

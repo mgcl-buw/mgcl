@@ -35,12 +35,14 @@ TEST_CASE("jacobi")
     auto c_expected_out_r = jacobiTestOutputR();
 
     auto stencil = mgcl::MGCL_LAPLACE_7POINT;
+    double h = 1.0 / (double)m;
+    double stencilFactor = 1.0 / (h * h);
 
     SECTION("seq L2-norm 7point")
     {
         auto stencilValues = std::make_unique<mgcl::Hypercube4d>(mgh, ngh, ogh, 7);
         double res = mgcl::MultigridEngine::jacobiSeq(*c_in_v, *c_in_f, *c_in_r, omega, maxiter,
-                                                      mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_7POINT, *stencilValues, true);
+                                                      mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_7POINT, stencilFactor, *stencilValues, true);
 
         CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
         CHECK(c_in_v->isEqual(*c_expected_out_v));
