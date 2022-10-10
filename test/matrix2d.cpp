@@ -22,6 +22,9 @@ namespace mgcl_test
 
     Matrix2d Matrix2d::operator+(const Matrix2d &b)
     {
+        if (m != b.getM() || n != b.getN())
+            throw "Matrix dimensions do not match!";
+
         Matrix2d c(m, n);
 
         for (int a1 = 0; a1 < m; a1++)
@@ -35,6 +38,9 @@ namespace mgcl_test
 
     void Matrix2d::operator+=(const Matrix2d &b)
     {
+        if (m != b.getM() || n != b.getN())
+            throw "Matrix dimensions do not match!";
+
         for (int a1 = 0; a1 < m; a1++)
             for (int a2 = 0; a2 < n; a2++)
             {
@@ -187,9 +193,9 @@ namespace mgcl_test
         auto Dyy = diag(vals, n, n);
         auto Dzz = diag(vals, o, o);
 
-        return Dzz.kronecker(eye(n)).kronecker(eye(m)) +
-               eye(o).kronecker(Dyy).kronecker(eye(n)) +
-               eye(o).kronecker(eye(n)).kronecker(Dxx);
+        return Dxx.kronecker(eye(o)).kronecker(eye(n)) +
+               eye(m).kronecker(Dyy.kronecker(eye(o))) +
+               eye(n).kronecker(eye(m).kronecker(Dzz));
     }
 
     /**

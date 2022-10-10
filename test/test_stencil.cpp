@@ -333,7 +333,7 @@ TEST_CASE("StencilVarying27p")
     REQUIRE(-r[1][1][1] == Catch::Approx(expected));
 }
 
-TEST_CASE("VaryingStencil::multiply")
+TEST_CASE("VaryingStencil::multiply", "[.]")
 {
     int m = 4;
     int n = 4;
