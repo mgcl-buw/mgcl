@@ -333,14 +333,14 @@ TEST_CASE("StencilVarying27p")
     REQUIRE(-r[1][1][1] == Catch::Approx(expected));
 }
 
-TEST_CASE("VaryingStencil::multiply", "[.]")
+TEST_CASE("VaryingStencil::multiply")
 {
     int m = 4;
     int n = 4;
     int o = 4;
-    int ghm = 1;
-    int ghn = 1;
-    int gho = 1;
+    int ghm = 0;
+    int ghn = 0;
+    int gho = 0;
 
     mgcl::VaryingStencil3x3x3 a(m, n, o, ghm, ghn, gho);
     mgcl::VaryingStencil3x3x3 b(m, n, o, ghm, ghn, gho);
@@ -392,7 +392,7 @@ TEST_CASE("VaryingStencil::multiply", "[.]")
     auto c = a.multiply(b);
 
     // check result against explicitly calculated matrix product
-    auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o);
+    auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
     auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(*c);
     CHECK(c_m2d == c_expected);
 }

@@ -100,6 +100,8 @@ test/test_hypercube.cpp
 test/matrix2d.hpp
 test/matrix2d.cpp
 test/test_matrix2d.cpp
+test/test_results.hpp
+test/test_results.cpp
 )
 
 add_executable(tests ${SOURCES_TEST})

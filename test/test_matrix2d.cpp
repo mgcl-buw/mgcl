@@ -8,6 +8,8 @@
 #include <fstream>
 #include <iostream>
 
+#include "test_results.hpp"
+
 TEST_CASE("Matrix2d::constructor")
 {
     mgcl_test::Matrix2d a(3, 2);
@@ -329,31 +331,45 @@ TEST_CASE("Matrix2d::diag")
         }
 }
 
-TEST_CASE("Matrix2d::fromVaryingStencil", "[.]")
+TEST_CASE("Matrix2d::fromVaryingStencil")
 {
-    int m = GENERATE(1, 2, 3);
-    int n = GENERATE(1, 2, 3);
-    int o = GENERATE(1, 2, 3);
-    int gh = 1;
+    SECTION("laplace3d")
+    {
+        int m = GENERATE(1, 2, 3);
+        int n = GENERATE(1, 2, 3);
+        int o = GENERATE(1, 2, 3);
+        int gh = 1;
 
-    auto a = mgcl_test::Matrix2d::laplace7p3d(m, n, o);
-    mgcl::VaryingStencil3x3x3 s(m, n, o, gh, gh, gh);
-    for (int i = 0; i < m + 2 * gh; i++)
-        for (int j = 0; j < n + 2 * gh; j++)
-            for (int k = 0; k < o + 2 * gh; k++)
-            {
-                // 7-point Laplace
-                s[i][j][k][0][1][1] = 1;
-                s[i][j][k][1][0][1] = 1;
-                s[i][j][k][1][1][0] = 1;
-                s[i][j][k][1][1][1] = -6;
-                s[i][j][k][1][1][2] = 1;
-                s[i][j][k][1][2][1] = 1;
-                s[i][j][k][2][1][1] = 1;
-            }
+        auto a = mgcl_test::Matrix2d::laplace7p3d(m, n, o);
+        mgcl::VaryingStencil3x3x3 s(m, n, o, gh, gh, gh);
+        for (int i = 0; i < m + 2 * gh; i++)
+            for (int j = 0; j < n + 2 * gh; j++)
+                for (int k = 0; k < o + 2 * gh; k++)
+                {
+                    // 7-point Laplace
+                    s[i][j][k][0][1][1] = 1;
+                    s[i][j][k][1][0][1] = 1;
+                    s[i][j][k][1][1][0] = 1;
+                    s[i][j][k][1][1][1] = -6;
+                    s[i][j][k][1][1][2] = 1;
+                    s[i][j][k][1][2][1] = 1;
+                    s[i][j][k][2][1][1] = 1;
+                }
 
-    auto c = mgcl_test::Matrix2d::fromVaryingStencil(s);
-    CHECK(a == c);
+        auto c = mgcl_test::Matrix2d::fromVaryingStencil(s);
+        CHECK(a == c);
+    }
+
+    SECTION("varying")
+    {
+        auto a = mgcl_test::Matrix2d_fromVaryingStencil::matrix2d64x64();
+        auto sptr = mgcl_test::Matrix2d_fromVaryingStencil::varyingStencil4x4x4();
+        auto &s = *sptr;
+
+        auto c = mgcl_test::Matrix2d::fromVaryingStencil(s);
+
+        CHECK(a == c);
+    }
 }
 
 TEST_CASE("Matrix2d::diag Laplace")

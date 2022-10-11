@@ -223,21 +223,23 @@ namespace mgcl_test
         int n = s.getDim2();
         int o = s.getDim3();
         Matrix2d c(m * n * o, m * n * o);
+        int N2 = N >> 1;
 
-        // TODO check integrating N
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)
                 for (int k = 0; k < o; k++)
-                    for (int ii = 0; ii < 3; ii++)
-                        for (int jj = 0; jj < 3; jj++)
-                            for (int kk = 0; kk < 3; kk++)
-                                if (i + ii - 1 >= 0 &&
-                                    i + ii - 1 < m &&
-                                    j + jj - 1 >= 0 &&
-                                    j + jj - 1 < n &&
-                                    k + kk - 1 >= 0 &&
-                                    k + kk - 1 < o)
-                                    c[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] =
+                    for (int ii = 0; ii < N; ii++)
+                        for (int jj = 0; jj < N; jj++)
+                            for (int kk = 0; kk < N; kk++)
+                                // check if current stencil entry maps to a real grid point
+                                if (i + ii >= N2 &&
+                                    i + ii <= m + N2 - 1 &&
+                                    j + jj >= N2 &&
+                                    j + jj <= n + N2 - 1 &&
+                                    k + kk >= N2 &&
+                                    k + kk <= o + N2 - 1)
+                                    // row is equal to grid point number, column is equal to grid point number plus a shift of half of stencil's size
+                                    c[i * n * o + j * o + k][i * n * o + j * o + k + (ii - N2) * n * o + (jj - N2) * o + (kk - N2)] =
                                         s[i + s.getGhostsDim1()][j + s.getGhostsDim2()][k + s.getGhostsDim3()][ii][jj][kk];
 
         return c;
