@@ -225,23 +225,25 @@ namespace mgcl_test
         Matrix2d c(m * n * o, m * n * o);
         int N2 = N >> 1;
 
+        // clang-format off
         for (int i = 0; i < m; i++)
-            for (int j = 0; j < n; j++)
-                for (int k = 0; k < o; k++)
-                    for (int ii = 0; ii < N; ii++)
-                        for (int jj = 0; jj < N; jj++)
-                            for (int kk = 0; kk < N; kk++)
-                                // check if current stencil entry maps to a real grid point
-                                if (i + ii >= N2 &&
-                                    i + ii <= m + N2 - 1 &&
-                                    j + jj >= N2 &&
-                                    j + jj <= n + N2 - 1 &&
-                                    k + kk >= N2 &&
-                                    k + kk <= o + N2 - 1)
-                                    // row is equal to grid point number, column is equal to grid point number plus a shift of half of stencil's size
-                                    c[i * n * o + j * o + k][i * n * o + j * o + k + (ii - N2) * n * o + (jj - N2) * o + (kk - N2)] =
-                                        s[i + s.getGhostsDim1()][j + s.getGhostsDim2()][k + s.getGhostsDim3()][ii][jj][kk];
+        for (int j = 0; j < n; j++)
+        for (int k = 0; k < o; k++)
+            for (int ii = 0; ii < N; ii++)
+            for (int jj = 0; jj < N; jj++)
+            for (int kk = 0; kk < N; kk++)
+                // check if current stencil entry maps to a real grid point
+                if (i + ii >= N2 &&
+                    i + ii <= m + N2 - 1 &&
+                    j + jj >= N2 &&
+                    j + jj <= n + N2 - 1 &&
+                    k + kk >= N2 &&
+                    k + kk <= o + N2 - 1)
+                    // row is equal to grid point number, column is equal to grid point number plus a shift of half of stencil's size
+                    c[i * n * o + j * o + k][i * n * o + j * o + k + (ii - N2) * n * o + (jj - N2) * o + (kk - N2)] =
+                        s[i + s.getGhostsDim1()][j + s.getGhostsDim2()][k + s.getGhostsDim3()][ii][jj][kk];
 
+        // clang-format on
         return c;
     }
 

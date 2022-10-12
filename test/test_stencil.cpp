@@ -342,17 +342,20 @@ TEST_CASE("VaryingStencil::multiply")
         int m = GENERATE(1, 2, 3, 4);
         int n = GENERATE(1, 2, 3, 4);
         int o = GENERATE(1, 2, 3, 4);
-        int ghm = 0;
-        int ghn = 0;
-        int gho = 0;
+        int ghm = GENERATE(1, 2);
+        int ghn = GENERATE(1, 2);
+        int gho = GENERATE(1, 2);
+        int mgh = m + 2 * ghm;
+        int ngh = n + 2 * ghn;
+        int ogh = o + 2 * gho;
 
         mgcl::VaryingStencil3x3x3 a(m, n, o, ghm, ghn, gho);
         mgcl::VaryingStencil3x3x3 b(m, n, o, ghm, ghn, gho);
 
         // fill a and b
-        for (int i = ghm; i < m + ghm; i++)
-            for (int j = ghn; j < n + ghn; j++)
-                for (int k = gho; k < o + gho; k++)
+        for (int i = 0; i < mgh; i++)
+            for (int j = 0; j < ngh; j++)
+                for (int k = 0; k < ogh; k++)
                 {
                     // 7-point Laplace
                     a[i][j][k][0][1][1] = 1;
@@ -400,6 +403,12 @@ TEST_CASE("VaryingStencil::multiply")
         auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
         auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(*c);
         auto cstar_m2d = mgcl_test::Matrix2d::fromVaryingStencil(*cstar);
+
+        REQUIRE(c_expected.getM() == c_m2d.getM());
+        REQUIRE(c_expected.getN() == c_m2d.getN());
+        REQUIRE(c_expected.getM() == cstar_m2d.getM());
+        REQUIRE(c_expected.getN() == cstar_m2d.getN());
+
         CHECK(c_m2d == c_expected);
         CHECK(cstar_m2d == c_expected);
     }

@@ -27,7 +27,6 @@ namespace mgcl
             dim4gh != b.getDim4gh())
             throw "Dimensions do not match!";
 
-        // TODO must be 5x5x5
         auto c = std::make_unique<VaryingStencil<N + 2>>(m, n, o, ghm, ghn, gho);
 
         // clang-format off
@@ -47,8 +46,9 @@ namespace mgcl
                         (y + a_j - 1 + b_j) >= 1 && (y + a_j - 1 + b_j) <= n &&
                         (z + a_k - 1 + b_k) >= 1 && (z + a_k - 1 + b_k) <= o)
                     {
-                        (*c)[x][y][z][a_i + b_i][a_j + b_j][a_k + b_k] +=
-                            field_6d[x][y][z][a_i][a_j][a_k] * b[x + a_i - 1][y + a_j - 1][z + a_k - 1][b_i][b_j][b_k];
+                        (*c)[x + ghm][y + ghn][z + gho][a_i + b_i][a_j + b_j][a_k + b_k] +=
+                            field_6d[x + ghostsDim1][y + ghostsDim2][z + ghostsDim3][a_i][a_j][a_k] *
+                            b[x + a_i - 1 + b.getGhostsDim1()][y + a_j - 1 + b.getGhostsDim2()][z + a_k - 1 + b.getGhostsDim3()][b_i][b_j][b_k];
                     }
         // clang-format on
 
