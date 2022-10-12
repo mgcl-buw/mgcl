@@ -32,7 +32,8 @@ namespace mgcl
         VaryingStencil(int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o)
             : Hypercube6d(m, n, o, N, N, N, ghosts_m, ghosts_n, ghosts_o, 0, 0, 0) {}
 
-        std::unique_ptr<VaryingStencil<N + 2>> multiply(VaryingStencil<N> &b);
+        std::unique_ptr<VaryingStencil<N + 2>> multiply(VaryingStencil<N> &b) const;
+        std::unique_ptr<VaryingStencil<N + 2>> operator*(VaryingStencil<N> &b) const;
     };
 
     typedef VaryingStencil<3> VaryingStencil3x3x3;

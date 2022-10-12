@@ -336,64 +336,89 @@ TEST_CASE("StencilVarying27p")
 
 TEST_CASE("VaryingStencil::multiply")
 {
-    int m = GENERATE(1, 2, 3, 4);
-    int n = GENERATE(1, 2, 3, 4);
-    int o = GENERATE(1, 2, 3, 4);
-    int ghm = 0;
-    int ghn = 0;
-    int gho = 0;
+    SECTION("valid")
+    {
+        // TODO check ghosts
+        int m = GENERATE(1, 2, 3, 4);
+        int n = GENERATE(1, 2, 3, 4);
+        int o = GENERATE(1, 2, 3, 4);
+        int ghm = 0;
+        int ghn = 0;
+        int gho = 0;
 
-    mgcl::VaryingStencil3x3x3 a(m, n, o, ghm, ghn, gho);
-    mgcl::VaryingStencil3x3x3 b(m, n, o, ghm, ghn, gho);
+        mgcl::VaryingStencil3x3x3 a(m, n, o, ghm, ghn, gho);
+        mgcl::VaryingStencil3x3x3 b(m, n, o, ghm, ghn, gho);
 
-    // fill a and b
-    for (int i = ghm; i < m + ghm; i++)
-        for (int j = ghn; j < n + ghn; j++)
-            for (int k = gho; k < o + gho; k++)
-            {
-                // 7-point Laplace
-                a[i][j][k][0][1][1] = 1;
-                a[i][j][k][1][0][1] = 1;
-                a[i][j][k][1][1][0] = 1;
-                a[i][j][k][1][1][1] = -6;
-                a[i][j][k][1][1][2] = 1;
-                a[i][j][k][1][2][1] = 1;
-                a[i][j][k][2][1][1] = 1;
+        // fill a and b
+        for (int i = ghm; i < m + ghm; i++)
+            for (int j = ghn; j < n + ghn; j++)
+                for (int k = gho; k < o + gho; k++)
+                {
+                    // 7-point Laplace
+                    a[i][j][k][0][1][1] = 1;
+                    a[i][j][k][1][0][1] = 1;
+                    a[i][j][k][1][1][0] = 1;
+                    a[i][j][k][1][1][1] = -6;
+                    a[i][j][k][1][1][2] = 1;
+                    a[i][j][k][1][2][1] = 1;
+                    a[i][j][k][2][1][1] = 1;
 
-                // full-weight restriction, scaled by 64
-                b[i][j][k][0][0][0] = 1;
-                b[i][j][k][0][0][1] = 2;
-                b[i][j][k][0][0][2] = 1;
-                b[i][j][k][0][1][0] = 2;
-                b[i][j][k][0][1][1] = 4;
-                b[i][j][k][0][1][2] = 2;
-                b[i][j][k][0][2][0] = 1;
-                b[i][j][k][0][2][1] = 2;
-                b[i][j][k][0][2][2] = 1;
-                b[i][j][k][1][0][0] = 2;
-                b[i][j][k][1][0][1] = 4;
-                b[i][j][k][1][0][2] = 2;
-                b[i][j][k][1][1][0] = 4;
-                b[i][j][k][1][1][1] = 8;
-                b[i][j][k][1][1][2] = 4;
-                b[i][j][k][1][2][0] = 2;
-                b[i][j][k][1][2][1] = 4;
-                b[i][j][k][1][2][2] = 2;
-                b[i][j][k][2][0][0] = 1;
-                b[i][j][k][2][0][1] = 2;
-                b[i][j][k][2][0][2] = 1;
-                b[i][j][k][2][1][0] = 2;
-                b[i][j][k][2][1][1] = 4;
-                b[i][j][k][2][1][2] = 2;
-                b[i][j][k][2][2][0] = 1;
-                b[i][j][k][2][2][1] = 2;
-                b[i][j][k][2][2][2] = 1;
-            }
+                    // full-weight restriction, scaled by 64
+                    b[i][j][k][0][0][0] = 1;
+                    b[i][j][k][0][0][1] = 2;
+                    b[i][j][k][0][0][2] = 1;
+                    b[i][j][k][0][1][0] = 2;
+                    b[i][j][k][0][1][1] = 4;
+                    b[i][j][k][0][1][2] = 2;
+                    b[i][j][k][0][2][0] = 1;
+                    b[i][j][k][0][2][1] = 2;
+                    b[i][j][k][0][2][2] = 1;
+                    b[i][j][k][1][0][0] = 2;
+                    b[i][j][k][1][0][1] = 4;
+                    b[i][j][k][1][0][2] = 2;
+                    b[i][j][k][1][1][0] = 4;
+                    b[i][j][k][1][1][1] = 8;
+                    b[i][j][k][1][1][2] = 4;
+                    b[i][j][k][1][2][0] = 2;
+                    b[i][j][k][1][2][1] = 4;
+                    b[i][j][k][1][2][2] = 2;
+                    b[i][j][k][2][0][0] = 1;
+                    b[i][j][k][2][0][1] = 2;
+                    b[i][j][k][2][0][2] = 1;
+                    b[i][j][k][2][1][0] = 2;
+                    b[i][j][k][2][1][1] = 4;
+                    b[i][j][k][2][1][2] = 2;
+                    b[i][j][k][2][2][0] = 1;
+                    b[i][j][k][2][2][1] = 2;
+                    b[i][j][k][2][2][2] = 1;
+                }
 
-    auto c = a.multiply(b);
+        auto c = a.multiply(b);
+        auto cstar = a * b;
 
-    // check result against explicitly calculated matrix product
-    auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
-    auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(*c);
-    CHECK(c_m2d == c_expected);
+        // check result against explicitly calculated matrix product
+        auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
+        auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(*c);
+        auto cstar_m2d = mgcl_test::Matrix2d::fromVaryingStencil(*cstar);
+        CHECK(c_m2d == c_expected);
+        CHECK(cstar_m2d == c_expected);
+    }
+
+    SECTION("throwing")
+    {
+        int m = GENERATE(1, 2, 3);
+        int n = GENERATE(1, 2, 3);
+        int o = GENERATE(1, 2, 3);
+        int ghm = GENERATE(1, 2, 3);
+        int ghn = GENERATE(1, 2, 3);
+        int gho = GENERATE(1, 2, 3);
+
+        mgcl::VaryingStencil3x3x3 a(m, n, o, ghm, ghn, gho);
+        mgcl::VaryingStencil3x3x3 b(m, n, o, ghm, ghn, gho);
+
+        if (a.getDim1gh() != b.getDim1gh() || a.getDim2gh() != b.getDim2gh() || a.getDim3gh() != b.getDim3gh())
+            REQUIRE_THROWS(a * b);
+        else
+            REQUIRE_NOTHROW(a * b);
+    }
 }

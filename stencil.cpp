@@ -12,7 +12,7 @@ namespace mgcl
      * @return std::unique_ptr<VaryingStencil<N + 2>> Resulting stencil (two cells wider).
      */
     template <int N>
-    std::unique_ptr<VaryingStencil<N + 2>> VaryingStencil<N>::multiply(VaryingStencil<N> &b)
+    std::unique_ptr<VaryingStencil<N + 2>> VaryingStencil<N>::multiply(VaryingStencil<N> &b) const
     {
         int m = dim1;
         int n = dim2;
@@ -53,6 +53,12 @@ namespace mgcl
         // clang-format on
 
         return c;
+    }
+
+    template <int N>
+    std::unique_ptr<VaryingStencil<N + 2>> VaryingStencil<N>::operator*(VaryingStencil<N> &b) const
+    {
+        return multiply(b);
     }
 
     // instantiate template classes to avoid linker errors
