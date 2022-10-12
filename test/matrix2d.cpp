@@ -213,7 +213,7 @@ namespace mgcl_test
         auto Dyy = diag(vals, n, n);
         auto Dzz = diag(vals, o, o);
 
-        return Dyy.kronecker(Dzz).kronecker(Dxx);
+        return Dxx.kronecker(Dyy.kronecker(Dzz));
     }
 
     template <int N>

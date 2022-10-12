@@ -2,6 +2,15 @@
 
 namespace mgcl
 {
+    /**
+     * @brief Multiplies this stencil with another one. Dimensions must match. Resulting stencil is two cells wider
+     * in each direction.
+     *
+     * @tparam N Width of the stencil
+     * @param b Other stencil
+     * @throws If dimensions do not match.
+     * @return std::unique_ptr<VaryingStencil<N + 2>> Resulting stencil (two cells wider).
+     */
     template <int N>
     std::unique_ptr<VaryingStencil<N + 2>> VaryingStencil<N>::multiply(VaryingStencil<N> &b)
     {
@@ -11,6 +20,12 @@ namespace mgcl
         int ghm = ghostsDim1;
         int ghn = ghostsDim2;
         int gho = ghostsDim3;
+
+        if (dim1gh != b.getDim1gh() ||
+            dim2gh != b.getDim2gh() ||
+            dim3gh != b.getDim3gh() ||
+            dim4gh != b.getDim4gh())
+            throw "Dimensions do not match!";
 
         // TODO must be 5x5x5
         auto c = std::make_unique<VaryingStencil<N + 2>>(m, n, o, ghm, ghn, gho);

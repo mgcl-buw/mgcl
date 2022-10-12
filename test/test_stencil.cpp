@@ -1,5 +1,6 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <memory>
 
@@ -335,9 +336,9 @@ TEST_CASE("StencilVarying27p")
 
 TEST_CASE("VaryingStencil::multiply")
 {
-    int m = 4;
-    int n = 4;
-    int o = 4;
+    int m = GENERATE(1, 2, 3, 4);
+    int n = GENERATE(1, 2, 3, 4);
+    int o = GENERATE(1, 2, 3, 4);
     int ghm = 0;
     int ghn = 0;
     int gho = 0;
