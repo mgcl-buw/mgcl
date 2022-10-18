@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MGCL_STENCIL_HPP
+#define MGCL_STENCIL_HPP
 
 #include <memory>
 #include <stdexcept>
@@ -22,7 +23,8 @@ namespace mgcl
     /**
      * @brief Class for NxNxN varying stencils, i.e. stencil can differ for each grid point.
      * Choose N = 3 to include only direct neighbors, N = 5 to include 2 nearest neighbors, etc.
-     * If two stencils of size NxNxN get multiplied with each other, the resulting stencil has size (N+2)^3.
+     * If two stencils of size NxNxN and NBxNBxNB get multiplied with each other, the resulting stencil has size
+     * (max(N, NB)+2)^3.
      *
      */
     template <int N>
@@ -32,12 +34,15 @@ namespace mgcl
         VaryingStencil(int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o)
             : Hypercube6d(m, n, o, N, N, N, ghosts_m, ghosts_n, ghosts_o, 0, 0, 0) {}
 
-        std::unique_ptr<VaryingStencil<N + 2>> multiply(VaryingStencil<N> &b) const;
-        std::unique_ptr<VaryingStencil<N + 2>> operator*(VaryingStencil<N> &b) const;
+        template <int NB>
+        std::unique_ptr<VaryingStencil<(N > NB ? N : NB) + 2>> multiply(VaryingStencil<NB> &b) const;
+        template <int NB>
+        std::unique_ptr<VaryingStencil<(N > NB ? N : NB) + 2>> operator*(VaryingStencil<NB> &b) const;
     };
 
     typedef VaryingStencil<3> VaryingStencil3x3x3;
     typedef VaryingStencil<5> VaryingStencil5x5x5;
+    typedef VaryingStencil<7> VaryingStencil7x7x7;
 
     enum StencilPos
     {
@@ -78,3 +83,5 @@ namespace mgcl
         // clang-format on
     };
 }
+
+#endif // MGCL_STENCIL_HPP

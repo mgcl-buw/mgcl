@@ -338,7 +338,6 @@ TEST_CASE("VaryingStencil::multiply")
 {
     SECTION("valid")
     {
-        // TODO check ghosts
         int m = GENERATE(1, 2, 3, 4);
         int n = GENERATE(1, 2, 3, 4);
         int o = GENERATE(1, 2, 3, 4);

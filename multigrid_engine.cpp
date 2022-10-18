@@ -194,4 +194,19 @@ namespace mgcl
         printf("0 level = %d, f[1,1,1] = %e\n", level.getNum(), level.getF()[1][1][1]);
         printf("0 level = %d, r[1,1,1] = %e\n", level.getNum(), level.getR()[1][1][1]);
     }
+
+    /**
+     * @brief Calculates and sets the stencil (i.e. the matrix A) for the current level by applying the
+     * Galerkin operator, which is defined as A_2h = R * A_h * P with R being restriction and P being prolongation
+     * operators.
+     *
+     * @param level This Level
+     * @param levelAbove Level above this one (finer than this level)
+     */
+    void MultigridEngine::galerkin(Level &level, Level &levelAbove)
+    {
+        // A, R and P needs to be stored as VaryingStencil3x3x3 in each Level
+
+        // cut stencil from 5x5x5 to 3x3x3 after each multiplication? Or do that directly in the multiplication?
+    }
 }

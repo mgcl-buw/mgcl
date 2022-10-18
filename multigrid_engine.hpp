@@ -58,7 +58,7 @@ namespace mgcl
         static double jacobi(Problem &problem, Level &level, int maxiter, int returnResidual);
         static double jacobiLocalMem(Problem &problem, Level &level, int maxiter, int returnResidual);
 
-        static void galerkin(Level &level);
+        static void galerkin(Level &level, Level &levelAbove);
 
         static void print7point(Cuboid &v, int i, int j, int k);
         static void print19point(Cuboid &v, int i, int j, int k);
