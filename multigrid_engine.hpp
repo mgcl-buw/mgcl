@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MGCL_MULTIGRID_ENGINE_HPP
+#define MGCL_MULTIGRID_ENGINE_HPP
 
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -47,10 +48,10 @@ namespace mgcl
 
         static double jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
                                 int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType, double stencilFactor,
-                                Hypercube4d &stencilValuesCuboid, bool returnResidualNorm);
+                                VaryingStencil3x3x3 &stencilValuesCuboid, bool returnResidualNorm);
         static double residual(Problem &problem, Level &level, bool returnResidual);
         static double residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
-                                  MGCL_STENCIL stencilType, double stencilFactor, Hypercube4d &stencilValues, bool returnResidualNorm);
+                                  MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil3x3x3 &stencilValues, bool returnResidualNorm);
         static double residualTest(Problem &problem, double ***v, double ***f, double ***r, int m, int n, int o,
                                    int returnResidual);
         static void jacobiTest(Problem &problem, double ***v, double ***f, double ***r, int m, int n, int o, int maxiter,
@@ -64,3 +65,5 @@ namespace mgcl
         static void print19point(Cuboid &v, int i, int j, int k);
     };
 }
+
+#endif // !MGCL_MULTIGRID_ENGINE_HPP

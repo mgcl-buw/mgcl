@@ -12,7 +12,7 @@ namespace mgcl
      * m,n,o is size of real grid */
     double MultigridEngine::jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
-                                      double stencilFactor, Hypercube4d &stencilValuesCuboid, bool returnResidualNorm)
+                                      double stencilFactor, VaryingStencil3x3x3 &stencilValuesCuboid, bool returnResidualNorm)
     {
         double res = 0.0;
         double h2 = 1.0 / ((double)(v.getM() * v.getM()));
@@ -800,11 +800,11 @@ namespace mgcl
     /* Calculates r = f - A*v using 7-point stencil of 3D laplacian.
      * m,n,o is size of real grid */
     double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
-                                        MGCL_STENCIL stencilType, double stencilFactor, Hypercube4d &stencilValuesCuboid, bool returnResidualNorm)
+                                        MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil3x3x3 &stencilValuesCuboid, bool returnResidualNorm)
     {
         double res = 0.0;
         double stencilsum = 0;
-        double ****stencilValues;
+        double ******stencilValues;
         double ***vraw = v.getData();
 
         if (stencilType == MGCL_VARYING_7POINT || stencilType == MGCL_VARYING_19POINT || stencilType == MGCL_VARYING_27POINT)
@@ -868,72 +868,72 @@ namespace mgcl
                     else if (stencilType == MGCL_VARYING_7POINT)
                     {
                         // clang-format off
-                        stencilsum = stencilValues[i][j][k][StencilPos::SELF]  * vraw[i][j][k]
-                            + stencilValues[i][j][k][StencilPos::FRONT]  * vraw[i][j][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK]   * vraw[i][j][k + 1]
-                            + stencilValues[i][j][k][StencilPos::TOP]    * vraw[i][j - 1][k]
-                            + stencilValues[i][j][k][StencilPos::BOTTOM] * vraw[i][j + 1][k]
-                            + stencilValues[i][j][k][StencilPos::LEFT]   * vraw[i - 1][j][k]
-                            + stencilValues[i][j][k][StencilPos::RIGHT]  * vraw[i + 1][j][k];
+                        stencilsum = stencilValues[i][j][k][1][1][1]  * vraw[i][j][k]
+                            + stencilValues[i][j][k][1][1][0]         * vraw[i][j][k - 1]
+                            + stencilValues[i][j][k][1][1][2]         * vraw[i][j][k + 1]
+                            + stencilValues[i][j][k][1][0][1]         * vraw[i][j - 1][k]
+                            + stencilValues[i][j][k][1][2][1]         * vraw[i][j + 1][k]
+                            + stencilValues[i][j][k][0][1][1]         * vraw[i - 1][j][k]
+                            + stencilValues[i][j][k][2][1][1]         * vraw[i + 1][j][k];
                         // clang-format on
                     }
                     else if (stencilType == MGCL_VARYING_19POINT)
                     {
                         // clang-format off
-                        stencilsum = stencilValues[i][j][k][StencilPos::SELF]  * vraw[i][j][k]
-                            + stencilValues[i][j][k][StencilPos::FRONT]  * vraw[i][j][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK]   * vraw[i][j][k + 1]
-                            + stencilValues[i][j][k][StencilPos::TOP]    * vraw[i][j - 1][k]
-                            + stencilValues[i][j][k][StencilPos::BOTTOM] * vraw[i][j + 1][k]
-                            + stencilValues[i][j][k][StencilPos::LEFT]   * vraw[i - 1][j][k]
-                            + stencilValues[i][j][k][StencilPos::RIGHT]  * vraw[i + 1][j][k]
+                        stencilsum = stencilValues[i][j][k][1][1][1]  * vraw[i][j][k]
+                            + stencilValues[i][j][k][1][1][0]         * vraw[i][j][k - 1]
+                            + stencilValues[i][j][k][1][1][2]         * vraw[i][j][k + 1]
+                            + stencilValues[i][j][k][1][0][1]         * vraw[i][j - 1][k]
+                            + stencilValues[i][j][k][1][2][1]         * vraw[i][j + 1][k]
+                            + stencilValues[i][j][k][0][1][1]         * vraw[i - 1][j][k]
+                            + stencilValues[i][j][k][2][1][1]         * vraw[i + 1][j][k]
                             
-                            + stencilValues[i][j][k][StencilPos::FRONT_TOP]    * vraw[i][j - 1][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK_TOP]     * vraw[i][j - 1][k + 1]
-                            + stencilValues[i][j][k][StencilPos::FRONT_BOTTOM] * vraw[i][j + 1][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK_BOTTOM]  * vraw[i][j + 1][k + 1]
-                            + stencilValues[i][j][k][StencilPos::FRONT_LEFT]   * vraw[i - 1][j][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK_LEFT]    * vraw[i - 1][j][k + 1]
-                            + stencilValues[i][j][k][StencilPos::FRONT_RIGHT]  * vraw[i + 1][j][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK_RIGHT]   * vraw[i + 1][j][k + 1]
-                            + stencilValues[i][j][k][StencilPos::LEFT_TOP]     * vraw[i - 1][j - 1][k]
-                            + stencilValues[i][j][k][StencilPos::LEFT_BOTTOM]  * vraw[i - 1][j + 1][k]
-                            + stencilValues[i][j][k][StencilPos::RIGHT_TOP]    * vraw[i + 1][j - 1][k]
-                            + stencilValues[i][j][k][StencilPos::RIGHT_BOTTOM] * vraw[i + 1][j + 1][k];
+                            + stencilValues[i][j][k][1][0][0] * vraw[i][j - 1][k - 1]
+                            + stencilValues[i][j][k][1][0][2] * vraw[i][j - 1][k + 1]
+                            + stencilValues[i][j][k][1][2][0] * vraw[i][j + 1][k - 1]
+                            + stencilValues[i][j][k][1][2][2] * vraw[i][j + 1][k + 1]
+                            + stencilValues[i][j][k][0][1][0] * vraw[i - 1][j][k - 1]
+                            + stencilValues[i][j][k][0][1][2] * vraw[i - 1][j][k + 1]
+                            + stencilValues[i][j][k][2][1][0] * vraw[i + 1][j][k - 1]
+                            + stencilValues[i][j][k][2][1][2] * vraw[i + 1][j][k + 1]
+                            + stencilValues[i][j][k][0][0][1] * vraw[i - 1][j - 1][k]
+                            + stencilValues[i][j][k][0][2][1] * vraw[i - 1][j + 1][k]
+                            + stencilValues[i][j][k][2][0][1] * vraw[i + 1][j - 1][k]
+                            + stencilValues[i][j][k][2][2][1] * vraw[i + 1][j + 1][k];
                         // clang-format on
                     }
                     else if (stencilType == MGCL_VARYING_27POINT)
                     {
                         // clang-format off
-                        stencilsum = stencilValues[i][j][k][StencilPos::SELF]  * vraw[i][j][k]
-                            + stencilValues[i][j][k][StencilPos::FRONT]  * vraw[i][j][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK]   * vraw[i][j][k + 1]
-                            + stencilValues[i][j][k][StencilPos::TOP]    * vraw[i][j - 1][k]
-                            + stencilValues[i][j][k][StencilPos::BOTTOM] * vraw[i][j + 1][k]
-                            + stencilValues[i][j][k][StencilPos::LEFT]   * vraw[i - 1][j][k]
-                            + stencilValues[i][j][k][StencilPos::RIGHT]  * vraw[i + 1][j][k]
+                        stencilsum = stencilValues[i][j][k][1][1][1]  * vraw[i][j][k]
+                            + stencilValues[i][j][k][1][1][0]         * vraw[i][j][k - 1]
+                            + stencilValues[i][j][k][1][1][2]         * vraw[i][j][k + 1]
+                            + stencilValues[i][j][k][1][0][1]         * vraw[i][j - 1][k]
+                            + stencilValues[i][j][k][1][2][1]         * vraw[i][j + 1][k]
+                            + stencilValues[i][j][k][0][1][1]         * vraw[i - 1][j][k]
+                            + stencilValues[i][j][k][2][1][1]         * vraw[i + 1][j][k]
                             
-                            + stencilValues[i][j][k][StencilPos::FRONT_TOP]    * vraw[i][j - 1][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK_TOP]     * vraw[i][j - 1][k + 1]
-                            + stencilValues[i][j][k][StencilPos::FRONT_BOTTOM] * vraw[i][j + 1][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK_BOTTOM]  * vraw[i][j + 1][k + 1]
-                            + stencilValues[i][j][k][StencilPos::FRONT_LEFT]   * vraw[i - 1][j][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK_LEFT]    * vraw[i - 1][j][k + 1]
-                            + stencilValues[i][j][k][StencilPos::FRONT_RIGHT]  * vraw[i + 1][j][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK_RIGHT]   * vraw[i + 1][j][k + 1]
-                            + stencilValues[i][j][k][StencilPos::LEFT_TOP]     * vraw[i - 1][j - 1][k]
-                            + stencilValues[i][j][k][StencilPos::LEFT_BOTTOM]  * vraw[i - 1][j + 1][k]
-                            + stencilValues[i][j][k][StencilPos::RIGHT_TOP]    * vraw[i + 1][j - 1][k]
-                            + stencilValues[i][j][k][StencilPos::RIGHT_BOTTOM] * vraw[i + 1][j + 1][k]
+                            + stencilValues[i][j][k][1][0][0] * vraw[i][j - 1][k - 1]
+                            + stencilValues[i][j][k][1][0][2] * vraw[i][j - 1][k + 1]
+                            + stencilValues[i][j][k][1][2][0] * vraw[i][j + 1][k - 1]
+                            + stencilValues[i][j][k][1][2][2] * vraw[i][j + 1][k + 1]
+                            + stencilValues[i][j][k][0][1][0] * vraw[i - 1][j][k - 1]
+                            + stencilValues[i][j][k][0][1][2] * vraw[i - 1][j][k + 1]
+                            + stencilValues[i][j][k][2][1][0] * vraw[i + 1][j][k - 1]
+                            + stencilValues[i][j][k][2][1][2] * vraw[i + 1][j][k + 1]
+                            + stencilValues[i][j][k][0][0][1] * vraw[i - 1][j - 1][k]
+                            + stencilValues[i][j][k][0][2][1] * vraw[i - 1][j + 1][k]
+                            + stencilValues[i][j][k][2][0][1] * vraw[i + 1][j - 1][k]
+                            + stencilValues[i][j][k][2][2][1] * vraw[i + 1][j + 1][k]
                             
-                            + stencilValues[i][j][k][StencilPos::FRONT_TOP_LEFT]     * vraw[i - 1][j - 1][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK_TOP_LEFT]      * vraw[i - 1][j - 1][k + 1]
-                            + stencilValues[i][j][k][StencilPos::FRONT_BOTTOM_LEFT]  * vraw[i - 1][j + 1][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK_BOTTOM_LEFT]   * vraw[i - 1][j + 1][k + 1]
-                            + stencilValues[i][j][k][StencilPos::FRONT_TOP_RIGHT]    * vraw[i + 1][j - 1][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK_TOP_RIGHT]     * vraw[i + 1][j - 1][k + 1]
-                            + stencilValues[i][j][k][StencilPos::FRONT_BOTTOM_RIGHT] * vraw[i + 1][j + 1][k - 1]
-                            + stencilValues[i][j][k][StencilPos::BACK_BOTTOM_RIGHT]  * vraw[i + 1][j + 1][k + 1];
+                            + stencilValues[i][j][k][0][0][0] * vraw[i - 1][j - 1][k - 1]
+                            + stencilValues[i][j][k][0][0][2] * vraw[i - 1][j - 1][k + 1]
+                            + stencilValues[i][j][k][0][2][0] * vraw[i - 1][j + 1][k - 1]
+                            + stencilValues[i][j][k][0][2][2] * vraw[i - 1][j + 1][k + 1]
+                            + stencilValues[i][j][k][2][0][0] * vraw[i + 1][j - 1][k - 1]
+                            + stencilValues[i][j][k][2][0][2] * vraw[i + 1][j - 1][k + 1]
+                            + stencilValues[i][j][k][2][2][0] * vraw[i + 1][j + 1][k - 1]
+                            + stencilValues[i][j][k][2][2][2] * vraw[i + 1][j + 1][k + 1];
                         // clang-format on
                     }
 

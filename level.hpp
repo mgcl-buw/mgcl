@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MGCL_LEVEL_HPP
+#define MGCL_LEVEL_HPP
 
 #include "cuboid.hpp"
 #include "multigrid_engine.hpp"
@@ -28,7 +29,7 @@ namespace mgcl
         // TODO init
         MGCL_STENCIL stencilType;
         double stencilFactor = 1;
-        std::unique_ptr<Hypercube4d> stencilValues = nullptr;
+        std::unique_ptr<VaryingStencil3x3x3> stencilValues = nullptr;
 
         /* grid dimensions of real grid */
         int m;
@@ -63,7 +64,6 @@ namespace mgcl
 
         bool init();
         int initOpenCLBuffers();
-        void galerkin();
 
         int getNum() const;
 
@@ -104,8 +104,10 @@ namespace mgcl
 
         MGCL_STENCIL getStencilType() const;
 
-        std::unique_ptr<Hypercube4d> &getStencilValues();
+        std::unique_ptr<VaryingStencil3x3x3> &getStencilValues();
 
         double getStencilFactor() const;
     };
 }
+
+#endif // MGCL_LEVEL_HPP

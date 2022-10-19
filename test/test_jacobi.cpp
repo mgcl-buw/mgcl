@@ -40,7 +40,7 @@ TEST_CASE("jacobi")
 
     SECTION("seq L2-norm 7point")
     {
-        auto stencilValues = std::make_unique<mgcl::Hypercube4d>(mgh, ngh, ogh, 7);
+        auto stencilValues = std::make_unique<mgcl::VaryingStencil3x3x3>(1, 1, 1, 0, 0, 0); // just a dummy
         double res = mgcl::MultigridEngine::jacobiSeq(*c_in_v, *c_in_f, *c_in_r, omega, maxiter,
                                                       mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_7POINT, stencilFactor, *stencilValues, true);
 

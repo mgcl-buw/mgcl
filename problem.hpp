@@ -85,7 +85,7 @@ namespace mgcl
 
         /* Stencil that will be used in Jacobi's method */
         MGCL_STENCIL stencilType = MGCL_LAPLACE_7POINT;
-        std::unique_ptr<Hypercube4d> stencilValues = nullptr;
+        std::unique_ptr<VaryingStencil3x3x3> stencilValues = nullptr;
 
         /* Whether to use opencl or not. Defaults to 0 (not using opencl) */
         // TODO needed?
@@ -258,6 +258,6 @@ namespace mgcl
         MGCL_STENCIL getStencilType() const;
         void setStencilType(const MGCL_STENCIL &stencilType_);
 
-        std::unique_ptr<Hypercube4d> &getStencilValues();
+        std::unique_ptr<VaryingStencil3x3x3> &getStencilValues();
     };
 }

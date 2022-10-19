@@ -119,6 +119,8 @@ namespace mgcl
         {
             return multiply(b);
         }
+
+        static std::unique_ptr<VaryingStencil<3>> create3dFullWeightRestriction(int m, int n, int o, int ghm, int ghn, int gho);
     };
 
     typedef VaryingStencil<3> VaryingStencil3x3x3;

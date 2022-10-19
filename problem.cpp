@@ -140,6 +140,10 @@ namespace mgcl
             auto lv = std::make_unique<Level>(this, level);
             levels.push_back(std::move(lv));
             levels.back()->init();
+
+            // Apply Galerkin operator if stencil is varying and we're not on level 0.
+            if (level >= 1)
+                MultigridEngine::galerkin(*levels[level], *levels[level - 1]);
         }
 
         return true;
@@ -651,15 +655,15 @@ namespace mgcl
     void Problem::setStencilType(const MGCL_STENCIL &stencilType_)
     {
         stencilType = stencilType_;
-        if (stencilType == MGCL_VARYING_7POINT)
-            stencilValues = std::make_unique<Hypercube4d>(m, n, o, 7, ghosts, ghosts, ghosts, 0);
-        else if (stencilType == MGCL_VARYING_19POINT)
-            stencilValues = std::make_unique<Hypercube4d>(m, n, o, 19, ghosts, ghosts, ghosts, 0);
-        else if (stencilType == MGCL_VARYING_27POINT)
-            stencilValues = std::make_unique<Hypercube4d>(m, n, o, 27, ghosts, ghosts, ghosts, 0);
+        if (stencilType == MGCL_VARYING_7POINT ||
+            stencilType == MGCL_VARYING_19POINT ||
+            stencilType == MGCL_VARYING_27POINT)
+            stencilValues = std::make_unique<VaryingStencil3x3x3>(m, n, o, ghosts, ghosts, ghosts);
+        else
+            stencilValues = nullptr;
     }
 
-    std::unique_ptr<Hypercube4d> &Problem::getStencilValues()
+    std::unique_ptr<VaryingStencil3x3x3> &Problem::getStencilValues()
     {
         return stencilValues;
     }

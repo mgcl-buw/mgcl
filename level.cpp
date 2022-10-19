@@ -119,18 +119,15 @@ namespace mgcl
 
                 // Create stencilsValues if a varying stencil shall be used. Stencil is always 27 point since
                 // for varying stencils the Galerkin operator is used.
-                if (stencilType == MGCL_VARYING_7POINT ||
-                    stencilType == MGCL_VARYING_19POINT ||
-                    stencilType == MGCL_VARYING_27POINT)
-                {
-                    stencilType = MGCL_VARYING_27POINT;
-                    stencilValues = std::make_unique<Hypercube4d>(m, n, o, 27, problem->ghosts, problem->ghosts, problem->ghosts, 0);
-                }
+                // if (stencilType == MGCL_VARYING_7POINT ||
+                //     stencilType == MGCL_VARYING_19POINT ||
+                //     stencilType == MGCL_VARYING_27POINT)
+                // {
+                //     stencilType = MGCL_VARYING_27POINT;
+                //     stencilValues = std::make_unique<Hypercube4d>(m, n, o, 27, problem->ghosts, problem->ghosts, problem->ghosts, 0);
+                // }
             }
         }
-
-        // Apply Galerkin operator if stencil is varying and we're not on level 0.
-        galerkin();
 
         if (initOpenCLBuffers() != CL_SUCCESS)
             return false;
@@ -212,14 +209,6 @@ namespace mgcl
         return CL_SUCCESS;
     }
 
-    /**
-     * @brief Creates stencilValues by applying the Galerkin operator for levels above 0.
-     * TODO implement
-     */
-    void Level::galerkin()
-    {
-    }
-
     void Level::setV(const std::shared_ptr<Cuboid> &v_)
     {
         v = v_;
@@ -240,7 +229,7 @@ namespace mgcl
         return ngh;
     }
 
-    std::unique_ptr<Hypercube4d> &Level::getStencilValues()
+    std::unique_ptr<VaryingStencil3x3x3> &Level::getStencilValues()
     {
         return stencilValues;
     }
