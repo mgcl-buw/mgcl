@@ -334,9 +334,55 @@ TEST_CASE("StencilVarying27p")
     REQUIRE(-r[1][1][1] == Catch::Approx(expected));
 }
 
+TEST_CASE("VaryingStencil move ctor")
+{
+    int n = GENERATE(1, 2, 3);
+    int m = GENERATE(1, 2, 3);
+    int o = GENERATE(1, 2, 3);
+
+    mgcl::VaryingStencil3x3x3 h(m, n, o, 0, 0, 0);
+    h.fillRandom();
+
+    // copy manually for checking results
+    mgcl::VaryingStencil3x3x3 h_check(m, n, o, 0, 0, 0);
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++)
+            for (int k = 0; k < o; k++)
+                for (int ii = 0; ii < 3; ii++)
+                    for (int jj = 0; jj < 3; jj++)
+                        for (int kk = 0; kk < 3; kk++)
+                        {
+                            h_check[i][j][k][ii][jj][kk] = h[i][j][k][ii][jj][kk];
+                        }
+
+    // check move ctor
+    auto h2(std::move(h));
+
+    CHECK(h.getDim1() == 0);
+    CHECK(h.getDim2() == 0);
+    CHECK(h.getDim3() == 0);
+    CHECK(h.getDim4() == 0);
+    CHECK(h.getDim5() == 0);
+    CHECK(h.getDim6() == 0);
+    CHECK(h.getData() == nullptr);
+    CHECK(h2.isEqual(h_check));
+
+    // check move assignment
+    auto h3 = std::move(h2);
+
+    CHECK(h2.getDim1() == 0);
+    CHECK(h2.getDim2() == 0);
+    CHECK(h2.getDim3() == 0);
+    CHECK(h2.getDim4() == 0);
+    CHECK(h2.getDim5() == 0);
+    CHECK(h2.getDim6() == 0);
+    CHECK(h2.getData() == nullptr);
+    CHECK(h3.isEqual(h_check));
+}
+
 TEST_CASE("VaryingStencil::multiply")
 {
-    SECTION("valid")
+    SECTION("valid N=3")
     {
         int m = GENERATE(1, 2, 3, 4);
         int n = GENERATE(1, 2, 3, 4);
@@ -400,8 +446,8 @@ TEST_CASE("VaryingStencil::multiply")
 
         // check result against explicitly calculated matrix product
         auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
-        auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(*c);
-        auto cstar_m2d = mgcl_test::Matrix2d::fromVaryingStencil(*cstar);
+        auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(c);
+        auto cstar_m2d = mgcl_test::Matrix2d::fromVaryingStencil(cstar);
 
         REQUIRE(c_expected.getM() == c_m2d.getM());
         REQUIRE(c_expected.getN() == c_m2d.getN());
@@ -410,6 +456,87 @@ TEST_CASE("VaryingStencil::multiply")
 
         CHECK(c_m2d == c_expected);
         CHECK(cstar_m2d == c_expected);
+    }
+
+    SECTION("different Ns")
+    {
+        int m = GENERATE(2, 3, 4);
+        int n = GENERATE(2, 3, 4);
+        int o = GENERATE(2, 3, 4);
+
+        mgcl::VaryingStencil3x3x3 a(m, n, o, 0, 0, 0);
+        mgcl::VaryingStencil3x3x3 b(m, n, o, 0, 0, 0);
+
+        // fill a and b
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                for (int k = 0; k < o; k++)
+                {
+                    // 7-point Laplace
+                    a[i][j][k][0][1][1] = 1;
+                    a[i][j][k][1][0][1] = 1;
+                    a[i][j][k][1][1][0] = 1;
+                    a[i][j][k][1][1][1] = -6;
+                    a[i][j][k][1][1][2] = 1;
+                    a[i][j][k][1][2][1] = 1;
+                    a[i][j][k][2][1][1] = 1;
+
+                    // full-weight restriction, scaled by 64
+                    b[i][j][k][0][0][0] = 1;
+                    b[i][j][k][0][0][1] = 2;
+                    b[i][j][k][0][0][2] = 1;
+                    b[i][j][k][0][1][0] = 2;
+                    b[i][j][k][0][1][1] = 4;
+                    b[i][j][k][0][1][2] = 2;
+                    b[i][j][k][0][2][0] = 1;
+                    b[i][j][k][0][2][1] = 2;
+                    b[i][j][k][0][2][2] = 1;
+                    b[i][j][k][1][0][0] = 2;
+                    b[i][j][k][1][0][1] = 4;
+                    b[i][j][k][1][0][2] = 2;
+                    b[i][j][k][1][1][0] = 4;
+                    b[i][j][k][1][1][1] = 8;
+                    b[i][j][k][1][1][2] = 4;
+                    b[i][j][k][1][2][0] = 2;
+                    b[i][j][k][1][2][1] = 4;
+                    b[i][j][k][1][2][2] = 2;
+                    b[i][j][k][2][0][0] = 1;
+                    b[i][j][k][2][0][1] = 2;
+                    b[i][j][k][2][0][2] = 1;
+                    b[i][j][k][2][1][0] = 2;
+                    b[i][j][k][2][1][1] = 4;
+                    b[i][j][k][2][1][2] = 2;
+                    b[i][j][k][2][2][0] = 1;
+                    b[i][j][k][2][2][1] = 2;
+                    b[i][j][k][2][2][2] = 1;
+                }
+
+        auto c = b * a * b;
+
+        // check result against explicitly calculated matrix product
+        auto c_expected = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o) *
+                          mgcl_test::Matrix2d::laplace7p3d(m, n, o) *
+                          mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
+        auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(c);
+
+        REQUIRE(c_expected.getM() == c_m2d.getM());
+        REQUIRE(c_expected.getN() == c_m2d.getN());
+
+        CHECK(c_m2d == c_expected);
+
+        // check also associativity
+        auto c_assoc = b * (a * b);
+
+        // check result against explicitly calculated matrix product
+        auto c_expected_assoc = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o) *
+                                (mgcl_test::Matrix2d::laplace7p3d(m, n, o) *
+                                 mgcl_test::Matrix2d::restrictionFullWeight(m, n, o));
+        auto c_m2d_assoc = mgcl_test::Matrix2d::fromVaryingStencil(c_assoc);
+
+        REQUIRE(c_expected_assoc.getM() == c_m2d_assoc.getM());
+        REQUIRE(c_expected_assoc.getN() == c_m2d_assoc.getN());
+
+        CHECK(c_m2d_assoc == c_expected_assoc);
     }
 
     SECTION("throwing")
