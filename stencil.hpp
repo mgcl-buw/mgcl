@@ -56,7 +56,7 @@ namespace mgcl
          * @return std::unique_ptr<VaryingStencil<N + 2>> Resulting stencil (two cells wider).
          */
         template <int NB>
-        VaryingStencil<(N > NB ? N : NB) + 2> multiply(VaryingStencil<NB> &&b) const
+        VaryingStencil<(N > NB ? N : NB) + 2> multiply(VaryingStencil<NB> &b) const
         {
             if (dim1gh != b.getDim1gh() ||
                 dim2gh != b.getDim2gh() ||
@@ -102,7 +102,7 @@ namespace mgcl
 
         // Overload with lvalue-reference to enable chaining, i.e. a.multiply(b.multiply(c))
         template <int NB>
-        VaryingStencil<(N > NB ? N : NB) + 2> multiply(VaryingStencil<NB> &b) const
+        VaryingStencil<(N > NB ? N : NB) + 2> multiply(VaryingStencil<NB> &&b) const
         {
             return multiply(b);
         }
