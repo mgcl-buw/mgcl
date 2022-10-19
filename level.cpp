@@ -116,16 +116,6 @@ namespace mgcl
                 v = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
                 f = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
                 r = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
-
-                // Create stencilsValues if a varying stencil shall be used. Stencil is always 27 point since
-                // for varying stencils the Galerkin operator is used.
-                // if (stencilType == MGCL_VARYING_7POINT ||
-                //     stencilType == MGCL_VARYING_19POINT ||
-                //     stencilType == MGCL_VARYING_27POINT)
-                // {
-                //     stencilType = MGCL_VARYING_27POINT;
-                //     stencilValues = std::make_unique<Hypercube4d>(m, n, o, 27, problem->ghosts, problem->ghosts, problem->ghosts, 0);
-                // }
             }
         }
 
