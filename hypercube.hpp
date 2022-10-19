@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MGCL_HYPERCUBE_HPP
+#define MGCL_HYPERCUBE_HPP
 
 #include <string>
 #include <vector>
@@ -93,8 +94,8 @@ namespace mgcl
                     int ghostsDim5_, int ghostsDim6_, double value = 0);
         Hypercube6d(const Hypercube6d &c) = delete;
         Hypercube6d &operator=(const Hypercube6d &) = delete;
-        Hypercube6d(const Hypercube6d &&) = delete;
-        Hypercube6d &operator=(const Hypercube6d &&) = delete;
+        Hypercube6d(Hypercube6d &&);
+        Hypercube6d &operator=(Hypercube6d &&);
         ~Hypercube6d();
 
         double ******getData() const;
@@ -125,3 +126,5 @@ namespace mgcl
         int getGhostsDim6() const;
     };
 }
+
+#endif // MGCL_HYPERCUBE_HPP

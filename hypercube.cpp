@@ -406,29 +406,120 @@ namespace mgcl
         }
     }
 
+    Hypercube6d::Hypercube6d(Hypercube6d &&o)
+        : dim1(o.dim1),
+          dim2(o.dim2),
+          dim3(o.dim3),
+          dim4(o.dim4),
+          dim5(o.dim5),
+          dim6(o.dim6),
+          dim1gh(o.dim1gh),
+          dim2gh(o.dim2gh),
+          dim3gh(o.dim3gh),
+          dim4gh(o.dim4gh),
+          dim5gh(o.dim5gh),
+          dim6gh(o.dim6gh),
+          ghostsDim1(o.ghostsDim1),
+          ghostsDim2(o.ghostsDim2),
+          ghostsDim3(o.ghostsDim3),
+          ghostsDim4(o.ghostsDim4),
+          ghostsDim5(o.ghostsDim5),
+          ghostsDim6(o.ghostsDim6),
+          field_1d(std::move(o.field_1d)),
+          field_6d(o.field_6d)
+    {
+        o.dim1 = 0;
+        o.dim2 = 0;
+        o.dim3 = 0;
+        o.dim4 = 0;
+        o.dim5 = 0;
+        o.dim6 = 0;
+        o.dim1gh = 0;
+        o.dim2gh = 0;
+        o.dim3gh = 0;
+        o.dim4gh = 0;
+        o.dim5gh = 0;
+        o.dim6gh = 0;
+        o.ghostsDim1 = 0;
+        o.ghostsDim2 = 0;
+        o.ghostsDim3 = 0;
+        o.ghostsDim4 = 0;
+        o.ghostsDim5 = 0;
+        o.ghostsDim6 = 0;
+        o.field_6d = nullptr;
+    }
+
+    Hypercube6d &Hypercube6d::operator=(Hypercube6d &&o)
+    {
+        dim1 = o.dim1;
+        dim2 = o.dim2;
+        dim3 = o.dim3;
+        dim4 = o.dim4;
+        dim5 = o.dim5;
+        dim6 = o.dim6;
+        dim1gh = o.dim1gh;
+        dim2gh = o.dim2gh;
+        dim3gh = o.dim3gh;
+        dim4gh = o.dim4gh;
+        dim5gh = o.dim5gh;
+        dim6gh = o.dim6gh;
+        ghostsDim1 = o.ghostsDim1;
+        ghostsDim2 = o.ghostsDim2;
+        ghostsDim3 = o.ghostsDim3;
+        ghostsDim4 = o.ghostsDim4;
+        ghostsDim5 = o.ghostsDim5;
+        ghostsDim6 = o.ghostsDim6;
+        field_1d = std::move(o.field_1d);
+        field_6d = o.field_6d;
+
+        o.dim1 = 0;
+        o.dim2 = 0;
+        o.dim3 = 0;
+        o.dim4 = 0;
+        o.dim5 = 0;
+        o.dim6 = 0;
+        o.dim1gh = 0;
+        o.dim2gh = 0;
+        o.dim3gh = 0;
+        o.dim4gh = 0;
+        o.dim5gh = 0;
+        o.dim6gh = 0;
+        o.ghostsDim1 = 0;
+        o.ghostsDim2 = 0;
+        o.ghostsDim3 = 0;
+        o.ghostsDim4 = 0;
+        o.ghostsDim5 = 0;
+        o.ghostsDim6 = 0;
+        o.field_6d = nullptr;
+        return *this;
+    }
+
     /**
      * @brief Destroy the Hypercube6d object, freeing memory.
      */
     Hypercube6d::~Hypercube6d()
     {
-        for (int d1 = 0; d1 < dim1gh; d1++)
+        if (field_6d)
         {
-            for (int d2 = 0; d2 < dim2gh; d2++)
+            for (int d1 = 0; d1 < dim1gh; d1++)
             {
-                for (int d3 = 0; d3 < dim3gh; d3++)
+                for (int d2 = 0; d2 < dim2gh; d2++)
                 {
-                    for (int d4 = 0; d4 < dim4gh; d4++)
+                    for (int d3 = 0; d3 < dim3gh; d3++)
                     {
-                        delete[] field_6d[d1][d2][d3][d4];
+                        for (int d4 = 0; d4 < dim4gh; d4++)
+                        {
+                            delete[] field_6d[d1][d2][d3][d4];
+                        }
+                        delete[] field_6d[d1][d2][d3];
                     }
-                    delete[] field_6d[d1][d2][d3];
+                    delete[] field_6d[d1][d2];
                 }
-                delete[] field_6d[d1][d2];
+                delete[] field_6d[d1];
             }
-            delete[] field_6d[d1];
+            delete[] field_6d;
+            field_6d = nullptr;
         }
-        delete[] field_6d;
-        field_6d = nullptr;
     }
 
     double ******Hypercube6d::getData() const

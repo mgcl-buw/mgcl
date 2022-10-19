@@ -184,3 +184,53 @@ TEST_CASE("Hypercube4d")
         CHECK(remove(path.c_str()) == 0);
     }
 }
+
+TEST_CASE("Hypercube6d")
+{
+    SECTION("move ctor")
+    {
+        int n = GENERATE(1, 2, 3);
+        int m = GENERATE(1, 2, 3);
+        int o = GENERATE(1, 2, 3);
+        int d4to6 = GENERATE(3, 5, 7);
+
+        mgcl::Hypercube6d h(m, n, o, d4to6, d4to6, d4to6);
+        h.fillRandom();
+
+        // copy manually for checking results
+        mgcl::Hypercube6d h_check(m, n, o, d4to6, d4to6, d4to6);
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                for (int k = 0; k < o; k++)
+                    for (int ii = 0; ii < d4to6; ii++)
+                        for (int jj = 0; jj < d4to6; jj++)
+                            for (int kk = 0; kk < d4to6; kk++)
+                            {
+                                h_check[i][j][k][ii][jj][kk] = h[i][j][k][ii][jj][kk];
+                            }
+
+        // check move ctor
+        auto h2(std::move(h));
+
+        CHECK(h.getDim1() == 0);
+        CHECK(h.getDim2() == 0);
+        CHECK(h.getDim3() == 0);
+        CHECK(h.getDim4() == 0);
+        CHECK(h.getDim5() == 0);
+        CHECK(h.getDim6() == 0);
+        CHECK(h.getData() == nullptr);
+        CHECK(h2.isEqual(h_check));
+
+        // check move assignment
+        auto h3 = std::move(h2);
+
+        CHECK(h2.getDim1() == 0);
+        CHECK(h2.getDim2() == 0);
+        CHECK(h2.getDim3() == 0);
+        CHECK(h2.getDim4() == 0);
+        CHECK(h2.getDim5() == 0);
+        CHECK(h2.getDim6() == 0);
+        CHECK(h2.getData() == nullptr);
+        CHECK(h3.isEqual(h_check));
+    }
+}
