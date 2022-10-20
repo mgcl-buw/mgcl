@@ -32,6 +32,8 @@ namespace mgcl_test
             : m(vec.size()), n(vec.at(0).size()), values(std::move(vec)) {}
 
         Matrix2d kronecker(const Matrix2d &b);
+        Matrix2d transposed();
+
         Matrix2d operator+(const Matrix2d &b);
         void operator+=(const Matrix2d &b);
         bool operator==(const Matrix2d &b) const;

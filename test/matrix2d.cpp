@@ -20,6 +20,24 @@ namespace mgcl_test
         return c;
     }
 
+    /**
+     * @brief Creates and returns the transposed of this matrix
+     *
+     * @return Matrix2d
+     */
+    Matrix2d Matrix2d::transposed()
+    {
+        Matrix2d t(n, m);
+
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+            {
+                t[j][i] = values[i][j];
+            }
+
+        return t;
+    }
+
     Matrix2d Matrix2d::operator+(const Matrix2d &b)
     {
         if (m != b.getM() || n != b.getN())

@@ -538,3 +538,23 @@ TEST_CASE("Matrix2d::cuttingMatrix3d")
         }
     }
 }
+
+TEST_CASE("Matrix2d::transposed")
+{
+    int m = GENERATE(1, 2, 3);
+    int n = GENERATE(1, 2, 3);
+
+    auto a = mgcl_test::Matrix2d(m, n);
+    auto b = a.transposed();
+
+    REQUIRE(a.getM() == m);
+    REQUIRE(a.getN() == n);
+    REQUIRE(b.getM() == n);
+    REQUIRE(b.getN() == m);
+
+    for (int i = 0; i < a.getM(); i++)
+        for (int j = 0; j < a.getN(); j++)
+        {
+            CHECK(a[i][j] == b[j][i]);
+        }
+}
