@@ -119,52 +119,71 @@ namespace mgcl
         {
             return multiply(b);
         }
-
-        static std::unique_ptr<VaryingStencil<3>> create3dFullWeightRestriction(int m, int n, int o, int ghm, int ghn, int gho);
     };
 
     typedef VaryingStencil<3> VaryingStencil3x3x3;
     typedef VaryingStencil<5> VaryingStencil5x5x5;
     typedef VaryingStencil<7> VaryingStencil7x7x7;
 
-    enum StencilPos
+    /**
+     * @brief Creates and returns a 3d full-weight restriction stencil for a grid of size mxnxo.
+     *
+     * @param m real grid size dim 1
+     * @param n real grid size dim 2
+     * @param o real grid size dim 3
+     * @param ghm ghosts in dim 1
+     * @param ghn ghosts in dim 2
+     * @param gho ghosts in dim 3
+     * @return std::unique_ptr<VaryingStencil<3>>
+     */
+    static std::unique_ptr<VaryingStencil3x3x3> create3dFullWeightRestrictionStencil(int m, int n, int o, int ghm, int ghn, int gho)
     {
-        // clang-format off
-        // 7p
-        SELF,   // [i][j][k]
-        FRONT,  // [i][j][k - 1]
-        BACK,   // [i][j][k + 1]
-        TOP,    // [i][j - 1][k]
-        BOTTOM, // [i][j + 1][k]
-        LEFT,   // [i - 1][j][k]
-        RIGHT,  // [i + 1][j][k]
+        auto bptr = std::make_unique<VaryingStencil3x3x3>(m, n, o, ghm, ghn, gho);
+        auto &b = *bptr;
+        double factor1 = 1.0 / 64.0;
+        double factor2 = 2.0 / 64.0;
+        double factor4 = 4.0 / 64.0;
+        double factor8 = 8.0 / 64.0;
 
-        // 19p
-        FRONT_TOP,    // [i][j - 1][k - 1]
-        BACK_TOP,     // [i][j - 1][k + 1]
-        FRONT_BOTTOM, // [i][j + 1][k - 1]
-        BACK_BOTTOM,  // [i][j + 1][k + 1]
-        FRONT_LEFT,   // [i - 1][j][k - 1]
-        BACK_LEFT,    // [i - 1][j][k + 1]
-        FRONT_RIGHT,  // [i + 1][j][k - 1]
-        BACK_RIGHT,   // [i + 1][j][k + 1]
-        LEFT_TOP,     // [i - 1][j - 1][k]
-        LEFT_BOTTOM,  // [i - 1][j + 1][k]
-        RIGHT_TOP,    // [i + 1][j - 1][k]
-        RIGHT_BOTTOM, // [i + 1][j + 1][k]
+        int mgh = m + 2 * ghm;
+        int ngh = n + 2 * ghn;
+        int ogh = o + 2 * gho;
 
-        // 27p
-        FRONT_TOP_LEFT,     // [i - 1][j - 1][k - 1]
-        BACK_TOP_LEFT,      // [i - 1][j - 1][k + 1]
-        FRONT_BOTTOM_LEFT,  // [i - 1][j + 1][k - 1]
-        BACK_BOTTOM_LEFT,   // [i - 1][j + 1][k + 1]
-        FRONT_TOP_RIGHT,    // [i + 1][j - 1][k - 1]
-        BACK_TOP_RIGHT,     // [i + 1][j - 1][k + 1]
-        FRONT_BOTTOM_RIGHT, // [i + 1][j + 1][k - 1]
-        BACK_BOTTOM_RIGHT   // [i + 1][j + 1][k + 1]
+        for (int i = 0; i < mgh; i++)
+            for (int j = 0; j < ngh; j++)
+                for (int k = 0; k < ogh; k++)
+                {
+                    b[i][j][k][0][0][0] = factor1;
+                    b[i][j][k][0][0][1] = factor2;
+                    b[i][j][k][0][0][2] = factor1;
+                    b[i][j][k][0][1][0] = factor2;
+                    b[i][j][k][0][1][1] = factor4;
+                    b[i][j][k][0][1][2] = factor2;
+                    b[i][j][k][0][2][0] = factor1;
+                    b[i][j][k][0][2][1] = factor2;
+                    b[i][j][k][0][2][2] = factor1;
+                    b[i][j][k][1][0][0] = factor2;
+                    b[i][j][k][1][0][1] = factor4;
+                    b[i][j][k][1][0][2] = factor2;
+                    b[i][j][k][1][1][0] = factor4;
+                    b[i][j][k][1][1][1] = factor8;
+                    b[i][j][k][1][1][2] = factor4;
+                    b[i][j][k][1][2][0] = factor2;
+                    b[i][j][k][1][2][1] = factor4;
+                    b[i][j][k][1][2][2] = factor2;
+                    b[i][j][k][2][0][0] = factor1;
+                    b[i][j][k][2][0][1] = factor2;
+                    b[i][j][k][2][0][2] = factor1;
+                    b[i][j][k][2][1][0] = factor2;
+                    b[i][j][k][2][1][1] = factor4;
+                    b[i][j][k][2][1][2] = factor2;
+                    b[i][j][k][2][2][0] = factor1;
+                    b[i][j][k][2][2][1] = factor2;
+                    b[i][j][k][2][2][2] = factor1;
+                }
 
-        // clang-format on
-    };
+        return bptr;
+    }
 }
 
 #endif // MGCL_STENCIL_HPP

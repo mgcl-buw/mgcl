@@ -554,3 +554,61 @@ TEST_CASE("VaryingStencil::multiply")
             REQUIRE_NOTHROW(a * b);
     }
 }
+
+TEST_CASE("VaryingStencil::create3dFullWeightRestriction")
+{
+    int m = GENERATE(1, 2, 3);
+    int n = GENERATE(1, 2, 3);
+    int o = GENERATE(1, 2, 3);
+    int ghm = GENERATE(1, 2);
+    int ghn = GENERATE(1, 2);
+    int gho = GENERATE(1, 2);
+
+    auto rptr = mgcl::create3dFullWeightRestrictionStencil(m, n, o, ghm, ghn, gho);
+    auto &r = *rptr;
+
+    REQUIRE(r.getDim1() == m);
+    REQUIRE(r.getDim2() == n);
+    REQUIRE(r.getDim3() == o);
+
+    double factor = 1.0 / 64.0;
+
+    int mgh = m + 2 * ghm;
+    int ngh = n + 2 * ghn;
+    int ogh = o + 2 * gho;
+
+    for (int i = 0; i < mgh; i++)
+        for (int j = 0; j < ngh; j++)
+            for (int k = 0; k < ogh; k++)
+            {
+
+                // full-weight restriction, scaled by 64
+                CHECK(r[i][j][k][0][0][0] == 1 * factor);
+                CHECK(r[i][j][k][0][0][1] == 2 * factor);
+                CHECK(r[i][j][k][0][0][2] == 1 * factor);
+                CHECK(r[i][j][k][0][1][0] == 2 * factor);
+                CHECK(r[i][j][k][0][1][1] == 4 * factor);
+                CHECK(r[i][j][k][0][1][2] == 2 * factor);
+                CHECK(r[i][j][k][0][2][0] == 1 * factor);
+                CHECK(r[i][j][k][0][2][1] == 2 * factor);
+                CHECK(r[i][j][k][0][2][2] == 1 * factor);
+                CHECK(r[i][j][k][1][0][0] == 2 * factor);
+                CHECK(r[i][j][k][1][0][1] == 4 * factor);
+                CHECK(r[i][j][k][1][0][2] == 2 * factor);
+                CHECK(r[i][j][k][1][1][0] == 4 * factor);
+                CHECK(r[i][j][k][1][1][1] == 8 * factor);
+                CHECK(r[i][j][k][1][1][2] == 4 * factor);
+                CHECK(r[i][j][k][1][2][0] == 2 * factor);
+                CHECK(r[i][j][k][1][2][1] == 4 * factor);
+                CHECK(r[i][j][k][1][2][2] == 2 * factor);
+                CHECK(r[i][j][k][2][0][0] == 1 * factor);
+                CHECK(r[i][j][k][2][0][1] == 2 * factor);
+                CHECK(r[i][j][k][2][0][2] == 1 * factor);
+                CHECK(r[i][j][k][2][1][0] == 2 * factor);
+                CHECK(r[i][j][k][2][1][1] == 4 * factor);
+                CHECK(r[i][j][k][2][1][2] == 2 * factor);
+                CHECK(r[i][j][k][2][2][0] == 1 * factor);
+                CHECK(r[i][j][k][2][2][1] == 2 * factor);
+                CHECK(r[i][j][k][2][2][2] == 1 * factor);
+            }
+}
