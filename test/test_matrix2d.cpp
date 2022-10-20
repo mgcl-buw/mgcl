@@ -434,6 +434,7 @@ TEST_CASE("Matrix2d::laplace7p3d")
                 j + jj <= n &&
                 k + kk >= 1 &&
                 k + kk <= o)
+            {
                 // center of stencil
                 if (ii == 1 && jj == 1 && kk == 1)
                     CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == -6.0);
@@ -444,6 +445,7 @@ TEST_CASE("Matrix2d::laplace7p3d")
                     CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == 1.0);
                 else
                     CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == 0.0);
+            }
     // clang-format on
 }
 
@@ -472,6 +474,7 @@ TEST_CASE("Matrix2d::restrictionFullWeight")
                 j + jj <= n &&
                 k + kk >= 1 &&
                 k + kk <= o)
+            {
                 // center of stencil
                 if (ii == 1 && jj == 1 && kk == 1)
                     CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == 8.0);
@@ -490,6 +493,7 @@ TEST_CASE("Matrix2d::restrictionFullWeight")
                     CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == 1.0);
                 else
                     CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == 0.0);
+            }
     // clang-format on
 }
 
