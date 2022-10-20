@@ -492,3 +492,49 @@ TEST_CASE("Matrix2d::restrictionFullWeight")
                     CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == 0.0);
     // clang-format on
 }
+
+TEST_CASE("Matrix2d::cuttingMatrix1d")
+{
+    int m = GENERATE(1, 2, 3, 4);
+
+    auto a = mgcl_test::Matrix2d::cuttingMatrix1d(m);
+
+    REQUIRE(a.getM() == m);
+    REQUIRE(a.getN() == m * 2);
+
+    for (int i = 0; i < a.getM(); i++)
+        for (int j = 0; j < a.getN(); j++)
+        {
+            if (j == (i + 1) * 2 - 1)
+                CHECK(a[i][j] == 1);
+            else
+                CHECK(a[i][j] == 0);
+        }
+}
+
+TEST_CASE("Matrix2d::cuttingMatrix3d")
+{
+    int m = GENERATE(1, 2, 3);
+    int n = GENERATE(1, 2, 3);
+    int o = GENERATE(1, 2, 3);
+
+    auto a = mgcl_test::Matrix2d::cuttingMatrix3d(m, n, o);
+
+    REQUIRE(a.getM() == m * n * o);
+    REQUIRE(a.getN() == m * n * o * 2 * 2 * 2);
+
+    int jstart = n * o * 2 * 2 + o * 2 + 1;
+
+    for (int i = 0; i < a.getM(); i++)
+    {
+        // find 1d index of current coarse grid point, that must equal the current column
+        int idx1d = jstart + (i % o) * 2 + (i / o) * 2 * 2 * o + (i / (n * o)) * 2 * 2 * n * o;
+        for (int j = 0; j < a.getN(); j++)
+        {
+            if (j == idx1d)
+                CHECK(a[i][j] == 1);
+            else
+                CHECK(a[i][j] == 0);
+        }
+    }
+}

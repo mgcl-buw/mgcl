@@ -51,6 +51,8 @@ namespace mgcl_test
         static Matrix2d diag(std::vector<std::tuple<double, int>> valuesAndOffsets, int m, int n);
         static Matrix2d laplace7p3d(int m, int n, int o);
         static Matrix2d restrictionFullWeight(int m, int n, int o);
+        static Matrix2d cuttingMatrix1d(int m);
+        static Matrix2d cuttingMatrix3d(int m, int n, int o);
 
         template <int N>
         static Matrix2d fromVaryingStencil(mgcl::VaryingStencil<N> &s)

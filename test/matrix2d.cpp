@@ -216,6 +216,39 @@ namespace mgcl_test
         return Dxx.kronecker(Dyy.kronecker(Dzz));
     }
 
+    /**
+     * @brief Creates a 1d cutting matrix K for cutting out rows and columns of another matrix A using K * A.
+     *
+     * @param m Size of rows. Matrix will be of size m x 2*m
+     * @return Matrix2d
+     */
+    Matrix2d Matrix2d::cuttingMatrix1d(int m)
+    {
+        Matrix2d x(m, m << 1);
+
+        for (int i = 0, j = 1; i < x.getM(); i++, j += 2)
+            x[i][j] = 1;
+
+        return x;
+    }
+
+    /**
+     * @brief Creates a 3d cutting matrix K for cutting out rows and columns of another matrix A using K * A.
+     *
+     * @param m Coarse grid size in x-direction
+     * @param n Coarse grid size in y-direction
+     * @param o Coarse grid size in z-direction
+     * @return Matrix2d
+     */
+    Matrix2d Matrix2d::cuttingMatrix3d(int m, int n, int o)
+    {
+        Matrix2d x = cuttingMatrix1d(m);
+        Matrix2d y = cuttingMatrix1d(n);
+        Matrix2d z = cuttingMatrix1d(o);
+
+        return x.kronecker(y.kronecker(z));
+    }
+
     std::ostream &operator<<(std::ostream &os, Matrix2d const &value)
     {
         {
