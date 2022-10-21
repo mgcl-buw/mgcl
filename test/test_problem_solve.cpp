@@ -85,8 +85,8 @@ TEST_CASE("Problem solving: periodic 4th order")
         auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
         auto errMax = calculateMaxError(*err);
 
-        solution.dumpToFile("out_solution.txt");
-        (*v).dumpToFile("out_v.txt");
+        // solution.dumpToFile("out_solution.txt");
+        // (*v).dumpToFile("out_v.txt");
 
         std::cout
             << std::scientific << std::setprecision(17) << "||e||_2 = " << errNorm << std::endl
@@ -103,6 +103,48 @@ TEST_CASE("Problem solving: periodic 4th order")
             CHECK(fabs(errNorm - 3.93115528889639940e-03) < 1e-14);
             CHECK(fabs(errMax - 3.95723982871564600e-03) < 1e-14);
         }
+    }
+
+    SECTION("Varying stencil, galerkin")
+    {
+        p.setStencilType(mgcl::MGCL_VARYING_7POINT);
+        auto &s = *p.getStencilValues();
+
+        // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
+        for (int i = 0; i < N; i++)
+            for (int j = 0; j < N; j++)
+                for (int k = 0; k < N; k++)
+                {
+                    // 7-point Laplace
+                    s[i][j][k][0][1][1] = 1;
+                    s[i][j][k][1][0][1] = 1;
+                    s[i][j][k][1][1][0] = 1;
+                    s[i][j][k][1][1][1] = -6;
+                    s[i][j][k][1][1][2] = 1;
+                    s[i][j][k][1][2][1] = 1;
+                    s[i][j][k][2][1][1] = 1;
+                }
+
+        p.solveSeq();
+
+        // check if input v is equal to the v stored in Problem instance
+        REQUIRE(v.get() == p.getVPtr().get());
+        REQUIRE(v->isEqual(p.getV()));
+
+        // check if solution is good
+        auto err = calculateError(solution, *v);
+        auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+        auto errMax = calculateMaxError(*err);
+
+        // solution.dumpToFile("out_solution.txt");
+        // (*v).dumpToFile("out_v.txt");
+
+        std::cout
+            << std::scientific << std::setprecision(17) << "||e||_2 = " << errNorm << std::endl
+            << std::scientific << std::setprecision(17) << "e_max = " << errMax << std::endl;
+
+        CHECK(errNorm < 1e-2);
+        CHECK(errMax < 1e-2);
     }
 
     SECTION("OpenCL")

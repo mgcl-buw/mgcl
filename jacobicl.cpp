@@ -802,20 +802,24 @@ namespace mgcl
     double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
                                         MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil3x3x3 &stencilValuesCuboid, bool returnResidualNorm)
     {
+        // TODO adjust when stencilValues are stored with ghosts
         double res = 0.0;
         double stencilsum = 0;
         double ******stencilValues;
         double ***vraw = v.getData();
 
+        int ghm = f.getGhostsM();
+        int ghn = f.getGhostsM();
+        int gho = f.getGhostsM();
+
         if (stencilType == MGCL_VARYING_7POINT || stencilType == MGCL_VARYING_19POINT || stencilType == MGCL_VARYING_27POINT)
             stencilValues = stencilValuesCuboid.getData();
 
-        for (int i = f.getGhostsM(); i < f.getM() + f.getGhostsM(); i++)
-            for (int j = f.getGhostsN(); j < f.getN() + f.getGhostsN(); j++)
-                for (int k = f.getGhostsO(); k < f.getO() + f.getGhostsO(); k++)
+        for (int i = ghm, isv = 0; i < f.getM() + ghm; i++, isv++)
+            for (int j = ghn, jsv = 0; j < f.getN() + ghn; j++, jsv++)
+                for (int k = gho, ksv = 0; k < f.getO() + gho; k++, ksv++)
                 {
                     // A*v
-                    // stencilsum = stencil.apply(v, i, j, k);
                     if (stencilType == MGCL_LAPLACE_7POINT)
                     {
                         // clang-format off
@@ -868,72 +872,72 @@ namespace mgcl
                     else if (stencilType == MGCL_VARYING_7POINT)
                     {
                         // clang-format off
-                        stencilsum = stencilValues[i][j][k][1][1][1]  * vraw[i][j][k]
-                            + stencilValues[i][j][k][1][1][0]         * vraw[i][j][k - 1]
-                            + stencilValues[i][j][k][1][1][2]         * vraw[i][j][k + 1]
-                            + stencilValues[i][j][k][1][0][1]         * vraw[i][j - 1][k]
-                            + stencilValues[i][j][k][1][2][1]         * vraw[i][j + 1][k]
-                            + stencilValues[i][j][k][0][1][1]         * vraw[i - 1][j][k]
-                            + stencilValues[i][j][k][2][1][1]         * vraw[i + 1][j][k];
+                        stencilsum = stencilValues[isv][jsv][ksv][1][1][1]  * vraw[i][j][k]
+                            + stencilValues[isv][jsv][ksv][1][1][0]         * vraw[i][j][k - 1]
+                            + stencilValues[isv][jsv][ksv][1][1][2]         * vraw[i][j][k + 1]
+                            + stencilValues[isv][jsv][ksv][1][0][1]         * vraw[i][j - 1][k]
+                            + stencilValues[isv][jsv][ksv][1][2][1]         * vraw[i][j + 1][k]
+                            + stencilValues[isv][jsv][ksv][0][1][1]         * vraw[i - 1][j][k]
+                            + stencilValues[isv][jsv][ksv][2][1][1]         * vraw[i + 1][j][k];
                         // clang-format on
                     }
                     else if (stencilType == MGCL_VARYING_19POINT)
                     {
                         // clang-format off
-                        stencilsum = stencilValues[i][j][k][1][1][1]  * vraw[i][j][k]
-                            + stencilValues[i][j][k][1][1][0]         * vraw[i][j][k - 1]
-                            + stencilValues[i][j][k][1][1][2]         * vraw[i][j][k + 1]
-                            + stencilValues[i][j][k][1][0][1]         * vraw[i][j - 1][k]
-                            + stencilValues[i][j][k][1][2][1]         * vraw[i][j + 1][k]
-                            + stencilValues[i][j][k][0][1][1]         * vraw[i - 1][j][k]
-                            + stencilValues[i][j][k][2][1][1]         * vraw[i + 1][j][k]
+                        stencilsum = stencilValues[isv][jsv][ksv][1][1][1]  * vraw[i][j][k]
+                            + stencilValues[isv][jsv][ksv][1][1][0]         * vraw[i][j][k - 1]
+                            + stencilValues[isv][jsv][ksv][1][1][2]         * vraw[i][j][k + 1]
+                            + stencilValues[isv][jsv][ksv][1][0][1]         * vraw[i][j - 1][k]
+                            + stencilValues[isv][jsv][ksv][1][2][1]         * vraw[i][j + 1][k]
+                            + stencilValues[isv][jsv][ksv][0][1][1]         * vraw[i - 1][j][k]
+                            + stencilValues[isv][jsv][ksv][2][1][1]         * vraw[i + 1][j][k]
                             
-                            + stencilValues[i][j][k][1][0][0] * vraw[i][j - 1][k - 1]
-                            + stencilValues[i][j][k][1][0][2] * vraw[i][j - 1][k + 1]
-                            + stencilValues[i][j][k][1][2][0] * vraw[i][j + 1][k - 1]
-                            + stencilValues[i][j][k][1][2][2] * vraw[i][j + 1][k + 1]
-                            + stencilValues[i][j][k][0][1][0] * vraw[i - 1][j][k - 1]
-                            + stencilValues[i][j][k][0][1][2] * vraw[i - 1][j][k + 1]
-                            + stencilValues[i][j][k][2][1][0] * vraw[i + 1][j][k - 1]
-                            + stencilValues[i][j][k][2][1][2] * vraw[i + 1][j][k + 1]
-                            + stencilValues[i][j][k][0][0][1] * vraw[i - 1][j - 1][k]
-                            + stencilValues[i][j][k][0][2][1] * vraw[i - 1][j + 1][k]
-                            + stencilValues[i][j][k][2][0][1] * vraw[i + 1][j - 1][k]
-                            + stencilValues[i][j][k][2][2][1] * vraw[i + 1][j + 1][k];
+                            + stencilValues[isv][jsv][ksv][1][0][0] * vraw[i][j - 1][k - 1]
+                            + stencilValues[isv][jsv][ksv][1][0][2] * vraw[i][j - 1][k + 1]
+                            + stencilValues[isv][jsv][ksv][1][2][0] * vraw[i][j + 1][k - 1]
+                            + stencilValues[isv][jsv][ksv][1][2][2] * vraw[i][j + 1][k + 1]
+                            + stencilValues[isv][jsv][ksv][0][1][0] * vraw[i - 1][j][k - 1]
+                            + stencilValues[isv][jsv][ksv][0][1][2] * vraw[i - 1][j][k + 1]
+                            + stencilValues[isv][jsv][ksv][2][1][0] * vraw[i + 1][j][k - 1]
+                            + stencilValues[isv][jsv][ksv][2][1][2] * vraw[i + 1][j][k + 1]
+                            + stencilValues[isv][jsv][ksv][0][0][1] * vraw[i - 1][j - 1][k]
+                            + stencilValues[isv][jsv][ksv][0][2][1] * vraw[i - 1][j + 1][k]
+                            + stencilValues[isv][jsv][ksv][2][0][1] * vraw[i + 1][j - 1][k]
+                            + stencilValues[isv][jsv][ksv][2][2][1] * vraw[i + 1][j + 1][k];
                         // clang-format on
                     }
                     else if (stencilType == MGCL_VARYING_27POINT)
                     {
                         // clang-format off
-                        stencilsum = stencilValues[i][j][k][1][1][1]  * vraw[i][j][k]
-                            + stencilValues[i][j][k][1][1][0]         * vraw[i][j][k - 1]
-                            + stencilValues[i][j][k][1][1][2]         * vraw[i][j][k + 1]
-                            + stencilValues[i][j][k][1][0][1]         * vraw[i][j - 1][k]
-                            + stencilValues[i][j][k][1][2][1]         * vraw[i][j + 1][k]
-                            + stencilValues[i][j][k][0][1][1]         * vraw[i - 1][j][k]
-                            + stencilValues[i][j][k][2][1][1]         * vraw[i + 1][j][k]
+                        stencilsum = stencilValues[isv][jsv][ksv][1][1][1]  * vraw[i][j][k]
+                            + stencilValues[isv][jsv][ksv][1][1][0]         * vraw[i][j][k - 1]
+                            + stencilValues[isv][jsv][ksv][1][1][2]         * vraw[i][j][k + 1]
+                            + stencilValues[isv][jsv][ksv][1][0][1]         * vraw[i][j - 1][k]
+                            + stencilValues[isv][jsv][ksv][1][2][1]         * vraw[i][j + 1][k]
+                            + stencilValues[isv][jsv][ksv][0][1][1]         * vraw[i - 1][j][k]
+                            + stencilValues[isv][jsv][ksv][2][1][1]         * vraw[i + 1][j][k]
                             
-                            + stencilValues[i][j][k][1][0][0] * vraw[i][j - 1][k - 1]
-                            + stencilValues[i][j][k][1][0][2] * vraw[i][j - 1][k + 1]
-                            + stencilValues[i][j][k][1][2][0] * vraw[i][j + 1][k - 1]
-                            + stencilValues[i][j][k][1][2][2] * vraw[i][j + 1][k + 1]
-                            + stencilValues[i][j][k][0][1][0] * vraw[i - 1][j][k - 1]
-                            + stencilValues[i][j][k][0][1][2] * vraw[i - 1][j][k + 1]
-                            + stencilValues[i][j][k][2][1][0] * vraw[i + 1][j][k - 1]
-                            + stencilValues[i][j][k][2][1][2] * vraw[i + 1][j][k + 1]
-                            + stencilValues[i][j][k][0][0][1] * vraw[i - 1][j - 1][k]
-                            + stencilValues[i][j][k][0][2][1] * vraw[i - 1][j + 1][k]
-                            + stencilValues[i][j][k][2][0][1] * vraw[i + 1][j - 1][k]
-                            + stencilValues[i][j][k][2][2][1] * vraw[i + 1][j + 1][k]
+                            + stencilValues[isv][jsv][ksv][1][0][0] * vraw[i][j - 1][k - 1]
+                            + stencilValues[isv][jsv][ksv][1][0][2] * vraw[i][j - 1][k + 1]
+                            + stencilValues[isv][jsv][ksv][1][2][0] * vraw[i][j + 1][k - 1]
+                            + stencilValues[isv][jsv][ksv][1][2][2] * vraw[i][j + 1][k + 1]
+                            + stencilValues[isv][jsv][ksv][0][1][0] * vraw[i - 1][j][k - 1]
+                            + stencilValues[isv][jsv][ksv][0][1][2] * vraw[i - 1][j][k + 1]
+                            + stencilValues[isv][jsv][ksv][2][1][0] * vraw[i + 1][j][k - 1]
+                            + stencilValues[isv][jsv][ksv][2][1][2] * vraw[i + 1][j][k + 1]
+                            + stencilValues[isv][jsv][ksv][0][0][1] * vraw[i - 1][j - 1][k]
+                            + stencilValues[isv][jsv][ksv][0][2][1] * vraw[i - 1][j + 1][k]
+                            + stencilValues[isv][jsv][ksv][2][0][1] * vraw[i + 1][j - 1][k]
+                            + stencilValues[isv][jsv][ksv][2][2][1] * vraw[i + 1][j + 1][k]
                             
-                            + stencilValues[i][j][k][0][0][0] * vraw[i - 1][j - 1][k - 1]
-                            + stencilValues[i][j][k][0][0][2] * vraw[i - 1][j - 1][k + 1]
-                            + stencilValues[i][j][k][0][2][0] * vraw[i - 1][j + 1][k - 1]
-                            + stencilValues[i][j][k][0][2][2] * vraw[i - 1][j + 1][k + 1]
-                            + stencilValues[i][j][k][2][0][0] * vraw[i + 1][j - 1][k - 1]
-                            + stencilValues[i][j][k][2][0][2] * vraw[i + 1][j - 1][k + 1]
-                            + stencilValues[i][j][k][2][2][0] * vraw[i + 1][j + 1][k - 1]
-                            + stencilValues[i][j][k][2][2][2] * vraw[i + 1][j + 1][k + 1];
+                            + stencilValues[isv][jsv][ksv][0][0][0] * vraw[i - 1][j - 1][k - 1]
+                            + stencilValues[isv][jsv][ksv][0][0][2] * vraw[i - 1][j - 1][k + 1]
+                            + stencilValues[isv][jsv][ksv][0][2][0] * vraw[i - 1][j + 1][k - 1]
+                            + stencilValues[isv][jsv][ksv][0][2][2] * vraw[i - 1][j + 1][k + 1]
+                            + stencilValues[isv][jsv][ksv][2][0][0] * vraw[i + 1][j - 1][k - 1]
+                            + stencilValues[isv][jsv][ksv][2][0][2] * vraw[i + 1][j - 1][k + 1]
+                            + stencilValues[isv][jsv][ksv][2][2][0] * vraw[i + 1][j + 1][k - 1]
+                            + stencilValues[isv][jsv][ksv][2][2][2] * vraw[i + 1][j + 1][k + 1];
                         // clang-format on
                     }
 
