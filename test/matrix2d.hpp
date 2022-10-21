@@ -39,6 +39,12 @@ namespace mgcl_test
         bool operator==(const Matrix2d &b) const;
         bool operator!=(const Matrix2d &b) const;
         Matrix2d operator*(const Matrix2d &b) const;
+        Matrix2d &operator*(double b);
+        Matrix2d &operator*(int b) { return operator*(static_cast<double>(b)); }
+        friend Matrix2d &operator*(double b, Matrix2d &m) { return m * b; }
+        friend Matrix2d &operator*(double b, Matrix2d &&m) { return m * b; }
+        friend Matrix2d &operator*(int b, Matrix2d &m) { return m * b; }
+        friend Matrix2d &operator*(int b, Matrix2d &&m) { return m * b; }
 
         std::vector<double> &operator[](int index);
         const std::vector<double> &operator[](int index) const;

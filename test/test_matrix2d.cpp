@@ -306,7 +306,7 @@ TEST_CASE("Matrix2d::operator*")
     SECTION("laplace3d * fullWeightRestriction")
     {
         auto a = mgcl_test::Matrix2d::laplace7p3d(3, 2, 1);
-        auto b = mgcl_test::Matrix2d::restrictionFullWeight(3, 2, 1);
+        auto b = 64 * mgcl_test::Matrix2d::restrictionFullWeight(3, 2, 1);
 
         auto c = a * b;
 

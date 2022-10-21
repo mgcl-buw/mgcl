@@ -108,6 +108,16 @@ namespace mgcl_test
         return c;
     }
 
+    Matrix2d &Matrix2d::operator*(double b)
+    {
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+            {
+                values[i][j] *= b;
+            }
+        return *this;
+    }
+
     std::vector<double> &Matrix2d::operator[](int index)
     {
         return values[index];
