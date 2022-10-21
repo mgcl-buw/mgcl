@@ -96,6 +96,7 @@ test/test_jacobi.cpp
 test/test_level.cpp
 test/test_stencil.cpp
 test/test_hypercube.cpp
+test/test_galerkin.cpp
 test/matrix2d.hpp
 test/matrix2d.cpp
 test/test_matrix2d.cpp

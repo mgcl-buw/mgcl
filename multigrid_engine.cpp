@@ -200,13 +200,34 @@ namespace mgcl
      * Galerkin operator, which is defined as A_2h = R * A_h * P with R being restriction and P being prolongation
      * operators.
      *
-     * @param level This Level
-     * @param levelAbove Level above this one (finer than this level)
+     * @param a_h The stencil of the finer grid.
+     * @returns VaryingStencil3x3x3 The stencil to be applied on the coarser grid
      */
-    void MultigridEngine::galerkin(Level &level, Level &levelAbove)
+    VaryingStencil3x3x3 MultigridEngine::galerkin(VaryingStencil3x3x3 &a_h)
     {
-        // A, R and P needs to be stored as VaryingStencil3x3x3 in each Level
+        // TODO respect ghosts maybe
 
-        // cut stencil from 5x5x5 to 3x3x3 after each multiplication? Or do that directly in the multiplication?
+        //  Get the full-weight restriction stencil S as 3x3x3 stencil
+        auto s = create3dFullWeightRestrictionStencil(a_h.getDim1(), a_h.getDim2(), a_h.getDim3(), 0, 0, 0);
+
+        // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
+        // S * A_h * S and cut out later manually.
+        auto sas = *s * a_h * *s;
+
+        // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil.
+        VaryingStencil3x3x3 a_2h(a_h.getDim1() >> 1, a_h.getDim2() >> 1, a_h.getDim3() >> 1, 0, 0, 0);
+        // clang-format off
+        for (int i = 0, i2 = 1; i < a_2h.getDim1(); i++, i2 += 2)
+        for (int j = 0, j2 = 1; j < a_2h.getDim2(); j++, j2 += 2)
+        for (int k = 0, k2 = 1; k < a_2h.getDim3(); k++, k2 += 2)
+            for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
+            for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
+            for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
+            {
+                a_2h[i][j][k][ii][jj][kk] = sas[i2][j2][k2][ii2][jj2][kk2];
+            }
+        // clang-format on
+
+        return a_2h;
     }
 }
