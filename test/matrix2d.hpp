@@ -45,6 +45,9 @@ namespace mgcl_test
         std::vector<double> &at(int index);
         const std::vector<double> &at(int index) const;
 
+        void dumpToFile(std::string path) const;
+        void dumpToFileWithIndices(std::string path) const;
+
         int getM() const;
         int getN() const;
 

@@ -460,6 +460,11 @@ TEST_CASE("Matrix2d::restrictionFullWeight")
     REQUIRE(a.getM() == m * n * o);
     REQUIRE(a.getN() == m * n * o);
 
+    double factor1 = 8.0 / 64.0;
+    double factor2 = 4.0 / 64.0;
+    double factor3 = 2.0 / 64.0;
+    double factor4 = 1.0 / 64.0;
+
     // clang-format off
     for (int i = 0; i < m; i++)
     for (int j = 0; j < n; j++)
@@ -477,20 +482,20 @@ TEST_CASE("Matrix2d::restrictionFullWeight")
             {
                 // center of stencil
                 if (ii == 1 && jj == 1 && kk == 1)
-                    CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == 8.0);
+                    CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == factor1);
                 // adjacent to center
                 else if (ii == 1 && jj == 1 && kk != 1 ||
                          ii == 1 && jj != 1 && kk == 1 ||
                          ii != 1 && jj == 1 && kk == 1)
-                    CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == 4.0);
+                    CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == factor2);
                 // diagonally adjacent to center
                 else if (ii == 1 && jj != 1 && kk != 1 ||
                          ii != 1 && jj != 1 && kk == 1 ||
                          ii != 1 && jj == 1 && kk != 1)
-                    CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == 2.0);
+                    CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == factor3);
                 // corner of stencil
                 else if (ii != 1 && jj != 1 && kk != 1)
-                    CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == 1.0);
+                    CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == factor4);
                 else
                     CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == 0.0);
             }

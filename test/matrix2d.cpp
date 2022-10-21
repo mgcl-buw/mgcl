@@ -1,5 +1,6 @@
 #include "matrix2d.hpp"
 
+#include <fstream>
 #include <iostream>
 
 namespace mgcl_test
@@ -127,6 +128,50 @@ namespace mgcl_test
         return values.at(index);
     }
 
+    void Matrix2d::dumpToFile(std::string path) const
+    {
+        std::ofstream myfile;
+        myfile.open(path, std::ios::out | std::ios::trunc);
+
+        if (myfile.is_open())
+        {
+            for (int d1 = 0; d1 < m; d1++)
+            {
+                for (int d2 = 0; d2 < n; d2++)
+                {
+                    myfile << std::scientific << std::setprecision(17) << values[d1][d2] << "\t";
+                }
+                myfile << std::endl;
+            }
+            myfile.close();
+        }
+        else
+        {
+            throw "Couldn't open file for writing given by: " + path;
+        }
+    }
+
+    void Matrix2d::dumpToFileWithIndices(std::string path) const
+    {
+        std::ofstream myfile;
+        myfile.open(path, std::ios::out | std::ios::trunc);
+
+        if (myfile.is_open())
+        {
+            for (int d1 = 0; d1 < m; d1++)
+                for (int d2 = 0; d2 < n; d2++)
+                {
+                    myfile << d1 << "\t" << d2 << "\t" << std::scientific << std::setprecision(17)
+                           << values[d1][d2] << std::endl;
+                }
+            myfile.close();
+        }
+        else
+        {
+            throw "Couldn't open file for writing given by: " + path;
+        }
+    }
+
     int Matrix2d::getM() const
     {
         return m;
@@ -226,7 +271,7 @@ namespace mgcl_test
      */
     Matrix2d Matrix2d::restrictionFullWeight(int m, int n, int o)
     {
-        std::vector<std::tuple<double, int>> vals{{2, 0}, {1, -1}, {1, 1}};
+        std::vector<std::tuple<double, int>> vals{{0.5, 0}, {0.25, -1}, {0.25, 1}};
         auto Dxx = diag(vals, m, m);
         auto Dyy = diag(vals, n, n);
         auto Dzz = diag(vals, o, o);
