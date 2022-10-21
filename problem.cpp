@@ -48,30 +48,22 @@ namespace mgcl
         //  check mandatory config fields
         if ((v == nullptr || f == nullptr) && (dV == nullptr || dF == nullptr))
         {
-            if (!silent)
-                printf("mgcl: supplied v or f and d_v or d_f is nullptr. Aborting.\n");
-            return false;
+            throw "mgcl: supplied v or f and d_v or d_f is nullptr. Aborting.\n";
         }
 
         if (m < 1 || n < 1 || o < 1)
         {
-            if (!silent)
-                printf("mgcl: m, n or o not supplied, zero or negative. Aborting.\n");
-            return false;
+            throw "mgcl: m, n or o not supplied, zero or negative. Aborting.\n";
         }
 
         if (ghosts < 1)
         {
-            if (!silent)
-                printf("mgcl: ghosts must be >= 1. Aborting.\n");
-            return false;
+            throw "mgcl: ghosts must be >= 1. Aborting.\n";
         }
 
         if (ghosts_in < 0)
         {
-            if (!silent)
-                printf("mgcl: ghosts_in must be >= 0. Aborting.\n");
-            return false;
+            throw "mgcl: ghosts_in must be >= 0. Aborting.\n";
         }
 
         return true;
@@ -143,7 +135,8 @@ namespace mgcl
 
             // Apply Galerkin operator if stencil is varying and we're not on level 0.
             if (level >= 1)
-                MultigridEngine::galerkin(*levels[level], *levels[level - 1]);
+                levels.back()->stencilValues = std::make_unique<VaryingStencil3x3x3>(
+                    std::move(MultigridEngine::galerkin(*levels[level - 1]->getStencilValues())));
         }
 
         return true;

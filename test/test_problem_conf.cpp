@@ -64,32 +64,32 @@ TEST_CASE("Problem::checkParameters")
     SECTION("m,n,o wrong")
     {
         mgcl::Problem pm(0, 1, 1, v, f);
-        mgcl::Problem pn(0, 1, 1, v, f);
-        mgcl::Problem po(0, 1, 1, v, f);
+        mgcl::Problem pn(1, 0, 1, v, f);
+        mgcl::Problem po(1, 1, 0, v, f);
 
-        REQUIRE(pm.checkParameters() == false);
-        REQUIRE(pn.checkParameters() == false);
-        REQUIRE(po.checkParameters() == false);
+        REQUIRE_THROWS(pm.checkParameters());
+        REQUIRE_THROWS(pn.checkParameters());
+        REQUIRE_THROWS(po.checkParameters());
     }
 
     SECTION("ghosts 0")
     {
         mgcl::Problem pm(8, 8, 8, v, f);
         pm.setGhosts(0);
-        REQUIRE(pm.checkParameters() == false);
+        REQUIRE_THROWS(pm.checkParameters());
     }
 
     SECTION("ghosts_in -1")
     {
         mgcl::Problem pm(8, 8, 8, v, f);
         pm.setGhostsIn(-1);
-        REQUIRE(pm.checkParameters() == false);
+        REQUIRE_THROWS(pm.checkParameters());
     }
 
     SECTION("all good")
     {
         mgcl::Problem pm(8, 8, 8, v, f);
-        REQUIRE(pm.checkParameters() == true);
+        REQUIRE_NOTHROW(pm.checkParameters() == true);
     }
 }
 
@@ -251,6 +251,7 @@ TEST_CASE("set OpenCLHelper values")
  */
 TEST_CASE("Problem::init")
 {
+    // TODO test galerkin
     int m = 4;
     int n = 4;
     int o = 4;
