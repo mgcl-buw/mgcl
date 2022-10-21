@@ -264,7 +264,7 @@ TEST_CASE("Problem::init")
     SECTION("default conf, v and f nullptr")
     {
         mgcl::Problem p2(8, 8, 8);
-        REQUIRE(!p2.init());
+        REQUIRE_THROWS(p2.init());
     }
 
     /**
@@ -570,6 +570,57 @@ TEST_CASE("Problem::init")
 
         REQUIRE(vgh.isEqual(*lv0d));
         REQUIRE(fgh.isEqual(*lv0f));
+    }
+
+    SECTION("galerkin")
+    {
+        // Checks if varying stencils are properly set for each level. Does not check actual values for validity, this
+        // is done in an own galerkin test.
+
+        p.setStencilType(mgcl::MGCL_VARYING_7POINT);
+        auto &s = *p.getStencilValues();
+
+        REQUIRE(s.getDim1() == m);
+        REQUIRE(s.getDim2() == n);
+        REQUIRE(s.getDim3() == o);
+        REQUIRE(s.getDim4() == 3);
+        REQUIRE(s.getDim5() == 3);
+        REQUIRE(s.getDim6() == 3);
+
+        // fill with 7-point Laplace
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                for (int k = 0; k < o; k++)
+                {
+                    // 7-point Laplace
+                    s[i][j][k][0][1][1] = 1;
+                    s[i][j][k][1][0][1] = 1;
+                    s[i][j][k][1][1][0] = 1;
+                    s[i][j][k][1][1][1] = -6;
+                    s[i][j][k][1][1][2] = 1;
+                    s[i][j][k][1][2][1] = 1;
+                    s[i][j][k][2][1][1] = 1;
+                }
+
+        p.init();
+
+        // stencilValues defined in Problem is now owned by level 0
+        REQUIRE(p.getStencilValues() == nullptr);
+
+        for (int lv = 0; lv <= p.getMaxlevel(); lv++)
+        {
+            auto &level = p.getLevelAt(lv);
+
+            REQUIRE(level.getStencilValues());
+            auto &sv = *level.getStencilValues();
+
+            CHECK(sv.getDim1() == level.getM());
+            CHECK(sv.getDim2() == level.getN());
+            CHECK(sv.getDim3() == level.getO());
+            CHECK(sv.getDim4() == 3);
+            CHECK(sv.getDim5() == 3);
+            CHECK(sv.getDim6() == 3);
+        }
     }
 }
 

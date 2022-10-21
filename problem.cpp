@@ -134,7 +134,7 @@ namespace mgcl
             levels.back()->init();
 
             // Apply Galerkin operator if stencil is varying and we're not on level 0.
-            if (level >= 1)
+            if (levels[0]->getStencilValues() && level >= 1)
                 levels.back()->stencilValues = std::make_unique<VaryingStencil3x3x3>(
                     std::move(MultigridEngine::galerkin(*levels[level - 1]->getStencilValues())));
         }
@@ -651,7 +651,7 @@ namespace mgcl
         if (stencilType == MGCL_VARYING_7POINT ||
             stencilType == MGCL_VARYING_19POINT ||
             stencilType == MGCL_VARYING_27POINT)
-            stencilValues = std::make_unique<VaryingStencil3x3x3>(m, n, o, ghosts, ghosts, ghosts);
+            stencilValues = std::make_unique<VaryingStencil3x3x3>(m, n, o, 0, 0, 0);
         else
             stencilValues = nullptr;
     }
