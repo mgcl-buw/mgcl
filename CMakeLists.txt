@@ -221,3 +221,17 @@ add_dependencies(example_main copy_kernels)
 add_dependencies(example_main copy_kernels_mgcl_c)
 target_compile_options(example_main PRIVATE "-pg")
 target_link_options(example_main PRIVATE "-pg")
+
+# ==========================
+# example program that initializes a Problem, i.e. test the galerkin operator, that can be profiled using e.g. gprof
+set(SOURCES_EXAMPLE_GALERKIN
+test/test_utility.hpp
+test/test_utility.cpp
+benchmarks/example_galerkin.cpp
+)
+
+add_executable(example_galerkin ${SOURCES_EXAMPLE_GALERKIN})
+target_link_libraries(example_galerkin PRIVATE mgcl)
+add_dependencies(example_galerkin copy_kernels)
+target_compile_options(example_galerkin PRIVATE "-pg")
+target_link_options(example_galerkin PRIVATE "-pg")
