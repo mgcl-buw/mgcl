@@ -109,6 +109,7 @@ TEST_CASE("Problem solving: periodic 4th order")
     {
         p.setStencilType(mgcl::MGCL_VARYING_7POINT);
         auto &s = *p.getStencilValues();
+        double h2inv = N * N; // h = 1/N -> 1/h = N
 
         // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
         for (int i = 0; i < N; i++)
@@ -116,13 +117,13 @@ TEST_CASE("Problem solving: periodic 4th order")
                 for (int k = 0; k < N; k++)
                 {
                     // 7-point Laplace
-                    s[i][j][k][0][1][1] = 1;
-                    s[i][j][k][1][0][1] = 1;
-                    s[i][j][k][1][1][0] = 1;
-                    s[i][j][k][1][1][1] = -6;
-                    s[i][j][k][1][1][2] = 1;
-                    s[i][j][k][1][2][1] = 1;
-                    s[i][j][k][2][1][1] = 1;
+                    s[i][j][k][0][1][1] = h2inv * -1.0;
+                    s[i][j][k][1][0][1] = h2inv * -1.0;
+                    s[i][j][k][1][1][0] = h2inv * -1.0;
+                    s[i][j][k][1][1][1] = h2inv * 6.0;
+                    s[i][j][k][1][1][2] = h2inv * -1.0;
+                    s[i][j][k][1][2][1] = h2inv * -1.0;
+                    s[i][j][k][2][1][1] = h2inv * -1.0;
                 }
 
         p.solveSeq();
