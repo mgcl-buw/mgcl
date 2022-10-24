@@ -25,6 +25,8 @@ x vergleich mit pmg
 - replace dynamic polymorphism (virtual function) with static polymorphism (template function)
 - varying stencil dinv in jacobi?
 
+- compare galerkin stencil + rediscreticized laplace stencil on coarse level
+
 Mid prio:
 - updateGhosts using clEnqueueWriteRect
 - stencil test opencl
