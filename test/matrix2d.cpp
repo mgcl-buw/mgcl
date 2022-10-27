@@ -257,14 +257,25 @@ namespace mgcl_test
      * @param m
      * @param n
      * @param o
+     * @param periodic Default is true.
      * @return Matrix2d
      */
-    Matrix2d Matrix2d::laplace7p3d(int m, int n, int o)
+    Matrix2d Matrix2d::laplace7p3d(int m, int n, int o, bool periodic)
     {
         std::vector<std::tuple<double, int>> vals{{-2, 0}, {1, -1}, {1, 1}};
         auto Dxx = diag(vals, m, m);
         auto Dyy = diag(vals, n, n);
         auto Dzz = diag(vals, o, o);
+
+        if (periodic)
+        {
+            Dxx[0][m - 1] += 1;
+            Dxx[m - 1][0] += 1;
+            Dyy[0][n - 1] += 1;
+            Dyy[n - 1][0] += 1;
+            Dzz[0][o - 1] += 1;
+            Dzz[o - 1][0] += 1;
+        }
 
         return Dxx.kronecker(eye(o)).kronecker(eye(n)) +
                eye(m).kronecker(Dyy.kronecker(eye(o))) +
@@ -279,12 +290,22 @@ namespace mgcl_test
      * @param o
      * @return Matrix2d
      */
-    Matrix2d Matrix2d::restrictionFullWeight(int m, int n, int o)
+    Matrix2d Matrix2d::restrictionFullWeight(int m, int n, int o, bool periodic)
     {
         std::vector<std::tuple<double, int>> vals{{0.5, 0}, {0.25, -1}, {0.25, 1}};
         auto Dxx = diag(vals, m, m);
         auto Dyy = diag(vals, n, n);
         auto Dzz = diag(vals, o, o);
+
+        if (periodic)
+        {
+            Dxx[0][m - 1] += 0.25;
+            Dxx[m - 1][0] += 0.25;
+            Dyy[0][n - 1] += 0.25;
+            Dyy[n - 1][0] += 0.25;
+            Dzz[0][o - 1] += 0.25;
+            Dzz[o - 1][0] += 0.25;
+        }
 
         return Dxx.kronecker(Dyy.kronecker(Dzz));
     }

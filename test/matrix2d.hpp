@@ -60,8 +60,8 @@ namespace mgcl_test
         static Matrix2d eye(int m);
         static Matrix2d eye(int m, int n);
         static Matrix2d diag(std::vector<std::tuple<double, int>> valuesAndOffsets, int m, int n);
-        static Matrix2d laplace7p3d(int m, int n, int o);
-        static Matrix2d restrictionFullWeight(int m, int n, int o);
+        static Matrix2d laplace7p3d(int m, int n, int o, bool periodic = true);
+        static Matrix2d restrictionFullWeight(int m, int n, int o, bool periodic = true);
         static Matrix2d cuttingMatrix1d(int m);
         static Matrix2d cuttingMatrix3d(int m, int n, int o);
 
@@ -81,17 +81,32 @@ namespace mgcl_test
                 for (int ii = 0; ii < N; ii++)
                 for (int jj = 0; jj < N; jj++)
                 for (int kk = 0; kk < N; kk++)
-                    // check if current stencil entry maps to a real grid point
-                    if (i + ii >= N2 &&
-                        i + ii <= m + N2 - 1 &&
-                        j + jj >= N2 &&
-                        j + jj <= n + N2 - 1 &&
-                        k + kk >= N2 &&
-                        k + kk <= o + N2 - 1)
-                        // row is equal to grid point number, column is equal to grid point number plus a shift of half of stencil's size
-                        c[i * n * o + j * o + k][i * n * o + j * o + k + (ii - N2) * n * o + (jj - N2) * o + (kk - N2)] =
-                            s[i + s.getGhostsDim1()][j + s.getGhostsDim2()][k + s.getGhostsDim3()][ii][jj][kk];
+                {
+                    // Column index of the resulting matrix is equal to the grid point
+                    // the current stencil entry maps to. Therefore wrap grid point
+                    // indices around to account boundary conditions.
+                    int gpi = i + (ii - N2); // grid point index mapped to by stencil entry in x-direction
+                    int gpj = j + (jj - N2); // grid point index mapped to by stencil entry in y-direction
+                    int gpk = k + (kk - N2); // grid point index mapped to by stencil entry in z-direction
 
+                    if (gpi < 0)
+                        gpi += m;
+                    else if (gpi >= m)
+                        gpi -= m;
+                    
+                    if (gpj < 0)
+                        gpj += n;
+                    else if (gpj >= n)
+                        gpj -= n;
+                    
+                    if (gpk < 0)
+                        gpk += o;
+                    else if (gpk >= o)
+                        gpk -= o;
+
+                    c[i * n * o + j * o + k][gpi * n * o + gpj * o + gpk] +=
+                        s[i + s.getGhostsDim1()][j + s.getGhostsDim2()][k + s.getGhostsDim3()][ii][jj][kk];
+                }
             // clang-format on
             return c;
         }
