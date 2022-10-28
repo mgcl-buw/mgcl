@@ -651,7 +651,7 @@ namespace mgcl
         if (stencilType == MGCL_VARYING_7POINT ||
             stencilType == MGCL_VARYING_19POINT ||
             stencilType == MGCL_VARYING_27POINT)
-            stencilValues = std::make_unique<VaryingStencil3x3x3>(m, n, o, 0, 0, 0);
+            stencilValues = std::make_unique<VaryingStencil3x3x3>(m, n, o, 2, 2, 2);
         else
             stencilValues = nullptr;
     }

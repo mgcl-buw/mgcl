@@ -694,25 +694,25 @@ TEST_CASE("Problem::setStencilType")
     CHECK(p.getStencilValues()->getDim1() == p.getM());
     CHECK(p.getStencilValues()->getDim2() == p.getN());
     CHECK(p.getStencilValues()->getDim3() == p.getO());
-    CHECK(p.getStencilValues()->getDim1gh() == p.getM() + 2 * p.getGhosts());
-    CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 2 * p.getGhosts());
-    CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 2 * p.getGhosts());
+    CHECK(p.getStencilValues()->getDim1gh() == p.getM() + 4);
+    CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 4);
+    CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 4);
 
     p.setStencilType(mgcl::MGCL_VARYING_19POINT);
     REQUIRE(p.getStencilValues() != nullptr);
     CHECK(p.getStencilValues()->getDim1() == p.getM());
     CHECK(p.getStencilValues()->getDim2() == p.getN());
     CHECK(p.getStencilValues()->getDim3() == p.getO());
-    CHECK(p.getStencilValues()->getDim1gh() == p.getM() + 2 * p.getGhosts());
-    CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 2 * p.getGhosts());
-    CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 2 * p.getGhosts());
+    CHECK(p.getStencilValues()->getDim1gh() == p.getM() + 4);
+    CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 4);
+    CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 4);
 
     p.setStencilType(mgcl::MGCL_VARYING_27POINT);
     REQUIRE(p.getStencilValues() != nullptr);
     CHECK(p.getStencilValues()->getDim1() == p.getM());
     CHECK(p.getStencilValues()->getDim2() == p.getN());
     CHECK(p.getStencilValues()->getDim3() == p.getO());
-    CHECK(p.getStencilValues()->getDim1gh() == p.getM() + 2 * p.getGhosts());
-    CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 2 * p.getGhosts());
-    CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 2 * p.getGhosts());
+    CHECK(p.getStencilValues()->getDim1gh() == p.getM() + 4);
+    CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 4);
+    CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 4);
 }
