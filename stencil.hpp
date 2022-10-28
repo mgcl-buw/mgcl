@@ -63,16 +63,13 @@ namespace mgcl
                 dim3gh != b.getDim3gh())
                 throw "Stencils map to different amount of grid cells!";
 
-            int m = dim1;
-            int n = dim2;
-            int o = dim3;
-            int ghm = ghostsDim1;
-            int ghn = ghostsDim2;
-            int gho = ghostsDim3;
+            int m = dim1gh;
+            int n = dim2gh;
+            int o = dim3gh;
             int N2 = N >> 1;
             int NB2 = NB >> 1;
 
-            auto c = VaryingStencil<(N > NB ? N : NB) + 2>(m, n, o, ghm, ghn, gho);
+            auto c = VaryingStencil<(N > NB ? N : NB) + 2>(dim1, dim2, dim3, ghostsDim1, ghostsDim2, ghostsDim3);
 
             // clang-format off
             for (int x = 0; x < m; x++)
@@ -91,9 +88,9 @@ namespace mgcl
                             (y + a_j - N2 + b_j) >= NB2 && (y + a_j - N2 + b_j) <= n + NB2 - 1 &&
                             (z + a_k - N2 + b_k) >= NB2 && (z + a_k - N2 + b_k) <= o + NB2 - 1)
                         {
-                            c[x + ghm][y + ghn][z + gho][a_i + b_i][a_j + b_j][a_k + b_k] +=
-                                field_6d[x + ghostsDim1][y + ghostsDim2][z + ghostsDim3][a_i][a_j][a_k] *
-                                b[x + a_i - N2 + b.getGhostsDim1()][y + a_j - N2 + b.getGhostsDim2()][z + a_k - N2 + b.getGhostsDim3()][b_i][b_j][b_k];
+                            c[x][y][z][a_i + b_i][a_j + b_j][a_k + b_k] +=
+                                field_6d[x][y][z][a_i][a_j][a_k] *
+                                b[x + a_i - N2][y + a_j - N2][z + a_k - N2][b_i][b_j][b_k];
                         }
             // clang-format on
 

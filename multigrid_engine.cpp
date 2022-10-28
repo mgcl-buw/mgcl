@@ -205,21 +205,26 @@ namespace mgcl
      */
     VaryingStencil3x3x3 MultigridEngine::galerkin(VaryingStencil3x3x3 &a_h)
     {
-        // TODO respect ghosts maybe
+        // TODO respect problem::ghosts maybe
 
-        //  Get the full-weight restriction stencil S as 3x3x3 stencil
-        auto s = create3dFullWeightRestrictionStencil(a_h.getDim1(), a_h.getDim2(), a_h.getDim3(), 0, 0, 0);
+        // Make sure a_h has two ghosts at each border for periodic bc.
+        if (a_h.getGhostsDim1() != 2 || a_h.getGhostsDim3() != 2 || a_h.getGhostsDim3() != 2)
+            throw "galerkin: a_h needs to have 2 ghosts at each border for periodic bc!";
+
+        // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
+        // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
+        auto s = create3dFullWeightRestrictionStencil(a_h.getDim1(), a_h.getDim2(), a_h.getDim3(), 2, 2, 2);
 
         // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
         // S * A_h * S and cut out later manually.
         auto sas = *s * a_h * *s;
 
-        // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil.
-        VaryingStencil3x3x3 a_2h(a_h.getDim1() >> 1, a_h.getDim2() >> 1, a_h.getDim3() >> 1, 0, 0, 0);
+        // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
+        VaryingStencil3x3x3 a_2h(a_h.getDim1() >> 1, a_h.getDim2() >> 1, a_h.getDim3() >> 1, 2, 2, 2);
         // clang-format off
-        for (int i = 0, i2 = 1; i < a_2h.getDim1(); i++, i2 += 2)
-        for (int j = 0, j2 = 1; j < a_2h.getDim2(); j++, j2 += 2)
-        for (int k = 0, k2 = 1; k < a_2h.getDim3(); k++, k2 += 2)
+        for (int i = 2, i2 = 3; i < a_2h.getDim1() + 2; i++, i2 += 2)
+        for (int j = 2, j2 = 3; j < a_2h.getDim2() + 2; j++, j2 += 2)
+        for (int k = 2, k2 = 3; k < a_2h.getDim3() + 2; k++, k2 += 2)
             for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
             for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
             for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
@@ -227,6 +232,8 @@ namespace mgcl
                 a_2h[i][j][k][ii][jj][kk] = sas[i2][j2][k2][ii2][jj2][kk2];
             }
         // clang-format on
+
+        // TODO update ghosts here?
 
         return a_2h;
     }

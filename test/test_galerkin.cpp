@@ -14,10 +14,10 @@ TEST_CASE("galerkin Laplace")
     int o = GENERATE(2, 4, 8);
 
     // Fill varying stencil on fine grid with 7p Laplace
-    mgcl::VaryingStencil3x3x3 a_h(m, n, o, 0, 0, 0);
-    for (int i = 0; i < m; i++)
-        for (int j = 0; j < n; j++)
-            for (int k = 0; k < o; k++)
+    mgcl::VaryingStencil3x3x3 a_h(m, n, o, 2, 2, 2);
+    for (int i = 0; i < m + 4; i++)
+        for (int j = 0; j < n + 4; j++)
+            for (int k = 0; k < o + 4; k++)
             {
                 // 7-point Laplace
                 a_h[i][j][k][0][1][1] = 1;
