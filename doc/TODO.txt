@@ -15,17 +15,18 @@ x benchmark solve different vcycle iteration count seq vs ocl
 x benchmark auch mit 256^3, 512^3
 x benchmark vergleich mit CPU OpenCL
 x vergleich mit pmg
-- incorporate varying stencil code Seq
+x incorporate varying stencil code Seq
 - incorporate varying stencil code OpenCL
 - add stencilarithmetic
-- add galerkin as preliminary step
-- bench Stencil::apply vs direct
+x add galerkin as preliminary step
+x bench Stencil::apply vs direct
 - bench different Stencils
 - pmg in different benchmark target, excluded from all?
-- replace dynamic polymorphism (virtual function) with static polymorphism (template function)
+x replace dynamic polymorphism (virtual function) with static polymorphism (template function)
 - varying stencil dinv in jacobi?
 
 - compare galerkin stencil + rediscreticized laplace stencil on coarse level
+- work out stencil arithmetic for different boundary conditions
 
 Mid prio:
 - updateGhosts using clEnqueueWriteRect
