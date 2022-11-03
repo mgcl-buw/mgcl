@@ -65,8 +65,16 @@ namespace mgcl_test
         static Matrix2d cuttingMatrix1d(int m);
         static Matrix2d cuttingMatrix3d(int m, int n, int o);
 
+        /**
+         * @brief Creates a matrix from a VaryingStencil of size NxNxN.
+         *
+         * @tparam N
+         * @param s
+         * @param periodic
+         * @return Matrix2d
+         */
         template <int N>
-        static Matrix2d fromVaryingStencil(mgcl::VaryingStencil<N> &s)
+        static Matrix2d fromVaryingStencil(mgcl::VaryingStencil<N> &s, bool periodic)
         {
             int m = s.getDim1();
             int n = s.getDim2();
@@ -89,23 +97,33 @@ namespace mgcl_test
                     int gpj = j + (jj - N2); // grid point index mapped to by stencil entry in y-direction
                     int gpk = k + (kk - N2); // grid point index mapped to by stencil entry in z-direction
 
-                    if (gpi < 0)
-                        gpi += m;
-                    else if (gpi >= m)
-                        gpi -= m;
-                    
-                    if (gpj < 0)
-                        gpj += n;
-                    else if (gpj >= n)
-                        gpj -= n;
-                    
-                    if (gpk < 0)
-                        gpk += o;
-                    else if (gpk >= o)
-                        gpk -= o;
+                    if (periodic)
+                    {
+                        if (gpi < 0)
+                            gpi += m;
+                        else if (gpi >= m)
+                            gpi -= m;
+                        
+                        if (gpj < 0)
+                            gpj += n;
+                        else if (gpj >= n)
+                            gpj -= n;
+                        
+                        if (gpk < 0)
+                            gpk += o;
+                        else if (gpk >= o)
+                            gpk -= o;
+                    }
 
-                    c[i * n * o + j * o + k][gpi * n * o + gpj * o + gpk] +=
-                        s[i + s.getGhostsDim1()][j + s.getGhostsDim2()][k + s.getGhostsDim3()][ii][jj][kk];
+                    if (gpi >= 0 && gpi < m &&
+                        gpj >= 0 && gpj < n &&
+                        gpk >= 0 && gpk < o)
+                    {
+                        // row: current grid point
+                        // column: grid point the current stencil entry maps to (dependent on current grid point)
+                        c[i * n * o + j * o + k][gpi * n * o + gpj * o + gpk] +=
+                            s[i + s.getGhostsDim1()][j + s.getGhostsDim2()][k + s.getGhostsDim3()][ii][jj][kk];
+                    }
                 }
             // clang-format on
             return c;

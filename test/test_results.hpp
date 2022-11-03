@@ -21,8 +21,11 @@ namespace mgcl_test
 {
     namespace Matrix2d_fromVaryingStencil
     {
-        std::unique_ptr<mgcl::VaryingStencil5x5x5> varyingStencil4x4x4();
-        mgcl_test::Matrix2d matrix2d64x64();
+        std::unique_ptr<mgcl::VaryingStencil5x5x5> varyingStencilLaplace4x4x4();
+        mgcl_test::Matrix2d matrix2dLaplace64x64();
+        std::unique_ptr<mgcl::VaryingStencil3x3x3> varyingStencil2x3x4RandomPeriodic();
+        mgcl_test::Matrix2d matrix2d24x24RandomPeriodic();
+        mgcl_test::Matrix2d matrix2d24x24RandomNotPeriodic();
     }
 }
 

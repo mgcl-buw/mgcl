@@ -30,7 +30,7 @@ TEST_CASE("galerkin Laplace")
             }
 
     auto a_2h = mgcl::MultigridEngine::galerkin(a_h);
-    auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h);
+    auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
 
     // calculate results with Matrices to check
     auto ah = mgcl_test::Matrix2d::laplace7p3d(m, n, o);

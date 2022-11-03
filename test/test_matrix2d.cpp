@@ -352,7 +352,34 @@ TEST_CASE("Matrix2d::diag")
 
 TEST_CASE("Matrix2d::fromVaryingStencil")
 {
-    SECTION("laplace3d")
+    SECTION("laplace3d, not periodic")
+    {
+        int m = GENERATE(1, 2, 3);
+        int n = GENERATE(1, 2, 3);
+        int o = GENERATE(1, 2, 3);
+        int gh = 0;
+
+        auto a = mgcl_test::Matrix2d::laplace7p3d(m, n, o, false);
+        mgcl::VaryingStencil3x3x3 s(m, n, o, gh, gh, gh);
+        for (int i = 0; i < m + 2 * gh; i++)
+            for (int j = 0; j < n + 2 * gh; j++)
+                for (int k = 0; k < o + 2 * gh; k++)
+                {
+                    // 7-point Laplace
+                    s[i][j][k][0][1][1] = 1;
+                    s[i][j][k][1][0][1] = 1;
+                    s[i][j][k][1][1][0] = 1;
+                    s[i][j][k][1][1][1] = -6;
+                    s[i][j][k][1][1][2] = 1;
+                    s[i][j][k][1][2][1] = 1;
+                    s[i][j][k][2][1][1] = 1;
+                }
+
+        auto c = mgcl_test::Matrix2d::fromVaryingStencil(s, false);
+        CHECK(a == c);
+    }
+
+    SECTION("laplace3d, periodic")
     {
         int m = GENERATE(1, 2, 3);
         int n = GENERATE(1, 2, 3);
@@ -375,17 +402,28 @@ TEST_CASE("Matrix2d::fromVaryingStencil")
                     s[i][j][k][2][1][1] = 1;
                 }
 
-        auto c = mgcl_test::Matrix2d::fromVaryingStencil(s);
+        auto c = mgcl_test::Matrix2d::fromVaryingStencil(s, true);
         CHECK(a == c);
     }
 
-    SECTION("varying")
+    SECTION("varying, not periodic")
     {
-        auto a = mgcl_test::Matrix2d_fromVaryingStencil::matrix2d64x64();
-        auto sptr = mgcl_test::Matrix2d_fromVaryingStencil::varyingStencil4x4x4();
+        auto a = mgcl_test::Matrix2d_fromVaryingStencil::matrix2d24x24RandomNotPeriodic();
+        auto sptr = mgcl_test::Matrix2d_fromVaryingStencil::varyingStencil2x3x4RandomPeriodic();
         auto &s = *sptr;
 
-        auto c = mgcl_test::Matrix2d::fromVaryingStencil(s);
+        auto c = mgcl_test::Matrix2d::fromVaryingStencil(s, false);
+
+        CHECK(a == c);
+    }
+
+    SECTION("varying, periodic")
+    {
+        auto a = mgcl_test::Matrix2d_fromVaryingStencil::matrix2d24x24RandomPeriodic();
+        auto sptr = mgcl_test::Matrix2d_fromVaryingStencil::varyingStencil2x3x4RandomPeriodic();
+        auto &s = *sptr;
+
+        auto c = mgcl_test::Matrix2d::fromVaryingStencil(s, true);
 
         CHECK(a == c);
     }

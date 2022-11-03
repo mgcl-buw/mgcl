@@ -283,7 +283,7 @@ namespace mgcl_test
     }
 
     /**
-     * @brief Generates full-weight restriction matrix scaled by 64.
+     * @brief Generates full-weight restriction matrix.
      *
      * @param m
      * @param n
