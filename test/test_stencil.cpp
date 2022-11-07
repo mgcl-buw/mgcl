@@ -3,36 +3,12 @@
 #include <catch2/generators/catch_generators.hpp>
 
 #include <memory>
-#include <random>
 
 #include "../cuboid.hpp"
 #include "../multigrid_engine.hpp"
 #include "../stencil.hpp"
 
 #include "matrix2d.hpp"
-
-// fills real cells of a stencil with random values
-template <int N>
-void fillRandomStencil(mgcl::VaryingStencil<N> &s)
-{
-    // specify fixed seed to get the same random values each run
-    std::default_random_engine rng(123);
-    std::uniform_real_distribution<double> rand(1, 9); // distribution in range [1, 9]
-
-    int ghm = s.getGhostsDim1();
-    int ghn = s.getGhostsDim2();
-    int gho = s.getGhostsDim3();
-
-    for (int i = ghm; i < s.getDim1() + ghm; i++)
-        for (int j = ghn; j < s.getDim2() + ghn; j++)
-            for (int k = gho; k < s.getDim3() + gho; k++)
-                for (int ii = 0; i < s.getDim1(); i++)
-                    for (int jj = 0; j < s.getDim2(); j++)
-                        for (int kk = 0; k < s.getDim3(); k++)
-                        {
-                            s[i][j][k][ii][jj][kk] = static_cast<double>(rand(rng));
-                        }
-}
 
 TEST_CASE("StencilLaplace7p")
 {
@@ -564,18 +540,19 @@ TEST_CASE("VaryingStencil::multiply")
         int o = GENERATE(2, 3, 4);
 
         mgcl::VaryingStencil3x3x3 a3(m, n, o, 0, 0, 0);
-        fillRandomStencil<3>(a3);
         mgcl::VaryingStencil5x5x5 a5(m, n, o, 0, 0, 0);
-        fillRandomStencil<5>(a5);
         mgcl::VaryingStencil7x7x7 a7(m, n, o, 0, 0, 0);
-        fillRandomStencil<7>(a7);
 
         mgcl::VaryingStencil3x3x3 b3(m, n, o, 1, 1, 1);
-        fillRandomStencil<3>(b3);
         mgcl::VaryingStencil5x5x5 b5(m, n, o, 2, 2, 2);
-        fillRandomStencil<5>(b5);
         mgcl::VaryingStencil7x7x7 b7(m, n, o, 3, 3, 3);
-        fillRandomStencil<7>(b7);
+
+        a3.fillRandom(1, 9);
+        a5.fillRandom(1, 9);
+        a7.fillRandom(1, 9);
+        b3.fillRandom(1, 9);
+        b5.fillRandom(1, 9);
+        b7.fillRandom(1, 9);
 
         // TODO update ghosts
 

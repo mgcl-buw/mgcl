@@ -34,7 +34,7 @@ namespace mgcl
         VaryingStencil(int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o)
             : Hypercube6d(m, n, o, N, N, N, ghosts_m, ghosts_n, ghosts_o, 0, 0, 0)
         {
-            static_assert(N % 2 == 1, "VaryingStencil<N> is only defined for odd N!");
+            static_assert(N % 2 == 1 || N < 3, "VaryingStencil<N> is only defined for odd N >= 3!");
         }
         VaryingStencil(VaryingStencil &) = delete;
         VaryingStencil &operator=(const VaryingStencil &) = delete;
@@ -45,7 +45,7 @@ namespace mgcl
             return *this;
         }
 
-        /**
+                /**
          * @brief Multiplies this stencil with another one. Dimensions must match. Resulting stencil is two cells wider
          * in each direction. The right-hand side stencil must have ghosts equal to (width_a - 1) / 2 at each border.
          *
