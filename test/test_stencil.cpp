@@ -16,8 +16,8 @@ template <int N>
 void fillRandomStencil(mgcl::VaryingStencil<N> &s)
 {
     // specify fixed seed to get the same random values each run
-    std::mt19937 rng(123);
-    std::uniform_real_distribution<std::mt19937::result_type> rand(1, 9); // distribution in range [1, 9]
+    std::default_random_engine rng(123);
+    std::uniform_real_distribution<double> rand(1, 9); // distribution in range [1, 9]
 
     int ghm = s.getGhostsDim1();
     int ghn = s.getGhostsDim2();
@@ -30,7 +30,7 @@ void fillRandomStencil(mgcl::VaryingStencil<N> &s)
                     for (int jj = 0; j < s.getDim2(); j++)
                         for (int kk = 0; k < s.getDim3(); k++)
                         {
-                            s[i][j][k][ii][jj][kk] = rand(rng);
+                            s[i][j][k][ii][jj][kk] = static_cast<double>(rand(rng));
                         }
 }
 
