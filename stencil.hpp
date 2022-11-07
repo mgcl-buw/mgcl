@@ -45,7 +45,58 @@ namespace mgcl
             return *this;
         }
 
-                /**
+        void updateGhosts()
+        // updates ghost cells, essentially same as for Cuboid in MultigridEngine
+        {
+            int m = dim1;
+            int n = dim2;
+            int o = dim3;
+            int ghosts_m = ghostsDim1;
+            int ghosts_n = ghostsDim2;
+            int ghosts_o = ghostsDim3;
+
+            auto &c = *this;
+
+            // clang-format off
+            // sending data in x-direction           
+            for (int i = 0; i < n + 2 * ghosts_n; i++)
+            for (int j = 0; j < o + 2 * ghosts_o; j++)
+            for (int k = 0; k < ghosts_m; k++)
+                for (int ii = 0; ii < N; ii++)
+                for (int jj = 0; jj < N; jj++)
+                for (int kk = 0; kk < N; kk++)
+                {
+                    c[k][i][j][ii][jj][kk] = c[m + k][i][j][ii][jj][kk];                       // left ghost cell = right real cell
+                    c[m + ghosts_m + k][i][j][ii][jj][kk] = c[ghosts_m + k][i][j][ii][jj][kk]; // right ghost cell = left real cell
+                }
+
+            // sending data in y-direction
+            for (int i = 0; i < m + 2 * ghosts_m; i++)
+            for (int j = 0; j < o + 2 * ghosts_o; j++)
+            for (int k = 0; k < ghosts_n; k++)
+                for (int ii = 0; ii < N; ii++)
+                for (int jj = 0; jj < N; jj++)
+                for (int kk = 0; kk < N; kk++)
+                {
+                    c[i][k][j][ii][jj][kk] = c[i][n + k][j][ii][jj][kk];                       // top ghost cell = bottom real cell
+                    c[i][n + ghosts_n + k][j][ii][jj][kk] = c[i][ghosts_n + k][j][ii][jj][kk]; // bottom ghost cell = top real cell
+                }
+
+            // sending data in z-direction
+            for (int i = 0; i < m + 2 * ghosts_m; i++)
+            for (int j = 0; j < n + 2 * ghosts_n; j++)
+            for (int k = 0; k < ghosts_o; k++)
+                for (int ii = 0; ii < N; ii++)
+                for (int jj = 0; jj < N; jj++)
+                for (int kk = 0; kk < N; kk++)
+                {
+                    c[i][j][k][ii][jj][kk] = c[i][j][o + k][ii][jj][kk];                       // front ghost cell = back real cell
+                    c[i][j][o + ghosts_o + k][ii][jj][kk] = c[i][j][ghosts_o + k][ii][jj][kk]; // back ghost cell = front real cell
+                }
+            // clang-format on
+        }
+
+        /**
          * @brief Multiplies this stencil with another one. Dimensions must match. Resulting stencil is two cells wider
          * in each direction. The right-hand side stencil must have ghosts equal to (width_a - 1) / 2 at each border.
          *

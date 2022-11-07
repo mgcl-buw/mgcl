@@ -377,6 +377,73 @@ TEST_CASE("VaryingStencil move ctor")
     CHECK(h3.isEqual(h_check));
 }
 
+TEST_CASE("VaryingStencil::updateGhosts")
+{
+    int m = GENERATE(2, 3, 4);
+    int n = GENERATE(2, 3, 4);
+    int o = GENERATE(2, 3, 4);
+
+    int gh = GENERATE(1, 2, 3);
+
+    // skip tests where ghosts is bigger than a dimension
+    if (gh >= m || gh >= n || gh >= o)
+        return;
+
+    SECTION("N = 3")
+    {
+        mgcl::VaryingStencil3x3x3 a(m, n, o, gh, gh, gh);
+        a.fillRandom();
+        a.updateGhosts();
+
+        for (int i = 0; i < gh; i++)
+            for (int j = 0; j < gh; j++)
+                for (int k = 0; k < gh; k++)
+                    for (int ii = 0; ii < 3; ii++)
+                        for (int jj = 0; jj < 3; jj++)
+                            for (int kk = 0; kk < 3; kk++)
+                            {
+                                CHECK(a[i][j][k][ii][jj][kk] == a[i + m][j + n][k + o][ii][jj][kk]);
+                                CHECK(a[i + gh][j + gh][k + gh][ii][jj][kk] == a[i + gh + m][j + gh + n][k + gh + o][ii][jj][kk]);
+                            }
+    }
+
+    SECTION("N = 5")
+    {
+        mgcl::VaryingStencil5x5x5 a(m, n, o, gh, gh, gh);
+        a.fillRandom();
+        a.updateGhosts();
+
+        for (int i = 0; i < gh; i++)
+            for (int j = 0; j < gh; j++)
+                for (int k = 0; k < gh; k++)
+                    for (int ii = 0; ii < 3; ii++)
+                        for (int jj = 0; jj < 3; jj++)
+                            for (int kk = 0; kk < 3; kk++)
+                            {
+                                CHECK(a[i][j][k][ii][jj][kk] == a[i + m][j + n][k + o][ii][jj][kk]);
+                                CHECK(a[i + gh][j + gh][k + gh][ii][jj][kk] == a[i + gh + m][j + gh + n][k + gh + o][ii][jj][kk]);
+                            }
+    }
+
+    SECTION("N = 7")
+    {
+        mgcl::VaryingStencil7x7x7 a(m, n, o, gh, gh, gh);
+        a.fillRandom();
+        a.updateGhosts();
+
+        for (int i = 0; i < gh; i++)
+            for (int j = 0; j < gh; j++)
+                for (int k = 0; k < gh; k++)
+                    for (int ii = 0; ii < 3; ii++)
+                        for (int jj = 0; jj < 3; jj++)
+                            for (int kk = 0; kk < 3; kk++)
+                            {
+                                CHECK(a[i][j][k][ii][jj][kk] == a[i + m][j + n][k + o][ii][jj][kk]);
+                                CHECK(a[i + gh][j + gh][k + gh][ii][jj][kk] == a[i + gh + m][j + gh + n][k + gh + o][ii][jj][kk]);
+                            }
+    }
+}
+
 TEST_CASE("VaryingStencil::multiply")
 {
     SECTION("valid N=3, not periodic")
