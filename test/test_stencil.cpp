@@ -3,12 +3,36 @@
 #include <catch2/generators/catch_generators.hpp>
 
 #include <memory>
+#include <random>
 
 #include "../cuboid.hpp"
 #include "../multigrid_engine.hpp"
 #include "../stencil.hpp"
 
 #include "matrix2d.hpp"
+
+// fills real cells of a stencil with random values
+template <int N>
+void fillRandomStencil(mgcl::VaryingStencil<N> &s)
+{
+    // specify fixed seed to get the same random values each run
+    std::mt19937 rng(123);
+    std::uniform_real_distribution<std::mt19937::result_type> rand(1, 9); // distribution in range [1, 9]
+
+    int ghm = s.getGhostsDim1();
+    int ghn = s.getGhostsDim2();
+    int gho = s.getGhostsDim3();
+
+    for (int i = ghm; i < s.getDim1() + ghm; i++)
+        for (int j = ghn; j < s.getDim2() + ghn; j++)
+            for (int k = gho; k < s.getDim3() + gho; k++)
+                for (int ii = 0; i < s.getDim1(); i++)
+                    for (int jj = 0; j < s.getDim2(); j++)
+                        for (int kk = 0; k < s.getDim3(); k++)
+                        {
+                            s[i][j][k][ii][jj][kk] = rand(rng);
+                        }
+}
 
 TEST_CASE("StencilLaplace7p")
 {
@@ -379,90 +403,19 @@ TEST_CASE("VaryingStencil move ctor")
 
 TEST_CASE("VaryingStencil::multiply")
 {
-    SECTION("valid N=3")
-    {
-        int m = GENERATE(1, 2, 3, 4);
-        int n = GENERATE(1, 2, 3, 4);
-        int o = GENERATE(1, 2, 3, 4);
-        int ghm = GENERATE(1, 2);
-        int ghn = GENERATE(1, 2);
-        int gho = GENERATE(1, 2);
-        int mgh = m + 2 * ghm;
-        int ngh = n + 2 * ghn;
-        int ogh = o + 2 * gho;
-
-        mgcl::VaryingStencil3x3x3 a(m, n, o, ghm, ghn, gho);
-        mgcl::VaryingStencil3x3x3 b(m, n, o, ghm, ghn, gho);
-
-        // fill a and b
-        for (int i = 0; i < mgh; i++)
-            for (int j = 0; j < ngh; j++)
-                for (int k = 0; k < ogh; k++)
-                {
-                    // 7-point Laplace
-                    a[i][j][k][0][1][1] = 1;
-                    a[i][j][k][1][0][1] = 1;
-                    a[i][j][k][1][1][0] = 1;
-                    a[i][j][k][1][1][1] = -6;
-                    a[i][j][k][1][1][2] = 1;
-                    a[i][j][k][1][2][1] = 1;
-                    a[i][j][k][2][1][1] = 1;
-
-                    // full-weight restriction, scaled by 64
-                    b[i][j][k][0][0][0] = 1;
-                    b[i][j][k][0][0][1] = 2;
-                    b[i][j][k][0][0][2] = 1;
-                    b[i][j][k][0][1][0] = 2;
-                    b[i][j][k][0][1][1] = 4;
-                    b[i][j][k][0][1][2] = 2;
-                    b[i][j][k][0][2][0] = 1;
-                    b[i][j][k][0][2][1] = 2;
-                    b[i][j][k][0][2][2] = 1;
-                    b[i][j][k][1][0][0] = 2;
-                    b[i][j][k][1][0][1] = 4;
-                    b[i][j][k][1][0][2] = 2;
-                    b[i][j][k][1][1][0] = 4;
-                    b[i][j][k][1][1][1] = 8;
-                    b[i][j][k][1][1][2] = 4;
-                    b[i][j][k][1][2][0] = 2;
-                    b[i][j][k][1][2][1] = 4;
-                    b[i][j][k][1][2][2] = 2;
-                    b[i][j][k][2][0][0] = 1;
-                    b[i][j][k][2][0][1] = 2;
-                    b[i][j][k][2][0][2] = 1;
-                    b[i][j][k][2][1][0] = 2;
-                    b[i][j][k][2][1][1] = 4;
-                    b[i][j][k][2][1][2] = 2;
-                    b[i][j][k][2][2][0] = 1;
-                    b[i][j][k][2][2][1] = 2;
-                    b[i][j][k][2][2][2] = 1;
-                }
-
-        auto c = a.multiply(b);
-        auto cstar = a * b;
-
-        // check result against explicitly calculated matrix product
-        auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
-        auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(c);
-        auto cstar_m2d = mgcl_test::Matrix2d::fromVaryingStencil(cstar);
-
-        REQUIRE(c_expected.getM() == c_m2d.getM());
-        REQUIRE(c_expected.getN() == c_m2d.getN());
-        REQUIRE(c_expected.getM() == cstar_m2d.getM());
-        REQUIRE(c_expected.getN() == cstar_m2d.getN());
-
-        CHECK(c_m2d == c_expected);
-        CHECK(cstar_m2d == c_expected);
-    }
-
-    SECTION("different Ns")
+    SECTION("valid N=3, not periodic")
     {
         int m = GENERATE(2, 3, 4);
         int n = GENERATE(2, 3, 4);
         int o = GENERATE(2, 3, 4);
 
         mgcl::VaryingStencil3x3x3 a(m, n, o, 0, 0, 0);
-        mgcl::VaryingStencil3x3x3 b(m, n, o, 0, 0, 0);
+        mgcl::VaryingStencil3x3x3 b(m, n, o, 1, 1, 1);
+
+        double factor1 = 8.0 / 64.0;
+        double factor2 = 4.0 / 64.0;
+        double factor3 = 2.0 / 64.0;
+        double factor4 = 1.0 / 64.0;
 
         // fill a and b
         for (int i = 0; i < m; i++)
@@ -478,62 +431,166 @@ TEST_CASE("VaryingStencil::multiply")
                     a[i][j][k][1][2][1] = 1;
                     a[i][j][k][2][1][1] = 1;
 
-                    // full-weight restriction, scaled by 64
-                    b[i][j][k][0][0][0] = 1;
-                    b[i][j][k][0][0][1] = 2;
-                    b[i][j][k][0][0][2] = 1;
-                    b[i][j][k][0][1][0] = 2;
-                    b[i][j][k][0][1][1] = 4;
-                    b[i][j][k][0][1][2] = 2;
-                    b[i][j][k][0][2][0] = 1;
-                    b[i][j][k][0][2][1] = 2;
-                    b[i][j][k][0][2][2] = 1;
-                    b[i][j][k][1][0][0] = 2;
-                    b[i][j][k][1][0][1] = 4;
-                    b[i][j][k][1][0][2] = 2;
-                    b[i][j][k][1][1][0] = 4;
-                    b[i][j][k][1][1][1] = 8;
-                    b[i][j][k][1][1][2] = 4;
-                    b[i][j][k][1][2][0] = 2;
-                    b[i][j][k][1][2][1] = 4;
-                    b[i][j][k][1][2][2] = 2;
-                    b[i][j][k][2][0][0] = 1;
-                    b[i][j][k][2][0][1] = 2;
-                    b[i][j][k][2][0][2] = 1;
-                    b[i][j][k][2][1][0] = 2;
-                    b[i][j][k][2][1][1] = 4;
-                    b[i][j][k][2][1][2] = 2;
-                    b[i][j][k][2][2][0] = 1;
-                    b[i][j][k][2][2][1] = 2;
-                    b[i][j][k][2][2][2] = 1;
+                    // full-weight restriction
+                    // fill only real cells, ghosts cells must be zero (Dirichlet condition)
+                    b[i + 1][j + 1][k + 1][0][0][0] = factor4;
+                    b[i + 1][j + 1][k + 1][0][0][1] = factor3;
+                    b[i + 1][j + 1][k + 1][0][0][2] = factor4;
+                    b[i + 1][j + 1][k + 1][0][1][0] = factor3;
+                    b[i + 1][j + 1][k + 1][0][1][1] = factor2;
+                    b[i + 1][j + 1][k + 1][0][1][2] = factor3;
+                    b[i + 1][j + 1][k + 1][0][2][0] = factor4;
+                    b[i + 1][j + 1][k + 1][0][2][1] = factor3;
+                    b[i + 1][j + 1][k + 1][0][2][2] = factor4;
+                    b[i + 1][j + 1][k + 1][1][0][0] = factor3;
+                    b[i + 1][j + 1][k + 1][1][0][1] = factor2;
+                    b[i + 1][j + 1][k + 1][1][0][2] = factor3;
+                    b[i + 1][j + 1][k + 1][1][1][0] = factor2;
+                    b[i + 1][j + 1][k + 1][1][1][1] = factor1;
+                    b[i + 1][j + 1][k + 1][1][1][2] = factor2;
+                    b[i + 1][j + 1][k + 1][1][2][0] = factor3;
+                    b[i + 1][j + 1][k + 1][1][2][1] = factor2;
+                    b[i + 1][j + 1][k + 1][1][2][2] = factor3;
+                    b[i + 1][j + 1][k + 1][2][0][0] = factor4;
+                    b[i + 1][j + 1][k + 1][2][0][1] = factor3;
+                    b[i + 1][j + 1][k + 1][2][0][2] = factor4;
+                    b[i + 1][j + 1][k + 1][2][1][0] = factor3;
+                    b[i + 1][j + 1][k + 1][2][1][1] = factor2;
+                    b[i + 1][j + 1][k + 1][2][1][2] = factor3;
+                    b[i + 1][j + 1][k + 1][2][2][0] = factor4;
+                    b[i + 1][j + 1][k + 1][2][2][1] = factor3;
+                    b[i + 1][j + 1][k + 1][2][2][2] = factor4;
                 }
 
-        auto c = b * a * b;
+        auto c = a.multiply(b);
+        auto cstar = a * b;
 
         // check result against explicitly calculated matrix product
-        auto c_expected = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o) *
-                          mgcl_test::Matrix2d::laplace7p3d(m, n, o) *
-                          mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
-        auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(c);
+        auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o, false) * mgcl_test::Matrix2d::restrictionFullWeight(m, n, o, false);
+        auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(c, false);
+        auto cstar_m2d = mgcl_test::Matrix2d::fromVaryingStencil(cstar, false);
 
         REQUIRE(c_expected.getM() == c_m2d.getM());
         REQUIRE(c_expected.getN() == c_m2d.getN());
+        REQUIRE(c_expected.getM() == cstar_m2d.getM());
+        REQUIRE(c_expected.getN() == cstar_m2d.getN());
 
         CHECK(c_m2d == c_expected);
+        CHECK(cstar_m2d == c_expected);
+    }
 
-        // check also associativity
-        auto c_assoc = b * (a * b);
+    SECTION("valid N=3, periodic")
+    {
+        int m = GENERATE(2, 3, 4);
+        int n = GENERATE(2, 3, 4);
+        int o = GENERATE(2, 3, 4);
+
+        mgcl::VaryingStencil3x3x3 a(m, n, o, 0, 0, 0);
+        mgcl::VaryingStencil3x3x3 b(m, n, o, 1, 1, 1);
+
+        double factor1 = 8.0 / 64.0;
+        double factor2 = 4.0 / 64.0;
+        double factor3 = 2.0 / 64.0;
+        double factor4 = 1.0 / 64.0;
+
+        // fill a and b
+        for (int i = 0; i < m + 2; i++)
+            for (int j = 0; j < n + 2; j++)
+                for (int k = 0; k < o + 2; k++)
+                {
+                    // 7-point Laplace, real cells only
+                    if (i < m && j < n && k < o)
+                    {
+                        a[i][j][k][0][1][1] = 1;
+                        a[i][j][k][1][0][1] = 1;
+                        a[i][j][k][1][1][0] = 1;
+                        a[i][j][k][1][1][1] = -6;
+                        a[i][j][k][1][1][2] = 1;
+                        a[i][j][k][1][2][1] = 1;
+                        a[i][j][k][2][1][1] = 1;
+                    }
+
+                    // full-weight restriction
+                    b[i][j][k][0][0][0] = factor4;
+                    b[i][j][k][0][0][1] = factor3;
+                    b[i][j][k][0][0][2] = factor4;
+                    b[i][j][k][0][1][0] = factor3;
+                    b[i][j][k][0][1][1] = factor2;
+                    b[i][j][k][0][1][2] = factor3;
+                    b[i][j][k][0][2][0] = factor4;
+                    b[i][j][k][0][2][1] = factor3;
+                    b[i][j][k][0][2][2] = factor4;
+                    b[i][j][k][1][0][0] = factor3;
+                    b[i][j][k][1][0][1] = factor2;
+                    b[i][j][k][1][0][2] = factor3;
+                    b[i][j][k][1][1][0] = factor2;
+                    b[i][j][k][1][1][1] = factor1;
+                    b[i][j][k][1][1][2] = factor2;
+                    b[i][j][k][1][2][0] = factor3;
+                    b[i][j][k][1][2][1] = factor2;
+                    b[i][j][k][1][2][2] = factor3;
+                    b[i][j][k][2][0][0] = factor4;
+                    b[i][j][k][2][0][1] = factor3;
+                    b[i][j][k][2][0][2] = factor4;
+                    b[i][j][k][2][1][0] = factor3;
+                    b[i][j][k][2][1][1] = factor2;
+                    b[i][j][k][2][1][2] = factor3;
+                    b[i][j][k][2][2][0] = factor4;
+                    b[i][j][k][2][2][1] = factor3;
+                    b[i][j][k][2][2][2] = factor4;
+                }
+
+        auto c = a.multiply(b);
+        auto cstar = a * b;
 
         // check result against explicitly calculated matrix product
-        auto c_expected_assoc = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o) *
-                                (mgcl_test::Matrix2d::laplace7p3d(m, n, o) *
-                                 mgcl_test::Matrix2d::restrictionFullWeight(m, n, o));
-        auto c_m2d_assoc = mgcl_test::Matrix2d::fromVaryingStencil(c_assoc);
+        auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
+        auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(c, true);
+        auto cstar_m2d = mgcl_test::Matrix2d::fromVaryingStencil(cstar, true);
 
-        REQUIRE(c_expected_assoc.getM() == c_m2d_assoc.getM());
-        REQUIRE(c_expected_assoc.getN() == c_m2d_assoc.getN());
+        REQUIRE(c_expected.getM() == c_m2d.getM());
+        REQUIRE(c_expected.getN() == c_m2d.getN());
+        REQUIRE(c_expected.getM() == cstar_m2d.getM());
+        REQUIRE(c_expected.getN() == cstar_m2d.getN());
 
-        CHECK(c_m2d_assoc == c_expected_assoc);
+        CHECK(c_m2d == c_expected);
+        CHECK(cstar_m2d == c_expected);
+    }
+
+    SECTION("different Ns, random values")
+    {
+        int m = GENERATE(2, 3, 4);
+        int n = GENERATE(2, 3, 4);
+        int o = GENERATE(2, 3, 4);
+
+        mgcl::VaryingStencil3x3x3 a3(m, n, o, 0, 0, 0);
+        fillRandomStencil<3>(a3);
+        mgcl::VaryingStencil5x5x5 a5(m, n, o, 0, 0, 0);
+        fillRandomStencil<5>(a5);
+        mgcl::VaryingStencil7x7x7 a7(m, n, o, 0, 0, 0);
+        fillRandomStencil<7>(a7);
+
+        mgcl::VaryingStencil3x3x3 b3(m, n, o, 1, 1, 1);
+        fillRandomStencil<3>(b3);
+        mgcl::VaryingStencil5x5x5 b5(m, n, o, 2, 2, 2);
+        fillRandomStencil<5>(b5);
+        mgcl::VaryingStencil7x7x7 b7(m, n, o, 3, 3, 3);
+        fillRandomStencil<7>(b7);
+
+        // TODO update ghosts
+
+        // TODO multiply each versions
+
+        auto c33 = a3 * b3;
+
+        // // check result against explicitly calculated matrix product
+        // auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
+        // auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(c, true);
+
+        // REQUIRE(c_expected.getM() == c_m2d.getM());
+        // REQUIRE(c_expected.getN() == c_m2d.getN());
+
+        // CHECK(c_m2d == c_expected);
     }
 
     SECTION("throwing")

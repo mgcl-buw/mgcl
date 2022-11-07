@@ -47,7 +47,7 @@ namespace mgcl
 
         /**
          * @brief Multiplies this stencil with another one. Dimensions must match. Resulting stencil is two cells wider
-         * in each direction.
+         * in each direction. The right-hand side stencil must have ghosts equal to (width_a - 1) / 2 at each border.
          *
          * @tparam NA Width of this stencil
          * @tparam NB Width of the other stencil
@@ -58,18 +58,28 @@ namespace mgcl
         template <int NB>
         VaryingStencil<(N > NB ? N : NB) + 2> multiply(VaryingStencil<NB> &b) const
         {
-            if (dim1gh != b.getDim1gh() ||
-                dim2gh != b.getDim2gh() ||
-                dim3gh != b.getDim3gh())
+            if (dim1 != b.getDim1() ||
+                dim2 != b.getDim2() ||
+                dim3 != b.getDim3())
                 throw "Stencils map to different amount of grid cells!";
 
-            int m = dim1gh;
-            int n = dim2gh;
-            int o = dim3gh;
+            if (b.getGhostsDim1() != b.getGhostsDim2() ||
+                b.getGhostsDim1() != b.getGhostsDim3())
+                throw "Ghosts of b must be equal in each dimension!";
+
+            if (b.getGhostsDim1() != N >> 1)
+                throw "Ghosts of b be must be of size " + (N >> 1);
+
+            int m = dim1;
+            int n = dim2;
+            int o = dim3;
             int N2 = N >> 1;
             int NB2 = NB >> 1;
+            int gh = b.getGhostsDim1();
 
-            auto c = VaryingStencil<(N > NB ? N : NB) + 2>(dim1, dim2, dim3, ghostsDim1, ghostsDim2, ghostsDim3);
+            // TODO ghosts of c?
+            auto c = VaryingStencil<(N > NB ? N : NB) + 2>(dim1, dim2, dim3, 0, 0, 0);
+            int width_c = c.getDim4();
 
             // clang-format off
             for (int x = 0; x < m; x++)
@@ -81,17 +91,24 @@ namespace mgcl
                     for (int b_i = 0; b_i < NB; b_i++)
                     for (int b_j = 0; b_j < NB; b_j++)
                     for (int b_k = 0; b_k < NB; b_k++)
-                        if ((x + a_i) >= N2 && (x + a_i) <= m + N2 - 1 &&
-                            (y + a_j) >= N2 && (y + a_j) <= n + N2 - 1 &&
-                            (z + a_k) >= N2 && (z + a_k) <= o + N2 - 1 &&
-                            (x + a_i - N2 + b_i) >= NB2 && (x + a_i - N2 + b_i) <= m + NB2 - 1 &&
-                            (y + a_j - N2 + b_j) >= NB2 && (y + a_j - N2 + b_j) <= n + NB2 - 1 &&
-                            (z + a_k - N2 + b_k) >= NB2 && (z + a_k - N2 + b_k) <= o + NB2 - 1)
+                    {
+                        int gpi = x + a_i - N2 + gh;
+                        int gpj = y + a_j - N2 + gh;
+                        int gpk = z + a_k - N2 + gh;
+
+                        int ci = a_i + b_i;
+                        int cj = a_j + b_j;
+                        int ck = a_k + b_k;
+
+                        if (ci >= 0 && ci < width_c &&
+                            cj >= 0 && cj < width_c &&
+                            ck >= 0 && ck < width_c)
                         {
                             c[x][y][z][a_i + b_i][a_j + b_j][a_k + b_k] +=
                                 field_6d[x][y][z][a_i][a_j][a_k] *
-                                b[x + a_i - N2][y + a_j - N2][z + a_k - N2][b_i][b_j][b_k];
+                                b[gpi][gpj][gpk][b_i][b_j][b_k];
                         }
+                    }
             // clang-format on
 
             return c;
