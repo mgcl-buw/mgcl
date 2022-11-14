@@ -546,6 +546,31 @@ namespace mgcl
             field_1d[i] = dist(rng);
     }
 
+    void Hypercube6d::fillRandomInt(int low, int high, bool realCellsOnly)
+    {
+        // use fixed seed to get same results every run
+        std::default_random_engine rng(123);
+        std::uniform_int_distribution<int> dist(low, high);
+
+        if (realCellsOnly)
+        {
+            for (int d1 = ghostsDim1; d1 < dim1 + ghostsDim1; d1++)
+                for (int d2 = ghostsDim2; d2 < dim2 + ghostsDim2; d2++)
+                    for (int d3 = ghostsDim3; d3 < dim3 + ghostsDim3; d3++)
+                        for (int d4 = ghostsDim4; d4 < dim4 + ghostsDim4; d4++)
+                            for (int d5 = ghostsDim5; d5 < dim5 + ghostsDim5; d5++)
+                                for (int d6 = ghostsDim6; d6 < dim6 + ghostsDim6; d6++)
+                                {
+                                    field_6d[d1][d2][d3][d4][d5][d6] = dist(rng);
+                                }
+        }
+        else
+        {
+            for (int i = 0; i < field_1d.size(); i++)
+                field_1d[i] = dist(rng);
+        }
+    }
+
     /**
      * @brief Fills Hypercube6d with given value
      *
@@ -652,23 +677,92 @@ namespace mgcl
      * @param path Path to file, overwrites existing one.
      * @throws runtime_error When file could not be opened.
      */
-    void Hypercube6d::dumpToFile(std::string path)
+    void Hypercube6d::dumpToFile(std::string path, bool realCellsOnly)
     {
         std::ofstream myfile;
         myfile.open(path, std::ios::out | std::ios::trunc);
 
         if (myfile.is_open())
         {
-            for (int d1 = 0; d1 < dim1gh; d1++)
-                for (int d2 = 0; d2 < dim2gh; d2++)
-                    for (int d3 = 0; d3 < dim3gh; d3++)
-                        for (int d4 = 0; d4 < dim4gh; d4++)
-                            for (int d5 = 0; d5 < dim5gh; d5++)
-                                for (int d6 = 0; d6 < dim6gh; d6++)
-                                {
-                                    myfile << d1 << "\t" << d2 << "\t" << d3 << "\t" << d4 << "\t" << d5 << "\t" << d6 << "\t"
-                                           << std::scientific << std::setprecision(17) << field_6d[d1][d2][d3][d4][d5][d6] << std::endl;
-                                }
+            if (realCellsOnly)
+            {
+                for (int d1 = ghostsDim1; d1 < dim1 + ghostsDim1; d1++)
+                    for (int d2 = ghostsDim2; d2 < dim2 + ghostsDim2; d2++)
+                        for (int d3 = ghostsDim3; d3 < dim3 + ghostsDim3; d3++)
+                            for (int d4 = ghostsDim4; d4 < dim4 + ghostsDim4; d4++)
+                                for (int d5 = ghostsDim5; d5 < dim5 + ghostsDim5; d5++)
+                                    for (int d6 = ghostsDim6; d6 < dim6 + ghostsDim6; d6++)
+                                    {
+                                        myfile << d1 << "\t" << d2 << "\t" << d3 << "\t" << d4 << "\t" << d5 << "\t" << d6 << "\t"
+                                               << std::scientific << std::setprecision(17) << field_6d[d1][d2][d3][d4][d5][d6] << std::endl;
+                                    }
+            }
+            else
+            {
+                for (int d1 = 0; d1 < dim1gh; d1++)
+                    for (int d2 = 0; d2 < dim2gh; d2++)
+                        for (int d3 = 0; d3 < dim3gh; d3++)
+                            for (int d4 = 0; d4 < dim4gh; d4++)
+                                for (int d5 = 0; d5 < dim5gh; d5++)
+                                    for (int d6 = 0; d6 < dim6gh; d6++)
+                                    {
+                                        myfile << d1 << "\t" << d2 << "\t" << d3 << "\t" << d4 << "\t" << d5 << "\t" << d6 << "\t"
+                                               << std::scientific << std::setprecision(17) << field_6d[d1][d2][d3][d4][d5][d6] << std::endl;
+                                    }
+            }
+            myfile.close();
+        }
+        else
+        {
+            throw std::runtime_error("Couldn't open file for writing given by: " + path);
+        }
+    }
+
+    void Hypercube6d::dumpToFileMatlab(std::string path, std::string varname, bool realCellsOnly)
+    {
+        std::ofstream myfile;
+        myfile.open(path, std::ios::out | std::ios::trunc);
+
+        if (myfile.is_open())
+        {
+            if (realCellsOnly)
+            {
+                myfile << varname << " = zeros(" << dim1 << ","
+                       << dim2 << ","
+                       << dim3 << ","
+                       << dim4 << ","
+                       << dim5 << ","
+                       << dim6 << ");" << std::endl;
+                for (int d1 = ghostsDim1; d1 < dim1 + ghostsDim1; d1++)
+                    for (int d2 = ghostsDim2; d2 < dim2 + ghostsDim2; d2++)
+                        for (int d3 = ghostsDim3; d3 < dim3 + ghostsDim3; d3++)
+                            for (int d4 = ghostsDim4; d4 < dim4 + ghostsDim4; d4++)
+                                for (int d5 = ghostsDim5; d5 < dim5 + ghostsDim5; d5++)
+                                    for (int d6 = ghostsDim6; d6 < dim6 + ghostsDim6; d6++)
+                                    {
+                                        myfile << varname << "(" << d1 + 1 << "," << d2 + 1 << "," << d3 + 1 << "," << d4 + 1 << "," << d5 + 1 << "," << d6 + 1 << ")="
+                                               << std::scientific << std::setprecision(17) << field_6d[d1][d2][d3][d4][d5][d6] << ";" << std::endl;
+                                    }
+            }
+            else
+            {
+                myfile << varname << " = zeros(" << dim1gh << ","
+                       << dim2gh << ","
+                       << dim3gh << ","
+                       << dim4gh << ","
+                       << dim5gh << ","
+                       << dim6gh << ");" << std::endl;
+                for (int d1 = 0; d1 < dim1gh; d1++)
+                    for (int d2 = 0; d2 < dim2gh; d2++)
+                        for (int d3 = 0; d3 < dim3gh; d3++)
+                            for (int d4 = 0; d4 < dim4gh; d4++)
+                                for (int d5 = 0; d5 < dim5gh; d5++)
+                                    for (int d6 = 0; d6 < dim6gh; d6++)
+                                    {
+                                        myfile << varname << "(" << d1 + 1 << "," << d2 + 1 << "," << d3 + 1 << "," << d4 + 1 << "," << d5 + 1 << "," << d6 + 1 << ")="
+                                               << std::scientific << std::setprecision(17) << field_6d[d1][d2][d3][d4][d5][d6] << ";" << std::endl;
+                                    }
+            }
             myfile.close();
         }
         else

@@ -119,7 +119,7 @@ namespace mgcl
                 throw "Ghosts of b must be equal in each dimension!";
 
             if (b.getGhostsDim1() != N >> 1)
-                throw "Ghosts of b be must be of size " + (N >> 1);
+                throw std::string("Ghosts of b be must be of size ").append(std::to_string(N >> 1));
 
             int m = dim1;
             int n = dim2;

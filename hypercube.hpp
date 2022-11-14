@@ -101,10 +101,12 @@ namespace mgcl
         double ******getData() const;
         double *****operator[](int index);
         void fillRandom(double low = 0, double high = 1);
+        void fillRandomInt(int low = 1, int high = 10, bool realCellsOnly = false);
         void fill(double value, bool realCellsOnly = false);
         std::vector<double> &field1d();
         bool isEqual(Hypercube6d &c, double tol = 1e-7, bool printDiffs = true);
-        void dumpToFile(std::string path);
+        void dumpToFile(std::string path, bool realCellsOnly = false);
+        void dumpToFileMatlab(std::string path, std::string varname, bool realCellsOnly = false);
 
         int getDim1() const;
         int getDim2() const;

@@ -605,36 +605,241 @@ TEST_CASE("VaryingStencil::multiply")
         int m = GENERATE(2, 3, 4);
         int n = GENERATE(2, 3, 4);
         int o = GENERATE(2, 3, 4);
+        std::cout << "m,n,o: " << m << "," << n << "," << o << std::endl;
 
-        mgcl::VaryingStencil3x3x3 a3(m, n, o, 0, 0, 0);
-        mgcl::VaryingStencil5x5x5 a5(m, n, o, 0, 0, 0);
-        mgcl::VaryingStencil7x7x7 a7(m, n, o, 0, 0, 0);
+        SECTION("widths 3 * {3,5,7}")
+        {
+            mgcl::VaryingStencil3x3x3 b3p(m, n, o, 1, 1, 1);
+            mgcl::VaryingStencil5x5x5 b5p(m, n, o, 1, 1, 1);
+            mgcl::VaryingStencil7x7x7 b7p(m, n, o, 1, 1, 1);
+            mgcl::VaryingStencil3x3x3 b3np(m, n, o, 1, 1, 1);
+            mgcl::VaryingStencil5x5x5 b5np(m, n, o, 1, 1, 1);
+            mgcl::VaryingStencil7x7x7 b7np(m, n, o, 1, 1, 1);
 
-        mgcl::VaryingStencil3x3x3 b3(m, n, o, 1, 1, 1);
-        mgcl::VaryingStencil5x5x5 b5(m, n, o, 2, 2, 2);
-        mgcl::VaryingStencil7x7x7 b7(m, n, o, 3, 3, 3);
+            b3p.fillRandomInt(1, 9);
+            b5p.fillRandomInt(1, 9);
+            b7p.fillRandomInt(1, 9);
+            // fill only real cells for non-periodic stencils, ghosts are 0.
+            b3np.fillRandomInt(1, 9, true);
+            b5np.fillRandomInt(1, 9, true);
+            b7np.fillRandomInt(1, 9, true);
 
-        a3.fillRandom(1, 9);
-        a5.fillRandom(1, 9);
-        a7.fillRandom(1, 9);
-        b3.fillRandom(1, 9);
-        b5.fillRandom(1, 9);
-        b7.fillRandom(1, 9);
+            // update ghosts only for periodic stencils
+            b3p.updateGhosts();
+            b5p.updateGhosts();
+            b7p.updateGhosts();
 
-        // TODO update ghosts
+            // build matrices from stencils to check results
+            auto mb3p = mgcl_test::Matrix2d::fromVaryingStencil(b3p, true);
+            auto mb5p = mgcl_test::Matrix2d::fromVaryingStencil(b5p, true);
+            auto mb7p = mgcl_test::Matrix2d::fromVaryingStencil(b7p, true);
+            auto mb3np = mgcl_test::Matrix2d::fromVaryingStencil(b3np, false);
+            auto mb5np = mgcl_test::Matrix2d::fromVaryingStencil(b5np, false);
+            auto mb7np = mgcl_test::Matrix2d::fromVaryingStencil(b7np, false);
 
-        // TODO multiply each versions
+            mgcl::VaryingStencil3x3x3 a3(m, n, o, 0, 0, 0);
+            a3.fillRandomInt(1, 9);
 
-        auto c33 = a3 * b3;
+            // build matrices from stencils to check results later
+            auto ma3p = mgcl_test::Matrix2d::fromVaryingStencil(a3, true);
+            auto ma3np = mgcl_test::Matrix2d::fromVaryingStencil(a3, false);
 
-        // // check result against explicitly calculated matrix product
-        // auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
-        // auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(c, true);
+            {
+                auto c33p = a3 * b3p;
+                auto c33np = a3 * b3np;
+                auto c33_expected_p = ma3p * mb3p;
+                auto c33_expected_np = ma3np * mb3np;
+                auto mc33p = mgcl_test::Matrix2d::fromVaryingStencil(c33p, true);
+                auto mc33np = mgcl_test::Matrix2d::fromVaryingStencil(c33np, false);
+                REQUIRE(mc33p == c33_expected_p);
+                REQUIRE(mc33np == c33_expected_np);
+            }
 
-        // REQUIRE(c_expected.getM() == c_m2d.getM());
-        // REQUIRE(c_expected.getN() == c_m2d.getN());
+            if (m > 2 && n > 2 && o > 2)
+            {
+                auto c35p = a3 * b5p;
+                auto c35np = a3 * b5np;
+                auto c35_expected_p = ma3p * mb5p;
+                auto c35_expected_np = ma3np * mb5np;
+                auto mc35p = mgcl_test::Matrix2d::fromVaryingStencil(c35p, true);
+                auto mc35np = mgcl_test::Matrix2d::fromVaryingStencil(c35np, false);
+                REQUIRE(mc35p == c35_expected_p);
+                REQUIRE(mc35np == c35_expected_np);
+            }
 
-        // CHECK(c_m2d == c_expected);
+            if (m > 3 && n > 3 && o > 3)
+            {
+                auto c37p = a3 * b7p;
+                auto c37np = a3 * b7np;
+                auto c37_expected_p = ma3p * mb7p;
+                auto c37_expected_np = ma3np * mb7np;
+                auto mc37p = mgcl_test::Matrix2d::fromVaryingStencil(c37p, true);
+                auto mc37np = mgcl_test::Matrix2d::fromVaryingStencil(c37np, false);
+                REQUIRE(mc37p == c37_expected_p);
+                REQUIRE(mc37np == c37_expected_np);
+            }
+        }
+
+        SECTION("widths 5 * {3,5,7}")
+        {
+            mgcl::VaryingStencil3x3x3 b3p(m, n, o, 2, 2, 2);
+            mgcl::VaryingStencil5x5x5 b5p(m, n, o, 2, 2, 2);
+            mgcl::VaryingStencil7x7x7 b7p(m, n, o, 2, 2, 2);
+            mgcl::VaryingStencil3x3x3 b3np(m, n, o, 2, 2, 2);
+            mgcl::VaryingStencil5x5x5 b5np(m, n, o, 2, 2, 2);
+            mgcl::VaryingStencil7x7x7 b7np(m, n, o, 2, 2, 2);
+
+            b3p.fillRandomInt(1, 9);
+            b5p.fillRandomInt(1, 9);
+            b7p.fillRandomInt(1, 9);
+            // fill only real cells for non-periodic stencils, ghosts are 0.
+            b3np.fillRandomInt(1, 9, true);
+            b5np.fillRandomInt(1, 9, true);
+            b7np.fillRandomInt(1, 9, true);
+
+            // update ghosts only for periodic stencils
+            b3p.updateGhosts();
+            b5p.updateGhosts();
+            b7p.updateGhosts();
+
+            // build matrices from stencils to check results
+            auto mb3p = mgcl_test::Matrix2d::fromVaryingStencil(b3p, true);
+            auto mb5p = mgcl_test::Matrix2d::fromVaryingStencil(b5p, true);
+            auto mb7p = mgcl_test::Matrix2d::fromVaryingStencil(b7p, true);
+            auto mb3np = mgcl_test::Matrix2d::fromVaryingStencil(b3np, false);
+            auto mb5np = mgcl_test::Matrix2d::fromVaryingStencil(b5np, false);
+            auto mb7np = mgcl_test::Matrix2d::fromVaryingStencil(b7np, false);
+
+            mgcl::VaryingStencil5x5x5 a5(m, n, o, 0, 0, 0);
+            a5.fillRandomInt(1, 9);
+
+            // build matrices from stencils to check results later
+            auto ma5p = mgcl_test::Matrix2d::fromVaryingStencil(a5, true);
+            auto ma5np = mgcl_test::Matrix2d::fromVaryingStencil(a5, false);
+
+            if (m > 2 && n > 2 && o > 2)
+            {
+                auto c53p = a5 * b3p;
+                auto c53np = a5 * b3np;
+                auto c53_expected_p = ma5p * mb3p;
+                auto c53_expected_np = ma5np * mb3np;
+                auto mc53p = mgcl_test::Matrix2d::fromVaryingStencil(c53p, true);
+                auto mc53np = mgcl_test::Matrix2d::fromVaryingStencil(c53np, false);
+                REQUIRE(mc53p == c53_expected_p);
+                REQUIRE(mc53np == c53_expected_np);
+            }
+
+            if (m > 2 && n > 2 && o > 2)
+            {
+                auto c55p = a5 * b5p;
+                auto c55np = a5 * b5np;
+                auto c55_expected_p = ma5p * mb5p;
+                auto c55_expected_np = ma5np * mb5np;
+                auto mc55p = mgcl_test::Matrix2d::fromVaryingStencil(c55p, true);
+                auto mc55np = mgcl_test::Matrix2d::fromVaryingStencil(c55np, false);
+
+                // if (m == 3 && n == 3 && o == 3)
+                // {
+                //     // fromVaryingStencil ok for a and b and c -> failure lies in multiply?
+                //     ma5p.dumpToFile("ma5p.csv");
+                //     mb5p.dumpToFile("mb5p.csv");
+                //     a5.dumpToFileMatlab("a5.csv", "as");
+                //     b5p.dumpToFileMatlab("b5p.csv", "bs", false);
+                //     c55p.dumpToFileMatlab("c55.csv", "cs");
+                //     mc55p.dumpToFile("mc55.csv");
+                //     c55_expected_p.dumpToFile("mc55exp.csv");
+                // }
+
+                REQUIRE(mc55p == c55_expected_p);
+                REQUIRE(mc55np == c55_expected_np);
+            }
+
+            if (m > 3 && n > 3 && o > 3)
+            {
+                auto c57p = a5 * b7p;
+                auto c57np = a5 * b7np;
+                auto c57_expected_p = ma5p * mb7p;
+                auto c57_expected_np = ma5np * mb7np;
+                auto mc57p = mgcl_test::Matrix2d::fromVaryingStencil(c57p, true);
+                auto mc57np = mgcl_test::Matrix2d::fromVaryingStencil(c57np, false);
+                REQUIRE(mc57p == c57_expected_p);
+                REQUIRE(mc57np == c57_expected_np);
+            }
+        }
+
+        SECTION("widths 7 * {3,5,7}")
+        {
+            mgcl::VaryingStencil3x3x3 b3p(m, n, o, 3, 3, 3);
+            mgcl::VaryingStencil5x5x5 b5p(m, n, o, 3, 3, 3);
+            mgcl::VaryingStencil7x7x7 b7p(m, n, o, 3, 3, 3);
+            mgcl::VaryingStencil3x3x3 b3np(m, n, o, 3, 3, 3);
+            mgcl::VaryingStencil5x5x5 b5np(m, n, o, 3, 3, 3);
+            mgcl::VaryingStencil7x7x7 b7np(m, n, o, 3, 3, 3);
+
+            b3p.fillRandomInt(1, 9);
+            b5p.fillRandomInt(1, 9);
+            b7p.fillRandomInt(1, 9);
+            // fill only real cells for non-periodic stencils, ghosts are 0.
+            b3np.fillRandomInt(1, 9, true);
+            b5np.fillRandomInt(1, 9, true);
+            b7np.fillRandomInt(1, 9, true);
+
+            // update ghosts only for periodic stencils
+            b3p.updateGhosts();
+            b5p.updateGhosts();
+            b7p.updateGhosts();
+
+            // build matrices from stencils to check results
+            auto mb3p = mgcl_test::Matrix2d::fromVaryingStencil(b3p, true);
+            auto mb5p = mgcl_test::Matrix2d::fromVaryingStencil(b5p, true);
+            auto mb7p = mgcl_test::Matrix2d::fromVaryingStencil(b7p, true);
+            auto mb3np = mgcl_test::Matrix2d::fromVaryingStencil(b3np, false);
+            auto mb5np = mgcl_test::Matrix2d::fromVaryingStencil(b5np, false);
+            auto mb7np = mgcl_test::Matrix2d::fromVaryingStencil(b7np, false);
+
+            mgcl::VaryingStencil7x7x7 a7(m, n, o, 0, 0, 0);
+            a7.fillRandomInt(1, 9);
+
+            // build matrices from stencils to check results later
+            auto ma7p = mgcl_test::Matrix2d::fromVaryingStencil(a7, true);
+            auto ma7np = mgcl_test::Matrix2d::fromVaryingStencil(a7, false);
+
+            if (m > 3 && n > 3 && o > 3)
+            {
+                auto c73p = a7 * b3p;
+                auto c73np = a7 * b3np;
+                auto c73_expected_p = ma7p * mb3p;
+                auto c73_expected_np = ma7np * mb3np;
+                auto mc73p = mgcl_test::Matrix2d::fromVaryingStencil(c73p, true);
+                auto mc73np = mgcl_test::Matrix2d::fromVaryingStencil(c73np, false);
+                REQUIRE(mc73p == c73_expected_p);
+                REQUIRE(mc73np == c73_expected_np);
+            }
+
+            if (m > 3 && n > 3 && o > 3)
+            {
+                auto c75p = a7 * b5p;
+                auto c75np = a7 * b5np;
+                auto c75_expected_p = ma7p * mb5p;
+                auto c75_expected_np = ma7np * mb5np;
+                auto mc75p = mgcl_test::Matrix2d::fromVaryingStencil(c75p, true);
+                auto mc75np = mgcl_test::Matrix2d::fromVaryingStencil(c75np, false);
+                REQUIRE(mc75p == c75_expected_p);
+                REQUIRE(mc75np == c75_expected_np);
+            }
+
+            if (m > 3 && n > 3 && o > 3)
+            {
+                auto c77p = a7 * b7p;
+                auto c77np = a7 * b7np;
+                auto c77_expected_p = ma7p * mb7p;
+                auto c77_expected_np = ma7np * mb7np;
+                auto mc77p = mgcl_test::Matrix2d::fromVaryingStencil(c77p, true);
+                auto mc77np = mgcl_test::Matrix2d::fromVaryingStencil(c77np, false);
+                REQUIRE(mc77p == c77_expected_p);
+                REQUIRE(mc77np == c77_expected_np);
+            }
+        }
     }
 
     SECTION("throwing")
@@ -649,7 +854,8 @@ TEST_CASE("VaryingStencil::multiply")
         mgcl::VaryingStencil3x3x3 a(m, n, o, ghm, ghn, gho);
         mgcl::VaryingStencil3x3x3 b(m, n, o, ghm, ghn, gho);
 
-        if (a.getDim1gh() != b.getDim1gh() || a.getDim2gh() != b.getDim2gh() || a.getDim3gh() != b.getDim3gh())
+        if (a.getDim1() != b.getDim1() || a.getDim2() != b.getDim2() || a.getDim3() != b.getDim3() ||
+            b.getGhostsDim1() != 1 || b.getGhostsDim2() != 1 || b.getGhostsDim3() != 1)
             REQUIRE_THROWS(a * b);
         else
             REQUIRE_NOTHROW(a * b);
