@@ -45,8 +45,8 @@ namespace mgcl
             return *this;
         }
 
+        // updates ghost cells, respects periodic ghosts, i.e. when gh > m
         void updateGhosts()
-        // updates ghost cells, essentially same as for Cuboid in MultigridEngine
         {
             int m = dim1;
             int n = dim2;
@@ -57,42 +57,64 @@ namespace mgcl
 
             auto &c = *this;
 
+            int ghm_start_right = ghosts_m + m;
+            int ghn_start_right = ghosts_n + n;
+            int gho_start_right = ghosts_o + o;
+
             // clang-format off
+            // sending data in z-direction           
+            for (int i = 0; i < ghosts_m; i++)
+            {
+                int factor_left = (ghosts_m - 1 - i) / m + 1;
+                int factor_right = (ghm_start_right + i - ghosts_m) / m;
+
+                for (int j = 0; j < n + 2 * ghosts_n; j++)
+                for (int k = 0; k < o + 2 * ghosts_o; k++)
+                    for (int ii = 0; ii < N; ii++)
+                    for (int jj = 0; jj < N; jj++)
+                    for (int kk = 0; kk < N; kk++)
+                    {
+                        
+                        c[i][j][k][ii][jj][kk] = c[i + factor_left * m][j][k][ii][jj][kk]; // left ghost cell = right real cell
+                        c[ghm_start_right + i][j][k][ii][jj][kk] = c[ghm_start_right + i - factor_right * m][j][k][ii][jj][kk]; // right ghost cell = left real cell
+                    }
+            }
+
+            // sending data in y-direction           
+            for (int i = 0; i < ghosts_n; i++)
+            {
+                int factor_left = (ghosts_n - 1 - i) / n + 1;
+                int factor_right = (ghn_start_right + i - ghosts_n) / n;
+
+                for (int j = 0; j < m + 2 * ghosts_m; j++)
+                for (int k = 0; k < o + 2 * ghosts_o; k++)
+                    for (int ii = 0; ii < N; ii++)
+                    for (int jj = 0; jj < N; jj++)
+                    for (int kk = 0; kk < N; kk++)
+                    {
+                        
+                        c[j][i][k][ii][jj][kk] = c[j][i + factor_left * n][k][ii][jj][kk]; // left ghost cell = right real cell
+                        c[j][ghn_start_right + i][k][ii][jj][kk] = c[j][ghn_start_right + i - factor_right * n][k][ii][jj][kk]; // right ghost cell = left real cell
+                    }
+            }
+
             // sending data in x-direction           
-            for (int i = 0; i < n + 2 * ghosts_n; i++)
-            for (int j = 0; j < o + 2 * ghosts_o; j++)
-            for (int k = 0; k < ghosts_m; k++)
-                for (int ii = 0; ii < N; ii++)
-                for (int jj = 0; jj < N; jj++)
-                for (int kk = 0; kk < N; kk++)
-                {
-                    c[k][i][j][ii][jj][kk] = c[m + k][i][j][ii][jj][kk];                       // left ghost cell = right real cell
-                    c[m + ghosts_m + k][i][j][ii][jj][kk] = c[ghosts_m + k][i][j][ii][jj][kk]; // right ghost cell = left real cell
-                }
+            for (int i = 0; i < ghosts_o; i++)
+            {
+                int factor_left = (ghosts_o - 1 - i) / o + 1;
+                int factor_right = (gho_start_right + i - ghosts_o) / o;
 
-            // sending data in y-direction
-            for (int i = 0; i < m + 2 * ghosts_m; i++)
-            for (int j = 0; j < o + 2 * ghosts_o; j++)
-            for (int k = 0; k < ghosts_n; k++)
-                for (int ii = 0; ii < N; ii++)
-                for (int jj = 0; jj < N; jj++)
-                for (int kk = 0; kk < N; kk++)
-                {
-                    c[i][k][j][ii][jj][kk] = c[i][n + k][j][ii][jj][kk];                       // top ghost cell = bottom real cell
-                    c[i][n + ghosts_n + k][j][ii][jj][kk] = c[i][ghosts_n + k][j][ii][jj][kk]; // bottom ghost cell = top real cell
-                }
-
-            // sending data in z-direction
-            for (int i = 0; i < m + 2 * ghosts_m; i++)
-            for (int j = 0; j < n + 2 * ghosts_n; j++)
-            for (int k = 0; k < ghosts_o; k++)
-                for (int ii = 0; ii < N; ii++)
-                for (int jj = 0; jj < N; jj++)
-                for (int kk = 0; kk < N; kk++)
-                {
-                    c[i][j][k][ii][jj][kk] = c[i][j][o + k][ii][jj][kk];                       // front ghost cell = back real cell
-                    c[i][j][o + ghosts_o + k][ii][jj][kk] = c[i][j][ghosts_o + k][ii][jj][kk]; // back ghost cell = front real cell
-                }
+                for (int j = 0; j < m + 2 * ghosts_m; j++)
+                for (int k = 0; k < n + 2 * ghosts_n; k++)
+                    for (int ii = 0; ii < N; ii++)
+                    for (int jj = 0; jj < N; jj++)
+                    for (int kk = 0; kk < N; kk++)
+                    {
+                        
+                        c[j][k][i][ii][jj][kk] = c[j][k][i + factor_left * o][ii][jj][kk]; // left ghost cell = right real cell
+                        c[j][k][gho_start_right + i][ii][jj][kk] = c[j][k][gho_start_right + i - factor_right * o][ii][jj][kk]; // right ghost cell = left real cell
+                    }
+            }
             // clang-format on
         }
 
