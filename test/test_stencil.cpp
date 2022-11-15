@@ -831,7 +831,6 @@ TEST_CASE("VaryingStencil::multiply")
         int m = GENERATE(2, 3, 4);
         int n = GENERATE(2, 3, 4);
         int o = GENERATE(2, 3, 4);
-        std::cout << "m,n,o: " << m << "," << n << "," << o << std::endl;
 
         SECTION("widths 3 * {3,5,7}")
         {
@@ -881,7 +880,6 @@ TEST_CASE("VaryingStencil::multiply")
                 REQUIRE(mc33np == c33_expected_np);
             }
 
-            if (m > 2 && n > 2 && o > 2)
             {
                 auto c35p = a3 * b5p;
                 auto c35np = a3 * b5np;
@@ -893,7 +891,6 @@ TEST_CASE("VaryingStencil::multiply")
                 REQUIRE(mc35np == c35_expected_np);
             }
 
-            if (m > 3 && n > 3 && o > 3)
             {
                 auto c37p = a3 * b7p;
                 auto c37np = a3 * b7np;
@@ -943,7 +940,6 @@ TEST_CASE("VaryingStencil::multiply")
             auto ma5p = mgcl_test::Matrix2d::fromVaryingStencil(a5, true);
             auto ma5np = mgcl_test::Matrix2d::fromVaryingStencil(a5, false);
 
-            if (m > 2 && n > 2 && o > 2)
             {
                 auto c53p = a5 * b3p;
                 auto c53np = a5 * b3np;
@@ -955,7 +951,6 @@ TEST_CASE("VaryingStencil::multiply")
                 REQUIRE(mc53np == c53_expected_np);
             }
 
-            if (m > 2 && n > 2 && o > 2)
             {
                 auto c55p = a5 * b5p;
                 auto c55np = a5 * b5np;
@@ -963,24 +958,10 @@ TEST_CASE("VaryingStencil::multiply")
                 auto c55_expected_np = ma5np * mb5np;
                 auto mc55p = mgcl_test::Matrix2d::fromVaryingStencil(c55p, true);
                 auto mc55np = mgcl_test::Matrix2d::fromVaryingStencil(c55np, false);
-
-                // if (m == 3 && n == 3 && o == 3)
-                // {
-                //     // fromVaryingStencil ok for a and b and c -> failure lies in multiply?
-                //     ma5p.dumpToFile("ma5p.csv");
-                //     mb5p.dumpToFile("mb5p.csv");
-                //     a5.dumpToFileMatlab("a5.csv", "as");
-                //     b5p.dumpToFileMatlab("b5p.csv", "bs", false);
-                //     c55p.dumpToFileMatlab("c55.csv", "cs");
-                //     mc55p.dumpToFile("mc55.csv");
-                //     c55_expected_p.dumpToFile("mc55exp.csv");
-                // }
-
                 REQUIRE(mc55p == c55_expected_p);
                 REQUIRE(mc55np == c55_expected_np);
             }
 
-            if (m > 3 && n > 3 && o > 3)
             {
                 auto c57p = a5 * b7p;
                 auto c57np = a5 * b7np;
@@ -1030,7 +1011,6 @@ TEST_CASE("VaryingStencil::multiply")
             auto ma7p = mgcl_test::Matrix2d::fromVaryingStencil(a7, true);
             auto ma7np = mgcl_test::Matrix2d::fromVaryingStencil(a7, false);
 
-            if (m > 3 && n > 3 && o > 3)
             {
                 auto c73p = a7 * b3p;
                 auto c73np = a7 * b3np;
@@ -1054,7 +1034,6 @@ TEST_CASE("VaryingStencil::multiply")
                 REQUIRE(mc75np == c75_expected_np);
             }
 
-            if (m > 3 && n > 3 && o > 3)
             {
                 auto c77p = a7 * b7p;
                 auto c77np = a7 * b7np;

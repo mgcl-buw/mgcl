@@ -129,7 +129,7 @@ namespace mgcl
          * @return std::unique_ptr<VaryingStencil<N + 2>> Resulting stencil (two cells wider).
          */
         template <int NB>
-        VaryingStencil<(N > NB ? N : NB) + 2> multiply(VaryingStencil<NB> &b) const
+        VaryingStencil<(N + NB - 1)> multiply(VaryingStencil<NB> &b) const
         {
             if (dim1 != b.getDim1() ||
                 dim2 != b.getDim2() ||
@@ -151,7 +151,7 @@ namespace mgcl
             int gh = b.getGhostsDim1();
 
             // TODO ghosts of c?
-            auto c = VaryingStencil<(N > NB ? N : NB) + 2>(dim1, dim2, dim3, 0, 0, 0);
+            auto c = VaryingStencil<(N + NB - 1)>(dim1, dim2, dim3, 0, 0, 0);
             int width_c = c.getDim4();
 
             // clang-format off
@@ -189,20 +189,20 @@ namespace mgcl
 
         // Overload with lvalue-reference to enable chaining, i.e. a.multiply(b.multiply(c))
         template <int NB>
-        VaryingStencil<(N > NB ? N : NB) + 2> multiply(VaryingStencil<NB> &&b) const
+        VaryingStencil<(N + NB - 1)> multiply(VaryingStencil<NB> &&b) const
         {
             return multiply(b);
         }
 
         // Just an alias for multiply
         template <int NB>
-        VaryingStencil<(N > NB ? N : NB) + 2> operator*(VaryingStencil<NB> &&b) const
+        VaryingStencil<(N + NB - 1)> operator*(VaryingStencil<NB> &&b) const
         {
             return multiply(b);
         }
 
         template <int NB>
-        VaryingStencil<(N > NB ? N : NB) + 2> operator*(VaryingStencil<NB> &b) const
+        VaryingStencil<(N + NB - 1)> operator*(VaryingStencil<NB> &b) const
         {
             return multiply(b);
         }
