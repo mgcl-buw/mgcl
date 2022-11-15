@@ -99,21 +99,38 @@ namespace mgcl_test
 
                     if (periodic)
                     {
+                        gpi = gpi % m;
+                        gpj = gpj % n;
+                        gpk = gpk % o;
+
+                        // shift mod result into positive range
                         if (gpi < 0)
                             gpi += m;
-                        else if (gpi >= m)
-                            gpi -= m;
-                        
+
                         if (gpj < 0)
                             gpj += n;
-                        else if (gpj >= n)
-                            gpj -= n;
-                        
+
                         if (gpk < 0)
                             gpk += o;
-                        else if (gpk >= o)
-                            gpk -= o;
                     }
+
+                    // if (periodic)
+                    // {
+                    //     if (gpi < 0)
+                    //         gpi += m;
+                    //     else if (gpi >= m)
+                    //         gpi -= m;
+                        
+                    //     if (gpj < 0)
+                    //         gpj += n;
+                    //     else if (gpj >= n)
+                    //         gpj -= n;
+                        
+                    //     if (gpk < 0)
+                    //         gpk += o;
+                    //     else if (gpk >= o)
+                    //         gpk -= o;
+                    // }
 
                     if (gpi >= 0 && gpi < m &&
                         gpj >= 0 && gpj < n &&
