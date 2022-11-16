@@ -834,12 +834,13 @@ TEST_CASE("VaryingStencil::multiply")
 
         SECTION("widths 3 * {3,5,7}")
         {
-            mgcl::VaryingStencil3x3x3 b3p(m, n, o, 1, 1, 1);
-            mgcl::VaryingStencil5x5x5 b5p(m, n, o, 1, 1, 1);
-            mgcl::VaryingStencil7x7x7 b7p(m, n, o, 1, 1, 1);
-            mgcl::VaryingStencil3x3x3 b3np(m, n, o, 1, 1, 1);
-            mgcl::VaryingStencil5x5x5 b5np(m, n, o, 1, 1, 1);
-            mgcl::VaryingStencil7x7x7 b7np(m, n, o, 1, 1, 1);
+            int gh = GENERATE(1, 2);
+            mgcl::VaryingStencil3x3x3 b3p(m, n, o, gh, gh, gh);
+            mgcl::VaryingStencil5x5x5 b5p(m, n, o, gh, gh, gh);
+            mgcl::VaryingStencil7x7x7 b7p(m, n, o, gh, gh, gh);
+            mgcl::VaryingStencil3x3x3 b3np(m, n, o, gh, gh, gh);
+            mgcl::VaryingStencil5x5x5 b5np(m, n, o, gh, gh, gh);
+            mgcl::VaryingStencil7x7x7 b7np(m, n, o, gh, gh, gh);
 
             b3p.fillRandomInt(1, 9);
             b5p.fillRandomInt(1, 9);
@@ -1059,8 +1060,11 @@ TEST_CASE("VaryingStencil::multiply")
         mgcl::VaryingStencil3x3x3 a(m, n, o, ghm, ghn, gho);
         mgcl::VaryingStencil3x3x3 b(m, n, o, ghm, ghn, gho);
 
-        if (a.getDim1() != b.getDim1() || a.getDim2() != b.getDim2() || a.getDim3() != b.getDim3() ||
-            b.getGhostsDim1() != 1 || b.getGhostsDim2() != 1 || b.getGhostsDim3() != 1)
+        bool dimsNotEqual = a.getDim1() != b.getDim1() || a.getDim2() != b.getDim2() || a.getDim3() != b.getDim3();
+        bool ghostsNotBigEnough = b.getGhostsDim1() < 1 || b.getGhostsDim2() < 1 || b.getGhostsDim3() < 1;
+        bool ghostsNotEqual = b.getGhostsDim1() != b.getGhostsDim2() || b.getGhostsDim1() != b.getGhostsDim3();
+
+        if (dimsNotEqual || ghostsNotEqual || ghostsNotBigEnough)
             REQUIRE_THROWS(a * b);
         else
             REQUIRE_NOTHROW(a * b);
