@@ -834,13 +834,15 @@ TEST_CASE("VaryingStencil::multiply")
 
         SECTION("widths 3 * {3,5,7}")
         {
-            int gh = GENERATE(1, 2);
-            mgcl::VaryingStencil3x3x3 b3p(m, n, o, gh, gh, gh);
-            mgcl::VaryingStencil5x5x5 b5p(m, n, o, gh, gh, gh);
-            mgcl::VaryingStencil7x7x7 b7p(m, n, o, gh, gh, gh);
-            mgcl::VaryingStencil3x3x3 b3np(m, n, o, gh, gh, gh);
-            mgcl::VaryingStencil5x5x5 b5np(m, n, o, gh, gh, gh);
-            mgcl::VaryingStencil7x7x7 b7np(m, n, o, gh, gh, gh);
+            int ghb = GENERATE(1, 2);
+            int gha = GENERATE(0, 1, 2);
+
+            mgcl::VaryingStencil3x3x3 b3p(m, n, o, ghb, ghb, ghb);
+            mgcl::VaryingStencil5x5x5 b5p(m, n, o, ghb, ghb, ghb);
+            mgcl::VaryingStencil7x7x7 b7p(m, n, o, ghb, ghb, ghb);
+            mgcl::VaryingStencil3x3x3 b3np(m, n, o, ghb, ghb, ghb);
+            mgcl::VaryingStencil5x5x5 b5np(m, n, o, ghb, ghb, ghb);
+            mgcl::VaryingStencil7x7x7 b7np(m, n, o, ghb, ghb, ghb);
 
             b3p.fillRandomInt(1, 9);
             b5p.fillRandomInt(1, 9);
@@ -863,7 +865,7 @@ TEST_CASE("VaryingStencil::multiply")
             auto mb5np = mgcl_test::Matrix2d::fromVaryingStencil(b5np, false);
             auto mb7np = mgcl_test::Matrix2d::fromVaryingStencil(b7np, false);
 
-            mgcl::VaryingStencil3x3x3 a3(m, n, o, 0, 0, 0);
+            mgcl::VaryingStencil3x3x3 a3(m, n, o, gha, gha, gha);
             a3.fillRandomInt(1, 9);
 
             // build matrices from stencils to check results later

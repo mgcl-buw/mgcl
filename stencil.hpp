@@ -140,6 +140,10 @@ namespace mgcl
                 b.getGhostsDim1() != b.getGhostsDim3())
                 throw "Ghosts of b must be equal in each dimension!";
 
+            if (getGhostsDim1() != getGhostsDim2() ||
+                getGhostsDim1() != getGhostsDim3())
+                throw "Ghosts of a must be equal in each dimension!";
+
             if (b.getGhostsDim1() < N >> 1)
                 throw std::string("Ghosts of b be must be >= ").append(std::to_string(N >> 1));
 
@@ -148,10 +152,11 @@ namespace mgcl
             int o = dim3;
             int N2 = N >> 1;
             int NB2 = NB >> 1;
-            int gh = b.getGhostsDim1();
+            int gha = getGhostsDim1();
+            int ghb = b.getGhostsDim1();
 
             // TODO ghosts of c?
-            auto c = VaryingStencil<(N + NB - 1)>(dim1, dim2, dim3, 0, 0, 0);
+            auto c = VaryingStencil<(N + NB - 1)>(dim1, dim2, dim3, 2, 2, 2);
             int width_c = c.getDim4();
 
             // clang-format off
@@ -165,9 +170,9 @@ namespace mgcl
                     for (int b_j = 0; b_j < NB; b_j++)
                     for (int b_k = 0; b_k < NB; b_k++)
                     {
-                        int gpi = x + a_i - N2 + gh;
-                        int gpj = y + a_j - N2 + gh;
-                        int gpk = z + a_k - N2 + gh;
+                        int gpi = x + a_i - N2 + ghb;
+                        int gpj = y + a_j - N2 + ghb;
+                        int gpk = z + a_k - N2 + ghb;
 
                         int ci = a_i + b_i;
                         int cj = a_j + b_j;
@@ -177,13 +182,14 @@ namespace mgcl
                             cj >= 0 && cj < width_c &&
                             ck >= 0 && ck < width_c)
                         {
-                            c[x][y][z][a_i + b_i][a_j + b_j][a_k + b_k] +=
-                                field_6d[x][y][z][a_i][a_j][a_k] *
+                            c[x + 2][y + 2][z + 2][a_i + b_i][a_j + b_j][a_k + b_k] +=
+                                field_6d[x + gha][y + gha][z + gha][a_i][a_j][a_k] *
                                 b[gpi][gpj][gpk][b_i][b_j][b_k];
                         }
                     }
             // clang-format on
 
+            c.updateGhosts();
             return c;
         }
 
