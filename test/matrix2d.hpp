@@ -34,6 +34,8 @@ namespace mgcl_test
         Matrix2d kronecker(const Matrix2d &b);
         Matrix2d transposed();
 
+        bool isEqual(const Matrix2d &b, double tol) const;
+
         Matrix2d operator+(const Matrix2d &b);
         void operator+=(const Matrix2d &b);
         bool operator==(const Matrix2d &b) const;
@@ -113,24 +115,6 @@ namespace mgcl_test
                         if (gpk < 0)
                             gpk += o;
                     }
-
-                    // if (periodic)
-                    // {
-                    //     if (gpi < 0)
-                    //         gpi += m;
-                    //     else if (gpi >= m)
-                    //         gpi -= m;
-                        
-                    //     if (gpj < 0)
-                    //         gpj += n;
-                    //     else if (gpj >= n)
-                    //         gpj -= n;
-                        
-                    //     if (gpk < 0)
-                    //         gpk += o;
-                    //     else if (gpk >= o)
-                    //         gpk -= o;
-                    // }
 
                     if (gpi >= 0 && gpi < m &&
                         gpj >= 0 && gpj < n &&

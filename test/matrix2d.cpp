@@ -39,6 +39,28 @@ namespace mgcl_test
         return t;
     }
 
+    /**
+     * @brief Returns true if matrices are equal within the given tolerance.
+     */
+    bool Matrix2d::isEqual(const Matrix2d &b, double tol) const
+    {
+        if (m != b.getM() || n != b.getN())
+            return false;
+
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+            {
+                double diff = values[i][j] - b[i][j];
+                if (diff < 0)
+                    diff *= -1;
+
+                if (diff > tol)
+                    return false;
+            }
+
+        return true;
+    }
+
     Matrix2d Matrix2d::operator+(const Matrix2d &b)
     {
         if (m != b.getM() || n != b.getN())
