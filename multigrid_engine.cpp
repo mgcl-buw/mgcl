@@ -233,7 +233,7 @@ namespace mgcl
             }
         // clang-format on
 
-        // TODO update ghosts here?
+        a_2h.updateGhosts();
 
         return a_2h;
     }
