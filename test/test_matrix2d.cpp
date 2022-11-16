@@ -660,20 +660,19 @@ TEST_CASE("Matrix2d::restrictionFullWeight")
                 int gpk = k + (kk - 1); // grid point index mapped to by stencil entry in z-direction
 
                 // wrap around for periodic bc
+                gpi = gpi % m;
+                gpj = gpj % n;
+                gpk = gpk % o;
+
+                // shift mod result into positive range
                 if (gpi < 0)
                     gpi += m;
-                else if (gpi >= m)
-                    gpi -= m;
-                
+
                 if (gpj < 0)
                     gpj += n;
-                else if (gpj >= n)
-                    gpj -= n;
-                
+
                 if (gpk < 0)
                     gpk += o;
-                else if (gpk >= o)
-                    gpk -= o;
 
                 // center of stencil
                 if (ii == 1 && jj == 1 && kk == 1)
