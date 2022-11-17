@@ -12,7 +12,7 @@ namespace mgcl
      * m,n,o is size of real grid */
     double MultigridEngine::jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
-                                      double stencilFactor, VaryingStencil3x3x3 &stencilValuesCuboid, bool returnResidualNorm)
+                                      double stencilFactor, VaryingStencil3x3x3 &stencilValues, bool returnResidualNorm)
     {
         double res = 0.0;
         double h2 = 1.0 / ((double)(v.getM() * v.getM()));
@@ -30,16 +30,33 @@ namespace mgcl
             // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
 
             // r = f - A*v
-            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValuesCuboid, returnResidualNorm);
-            for (int i = f.getGhostsM(); i < f.getM() + f.getGhostsM(); i++)
-                for (int j = f.getGhostsN(); j < f.getN() + f.getGhostsN(); j++)
-                    for (int k = f.getGhostsO(); k < f.getO() + f.getGhostsO(); k++)
-                    {
-                        // if (i == 1 && j == 1 && k == 1)
-                        //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, v[i][j][k],
-                        //     i,j,k,r[i][j][k], omega);
-                        v[i][j][k] = v[i][j][k] + omega * dinv * r[i][j][k];
-                    }
+            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, returnResidualNorm);
+
+            if (stencilType == MGCL_LAPLACE_7POINT || stencilType == MGCL_LAPLACE_19POINT || stencilType == MGCL_LAPLACE_27POINT)
+            {
+                for (int i = f.getGhostsM(); i < f.getM() + f.getGhostsM(); i++)
+                    for (int j = f.getGhostsN(); j < f.getN() + f.getGhostsN(); j++)
+                        for (int k = f.getGhostsO(); k < f.getO() + f.getGhostsO(); k++)
+                        {
+                            // if (i == 1 && j == 1 && k == 1)
+                            //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, v[i][j][k],
+                            //     i,j,k,r[i][j][k], omega);
+                            v[i][j][k] = v[i][j][k] + omega * dinv * r[i][j][k];
+                        }
+            }
+            else
+            {
+                // TODO which dinv?
+                for (int i = f.getGhostsM(); i < f.getM() + f.getGhostsM(); i++)
+                    for (int j = f.getGhostsN(); j < f.getN() + f.getGhostsN(); j++)
+                        for (int k = f.getGhostsO(); k < f.getO() + f.getGhostsO(); k++)
+                        {
+                            // if (i == 1 && j == 1 && k == 1)
+                            //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, v[i][j][k],
+                            //     i,j,k,r[i][j][k], omega);
+                            v[i][j][k] = v[i][j][k] + omega * (1.0 / stencilValues[i][j][k][1][1][1]) * r[i][j][k];
+                        }
+            }
         }
         MultigridEngine::updateGhostsSeq(v);
         return res;
