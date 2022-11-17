@@ -112,9 +112,9 @@ TEST_CASE("Problem solving: periodic 4th order")
         double h2inv = N * N; // h = 1/N -> 1/h = N
 
         // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
-        for (int i = 0; i < N; i++)
-            for (int j = 0; j < N; j++)
-                for (int k = 0; k < N; k++)
+        for (int i = 0; i < s.getDim1gh(); i++)
+            for (int j = 0; j < s.getDim2gh(); j++)
+                for (int k = 0; k < s.getDim3gh(); k++)
                 {
                     // 7-point Laplace
                     s[i][j][k][0][1][1] = h2inv * -1.0;
