@@ -27,6 +27,13 @@ namespace mgcl_test
         mgcl_test::Matrix2d matrix2d24x24RandomPeriodic();
         mgcl_test::Matrix2d matrix2d24x24RandomNotPeriodic();
     }
+
+    namespace test_residual
+    {
+        std::unique_ptr<mgcl::Cuboid> inputF16();
+        std::unique_ptr<mgcl::Cuboid> inputV16();
+        std::unique_ptr<mgcl::Cuboid> outputR16();
+    }
 }
 
 #endif // TEST_RESULTS_HPP
