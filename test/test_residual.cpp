@@ -79,4 +79,30 @@ TEST_CASE("residual")
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_r_out->isEqual(*c_expected_out_r));
     }
+
+    SECTION("residualSeq L2-norm 7point varying stencil")
+    {
+        int n = 16;
+        auto vals = mgcl::VaryingStencil3x3x3(16, 16, 16, 1, 1, 1);
+
+        double h2inv = static_cast<double>(n * n);
+        for (int i = 0; i < vals.getDim1gh(); i++)
+            for (int j = 0; j < vals.getDim2gh(); j++)
+                for (int k = 0; k < vals.getDim3gh(); k++)
+                {
+                    vals[i][j][k][1][1][1] = 6.0 * h2inv;
+                    vals[i][j][k][1][1][0] = -1.0 * h2inv;
+                    vals[i][j][k][1][1][2] = -1.0 * h2inv;
+                    vals[i][j][k][1][0][1] = -1.0 * h2inv;
+                    vals[i][j][k][1][2][1] = -1.0 * h2inv;
+                    vals[i][j][k][0][1][1] = -1.0 * h2inv;
+                    vals[i][j][k][2][1][1] = -1.0 * h2inv;
+                }
+
+        double res = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r, mgcl::MGCL_L2,
+                                                        mgcl::MGCL_VARYING_7POINT, stencilFactor, vals, true);
+
+        CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
+        REQUIRE(c_in_r->isEqual(*c_expected_out_r));
+    }
 }
