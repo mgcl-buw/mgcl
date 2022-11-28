@@ -135,9 +135,11 @@ thirdparty/pmg/stencil.h
 
 add_library(pmg ${SOURCES_PMG})
 
+# maybe need to run cmake with
+# cmake -DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/openmpi
+# in order to find MPI libraries
 find_package(MPI)
-include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-add_definitions(-DOMPI_SKIP_MPICXX)
+set(MPI_CXX_SKIP_MPICXX TRUE)
 target_link_libraries(pmg PRIVATE MPI::MPI_C)
 
 # ==========================
