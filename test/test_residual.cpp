@@ -83,7 +83,7 @@ TEST_CASE("residual")
     SECTION("residualSeq L2-norm 7point varying stencil")
     {
         int n = 16;
-        auto vals = mgcl::VaryingStencil3x3x3(16, 16, 16, 1, 1, 1);
+        auto vals = mgcl::VaryingStencil3x3x3(n, n, n, 1, 1, 1);
 
         double h2inv = static_cast<double>(n * n);
         for (int i = 0; i < vals.getDim1gh(); i++)
@@ -104,5 +104,51 @@ TEST_CASE("residual")
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_in_r->isEqual(*c_expected_out_r));
+    }
+}
+
+TEST_CASE("residual galerkin")
+{
+    // creates 7p Laplace stencil on fine grid, applies galerkin operator and calculates residual on coarse grid
+    SECTION("residualSeq L2-norm 7point galerkin")
+    {
+        int n = 16;
+        double h = 1.0 / (double)n;
+        double stencilFactor = 1.0 / (h * h);
+
+        mgcl::Cuboid c_in_f(n, n, n, 2, 2, 2);
+        mgcl::Cuboid c_in_v(n, n, n, 2, 2, 2);
+        mgcl::Cuboid c_r_galerkin(n, n, n, 2, 2, 2, 0);
+        mgcl::Cuboid c_r_explicit(n, n, n, 2, 2, 2, 0);
+        auto vals_fine = mgcl::VaryingStencil3x3x3(2 * n, 2 * n, 2 * n, 2, 2, 2);
+
+        c_in_f.fillRandom();
+        c_in_v.fillRandom();
+
+        // fill fine grid stencil with 7p Laplace on which galerkin will be applied
+        double h2inv_fine = static_cast<double>(2 * n * 2 * n);
+        for (int i = 0; i < vals_fine.getDim1gh(); i++)
+            for (int j = 0; j < vals_fine.getDim2gh(); j++)
+                for (int k = 0; k < vals_fine.getDim3gh(); k++)
+                {
+                    vals_fine[i][j][k][1][1][1] = 6.0 * h2inv_fine;
+                    vals_fine[i][j][k][1][1][0] = -1.0 * h2inv_fine;
+                    vals_fine[i][j][k][1][1][2] = -1.0 * h2inv_fine;
+                    vals_fine[i][j][k][1][0][1] = -1.0 * h2inv_fine;
+                    vals_fine[i][j][k][1][2][1] = -1.0 * h2inv_fine;
+                    vals_fine[i][j][k][0][1][1] = -1.0 * h2inv_fine;
+                    vals_fine[i][j][k][2][1][1] = -1.0 * h2inv_fine;
+                }
+
+        auto vals_coarse = mgcl::MultigridEngine::galerkin(vals_fine);
+
+        double res_galerkin = mgcl::MultigridEngine::residualSeq(c_in_f, c_in_v, c_r_galerkin, mgcl::MGCL_L2,
+                                                                 mgcl::MGCL_VARYING_7POINT, stencilFactor, vals_coarse, true);
+
+        double res_explicit = mgcl::MultigridEngine::residualSeq(c_in_f, c_in_v, c_r_explicit, mgcl::MGCL_L2,
+                                                                 mgcl::MGCL_LAPLACE_7POINT, stencilFactor, vals_coarse, true);
+
+        CHECK(fabs(res_galerkin - res_explicit) < 1e-7);
+        REQUIRE(c_r_galerkin.isEqual(c_r_explicit));
     }
 }

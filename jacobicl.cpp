@@ -826,11 +826,17 @@ namespace mgcl
         double ***vraw = v.getData();
 
         int ghm = f.getGhostsM();
-        int ghn = f.getGhostsM();
-        int gho = f.getGhostsM();
+        int ghn = f.getGhostsN();
+        int gho = f.getGhostsO();
 
         if (stencilType == MGCL_VARYING_7POINT || stencilType == MGCL_VARYING_19POINT || stencilType == MGCL_VARYING_27POINT)
+        {
             stencilValues = stencilValuesCuboid.getData();
+            if (stencilValuesCuboid.getGhostsDim1() != ghm ||
+                stencilValuesCuboid.getGhostsDim2() != ghn ||
+                stencilValuesCuboid.getGhostsDim3() != gho)
+                throw "Ghosts of inputs and stencilValues must be the same!";
+        }
 
         for (int i = ghm, isv = 0; i < f.getM() + ghm; i++, isv++)
             for (int j = ghn, jsv = 0; j < f.getN() + ghn; j++, jsv++)
