@@ -6,6 +6,7 @@
 
 #include "../cuboid.hpp"
 #include "../multigrid_engine.hpp"
+#include "test_results.hpp"
 #include "test_utility.hpp"
 
 std::shared_ptr<mgcl::Cuboid> restrictionTestInputFine();
@@ -25,10 +26,10 @@ TEST_CASE("restriction")
     int ngh = n + 2 * ghosts_n;
     int ogh = o + 2 * ghosts_o;
 
-    auto c_fine = restrictionTestInputFine();
-    auto c_coarse = restrictionTestInputCoarse();
-    auto c_expected_fine = restrictionTestOutputFine();
-    auto c_expected_coarse = restrictionTestOutputCoarse();
+    auto c_fine = mgcl_test::test_restriction::inputFine16();
+    auto c_coarse = mgcl_test::test_restriction::inputCoarse8();
+    auto c_expected_fine = mgcl_test::test_restriction::outputFine16();
+    auto c_expected_coarse = mgcl_test::test_restriction::outputCoarse8();
 
     auto p = std::make_shared<mgcl::Problem>(m, n, o);
     mgcl::Level lv_fine(p.get(), 0);

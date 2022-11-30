@@ -34,6 +34,14 @@ namespace mgcl_test
         std::unique_ptr<mgcl::Cuboid> inputV16();
         std::unique_ptr<mgcl::Cuboid> outputR16();
     }
+
+    namespace test_restriction
+    {
+        std::unique_ptr<mgcl::Cuboid> inputFine16();
+        std::unique_ptr<mgcl::Cuboid> inputCoarse8();
+        std::unique_ptr<mgcl::Cuboid> outputFine16();
+        std::unique_ptr<mgcl::Cuboid> outputCoarse8();
+    }
 }
 
 #endif // TEST_RESULTS_HPP
