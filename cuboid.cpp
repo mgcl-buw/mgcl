@@ -116,6 +116,58 @@ namespace mgcl
         }
     }
 
+    Cuboid::Cuboid(Cuboid &&c)
+        : m(c.m),
+          n(c.n),
+          o(c.o),
+          mgh(c.mgh),
+          ngh(c.ngh),
+          ogh(c.ogh),
+          ghostsM(c.ghostsM),
+          ghostsN(c.ghostsN),
+          ghostsO(c.ghostsO),
+          field_1d(std::move(c.field_1d)),
+          field_3d(c.field_3d)
+    {
+        c.m = 0;
+        c.n = 0;
+        c.o = 0;
+        c.mgh = 0;
+        c.ngh = 0;
+        c.ogh = 0;
+        c.ghostsM = 0;
+        c.ghostsN = 0;
+        c.ghostsO = 0;
+        c.field_3d = nullptr;
+    }
+
+    Cuboid &Cuboid::operator=(Cuboid &&c)
+    {
+        m = c.m;
+        n = c.n;
+        o = c.o;
+        mgh = c.mgh;
+        ngh = c.ngh;
+        ogh = c.ogh;
+        ghostsM = c.ghostsM;
+        ghostsN = c.ghostsN;
+        ghostsO = c.ghostsO;
+        field_1d = std::move(c.field_1d);
+        field_3d = c.field_3d;
+
+        c.m = 0;
+        c.n = 0;
+        c.o = 0;
+        c.mgh = 0;
+        c.ngh = 0;
+        c.ogh = 0;
+        c.ghostsM = 0;
+        c.ghostsN = 0;
+        c.ghostsO = 0;
+        c.field_3d = nullptr;
+        return *this;
+    }
+
     Cuboid::~Cuboid()
     {
         for (int i = 0; i < mgh; i++)
@@ -299,5 +351,25 @@ namespace mgcl
         {
             throw std::runtime_error("Couldn't open file for writing given by: " + path);
         }
+    }
+
+    /**
+     * @brief Creates a copy of the given Cuboid and returns it.
+     *
+     * @param c
+     * @return Cuboid
+     */
+    Cuboid Cuboid::copyFrom(Cuboid &c)
+    {
+        Cuboid ret(c.getM(), c.getN(), c.getO(), c.getGhostsM(), c.getGhostsN(), c.getGhostsO(), 0);
+
+        for (int i = 0; i < c.getMgh(); i++)
+            for (int j = 0; j < c.getNgh(); j++)
+                for (int k = 0; k < c.getOgh(); k++)
+                {
+                    ret[i][j][k] = c[i][j][k];
+                }
+
+        return ret;
     }
 }

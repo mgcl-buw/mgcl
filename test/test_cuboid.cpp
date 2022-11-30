@@ -29,6 +29,50 @@ TEST_CASE("cuboid class")
 
     mgcl::Cuboid c(1, 2, 3);
 
+    SECTION("move ctor")
+    {
+        mgcl::Cuboid c_check(1, 2, 3);
+        c.fillRandom();
+
+        for (int i = 0; i < c.getM(); i++)
+            for (int j = 0; j < c.getN(); j++)
+                for (int k = 0; k < c.getO(); k++)
+                {
+                    c_check[i][j][k] = c[i][j][k];
+                }
+
+        mgcl::Cuboid c2(std::move(c));
+
+        REQUIRE(c.getData() == nullptr);
+        REQUIRE(c.getM() == 0);
+        REQUIRE(c.getN() == 0);
+        REQUIRE(c.getO() == 0);
+
+        REQUIRE(c2.isEqual(c_check));
+    }
+
+    SECTION("move assignment ctor")
+    {
+        mgcl::Cuboid c_check(1, 2, 3);
+        c.fillRandom();
+
+        for (int i = 0; i < c.getM(); i++)
+            for (int j = 0; j < c.getN(); j++)
+                for (int k = 0; k < c.getO(); k++)
+                {
+                    c_check[i][j][k] = c[i][j][k];
+                }
+
+        mgcl::Cuboid c2 = std::move(c);
+
+        REQUIRE(c.getData() == nullptr);
+        REQUIRE(c.getM() == 0);
+        REQUIRE(c.getN() == 0);
+        REQUIRE(c.getO() == 0);
+
+        REQUIRE(c2.isEqual(c_check));
+    }
+
     SECTION("dimensions")
     {
         REQUIRE(c.getM() == 1);

@@ -35,6 +35,8 @@ namespace mgcl
         Cuboid(int m_, int n_, int o_, int ghostsM_, int ghostsN_, int ghostsO_, double value = 0);
         Cuboid(const Cuboid &) = delete;
         Cuboid &operator=(const Cuboid &) = delete;
+        Cuboid(Cuboid &&);
+        Cuboid &operator=(Cuboid &&);
         ~Cuboid();
 
         double ***getData() const;
@@ -54,6 +56,8 @@ namespace mgcl
         int getOgh() const;
         int getNgh() const;
         int getMgh() const;
+
+        static Cuboid copyFrom(Cuboid &c);
     };
 
     double ***cuboid_alloc(int m, int n, int o);
