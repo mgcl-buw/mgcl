@@ -828,19 +828,25 @@ namespace mgcl
         int ghm = f.getGhostsM();
         int ghn = f.getGhostsN();
         int gho = f.getGhostsO();
+        int ghmsv = 0;
+        int ghnsv = 0;
+        int ghosv = 0;
 
         if (stencilType == MGCL_VARYING_7POINT || stencilType == MGCL_VARYING_19POINT || stencilType == MGCL_VARYING_27POINT)
         {
             stencilValues = stencilValuesCuboid.getData();
-            if (stencilValuesCuboid.getGhostsDim1() != ghm ||
-                stencilValuesCuboid.getGhostsDim2() != ghn ||
-                stencilValuesCuboid.getGhostsDim3() != gho)
-                throw "Ghosts of inputs and stencilValues must be the same!";
+            int ghmsv = stencilValuesCuboid.getGhostsDim1();
+            int ghnsv = stencilValuesCuboid.getGhostsDim2();
+            int ghosv = stencilValuesCuboid.getGhostsDim3();
+            // if (ghmsv != ghm ||
+            //     ghnsv != ghn ||
+            //     ghosv != gho)
+            //     throw "Ghosts of inputs and stencilValues must be the same!";
         }
 
-        for (int i = ghm, isv = 0; i < f.getM() + ghm; i++, isv++)
-            for (int j = ghn, jsv = 0; j < f.getN() + ghn; j++, jsv++)
-                for (int k = gho, ksv = 0; k < f.getO() + gho; k++, ksv++)
+        for (int i = ghm, isv = ghmsv; i < f.getM() + ghm; i++, isv++)
+            for (int j = ghn, jsv = ghnsv; j < f.getN() + ghn; j++, jsv++)
+                for (int k = gho, ksv = ghosv; k < f.getO() + gho; k++, ksv++)
                 {
                     // A*v
                     if (stencilType == MGCL_LAPLACE_7POINT)
