@@ -179,19 +179,18 @@ TEST_CASE("galerkin Laplace rediscretized")
             }
 
     auto a_2h = mgcl::MultigridEngine::galerkin(a_h);
-    // factor calculated by hand and with help of Matlab
-    // TODO get for 3d, this is for 2d
-    double factor = static_cast<double>((0.5 * a_2h.getDim1()) * (0.5 * a_2h.getDim1()));
+    h2inv = static_cast<double>(a_2h.getDim1() * a_2h.getDim1());
 
     for (int i = 0; i < m; i++)
         for (int j = 0; j < n; j++)
             for (int k = 0; k < o; k++)
             {
-                REQUIRE(a_2h[i][j][k][0][1][1] == factor * 1.0);
-                REQUIRE(a_2h[i][j][k][1][0][1] == factor * 1.0);
-                REQUIRE(a_2h[i][j][k][1][1][0] == factor * 1.0);
-                REQUIRE(a_2h[i][j][k][1][1][1] == factor * -6.0);
-                REQUIRE(a_2h[i][j][k][1][1][2] == factor * 1.0);
-                REQUIRE(a_2h[i][j][k][1][2][1] == factor * 1.0);
-                REQUIRE(a_2h[i][j][k][2][1][1] == factor * 1.0);
+                REQUIRE(a_2h[i][j][k][0][1][1] == h2inv * 1.0);
+                REQUIRE(a_2h[i][j][k][1][0][1] == h2inv * 1.0);
+                REQUIRE(a_2h[i][j][k][1][1][0] == h2inv * 1.0);
+                REQUIRE(a_2h[i][j][k][1][1][1] == h2inv * -6.0);
+                REQUIRE(a_2h[i][j][k][1][1][2] == h2inv * 1.0);
+                REQUIRE(a_2h[i][j][k][1][2][1] == h2inv * 1.0);
+                REQUIRE(a_2h[i][j][k][2][1][1] == h2inv * 1.0);
             }
+}
