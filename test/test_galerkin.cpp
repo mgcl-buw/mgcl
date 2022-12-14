@@ -200,7 +200,6 @@ TEST_CASE("galerkin Laplace SA == AS")
  * In higher dimensions the full stencil is being used, i.e. a 7p stencil on the fine grid results in a 27p stencil on
  * the coarse grid with constant factors, depending just on h. The factors were calculated using Matlab.
  */
-
 TEST_CASE("galerkin Laplace rediscretized")
 {
     int m = 8; // GENERATE(2, 4, 8);
@@ -226,18 +225,43 @@ TEST_CASE("galerkin Laplace rediscretized")
             }
 
     auto a_2h = mgcl::MultigridEngine::galerkin(a_h);
-    h2inv = static_cast<double>(a_2h.getDim1() * a_2h.getDim1());
 
-    for (int i = 0; i < m; i++)
-        for (int j = 0; j < n; j++)
-            for (int k = 0; k < o; k++)
+    // Test with fine h (result from Matlab's Symbolic Toolbox)
+    double factor1 = h2inv * (3.0 / 256.0);  // corners
+    double factor2 = h2inv * (5.0 / 128.0);  // diagonally off
+    double factor3 = h2inv * (3.0 / 64.0);   // straight off
+    double factor4 = h2inv * (-27.0 / 32.0); // center
+
+    for (int i = 0; i < a_2h.getDim1(); i++)
+        for (int j = 0; j < a_2h.getDim2(); j++)
+            for (int k = 0; k < a_2h.getDim3(); k++)
             {
-                REQUIRE(a_2h[i][j][k][0][1][1] == h2inv * 1.0);
-                REQUIRE(a_2h[i][j][k][1][0][1] == h2inv * 1.0);
-                REQUIRE(a_2h[i][j][k][1][1][0] == h2inv * 1.0);
-                REQUIRE(a_2h[i][j][k][1][1][1] == h2inv * -6.0);
-                REQUIRE(a_2h[i][j][k][1][1][2] == h2inv * 1.0);
-                REQUIRE(a_2h[i][j][k][1][2][1] == h2inv * 1.0);
-                REQUIRE(a_2h[i][j][k][2][1][1] == h2inv * 1.0);
+                REQUIRE(a_2h[i][j][k][0][0][0] == factor1);
+                REQUIRE(a_2h[i][j][k][0][0][1] == factor2);
+                REQUIRE(a_2h[i][j][k][0][0][2] == factor1);
+                REQUIRE(a_2h[i][j][k][0][1][0] == factor2);
+                REQUIRE(a_2h[i][j][k][0][1][1] == factor3);
+                REQUIRE(a_2h[i][j][k][0][1][2] == factor2);
+                REQUIRE(a_2h[i][j][k][0][2][0] == factor1);
+                REQUIRE(a_2h[i][j][k][0][2][1] == factor2);
+                REQUIRE(a_2h[i][j][k][0][2][2] == factor1);
+                REQUIRE(a_2h[i][j][k][1][0][0] == factor2);
+                REQUIRE(a_2h[i][j][k][1][0][1] == factor3);
+                REQUIRE(a_2h[i][j][k][1][0][2] == factor2);
+                REQUIRE(a_2h[i][j][k][1][1][0] == factor3);
+                REQUIRE(a_2h[i][j][k][1][1][1] == factor4);
+                REQUIRE(a_2h[i][j][k][1][1][2] == factor3);
+                REQUIRE(a_2h[i][j][k][1][2][0] == factor2);
+                REQUIRE(a_2h[i][j][k][1][2][1] == factor3);
+                REQUIRE(a_2h[i][j][k][1][2][2] == factor2);
+                REQUIRE(a_2h[i][j][k][2][0][0] == factor1);
+                REQUIRE(a_2h[i][j][k][2][0][1] == factor2);
+                REQUIRE(a_2h[i][j][k][2][0][2] == factor1);
+                REQUIRE(a_2h[i][j][k][2][1][0] == factor2);
+                REQUIRE(a_2h[i][j][k][2][1][1] == factor3);
+                REQUIRE(a_2h[i][j][k][2][1][2] == factor2);
+                REQUIRE(a_2h[i][j][k][2][2][0] == factor1);
+                REQUIRE(a_2h[i][j][k][2][2][1] == factor2);
+                REQUIRE(a_2h[i][j][k][2][2][2] == factor1);
             }
 }
