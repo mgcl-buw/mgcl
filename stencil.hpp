@@ -212,6 +212,27 @@ namespace mgcl
         {
             return multiply(b);
         }
+
+        /**
+         * @brief Multiplies this stencil with a constant factor.
+         *
+         * @param factor
+         * @return VaryingStencil<N>&
+         */
+        VaryingStencil<N> &operator*(double factor)
+        {
+            for (int i = 0; i < dim1; i++)
+                for (int j = 0; j < dim2; j++)
+                    for (int k = 0; k < dim3; k++)
+                        for (int ii = 0; ii < dim4; ii++)
+                            for (int jj = 0; jj < dim5; jj++)
+                                for (int kk = 0; kk < dim6; kk++)
+                                {
+                                    (*this)[i][j][k][ii][jj][kk] *= factor;
+                                }
+
+            return *this;
+        }
     };
 
     typedef VaryingStencil<3> VaryingStencil3x3x3;
