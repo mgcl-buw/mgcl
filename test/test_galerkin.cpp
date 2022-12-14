@@ -152,8 +152,55 @@ TEST_CASE("galerkin symmetric")
         }
 }
 
-// For the Laplace operator the Galerkin coarse grid operator shall be equal to the rediscretization of the Laplace
-// operator on the coarse grid (using 2nd order differences, see "A Multigrid Tutorial", p. 79).
+// Checks if SA == AS which it should since S = S^T and A = A^T
+TEST_CASE("galerkin Laplace SA == AS")
+{
+    int m = 8; // GENERATE(2, 4, 8);
+    int n = 8; // GENERATE(2, 4, 8);
+    int o = 8; // GENERATE(2, 4, 8);
+    double h = 1.0 / (double)m;
+    double h2inv = static_cast<double>(m * m);
+
+    // Fill varying stencil on fine grid with 7p Laplace
+    mgcl::VaryingStencil3x3x3 a(m, n, o, 2, 2, 2);
+    for (int i = 0; i < m + 4; i++)
+        for (int j = 0; j < n + 4; j++)
+            for (int k = 0; k < o + 4; k++)
+            {
+                // 7-point Laplace
+                a[i][j][k][0][1][1] = h2inv * 1.0;
+                a[i][j][k][1][0][1] = h2inv * 1.0;
+                a[i][j][k][1][1][0] = h2inv * 1.0;
+                a[i][j][k][1][1][1] = h2inv * -6.0;
+                a[i][j][k][1][1][2] = h2inv * 1.0;
+                a[i][j][k][1][2][1] = h2inv * 1.0;
+                a[i][j][k][2][1][1] = h2inv * 1.0;
+            }
+
+    auto sptr = mgcl::create3dFullWeightRestrictionStencil(m, n, o, 2, 2, 2);
+    auto &s = *sptr;
+
+    auto as = a * s;
+    auto sa = s * a;
+
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++)
+            for (int k = 0; k < o; k++)
+                for (int ii = 0; ii < as.getDim4gh(); ii++)
+                    for (int jj = 0; jj < as.getDim5gh(); jj++)
+                        for (int kk = 0; kk < as.getDim6gh(); kk++)
+                        {
+                            REQUIRE(as[i][j][k][ii][jj][kk] == sa[i][j][k][ii][jj][kk]);
+                        }
+}
+
+/**
+ * For the Laplace operator the Galerkin coarse grid operator shall be equal to the rediscretization of the Laplace
+ * operator on the coarse grid (using 2nd order differences, see "A Multigrid Tutorial", p. 79) in 1d.
+ * In higher dimensions the full stencil is being used, i.e. a 7p stencil on the fine grid results in a 27p stencil on
+ * the coarse grid with constant factors, depending just on h. The factors were calculated using Matlab.
+ */
+
 TEST_CASE("galerkin Laplace rediscretized")
 {
     int m = 8; // GENERATE(2, 4, 8);
