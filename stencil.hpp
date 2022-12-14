@@ -194,6 +194,67 @@ namespace mgcl
         }
 
         /**
+         * @brief Multiplies this stencil with a FixedStencil on the rhs. Resulting stencil is two cells wider
+         * in each direction. The right-hand side stencil must have ghosts equal to (width_a - 1) / 2 at each border.
+         *
+         * @tparam NA Width of this stencil
+         * @tparam NB Width of the other stencil
+         * @param b Other stencil
+         * @param ghc Ghosts of resulting stencil at one border. Defaults to 2.
+         * @throws If dimensions do not match.
+         * @return std::unique_ptr<VaryingStencil<N + 2>> Resulting stencil (two cells wider).
+         */
+        template <int NB>
+        VaryingStencil<(N + NB - 1)> multiply(FixedStencil<NB> &b, int ghc = 2) const
+        {
+            if (getGhostsDim1() != getGhostsDim2() ||
+                getGhostsDim1() != getGhostsDim3())
+                throw "Ghosts of a must be equal in each dimension!";
+
+            int m = dim1;
+            int n = dim2;
+            int o = dim3;
+            int N2 = N >> 1;
+            int NB2 = NB >> 1;
+            int gha = getGhostsDim1();
+
+            // TODO ghosts of c?
+            auto c = VaryingStencil<(N + NB - 1)>(dim1, dim2, dim3, ghc, ghc, ghc);
+            int width_c = c.getDim4();
+
+            // clang-format off
+            for (int x = 0; x < m; x++)
+            for (int y = 0; y < n; y++)
+            for (int z = 0; z < o; z++)
+                for (int a_i = 0; a_i < N; a_i++)
+                for (int a_j = 0; a_j < N; a_j++)
+                for (int a_k = 0; a_k < N; a_k++)
+                    for (int b_i = 0; b_i < NB; b_i++)
+                    for (int b_j = 0; b_j < NB; b_j++)
+                    for (int b_k = 0; b_k < NB; b_k++)
+                    {
+                        int ci = a_i + b_i;
+                        int cj = a_j + b_j;
+                        int ck = a_k + b_k;
+
+                        if (ci >= 0 && ci < width_c &&
+                            cj >= 0 && cj < width_c &&
+                            ck >= 0 && ck < width_c)
+                        {
+                            c[x + ghc][y + ghc][z + ghc][a_i + b_i][a_j + b_j][a_k + b_k] +=
+                                field_6d[x + gha][y + gha][z + gha][a_i][a_j][a_k] *
+                                b[b_i][b_j][b_k];
+                        }
+                    }
+            // clang-format on
+
+            if (ghc > 0)
+                c.updateGhosts();
+
+            return c;
+        }
+
+        /**
          * @brief Multiplies this stencil with another one. Dimensions must match. Resulting stencil is two cells wider
          * in each direction. The right-hand side stencil must have ghosts equal to (width_a - 1) / 2 at each border.
          *
