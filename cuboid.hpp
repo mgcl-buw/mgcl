@@ -17,7 +17,7 @@ namespace mgcl
 {
     class Cuboid
     {
-    private:
+    protected:
         int m;
         int n;
         int o;

@@ -11,14 +11,89 @@
 
 namespace mgcl
 {
+    // forward declarations
+    template <int N>
+    class VaryingStencil;
+
     /**
      * @brief Fixed 3x3x3 stencil (same stencil entries for each grid point).
      */
+    template <int N>
     class FixedStencil : public Cuboid
     {
     public:
-        FixedStencil() : Cuboid(3, 3, 3, 0, 0, 0) {}
+        FixedStencil() : Cuboid(3, 3, 3, 0, 0, 0)
+        {
+            static_assert(N % 2 == 1 || N < 3, "FixedStencil<N> is only defined for odd N >= 3!");
+        }
+
+        /**
+         * @brief Multiplies this stencil with a VaryingStencil on the right-hand side. Resulting stencil is two cells
+         * wider in each direction. The right-hand side stencil must have ghosts equal to (width_a - 1) / 2 at each border.
+         *
+         * @tparam NA Width of this stencil
+         * @tparam NB Width of the other stencil
+         * @param b Other stencil
+         * @param ghc Ghosts of resulting stencil at one border. Defaults to 2.
+         * @throws If dimensions do not match.
+         * @return std::unique_ptr<VaryingStencil<N + 2>> Resulting stencil (two cells wider).
+         */
+        template <int NB>
+        VaryingStencil<(N + NB - 1)> multiply(VaryingStencil<NB> &b, int ghc = 2) const
+        {
+            if (b.getGhostsDim1() != b.getGhostsDim2() ||
+                b.getGhostsDim1() != b.getGhostsDim3())
+                throw "Ghosts of b must be equal in each dimension!";
+
+            if (b.getGhostsDim1() < N >> 1)
+                throw std::string("Ghosts of b be must be >= ").append(std::to_string(N >> 1));
+
+            int N2 = N >> 1;
+            int NB2 = NB >> 1;
+            int ghb = b.getGhostsDim1();
+
+            // TODO ghosts of c?
+            auto c = VaryingStencil<(N + NB - 1)>(b.getDim1(), b.getDim2(), b.getDim3(), ghc, ghc, ghc);
+            int width_c = c.getDim4();
+
+            // clang-format off
+            for (int x = 0; x < b.getDim1(); x++)
+            for (int y = 0; y < b.getDim2(); y++)
+            for (int z = 0; z < b.getDim3(); z++)
+                for (int a_i = 0; a_i < N; a_i++)
+                for (int a_j = 0; a_j < N; a_j++)
+                for (int a_k = 0; a_k < N; a_k++)
+                    for (int b_i = 0; b_i < NB; b_i++)
+                    for (int b_j = 0; b_j < NB; b_j++)
+                    for (int b_k = 0; b_k < NB; b_k++)
+                    {
+                        int gpi = x + a_i - N2 + ghb;
+                        int gpj = y + a_j - N2 + ghb;
+                        int gpk = z + a_k - N2 + ghb;
+
+                        int ci = a_i + b_i;
+                        int cj = a_j + b_j;
+                        int ck = a_k + b_k;
+
+                        if (ci >= 0 && ci < width_c &&
+                            cj >= 0 && cj < width_c &&
+                            ck >= 0 && ck < width_c)
+                        {
+                            c[x + ghc][y + ghc][z + ghc][a_i + b_i][a_j + b_j][a_k + b_k] +=
+                                field_3d[a_i][a_j][a_k] *
+                                b[gpi][gpj][gpk][b_i][b_j][b_k];
+                        }
+                    }
+            // clang-format on
+
+            if (ghc > 0)
+                c.updateGhosts();
+
+            return c;
+        }
     };
+
+    typedef FixedStencil<3> FixedStencil3x3x3;
 
     /**
      * @brief Class for NxNxN varying stencils, i.e. stencil can differ for each grid point.

@@ -1073,6 +1073,64 @@ TEST_CASE("VaryingStencil::multiply")
     }
 }
 
+TEST_CASE("FixedStencil::multiply")
+{
+    int m = GENERATE(2, 3, 4);
+    int n = GENERATE(2, 3, 4);
+    int o = GENERATE(2, 3, 4);
+
+    mgcl::FixedStencil3x3x3 f;
+    f.fillRandom(0, 10);
+
+    // create varying stencil from fixed
+    mgcl::VaryingStencil3x3x3 vf(m, n, o, 0, 0, 0);
+    // clang-format off
+    for (int i = 0; i < vf.getDim1(); i++)
+    for (int j = 0; j < vf.getDim2(); j++)
+    for (int k = 0; k < vf.getDim3(); k++)
+        for (int ii = 0; ii < vf.getDim4(); ii++)
+        for (int jj = 0; jj < vf.getDim5(); jj++)
+        for (int kk = 0; kk < vf.getDim6(); kk++)
+        {
+            vf[i][j][k][ii][jj][kk] = f[ii][jj][kk];
+        }
+    // clang-format on
+
+    // create random rhs varying stencil
+    mgcl::VaryingStencil3x3x3 vr(m, n, o, 1, 1, 1);
+
+    auto fres = f.multiply(vr, 2);
+    auto vres = vf.multiply(vr);
+
+    // Check dimensions
+    REQUIRE(fres.getDim1() == vres.getDim1());
+    REQUIRE(fres.getDim2() == vres.getDim2());
+    REQUIRE(fres.getDim3() == vres.getDim3());
+    REQUIRE(fres.getDim4() == vres.getDim4());
+    REQUIRE(fres.getDim5() == vres.getDim5());
+    REQUIRE(fres.getDim6() == vres.getDim6());
+    REQUIRE(fres.getGhostsDim1() == vres.getGhostsDim1());
+    REQUIRE(fres.getGhostsDim2() == vres.getGhostsDim2());
+    REQUIRE(fres.getGhostsDim3() == vres.getGhostsDim3());
+    REQUIRE(fres.getGhostsDim4() == vres.getGhostsDim4());
+    REQUIRE(fres.getGhostsDim5() == vres.getGhostsDim5());
+    REQUIRE(fres.getGhostsDim6() == vres.getGhostsDim6());
+
+    // check results
+
+    // clang-format off
+    for (int i = 0; i < vf.getDim1(); i++)
+    for (int j = 0; j < vf.getDim2(); j++)
+    for (int k = 0; k < vf.getDim3(); k++)
+        for (int ii = 0; ii < vf.getDim4(); ii++)
+        for (int jj = 0; jj < vf.getDim5(); jj++)
+        for (int kk = 0; kk < vf.getDim6(); kk++)
+        {
+            REQUIRE(fres[i][j][k][ii][jj][kk] == vres[i][j][k][ii][jj][kk]);
+        }
+    // clang-format on
+}
+
 TEST_CASE("VaryingStencil::create3dFullWeightRestriction")
 {
     int m = GENERATE(1, 2, 3);
