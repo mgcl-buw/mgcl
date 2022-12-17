@@ -213,11 +213,18 @@ namespace mgcl
 
         // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
         // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
-        auto s = create3dFullWeightRestrictionStencil(a_h.getDim1(), a_h.getDim2(), a_h.getDim3(), 2, 2, 2);
+        auto sr = create3dFullWeightRestrictionStencil();
+        auto sp = create3dBilinearProlongationStencil();
+        // TODO results not correct yet. Check against Matlab code.
+        // TODO use fixed stencil for fw restriction
 
         // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
         // S * A_h * S and cut out later manually.
-        auto sas = *s * a_h * *s;
+        auto sas = sr->multiply(a_h, 2).multiply(*sp);
+
+        // std::cout << "a_h[1][1][1][1][1][1] = " << a_h[1][1][1][1][1][1] << std::endl;
+        // std::cout << "s[1][1][1][1][1][1] = " << (*s)[1][1][1][1][1][1] << std::endl;
+        // std::cout << "sas[1][1][1][1][1][1] = " << sas[1][1][1][1][1][1] << std::endl;
 
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
         VaryingStencil3x3x3 a_2h(a_h.getDim1() >> 1, a_h.getDim2() >> 1, a_h.getDim3() >> 1, 2, 2, 2);

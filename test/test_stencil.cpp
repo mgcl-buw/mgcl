@@ -732,20 +732,15 @@ TEST_CASE("VaryingStencil::multiply")
                 }
 
         auto c = a.multiply(b);
-        auto cstar = a * b;
 
         // check result against explicitly calculated matrix product
         auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o, false) * mgcl_test::Matrix2d::restrictionFullWeight(m, n, o, false);
         auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(c, false);
-        auto cstar_m2d = mgcl_test::Matrix2d::fromVaryingStencil(cstar, false);
 
         REQUIRE(c_expected.getM() == c_m2d.getM());
         REQUIRE(c_expected.getN() == c_m2d.getN());
-        REQUIRE(c_expected.getM() == cstar_m2d.getM());
-        REQUIRE(c_expected.getN() == cstar_m2d.getN());
 
         CHECK(c_m2d == c_expected);
-        CHECK(cstar_m2d == c_expected);
     }
 
     SECTION("valid N=3, periodic")
@@ -810,20 +805,15 @@ TEST_CASE("VaryingStencil::multiply")
                 }
 
         auto c = a.multiply(b);
-        auto cstar = a * b;
 
         // check result against explicitly calculated matrix product
         auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
         auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(c, true);
-        auto cstar_m2d = mgcl_test::Matrix2d::fromVaryingStencil(cstar, true);
 
         REQUIRE(c_expected.getM() == c_m2d.getM());
         REQUIRE(c_expected.getN() == c_m2d.getN());
-        REQUIRE(c_expected.getM() == cstar_m2d.getM());
-        REQUIRE(c_expected.getN() == cstar_m2d.getN());
 
         CHECK(c_m2d == c_expected);
-        CHECK(cstar_m2d == c_expected);
     }
 
     SECTION("different Ns, random values")
@@ -873,8 +863,8 @@ TEST_CASE("VaryingStencil::multiply")
             auto ma3np = mgcl_test::Matrix2d::fromVaryingStencil(a3, false);
 
             {
-                auto c33p = a3 * b3p;
-                auto c33np = a3 * b3np;
+                auto c33p = a3.multiply(b3p);
+                auto c33np = a3.multiply(b3np);
                 auto c33_expected_p = ma3p * mb3p;
                 auto c33_expected_np = ma3np * mb3np;
                 auto mc33p = mgcl_test::Matrix2d::fromVaryingStencil(c33p, true);
@@ -884,8 +874,8 @@ TEST_CASE("VaryingStencil::multiply")
             }
 
             {
-                auto c35p = a3 * b5p;
-                auto c35np = a3 * b5np;
+                auto c35p = a3.multiply(b5p);
+                auto c35np = a3.multiply(b5np);
                 auto c35_expected_p = ma3p * mb5p;
                 auto c35_expected_np = ma3np * mb5np;
                 auto mc35p = mgcl_test::Matrix2d::fromVaryingStencil(c35p, true);
@@ -895,8 +885,8 @@ TEST_CASE("VaryingStencil::multiply")
             }
 
             {
-                auto c37p = a3 * b7p;
-                auto c37np = a3 * b7np;
+                auto c37p = a3.multiply(b7p);
+                auto c37np = a3.multiply(b7np);
                 auto c37_expected_p = ma3p * mb7p;
                 auto c37_expected_np = ma3np * mb7np;
                 auto mc37p = mgcl_test::Matrix2d::fromVaryingStencil(c37p, true);
@@ -944,8 +934,8 @@ TEST_CASE("VaryingStencil::multiply")
             auto ma5np = mgcl_test::Matrix2d::fromVaryingStencil(a5, false);
 
             {
-                auto c53p = a5 * b3p;
-                auto c53np = a5 * b3np;
+                auto c53p = a5.multiply(b3p);
+                auto c53np = a5.multiply(b3np);
                 auto c53_expected_p = ma5p * mb3p;
                 auto c53_expected_np = ma5np * mb3np;
                 auto mc53p = mgcl_test::Matrix2d::fromVaryingStencil(c53p, true);
@@ -955,8 +945,8 @@ TEST_CASE("VaryingStencil::multiply")
             }
 
             {
-                auto c55p = a5 * b5p;
-                auto c55np = a5 * b5np;
+                auto c55p = a5.multiply(b5p);
+                auto c55np = a5.multiply(b5np);
                 auto c55_expected_p = ma5p * mb5p;
                 auto c55_expected_np = ma5np * mb5np;
                 auto mc55p = mgcl_test::Matrix2d::fromVaryingStencil(c55p, true);
@@ -966,8 +956,8 @@ TEST_CASE("VaryingStencil::multiply")
             }
 
             {
-                auto c57p = a5 * b7p;
-                auto c57np = a5 * b7np;
+                auto c57p = a5.multiply(b7p);
+                auto c57np = a5.multiply(b7np);
                 auto c57_expected_p = ma5p * mb7p;
                 auto c57_expected_np = ma5np * mb7np;
                 auto mc57p = mgcl_test::Matrix2d::fromVaryingStencil(c57p, true);
@@ -1015,8 +1005,8 @@ TEST_CASE("VaryingStencil::multiply")
             auto ma7np = mgcl_test::Matrix2d::fromVaryingStencil(a7, false);
 
             {
-                auto c73p = a7 * b3p;
-                auto c73np = a7 * b3np;
+                auto c73p = a7.multiply(b3p);
+                auto c73np = a7.multiply(b3np);
                 auto c73_expected_p = ma7p * mb3p;
                 auto c73_expected_np = ma7np * mb3np;
                 auto mc73p = mgcl_test::Matrix2d::fromVaryingStencil(c73p, true);
@@ -1027,8 +1017,8 @@ TEST_CASE("VaryingStencil::multiply")
 
             if (m > 3 && n > 3 && o > 3)
             {
-                auto c75p = a7 * b5p;
-                auto c75np = a7 * b5np;
+                auto c75p = a7.multiply(b5p);
+                auto c75np = a7.multiply(b5np);
                 auto c75_expected_p = ma7p * mb5p;
                 auto c75_expected_np = ma7np * mb5np;
                 auto mc75p = mgcl_test::Matrix2d::fromVaryingStencil(c75p, true);
@@ -1038,8 +1028,8 @@ TEST_CASE("VaryingStencil::multiply")
             }
 
             {
-                auto c77p = a7 * b7p;
-                auto c77np = a7 * b7np;
+                auto c77p = a7.multiply(b7p);
+                auto c77np = a7.multiply(b7np);
                 auto c77_expected_p = ma7p * mb7p;
                 auto c77_expected_np = ma7np * mb7np;
                 auto mc77p = mgcl_test::Matrix2d::fromVaryingStencil(c77p, true);
@@ -1067,9 +1057,9 @@ TEST_CASE("VaryingStencil::multiply")
         bool ghostsNotEqual = b.getGhostsDim1() != b.getGhostsDim2() || b.getGhostsDim1() != b.getGhostsDim3();
 
         if (dimsNotEqual || ghostsNotEqual || ghostsNotBigEnough)
-            REQUIRE_THROWS(a * b);
+            REQUIRE_THROWS(a.multiply(b));
         else
-            REQUIRE_NOTHROW(a * b);
+            REQUIRE_NOTHROW(a.multiply(b));
     }
 }
 
@@ -1191,58 +1181,74 @@ TEST_CASE("FixedStencil::multiply")
 
 TEST_CASE("VaryingStencil::create3dFullWeightRestriction")
 {
-    int m = GENERATE(1, 2, 3);
-    int n = GENERATE(1, 2, 3);
-    int o = GENERATE(1, 2, 3);
-    int ghm = GENERATE(1, 2);
-    int ghn = GENERATE(1, 2);
-    int gho = GENERATE(1, 2);
-
-    auto rptr = mgcl::create3dFullWeightRestrictionStencil(m, n, o, ghm, ghn, gho);
+    auto rptr = mgcl::create3dFullWeightRestrictionStencil();
     auto &r = *rptr;
-
-    REQUIRE(r.getDim1() == m);
-    REQUIRE(r.getDim2() == n);
-    REQUIRE(r.getDim3() == o);
 
     double factor = 1.0 / 64.0;
 
-    int mgh = m + 2 * ghm;
-    int ngh = n + 2 * ghn;
-    int ogh = o + 2 * gho;
+    // full-weight restriction, scaled by 64
+    REQUIRE(r[0][0][0] == 1 * factor);
+    REQUIRE(r[0][0][1] == 2 * factor);
+    REQUIRE(r[0][0][2] == 1 * factor);
+    REQUIRE(r[0][1][0] == 2 * factor);
+    REQUIRE(r[0][1][1] == 4 * factor);
+    REQUIRE(r[0][1][2] == 2 * factor);
+    REQUIRE(r[0][2][0] == 1 * factor);
+    REQUIRE(r[0][2][1] == 2 * factor);
+    REQUIRE(r[0][2][2] == 1 * factor);
+    REQUIRE(r[1][0][0] == 2 * factor);
+    REQUIRE(r[1][0][1] == 4 * factor);
+    REQUIRE(r[1][0][2] == 2 * factor);
+    REQUIRE(r[1][1][0] == 4 * factor);
+    REQUIRE(r[1][1][1] == 8 * factor);
+    REQUIRE(r[1][1][2] == 4 * factor);
+    REQUIRE(r[1][2][0] == 2 * factor);
+    REQUIRE(r[1][2][1] == 4 * factor);
+    REQUIRE(r[1][2][2] == 2 * factor);
+    REQUIRE(r[2][0][0] == 1 * factor);
+    REQUIRE(r[2][0][1] == 2 * factor);
+    REQUIRE(r[2][0][2] == 1 * factor);
+    REQUIRE(r[2][1][0] == 2 * factor);
+    REQUIRE(r[2][1][1] == 4 * factor);
+    REQUIRE(r[2][1][2] == 2 * factor);
+    REQUIRE(r[2][2][0] == 1 * factor);
+    REQUIRE(r[2][2][1] == 2 * factor);
+    REQUIRE(r[2][2][2] == 1 * factor);
+}
 
-    for (int i = 0; i < mgh; i++)
-        for (int j = 0; j < ngh; j++)
-            for (int k = 0; k < ogh; k++)
-            {
+TEST_CASE("FixedStencil::create3dBilinearProlongationStencil")
+{
+    auto rptr = mgcl::create3dBilinearProlongationStencil();
+    auto &r = *rptr;
 
-                // full-weight restriction, scaled by 64
-                CHECK(r[i][j][k][0][0][0] == 1 * factor);
-                CHECK(r[i][j][k][0][0][1] == 2 * factor);
-                CHECK(r[i][j][k][0][0][2] == 1 * factor);
-                CHECK(r[i][j][k][0][1][0] == 2 * factor);
-                CHECK(r[i][j][k][0][1][1] == 4 * factor);
-                CHECK(r[i][j][k][0][1][2] == 2 * factor);
-                CHECK(r[i][j][k][0][2][0] == 1 * factor);
-                CHECK(r[i][j][k][0][2][1] == 2 * factor);
-                CHECK(r[i][j][k][0][2][2] == 1 * factor);
-                CHECK(r[i][j][k][1][0][0] == 2 * factor);
-                CHECK(r[i][j][k][1][0][1] == 4 * factor);
-                CHECK(r[i][j][k][1][0][2] == 2 * factor);
-                CHECK(r[i][j][k][1][1][0] == 4 * factor);
-                CHECK(r[i][j][k][1][1][1] == 8 * factor);
-                CHECK(r[i][j][k][1][1][2] == 4 * factor);
-                CHECK(r[i][j][k][1][2][0] == 2 * factor);
-                CHECK(r[i][j][k][1][2][1] == 4 * factor);
-                CHECK(r[i][j][k][1][2][2] == 2 * factor);
-                CHECK(r[i][j][k][2][0][0] == 1 * factor);
-                CHECK(r[i][j][k][2][0][1] == 2 * factor);
-                CHECK(r[i][j][k][2][0][2] == 1 * factor);
-                CHECK(r[i][j][k][2][1][0] == 2 * factor);
-                CHECK(r[i][j][k][2][1][1] == 4 * factor);
-                CHECK(r[i][j][k][2][1][2] == 2 * factor);
-                CHECK(r[i][j][k][2][2][0] == 1 * factor);
-                CHECK(r[i][j][k][2][2][1] == 2 * factor);
-                CHECK(r[i][j][k][2][2][2] == 1 * factor);
-            }
+    double factor = 1.0 / 8.0;
+
+    // full-weight restriction, scaled by 64
+    REQUIRE(r[0][0][0] == 1 * factor);
+    REQUIRE(r[0][0][1] == 2 * factor);
+    REQUIRE(r[0][0][2] == 1 * factor);
+    REQUIRE(r[0][1][0] == 2 * factor);
+    REQUIRE(r[0][1][1] == 4 * factor);
+    REQUIRE(r[0][1][2] == 2 * factor);
+    REQUIRE(r[0][2][0] == 1 * factor);
+    REQUIRE(r[0][2][1] == 2 * factor);
+    REQUIRE(r[0][2][2] == 1 * factor);
+    REQUIRE(r[1][0][0] == 2 * factor);
+    REQUIRE(r[1][0][1] == 4 * factor);
+    REQUIRE(r[1][0][2] == 2 * factor);
+    REQUIRE(r[1][1][0] == 4 * factor);
+    REQUIRE(r[1][1][1] == 8 * factor);
+    REQUIRE(r[1][1][2] == 4 * factor);
+    REQUIRE(r[1][2][0] == 2 * factor);
+    REQUIRE(r[1][2][1] == 4 * factor);
+    REQUIRE(r[1][2][2] == 2 * factor);
+    REQUIRE(r[2][0][0] == 1 * factor);
+    REQUIRE(r[2][0][1] == 2 * factor);
+    REQUIRE(r[2][0][2] == 1 * factor);
+    REQUIRE(r[2][1][0] == 2 * factor);
+    REQUIRE(r[2][1][1] == 4 * factor);
+    REQUIRE(r[2][1][2] == 2 * factor);
+    REQUIRE(r[2][2][0] == 1 * factor);
+    REQUIRE(r[2][2][1] == 2 * factor);
+    REQUIRE(r[2][2][2] == 1 * factor);
 }

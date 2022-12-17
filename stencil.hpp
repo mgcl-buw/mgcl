@@ -329,26 +329,6 @@ namespace mgcl
             return c;
         }
 
-        // Overload with lvalue-reference to enable chaining, i.e. a.multiply(b.multiply(c))
-        template <int NB>
-        VaryingStencil<(N + NB - 1)> multiply(VaryingStencil<NB> &&b) const
-        {
-            return multiply(b);
-        }
-
-        // Just an alias for multiply
-        template <int NB>
-        VaryingStencil<(N + NB - 1)> operator*(VaryingStencil<NB> &&b) const
-        {
-            return multiply(b);
-        }
-
-        template <int NB>
-        VaryingStencil<(N + NB - 1)> operator*(VaryingStencil<NB> &b) const
-        {
-            return multiply(b);
-        }
-
         /**
          * @brief Multiplies this stencil with a constant factor.
          *
@@ -376,61 +356,92 @@ namespace mgcl
     typedef VaryingStencil<7> VaryingStencil7x7x7;
 
     /**
-     * @brief Creates and returns a 3d full-weight restriction stencil for a grid of size mxnxo.
+     * @brief Creates and returns a fixed 3d full-weight restriction stencil (27p).
      *
-     * @param m real grid size dim 1
-     * @param n real grid size dim 2
-     * @param o real grid size dim 3
-     * @param ghm ghosts in dim 1
-     * @param ghn ghosts in dim 2
-     * @param gho ghosts in dim 3
-     * @return std::unique_ptr<VaryingStencil<3>>
+     * @return std::unique_ptr<FixedStencil3x3x3>
      */
-    static std::unique_ptr<VaryingStencil3x3x3> create3dFullWeightRestrictionStencil(int m, int n, int o, int ghm, int ghn, int gho)
+    static std::unique_ptr<FixedStencil3x3x3> create3dFullWeightRestrictionStencil()
     {
-        auto bptr = std::make_unique<VaryingStencil3x3x3>(m, n, o, ghm, ghn, gho);
+        auto bptr = std::make_unique<FixedStencil3x3x3>();
         auto &b = *bptr;
-        double factor1 = 1.0 / 64.0;
-        double factor2 = 2.0 / 64.0;
-        double factor4 = 4.0 / 64.0;
-        double factor8 = 8.0 / 64.0;
+        double factor1 = 1.0 / 64.0; // corner
+        double factor2 = 2.0 / 64.0; // diagonally off
+        double factor4 = 4.0 / 64.0; // adjacent
+        double factor8 = 8.0 / 64.0; // center
 
-        int mgh = m + 2 * ghm;
-        int ngh = n + 2 * ghn;
-        int ogh = o + 2 * gho;
+        b[0][0][0] = factor1;
+        b[0][0][1] = factor2;
+        b[0][0][2] = factor1;
+        b[0][1][0] = factor2;
+        b[0][1][1] = factor4;
+        b[0][1][2] = factor2;
+        b[0][2][0] = factor1;
+        b[0][2][1] = factor2;
+        b[0][2][2] = factor1;
+        b[1][0][0] = factor2;
+        b[1][0][1] = factor4;
+        b[1][0][2] = factor2;
+        b[1][1][0] = factor4;
+        b[1][1][1] = factor8;
+        b[1][1][2] = factor4;
+        b[1][2][0] = factor2;
+        b[1][2][1] = factor4;
+        b[1][2][2] = factor2;
+        b[2][0][0] = factor1;
+        b[2][0][1] = factor2;
+        b[2][0][2] = factor1;
+        b[2][1][0] = factor2;
+        b[2][1][1] = factor4;
+        b[2][1][2] = factor2;
+        b[2][2][0] = factor1;
+        b[2][2][1] = factor2;
+        b[2][2][2] = factor1;
 
-        for (int i = 0; i < mgh; i++)
-            for (int j = 0; j < ngh; j++)
-                for (int k = 0; k < ogh; k++)
-                {
-                    b[i][j][k][0][0][0] = factor1;
-                    b[i][j][k][0][0][1] = factor2;
-                    b[i][j][k][0][0][2] = factor1;
-                    b[i][j][k][0][1][0] = factor2;
-                    b[i][j][k][0][1][1] = factor4;
-                    b[i][j][k][0][1][2] = factor2;
-                    b[i][j][k][0][2][0] = factor1;
-                    b[i][j][k][0][2][1] = factor2;
-                    b[i][j][k][0][2][2] = factor1;
-                    b[i][j][k][1][0][0] = factor2;
-                    b[i][j][k][1][0][1] = factor4;
-                    b[i][j][k][1][0][2] = factor2;
-                    b[i][j][k][1][1][0] = factor4;
-                    b[i][j][k][1][1][1] = factor8;
-                    b[i][j][k][1][1][2] = factor4;
-                    b[i][j][k][1][2][0] = factor2;
-                    b[i][j][k][1][2][1] = factor4;
-                    b[i][j][k][1][2][2] = factor2;
-                    b[i][j][k][2][0][0] = factor1;
-                    b[i][j][k][2][0][1] = factor2;
-                    b[i][j][k][2][0][2] = factor1;
-                    b[i][j][k][2][1][0] = factor2;
-                    b[i][j][k][2][1][1] = factor4;
-                    b[i][j][k][2][1][2] = factor2;
-                    b[i][j][k][2][2][0] = factor1;
-                    b[i][j][k][2][2][1] = factor2;
-                    b[i][j][k][2][2][2] = factor1;
-                }
+        return bptr;
+    }
+
+    /**
+     * @brief Creates and returns a fixed 3d bilinear prolongation stencil (27p).
+     *
+     * @return std::unique_ptr<FixedStencil3x3x3>
+     */
+    static std::unique_ptr<FixedStencil3x3x3> create3dBilinearProlongationStencil()
+    {
+        // TODO implement
+        auto bptr = std::make_unique<FixedStencil3x3x3>();
+        auto &b = *bptr;
+        double factor1 = 1.0 / 8.0; // corner
+        double factor2 = 1.0 / 4.0; // diagonally off
+        double factor4 = 1.0 / 2.0; // adjacent
+        double factor8 = 1.0;       // center
+
+        b[0][0][0] = factor1;
+        b[0][0][1] = factor2;
+        b[0][0][2] = factor1;
+        b[0][1][0] = factor2;
+        b[0][1][1] = factor4;
+        b[0][1][2] = factor2;
+        b[0][2][0] = factor1;
+        b[0][2][1] = factor2;
+        b[0][2][2] = factor1;
+        b[1][0][0] = factor2;
+        b[1][0][1] = factor4;
+        b[1][0][2] = factor2;
+        b[1][1][0] = factor4;
+        b[1][1][1] = factor8;
+        b[1][1][2] = factor4;
+        b[1][2][0] = factor2;
+        b[1][2][1] = factor4;
+        b[1][2][2] = factor2;
+        b[2][0][0] = factor1;
+        b[2][0][1] = factor2;
+        b[2][0][2] = factor1;
+        b[2][1][0] = factor2;
+        b[2][1][1] = factor4;
+        b[2][1][2] = factor2;
+        b[2][2][0] = factor1;
+        b[2][2][1] = factor2;
+        b[2][2][2] = factor1;
 
         return bptr;
     }
