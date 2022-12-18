@@ -1181,8 +1181,7 @@ TEST_CASE("FixedStencil::multiply")
 
 TEST_CASE("VaryingStencil::create3dFullWeightRestriction")
 {
-    auto rptr = mgcl::create3dFullWeightRestrictionStencil();
-    auto &r = *rptr;
+    auto r = mgcl::create3dFullWeightRestrictionStencil();
 
     double factor = 1.0 / 64.0;
 
@@ -1218,8 +1217,7 @@ TEST_CASE("VaryingStencil::create3dFullWeightRestriction")
 
 TEST_CASE("FixedStencil::create3dBilinearProlongationStencil")
 {
-    auto rptr = mgcl::create3dBilinearProlongationStencil();
-    auto &r = *rptr;
+    auto r = mgcl::create3dBilinearProlongationStencil();
 
     double factor = 1.0 / 8.0;
 

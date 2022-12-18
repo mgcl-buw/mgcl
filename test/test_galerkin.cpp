@@ -177,11 +177,10 @@ TEST_CASE("galerkin Laplace SA == AS")
                 a[i][j][k][2][1][1] = h2inv * 1.0;
             }
 
-    auto sptr = mgcl::create3dFullWeightRestrictionStencil(m, n, o, 2, 2, 2);
-    auto &s = *sptr;
+    auto s = mgcl::create3dFullWeightRestrictionStencil();
 
-    auto as = a * s;
-    auto sa = s * a;
+    auto as = a.multiply(s);
+    auto sa = s.multiply(a);
 
     for (int i = 0; i < m; i++)
         for (int j = 0; j < n; j++)

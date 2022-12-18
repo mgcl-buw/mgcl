@@ -220,7 +220,7 @@ namespace mgcl
 
         // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
         // S * A_h * S and cut out later manually.
-        auto sas = sr->multiply(a_h, 2).multiply(*sp);
+        auto sas = sr.multiply(a_h, 2).multiply(sp);
 
         // std::cout << "a_h[1][1][1][1][1][1] = " << a_h[1][1][1][1][1][1] << std::endl;
         // std::cout << "s[1][1][1][1][1][1] = " << (*s)[1][1][1][1][1][1] << std::endl;

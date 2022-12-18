@@ -360,10 +360,9 @@ namespace mgcl
      *
      * @return std::unique_ptr<FixedStencil3x3x3>
      */
-    static std::unique_ptr<FixedStencil3x3x3> create3dFullWeightRestrictionStencil()
+    static FixedStencil3x3x3 create3dFullWeightRestrictionStencil()
     {
-        auto bptr = std::make_unique<FixedStencil3x3x3>();
-        auto &b = *bptr;
+        FixedStencil3x3x3 b;
         double factor1 = 1.0 / 64.0; // corner
         double factor2 = 2.0 / 64.0; // diagonally off
         double factor4 = 4.0 / 64.0; // adjacent
@@ -397,7 +396,7 @@ namespace mgcl
         b[2][2][1] = factor2;
         b[2][2][2] = factor1;
 
-        return bptr;
+        return b;
     }
 
     /**
@@ -405,11 +404,9 @@ namespace mgcl
      *
      * @return std::unique_ptr<FixedStencil3x3x3>
      */
-    static std::unique_ptr<FixedStencil3x3x3> create3dBilinearProlongationStencil()
+    static FixedStencil3x3x3 create3dBilinearProlongationStencil()
     {
-        // TODO implement
-        auto bptr = std::make_unique<FixedStencil3x3x3>();
-        auto &b = *bptr;
+        FixedStencil3x3x3 b;
         double factor1 = 1.0 / 8.0; // corner
         double factor2 = 1.0 / 4.0; // diagonally off
         double factor4 = 1.0 / 2.0; // adjacent
@@ -443,7 +440,7 @@ namespace mgcl
         b[2][2][1] = factor2;
         b[2][2][2] = factor1;
 
-        return bptr;
+        return b;
     }
 }
 
