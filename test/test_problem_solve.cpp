@@ -22,7 +22,7 @@ double calculateErrorNorm(double h, mgcl::Cuboid &error);
  */
 TEST_CASE("Problem solving: periodic 4th order")
 {
-    int N = 32;
+    int N = 16;
     double h = 1.0 / (double)N;
 
     // Problem parameters
@@ -31,6 +31,7 @@ TEST_CASE("Problem solving: periodic 4th order")
     int nu2 = 2;
     double omega = 0.8;
     int maxIterVCycles = 10;
+    int maxlevel = 1;
 
     auto v = std::make_shared<mgcl::Cuboid>(N, N, N);
     auto f = std::make_shared<mgcl::Cuboid>(N, N, N);
@@ -80,6 +81,7 @@ TEST_CASE("Problem solving: periodic 4th order")
     p.setNu1(nu1);
     p.setNu2(nu2);
     p.setOmega(omega);
+    p.setMaxlevel(maxlevel);
 
     SECTION("Sequential")
     {
@@ -245,8 +247,8 @@ TEST_CASE("Problem solving: periodic 4th order")
             zoff[6] = -1;
 
             // run with a tolerance that will never be reached thus all vcycle iters are executed
-            mg(v->getData(), f->getData(), maxIterVCycles, tol, N, N, N, 0, N - 1, 0, N - 1, 0, N - 1,
-               1, nu1, nu2, omega, size, values, xoff, yoff, zoff, mpi_comm_cart, 1);
+            mg_with_maxlv(v->getData(), f->getData(), maxIterVCycles, tol, N, N, N, 0, N - 1, 0, N - 1, 0, N - 1,
+                          1, nu1, nu2, omega, size, values, xoff, yoff, zoff, mpi_comm_cart, 1, maxlevel + 1);
 
             // check if solution is good
             auto err = calculateError(solution, *v);

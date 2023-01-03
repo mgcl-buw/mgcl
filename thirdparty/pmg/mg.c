@@ -668,12 +668,12 @@ double mg_vcycle(mg_data *data, int level, int maxlevel)
     return (res);
 }
 
-double mg(double ***u, double ***f, int maxiter, double tol, int m, int n, int o,
-          int xstart, int xend, int ystart, int yend, int zstart, int zend,
-          int p, int nu1, int nu2, double omega, int size, double *values,
-          int *xoff, int *yoff, int *zoff, MPI_Comm cart_comm, int ignoreTol)
+// runs mg with maxlv which is 1-based, < 1 means ignore its value.
+double mg_with_maxlv(double ***u, double ***f, int maxiter, double tol, int m, int n, int o,
+                     int xstart, int xend, int ystart, int yend, int zstart, int zend,
+                     int p, int nu1, int nu2, double omega, int size, double *values,
+                     int *xoff, int *yoff, int *zoff, MPI_Comm cart_comm, int ignoreTol, int maxlv)
 {
-
     /* MPI variables */
     int myid;
 
@@ -703,11 +703,23 @@ double mg(double ***u, double ***f, int maxiter, double tol, int m, int n, int o
     n_l = yend - ystart + 3;
     o_l = zend - zstart + 3;
 
-    /* Calculating number of levels and checking input size */
+    /* Calculating number of levels and checking input size. Also set to specified maxlv if one was specified. */
     if (p)
     {
         maxlevel = (int)floor(log((double)(m + 1)) / log(2.0)) + 1;
-        if (m != (int)pow(2.0, (double)(maxlevel - 1)))
+
+        if (maxlv > maxlevel)
+        {
+            printf("maxlv = %d > %d = maxlevel\n", maxlv, maxlevel);
+            exit(123);
+        }
+
+        if (maxlv > 0 && maxlv < maxlevel)
+        {
+            printf("setting maxlevel to %d\n", maxlv);
+            maxlevel = maxlv;
+        }
+        else if (m != (int)pow(2.0, (double)(maxlevel - 1)))
         {
             printf("m = %d != %d = 2^%d\n", m, (int)pow(2.0, (double)(maxlevel - 1)), maxlevel - 1);
             exit(123);
@@ -716,7 +728,19 @@ double mg(double ***u, double ***f, int maxiter, double tol, int m, int n, int o
     else
     {
         maxlevel = (int)floor(log((double)(m)) / log(2.0)) + 1;
-        if (m != (int)pow(2.0, (double)(maxlevel)) - 1)
+
+        if (maxlv > maxlevel)
+        {
+            printf("maxlv = %d > %d = maxlevel\n", maxlv, maxlevel);
+            exit(123);
+        }
+
+        if (maxlv > 0 && maxlv < maxlevel)
+        {
+            printf("setting maxlevel to %d\n", maxlv);
+            maxlevel = maxlv;
+        }
+        else if (m != (int)pow(2.0, (double)(maxlevel)) - 1)
         {
             printf("m = %d != %d = 2^maxlevel - 1\n", m, (int)pow(2.0, (double)(maxlevel)) - 1);
             exit(123);
@@ -773,4 +797,16 @@ double mg(double ***u, double ***f, int maxiter, double tol, int m, int n, int o
     mg_free(data, maxlevel);
 
     return (res);
+}
+
+// runs mg. maxlv is 1-based, < 1 means ignore its value.
+double mg(double ***u, double ***f, int maxiter, double tol, int m, int n, int o,
+          int xstart, int xend, int ystart, int yend, int zstart, int zend,
+          int p, int nu1, int nu2, double omega, int size, double *values,
+          int *xoff, int *yoff, int *zoff, MPI_Comm cart_comm, int ignoreTol)
+{
+    return mg_with_maxlv(u, f, maxiter, tol, m, n, o,
+                         xstart, xend, ystart, yend, zstart, zend,
+                         p, nu1, nu2, omega, size, values,
+                         xoff, yoff, zoff, cart_comm, ignoreTol, 0);
 }
