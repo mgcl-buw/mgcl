@@ -6,8 +6,10 @@
 #include <iomanip>
 #include <iostream>
 
+#include "../benchmarks/pmg_utility.hpp"
 #include "../cuboid.hpp"
 #include "../problem.hpp"
+#include "../thirdparty/pmg/mg.h"
 #include "test_utility.hpp"
 
 std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid &solution, mgcl::Cuboid &approximation);
@@ -22,6 +24,13 @@ TEST_CASE("Problem solving: periodic 4th order")
 {
     int N = 32;
     double h = 1.0 / (double)N;
+
+    // Problem parameters
+    double tol = 1e-20;
+    int nu1 = 2;
+    int nu2 = 2;
+    double omega = 0.8;
+    int maxIterVCycles = 10;
 
     auto v = std::make_shared<mgcl::Cuboid>(N, N, N);
     auto f = std::make_shared<mgcl::Cuboid>(N, N, N);
@@ -66,11 +75,11 @@ TEST_CASE("Problem solving: periodic 4th order")
             }
 
     mgcl::Problem p(N, N, N, f, v);
-    p.setMaxiterVcycles(10);
-    p.setTol(1e-14);
-    p.setNu1(2);
-    p.setNu2(2);
-    p.setOmega(0.8);
+    p.setMaxiterVcycles(maxIterVCycles);
+    p.setTol(tol);
+    p.setNu1(nu1);
+    p.setNu2(nu2);
+    p.setOmega(omega);
 
     SECTION("Sequential")
     {
@@ -89,8 +98,9 @@ TEST_CASE("Problem solving: periodic 4th order")
         // (*v).dumpToFile("out_v.txt");
 
         std::cout
-            << std::scientific << std::setprecision(17) << "||e||_2 = " << errNorm << std::endl
-            << std::scientific << std::setprecision(17) << "e_max = " << errMax << std::endl;
+            << "seq" << std::endl
+            << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+            << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
         CHECK(errNorm < 1e-2);
         CHECK(errMax < 1e-2);
@@ -141,8 +151,9 @@ TEST_CASE("Problem solving: periodic 4th order")
         // (*v).dumpToFile("out_v.txt");
 
         std::cout
-            << std::scientific << std::setprecision(17) << "||e||_2 = " << errNorm << std::endl
-            << std::scientific << std::setprecision(17) << "e_max = " << errMax << std::endl;
+            << "seq galerkin" << std::endl
+            << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+            << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
         CHECK(errNorm < 1e-2);
         CHECK(errMax < 1e-2);
@@ -170,8 +181,10 @@ TEST_CASE("Problem solving: periodic 4th order")
         auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
         auto errMax = calculateMaxError(*err);
 
-        std::cout << std::scientific << "||e||_2 = " << errNorm << std::endl
-                  << std::scientific << "e_max = " << errMax << std::endl;
+        std::cout
+            << "OpenCL" << std::endl
+            << std::scientific << "  ||e||_2 = " << errNorm << std::endl
+            << std::scientific << "  e_max = " << errMax << std::endl;
 
         CHECK(errNorm < 1e-2);
         CHECK(errMax < 1e-2);
@@ -184,6 +197,80 @@ TEST_CASE("Problem solving: periodic 4th order")
             CHECK(fabs(errNorm - 3.93115528889612358e-03) < 1e-14);
             CHECK(fabs(errMax - 3.95723982871536324e-03) < 1e-14);
         }
+    }
+
+    SECTION("pmg")
+    {
+        // pmg
+
+        // setup MPI
+        MPI_Comm mpi_comm_cart = *init_mpi_for_pmg();
+
+        if (mpi_comm_cart == MPI_COMM_NULL)
+        {
+            std::cout << "mpi_comm_cart is null! Cannot test against pmg." << std::endl;
+        }
+        else
+        {
+            auto v = std::make_shared<mgcl::Cuboid>(N, N, N);
+
+            // init 7-point stencil for pmg's jacobi
+            int size = 7;
+            double h2 = 1.0 / (double)(N * N);
+            double *values = new double[size]();
+            int *xoff = new int[size]();
+            int *yoff = new int[size]();
+            int *zoff = new int[size]();
+
+            values[0] = 6.0 / h2;
+            for (int i = 1; i <= 6; i++)
+                values[i] = (-1.0) / h2;
+
+            xoff[0] = 0;
+            xoff[1] = 1;
+            xoff[2] = -1;
+            for (int i = 3; i <= 6; i++)
+                xoff[i] = 0;
+
+            for (int i = 0; i <= 2; i++)
+                yoff[i] = 0;
+            yoff[3] = 1;
+            yoff[4] = -1;
+            yoff[5] = 0;
+            yoff[6] = 0;
+
+            for (int i = 0; i <= 4; i++)
+                zoff[i] = 0;
+            zoff[5] = 1;
+            zoff[6] = -1;
+
+            // run with a tolerance that will never be reached thus all vcycle iters are executed
+            mg(v->getData(), f->getData(), maxIterVCycles, tol, N, N, N, 0, N - 1, 0, N - 1, 0, N - 1,
+               1, nu1, nu2, omega, size, values, xoff, yoff, zoff, mpi_comm_cart, 1);
+
+            // check if solution is good
+            auto err = calculateError(solution, *v);
+            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = calculateMaxError(*err);
+
+            std::cout
+                << "pmg" << std::endl
+                << std::scientific << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << "  e_max = " << errMax << std::endl;
+
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
+
+            // check if error is equal to old mgcl implementation (problem params must match)
+            if (p.getMaxiterVcycles() == 10 && N == 32 && p.getTol() == 1e-14 &&
+                p.getNu1() == 2 && p.getNu2() == 2 && p.getOmega() == 0.8 &&
+                p.getDeviceName() == "Quadro" && p.getDeviceType() == CL_DEVICE_TYPE_GPU)
+            {
+                CHECK(fabs(errNorm - 3.93115528889612358e-03) < 1e-14);
+                CHECK(fabs(errMax - 3.95723982871536324e-03) < 1e-14);
+            }
+        }
+        MPI_Finalize();
     }
 }
 

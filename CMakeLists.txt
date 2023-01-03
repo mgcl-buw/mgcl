@@ -68,6 +68,40 @@ add_custom_target(copy_kernels DEPENDS "${CMAKE_BINARY_DIR}/mgcl.cl")
 add_dependencies(mgcl copy_kernels)
 
 # ==========================
+# pmg configuration for comparison in benchmarks
+set (SOURCES_PMG
+thirdparty/pmg/cuboid.c
+thirdparty/pmg/cuboid.h
+thirdparty/pmg/galerkin.c
+thirdparty/pmg/galerkin.h
+thirdparty/pmg/ghosts.c
+thirdparty/pmg/ghosts.h
+thirdparty/pmg/interpolate.c
+thirdparty/pmg/interpolate.h
+thirdparty/pmg/jacobi.c
+thirdparty/pmg/jacobi.h
+thirdparty/pmg/lueqf.c
+thirdparty/pmg/lueqf.h
+thirdparty/pmg/mg.c
+thirdparty/pmg/mg.h
+thirdparty/pmg/rectangle.c
+thirdparty/pmg/rectangle.h
+thirdparty/pmg/restrict.c
+thirdparty/pmg/restrict.h
+thirdparty/pmg/stencil.c
+thirdparty/pmg/stencil.h
+)
+
+add_library(pmg ${SOURCES_PMG})
+
+# maybe need to run cmake with
+# cmake -DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/openmpi
+# in order to find MPI libraries
+find_package(MPI)
+set(MPI_CXX_SKIP_MPICXX TRUE)
+target_link_libraries(pmg PRIVATE MPI::MPI_C)
+
+# ==========================
 Include(FetchContent)
 
 FetchContent_Declare(
@@ -107,40 +141,7 @@ test/test_results.cpp
 add_executable(tests ${SOURCES_TEST})
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(tests PRIVATE mgcl)
-
-# ==========================
-# pmg configuration for comparison in benchmarks
-set (SOURCES_PMG
-thirdparty/pmg/cuboid.c
-thirdparty/pmg/cuboid.h
-thirdparty/pmg/galerkin.c
-thirdparty/pmg/galerkin.h
-thirdparty/pmg/ghosts.c
-thirdparty/pmg/ghosts.h
-thirdparty/pmg/interpolate.c
-thirdparty/pmg/interpolate.h
-thirdparty/pmg/jacobi.c
-thirdparty/pmg/jacobi.h
-thirdparty/pmg/lueqf.c
-thirdparty/pmg/lueqf.h
-thirdparty/pmg/mg.c
-thirdparty/pmg/mg.h
-thirdparty/pmg/rectangle.c
-thirdparty/pmg/rectangle.h
-thirdparty/pmg/restrict.c
-thirdparty/pmg/restrict.h
-thirdparty/pmg/stencil.c
-thirdparty/pmg/stencil.h
-)
-
-add_library(pmg ${SOURCES_PMG})
-
-# maybe need to run cmake with
-# cmake -DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/openmpi
-# in order to find MPI libraries
-find_package(MPI)
-set(MPI_CXX_SKIP_MPICXX TRUE)
-target_link_libraries(pmg PRIVATE MPI::MPI_C)
+target_link_libraries(tests PRIVATE pmg)
 
 # ==========================
 # old mgcl c configuration for comparison in benchmarks
