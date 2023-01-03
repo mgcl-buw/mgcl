@@ -625,10 +625,13 @@ TEST_CASE("Matrix2d::restrictionFullWeight")
 
     SECTION("periodic")
     {
-        auto a = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
+        int m2 = 2 * m;
+        int n2 = 2 * n;
+        int o2 = 2 * o;
+        auto a = mgcl_test::Matrix2d::restrictionFullWeight(m2, n2, o2);
 
         REQUIRE(a.getM() == m * n * o);
-        REQUIRE(a.getN() == m * n * o);
+        REQUIRE(a.getN() == m2 * n2 * o2);
 
         double factor1 = 8.0 / 64.0;
         double factor2 = 4.0 / 64.0;
@@ -640,7 +643,7 @@ TEST_CASE("Matrix2d::restrictionFullWeight")
         // 1: Amount of entries adjacent to center (should be 0 to 4)
         // 2: Amount of entries diagonally adjacent to center (should be 0 to 14)
         // 3: Amount of outer corner entries (should be 0 to 8)
-        std::tuple<int, int, int, int> mappingsPerEntry[m * n * o][m * n * o];
+        std::tuple<int, int, int, int> mappingsPerEntry[m * n * o][m2 * n2 * o2];
 
         // init with 0
         for (int i = 0; i < m * n * o; i++)
@@ -653,55 +656,58 @@ TEST_CASE("Matrix2d::restrictionFullWeight")
             }
 
         // clang-format off
-        for (int i = 0; i < m; i++)
-        for (int j = 0; j < n; j++)
-        for (int k = 0; k < o; k++)
+        for (int i = 0, i2 = 1; i < m; i++, i2 += 2)
+        for (int j = 0, j2 = 1; j < n; j++, j2 += 2)
+        for (int k = 0, k2 = 1; k < o; k++, k2 += 2)
             for (int ii = 0; ii < 3; ii++)
             for (int jj = 0; jj < 3; jj++)
             for (int kk = 0; kk < 3; kk++)
             {
                 // taken from fromVaryingStencil
-                int gpi = i + (ii - 1); // grid point index mapped to by stencil entry in x-direction
-                int gpj = j + (jj - 1); // grid point index mapped to by stencil entry in y-direction
-                int gpk = k + (kk - 1); // grid point index mapped to by stencil entry in z-direction
+                int gpi = i2 + (ii - 1); // grid point index mapped to by stencil entry in x-direction
+                int gpj = j2 + (jj - 1); // grid point index mapped to by stencil entry in y-direction
+                int gpk = k2 + (kk - 1); // grid point index mapped to by stencil entry in z-direction
 
                 // wrap around for periodic bc
-                gpi = gpi % m;
-                gpj = gpj % n;
-                gpk = gpk % o;
+                gpi = gpi % m2;
+                gpj = gpj % n2;
+                gpk = gpk % o2;
 
                 // shift mod result into positive range
                 if (gpi < 0)
-                    gpi += m;
+                    gpi += m2;
 
                 if (gpj < 0)
-                    gpj += n;
+                    gpj += n2;
 
                 if (gpk < 0)
-                    gpk += o;
+                    gpk += o2;
+
+                int row = i * n * o + j * o + k;
+                int col = gpi * n2 * o2 + gpj * o2 + gpk;
 
                 // center of stencil
                 if (ii == 1 && jj == 1 && kk == 1)
-                    std::get<0>(mappingsPerEntry[i * n * o + j * o + k][gpi * n * o + gpj * o + gpk])++;
+                    std::get<0>(mappingsPerEntry[row][col])++;
                 // adjacent to center
                 else if (ii == 1 && jj == 1 && kk != 1 ||
                         ii == 1 && jj != 1 && kk == 1 ||
                         ii != 1 && jj == 1 && kk == 1)
-                    std::get<1>(mappingsPerEntry[i * n * o + j * o + k][gpi * n * o + gpj * o + gpk])++;
+                    std::get<1>(mappingsPerEntry[row][col])++;
                 // diagonally adjacent to center
                 else if (ii == 1 && jj != 1 && kk != 1 ||
                         ii != 1 && jj != 1 && kk == 1 ||
                         ii != 1 && jj == 1 && kk != 1)
-                    std::get<2>(mappingsPerEntry[i * n * o + j * o + k][gpi * n * o + gpj * o + gpk])++;
+                    std::get<2>(mappingsPerEntry[row][col])++;
                 // corner of stencil
                 else if (ii != 1 && jj != 1 && kk != 1)
-                    std::get<3>(mappingsPerEntry[i * n * o + j * o + k][gpi * n * o + gpj * o + gpk])++;
+                    std::get<3>(mappingsPerEntry[row][col])++;
             }
         // clang-format on
 
         // Now check matrix entries, which should be sums of the mappings
         for (int i = 0; i < m * n * o; i++)
-            for (int j = 0; j < m * n * o; j++)
+            for (int j = 0; j < m2 * n2 * o2; j++)
             {
                 double sum = std::get<0>(mappingsPerEntry[i][j]) * factor1 +
                              std::get<1>(mappingsPerEntry[i][j]) * factor2 +
