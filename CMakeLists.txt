@@ -113,11 +113,11 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
+# Test binary for unit testing mgcl
 # These tests can use the Catch2-provided main
 set(SOURCES_TEST 
 test/test_cuboid.cpp
 test/test_problem_conf.cpp
-test/test_problem_solve.cpp
 test/test_opencl_helper.cpp
 test/test_utility.hpp
 test/test_utility.cpp
@@ -141,7 +141,23 @@ test/test_results.cpp
 add_executable(tests ${SOURCES_TEST})
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(tests PRIVATE mgcl)
-target_link_libraries(tests PRIVATE pmg)
+
+# Test binary for solving problems
+# These tests can use the Catch2-provided main
+set(SOURCES_TEST_SOLVING
+test/test_problem_solve.cpp
+test/test_utility.hpp
+test/test_utility.cpp
+test/matrix2d.hpp
+test/matrix2d.cpp
+test/test_results.hpp
+test/test_results.cpp
+)
+
+add_executable(tests_solving ${SOURCES_TEST_SOLVING})
+target_link_libraries(tests_solving PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(tests_solving PRIVATE mgcl)
+target_link_libraries(tests_solving PRIVATE pmg)
 
 # ==========================
 # old mgcl c configuration for comparison in benchmarks
