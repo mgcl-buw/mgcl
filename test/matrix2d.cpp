@@ -305,7 +305,7 @@ namespace mgcl_test
     }
 
     /**
-     * @brief Generates full-weight restriction matrix.
+     * @brief Generates 3d full-weight restriction matrix.
      *
      * @param m
      * @param n
@@ -329,7 +329,20 @@ namespace mgcl_test
             Dzz[o - 1][0] += 0.25;
         }
 
-        return Dxx.kronecker(Dyy.kronecker(Dzz));
+        return cuttingMatrix3d(m / 2, n / 2, o / 2) * Dxx.kronecker(Dyy.kronecker(Dzz));
+    }
+
+    /**
+     * @brief Generates 3d bilinear prolongation matrix.
+     *
+     * @param m
+     * @param n
+     * @param o
+     * @return Matrix2d
+     */
+    Matrix2d Matrix2d::prolongationBilinear(int m, int n, int o, bool periodic)
+    {
+        return 8 * restrictionFullWeight(m, n, o, periodic).transposed();
     }
 
     /**

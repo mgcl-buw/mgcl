@@ -36,15 +36,12 @@ TEST_CASE("galerkin Laplace vs Matrix")
 
     // calculate results with Matrices to check
     auto ah = mgcl_test::Matrix2d::laplace7p3d(m, n, o);
-    auto s = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
-    auto k = mgcl_test::Matrix2d::cuttingMatrix3d(m / 2, n / 2, o / 2);
-
-    auto r = k * s;
-    auto p = r.transposed();
+    auto r = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
+    auto p = mgcl_test::Matrix2d::prolongationBilinear(m, n, o);
 
     auto a2h = r * ah * p;
 
-    CHECK(a2hm == a2h);
+    REQUIRE(a2hm == a2h);
 }
 
 TEST_CASE("galerkin random values periodic vs Matrix")
@@ -65,11 +62,8 @@ TEST_CASE("galerkin random values periodic vs Matrix")
 
     // calculate results with Matrices to check
     auto ah = mgcl_test::Matrix2d::fromVaryingStencil(a_h, true);
-    auto s = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
-    auto k = mgcl_test::Matrix2d::cuttingMatrix3d(m / 2, n / 2, o / 2);
-
-    auto r = k * s;
-    auto p = r.transposed();
+    auto r = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
+    auto p = mgcl_test::Matrix2d::prolongationBilinear(m, n, o);
 
     auto a2h = r * ah * p;
 
@@ -104,11 +98,8 @@ TEST_CASE("galerkin multiple levels random values periodic")
 
         // calculate results with Matrices to check
         auto ah = mgcl_test::Matrix2d::fromVaryingStencil(*a_h, true);
-        auto s = mgcl_test::Matrix2d::restrictionFullWeight(m >> lv, n >> lv, o >> lv);
-        auto k = mgcl_test::Matrix2d::cuttingMatrix3d(m >> (lv + 1), n >> (lv + 1), o >> (lv + 1));
-
-        auto r = k * s;
-        auto p = r.transposed();
+        auto r = mgcl_test::Matrix2d::restrictionFullWeight(m >> lv, n >> lv, o >> lv);
+        auto p = mgcl_test::Matrix2d::prolongationBilinear(m >> lv, n >> lv, o >> lv);
 
         auto a2h = r * ah * p;
 

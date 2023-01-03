@@ -570,10 +570,13 @@ TEST_CASE("Matrix2d::restrictionFullWeight")
 
     SECTION("not periodic")
     {
-        auto a = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o, false);
+        int m2 = 2 * m;
+        int n2 = 2 * n;
+        int o2 = 2 * o;
+        auto a = mgcl_test::Matrix2d::restrictionFullWeight(m2, n2, o2, false);
 
         REQUIRE(a.getM() == m * n * o);
-        REQUIRE(a.getN() == m * n * o);
+        REQUIRE(a.getN() == m2 * n2 * o2);
 
         double factor1 = 8.0 / 64.0;
         double factor2 = 4.0 / 64.0;
@@ -581,38 +584,41 @@ TEST_CASE("Matrix2d::restrictionFullWeight")
         double factor4 = 1.0 / 64.0;
 
         // clang-format off
-        for (int i = 0; i < m; i++)
-        for (int j = 0; j < n; j++)
-        for (int k = 0; k < o; k++)
+        for (int i = 0, i2 = 1; i < m; i++, i2 += 2)
+        for (int j = 0, j2 = 1; j < n; j++, j2 += 2)
+        for (int k = 0, k2 = 1; k < o; k++, k2 += 2)
             for (int ii = 0; ii < 3; ii++)
             for (int jj = 0; jj < 3; jj++)
             for (int kk = 0; kk < 3; kk++)
                 // check if current stencil entry maps to a real grid point
-                if (i + ii >= 1 &&
-                    i + ii <= m &&
-                    j + jj >= 1 &&
-                    j + jj <= n &&
-                    k + kk >= 1 &&
-                    k + kk <= o)
+                if (i2 + ii >= 1 &&
+                    i2 + ii <= m2 &&
+                    j2 + jj >= 1 &&
+                    j2 + jj <= n2 &&
+                    k2 + kk >= 1 &&
+                    k2 + kk <= o2)
                 {
+                    int row = i * n * o + j * o + k;
+                    int col = i2 * n2 * o2 + j2 * o2 + k2 + (ii - 1) * n2 * o2 + (jj - 1) * o2 + (kk - 1);
+
                     // center of stencil
                     if (ii == 1 && jj == 1 && kk == 1)
-                        CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == factor1);
+                        REQUIRE(a[row][col] == factor1);
                     // adjacent to center
                     else if (ii == 1 && jj == 1 && kk != 1 ||
                             ii == 1 && jj != 1 && kk == 1 ||
                             ii != 1 && jj == 1 && kk == 1)
-                        CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == factor2);
+                        REQUIRE(a[row][col] == factor2);
                     // diagonally adjacent to center
                     else if (ii == 1 && jj != 1 && kk != 1 ||
                             ii != 1 && jj != 1 && kk == 1 ||
                             ii != 1 && jj == 1 && kk != 1)
-                        CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == factor3);
+                        REQUIRE(a[row][col] == factor3);
                     // corner of stencil
                     else if (ii != 1 && jj != 1 && kk != 1)
-                        CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == factor4);
+                        REQUIRE(a[row][col] == factor4);
                     else
-                        CHECK(a[i * n * o + j * o + k][i * n * o + j * o + k + (ii - 1) * n * o + (jj - 1) * o + (kk - 1)] == 0.0);
+                        REQUIRE(a[row][col] == 0.0);
                 }
         // clang-format on
     }
