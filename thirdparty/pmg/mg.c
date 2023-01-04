@@ -709,10 +709,7 @@ double mg_with_maxlv(double ***u, double ***f, int maxiter, double tol, int m, i
         maxlevel = (int)floor(log((double)(m + 1)) / log(2.0)) + 1;
 
         if (maxlv > maxlevel)
-        {
-            printf("maxlv = %d > %d = maxlevel\n", maxlv, maxlevel);
-            exit(123);
-        }
+            printf("not using maxlv = %d > %d = maxlevel\n", maxlv, maxlevel);
 
         if (maxlv > 0 && maxlv < maxlevel)
         {
@@ -730,10 +727,7 @@ double mg_with_maxlv(double ***u, double ***f, int maxiter, double tol, int m, i
         maxlevel = (int)floor(log((double)(m)) / log(2.0)) + 1;
 
         if (maxlv > maxlevel)
-        {
-            printf("maxlv = %d > %d = maxlevel\n", maxlv, maxlevel);
-            exit(123);
-        }
+            printf("not using maxlv = %d > %d = maxlevel\n", maxlv, maxlevel);
 
         if (maxlv > 0 && maxlv < maxlevel)
         {
@@ -756,13 +750,14 @@ double mg_with_maxlv(double ***u, double ***f, int maxiter, double tol, int m, i
     initres = sqrt(initres);
 
     /* Output */
-    // if (myid == 0) {
-    //   printf("*************** MG with initres = %e ***************\n",initres);
-    //   printf("\n");
-    //   printf("+-------+-----------+----------+\n");
-    //   printf("| iter. | rel. res. | time     |\n");
-    //   printf("+-------+-----------+----------+\n");
-    // }
+    if (myid == 0)
+    {
+        printf("*************** MG with initres = %e ***************\n", initres);
+        printf("\n");
+        printf("+-------+-----------+----------+\n");
+        printf("| iter. | rel. res. | time     |\n");
+        printf("+-------+-----------+----------+\n");
+    }
 
     for (iter = 0; iter < maxiter; iter++)
     {
@@ -779,9 +774,10 @@ double mg_with_maxlv(double ***u, double ***f, int maxiter, double tol, int m, i
         elapsed = (double)(stop.tv_sec - start.tv_sec) + ((double)(stop.tv_usec - start.tv_usec)) / 1000000.0;
 
         /* Output */
-        // if (myid == 0) {
-        //   printf("| %5d | %9.3e | %8.6f |\n", iter, initres == 0.0 ? 0.0 : res/initres, elapsed);
-        // }
+        if (myid == 0)
+        {
+            printf("| %5d | %9.3e | %8.6f |\n", iter, initres == 0.0 ? 0.0 : res / initres, elapsed);
+        }
 
         if (!ignoreTol && res / initres < tol)
             break;
