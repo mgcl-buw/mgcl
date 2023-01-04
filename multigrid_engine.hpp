@@ -9,7 +9,11 @@
 #define CL_TARGET_OPENCL_VERSION 120
 #endif // CL_TARGET_OPENCL_VERSION
 
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
 #include <CL/cl.h>
+#endif
 
 #include "mgcl.hpp"
 #include "problem.hpp"

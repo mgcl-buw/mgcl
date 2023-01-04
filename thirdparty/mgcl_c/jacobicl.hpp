@@ -1,7 +1,11 @@
 #pragma once
 
 #include "mgcl.hpp"
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
 #include <CL/cl.h>
+#endif
 
 double mgcl_jacobi_seq(double ***v, double ***f, double ***r, int m, int n, int o, int ghosts, double omega,
                        int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencil);

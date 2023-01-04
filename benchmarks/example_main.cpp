@@ -63,7 +63,7 @@ int main(int argc, char **argv)
     int o = N;
 
     // Problem parameters
-    double tol = 1e-20;
+    double tol = 1e-7;
     int nu1 = 2;
     int nu2 = 2;
     double omega = 0.8;
@@ -79,8 +79,8 @@ int main(int argc, char **argv)
 
         mgcl::Problem p(m, n, o, f, v);
         p.setMaxiterVcycles(maxIterVCycles);
-        p.setIgnoreTol(true);
-        p.setSilent(true);
+        p.setIgnoreTol(false);
+        p.setSilent(false);
         p.setNu1(nu1);
         p.setNu2(nu2);
         p.setOmega(omega);

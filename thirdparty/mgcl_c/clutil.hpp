@@ -1,7 +1,11 @@
 #pragma once
 
 #include "mgcl.hpp"
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
 #include <CL/cl.h>
+#endif
 #include <stdio.h>
 
 int mgcl_init_opencl(mgcl_config *conf, mgcl_level_data *data);

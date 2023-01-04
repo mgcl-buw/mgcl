@@ -1,7 +1,11 @@
 #include "ghostscl.hpp"
 #include "clutil.hpp"
 #include "mpi.h"
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
 #include <CL/cl.h>
+#endif
 
 // TODO ghosts parameter
 /* updates ghost cells for periodic boundary condition
