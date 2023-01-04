@@ -96,10 +96,10 @@ int main(int argc, char **argv)
 
         mgcl::Problem p(m, n, o, f, v);
         p.setMaxiterVcycles(maxIterVCycles);
-        p.setIgnoreTol(true);
+        p.setIgnoreTol(false);
         p.setUseOpencl(true);
         p.setDeviceType(CL_DEVICE_TYPE_GPU);
-        p.setSilent(true);
+        p.setSilent(false);
         p.setNu1(nu1);
         p.setNu2(nu2);
         p.setOmega(omega);
