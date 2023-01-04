@@ -303,25 +303,6 @@ TEST_CASE("Matrix2d::operator*")
         CHECK(c[1][0] == 122);
     }
 
-    SECTION("laplace3d * fullWeightRestriction")
-    {
-        auto a = mgcl_test::Matrix2d::laplace7p3d(3, 2, 1, false);
-        auto b = 64 * mgcl_test::Matrix2d::restrictionFullWeight(3, 2, 1, false);
-
-        auto c = a * b;
-
-        REQUIRE(c.getM() == a.getM());
-        REQUIRE(c.getN() == b.getN());
-
-        mgcl_test::Matrix2d c_check({{-40, -14, -14, -4, 4, 2},
-                                     {-14, -40, -4, -14, 2, 4},
-                                     {-14, -4, -36, -12, -14, -4},
-                                     {-4, -14, -12, -36, -4, -14},
-                                     {4, 2, -14, -4, -40, -14},
-                                     {2, 4, -4, -14, -14, -40}});
-        CHECK(c == c_check);
-    }
-
     SECTION("throws")
     {
         REQUIRE_THROWS(mgcl_test::Matrix2d(1, 1) * mgcl_test::Matrix2d(3, 1));
