@@ -1,0 +1,87 @@
+#include "nanobench.h"
+
+#include "catch2/catch_test_macros.hpp"
+#include "catch2/generators/catch_generators.hpp"
+
+#include <chrono>
+#include <fstream>
+#include <iostream>
+#include <vector>
+using namespace std::chrono_literals;
+
+#include "../cuboid.hpp"
+#include "../problem.hpp"
+#include "../stencil.hpp"
+#include "../test/test_utility.hpp"
+#include "bench_render_templates.hpp"
+
+// TODO implement + add to cmake
+TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
+{
+    int N = GENERATE(8, 16, 32, 64);
+    // int N = 16;
+    int m = N;
+    int n = N;
+    int o = N;
+
+    ankerl::nanobench::Bench b;
+    b.timeUnit(1ms, "ms")
+        // .epochs(1)
+        // .epochIterations(1)
+        .minEpochTime(100ms)
+        .relative(false);
+
+    if (N >= 32)
+        b.epochs(1).epochIterations(2);
+
+    if (N >= 64)
+        b.epochs(1).epochIterations(1);
+
+    // auto tu = new mgcl_test::TestUtility();
+    // bool gpuAvailable = tu->deviceAvailable("", CL_DEVICE_TYPE_GPU);
+    // bool cpuAvailable = tu->deviceAvailable("", CL_DEVICE_TYPE_CPU);
+
+    SECTION(std::string("N = ").append(std::to_string(N)).c_str())
+    {
+        int gh = 1;
+
+        {
+            mgcl::VaryingStencil3x3x3 v(m, n, o, gh, gh, gh);
+            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            v.fillRandom(0, 10);
+            f.fillRandom(0, 10);
+
+            std::string name = std::string("seq var*var, N = ")
+                                   .append(std::to_string(N));
+
+            b.run(std::string(name).c_str(), [&]
+                  { ankerl::nanobench::doNotOptimizeAway(v.multiply(f)); });
+        }
+
+        {
+            mgcl::FixedStencil3x3x3 v;
+            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            v.fillRandom(0, 10);
+            f.fillRandom(0, 10);
+
+            std::string name = std::string("seq fix*var, N = ")
+                                   .append(std::to_string(N));
+
+            b.run(std::string(name).c_str(), [&]
+                  { ankerl::nanobench::doNotOptimizeAway(v.multiply(f)); });
+        }
+
+        {
+            mgcl::FixedStencil3x3x3 v;
+            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            v.fillRandom(0, 10);
+            f.fillRandom(0, 10);
+
+            std::string name = std::string("seq var*fix, N = ")
+                                   .append(std::to_string(N));
+
+            b.run(std::string(name).c_str(), [&]
+                  { ankerl::nanobench::doNotOptimizeAway(f.multiply(v)); });
+        }
+    }
+}
