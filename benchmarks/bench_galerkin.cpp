@@ -54,7 +54,7 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
                   { ret = p.init(); });
             REQUIRE(ret);
 
-            b.run(std::string(name).append(", solve").c_str(), [&]
+            b.run(std::string(name).append(", init+solve").c_str(), [&]
                   { p.solve(); });
         }
 
@@ -97,7 +97,7 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
                   { ret = p.init(); });
             REQUIRE(ret);
 
-            b.run(std::string(name).append(", solve").c_str(), [&]
+            b.run(std::string(name).append(", init+solve").c_str(), [&]
                   { p.solve(); });
 
             if (N >= 32)
