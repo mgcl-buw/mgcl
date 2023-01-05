@@ -265,7 +265,7 @@ namespace mgcl
          * @return std::unique_ptr<VaryingStencil<N + 2>> Resulting stencil (two cells wider).
          */
         template <int NB>
-        VaryingStencil<(N + NB - 1)> multiply(VaryingStencil<NB> &b) const
+        VaryingStencil<(N + NB - 1)> multiply(VaryingStencil<NB> &b, int ghc = 2) const
         {
             if (dim1 != b.getDim1() ||
                 dim2 != b.getDim2() ||
@@ -292,7 +292,7 @@ namespace mgcl
             int ghb = b.getGhostsDim1();
 
             // TODO ghosts of c?
-            auto c = VaryingStencil<(N + NB - 1)>(dim1, dim2, dim3, 2, 2, 2);
+            auto c = VaryingStencil<(N + NB - 1)>(dim1, dim2, dim3, ghc, ghc, ghc);
             int width_c = c.getDim4();
 
             // clang-format off
@@ -318,14 +318,16 @@ namespace mgcl
                             cj >= 0 && cj < width_c &&
                             ck >= 0 && ck < width_c)
                         {
-                            c[x + 2][y + 2][z + 2][a_i + b_i][a_j + b_j][a_k + b_k] +=
+                            c[x + ghc][y + ghc][z + ghc][a_i + b_i][a_j + b_j][a_k + b_k] +=
                                 field_6d[x + gha][y + gha][z + gha][a_i][a_j][a_k] *
                                 b[gpi][gpj][gpk][b_i][b_j][b_k];
                         }
                     }
             // clang-format on
 
-            c.updateGhosts();
+            if (ghc > 0)
+                c.updateGhosts();
+
             return c;
         }
 
