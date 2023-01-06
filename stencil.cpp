@@ -4,7 +4,7 @@
 namespace mgcl
 {
 
-    VaryingStencilGpu::VaryingStencilGpu(int m_, int n_, int o_, int width_, int gh_, cl_context context)
+    VaryingStencilGpu::VaryingStencilGpu(int m_, int n_, int o_, int width_, int gh_, cl_context context, cl_command_queue queue)
         : m(m_), n(n_), o(o_), width(width_), gh(gh_)
     {
         int err;
@@ -12,6 +12,12 @@ namespace mgcl
                              sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width,
                              NULL, &err);
         mgclCheckError(err, "clCreateBuffer");
+
+        cl_double zero = 0;
+        err = clEnqueueFillBuffer(queue, buf, &zero, sizeof(cl_double), 0,
+                                  sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width,
+                                  0, NULL, NULL);
+        mgclCheckError(err, "clEnqueueFillBuffer");
     }
 
     VaryingStencilGpu::~VaryingStencilGpu()
@@ -42,7 +48,7 @@ namespace mgcl
 
         // create output buffer c
         auto c = std::make_unique<VaryingStencilGpu>(m + 2 * ghc, n + 2 * ghc, o + 2 * ghc,
-                                                     width + b.getWidth() - 1, ghc, context);
+                                                     width + b.getWidth() - 1, ghc, context, queue);
 
         auto bbuf = b.getBuf();
         auto cbuf = c->getBuf();
@@ -122,5 +128,46 @@ namespace mgcl
     int VaryingStencilGpu::getWidth() const
     {
         return width;
+    }
+
+    /**
+     * *********************************************
+     * FixedStencilGpu below
+     * *********************************************
+     */
+
+    FixedStencilGpu::FixedStencilGpu(int width_, int gh_, cl_context context, cl_command_queue queue)
+        : width(width_), gh(gh_)
+    {
+        int err;
+        buf = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(double) * width * width * width, NULL, &err);
+        mgclCheckError(err, "clCreateBuffer");
+
+        cl_double zero = 0;
+        err = clEnqueueFillBuffer(queue, buf, &zero, sizeof(cl_double), 0, sizeof(double) * width * width * width,
+                                  0, NULL, NULL);
+        mgclCheckError(err, "clEnqueueFillBuffer");
+    }
+
+    FixedStencilGpu::~FixedStencilGpu()
+    {
+        int err = clReleaseMemObject(buf);
+        mgclCheckError(err, "clReleaseMemObject");
+        buf = nullptr;
+    }
+
+    int FixedStencilGpu::getWidth() const
+    {
+        return width;
+    }
+
+    cl_mem FixedStencilGpu::getBuf() const
+    {
+        return buf;
+    }
+
+    int FixedStencilGpu::getGh() const
+    {
+        return gh;
     }
 }

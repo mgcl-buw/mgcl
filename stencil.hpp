@@ -22,6 +22,7 @@
 #include "cuboid.hpp"
 #include "hypercube.hpp"
 #include "mgcl.hpp"
+#include "opencl_helper.hpp"
 
 namespace mgcl
 {
@@ -477,8 +478,25 @@ namespace mgcl
         cl_mem buf = nullptr;
 
     public:
-        VaryingStencilGpu(int m_, int n_, int o_, int width_, int gh_, cl_context context);
+        VaryingStencilGpu(int m_, int n_, int o_, int width_, int gh_, cl_context context, cl_command_queue queue);
         ~VaryingStencilGpu();
+
+        template <int N>
+        void fill(VaryingStencil<N> &f, cl_command_queue queue)
+        {
+            if (N != width)
+                throw "Widths are not equal!";
+
+            if (m != f.getDim1() || n != f.getDim2() || o != f.getDim3() ||
+                gh != f.getGhostsDim1() || gh != f.getGhostsDim2() || gh != f.getGhostsDim3())
+                throw "Dimensions are not equal!";
+
+            int err = clEnqueueFillBuffer(queue, buf, f[0][0][0][0][0],
+                                          sizeof(cl_double), 0,
+                                          sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width,
+                                          0, NULL, NULL);
+            mgclCheckError(err, "clEnqueueFillBuffer");
+        }
 
         std::unique_ptr<VaryingStencilGpu> multiply(VaryingStencilGpu &b, int ghc,
                                                     cl_program program, cl_command_queue queue, cl_context context);
@@ -506,9 +524,31 @@ namespace mgcl
         cl_mem buf;
 
     public:
-        FixedStencilGpu(int width_, int gh_, cl_context context);
+        FixedStencilGpu(int width_, int gh_, cl_context context, cl_command_queue queue);
+        ~FixedStencilGpu();
+
+        template <int N>
+        void fill(FixedStencil<N> &f, cl_command_queue queue)
+        {
+            if (N != width)
+                throw "Widths are not equal!";
+
+            if (gh != f.getGhostsDim1() || gh != f.getGhostsDim2() || gh != f.getGhostsDim3())
+                throw "Dimensions are not equal!";
+
+            int err = clEnqueueFillBuffer(queue, buf, f[0][0][0][0][0], sizeof(cl_double), 0,
+                                          sizeof(double) * width * width * width, 0, NULL, NULL);
+            mgclCheckError(err, "clEnqueueFillBuffer");
+        }
+
         std::unique_ptr<VaryingStencilGpu> multiply(VaryingStencilGpu &b, int ghc,
                                                     cl_program program, cl_command_queue queue, cl_context context);
+
+        int getWidth() const;
+
+        int getGh() const;
+
+        cl_mem getBuf() const;
     };
 }
 
