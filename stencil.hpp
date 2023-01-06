@@ -5,6 +5,20 @@
 #include <stdexcept>
 #include <vector>
 
+#ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#endif // CL_USE_DEPRECATED_OPENCL_1_2_APIS
+
+#ifndef CL_TARGET_OPENCL_VERSION
+#define CL_TARGET_OPENCL_VERSION 120
+#endif // CL_TARGET_OPENCL_VERSION
+
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
+#include <CL/cl.h>
+#endif
+
 #include "cuboid.hpp"
 #include "hypercube.hpp"
 #include "mgcl.hpp"
@@ -14,6 +28,8 @@ namespace mgcl
     // forward declarations
     template <int N>
     class VaryingStencil;
+    class FixedStencilGpu;
+    class VaryingStencilGpu;
 
     /**
      * @brief Fixed 3x3x3 stencil (same stencil entries for each grid point).
@@ -218,7 +234,6 @@ namespace mgcl
             int NB2 = NB >> 1;
             int gha = getGhostsDim1();
 
-            // TODO ghosts of c?
             auto c = VaryingStencil<(N + NB - 1)>(dim1, dim2, dim3, ghc, ghc, ghc);
             int width_c = c.getDim4();
 
@@ -444,6 +459,57 @@ namespace mgcl
 
         return b;
     }
+
+    /**
+     * @brief Wrapper class for a varying stencil gpu buffer. Stores additional information like width of the grid,
+     * width of the stencil and amount of ghost cells. The device buffer gets automatically created in the constructor
+     * and gets released in the destructor.
+     *
+     */
+    class VaryingStencilGpu
+    {
+    private:
+        int m;
+        int n;
+        int o;
+        int width;
+        int gh;
+        cl_mem buf = nullptr;
+
+    public:
+        VaryingStencilGpu(int m_, int n_, int o_, int width_, int gh_, cl_context context);
+        ~VaryingStencilGpu();
+
+        std::unique_ptr<VaryingStencilGpu> multiply(VaryingStencilGpu &b, int ghc,
+                                                    cl_program program, cl_command_queue queue, cl_context context);
+        std::unique_ptr<VaryingStencilGpu> multiply(FixedStencilGpu &b, int ghc,
+                                                    cl_program program, cl_command_queue queue, cl_context context);
+
+        int getM() const;
+        int getN() const;
+        int getO() const;
+        int getWidth() const;
+        int getGh() const;
+        cl_mem getBuf() const;
+    };
+
+    /**
+     * @brief Wrapper class for a fixed stencil gpu buffer. Stores additional information like width of the stencil
+     *  and amount of ghost cells.
+     *
+     */
+    class FixedStencilGpu
+    {
+    private:
+        int width;
+        int gh;
+        cl_mem buf;
+
+    public:
+        FixedStencilGpu(int width_, int gh_, cl_context context);
+        std::unique_ptr<VaryingStencilGpu> multiply(VaryingStencilGpu &b, int ghc,
+                                                    cl_program program, cl_command_queue queue, cl_context context);
+    };
 }
 
 #endif // MGCL_STENCIL_HPP
