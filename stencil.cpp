@@ -136,8 +136,8 @@ namespace mgcl
      * *********************************************
      */
 
-    FixedStencilGpu::FixedStencilGpu(int width_, int gh_, cl_context context, cl_command_queue queue)
-        : width(width_), gh(gh_)
+    FixedStencilGpu::FixedStencilGpu(int width_, cl_context context, cl_command_queue queue)
+        : width(width_)
     {
         int err;
         buf = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(double) * width * width * width, NULL, &err);
@@ -164,10 +164,5 @@ namespace mgcl
     cl_mem FixedStencilGpu::getBuf() const
     {
         return buf;
-    }
-
-    int FixedStencilGpu::getGh() const
-    {
-        return gh;
     }
 }
