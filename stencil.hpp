@@ -334,7 +334,7 @@ namespace mgcl
                             cj >= 0 && cj < width_c &&
                             ck >= 0 && ck < width_c)
                         {
-                            c[x + ghc][y + ghc][z + ghc][a_i + b_i][a_j + b_j][a_k + b_k] +=
+                            c[x + ghc][y + ghc][z + ghc][ci][cj][ck] +=
                                 field_6d[x + gha][y + gha][z + gha][a_i][a_j][a_k] *
                                 b[gpi][gpj][gpk][b_i][b_j][b_k];
                         }
