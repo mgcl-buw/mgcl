@@ -39,7 +39,7 @@ namespace mgcl
     class FixedStencil : public Cuboid
     {
     public:
-        FixedStencil() : Cuboid(3, 3, 3, 0, 0, 0)
+        FixedStencil() : Cuboid(N, N, N, 0, 0, 0)
         {
             static_assert(N % 2 == 1 || N < 3, "FixedStencil<N> is only defined for odd N >= 3!");
         }
@@ -541,7 +541,7 @@ namespace mgcl
     {
     private:
         int width;
-        cl_mem buf;
+        cl_mem buf = nullptr;
 
     public:
         FixedStencilGpu(int width_, cl_context context, cl_command_queue queue);
@@ -557,6 +557,25 @@ namespace mgcl
                                            sizeof(double) * width * width * width,
                                            f[0][0], 0, NULL, NULL);
             mgclCheckError(err, "clEnqueueFillBuffer");
+        }
+
+        /**
+         * Reads the gpu buffer into a new FixedStencil. The template parameter N must match the width of the gpu
+         * stencil.
+         */
+        template <int N>
+        FixedStencil<N> read(cl_command_queue queue)
+        {
+            if (N != width)
+                throw "Widths are not equal!";
+
+            FixedStencil<N> ret;
+            int err = clEnqueueReadBuffer(queue, buf, CL_FALSE, 0,
+                                          sizeof(double) * width * width * width,
+                                          ret.field1d().data(), 0, NULL, NULL);
+            mgclCheckError(err, "clEnqueueReadBuffer");
+
+            return ret;
         }
 
         std::unique_ptr<VaryingStencilGpu> multiply(VaryingStencilGpu &b, int ghc,

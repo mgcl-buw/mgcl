@@ -166,8 +166,6 @@ TEST_CASE("VaryingStencilGpu::read")
         auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
         t.finish();
 
-        int sizeNeeded = (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width;
-
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil3x3x3 s3(m, n, o, gh, gh, gh);
         s3.fillRandomInt();
@@ -187,8 +185,6 @@ TEST_CASE("VaryingStencilGpu::read")
         int width = 5;
         auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
         t.finish();
-
-        int sizeNeeded = (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width;
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil5x5x5 s3(m, n, o, gh, gh, gh);
@@ -328,5 +324,80 @@ TEST_CASE("FixedStencilGpu::fill")
         // widths do not match
         mgcl::FixedStencil<5> s3;
         REQUIRE_THROWS(s->fill(s3, t.getCommands()));
+    }
+}
+
+TEST_CASE("FixedStencilGpu::read")
+{
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    {
+        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+        return;
+    }
+
+    mgcl_test::TestUtility t(deviceType);
+
+    SECTION("FixedStencil3x3x3")
+    {
+        int width = 3;
+        auto s = std::make_unique<mgcl::FixedStencilGpu>(width, t.getContext(), t.getCommands());
+        t.finish();
+
+        // create FixedStencil, fill with random values and copy to gpu buffer
+        mgcl::FixedStencil3x3x3 s3;
+        s3.fillRandom();
+        s->fill(s3, t.getCommands());
+        t.finish();
+
+        // read buffer
+        auto ret = s->read<3>(t.getCommands());
+        t.finish();
+
+        // check results
+        REQUIRE(ret.field1d().size() == s3.field1d().size());
+
+        for (int i = 0; i < ret.field1d().size(); i++)
+            REQUIRE(ret.field1d()[i] == s3.field1d()[i]);
+
+        t.finish();
+    }
+
+    SECTION("FixedStencil5x5x5")
+    {
+        int width = 5;
+        mgcl::FixedStencilGpu s(width, t.getContext(), t.getCommands());
+        t.finish();
+
+        // create FixedStencil, fill with random values and copy to gpu buffer
+        mgcl::FixedStencil<5> s3;
+        s3.fillRandom();
+        s.fill(s3, t.getCommands());
+        t.finish();
+
+        // read buffer
+        auto ret = s.read<5>(t.getCommands());
+        t.finish();
+
+        // check results
+        REQUIRE(ret.field1d().size() == s3.field1d().size());
+
+        for (int i = 0; i < ret.field1d().size(); i++)
+            REQUIRE(ret.field1d()[i] == s3.field1d()[i]);
+
+        t.finish();
+    }
+
+    SECTION("throwing")
+    {
+        int width = 3;
+        auto s = std::make_unique<mgcl::FixedStencilGpu>(width, t.getContext(), t.getCommands());
+        t.finish();
+
+        REQUIRE_THROWS(s->read<5>(t.getCommands()));
+
+        t.finish();
     }
 }
