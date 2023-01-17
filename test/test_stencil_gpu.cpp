@@ -209,6 +209,75 @@ TEST_CASE("VaryingStencilGpu::read")
         REQUIRE_THROWS(s->read<5>(t.getCommands()));
     }
 }
+
+TEST_CASE("VaryingStencilGpu::updateGhosts")
+{
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    {
+        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+        return;
+    }
+
+    mgcl_test::TestUtility t(deviceType);
+
+    int m = 4;
+    int n = 4;
+    int o = 4;
+    int gh = 2;
+
+    SECTION("VaryingStencil3x3x3")
+    {
+        int width = 3;
+        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
+        t.finish();
+
+        // create VaryingStencil, fill with random values and copy to gpu buffer
+        mgcl::VaryingStencil3x3x3 s3(m, n, o, gh, gh, gh);
+        s3.fillRandomInt();
+        s->fill(s3, t.getCommands());
+
+        // update ghosts of both, host and device stencils
+        s3.updateGhosts();
+        s->updateGhosts(t.getProgram(), t.getCommands(), t.getContext());
+        t.finish();
+
+        // read buffer
+        auto ret = s->read<3>(t.getCommands());
+        t.finish();
+
+        // check results
+        for (int i = 0; i < ret.field1d().size(); i++)
+            REQUIRE(ret.field1d()[i] == s3.field1d()[i]);
+    }
+
+    SECTION("VaryingStencil5x5x5")
+    {
+        int width = 5;
+        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
+        t.finish();
+
+        // create VaryingStencil, fill with random values and copy to gpu buffer
+        mgcl::VaryingStencil5x5x5 s3(m, n, o, gh, gh, gh);
+        s3.fillRandomInt();
+        s->fill(s3, t.getCommands());
+
+        // update ghosts of both, host and device stencils
+        s3.updateGhosts();
+        s->updateGhosts(t.getProgram(), t.getCommands(), t.getContext());
+        t.finish();
+
+        // read buffer
+        auto ret = s->read<5>(t.getCommands());
+        t.finish();
+
+        // check results
+        for (int i = 0; i < ret.field1d().size(); i++)
+            REQUIRE(ret.field1d()[i] == s3.field1d()[i]);
+    }
+}
 TEST_CASE("FixedStencilGpu ctor+dtor")
 {
     auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);

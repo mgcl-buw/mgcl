@@ -28,6 +28,51 @@ namespace mgcl
     }
 
     /**
+     * Updates ghost cells, respects periodic ghosts, i.e. when gh > m
+     */
+    void VaryingStencilGpu::updateGhosts(cl_program program, cl_command_queue queue, cl_context context)
+    {
+        int err;
+
+        // Create the compute kernel from the program
+        cl_kernel kernel = clCreateKernel(program, "update_ghosts_varying_stencil", &err);
+        mgclCheckError(err, "clCreateKernel");
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &width);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh);
+        mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
+        int gh2 = 2 * gh;
+        size_t global[3] = {static_cast<size_t>(gh2), static_cast<size_t>(gh2), static_cast<size_t>(gh2)};
+        const size_t local[3] = {
+            static_cast<size_t>(gh2 > 4 ? 4 : gh2),
+            static_cast<size_t>(gh2 > 4 ? 4 : gh2),
+            static_cast<size_t>(gh2 > 4 ? 4 : gh2)};
+
+        for (int i = 0; i < 3; i++)
+            if (global[i] % local[i] != 0)
+            {
+                // printf("padding global size %d from %ld to ", i, global[i]);
+                global[i] += local[i] - (global[i] % local[i]);
+                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
+            }
+
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, NULL);
+        mgclCheckError(err, "Enqueueing update ghosts of varying stencil kernel");
+
+        err = clReleaseKernel(kernel);
+        mgclCheckError(err, "Releasing update ghosts of varying stencil kernel");
+    }
+
+    /**
      * @brief Multiplies two varying stencils on the gpu and creates a new gpu buffer which will be returned.
      *
      * @param b
@@ -84,17 +129,14 @@ namespace mgcl
             }
 
         // update ghosts of b first (maybe not needed if done earlier)
-        // err = MultigridEngine::updateGhosts(*problem, d_fine_values, fine.mgh, fine.ngh, fine.ogh, problem->ghosts, problem->ghosts, problem->ghosts);
-        // mgclCheckError(err, "Updating ghosts of b");
+        b.updateGhosts(program, queue, context);
 
         // enqueue multiplication kernel
         err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing stencil multiplication kernel");
 
         // update ghosts of c
-        // err = MultigridEngine::updateGhosts(*problem, d_coarse_values, coarse.mgh, coarse.ngh, coarse.ogh, problem->ghosts, problem->ghosts,
-        //                                     problem->ghosts);
-        // mgclCheckError(err, "Updating ghosts of c");
+        c->updateGhosts(program, queue, context);
 
         clReleaseKernel(kernel);
         return c;

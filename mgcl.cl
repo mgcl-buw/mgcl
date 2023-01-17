@@ -1468,6 +1468,56 @@ __kernel void jacobi_stream_shmem_27point(
 }
 
 /**
+ * Updates ghosts of a varying stencil, respecting small grids, e.g. gh > m.
+ * Needs to be called with one work-item per ghost cell.
+ */
+__kernel void update_ghosts_varying_stencil(
+    __global double *restrict c,
+    int m, int n, int o,
+    int width, int gh)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
+
+    // set index of right/back/bottom ghost cell
+    if (i >= gh)
+        i += m;
+
+    if (j >= gh)
+        j += n;
+
+    if (k >= gh)
+        k += o;
+
+    int ireal = i + ((gh - 1 - i) / m + 1) * m;
+    int jreal = j + ((gh - 1 - j) / n + 1) * n;
+    int kreal = k + ((gh - 1 - k) / o + 1) * o;
+
+    // 1d indices
+    int widthPow2 = width * width;
+    int widthPow3 = widthPow2 * width;
+    int widthPow3o = widthPow2 * width * o;
+    int widthPow3on = widthPow2 * width * o * n;
+
+    int idx_gh_cell = i * widthPow3on + j * widthPow3o + k * widthPow3;
+    int idx_real_cell = ireal * widthPow3on + jreal * widthPow3o + kreal * widthPow3;
+
+    if (i < 2 * gh && j < 2 * gh && k < 2 * gh)
+    {
+        // clang-format off
+        // update every stencil entry of current cell
+        for (int ii = 0; ii < width; ii++)
+        for (int jj = 0; jj < width; jj++)
+        for (int kk = 0; kk < width; kk++)
+        {
+            c[idx_gh_cell + ii * widthPow2 + jj * width + kk] = c[idx_real_cell + ii * widthPow2 + jj * width + kk];
+        }
+        // clang-format on
+    }
+}
+
+/**
  * Multiplies two varying stencils c = a * b.
  * m, n and o are dimensions of the grid.
  * wa and wb are the widths of the stencils. Must be odd and >= 3.
@@ -1489,7 +1539,6 @@ __kernel void mult_stencils_var_var(
     int j = get_global_id(1);
     int k = get_global_id(2);
 
-    int index = i * n * o + j * o + k;
     int wa2 = wa >> 1;
     int wb2 = wb >> 1;
     int wc = wa + wb - 1;
