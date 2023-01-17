@@ -1490,9 +1490,9 @@ __kernel void update_ghosts_varying_stencil(
     if (k >= gh)
         k += o;
 
-    int ireal = i + ((gh - 1 - i) / m + 1) * m;
-    int jreal = j + ((gh - 1 - j) / n + 1) * n;
-    int kreal = k + ((gh - 1 - k) / o + 1) * o;
+    int ireal = i + floor(((double)(gh - 1 - i)) / m + 1) * m;
+    int jreal = j + floor(((double)(gh - 1 - j)) / n + 1) * n;
+    int kreal = k + floor(((double)(gh - 1 - k)) / o + 1) * o;
 
     // 1d indices
     int widthPow2 = width * width;

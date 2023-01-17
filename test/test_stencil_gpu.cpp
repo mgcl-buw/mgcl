@@ -2,6 +2,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include <ctgmath>
 #include <memory>
 
 #include "../cuboid.hpp"
@@ -222,6 +223,42 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
     }
 
     mgcl_test::TestUtility t(deviceType);
+
+    SECTION("checking indices (1d), gh > m")
+    {
+        int gh = 8;
+        int m = 3;
+        std::vector<int> ireal_expected{9, 10, 8, 9, 10, 8, 9, 10, 8, 9, 10, 8, 9, 10, 8, 9};
+        std::vector<int> factors_expected{3, 3, 2, 2, 2, 1, 1, 1, -1, -1, -1, -2, -2, -2, -3, -3};
+
+        for (int globalId = 0; globalId < 2 * gh; globalId++)
+        {
+            int i = globalId >= gh ? globalId + m : globalId;
+            int factor = floor(((double)(gh - 1 - i)) / m + 1);
+            int ireal = i + factor * m;
+
+            REQUIRE(factor == factors_expected[globalId]);
+            REQUIRE(ireal == ireal_expected[globalId]);
+        }
+    }
+
+    SECTION("checking indices (1d), gh < m")
+    {
+        int gh = 2;
+        int m = 5;
+        std::vector<int> ireal_expected{5, 6, 2, 3};
+        std::vector<int> factors_expected{1, 1, -1, -1};
+
+        for (int globalId = 0; globalId < 2 * gh; globalId++)
+        {
+            int i = globalId >= gh ? globalId + m : globalId;
+            int factor = floor(((double)(gh - 1 - i)) / m + 1);
+            int ireal = i + factor * m;
+
+            REQUIRE(factor == factors_expected[globalId]);
+            REQUIRE(ireal == ireal_expected[globalId]);
+        }
+    }
 
     int m = 4;
     int n = 4;
