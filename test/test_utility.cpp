@@ -183,6 +183,11 @@ cl_command_queue mgcl_test::TestUtility::getCommands()
     return problem->getCommands();
 }
 
+cl_program mgcl_test::TestUtility::getProgram()
+{
+    return problem->getProgram();
+}
+
 cl_device_id mgcl_test::TestUtility::getDeviceId()
 {
     return problem->getDeviceId();

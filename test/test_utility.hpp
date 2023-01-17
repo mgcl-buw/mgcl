@@ -42,6 +42,7 @@ namespace mgcl_test
 
         cl_context getContext();
         cl_command_queue getCommands();
+        cl_program getProgram();
         cl_device_id getDeviceId();
         mgcl::Problem &getProblem();
     };
