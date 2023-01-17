@@ -318,4 +318,15 @@ TEST_CASE("FixedStencilGpu::fill")
         for (int i = 0; i < sizeNeeded; i++)
             REQUIRE(tmp[i] == s3[0][0][i]);
     }
+
+    SECTION("throwing")
+    {
+        int width = 3;
+        auto s = std::make_unique<mgcl::FixedStencilGpu>(width, t.getContext(), t.getCommands());
+        t.finish();
+
+        // widths do not match
+        mgcl::FixedStencil<5> s3;
+        REQUIRE_THROWS(s->fill(s3, t.getCommands()));
+    }
 }
