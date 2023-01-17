@@ -125,6 +125,21 @@ TEST_CASE("VaryingStencilGpu::fill")
         for (int i = 0; i < sizeNeeded; i++)
             REQUIRE(tmp[i] == s3[0][0][0][0][0][i]);
     }
+
+    SECTION("throwing")
+    {
+        int width = 3;
+        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
+        t.finish();
+
+        // widths do not match
+        mgcl::VaryingStencil5x5x5 s3(m, n, o, gh, gh, gh);
+        REQUIRE_THROWS(s->fill(s3, t.getCommands()));
+
+        // grid sizes do not match
+        mgcl::VaryingStencil5x5x5 s35(m * 2, n * 3, o * 4, gh, gh, gh);
+        REQUIRE_THROWS(s->fill(s35, t.getCommands()));
+    }
 }
 
 TEST_CASE("VaryingStencilGpu::read")
