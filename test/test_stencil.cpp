@@ -734,7 +734,7 @@ TEST_CASE("VaryingStencil::multiply")
         auto c = a.multiply(b);
 
         // check result against explicitly calculated matrix product
-        auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o, false) * mgcl_test::Matrix2d::restrictionFullWeight(m, n, o, false);
+        auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o, false) * mgcl_test::Matrix2d::fullWeightNonCut(m, n, o, false);
         auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(c, false);
 
         REQUIRE(c_expected.getM() == c_m2d.getM());
@@ -807,7 +807,7 @@ TEST_CASE("VaryingStencil::multiply")
         auto c = a.multiply(b);
 
         // check result against explicitly calculated matrix product
-        auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
+        auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * mgcl_test::Matrix2d::fullWeightNonCut(m, n, o);
         auto c_m2d = mgcl_test::Matrix2d::fromVaryingStencil(c, true);
 
         REQUIRE(c_expected.getM() == c_m2d.getM());

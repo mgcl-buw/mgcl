@@ -305,6 +305,34 @@ namespace mgcl_test
     }
 
     /**
+     * @brief Generates 3d full-weight matrix that is not multiplied with the cutting matrix.
+     *
+     * @param m
+     * @param n
+     * @param o
+     * @return Matrix2d
+     */
+    Matrix2d Matrix2d::fullWeightNonCut(int m, int n, int o, bool periodic)
+    {
+        std::vector<std::tuple<double, int>> vals{{0.5, 0}, {0.25, -1}, {0.25, 1}};
+        auto Dxx = diag(vals, m, m);
+        auto Dyy = diag(vals, n, n);
+        auto Dzz = diag(vals, o, o);
+
+        if (periodic)
+        {
+            Dxx[0][m - 1] += 0.25;
+            Dxx[m - 1][0] += 0.25;
+            Dyy[0][n - 1] += 0.25;
+            Dyy[n - 1][0] += 0.25;
+            Dzz[0][o - 1] += 0.25;
+            Dzz[o - 1][0] += 0.25;
+        }
+
+        return Dxx.kronecker(Dyy.kronecker(Dzz));
+    }
+
+    /**
      * @brief Generates 3d full-weight restriction matrix.
      *
      * @param m
