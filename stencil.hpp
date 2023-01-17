@@ -116,7 +116,7 @@ namespace mgcl
      * @brief Class for NxNxN varying stencils, i.e. stencil can differ for each grid point.
      * Choose N = 3 to include only direct neighbors, N = 5 to include 2 nearest neighbors, etc.
      * If two stencils of size NxNxN and NBxNBxNB get multiplied with each other, the resulting stencil has size
-     * (max(N, NB)+2)^3.
+     * (N + NB - 1)^3.
      *
      */
     template <int N>
@@ -481,6 +481,9 @@ namespace mgcl
         VaryingStencilGpu(int m_, int n_, int o_, int width_, int gh_, cl_context context, cl_command_queue queue);
         ~VaryingStencilGpu();
 
+        /**
+         * Fills the gpu buffer with values from a VaryingStencil.
+         */
         template <int N>
         void fill(VaryingStencil<N> &f, cl_command_queue queue)
         {
@@ -494,7 +497,26 @@ namespace mgcl
             int err = clEnqueueWriteBuffer(queue, buf, CL_FALSE, 0,
                                            sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width,
                                            f[0][0][0][0][0], 0, NULL, NULL);
-            mgclCheckError(err, "clEnqueueFillBuffer");
+            mgclCheckError(err, "clEnqueueWriteBuffer");
+        }
+
+        /**
+         * Reads the gpu buffer into a new VaryingStencil. The template parameter N must match the width of the gpu
+         * stencil.
+         */
+        template <int N>
+        VaryingStencil<N> read(cl_command_queue queue)
+        {
+            if (N != width)
+                throw "Widths are not equal!";
+
+            VaryingStencil<N> ret(m, n, o, gh, gh, gh);
+            int err = clEnqueueReadBuffer(queue, buf, CL_FALSE, 0,
+                                          sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width,
+                                          ret.field1d().data(), 0, NULL, NULL);
+            mgclCheckError(err, "clEnqueueReadBuffer");
+
+            return ret;
         }
 
         std::unique_ptr<VaryingStencilGpu> multiply(VaryingStencilGpu &b, int ghc,
