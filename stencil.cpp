@@ -94,8 +94,7 @@ namespace mgcl
         mgclCheckError(err, "clCreateKernel");
 
         // create output buffer c
-        auto c = std::make_unique<VaryingStencilGpu>(m + 2 * ghc, n + 2 * ghc, o + 2 * ghc,
-                                                     width + b.getWidth() - 1, ghc, context, queue);
+        auto c = std::make_unique<VaryingStencilGpu>(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
         auto bbuf = b.getBuf();
         auto cbuf = c->getBuf();
@@ -138,7 +137,8 @@ namespace mgcl
         mgclCheckError(err, "Enqueueing stencil multiplication kernel");
 
         // update ghosts of c
-        c->updateGhosts(program, queue, context);
+        if (ghc > 0)
+            c->updateGhosts(program, queue, context);
 
         clReleaseKernel(kernel);
         return c;

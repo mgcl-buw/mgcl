@@ -303,11 +303,9 @@ namespace mgcl
             int n = dim2;
             int o = dim3;
             int N2 = N >> 1;
-            int NB2 = NB >> 1;
             int gha = getGhostsDim1();
             int ghb = b.getGhostsDim1();
 
-            // TODO ghosts of c?
             auto c = VaryingStencil<(N + NB - 1)>(dim1, dim2, dim3, ghc, ghc, ghc);
             int width_c = c.getDim4();
 

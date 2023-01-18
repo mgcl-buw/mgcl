@@ -431,9 +431,6 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
         auto ret = s->read<3>(t.getCommands());
         t.finish();
 
-        s3.dumpToFile("gh_s3.csv");
-        ret.dumpToFile("gh_ret.csv");
-
         // check results
         for (int i = 0; i < ret.field1d().size(); i++)
             REQUIRE(ret.field1d()[i] == s3.field1d()[i]);
@@ -464,6 +461,144 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
             REQUIRE(ret.field1d()[i] == s3.field1d()[i]);
     }
 }
+
+TEST_CASE("VaryingStencilGpu::multiply(var)")
+{
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    {
+        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+        return;
+    }
+
+    mgcl_test::TestUtility t(deviceType);
+
+    int m = 4;
+    int n = 4;
+    int o = 4;
+    int gh = 2;
+
+    SECTION("checking indices")
+    {
+        mgcl::VaryingStencil3x3x3 a(m, n, o, gh, gh, gh);
+        mgcl::VaryingStencil3x3x3 b(m, n, o, gh, gh, gh);
+        mgcl::VaryingStencil5x5x5 c(m, n, o, gh, gh, gh);
+
+        // fill with 1d cell index
+        for (int i = 0; i < a.field1d().size(); i++)
+            a.field1d()[i] = i;
+        for (int i = 0; i < b.field1d().size(); i++)
+            b.field1d()[i] = i;
+        for (int i = 0; i < c.field1d().size(); i++)
+            c.field1d()[i] = i;
+
+        int wa = 3;
+        int wb = 3;
+        int wc = 5;
+        int gha = gh;
+        int ghb = gh;
+        int ghc = gh;
+
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                for (int k = 0; k < o; k++)
+                {
+                    int wa2 = wa >> 1;
+                    int wc = wa + wb - 1;
+
+                    // 1d indices
+                    int wcPow2 = wc * wc;
+                    int wcPow3 = wcPow2 * wc;
+                    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) * wcPow3 + (j + ghc) * (o + 2 * ghc) * wcPow3 + (k + ghc) * wcPow3;
+
+                    int waPow2 = wa * wa;
+                    int waPow3 = waPow2 * wa;
+                    int cell_a = (i + gha) * (n + 2 * gha) * (o + 2 * gha) * waPow3 + (j + gha) * (o + 2 * gha) * waPow3 + (k + gha) * waPow3;
+
+                    int wbPow2 = wb * wb;
+                    int wbPow3 = wbPow2 * wb;
+
+                    // clang-format off
+                    for (int a_i = 0; a_i < wa; a_i++)
+                    for (int a_j = 0; a_j < wa; a_j++)
+                    for (int a_k = 0; a_k < wa; a_k++)
+                        for (int b_i = 0; b_i < wb; b_i++)
+                        for (int b_j = 0; b_j < wb; b_j++)
+                        for (int b_k = 0; b_k < wb; b_k++)
+                        {
+                            int gpi = i + a_i - wa2 + ghb;
+                            int gpj = j + a_j - wa2 + ghb;
+                            int gpk = k + a_k - wa2 + ghb;
+
+                            int cell_b = gpi * (n + 2 * ghb) * (o + 2 * ghb) * wbPow3 + gpj * (o + 2 * ghb) * wbPow3 + gpk * wbPow3;
+
+                            int ci = a_i + b_i;
+                            int cj = a_j + b_j;
+                            int ck = a_k + b_k;
+
+                            if (ci >= 0 && ci < wc &&
+                                cj >= 0 && cj < wc &&
+                                ck >= 0 && ck < wc)
+                            {
+                                REQUIRE(c.field1d()[cell_c + ci * wcPow2 + cj * wc + ck] == cell_c + ci * wcPow2 + cj * wc + ck);
+                                REQUIRE(a.field1d()[cell_a + a_i * waPow2 + a_j * wa + a_k] == cell_a + a_i * waPow2 + a_j * wa + a_k);
+                                REQUIRE(b.field1d()[cell_b + b_i * wbPow2 + b_j * wb + b_k] == cell_b + b_i * wbPow2 + b_j * wb + b_k);
+                                // c[cell_c + ci * wcPow2 + cj * wc + ck] +=
+                                //     a[cell_a + a_i * waPow2 + a_j * wa + a_k] *
+                                //     b[cell_b + b_i * wbPow2 + b_j * wb + b_k];
+                                // c[i + ghc][j + ghc][k + ghc][a_i + b_i][a_j + b_j][a_k + b_k] +=
+                                //     a[i + gha][j + gha][k + gha][a_i][a_j][a_k] *
+                                //     b[b_i][b_j][b_k];
+                            }
+                        }
+                    // clang-format on
+                }
+    }
+
+    SECTION("widths 3 * 3")
+    {
+        int width = 3;
+        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
+        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
+        t.finish();
+
+        // create VaryingStencil, fill with random values and copy to gpu buffer
+        mgcl::VaryingStencil3x3x3 a_h(m, n, o, gh, gh, gh);
+        a_h.fillRandomInt();
+        a->fill(a_h, t.getCommands());
+
+        mgcl::VaryingStencil3x3x3 b_h(m, n, o, gh, gh, gh);
+        b_h.fillRandomInt();
+        b->fill(b_h, t.getCommands());
+
+        auto c_h = a_h.multiply(b_h, 2);
+        auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
+        t.finish();
+
+        auto ret = c->read<5>(t.getCommands());
+        t.finish();
+
+        ret.dumpToFile("c_ret.csv");
+        c_h.dumpToFile("c_h_ret.csv");
+
+        // check results
+        REQUIRE(c->getM() == c_h.getDim1());
+        REQUIRE(c->getN() == c_h.getDim2());
+        REQUIRE(c->getO() == c_h.getDim3());
+        REQUIRE(c->getWidth() == c_h.getDim4());
+        REQUIRE(c->getWidth() == c_h.getDim5());
+        REQUIRE(c->getWidth() == c_h.getDim6());
+        REQUIRE(c->getGh() == c_h.getGhostsDim1());
+        REQUIRE(c->getGh() == c_h.getGhostsDim2());
+        REQUIRE(c->getGh() == c_h.getGhostsDim3());
+
+        for (int i = 0; i < c_h.field1d().size(); i++)
+            REQUIRE(c_h.field1d()[i] == ret.field1d()[i]);
+    }
+}
+
 TEST_CASE("FixedStencilGpu ctor+dtor")
 {
     auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
