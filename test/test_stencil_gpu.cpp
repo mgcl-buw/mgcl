@@ -260,6 +260,79 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
         }
     }
 
+    // This test simulates the opencl kernel and checks if every ghost cell is written to exactly once.
+    SECTION("writing exactly once?")
+    {
+        int m = 4;
+        int n = 4;
+        int o = 4;
+        int gh = 2;
+        int width = 3;
+
+        // 1d indices
+        int widthPow2 = width * width;
+        int widthPow3 = widthPow2 * width;
+        int widthPow3o = widthPow3 * (o + 2 * gh);
+        int widthPow3on = widthPow3o * (n + 2 * gh);
+
+        mgcl::VaryingStencil3x3x3 s3(m, n, o, gh, gh, gh);
+        for (int i = 0; i < m + 2 * gh; i++)
+            for (int j = 0; j < n + 2 * gh; j++)
+                for (int k = 0; k < o + 2 * gh; k++)
+                {
+                    // if cell is ghost cell
+                    if (i < gh || j < gh || k < gh ||
+                        i >= gh + m || j >= gh + n || k >= gh + o)
+                    {
+                        int ireal = i + floor(((double)(gh - 1 - i)) / m + 1) * m;
+                        int jreal = j + floor(((double)(gh - 1 - j)) / n + 1) * n;
+                        int kreal = k + floor(((double)(gh - 1 - k)) / o + 1) * o;
+
+                        int idx_gh_cell = i * widthPow3on + j * widthPow3o + k * widthPow3;
+                        int idx_real_cell = ireal * widthPow3on + jreal * widthPow3o + kreal * widthPow3;
+
+                        // clang-format off
+                        // update every stencil entry of current cell
+                        for (int ii = 0; ii < width; ii++)
+                        for (int jj = 0; jj < width; jj++)
+                        for (int kk = 0; kk < width; kk++)
+                        {
+                            s3.field1d()[idx_gh_cell + ii * widthPow2 + jj * width + kk]++;
+
+                            // check that ghost cell is written to once
+                            REQUIRE(s3[i][j][k][ii][jj][kk] == 1);
+
+                            // check that 1d index coincides with 6d index
+                            REQUIRE(s3[i][j][k][ii][jj][kk] == s3.field1d()[idx_gh_cell + ii * widthPow2 + jj * width + kk]);
+
+                            // check that calculated indices of real cell is actually a real cell
+                            REQUIRE(ireal >= gh);
+                            REQUIRE(ireal < m + gh);
+                            REQUIRE(jreal >= gh);
+                            REQUIRE(jreal < n + gh);
+                            REQUIRE(kreal >= gh);
+                            REQUIRE(kreal < o + gh);
+                        }
+                        // clang-format on
+                    }
+                }
+
+        // Now check if all ghost cells are 1 and all real cells are 0
+        for (int i = 0; i < m + 2 * gh; i++)
+            for (int j = 0; j < n + 2 * gh; j++)
+                for (int k = 0; k < o + 2 * gh; k++)
+                    for (int ii = 0; ii < width; ii++)
+                        for (int jj = 0; jj < width; jj++)
+                            for (int kk = 0; kk < width; kk++)
+                            {
+                                if (i < gh || j < gh || k < gh ||
+                                    i >= gh + m || j >= gh + n || k >= gh + o)
+                                    REQUIRE(s3[i][j][k][ii][jj][kk] == 1);
+                                else
+                                    REQUIRE(s3[i][j][k][ii][jj][kk] == 0);
+                            }
+    }
+
     int m = 4;
     int n = 4;
     int o = 4;
@@ -284,6 +357,9 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
         // read buffer
         auto ret = s->read<3>(t.getCommands());
         t.finish();
+
+        s3.dumpToFile("gh_s3.csv");
+        ret.dumpToFile("gh_ret.csv");
 
         // check results
         for (int i = 0; i < ret.field1d().size(); i++)

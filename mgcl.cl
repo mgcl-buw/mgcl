@@ -1469,7 +1469,8 @@ __kernel void jacobi_stream_shmem_27point(
 
 /**
  * Updates ghosts of a varying stencil, respecting small grids, e.g. gh > m.
- * Needs to be called with one work-item per ghost cell.
+ * Needs to be called with one work-item per cell of ghosted grid.
+ * Work-items that map to a real cell simply do nothing (optimization potential here!).
  */
 __kernel void update_ghosts_varying_stencil(
     __global double *restrict c,
@@ -1480,31 +1481,23 @@ __kernel void update_ghosts_varying_stencil(
     int j = get_global_id(1);
     int k = get_global_id(2);
 
-    // set index of right/back/bottom ghost cell
-    if (i >= gh)
-        i += m;
-
-    if (j >= gh)
-        j += n;
-
-    if (k >= gh)
-        k += o;
-
-    int ireal = i + floor(((double)(gh - 1 - i)) / m + 1) * m;
-    int jreal = j + floor(((double)(gh - 1 - j)) / n + 1) * n;
-    int kreal = k + floor(((double)(gh - 1 - k)) / o + 1) * o;
-
-    // 1d indices
-    int widthPow2 = width * width;
-    int widthPow3 = widthPow2 * width;
-    int widthPow3o = widthPow2 * width * o;
-    int widthPow3on = widthPow2 * width * o * n;
-
-    int idx_gh_cell = i * widthPow3on + j * widthPow3o + k * widthPow3;
-    int idx_real_cell = ireal * widthPow3on + jreal * widthPow3o + kreal * widthPow3;
-
-    if (i < 2 * gh && j < 2 * gh && k < 2 * gh)
+    if ((i < gh || j < gh || k < gh ||
+         i >= gh + m || j >= gh + n || k >= gh + o) &&
+        (i < m + 2 * gh && j < n + 2 * gh && k < o + 2 * gh))
     {
+        int ireal = i + floor(((double)(gh - 1 - i)) / m + 1) * m;
+        int jreal = j + floor(((double)(gh - 1 - j)) / n + 1) * n;
+        int kreal = k + floor(((double)(gh - 1 - k)) / o + 1) * o;
+
+        // 1d indices
+        int widthPow2 = width * width;
+        int widthPow3 = widthPow2 * width;
+        int widthPow3o = widthPow3 * (o + 2 * gh);
+        int widthPow3on = widthPow3o * (n + 2 * gh);
+
+        int idx_gh_cell = i * widthPow3on + j * widthPow3o + k * widthPow3;
+        int idx_real_cell = ireal * widthPow3on + jreal * widthPow3o + kreal * widthPow3;
+
         // clang-format off
         // update every stencil entry of current cell
         for (int ii = 0; ii < width; ii++)

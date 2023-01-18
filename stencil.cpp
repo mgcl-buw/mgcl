@@ -49,12 +49,14 @@ namespace mgcl
         mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
-        int gh2 = 2 * gh;
-        size_t global[3] = {static_cast<size_t>(gh2), static_cast<size_t>(gh2), static_cast<size_t>(gh2)};
+        int mgh = m + 2 * gh;
+        int ngh = n + 2 * gh;
+        int ogh = o + 2 * gh;
+        size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
         const size_t local[3] = {
-            static_cast<size_t>(gh2 > 4 ? 4 : gh2),
-            static_cast<size_t>(gh2 > 4 ? 4 : gh2),
-            static_cast<size_t>(gh2 > 4 ? 4 : gh2)};
+            static_cast<size_t>(mgh > 4 ? 4 : mgh),
+            static_cast<size_t>(ngh > 4 ? 4 : ngh),
+            static_cast<size_t>(ogh > 4 ? 4 : ogh)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
