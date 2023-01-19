@@ -559,9 +559,8 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
 
     SECTION("widths 3 * 3")
     {
-        int width = 3;
-        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
-        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
+        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands());
+        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -594,12 +593,156 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         REQUIRE(c->getGh() == c_h.getGhostsDim3());
 
         // clang-format off
-        for (int i = gh; i < m + gh; i++)
-        for (int j = gh; j < n + gh; j++)
-        for (int k = gh; k < o + gh; k++)
-            for (int ii = 0; ii < width; ii++)
-            for (int jj = 0; jj < width; jj++)
-            for (int kk = 0; kk < width; kk++)
+        for (int i = 0; i < c_h.getDim1gh(); i++)
+        for (int j = 0; j < c_h.getDim2gh(); j++)
+        for (int k = 0; k < c_h.getDim3gh(); k++)
+            for (int ii = 0; ii < c_h.getDim4(); ii++)
+            for (int jj = 0; jj < c_h.getDim5(); jj++)
+            for (int kk = 0; kk < c_h.getDim6(); kk++)
+            {
+                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+            }
+        // clang-format on
+    }
+
+    SECTION("widths 3 * 5")
+    {
+        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands());
+        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands());
+        t.finish();
+
+        // create VaryingStencil, fill with random values and copy to gpu buffer
+        mgcl::VaryingStencil3x3x3 a_h(m, n, o, gh, gh, gh);
+        a_h.fillRandomInt();
+        a->fill(a_h, t.getCommands());
+
+        mgcl::VaryingStencil5x5x5 b_h(m, n, o, gh, gh, gh);
+        b_h.fillRandomInt();
+        b->fill(b_h, t.getCommands());
+        t.finish();
+        b_h.updateGhosts();
+
+        auto c_h = a_h.multiply(b_h, 2);
+        auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
+        t.finish();
+
+        auto ret = c->read<7>(t.getCommands());
+        t.finish();
+
+        // check results
+        REQUIRE(c->getM() == c_h.getDim1());
+        REQUIRE(c->getN() == c_h.getDim2());
+        REQUIRE(c->getO() == c_h.getDim3());
+        REQUIRE(c->getWidth() == c_h.getDim4());
+        REQUIRE(c->getWidth() == c_h.getDim5());
+        REQUIRE(c->getWidth() == c_h.getDim6());
+        REQUIRE(c->getGh() == c_h.getGhostsDim1());
+        REQUIRE(c->getGh() == c_h.getGhostsDim2());
+        REQUIRE(c->getGh() == c_h.getGhostsDim3());
+
+        // clang-format off
+        for (int i = 0; i < c_h.getDim1gh(); i++)
+        for (int j = 0; j < c_h.getDim2gh(); j++)
+        for (int k = 0; k < c_h.getDim3gh(); k++)
+            for (int ii = 0; ii < c_h.getDim4(); ii++)
+            for (int jj = 0; jj < c_h.getDim5(); jj++)
+            for (int kk = 0; kk < c_h.getDim6(); kk++)
+            {
+                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+            }
+        // clang-format on
+    }
+
+    SECTION("widths 5 * 3")
+    {
+        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands());
+        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands());
+        t.finish();
+
+        // create VaryingStencil, fill with random values and copy to gpu buffer
+        mgcl::VaryingStencil5x5x5 a_h(m, n, o, gh, gh, gh);
+        a_h.fillRandomInt();
+        a->fill(a_h, t.getCommands());
+
+        mgcl::VaryingStencil3x3x3 b_h(m, n, o, gh, gh, gh);
+        b_h.fillRandomInt();
+        b->fill(b_h, t.getCommands());
+        t.finish();
+        b_h.updateGhosts();
+
+        auto c_h = a_h.multiply(b_h, 2);
+        auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
+        t.finish();
+
+        auto ret = c->read<7>(t.getCommands());
+        t.finish();
+
+        // check results
+        REQUIRE(c->getM() == c_h.getDim1());
+        REQUIRE(c->getN() == c_h.getDim2());
+        REQUIRE(c->getO() == c_h.getDim3());
+        REQUIRE(c->getWidth() == c_h.getDim4());
+        REQUIRE(c->getWidth() == c_h.getDim5());
+        REQUIRE(c->getWidth() == c_h.getDim6());
+        REQUIRE(c->getGh() == c_h.getGhostsDim1());
+        REQUIRE(c->getGh() == c_h.getGhostsDim2());
+        REQUIRE(c->getGh() == c_h.getGhostsDim3());
+
+        // clang-format off
+        for (int i = 0; i < c_h.getDim1gh(); i++)
+        for (int j = 0; j < c_h.getDim2gh(); j++)
+        for (int k = 0; k < c_h.getDim3gh(); k++)
+            for (int ii = 0; ii < c_h.getDim4(); ii++)
+            for (int jj = 0; jj < c_h.getDim5(); jj++)
+            for (int kk = 0; kk < c_h.getDim6(); kk++)
+            {
+                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+            }
+        // clang-format on
+    }
+
+    SECTION("widths 5 * 5")
+    {
+        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands());
+        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands());
+        t.finish();
+
+        // create VaryingStencil, fill with random values and copy to gpu buffer
+        mgcl::VaryingStencil5x5x5 a_h(m, n, o, gh, gh, gh);
+        a_h.fillRandomInt();
+        a->fill(a_h, t.getCommands());
+
+        mgcl::VaryingStencil5x5x5 b_h(m, n, o, gh, gh, gh);
+        b_h.fillRandomInt();
+        b->fill(b_h, t.getCommands());
+        t.finish();
+        b_h.updateGhosts();
+
+        auto c_h = a_h.multiply(b_h, 2);
+        auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
+        t.finish();
+
+        auto ret = c->read<9>(t.getCommands());
+        t.finish();
+
+        // check results
+        REQUIRE(c->getM() == c_h.getDim1());
+        REQUIRE(c->getN() == c_h.getDim2());
+        REQUIRE(c->getO() == c_h.getDim3());
+        REQUIRE(c->getWidth() == c_h.getDim4());
+        REQUIRE(c->getWidth() == c_h.getDim5());
+        REQUIRE(c->getWidth() == c_h.getDim6());
+        REQUIRE(c->getGh() == c_h.getGhostsDim1());
+        REQUIRE(c->getGh() == c_h.getGhostsDim2());
+        REQUIRE(c->getGh() == c_h.getGhostsDim3());
+
+        // clang-format off
+        for (int i = 0; i < c_h.getDim1gh(); i++)
+        for (int j = 0; j < c_h.getDim2gh(); j++)
+        for (int k = 0; k < c_h.getDim3gh(); k++)
+            for (int ii = 0; ii < c_h.getDim4(); ii++)
+            for (int jj = 0; jj < c_h.getDim5(); jj++)
+            for (int kk = 0; kk < c_h.getDim6(); kk++)
             {
                 REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
             }
