@@ -542,9 +542,9 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
                                 cj >= 0 && cj < wc &&
                                 ck >= 0 && ck < wc)
                             {
-                                REQUIRE(c.field1d()[cell_c + ci * wcPow2 + cj * wc + ck] == cell_c + ci * wcPow2 + cj * wc + ck);
-                                REQUIRE(a.field1d()[cell_a + a_i * waPow2 + a_j * wa + a_k] == cell_a + a_i * waPow2 + a_j * wa + a_k);
-                                REQUIRE(b.field1d()[cell_b + b_i * wbPow2 + b_j * wb + b_k] == cell_b + b_i * wbPow2 + b_j * wb + b_k);
+                                REQUIRE(c.field1d()[cell_c + ci * wcPow2 + cj * wc + ck] == c[i + ghc][j + ghc][k + ghc][a_i + b_i][a_j + b_j][a_k + b_k]);
+                                REQUIRE(a.field1d()[cell_a + a_i * waPow2 + a_j * wa + a_k] == a[i + gha][j + gha][k + gha][a_i][a_j][a_k]);
+                                REQUIRE(b.field1d()[cell_b + b_i * wbPow2 + b_j * wb + b_k] == b[gpi][gpj][gpk][b_i][b_j][b_k]);
                                 // c[cell_c + ci * wcPow2 + cj * wc + ck] +=
                                 //     a[cell_a + a_i * waPow2 + a_j * wa + a_k] *
                                 //     b[cell_b + b_i * wbPow2 + b_j * wb + b_k];
@@ -572,6 +572,8 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         mgcl::VaryingStencil3x3x3 b_h(m, n, o, gh, gh, gh);
         b_h.fillRandomInt();
         b->fill(b_h, t.getCommands());
+        t.finish();
+        b_h.updateGhosts();
 
         auto c_h = a_h.multiply(b_h, 2);
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
@@ -579,9 +581,6 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
 
         auto ret = c->read<5>(t.getCommands());
         t.finish();
-
-        ret.dumpToFile("c_ret.csv");
-        c_h.dumpToFile("c_h_ret.csv");
 
         // check results
         REQUIRE(c->getM() == c_h.getDim1());
@@ -594,8 +593,17 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         REQUIRE(c->getGh() == c_h.getGhostsDim2());
         REQUIRE(c->getGh() == c_h.getGhostsDim3());
 
-        for (int i = 0; i < c_h.field1d().size(); i++)
-            REQUIRE(c_h.field1d()[i] == ret.field1d()[i]);
+        // clang-format off
+        for (int i = gh; i < m + gh; i++)
+        for (int j = gh; j < n + gh; j++)
+        for (int k = gh; k < o + gh; k++)
+            for (int ii = 0; ii < width; ii++)
+            for (int jj = 0; jj < width; jj++)
+            for (int kk = 0; kk < width; kk++)
+            {
+                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+            }
+        // clang-format on
     }
 }
 

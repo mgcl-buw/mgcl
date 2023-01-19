@@ -1518,7 +1518,6 @@ __kernel void update_ghosts_varying_stencil(
  * These restrictions are not checked in the kernel but shall be checked beforehand!
  * This kernel is supposed to be launched with one work-item per grid cell.
  * Remember to update ghosts of c if ghc > 0 afterwards.
- * TODO implement
  */
 __kernel void mult_stencils_var_var(
     __global double *restrict a,
@@ -1576,9 +1575,10 @@ __kernel void mult_stencils_var_var(
                     c[cell_c + ci * wcPow2 + cj * wc + ck] +=
                         a[cell_a + a_i * waPow2 + a_j * wa + a_k] *
                         b[cell_b + b_i * wbPow2 + b_j * wb + b_k];
+
                     // c[i + ghc][j + ghc][k + ghc][a_i + b_i][a_j + b_j][a_k + b_k] +=
                     //     a[i + gha][j + gha][k + gha][a_i][a_j][a_k] *
-                    //     b[b_i][b_j][b_k];
+                    //     b[gpi][gpj][gpk][b_i][b_j][b_k];
                 }
             }
         // clang-format on
