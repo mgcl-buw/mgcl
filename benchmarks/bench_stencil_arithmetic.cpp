@@ -37,9 +37,9 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
     if (N >= 64)
         b.epochs(1).epochIterations(1);
 
-    // auto tu = new mgcl_test::TestUtility();
-    // bool gpuAvailable = tu->deviceAvailable("", CL_DEVICE_TYPE_GPU);
-    // bool cpuAvailable = tu->deviceAvailable("", CL_DEVICE_TYPE_CPU);
+    auto tu = std::make_shared<mgcl_test::TestUtility>();
+    bool gpuAvailable = tu->deviceAvailable("Quadro", CL_DEVICE_TYPE_GPU);
+    bool cpuAvailable = tu->deviceAvailable("", CL_DEVICE_TYPE_CPU);
 
     SECTION(std::string("N = ").append(std::to_string(N)).c_str())
     {
@@ -82,6 +82,72 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
             b.run(std::string(name).c_str(), [&]
                   { ankerl::nanobench::doNotOptimizeAway(f.multiply(v)); });
+        }
+
+        if (gpuAvailable)
+        {
+            mgcl::VaryingStencil3x3x3 v(m, n, o, gh, gh, gh);
+            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            v.fillRandom(0, 10);
+            f.fillRandom(0, 10);
+
+            mgcl::VaryingStencilGpu vd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
+            mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
+            vd.fill(v, tu->getCommands());
+            fd.fill(f, tu->getCommands());
+            tu->finish();
+
+            std::string name = std::string("gpu var*var, N = ")
+                                   .append(std::to_string(N));
+
+            b.run(std::string(name).c_str(), [&]
+                  { 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 2, tu->getProgram(), tu->getCommands(), tu->getContext())); 
+                    tu->finish(); });
+        }
+
+        if (gpuAvailable)
+        {
+            mgcl::FixedStencil3x3x3 v;
+            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            v.fillRandom(0, 10);
+            f.fillRandom(0, 10);
+
+            mgcl::FixedStencilGpu vd(3, tu->getContext(), tu->getCommands());
+            mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
+            vd.fill(v, tu->getCommands());
+            fd.fill(f, tu->getCommands());
+            tu->finish();
+
+            std::string name = std::string("gpu fix*var, N = ")
+                                   .append(std::to_string(N));
+
+            b.run(std::string(name).c_str(), [&]
+                  { 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 2, tu->getProgram(), tu->getCommands(), tu->getContext())); 
+                    tu->finish(); });
+        }
+
+        if (gpuAvailable)
+        {
+            mgcl::FixedStencil3x3x3 v;
+            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            v.fillRandom(0, 10);
+            f.fillRandom(0, 10);
+
+            mgcl::FixedStencilGpu vd(3, tu->getContext(), tu->getCommands());
+            mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
+            vd.fill(v, tu->getCommands());
+            fd.fill(f, tu->getCommands());
+            tu->finish();
+
+            std::string name = std::string("gpu var*fix, N = ")
+                                   .append(std::to_string(N));
+
+            b.run(std::string(name).c_str(), [&]
+                  { 
+                    ankerl::nanobench::doNotOptimizeAway(fd.multiply(vd, 2, tu->getProgram(), tu->getCommands(), tu->getContext())); 
+                    tu->finish(); });
         }
     }
 }
