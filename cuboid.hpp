@@ -42,6 +42,7 @@ namespace mgcl
         double ***getData() const;
         inline double **operator[](int index) { return field_3d[index]; }
         void fillRandom(double low = 0, double high = 1);
+        void fillRandomInt(int low = 1, int high = 10, bool realCellsOnly = false);
         void fill(double value, bool realCellsOnly = false);
         std::vector<double> &field1d();
         bool isEqual(Cuboid &c, double tol = 1e-7, bool printDiffs = false);

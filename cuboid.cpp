@@ -237,6 +237,32 @@ namespace mgcl
             field_1d[i] = dist(rng);
     }
 
+    /**
+     * @brief Fills Cuboid with random int values between low and high, which default to 1 and 10.
+     * @param realCellsOnly if true, only real cells will be filled.
+     */
+    void Cuboid::fillRandomInt(int low, int high, bool realCellsOnly)
+    {
+        // use fixed seed to get same results every run
+        std::default_random_engine rng(123);
+        std::uniform_int_distribution<int> dist(low, high);
+
+        if (realCellsOnly)
+        {
+            for (int d1 = ghostsM; d1 < m + ghostsM; d1++)
+                for (int d2 = ghostsN; d2 < n + ghostsN; d2++)
+                    for (int d3 = ghostsM; d3 < o + ghostsO; d3++)
+                    {
+                        field_3d[d1][d2][d3] = dist(rng);
+                    }
+        }
+        else
+        {
+            for (int i = 0; i < field_1d.size(); i++)
+                field_1d[i] = dist(rng);
+        }
+    }
+
     std::vector<double> &Cuboid::field1d()
     {
         return field_1d;
