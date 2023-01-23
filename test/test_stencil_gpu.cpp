@@ -424,7 +424,7 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
 
         // update ghosts of both, host and device stencils
         s3.updateGhosts();
-        s->updateGhosts(t.getProgram(), t.getCommands(), t.getContext());
+        s->updateGhosts(t.getProgram(), t.getCommands());
         t.finish();
 
         // read buffer
@@ -449,7 +449,7 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
 
         // update ghosts of both, host and device stencils
         s3.updateGhosts();
-        s->updateGhosts(t.getProgram(), t.getCommands(), t.getContext());
+        s->updateGhosts(t.getProgram(), t.getCommands());
         t.finish();
 
         // read buffer
@@ -573,6 +573,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         b->fill(b_h, t.getCommands());
         t.finish();
         b_h.updateGhosts();
+        b->updateGhosts(t.getProgram(), t.getCommands());
 
         auto c_h = a_h.multiply(b_h, 2);
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
@@ -621,6 +622,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         b->fill(b_h, t.getCommands());
         t.finish();
         b_h.updateGhosts();
+        b->updateGhosts(t.getProgram(), t.getCommands());
 
         auto c_h = a_h.multiply(b_h, 2);
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
@@ -669,6 +671,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         b->fill(b_h, t.getCommands());
         t.finish();
         b_h.updateGhosts();
+        b->updateGhosts(t.getProgram(), t.getCommands());
 
         auto c_h = a_h.multiply(b_h, 2);
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
@@ -717,6 +720,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         b->fill(b_h, t.getCommands());
         t.finish();
         b_h.updateGhosts();
+        b->updateGhosts(t.getProgram(), t.getCommands());
 
         auto c_h = a_h.multiply(b_h, 2);
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
@@ -1038,6 +1042,7 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         b->fill(b_h, t.getCommands());
         t.finish();
         b_h.updateGhosts();
+        b->updateGhosts(t.getProgram(), t.getCommands());
 
         auto c_h = a_h.multiply(b_h, 2);
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
@@ -1086,6 +1091,7 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         b->fill(b_h, t.getCommands());
         t.finish();
         b_h.updateGhosts();
+        b->updateGhosts(t.getProgram(), t.getCommands());
 
         auto c_h = a_h.multiply(b_h, 2);
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
@@ -1134,6 +1140,7 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         b->fill(b_h, t.getCommands());
         t.finish();
         b_h.updateGhosts();
+        b->updateGhosts(t.getProgram(), t.getCommands());
 
         auto c_h = a_h.multiply(b_h, 2);
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
@@ -1182,6 +1189,7 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         b->fill(b_h, t.getCommands());
         t.finish();
         b_h.updateGhosts();
+        b->updateGhosts(t.getProgram(), t.getCommands());
 
         auto c_h = a_h.multiply(b_h, 2);
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());

@@ -517,7 +517,7 @@ namespace mgcl
             return ret;
         }
 
-        void updateGhosts(cl_program program, cl_command_queue queue, cl_context context);
+        void updateGhosts(cl_program program, cl_command_queue queue);
         std::unique_ptr<VaryingStencilGpu> multiply(VaryingStencilGpu &b, int ghc,
                                                     cl_program program, cl_command_queue queue, cl_context context);
         std::unique_ptr<VaryingStencilGpu> multiply(FixedStencilGpu &b, int ghc,

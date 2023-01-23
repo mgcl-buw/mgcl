@@ -30,7 +30,7 @@ namespace mgcl
     /**
      * Updates ghost cells, respects periodic ghosts, i.e. when gh > m
      */
-    void VaryingStencilGpu::updateGhosts(cl_program program, cl_command_queue queue, cl_context context)
+    void VaryingStencilGpu::updateGhosts(cl_program program, cl_command_queue queue)
     {
         int err;
 
@@ -130,7 +130,7 @@ namespace mgcl
             }
 
         // update ghosts of b first (maybe not needed if done earlier)
-        b.updateGhosts(program, queue, context);
+        // b.updateGhosts(program, queue);
 
         // enqueue multiplication kernel
         err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, NULL);
@@ -138,7 +138,7 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            c->updateGhosts(program, queue, context);
+            c->updateGhosts(program, queue);
 
         clReleaseKernel(kernel);
         return c;
@@ -204,7 +204,7 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            c->updateGhosts(program, queue, context);
+            c->updateGhosts(program, queue);
 
         clReleaseKernel(kernel);
         return c;
@@ -326,7 +326,7 @@ namespace mgcl
             }
 
         // update ghosts of b first (maybe not needed if done earlier)
-        b.updateGhosts(program, queue, context);
+        // b.updateGhosts(program, queue);
 
         // enqueue multiplication kernel
         err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, NULL);
@@ -334,7 +334,7 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            c->updateGhosts(program, queue, context);
+            c->updateGhosts(program, queue);
 
         clReleaseKernel(kernel);
         return c;
