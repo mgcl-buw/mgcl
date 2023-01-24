@@ -349,4 +349,26 @@ namespace mgcl
     {
         return buf;
     }
+
+    std::unique_ptr<FixedStencilGpu> create3dFullWeightRestrictionStencilGpu(cl_context context, cl_command_queue queue)
+    {
+        int err;
+        auto ret = std::make_unique<FixedStencilGpu>(3, context, queue);
+
+        auto s = create3dFullWeightRestrictionStencil();
+        ret->fill(s, queue);
+
+        return ret;
+    }
+
+    std::unique_ptr<FixedStencilGpu> create3dBilinearProlongationStencilGpu(cl_context context, cl_command_queue queue)
+    {
+        int err;
+        auto ret = std::make_unique<FixedStencilGpu>(3, context, queue);
+
+        auto s = create3dBilinearProlongationStencil();
+        ret->fill(s, queue);
+
+        return ret;
+    }
 }

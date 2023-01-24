@@ -583,6 +583,9 @@ namespace mgcl
         int getWidth() const;
         cl_mem getBuf() const;
     };
+
+    static std::unique_ptr<FixedStencilGpu> create3dFullWeightRestrictionStencilGpu();
+    static std::unique_ptr<FixedStencilGpu> create3dBilinearProlongationStencilGpu();
 }
 
 #endif // MGCL_STENCIL_HPP
