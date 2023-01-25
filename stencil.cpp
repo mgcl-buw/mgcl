@@ -82,10 +82,10 @@ namespace mgcl
      * @param program
      * @param queue
      * @param context
-     * @return std::unique_ptr<VaryingStencilGpu>
+     * @return VaryingStencilGpu
      */
-    std::unique_ptr<VaryingStencilGpu> VaryingStencilGpu::multiply(VaryingStencilGpu &b, int ghc,
-                                                                   cl_program program, cl_command_queue queue, cl_context context)
+    VaryingStencilGpu VaryingStencilGpu::multiply(VaryingStencilGpu &b, int ghc,
+                                                  cl_program program, cl_command_queue queue, cl_context context)
     {
         int err;
 
@@ -94,10 +94,10 @@ namespace mgcl
         mgclCheckError(err, "clCreateKernel");
 
         // create output buffer c
-        auto c = std::make_unique<VaryingStencilGpu>(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
+        VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
         auto bbuf = b.getBuf();
-        auto cbuf = c->getBuf();
+        auto cbuf = c.getBuf();
         auto wb = b.getWidth();
         auto ghb = b.getGh();
 
@@ -138,7 +138,7 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            c->updateGhosts(program, queue);
+            c.updateGhosts(program, queue);
 
         clReleaseKernel(kernel);
         return c;
@@ -153,10 +153,10 @@ namespace mgcl
      * @param program
      * @param queue
      * @param context
-     * @return std::unique_ptr<VaryingStencilGpu>
+     * @return VaryingStencilGpu
      */
-    std::unique_ptr<VaryingStencilGpu> VaryingStencilGpu::multiply(FixedStencilGpu &b, int ghc,
-                                                                   cl_program program, cl_command_queue queue, cl_context context)
+    VaryingStencilGpu VaryingStencilGpu::multiply(FixedStencilGpu &b, int ghc,
+                                                  cl_program program, cl_command_queue queue, cl_context context)
     {
         int err;
 
@@ -165,10 +165,10 @@ namespace mgcl
         mgclCheckError(err, "clCreateKernel");
 
         // create output buffer c
-        auto c = std::make_unique<VaryingStencilGpu>(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
+        VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
         auto bbuf = b.getBuf();
-        auto cbuf = c->getBuf();
+        auto cbuf = c.getBuf();
         auto wb = b.getWidth();
 
         // assign kernel arguments
@@ -204,7 +204,7 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            c->updateGhosts(program, queue);
+            c.updateGhosts(program, queue);
 
         clReleaseKernel(kernel);
         return c;
@@ -275,10 +275,10 @@ namespace mgcl
      * @param program
      * @param queue
      * @param context
-     * @return std::unique_ptr<VaryingStencilGpu>
+     * @return VaryingStencilGpu
      */
-    std::unique_ptr<VaryingStencilGpu> FixedStencilGpu::multiply(VaryingStencilGpu &b, int ghc,
-                                                                 cl_program program, cl_command_queue queue, cl_context context)
+    VaryingStencilGpu FixedStencilGpu::multiply(VaryingStencilGpu &b, int ghc,
+                                                cl_program program, cl_command_queue queue, cl_context context)
     {
         int err;
 
@@ -291,10 +291,10 @@ namespace mgcl
         int o = b.getO();
 
         // create output buffer c
-        auto c = std::make_unique<VaryingStencilGpu>(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
+        VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
         auto bbuf = b.getBuf();
-        auto cbuf = c->getBuf();
+        auto cbuf = c.getBuf();
         auto wb = b.getWidth();
         auto ghb = b.getGh();
 
@@ -334,10 +334,67 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            c->updateGhosts(program, queue);
+            c.updateGhosts(program, queue);
 
         clReleaseKernel(kernel);
         return c;
+    }
+
+    // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
+    VaryingStencilGpu VaryingStencilGpu::cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context)
+    {
+        int err;
+
+        if (width != 7)
+            throw "Width is not 7!";
+
+        int m2 = m >> 1;
+        int n2 = n >> 1;
+        int o2 = o >> 1;
+
+        if (m2 == 0 || n2 == 0 || o2 == 0)
+            throw "Cannot cut down stencil of grid size 1!";
+
+        VaryingStencilGpu a_2h(m >> 1, n >> 1, o >> 1, 3, 2, context, queue);
+
+        // Create the compute kernel from the program
+        cl_kernel kernel = clCreateKernel(program, "cut_stencils_w7_to_w3", &err);
+        mgclCheckError(err, "clCreateKernel");
+
+        auto outbuf = a_2h.getBuf();
+        int ghout = a_2h.getGh();
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &outbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m2);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n2);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o2);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghout);
+        mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
+        size_t global[3] = {static_cast<size_t>(m2), static_cast<size_t>(n2), static_cast<size_t>(o2)};
+        const size_t local[3] = {static_cast<size_t>(m2 > 4 ? 4 : m2), static_cast<size_t>(n2 > 4 ? 4 : n2),
+                                 static_cast<size_t>(o2 > 4 ? 4 : o2)};
+
+        for (int i = 0; i < 3; i++)
+            if (global[i] % local[i] != 0)
+            {
+                // printf("padding global size %d from %ld to ", i, global[i]);
+                global[i] += local[i] - (global[i] % local[i]);
+                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
+            }
+
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, NULL);
+        mgclCheckError(err, "Enqueueing stencil cut kernel");
+
+        clReleaseKernel(kernel);
+
+        return a_2h;
     }
 
     int FixedStencilGpu::getWidth() const
@@ -348,27 +405,5 @@ namespace mgcl
     cl_mem FixedStencilGpu::getBuf() const
     {
         return buf;
-    }
-
-    std::unique_ptr<FixedStencilGpu> create3dFullWeightRestrictionStencilGpu(cl_context context, cl_command_queue queue)
-    {
-        int err;
-        auto ret = std::make_unique<FixedStencilGpu>(3, context, queue);
-
-        auto s = create3dFullWeightRestrictionStencil();
-        ret->fill(s, queue);
-
-        return ret;
-    }
-
-    std::unique_ptr<FixedStencilGpu> create3dBilinearProlongationStencilGpu(cl_context context, cl_command_queue queue)
-    {
-        int err;
-        auto ret = std::make_unique<FixedStencilGpu>(3, context, queue);
-
-        auto s = create3dBilinearProlongationStencil();
-        ret->fill(s, queue);
-
-        return ret;
     }
 }

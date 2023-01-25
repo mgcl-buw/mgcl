@@ -215,8 +215,6 @@ namespace mgcl
         // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
         auto sr = create3dFullWeightRestrictionStencil();
         auto sp = create3dBilinearProlongationStencil();
-        // TODO results not correct yet. Check against Matlab code.
-        // TODO use fixed stencil for fw restriction
 
         // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
         // S * A_h * S and cut out later manually.
@@ -241,6 +239,36 @@ namespace mgcl
         // clang-format on
 
         a_2h.updateGhosts();
+
+        return a_2h;
+    }
+
+    /**
+     * @brief Calculates and sets the stencil (i.e. the matrix A) for the current level by applying the
+     * Galerkin operator, which is defined as A_2h = R * A_h * P with R being restriction and P being prolongation
+     * operators on GPU.
+     *
+     * @param a_h The stencil of the finer grid.
+     * @returns VaryingStencilGpu The stencil to be applied on the coarser grid
+     */
+    VaryingStencilGpu MultigridEngine::galerkin(VaryingStencilGpu &a_h, cl_program program, cl_command_queue queue, cl_context context)
+    {
+        // Make sure a_h has two ghosts at each border for periodic bc.
+        if (a_h.getGh() != 2)
+            throw "galerkin: a_h needs to have 2 ghosts at each border for periodic bc!";
+
+        // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
+        // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
+        auto sr = create3dFullWeightRestrictionStencilGpu(context, queue);
+        auto sp = create3dBilinearProlongationStencilGpu(context, queue);
+
+        // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
+        // S * A_h * S and cut out later manually.
+        auto sas = sr.multiply(a_h, 2, program, queue, context).multiply(sp, 0, program, queue, context);
+
+        // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
+        auto a_2h = sas.cutFromW7ToW3(program, queue, context);
+        a_2h.updateGhosts(program, queue);
 
         return a_2h;
     }

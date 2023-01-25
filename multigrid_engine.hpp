@@ -64,6 +64,7 @@ namespace mgcl
         static double jacobiLocalMem(Problem &problem, Level &level, int maxiter, int returnResidual);
 
         static VaryingStencil3x3x3 galerkin(VaryingStencil3x3x3 &a_h);
+        static VaryingStencilGpu galerkin(VaryingStencilGpu &a_h, cl_program program, cl_command_queue queue, cl_context context);
 
         static void print7point(Cuboid &v, int i, int j, int k);
         static void print19point(Cuboid &v, int i, int j, int k);

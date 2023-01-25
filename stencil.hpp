@@ -518,10 +518,12 @@ namespace mgcl
         }
 
         void updateGhosts(cl_program program, cl_command_queue queue);
-        std::unique_ptr<VaryingStencilGpu> multiply(VaryingStencilGpu &b, int ghc,
-                                                    cl_program program, cl_command_queue queue, cl_context context);
-        std::unique_ptr<VaryingStencilGpu> multiply(FixedStencilGpu &b, int ghc,
-                                                    cl_program program, cl_command_queue queue, cl_context context);
+        VaryingStencilGpu multiply(VaryingStencilGpu &b, int ghc,
+                                   cl_program program, cl_command_queue queue, cl_context context);
+        VaryingStencilGpu multiply(FixedStencilGpu &b, int ghc,
+                                   cl_program program, cl_command_queue queue, cl_context context);
+
+        VaryingStencilGpu cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context);
 
         int getM() const;
         int getN() const;
@@ -577,15 +579,34 @@ namespace mgcl
             return ret;
         }
 
-        std::unique_ptr<VaryingStencilGpu> multiply(VaryingStencilGpu &b, int ghc,
-                                                    cl_program program, cl_command_queue queue, cl_context context);
+        VaryingStencilGpu multiply(VaryingStencilGpu &b, int ghc,
+                                   cl_program program, cl_command_queue queue, cl_context context);
 
         int getWidth() const;
         cl_mem getBuf() const;
     };
 
-    static std::unique_ptr<FixedStencilGpu> create3dFullWeightRestrictionStencilGpu();
-    static std::unique_ptr<FixedStencilGpu> create3dBilinearProlongationStencilGpu();
+    static FixedStencilGpu create3dFullWeightRestrictionStencilGpu(cl_context context, cl_command_queue queue)
+    {
+        int err;
+        FixedStencilGpu ret(3, context, queue);
+
+        auto s = create3dFullWeightRestrictionStencil();
+        ret.fill(s, queue);
+
+        return ret;
+    }
+
+    static FixedStencilGpu create3dBilinearProlongationStencilGpu(cl_context context, cl_command_queue queue)
+    {
+        int err;
+        FixedStencilGpu ret(3, context, queue);
+
+        auto s = create3dBilinearProlongationStencil();
+        ret.fill(s, queue);
+
+        return ret;
+    }
 }
 
 #endif // MGCL_STENCIL_HPP

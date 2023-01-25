@@ -1727,3 +1727,51 @@ __kernel void mult_stencils_fix_var(
         // clang-format on
     }
 }
+
+/**
+ * Copies values from in which is of width 7 on a grid 2m x 2n x 2o to stencil out of width
+ * 3 on grid m x n x o.
+ */
+__kernel void cut_stencils_w7_to_w3(
+    __global double *restrict in,
+    __global double *restrict out,
+    int m, int n, int o, int ghin, int ghout)
+{
+    int i = get_global_id(0) + 2;
+    int j = get_global_id(1) + 2;
+    int k = get_global_id(2) + 2;
+
+    int i2 = (i - 1) * 2 + 1;
+    int j2 = (j - 1) * 2 + 1;
+    int k2 = (k - 1) * 2 + 1;
+
+    // 7^3 = 343
+    int cell_h = i2 * (2 * n + 2 * ghin) * (2 * o + 2 * ghin) * 343 + j2 * (2 * o + 2 * ghin) * 343 + k2 * 343;
+
+    // 3^3 = 27
+    int cell_h2 = i2 * (n + 2 * ghout) * (o + 2 * ghout) * 27 + j2 * (o + 2 * ghout) * 27 + k2 * 27;
+
+    if (i < m + 2 && j < n + 2 && k < o + 2)
+    {
+        // clang-format off
+        for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
+        for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
+        for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
+        {
+            out[cell_h2 + ii * 9 + jj * 3 + kk] = in[cell_h + ii2 * 49 + jj2 * 7 + kk2];
+        }
+        // clang-format on
+
+        // clang-format off
+        // for (int i = 2, i2 = 3; i < a_2h.getDim1() + 2; i++, i2 += 2)
+        // for (int j = 2, j2 = 3; j < a_2h.getDim2() + 2; j++, j2 += 2)
+        // for (int k = 2, k2 = 3; k < a_2h.getDim3() + 2; k++, k2 += 2)
+        //     for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
+        //     for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
+        //     for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
+        //     {
+        //         a_2h[i][j][k][ii][jj][kk] = sas[i2][j2][k2][ii2][jj2][kk2];
+        //     }
+        // clang-format on
+    }
+}
