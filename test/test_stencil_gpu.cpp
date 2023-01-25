@@ -1474,3 +1474,101 @@ TEST_CASE("FixedStencilGpu::read")
         t.finish();
     }
 }
+
+TEST_CASE("FixedStencilGpu::create3dFullWeightRestrictionGpu")
+{
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    {
+        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+        return;
+    }
+
+    mgcl_test::TestUtility t(deviceType);
+
+    auto rgpu = mgcl::create3dFullWeightRestrictionStencilGpu(t.getContext(), t.getCommands());
+    auto r = rgpu.read<3>(t.getCommands());
+    t.finish();
+
+    double factor = 1.0 / 64.0;
+
+    // full-weight restriction
+    REQUIRE(r[0][0][0] == 1 * factor);
+    REQUIRE(r[0][0][1] == 2 * factor);
+    REQUIRE(r[0][0][2] == 1 * factor);
+    REQUIRE(r[0][1][0] == 2 * factor);
+    REQUIRE(r[0][1][1] == 4 * factor);
+    REQUIRE(r[0][1][2] == 2 * factor);
+    REQUIRE(r[0][2][0] == 1 * factor);
+    REQUIRE(r[0][2][1] == 2 * factor);
+    REQUIRE(r[0][2][2] == 1 * factor);
+    REQUIRE(r[1][0][0] == 2 * factor);
+    REQUIRE(r[1][0][1] == 4 * factor);
+    REQUIRE(r[1][0][2] == 2 * factor);
+    REQUIRE(r[1][1][0] == 4 * factor);
+    REQUIRE(r[1][1][1] == 8 * factor);
+    REQUIRE(r[1][1][2] == 4 * factor);
+    REQUIRE(r[1][2][0] == 2 * factor);
+    REQUIRE(r[1][2][1] == 4 * factor);
+    REQUIRE(r[1][2][2] == 2 * factor);
+    REQUIRE(r[2][0][0] == 1 * factor);
+    REQUIRE(r[2][0][1] == 2 * factor);
+    REQUIRE(r[2][0][2] == 1 * factor);
+    REQUIRE(r[2][1][0] == 2 * factor);
+    REQUIRE(r[2][1][1] == 4 * factor);
+    REQUIRE(r[2][1][2] == 2 * factor);
+    REQUIRE(r[2][2][0] == 1 * factor);
+    REQUIRE(r[2][2][1] == 2 * factor);
+    REQUIRE(r[2][2][2] == 1 * factor);
+}
+
+TEST_CASE("FixedStencilGpu::create3dBilinearProlongationStencilGpu")
+{
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    {
+        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+        return;
+    }
+
+    mgcl_test::TestUtility t(deviceType);
+
+    auto rgpu = mgcl::create3dBilinearProlongationStencilGpu(t.getContext(), t.getCommands());
+    auto r = rgpu.read<3>(t.getCommands());
+    t.finish();
+
+    double factor = 1.0 / 8.0;
+
+    // bilinear prolongation
+    REQUIRE(r[0][0][0] == 1 * factor);
+    REQUIRE(r[0][0][1] == 2 * factor);
+    REQUIRE(r[0][0][2] == 1 * factor);
+    REQUIRE(r[0][1][0] == 2 * factor);
+    REQUIRE(r[0][1][1] == 4 * factor);
+    REQUIRE(r[0][1][2] == 2 * factor);
+    REQUIRE(r[0][2][0] == 1 * factor);
+    REQUIRE(r[0][2][1] == 2 * factor);
+    REQUIRE(r[0][2][2] == 1 * factor);
+    REQUIRE(r[1][0][0] == 2 * factor);
+    REQUIRE(r[1][0][1] == 4 * factor);
+    REQUIRE(r[1][0][2] == 2 * factor);
+    REQUIRE(r[1][1][0] == 4 * factor);
+    REQUIRE(r[1][1][1] == 8 * factor);
+    REQUIRE(r[1][1][2] == 4 * factor);
+    REQUIRE(r[1][2][0] == 2 * factor);
+    REQUIRE(r[1][2][1] == 4 * factor);
+    REQUIRE(r[1][2][2] == 2 * factor);
+    REQUIRE(r[2][0][0] == 1 * factor);
+    REQUIRE(r[2][0][1] == 2 * factor);
+    REQUIRE(r[2][0][2] == 1 * factor);
+    REQUIRE(r[2][1][0] == 2 * factor);
+    REQUIRE(r[2][1][1] == 4 * factor);
+    REQUIRE(r[2][1][2] == 2 * factor);
+    REQUIRE(r[2][2][0] == 1 * factor);
+    REQUIRE(r[2][2][1] == 2 * factor);
+    REQUIRE(r[2][2][2] == 1 * factor);
+}
