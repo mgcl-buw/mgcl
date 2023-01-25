@@ -340,7 +340,11 @@ namespace mgcl
         return c;
     }
 
-    // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
+    /**
+     * @brief Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
+     * Ghosts of returning stencil is hard-coded to be 2!
+     */
+
     VaryingStencilGpu VaryingStencilGpu::cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context)
     {
         int err;

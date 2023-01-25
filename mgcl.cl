@@ -1749,7 +1749,7 @@ __kernel void cut_stencils_w7_to_w3(
     int cell_h = i2 * (2 * n + 2 * ghin) * (2 * o + 2 * ghin) * 343 + j2 * (2 * o + 2 * ghin) * 343 + k2 * 343;
 
     // 3^3 = 27
-    int cell_h2 = i2 * (n + 2 * ghout) * (o + 2 * ghout) * 27 + j2 * (o + 2 * ghout) * 27 + k2 * 27;
+    int cell_h2 = i * (n + 2 * ghout) * (o + 2 * ghout) * 27 + j * (o + 2 * ghout) * 27 + k * 27;
 
     if (i < m + 2 && j < n + 2 && k < o + 2)
     {

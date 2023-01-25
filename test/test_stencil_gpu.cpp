@@ -961,6 +961,112 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
     }
 }
 
+TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
+{
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    {
+        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+        return;
+    }
+
+    mgcl_test::TestUtility t(deviceType);
+
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    int gh = 2;
+
+    // This section checks if the indices inside the kernel are correctly reduced to 1d.
+    SECTION("indices")
+    {
+        // create test stencils and fill with unique values
+        mgcl::VaryingStencil<7> a_h(2 * m, 2 * n, 2 * o, gh, gh, gh);
+        mgcl::VaryingStencil<3> a_2h(m, n, o, gh, gh, gh);
+        for (int i = 0; i < a_h.field1d().size(); i++)
+            a_h.field1d()[i] = i;
+        for (int i = 0; i < a_2h.field1d().size(); i++)
+            a_2h.field1d()[i] = i;
+
+        int ghin = 2;
+        int ghout = 2;
+
+        // clang-format off
+        // simulate call with one work-item per cell using these 3 for loops
+        for (int i = 2; i < a_2h.getDim1() + 2; i++)
+        for (int j = 2; j < a_2h.getDim2() + 2; j++)
+        for (int k = 2; k < a_2h.getDim3() + 2; k++)
+        {
+            int i2 = (i - 1) * 2 + 1;
+            int j2 = (j - 1) * 2 + 1;
+            int k2 = (k - 1) * 2 + 1;
+
+            // 7^3 = 343
+            int cell_h = i2 * (2 * n + 2 * ghin) * (2 * o + 2 * ghin) * 343 + j2 * (2 * o + 2 * ghin) * 343 + k2 * 343;
+
+            // 3^3 = 27
+            int cell_h2 = i * (n + 2 * ghout) * (o + 2 * ghout) * 27 + j * (o + 2 * ghout) * 27 + k * 27;
+
+            for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
+            for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
+            for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
+            {
+                REQUIRE(a_2h[i][j][k][ii][jj][kk] == a_2h.field1d()[cell_h2 + ii * 9 + jj * 3 + kk]);
+                REQUIRE(a_h[i2][j2][k2][ii2][jj2][kk2] == a_h.field1d()[cell_h + ii2 * 49 + jj2 * 7 + kk2]);
+            }
+        }
+        // clang-format on
+    }
+
+    // This section checks if the actual calculation is correct by checking results vs the sequential version.
+    SECTION("vs seq")
+    {
+        mgcl::VaryingStencilGpu a_gpu(m, n, o, 7, gh, t.getContext(), t.getCommands());
+
+        // create VaryingStencil, fill with random values and copy to gpu buffer
+        mgcl::VaryingStencil<7> a_h(m, n, o, gh, gh, gh);
+        a_h.fillRandomInt();
+        a_gpu.fill(a_h, t.getCommands());
+        t.finish();
+
+        // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
+        mgcl::VaryingStencil3x3x3 a_2h(a_h.getDim1() >> 1, a_h.getDim2() >> 1, a_h.getDim3() >> 1, 2, 2, 2);
+        // clang-format off
+        for (int i = 2, i2 = 3; i < a_2h.getDim1() + 2; i++, i2 += 2)
+        for (int j = 2, j2 = 3; j < a_2h.getDim2() + 2; j++, j2 += 2)
+        for (int k = 2, k2 = 3; k < a_2h.getDim3() + 2; k++, k2 += 2)
+            for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
+            for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
+            for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
+            {
+                a_2h[i][j][k][ii][jj][kk] = a_h[i2][j2][k2][ii2][jj2][kk2];
+            }
+        // clang-format on
+
+        // cut on gpu and read back result
+        auto a_2h_gpu = a_gpu.cutFromW7ToW3(t.getProgram(), t.getCommands(), t.getContext());
+        auto ret = a_2h_gpu.read<3>(t.getCommands());
+        t.finish();
+
+        REQUIRE(ret.getDim1() == a_2h.getDim1());
+        REQUIRE(ret.getDim2() == a_2h.getDim2());
+        REQUIRE(ret.getDim3() == a_2h.getDim3());
+        REQUIRE(ret.getDim4() == a_2h.getDim4());
+        REQUIRE(ret.getDim5() == a_2h.getDim5());
+        REQUIRE(ret.getDim6() == a_2h.getDim6());
+        REQUIRE(ret.getDim1gh() == a_2h.getDim1gh());
+        REQUIRE(ret.getDim2gh() == a_2h.getDim2gh());
+        REQUIRE(ret.getDim3gh() == a_2h.getDim3gh());
+        REQUIRE(ret.getDim4gh() == a_2h.getDim4gh());
+        REQUIRE(ret.getDim5gh() == a_2h.getDim5gh());
+        REQUIRE(ret.getDim6gh() == a_2h.getDim6gh());
+
+        REQUIRE(ret.isEqual(a_2h));
+    }
+}
+
 TEST_CASE("FixedStencilGpu ctor+dtor")
 {
     auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
