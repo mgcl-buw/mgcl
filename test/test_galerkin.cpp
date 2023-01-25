@@ -9,6 +9,8 @@
 #include "../multigrid_engine.hpp"
 #include "../stencil.hpp"
 
+#include "test_utility.hpp"
+
 TEST_CASE("galerkin Laplace vs Matrix")
 {
     int m = GENERATE(2, 4, 8);
@@ -68,6 +70,44 @@ TEST_CASE("galerkin random values periodic vs Matrix")
     auto a2h = r * ah * p;
 
     CHECK(a2hm.isEqual(a2h, tol));
+}
+
+TEST_CASE("GPU galerkin random values periodic")
+{
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    {
+        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+        return;
+    }
+
+    mgcl_test::TestUtility t(deviceType);
+
+    int m = GENERATE(2, 4, 8);
+    int n = GENERATE(2, 4, 8);
+    int o = GENERATE(2, 4, 8);
+
+    double tol = 1e-12;
+    int gh = 2;
+
+    // Fill varying stencil on fine grid with 27p random values
+    mgcl::VaryingStencilGpu a_h_gpu(m, n, o, 3, gh, t.getContext(), t.getCommands());
+    mgcl::VaryingStencil3x3x3 a_h(m, n, o, gh, gh, gh);
+    a_h.fillRandom(-10, 10);
+    a_h.updateGhosts();
+    a_h_gpu.fill(a_h, t.getCommands());
+    t.finish();
+
+    auto a_2h = mgcl::MultigridEngine::galerkin(a_h);
+    auto a_2h_gpu = mgcl::MultigridEngine::galerkin(a_h_gpu, t.getProgram(), t.getCommands(), t.getContext());
+    t.finish();
+
+    auto ret = a_2h_gpu.read<3>(t.getCommands());
+    t.finish();
+
+    REQUIRE(a_2h.isEqual(ret, tol));
 }
 
 TEST_CASE("galerkin multiple levels random values periodic")
