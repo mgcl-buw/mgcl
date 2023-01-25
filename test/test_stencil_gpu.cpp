@@ -983,14 +983,14 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
     SECTION("indices")
     {
         // create test stencils and fill with unique values
-        mgcl::VaryingStencil<7> a_h(2 * m, 2 * n, 2 * o, gh, gh, gh);
+        mgcl::VaryingStencil<7> a_h(2 * m, 2 * n, 2 * o, 0, 0, 0);
         mgcl::VaryingStencil<3> a_2h(m, n, o, gh, gh, gh);
         for (int i = 0; i < a_h.field1d().size(); i++)
             a_h.field1d()[i] = i;
         for (int i = 0; i < a_2h.field1d().size(); i++)
             a_2h.field1d()[i] = i;
 
-        int ghin = 2;
+        int ghin = 0;
         int ghout = 2;
 
         // clang-format off
@@ -999,9 +999,9 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
         for (int j = 2; j < a_2h.getDim2() + 2; j++)
         for (int k = 2; k < a_2h.getDim3() + 2; k++)
         {
-            int i2 = (i - 1) * 2 + 1;
-            int j2 = (j - 1) * 2 + 1;
-            int k2 = (k - 1) * 2 + 1;
+            int i2 = (i - 2) * 2 + 1;
+            int j2 = (j - 2) * 2 + 1;
+            int k2 = (k - 2) * 2 + 1;
 
             // 7^3 = 343
             int cell_h = i2 * (2 * n + 2 * ghin) * (2 * o + 2 * ghin) * 343 + j2 * (2 * o + 2 * ghin) * 343 + k2 * 343;
@@ -1034,9 +1034,9 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
         mgcl::VaryingStencil3x3x3 a_2h(a_h.getDim1() >> 1, a_h.getDim2() >> 1, a_h.getDim3() >> 1, 2, 2, 2);
         // clang-format off
-        for (int i = 2, i2 = 3; i < a_2h.getDim1() + 2; i++, i2 += 2)
-        for (int j = 2, j2 = 3; j < a_2h.getDim2() + 2; j++, j2 += 2)
-        for (int k = 2, k2 = 3; k < a_2h.getDim3() + 2; k++, k2 += 2)
+        for (int i = 2, i2 = 1; i < a_2h.getDim1() + 2; i++, i2 += 2)
+        for (int j = 2, j2 = 1; j < a_2h.getDim2() + 2; j++, j2 += 2)
+        for (int k = 2, k2 = 1; k < a_2h.getDim3() + 2; k++, k2 += 2)
             for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
             for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
             for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)

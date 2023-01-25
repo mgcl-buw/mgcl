@@ -218,7 +218,7 @@ namespace mgcl
 
         // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
         // S * A_h * S and cut out later manually.
-        auto sas = sr.multiply(a_h, 2).multiply(sp);
+        auto sas = sr.multiply(a_h, 2).multiply(sp, 0);
 
         // std::cout << "a_h[1][1][1][1][1][1] = " << a_h[1][1][1][1][1][1] << std::endl;
         // std::cout << "s[1][1][1][1][1][1] = " << (*s)[1][1][1][1][1][1] << std::endl;
@@ -227,9 +227,9 @@ namespace mgcl
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
         VaryingStencil3x3x3 a_2h(a_h.getDim1() >> 1, a_h.getDim2() >> 1, a_h.getDim3() >> 1, 2, 2, 2);
         // clang-format off
-        for (int i = 2, i2 = 3; i < a_2h.getDim1() + 2; i++, i2 += 2)
-        for (int j = 2, j2 = 3; j < a_2h.getDim2() + 2; j++, j2 += 2)
-        for (int k = 2, k2 = 3; k < a_2h.getDim3() + 2; k++, k2 += 2)
+        for (int i = 2, i2 = 1; i < a_2h.getDim1() + 2; i++, i2 += 2)
+        for (int j = 2, j2 = 1; j < a_2h.getDim2() + 2; j++, j2 += 2)
+        for (int k = 2, k2 = 1; k < a_2h.getDim3() + 2; k++, k2 += 2)
             for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
             for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
             for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)

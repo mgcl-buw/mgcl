@@ -1179,7 +1179,7 @@ TEST_CASE("FixedStencil::multiply")
     // clang-format on
 }
 
-TEST_CASE("VaryingStencil::create3dFullWeightRestriction")
+TEST_CASE("FixedStencil::create3dFullWeightRestriction")
 {
     auto r = mgcl::create3dFullWeightRestrictionStencil();
 

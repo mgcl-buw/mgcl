@@ -1737,13 +1737,13 @@ __kernel void cut_stencils_w7_to_w3(
     __global double *restrict out,
     int m, int n, int o, int ghin, int ghout)
 {
-    int i = get_global_id(0) + 2;
-    int j = get_global_id(1) + 2;
-    int k = get_global_id(2) + 2;
+    int i = get_global_id(0) + ghout;
+    int j = get_global_id(1) + ghout;
+    int k = get_global_id(2) + ghout;
 
-    int i2 = (i - 1) * 2 + 1;
-    int j2 = (j - 1) * 2 + 1;
-    int k2 = (k - 1) * 2 + 1;
+    int i2 = get_global_id(0) * 2 + 1;
+    int j2 = get_global_id(1) * 2 + 1;
+    int k2 = get_global_id(2) * 2 + 1;
 
     // 7^3 = 343
     int cell_h = i2 * (2 * n + 2 * ghin) * (2 * o + 2 * ghin) * 343 + j2 * (2 * o + 2 * ghin) * 343 + k2 * 343;
