@@ -55,7 +55,7 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
                                    .append(std::to_string(N));
 
             b.run(std::string(name).c_str(), [&]
-                  { ankerl::nanobench::doNotOptimizeAway(v.multiply(f)); });
+                  { ankerl::nanobench::doNotOptimizeAway(v.multiply(f, 0)); });
         }
 
         {
@@ -68,7 +68,7 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
                                    .append(std::to_string(N));
 
             b.run(std::string(name).c_str(), [&]
-                  { ankerl::nanobench::doNotOptimizeAway(v.multiply(f)); });
+                  { ankerl::nanobench::doNotOptimizeAway(v.multiply(f, 0)); });
         }
 
         {
@@ -81,7 +81,7 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
                                    .append(std::to_string(N));
 
             b.run(std::string(name).c_str(), [&]
-                  { ankerl::nanobench::doNotOptimizeAway(f.multiply(v)); });
+                  { ankerl::nanobench::doNotOptimizeAway(f.multiply(v, 0)); });
         }
 
         if (gpuAvailable)
@@ -102,7 +102,7 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 2, tu->getProgram(), tu->getCommands(), tu->getContext())); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0, tu->getProgram(), tu->getCommands(), tu->getContext())); 
                     tu->finish(); });
         }
 
@@ -124,7 +124,7 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 2, tu->getProgram(), tu->getCommands(), tu->getContext())); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0, tu->getProgram(), tu->getCommands(), tu->getContext())); 
                     tu->finish(); });
         }
 
@@ -146,7 +146,7 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(fd.multiply(vd, 2, tu->getProgram(), tu->getCommands(), tu->getContext())); 
+                    ankerl::nanobench::doNotOptimizeAway(fd.multiply(vd, 0, tu->getProgram(), tu->getCommands(), tu->getContext())); 
                     tu->finish(); });
         }
     }
