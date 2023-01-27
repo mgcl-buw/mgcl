@@ -30,6 +30,7 @@ namespace mgcl
         MGCL_STENCIL stencilType;
         double stencilFactor = 1;
         std::unique_ptr<VaryingStencil3x3x3> stencilValues = nullptr;
+        std::unique_ptr<VaryingStencilGpu> stencilValuesGpu = nullptr;
 
         /* grid dimensions of real grid */
         int m;
@@ -107,6 +108,8 @@ namespace mgcl
         std::unique_ptr<VaryingStencil3x3x3> &getStencilValues();
 
         double getStencilFactor() const;
+
+        std::unique_ptr<VaryingStencilGpu> &getStencilValuesGpu();
     };
 }
 

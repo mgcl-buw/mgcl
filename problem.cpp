@@ -135,8 +135,20 @@ namespace mgcl
 
             // Apply Galerkin operator if stencil is varying and we're not on level 0.
             if (levels[0]->getStencilValues() && level >= 1)
-                levels.back()->stencilValues = std::make_unique<VaryingStencil3x3x3>(
-                    std::move(MultigridEngine::galerkin(*levels[level - 1]->getStencilValues())));
+            {
+                if (!use_opencl)
+                {
+                    levels.back()->stencilValues = std::make_unique<VaryingStencil3x3x3>(
+                        std::move(MultigridEngine::galerkin(*levels[level - 1]->getStencilValues())));
+                }
+                else
+                {
+                    levels.back()->stencilValuesGpu = std::make_unique<VaryingStencilGpu>(
+                        std::move(MultigridEngine::galerkin(
+                            *levels[level - 1]->getStencilValuesGpu(),
+                            getProgram(), getCommands(), getContext())));
+                }
+            }
         }
 
         return true;

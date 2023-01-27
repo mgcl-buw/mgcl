@@ -132,13 +132,25 @@ namespace mgcl
      */
     int Level::initOpenCLBuffers()
     {
-        // TODO create stencilValues
         if (!problem->getUseOpencl())
             return CL_SUCCESS;
 
         int err;
         auto context = problem->getOpenCLHelper().getContext();
         auto deviceType = problem->getOpenCLHelper().getDeviceType();
+
+        // create gpu buffer for varying stencil if needed
+        if (stencilType == MGCL_VARYING_7POINT ||
+            stencilType == MGCL_VARYING_19POINT ||
+            stencilType == MGCL_VARYING_27POINT)
+        {
+            stencilValuesGpu = std::make_unique<VaryingStencilGpu>(
+                m, n, o, 3, 2, problem->getContext(), problem->getCommands());
+
+            if (num == 0)
+                // Fill stencil values on gpu on level 0 from input stencil
+                stencilValuesGpu->fill(*stencilValues, problem->getCommands());
+        }
 
         // create d_v_in and d_f buffers on level zero and copy data to it only if buffers should not be reused
         if (num == 0)
@@ -212,6 +224,11 @@ namespace mgcl
     MGCL_STENCIL Level::getStencilType() const
     {
         return stencilType;
+    }
+
+    std::unique_ptr<VaryingStencilGpu> &Level::getStencilValuesGpu()
+    {
+        return stencilValuesGpu;
     }
 
     int Level::getNgh() const

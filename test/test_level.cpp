@@ -199,6 +199,27 @@ TEST_CASE("Level::initOpenCLBuffers")
         REQUIRE(err == CL_SUCCESS);
         CHECK(refCount == 1);
     }
+
+    SECTION("VaryingStencils")
+    {
+        auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
+        p->setUseOpencl(true);
+        p->setGhostsIn(1);
+        p->setDeviceType(deviceType);
+
+        p->setStencilType(mgcl::MGCL_VARYING_27POINT);
+        auto &sv = p->getStencilValues();
+        sv->fillRandomInt();
+
+        REQUIRE(p->init());
+
+        int levelNum = GENERATE(0, 1, 2);
+        auto &level0 = p->getLevelAt(levelNum);
+
+        REQUIRE(level0.getStencilValuesGpu());
+        if (levelNum > 0)
+            REQUIRE(!level0.getStencilValues());
+    }
 }
 
 TEST_CASE("Level::init")
