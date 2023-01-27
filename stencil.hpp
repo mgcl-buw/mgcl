@@ -477,7 +477,12 @@ namespace mgcl
 
     public:
         VaryingStencilGpu(int m_, int n_, int o_, int width_, int gh_, cl_context context, cl_command_queue queue);
+        VaryingStencilGpu(VaryingStencilGpu &&);
+        VaryingStencilGpu &operator=(VaryingStencilGpu &&);
         ~VaryingStencilGpu();
+
+        VaryingStencilGpu(const VaryingStencilGpu &) = delete;
+        VaryingStencilGpu &operator=(const VaryingStencilGpu &) = delete;
 
         /**
          * Fills the gpu buffer with values from a VaryingStencil.
@@ -546,7 +551,12 @@ namespace mgcl
 
     public:
         FixedStencilGpu(int width_, cl_context context, cl_command_queue queue);
+        FixedStencilGpu(FixedStencilGpu &&);
+        FixedStencilGpu &operator=(FixedStencilGpu &&);
         ~FixedStencilGpu();
+
+        FixedStencilGpu(const FixedStencilGpu &) = delete;
+        FixedStencilGpu &operator=(const FixedStencilGpu &) = delete;
 
         template <int N>
         void fill(FixedStencil<N> &f, cl_command_queue queue)
@@ -588,7 +598,6 @@ namespace mgcl
 
     static FixedStencilGpu create3dFullWeightRestrictionStencilGpu(cl_context context, cl_command_queue queue)
     {
-        int err;
         FixedStencilGpu ret(3, context, queue);
 
         auto s = create3dFullWeightRestrictionStencil();
@@ -599,7 +608,6 @@ namespace mgcl
 
     static FixedStencilGpu create3dBilinearProlongationStencilGpu(cl_context context, cl_command_queue queue)
     {
-        int err;
         FixedStencilGpu ret(3, context, queue);
 
         auto s = create3dBilinearProlongationStencil();

@@ -63,6 +63,81 @@ TEST_CASE("VaryingStencilGpu ctor+dtor")
     s.reset();
 }
 
+TEST_CASE("VaryingStencilGpu move ctor")
+{
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    {
+        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+        return;
+    }
+
+    mgcl_test::TestUtility t(deviceType);
+
+    int n = GENERATE(1, 2, 3);
+    int m = GENERATE(1, 2, 3);
+    int o = GENERATE(1, 2, 3);
+
+    mgcl::VaryingStencil3x3x3 h(m, n, o, 0, 0, 0);
+    h.fillRandom();
+    auto hgpu = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, 0, t.getContext(), t.getCommands());
+    hgpu->fill(h, t.getCommands());
+
+    // copy manually for checking results
+    mgcl::VaryingStencil3x3x3 h_check(m, n, o, 0, 0, 0);
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++)
+            for (int k = 0; k < o; k++)
+                for (int ii = 0; ii < 3; ii++)
+                    for (int jj = 0; jj < 3; jj++)
+                        for (int kk = 0; kk < 3; kk++)
+                        {
+                            h_check[i][j][k][ii][jj][kk] = h[i][j][k][ii][jj][kk];
+                        }
+
+    // check move ctor
+    auto h2gpu(std::move(*hgpu));
+
+    REQUIRE(hgpu->getM() == 0);
+    REQUIRE(hgpu->getN() == 0);
+    REQUIRE(hgpu->getO() == 0);
+    REQUIRE(hgpu->getGh() == 0);
+    REQUIRE(hgpu->getWidth() == 0);
+    auto h2 = h2gpu.read<3>(t.getCommands());
+    t.finish();
+    REQUIRE(h2.isEqual(h_check));
+
+    // check if buffer has count 2 (since hgpu is not deleted yet)
+    int err;
+    cl_uint refCount = 0;
+    err = clGetMemObjectInfo(hgpu->getBuf(), CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+    mgcl::mgclCheckError(err, "clGetMemObjectInfo(hgpu->getBuf(), CL_MEM_REFERENCE_COUNT)");
+    REQUIRE(err == CL_SUCCESS);
+    REQUIRE(refCount == 2);
+
+    // now delete object, ref count should be 1
+    hgpu.reset();
+    t.finish();
+    err = clGetMemObjectInfo(h2gpu.getBuf(), CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+    mgcl::mgclCheckError(err, "clGetMemObjectInfo(hgpu->getBuf(), CL_MEM_REFERENCE_COUNT)");
+    REQUIRE(err == CL_SUCCESS);
+    REQUIRE(refCount == 1);
+
+    // check move assignment
+    auto h3gpu = std::move(h2gpu);
+
+    REQUIRE(h2gpu.getM() == 0);
+    REQUIRE(h2gpu.getN() == 0);
+    REQUIRE(h2gpu.getO() == 0);
+    REQUIRE(h2gpu.getGh() == 0);
+    REQUIRE(h2gpu.getWidth() == 0);
+    auto h3 = h3gpu.read<3>(t.getCommands());
+    t.finish();
+    REQUIRE(h3.isEqual(h_check));
+}
+
 TEST_CASE("VaryingStencilGpu::fill")
 {
     auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);

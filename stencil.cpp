@@ -20,6 +20,34 @@ namespace mgcl
         mgclCheckError(err, "clEnqueueFillBuffer");
     }
 
+    VaryingStencilGpu::VaryingStencilGpu(VaryingStencilGpu &&s)
+        : m(std::exchange(s.m, 0)),
+          n(std::exchange(s.n, 0)),
+          o(std::exchange(s.o, 0)),
+          width(std::exchange(s.width, 0)),
+          gh(std::exchange(s.gh, 0)),
+          buf(s.buf) // don't set buf to nullptr since it gets released in dtor
+    {
+        // retain buffers (i.e. increase internal reference count so they won't be released by accident in dtor)
+        if (buf)
+        {
+            int err = clRetainMemObject(buf);
+            mgclCheckError(err, "clRetainMemObject(buf)");
+        }
+    }
+
+    VaryingStencilGpu &VaryingStencilGpu::operator=(VaryingStencilGpu &&s)
+    {
+        m = std::exchange(s.m, 0);
+        n = std::exchange(s.n, 0);
+        o = std::exchange(s.o, 0);
+        width = std::exchange(s.width, 0);
+        gh = std::exchange(s.gh, 0);
+        buf = s.buf;
+
+        return *this;
+    }
+
     VaryingStencilGpu::~VaryingStencilGpu()
     {
         int err = clReleaseMemObject(buf);
@@ -257,6 +285,33 @@ namespace mgcl
         err = clEnqueueFillBuffer(queue, buf, &zero, sizeof(cl_double), 0, sizeof(double) * width * width * width,
                                   0, NULL, NULL);
         mgclCheckError(err, "clEnqueueFillBuffer");
+    }
+
+    FixedStencilGpu::FixedStencilGpu(FixedStencilGpu &&s)
+        : width(std::exchange(s.width, 0)),
+          buf(s.buf) // don't set buf to nullptr since it gets released in dtor
+    {
+        // retain buffers (i.e. increase internal reference count so they won't be released by accident in dtor)
+        if (buf)
+        {
+            int err = clRetainMemObject(buf);
+            mgclCheckError(err, "clRetainMemObject(buf)");
+        }
+    }
+
+    FixedStencilGpu &FixedStencilGpu::operator=(FixedStencilGpu &&s)
+    {
+        width = std::exchange(s.width, 0);
+        buf = s.buf;
+
+        // retain buffers (i.e. increase internal reference count so they won't be released by accident in dtor)
+        if (buf)
+        {
+            int err = clRetainMemObject(buf);
+            mgclCheckError(err, "clRetainMemObject(buf)");
+        }
+
+        return *this;
     }
 
     FixedStencilGpu::~FixedStencilGpu()
