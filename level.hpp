@@ -110,6 +110,7 @@ namespace mgcl
         double getStencilFactor() const;
 
         std::unique_ptr<VaryingStencilGpu> &getStencilValuesGpu();
+        void setStencilValuesGpu(std::unique_ptr<VaryingStencilGpu> sv);
     };
 }
 

@@ -92,6 +92,83 @@ TEST_CASE("jacobi")
     }
 }
 
+TEST_CASE("jacobi GPU varying stencil")
+{
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    {
+        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+        return;
+    }
+
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    int ghosts_m = 1;
+    int ghosts_n = 1;
+    int ghosts_o = 1;
+    int mgh = m + 2 * ghosts_m;
+    int ngh = n + 2 * ghosts_n;
+    int ogh = o + 2 * ghosts_o;
+    double omega = 0.8;
+    int maxiter = 5;
+
+    // make sure to actually set grid size to 16^3 when using these values
+    // auto v_in = mgcl_test::test_jacobi::inputV16();
+    // auto f_in = mgcl_test::test_jacobi::inputF16();
+    // auto r_in = mgcl_test::test_jacobi::inputR16();
+    auto v_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+    auto f_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+    auto r_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+    f_in->fillRandomInt();
+
+    auto p = std::make_shared<mgcl::Problem>(m, n, o);
+    p->setResidualNorm(mgcl::MGCL_L2);
+    p->setGhosts(1);
+    p->setOmega(omega);
+    p->setDeviceType(deviceType);
+    p->setV(v_in);
+    p->setF(f_in);
+
+    p->setStencilType(mgcl::MGCL_VARYING_27POINT);
+    auto &sv_tmp = p->getStencilValues();
+    sv_tmp->fillRandomInt();
+
+    p->init();
+    auto &level = p->getLevelAt(0);
+    auto &sv = level.getStencilValues();
+
+    mgcl_test::TestUtility tu(p);
+    cl_mem d_in_f = tu.createOpenCLBuffer(*f_in);
+    cl_mem d_in_v = tu.createOpenCLBuffer(*v_in);
+    cl_mem d_in_v_out = tu.createOpenCLBuffer(*v_in);
+    cl_mem d_in_r = tu.createOpenCLBuffer(*r_in);
+    auto d_in_sv = std::make_unique<mgcl::VaryingStencilGpu>(sv->getDim1(), sv->getDim2(), sv->getDim3(),
+                                                             sv->getDim4(), sv->getGhostsDim1(),
+                                                             p->getContext(), p->getCommands());
+    d_in_sv->fill(*sv, p->getCommands());
+
+    level.setDF(d_in_f);
+    level.setDVIn(d_in_v);
+    level.setDVOut(d_in_v_out);
+    level.setDR(d_in_r);
+    level.setStencilValuesGpu(std::move(d_in_sv));
+
+    double res_gpu = mgcl::MultigridEngine::jacobi(*p, level, maxiter, 1);
+    tu.finish();
+
+    double res_seq = mgcl::MultigridEngine::jacobiSeq(*v_in, *f_in, *r_in, omega, maxiter, mgcl::MGCL_L2,
+                                                      mgcl::MGCL_VARYING_27POINT, 1, *sv, 1);
+
+    auto c_r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+    auto c_v_out = tu.readOpenCLBuffer(d_in_v, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+
+    REQUIRE(fabs(res_seq - res_gpu) < 1e-13);
+    REQUIRE(c_r_out->isEqual(*r_in));
+    REQUIRE(c_v_out->isEqual(*v_in));
+}
 
 TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
 {

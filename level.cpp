@@ -231,6 +231,11 @@ namespace mgcl
         return stencilValuesGpu;
     }
 
+    void Level::setStencilValuesGpu(std::unique_ptr<VaryingStencilGpu> sv)
+    {
+        stencilValuesGpu = std::move(sv);
+    }
+
     int Level::getNgh() const
     {
         return ngh;

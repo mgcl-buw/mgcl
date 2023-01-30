@@ -612,6 +612,131 @@ __kernel void jacobi_iter_27point(
     }
 }
 
+/* runs one iteration of jacobi's method using one work-item per row.
+ * uses a 2D kernel which loops over cells in x-direction. y and z is parallelized.
+ * global size must be of ghosted grid.
+ * m, n and o must be dimensions of ghosted grid, too.
+ * h2 is grid spacing to the power of 2
+ * dinv is h2/A(i,i), e.g. h2/6.0 for 3D laplacian stencil
+ * if store_residual is true, the residual will be stored into global field r.
+ * stencilValues is a VaryingStencilGpu having width 3 (i.e. a 6d array).
+ * ghosts_sv is the amount of ghost cells of stencilValues. */
+__kernel void jacobi_iter_27point_varying_stencil(
+    __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double *restrict v_out,
+    __global double *restrict f,
+    __global double *restrict r,
+    __global double *restrict stencilValues,
+    const double omega,
+    const int m, const int n, const int o,
+    const int ghosts, const int ghosts_sv,
+    const int store_residual)
+{
+    int j = get_global_id(0);
+    int k = get_global_id(1);
+
+    // calculate residual only for real cells since ghost cells do not have further ghost cells for themselves
+    if (j > ghosts - 1 && k > ghosts - 1 && j < n - ghosts && k < o - ghosts)
+    {
+        int ioff = n * o;
+        int joff = o;
+        int koff = 1;
+        int index = ghosts * ioff + j * o + k;
+
+        int ioff_sv = ((n - 2 * ghosts) + 2 * ghosts_sv) * ((o - 2 * ghosts) + 2 * ghosts_sv);
+        int index_sv = ghosts_sv * ioff_sv + j * ((o - 2 * ghosts) + 2 * ghosts_sv) + k;
+
+        for (int i = ghosts; i < m - ghosts; i++)
+        {
+            double res;
+            double v_in_index = v_in[index];
+            double sv_self = stencilValues[index_sv + 9 + 3 + 1];
+
+            // A*v
+            // clang-format off
+            double stencilsum = sv_self * v_in_index
+                + stencilValues[index_sv + 9 + 3]      * v_in[index - 1]
+                + stencilValues[index_sv + 9 + 3 + 2]  * v_in[index + 1]
+                + stencilValues[index_sv + 9 + 1]      * v_in[index - joff]
+                + stencilValues[index_sv + 9 + 6 + 1]  * v_in[index + joff]
+                + stencilValues[index_sv + 3 + 1]      * v_in[index - ioff]
+                + stencilValues[index_sv + 18 + 3 + 1] * v_in[index + ioff]
+                
+                + stencilValues[index_sv + 9]          * v_in[index - joff - koff]
+                + stencilValues[index_sv + 9 + 2]      * v_in[index - joff + koff]
+                + stencilValues[index_sv + 9 + 6]      * v_in[index + joff - koff]
+                + stencilValues[index_sv + 9 + 6 + 2]  * v_in[index + joff + koff]
+                + stencilValues[index_sv + 3]          * v_in[index - ioff - koff]
+                + stencilValues[index_sv + 3 + 2]      * v_in[index - ioff + koff]
+                + stencilValues[index_sv + 18 + 3]     * v_in[index + ioff - koff]
+                + stencilValues[index_sv + 18 + 3 + 2] * v_in[index + ioff + koff]
+                + stencilValues[index_sv + 1]          * v_in[index - ioff - joff]
+                + stencilValues[index_sv + 6 + 1]      * v_in[index - ioff + joff]
+                + stencilValues[index_sv + 18 + 1]     * v_in[index + ioff - joff]
+                + stencilValues[index_sv + 18 + 6 + 1] * v_in[index + ioff + joff]
+
+                + stencilValues[index_sv]              * v_in[index - ioff - joff - koff]
+                + stencilValues[index_sv + 2]          * v_in[index - ioff - joff + koff]
+                + stencilValues[index_sv + 6]          * v_in[index - ioff + joff - koff]
+                + stencilValues[index_sv + 6 + 2]      * v_in[index - ioff + joff + koff]
+                + stencilValues[index_sv + 18]         * v_in[index + ioff - joff - koff]
+                + stencilValues[index_sv + 18 + 2]     * v_in[index + ioff - joff + koff]
+                + stencilValues[index_sv + 18 + 6]     * v_in[index + ioff + joff - koff]
+                + stencilValues[index_sv + 18 + 6 + 2] * v_in[index + ioff + joff + koff];
+            // clang-format on
+
+            // clang-format off
+            // stencilsum = stencilValues[isv][jsv][ksv][1][1][1]  * vraw[i][j][k]
+            //x     + stencilValues[isv][jsv][ksv][1][1][0]         * vraw[i][j][k - 1]
+            //x     + stencilValues[isv][jsv][ksv][1][1][2]         * vraw[i][j][k + 1]
+            //x     + stencilValues[isv][jsv][ksv][1][0][1]         * vraw[i][j - 1][k]
+            //x     + stencilValues[isv][jsv][ksv][1][2][1]         * vraw[i][j + 1][k]
+            //x     + stencilValues[isv][jsv][ksv][0][1][1]         * vraw[i - 1][j][k]
+            //x     + stencilValues[isv][jsv][ksv][2][1][1]         * vraw[i + 1][j][k]
+                
+            //x     + stencilValues[isv][jsv][ksv][1][0][0] * vraw[i][j - 1][k - 1]
+            //x     + stencilValues[isv][jsv][ksv][1][0][2] * vraw[i][j - 1][k + 1]
+            //x     + stencilValues[isv][jsv][ksv][1][2][0] * vraw[i][j + 1][k - 1]
+            //x     + stencilValues[isv][jsv][ksv][1][2][2] * vraw[i][j + 1][k + 1]
+            //x     + stencilValues[isv][jsv][ksv][0][1][0] * vraw[i - 1][j][k - 1]
+            //x     + stencilValues[isv][jsv][ksv][0][1][2] * vraw[i - 1][j][k + 1]
+            //x     + stencilValues[isv][jsv][ksv][2][1][0] * vraw[i + 1][j][k - 1]
+            //x     + stencilValues[isv][jsv][ksv][2][1][2] * vraw[i + 1][j][k + 1]
+            //x     + stencilValues[isv][jsv][ksv][0][0][1] * vraw[i - 1][j - 1][k]
+            //x     + stencilValues[isv][jsv][ksv][0][2][1] * vraw[i - 1][j + 1][k]
+            //x     + stencilValues[isv][jsv][ksv][2][0][1] * vraw[i + 1][j - 1][k]
+            //x     + stencilValues[isv][jsv][ksv][2][2][1] * vraw[i + 1][j + 1][k]
+                
+            //x     + stencilValues[isv][jsv][ksv][0][0][0] * vraw[i - 1][j - 1][k - 1]
+            //x     + stencilValues[isv][jsv][ksv][0][0][2] * vraw[i - 1][j - 1][k + 1]
+            //x     + stencilValues[isv][jsv][ksv][0][2][0] * vraw[i - 1][j + 1][k - 1]
+            //x     + stencilValues[isv][jsv][ksv][0][2][2] * vraw[i - 1][j + 1][k + 1]
+            //     + stencilValues[isv][jsv][ksv][2][0][0] * vraw[i + 1][j - 1][k - 1]
+            //     + stencilValues[isv][jsv][ksv][2][0][2] * vraw[i + 1][j - 1][k + 1]
+            //     + stencilValues[isv][jsv][ksv][2][2][0] * vraw[i + 1][j + 1][k - 1]
+            //     + stencilValues[isv][jsv][ksv][2][2][2] * vraw[i + 1][j + 1][k + 1];
+            // clang-format on
+
+            // r = f - A*v
+            res = f[index] - stencilsum;
+
+            // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
+            v_out[index] = v_in_index + omega * (1.0 / sv_self) * res;
+
+            // if (get_global_id(0) == ghosts && get_global_id(1) == ghosts && i >= ghosts && i <= ghosts+2)
+            // {
+            //     printf("x = %d, res = %e, v_out = %e\n", i, res, v_out[index]);
+            //     print_7point(v_in, index, ioff, joff, koff);
+            // }
+
+            if (store_residual)
+                r[index] = res;
+
+            index += ioff;
+        }
+    }
+}
+
 /* Restricts from fine to coarse grid.
  * Needs to get called with m*n*o work-items.
  * m,n,o is size of ghosted coarse grid.
