@@ -42,6 +42,15 @@ namespace mgcl_test
         std::unique_ptr<mgcl::Cuboid> outputFine16();
         std::unique_ptr<mgcl::Cuboid> outputCoarse8();
     }
+
+    namespace test_jacobi
+    {
+        std::shared_ptr<mgcl::Cuboid> inputV16();
+        std::shared_ptr<mgcl::Cuboid> inputR16();
+        std::shared_ptr<mgcl::Cuboid> inputF16();
+        std::shared_ptr<mgcl::Cuboid> outputV16();
+        std::shared_ptr<mgcl::Cuboid> outputR16();
+    }
 }
 
 #endif // TEST_RESULTS_HPP
