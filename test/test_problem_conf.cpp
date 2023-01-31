@@ -604,8 +604,9 @@ TEST_CASE("Problem::init")
 
         p.init();
 
-        // stencilValues defined in Problem is now owned by level 0
-        REQUIRE(p.getStencilValues() == nullptr);
+        // stencilValues defined in Problem is copied to level 0
+        REQUIRE(p.getStencilValues().get() == &s);
+        REQUIRE(p.getStencilValues().get() == p.getLevelAt(0).getStencilValues().get());
 
         for (int lv = 0; lv <= p.getMaxlevel(); lv++)
         {

@@ -26,11 +26,10 @@ namespace mgcl
         std::shared_ptr<Cuboid> r = nullptr;
 
         /* Stencil for this Level that will be applied on v */
-        // TODO init
         MGCL_STENCIL stencilType;
         double stencilFactor = 1;
-        std::unique_ptr<VaryingStencil3x3x3> stencilValues = nullptr;
-        std::unique_ptr<VaryingStencilGpu> stencilValuesGpu = nullptr;
+        std::shared_ptr<VaryingStencil3x3x3> stencilValues = nullptr;
+        std::shared_ptr<VaryingStencilGpu> stencilValuesGpu = nullptr;
 
         /* grid dimensions of real grid */
         int m;
@@ -105,12 +104,12 @@ namespace mgcl
 
         MGCL_STENCIL getStencilType() const;
 
-        std::unique_ptr<VaryingStencil3x3x3> &getStencilValues();
+        std::shared_ptr<VaryingStencil3x3x3> &getStencilValues();
 
         double getStencilFactor() const;
 
-        std::unique_ptr<VaryingStencilGpu> &getStencilValuesGpu();
-        void setStencilValuesGpu(std::unique_ptr<VaryingStencilGpu> sv);
+        std::shared_ptr<VaryingStencilGpu> &getStencilValuesGpu();
+        void setStencilValuesGpu(std::shared_ptr<VaryingStencilGpu> sv);
     };
 }
 

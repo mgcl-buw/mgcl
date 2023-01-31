@@ -133,19 +133,20 @@ TEST_CASE("jacobi GPU varying stencil")
     p->setF(f_in);
 
     p->setStencilType(mgcl::MGCL_VARYING_27POINT);
-    auto &sv_tmp = p->getStencilValues();
-    sv_tmp->fillRandomInt();
+    auto &sv = p->getStencilValues();
+    sv->fillRandomInt();
 
     p->init();
     auto &level = p->getLevelAt(0);
-    auto &sv = level.getStencilValues();
+    // auto &sv = level.getStencilValues();
+    REQUIRE(level.getStencilValues().get() == sv.get());
 
     mgcl_test::TestUtility tu(p);
     cl_mem d_in_f = tu.createOpenCLBuffer(*f_in);
     cl_mem d_in_v = tu.createOpenCLBuffer(*v_in);
     cl_mem d_in_v_out = tu.createOpenCLBuffer(*v_in);
     cl_mem d_in_r = tu.createOpenCLBuffer(*r_in);
-    auto d_in_sv = std::make_unique<mgcl::VaryingStencilGpu>(sv->getDim1(), sv->getDim2(), sv->getDim3(),
+    auto d_in_sv = std::make_shared<mgcl::VaryingStencilGpu>(sv->getDim1(), sv->getDim2(), sv->getDim3(),
                                                              sv->getDim4(), sv->getGhostsDim1(),
                                                              p->getContext(), p->getCommands());
     d_in_sv->fill(*sv, p->getCommands());
@@ -154,7 +155,7 @@ TEST_CASE("jacobi GPU varying stencil")
     level.setDVIn(d_in_v);
     level.setDVOut(d_in_v_out);
     level.setDR(d_in_r);
-    level.setStencilValuesGpu(std::move(d_in_sv));
+    level.setStencilValuesGpu(d_in_sv);
 
     double res_gpu = mgcl::MultigridEngine::jacobi(*p, level, maxiter, 1);
     tu.finish();

@@ -138,15 +138,15 @@ namespace mgcl
             {
                 if (!use_opencl)
                 {
-                    levels.back()->stencilValues = std::make_unique<VaryingStencil3x3x3>(
-                        std::move(MultigridEngine::galerkin(*levels[level - 1]->getStencilValues())));
+                    levels.back()->stencilValues = std::make_shared<VaryingStencil3x3x3>(
+                        MultigridEngine::galerkin(*levels[level - 1]->getStencilValues()));
                 }
                 else
                 {
-                    levels.back()->stencilValuesGpu = std::make_unique<VaryingStencilGpu>(
-                        std::move(MultigridEngine::galerkin(
+                    levels.back()->stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
+                        MultigridEngine::galerkin(
                             *levels[level - 1]->getStencilValuesGpu(),
-                            getProgram(), getCommands(), getContext())));
+                            getProgram(), getCommands(), getContext()));
                 }
             }
         }
@@ -663,12 +663,12 @@ namespace mgcl
         if (stencilType == MGCL_VARYING_7POINT ||
             stencilType == MGCL_VARYING_19POINT ||
             stencilType == MGCL_VARYING_27POINT)
-            stencilValues = std::make_unique<VaryingStencil3x3x3>(m, n, o, 2, 2, 2);
+            stencilValues = std::make_shared<VaryingStencil3x3x3>(m, n, o, 2, 2, 2);
         else
             stencilValues = nullptr;
     }
 
-    std::unique_ptr<VaryingStencil3x3x3> &Problem::getStencilValues()
+    std::shared_ptr<VaryingStencil3x3x3> &Problem::getStencilValues()
     {
         return stencilValues;
     }

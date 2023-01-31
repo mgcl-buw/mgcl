@@ -81,7 +81,7 @@ namespace mgcl
             if (stencilType == MGCL_VARYING_7POINT ||
                 stencilType == MGCL_VARYING_19POINT ||
                 stencilType == MGCL_VARYING_27POINT)
-                stencilValues = std::move(problem->stencilValues);
+                stencilValues = problem->stencilValues;
 
             // create ghosted arrays for v and f on host if device buffer should not be reused
             if (!problem->reuse_opencl_buffers && !problem->copy_buffer_data)
@@ -144,7 +144,7 @@ namespace mgcl
             stencilType == MGCL_VARYING_19POINT ||
             stencilType == MGCL_VARYING_27POINT)
         {
-            stencilValuesGpu = std::make_unique<VaryingStencilGpu>(
+            stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
                 m, n, o, 3, 2, problem->getContext(), problem->getCommands());
 
             if (num == 0)
@@ -226,14 +226,14 @@ namespace mgcl
         return stencilType;
     }
 
-    std::unique_ptr<VaryingStencilGpu> &Level::getStencilValuesGpu()
+    std::shared_ptr<VaryingStencilGpu> &Level::getStencilValuesGpu()
     {
         return stencilValuesGpu;
     }
 
-    void Level::setStencilValuesGpu(std::unique_ptr<VaryingStencilGpu> sv)
+    void Level::setStencilValuesGpu(std::shared_ptr<VaryingStencilGpu> sv)
     {
-        stencilValuesGpu = std::move(sv);
+        stencilValuesGpu = sv;
     }
 
     int Level::getNgh() const
@@ -241,7 +241,7 @@ namespace mgcl
         return ngh;
     }
 
-    std::unique_ptr<VaryingStencil3x3x3> &Level::getStencilValues()
+    std::shared_ptr<VaryingStencil3x3x3> &Level::getStencilValues()
     {
         return stencilValues;
     }
