@@ -636,6 +636,7 @@ __kernel void jacobi_iter_27point_varying_stencil(
     int k = get_global_id(1);
 
     // calculate residual only for real cells since ghost cells do not have further ghost cells for themselves
+    // TODO start kernel for only real cells and offset indices by ghosts
     if (j > ghosts - 1 && k > ghosts - 1 && j < n - ghosts && k < o - ghosts)
     {
         int ioff = n * o;
@@ -643,8 +644,8 @@ __kernel void jacobi_iter_27point_varying_stencil(
         int koff = 1;
         int index = ghosts * ioff + j * o + k;
 
-        int ioff_sv = ((n - 2 * ghosts) + 2 * ghosts_sv) * ((o - 2 * ghosts) + 2 * ghosts_sv);
-        int index_sv = ghosts_sv * ioff_sv + j * ((o - 2 * ghosts) + 2 * ghosts_sv) + k;
+        int ioff_sv = ((n - 2 * ghosts) + 2 * ghosts_sv) * ((o - 2 * ghosts) + 2 * ghosts_sv) * 27;
+        int index_sv = ghosts_sv * ioff_sv + (j + (ghosts_sv - ghosts)) * ((o - 2 * ghosts) + 2 * ghosts_sv) * 27 + (k + (ghosts_sv - ghosts)) * 27;
 
         for (int i = ghosts; i < m - ghosts; i++)
         {
@@ -686,31 +687,61 @@ __kernel void jacobi_iter_27point_varying_stencil(
             // clang-format on
 
             // clang-format off
+            // double stencilsum = sv_self * v_in_index
+            //     + stencilValues[index_sv + 1 * 9 + 1 * 3 + 0] * v_in[index - 1]
+            //     + stencilValues[index_sv + 1 * 9 + 1 * 3 + 2] * v_in[index + 1]
+            //     + stencilValues[index_sv + 1 * 9 + 0 * 3 + 1] * v_in[index - joff]
+            //     + stencilValues[index_sv + 1 * 9 + 2 * 3 + 1] * v_in[index + joff]
+            //     + stencilValues[index_sv + 0 * 9 + 1 * 3 + 1] * v_in[index - ioff]
+            //     + stencilValues[index_sv + 2 * 9 + 1 * 3 + 1] * v_in[index + ioff]
+            //     + stencilValues[index_sv + 1 * 9 + 0 * 3 + 0] * v_in[index - joff - koff]
+            //     + stencilValues[index_sv + 1 * 9 + 0 * 3 + 2] * v_in[index - joff + koff]
+            //     + stencilValues[index_sv + 1 * 9 + 2 * 3 + 0] * v_in[index + joff - koff]
+            //     + stencilValues[index_sv + 1 * 9 + 2 * 3 + 2] * v_in[index + joff + koff]
+            //     + stencilValues[index_sv + 0 * 9 + 1 * 3 + 0] * v_in[index - ioff - koff]
+            //     + stencilValues[index_sv + 0 * 9 + 1 * 3 + 2] * v_in[index - ioff + koff]
+            //     + stencilValues[index_sv + 2 * 9 + 1 * 3 + 0] * v_in[index + ioff - koff]
+            //     + stencilValues[index_sv + 2 * 9 + 1 * 3 + 2] * v_in[index + ioff + koff]
+            //     + stencilValues[index_sv + 0 * 9 + 0 * 3 + 1] * v_in[index - ioff - joff]
+            //     + stencilValues[index_sv + 0 * 9 + 2 * 3 + 1] * v_in[index - ioff + joff]
+            //     + stencilValues[index_sv + 2 * 9 + 0 * 3 + 1] * v_in[index + ioff - joff]
+            //     + stencilValues[index_sv + 2 * 9 + 2 * 3 + 1] * v_in[index + ioff + joff]
+            //     + stencilValues[index_sv + 0 * 9 + 0 * 3 + 0] * v_in[index - ioff - joff - koff]
+            //     + stencilValues[index_sv + 0 * 9 + 0 * 3 + 2] * v_in[index - ioff - joff + koff]
+            //     + stencilValues[index_sv + 0 * 9 + 2 * 3 + 0] * v_in[index - ioff + joff - koff]
+            //     + stencilValues[index_sv + 0 * 9 + 2 * 3 + 2] * v_in[index - ioff + joff + koff]
+            //     + stencilValues[index_sv + 2 * 9 + 0 * 3 + 0] * v_in[index + ioff - joff - koff]
+            //     + stencilValues[index_sv + 2 * 9 + 0 * 3 + 2] * v_in[index + ioff - joff + koff]
+            //     + stencilValues[index_sv + 2 * 9 + 2 * 3 + 0] * v_in[index + ioff + joff - koff]
+            //     + stencilValues[index_sv + 2 * 9 + 2 * 3 + 2] * v_in[index + ioff + joff + koff];
+            // clang-format on
+
+            // clang-format off
             // stencilsum = stencilValues[isv][jsv][ksv][1][1][1]  * vraw[i][j][k]
-            //x     + stencilValues[isv][jsv][ksv][1][1][0]         * vraw[i][j][k - 1]
-            //x     + stencilValues[isv][jsv][ksv][1][1][2]         * vraw[i][j][k + 1]
-            //x     + stencilValues[isv][jsv][ksv][1][0][1]         * vraw[i][j - 1][k]
-            //x     + stencilValues[isv][jsv][ksv][1][2][1]         * vraw[i][j + 1][k]
-            //x     + stencilValues[isv][jsv][ksv][0][1][1]         * vraw[i - 1][j][k]
-            //x     + stencilValues[isv][jsv][ksv][2][1][1]         * vraw[i + 1][j][k]
+            //     + stencilValues[isv][jsv][ksv][1][1][0]         * vraw[i][j][k - 1]
+            //     + stencilValues[isv][jsv][ksv][1][1][2]         * vraw[i][j][k + 1]
+            //     + stencilValues[isv][jsv][ksv][1][0][1]         * vraw[i][j - 1][k]
+            //     + stencilValues[isv][jsv][ksv][1][2][1]         * vraw[i][j + 1][k]
+            //     + stencilValues[isv][jsv][ksv][0][1][1]         * vraw[i - 1][j][k]
+            //     + stencilValues[isv][jsv][ksv][2][1][1]         * vraw[i + 1][j][k]
+               
+            //     + stencilValues[isv][jsv][ksv][1][0][0] * vraw[i][j - 1][k - 1]
+            //     + stencilValues[isv][jsv][ksv][1][0][2] * vraw[i][j - 1][k + 1]
+            //     + stencilValues[isv][jsv][ksv][1][2][0] * vraw[i][j + 1][k - 1]
+            //     + stencilValues[isv][jsv][ksv][1][2][2] * vraw[i][j + 1][k + 1]
+            //     + stencilValues[isv][jsv][ksv][0][1][0] * vraw[i - 1][j][k - 1]
+            //     + stencilValues[isv][jsv][ksv][0][1][2] * vraw[i - 1][j][k + 1]
+            //     + stencilValues[isv][jsv][ksv][2][1][0] * vraw[i + 1][j][k - 1]
+            //     + stencilValues[isv][jsv][ksv][2][1][2] * vraw[i + 1][j][k + 1]
+            //     + stencilValues[isv][jsv][ksv][0][0][1] * vraw[i - 1][j - 1][k]
+            //     + stencilValues[isv][jsv][ksv][0][2][1] * vraw[i - 1][j + 1][k]
+            //     + stencilValues[isv][jsv][ksv][2][0][1] * vraw[i + 1][j - 1][k]
+            //     + stencilValues[isv][jsv][ksv][2][2][1] * vraw[i + 1][j + 1][k]
                 
-            //x     + stencilValues[isv][jsv][ksv][1][0][0] * vraw[i][j - 1][k - 1]
-            //x     + stencilValues[isv][jsv][ksv][1][0][2] * vraw[i][j - 1][k + 1]
-            //x     + stencilValues[isv][jsv][ksv][1][2][0] * vraw[i][j + 1][k - 1]
-            //x     + stencilValues[isv][jsv][ksv][1][2][2] * vraw[i][j + 1][k + 1]
-            //x     + stencilValues[isv][jsv][ksv][0][1][0] * vraw[i - 1][j][k - 1]
-            //x     + stencilValues[isv][jsv][ksv][0][1][2] * vraw[i - 1][j][k + 1]
-            //x     + stencilValues[isv][jsv][ksv][2][1][0] * vraw[i + 1][j][k - 1]
-            //x     + stencilValues[isv][jsv][ksv][2][1][2] * vraw[i + 1][j][k + 1]
-            //x     + stencilValues[isv][jsv][ksv][0][0][1] * vraw[i - 1][j - 1][k]
-            //x     + stencilValues[isv][jsv][ksv][0][2][1] * vraw[i - 1][j + 1][k]
-            //x     + stencilValues[isv][jsv][ksv][2][0][1] * vraw[i + 1][j - 1][k]
-            //x     + stencilValues[isv][jsv][ksv][2][2][1] * vraw[i + 1][j + 1][k]
-                
-            //x     + stencilValues[isv][jsv][ksv][0][0][0] * vraw[i - 1][j - 1][k - 1]
-            //x     + stencilValues[isv][jsv][ksv][0][0][2] * vraw[i - 1][j - 1][k + 1]
-            //x     + stencilValues[isv][jsv][ksv][0][2][0] * vraw[i - 1][j + 1][k - 1]
-            //x     + stencilValues[isv][jsv][ksv][0][2][2] * vraw[i - 1][j + 1][k + 1]
+            //     + stencilValues[isv][jsv][ksv][0][0][0] * vraw[i - 1][j - 1][k - 1]
+            //     + stencilValues[isv][jsv][ksv][0][0][2] * vraw[i - 1][j - 1][k + 1]
+            //     + stencilValues[isv][jsv][ksv][0][2][0] * vraw[i - 1][j + 1][k - 1]
+            //     + stencilValues[isv][jsv][ksv][0][2][2] * vraw[i - 1][j + 1][k + 1]
             //     + stencilValues[isv][jsv][ksv][2][0][0] * vraw[i + 1][j - 1][k - 1]
             //     + stencilValues[isv][jsv][ksv][2][0][2] * vraw[i + 1][j - 1][k + 1]
             //     + stencilValues[isv][jsv][ksv][2][2][0] * vraw[i + 1][j + 1][k - 1]
@@ -723,16 +754,11 @@ __kernel void jacobi_iter_27point_varying_stencil(
             // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
             v_out[index] = v_in_index + omega * (1.0 / sv_self) * res;
 
-            // if (get_global_id(0) == ghosts && get_global_id(1) == ghosts && i >= ghosts && i <= ghosts+2)
-            // {
-            //     printf("x = %d, res = %e, v_out = %e\n", i, res, v_out[index]);
-            //     print_7point(v_in, index, ioff, joff, koff);
-            // }
-
             if (store_residual)
                 r[index] = res;
 
             index += ioff;
+            index_sv += ioff_sv;
         }
     }
 }

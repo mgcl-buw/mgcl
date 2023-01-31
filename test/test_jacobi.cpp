@@ -107,17 +107,16 @@ TEST_CASE("jacobi GPU varying stencil")
     int n = 8;
     int o = 8;
     double omega = 0.8;
-    int maxiter = 5;
+    int maxiter = 2;
 
-    auto v_in = std::make_shared<mgcl::Cuboid>(m, n, o, 1, 1, 1);
-    auto f_in = std::make_shared<mgcl::Cuboid>(m, n, o, 1, 1, 1);
-    auto r_in = std::make_shared<mgcl::Cuboid>(m, n, o, 1, 1, 1);
+    auto v_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
+    auto f_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
+    auto r_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
     f_in->fillRandomInt();
 
     // init sequential Problem
     auto p_seq = std::make_shared<mgcl::Problem>(m, n, o);
     p_seq->setResidualNorm(mgcl::MGCL_L2);
-    p_seq->setGhosts(1);
     p_seq->setOmega(omega);
     p_seq->setDeviceType(deviceType);
     p_seq->setV(v_in);
@@ -134,7 +133,6 @@ TEST_CASE("jacobi GPU varying stencil")
     // init OpenCL problem
     auto p_gpu = std::make_shared<mgcl::Problem>(m, n, o);
     p_gpu->setResidualNorm(mgcl::MGCL_L2);
-    p_gpu->setGhosts(1);
     p_gpu->setOmega(omega);
     p_gpu->setDeviceType(deviceType);
     p_gpu->setV(v_in);
@@ -144,6 +142,7 @@ TEST_CASE("jacobi GPU varying stencil")
     p_gpu->setStencilType(mgcl::MGCL_VARYING_27POINT);
     auto &sv_gpu = p_gpu->getStencilValues();
 
+    // copy stencil values
     REQUIRE(sv->field1d().size() == sv_gpu->field1d().size());
     for (int i = 0; i < sv->field1d().size(); i++)
         sv_gpu->field1d()[i] = sv->field1d()[i];
@@ -174,6 +173,8 @@ TEST_CASE("jacobi GPU varying stencil")
     REQUIRE(c_f_in->isEqual(f_in_lv0));
     REQUIRE(c_sv_in.isEqual(*sv_in_lv0));
 
+    std::cout << std::scientific << "stencilValues[2][3][5][1][1][1] = " << c_sv_in[2][3][5][1][1][1] << std::endl;
+
     double res_gpu = mgcl::MultigridEngine::jacobi(*p_gpu, level0_gpu, maxiter, 1);
     tu.finish();
     double res_seq = mgcl::MultigridEngine::jacobiSeq(v_in_lv0, f_in_lv0, r_in_lv0, omega, maxiter, mgcl::MGCL_L2,
@@ -183,9 +184,21 @@ TEST_CASE("jacobi GPU varying stencil")
     auto c_v_out = tu.readOpenCLBuffer(dv_in_lv0, m, n, o, 1, 1, 1);
     tu.finish();
 
+    REQUIRE(c_r_out->getM() == r_in_lv0.getM());
+    REQUIRE(c_r_out->getN() == r_in_lv0.getN());
+    REQUIRE(c_r_out->getO() == r_in_lv0.getO());
+    REQUIRE(c_r_out->getMgh() == r_in_lv0.getMgh());
+    REQUIRE(c_r_out->getNgh() == r_in_lv0.getNgh());
+    REQUIRE(c_r_out->getOgh() == r_in_lv0.getOgh());
+
+    c_r_out->dumpToFile("../r_gpu.txt");
+    r_in_lv0.dumpToFile("../r_seq.txt");
+    c_v_out->dumpToFile("../v_gpu.txt");
+    v_in_lv0.dumpToFile("../v_seq.txt");
+
     REQUIRE(fabs(res_seq - res_gpu) < 1e-13);
-    REQUIRE(c_r_out->isEqual(*r_in));
-    REQUIRE(c_v_out->isEqual(*v_in));
+    REQUIRE(c_r_out->isEqual(r_in_lv0));
+    REQUIRE(c_v_out->isEqual(v_in_lv0));
 }
 
 TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")

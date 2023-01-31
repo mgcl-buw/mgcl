@@ -22,6 +22,8 @@ namespace mgcl
         else if (stencilType == MGCL_LAPLACE_27POINT)
             dinv = (30.0 * h2) / 128.0;
 
+        double ***vraw = v.getData();
+
         for (int iter = 0; iter < maxiter; iter++)
         {
             // update ghost cells for periodic boundary condition
@@ -39,22 +41,24 @@ namespace mgcl
                         for (int k = f.getGhostsO(); k < f.getO() + f.getGhostsO(); k++)
                         {
                             // if (i == 1 && j == 1 && k == 1)
-                            //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, v[i][j][k],
+                            //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, vraw[i][j][k],
                             //     i,j,k,r[i][j][k], omega);
-                            v[i][j][k] = v[i][j][k] + omega * dinv * r[i][j][k];
+                            vraw[i][j][k] = vraw[i][j][k] + omega * dinv * r[i][j][k];
                         }
             }
             else
             {
-                // TODO which dinv?
-                for (int i = f.getGhostsM(); i < f.getM() + f.getGhostsM(); i++)
-                    for (int j = f.getGhostsN(); j < f.getN() + f.getGhostsN(); j++)
-                        for (int k = f.getGhostsO(); k < f.getO() + f.getGhostsO(); k++)
+                int ghmsv = stencilValues.getGhostsDim1();
+                int ghnsv = stencilValues.getGhostsDim2();
+                int ghosv = stencilValues.getGhostsDim3();
+                for (int i = f.getGhostsM(), isv = ghmsv; i < f.getM() + f.getGhostsM(); i++, isv++)
+                    for (int j = f.getGhostsN(), jsv = ghnsv; j < f.getN() + f.getGhostsN(); j++, jsv++)
+                        for (int k = f.getGhostsO(), ksv = ghosv; k < f.getO() + f.getGhostsO(); k++, ksv++)
                         {
                             // if (i == 1 && j == 1 && k == 1)
-                            //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, v[i][j][k],
+                            //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, vraw[i][j][k],
                             //     i,j,k,r[i][j][k], omega);
-                            v[i][j][k] = v[i][j][k] + omega * (1.0 / stencilValues[i][j][k][1][1][1]) * r[i][j][k];
+                            vraw[i][j][k] = vraw[i][j][k] + omega * (1.0 / stencilValues[isv][jsv][ksv][1][1][1]) * r[i][j][k];
                         }
             }
         }
@@ -261,6 +265,12 @@ namespace mgcl
 
             err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
             mgclCheckError(err, "Enqueueing kernel");
+
+            if (iter == maxiter - 1 && store_res)
+            {
+                err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+                mgclCheckError(err, "Updating ghosts of dR");
+            }
         }
 
         // copy result into dVIn if needed
