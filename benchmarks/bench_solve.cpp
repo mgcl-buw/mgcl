@@ -214,11 +214,10 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
     std::vector stencils{
         mgcl::MGCL_LAPLACE_7POINT,
         mgcl::MGCL_LAPLACE_19POINT,
-        mgcl::MGCL_LAPLACE_27POINT
+        mgcl::MGCL_LAPLACE_27POINT,
         // mgcl::MGCL_VARYING_7POINT,
         // mgcl::MGCL_VARYING_19POINT,
-        // mgcl::MGCL_VARYING_27POINT,
-    };
+        mgcl::MGCL_VARYING_27POINT};
 
     for (auto N : grids)
     {
@@ -277,6 +276,9 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
                 p.setNu2(nu2);
                 p.setOmega(omega);
                 p.setStencilType(stencil);
+
+                if (stencil == mgcl::MGCL_VARYING_27POINT)
+                    p.getStencilValues()->fillRandomInt();
                 // p.init();
 
                 b.run(std::string("sequential random values, N = ").append(std::to_string(N)).append(", ").append(stencilName).c_str(), [&]
@@ -297,6 +299,9 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
                 p.setNu2(nu2);
                 p.setOmega(omega);
                 p.setStencilType(stencil);
+
+                if (stencil == mgcl::MGCL_VARYING_27POINT)
+                    p.getStencilValues()->fillRandomInt();
 
                 if (mgcl_test::TestUtility::deviceAvailable("Quadro", p.getDeviceType()))
                     p.setDeviceName("Quadro");
