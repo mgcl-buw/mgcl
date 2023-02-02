@@ -265,12 +265,12 @@ namespace mgcl
 
             err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
             mgclCheckError(err, "Enqueueing kernel");
+        }
 
-            if (iter == maxiter - 1 && store_res)
-            {
-                err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-                mgclCheckError(err, "Updating ghosts of dR");
-            }
+        if (store_res)
+        {
+            err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+            mgclCheckError(err, "Updating ghosts of dR");
         }
 
         // copy result into dVIn if needed
