@@ -209,12 +209,11 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console][Laplac
 
 TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allStencils]")
 {
-    // TODO add varying stencils
-    std::vector grids{16, 32, 64, 128};
+    std::vector grids{4, 8, 16, 32, 64, 128};
     std::vector stencils{
-        mgcl::MGCL_LAPLACE_7POINT,
-        mgcl::MGCL_LAPLACE_19POINT,
-        mgcl::MGCL_LAPLACE_27POINT,
+        // mgcl::MGCL_LAPLACE_7POINT,
+        // mgcl::MGCL_LAPLACE_19POINT,
+        // mgcl::MGCL_LAPLACE_27POINT,
         // mgcl::MGCL_VARYING_7POINT,
         // mgcl::MGCL_VARYING_19POINT,
         mgcl::MGCL_VARYING_27POINT};
@@ -276,6 +275,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
                 p.setNu2(nu2);
                 p.setOmega(omega);
                 p.setStencilType(stencil);
+                p.setReadResults(true);
 
                 if (stencil == mgcl::MGCL_VARYING_27POINT)
                     p.getStencilValues()->fillRandomInt();
@@ -299,6 +299,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
                 p.setNu2(nu2);
                 p.setOmega(omega);
                 p.setStencilType(stencil);
+                p.setReadResults(true);
 
                 if (stencil == mgcl::MGCL_VARYING_27POINT)
                     p.getStencilValues()->fillRandomInt();

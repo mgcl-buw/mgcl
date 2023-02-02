@@ -102,7 +102,7 @@ TEST_CASE("Problem solving: periodic 4th order")
             // (*v).dumpToFile("out_v.txt");
 
             std::cout
-                << "seq" << std::endl
+                << "seq Laplace" << std::endl
                 << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
                 << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
@@ -155,7 +155,7 @@ TEST_CASE("Problem solving: periodic 4th order")
             // (*v).dumpToFile("out_v.txt");
 
             std::cout
-                << "seq galerkin" << std::endl
+                << "seq Galerkin" << std::endl
                 << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
                 << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
@@ -190,7 +190,7 @@ TEST_CASE("Problem solving: periodic 4th order")
             auto errMax = calculateMaxError(*err);
 
             std::cout
-                << "OpenCL" << std::endl
+                << "ocl Laplace" << std::endl
                 << std::scientific << "  ||e||_2 = " << errNorm << std::endl
                 << std::scientific << "  e_max = " << errMax << std::endl;
 
@@ -239,7 +239,7 @@ TEST_CASE("Problem solving: periodic 4th order")
             // (*v).dumpToFile("out_v.txt");
 
             std::cout
-                << "ocl galerkin" << std::endl
+                << "ocl Galerkin" << std::endl
                 << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
                 << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
