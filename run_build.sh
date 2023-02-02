@@ -11,6 +11,15 @@
 
 # cd ~/output/ || exit
 
+# create build dir if it doesn't exist
+[ ! -d "$HOME"/projects/mgcl/build ] && mkdir -p "$HOME"/projects/mgcl/build
+
+# init cmake
+cd "$HOME"/projects/mgcl/build || exit
+cmake "$HOME"/projects/mgcl
+
+cd "$HOME"/projects/mgcl || exit
+
 cmake -DCMAKE_BUILD_TYPE=Release "$HOME"/projects/mgcl/build
 cmake --build "$HOME"/projects/mgcl/build
 
