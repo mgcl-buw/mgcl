@@ -709,8 +709,10 @@ __kernel void jacobi_iter_27point_varying_stencil(
         int koff = 1;
         int index = ghosts * ioff + j * o + k;
 
-        int ioff_sv = ((n - 2 * ghosts) + 2 * ghosts_sv) * ((o - 2 * ghosts) + 2 * ghosts_sv) * 27;
-        int index_sv = ghosts_sv * ioff_sv + (j + (ghosts_sv - ghosts)) * ((o - 2 * ghosts) + 2 * ghosts_sv) * 27 + (k + (ghosts_sv - ghosts)) * 27;
+        int koff_sv = 27;
+        int joff_sv = ((o - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
+        int ioff_sv = ((n - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
+        int index_sv = ghosts_sv * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
 
         for (int i = ghosts; i < m - ghosts; i++)
         {
@@ -816,8 +818,29 @@ __kernel void jacobi_iter_27point_varying_stencil(
             // r = f - A*v
             res = f[index] - stencilsum;
 
+            // barrier(CLK_GLOBAL_MEM_FENCE);
+            // if (get_global_id(0) == 2 && get_global_id(1) == 5 && i == 1)
+            // {
+            //     // printf("ocl x = %d, omega = %e, stencilsum = %e, res = %e,  v_in = %e, sv_self = %e\n", i, omega, stencilsum, res, v_in[index], sv_self);
+            //     // printf("ocl omega * (1.0 / sv_self) * res = %e\n", omega * (1.0 / sv_self) * res);
+            //     // printf("ocl omega = %e, (1.0 / sv_self) = %e, res = %e\n", omega, (1.0 / sv_self), res);
+            //     printf("ocl stencilsum = %e\n", stencilsum);
+            //     // print27point(v_in, index, ioff, joff, koff);
+            //     print27point_sv(v_in, index, ioff, joff, koff, stencilValues, index_sv);
+            //     // print_7point(v_in, index, ioff, joff, koff);
+            // }
+            // barrier(CLK_GLOBAL_MEM_FENCE);
+
             // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
             v_out[index] = v_in_index + omega * (1.0 / sv_self) * res;
+
+            // barrier(CLK_GLOBAL_MEM_FENCE);
+            // if (get_global_id(0) == 2 && get_global_id(1) == 5 && i == 1)
+            // {
+            //     printf("ocl x = %d, omega = %e, res = %e, v_out = %e, sv_self = %e\n", i, omega, res, v_out[index], sv_self);
+            //     print27point(v_out, index, ioff, joff, koff);
+            //     // print_7point(v_in, index, ioff, joff, koff);
+            // }
 
             if (store_residual)
                 r[index] = res;

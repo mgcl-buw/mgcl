@@ -159,111 +159,116 @@ TEST_CASE("jacobi GPU varying stencil")
                 }
             }
     }
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    SECTION("ocl vs seq")
     {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
+        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+        {
+            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+            return;
+        }
+
+        int m = 8;
+        int n = 8;
+        int o = 8;
+        double omega = 0.8;
+        int maxiter = GENERATE(1, 2, 3, 4);
+
+        auto v_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
+        auto f_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
+        auto r_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
+        f_in->fillRandomInt();
+
+        // init sequential Problem
+        auto p_seq = std::make_shared<mgcl::Problem>(m, n, o);
+        p_seq->setResidualNorm(mgcl::MGCL_L2);
+        p_seq->setOmega(omega);
+        p_seq->setDeviceType(deviceType);
+        p_seq->setV(v_in);
+        p_seq->setF(f_in);
+
+        p_seq->setStencilType(mgcl::MGCL_VARYING_27POINT);
+        auto &sv = p_seq->getStencilValues();
+        sv->fillRandomInt();
+
+        p_seq->init();
+        auto &level0_seq = p_seq->getLevelAt(0);
+        REQUIRE(level0_seq.getStencilValues().get() == sv.get());
+
+        // init OpenCL problem
+        auto p_gpu = std::make_shared<mgcl::Problem>(m, n, o);
+        p_gpu->setResidualNorm(mgcl::MGCL_L2);
+        p_gpu->setOmega(omega);
+        p_gpu->setDeviceType(deviceType);
+        p_gpu->setV(v_in);
+        p_gpu->setF(f_in);
+        p_gpu->setUseOpencl(true);
+
+        p_gpu->setStencilType(mgcl::MGCL_VARYING_27POINT);
+        auto &sv_gpu = p_gpu->getStencilValues();
+
+        // copy stencil values
+        REQUIRE(sv->field1d().size() == sv_gpu->field1d().size());
+        for (int i = 0; i < sv->field1d().size(); i++)
+            sv_gpu->field1d()[i] = sv->field1d()[i];
+
+        p_gpu->init();
+        auto &level0_gpu = p_gpu->getLevelAt(0);
+        REQUIRE(level0_gpu.getStencilValuesGpu() != nullptr);
+
+        auto &v_in_lv0 = level0_seq.getV();
+        auto &f_in_lv0 = level0_seq.getF();
+        auto &r_in_lv0 = level0_seq.getR();
+        auto &sv_in_lv0 = level0_seq.getStencilValues();
+
+        mgcl_test::TestUtility tu(p_gpu);
+
+        // make sure input is equal
+        auto dv_in_lv0 = level0_gpu.getDVIn();
+        auto dr_in_lv0 = level0_gpu.getDR();
+        auto df_in_lv0 = level0_gpu.getDF();
+        auto dsv_in_lv0 = level0_gpu.getStencilValuesGpu();
+        auto c_r_in = tu.readOpenCLBuffer(dr_in_lv0, m, n, o, 1, 1, 1);
+        auto c_v_in = tu.readOpenCLBuffer(dv_in_lv0, m, n, o, 1, 1, 1);
+        auto c_f_in = tu.readOpenCLBuffer(df_in_lv0, m, n, o, 1, 1, 1);
+        auto c_sv_in = dsv_in_lv0->read<3>(tu.getCommands());
+        tu.finish();
+        REQUIRE(c_r_in->isEqual(r_in_lv0));
+        REQUIRE(c_v_in->isEqual(v_in_lv0));
+        REQUIRE(c_f_in->isEqual(f_in_lv0));
+        REQUIRE(c_sv_in.isEqual(*sv_in_lv0));
+
+        double res_gpu = mgcl::MultigridEngine::jacobi(*p_gpu, level0_gpu, maxiter, 1);
+        tu.finish();
+        double res_seq = mgcl::MultigridEngine::jacobiSeq(v_in_lv0, f_in_lv0, r_in_lv0, omega, maxiter, mgcl::MGCL_L2,
+                                                          mgcl::MGCL_VARYING_27POINT, 1, *sv_in_lv0, 1);
+
+        auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
+        auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
+        tu.finish();
+
+        REQUIRE(c_r_out->getM() == r_in_lv0.getM());
+        REQUIRE(c_r_out->getN() == r_in_lv0.getN());
+        REQUIRE(c_r_out->getO() == r_in_lv0.getO());
+        REQUIRE(c_r_out->getMgh() == r_in_lv0.getMgh());
+        REQUIRE(c_r_out->getNgh() == r_in_lv0.getNgh());
+        REQUIRE(c_r_out->getOgh() == r_in_lv0.getOgh());
+
+        // c_r_out->dumpToFile("../r_gpu.txt");
+        // r_in_lv0.dumpToFile("../r_seq.txt");
+        // c_v_out->dumpToFile("../v_gpu.txt");
+        // v_in_lv0.dumpToFile("../v_seq.txt");
+
+        // sv_in_lv0->dumpToFile("../sv_seq.txt");
+        // c_sv_in.dumpToFile("../sv_gpu.txt");
+
+        REQUIRE(fabs(res_seq - res_gpu) < 1e-13);
+        REQUIRE(c_r_out->isEqual(r_in_lv0));
+        REQUIRE(c_v_out->isEqual(v_in_lv0));
     }
-
-    int m = 8;
-    int n = 8;
-    int o = 8;
-    double omega = 0.8;
-    int maxiter = 2;
-
-    auto v_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
-    auto f_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
-    auto r_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
-    f_in->fillRandomInt();
-
-    // init sequential Problem
-    auto p_seq = std::make_shared<mgcl::Problem>(m, n, o);
-    p_seq->setResidualNorm(mgcl::MGCL_L2);
-    p_seq->setOmega(omega);
-    p_seq->setDeviceType(deviceType);
-    p_seq->setV(v_in);
-    p_seq->setF(f_in);
-
-    p_seq->setStencilType(mgcl::MGCL_VARYING_27POINT);
-    auto &sv = p_seq->getStencilValues();
-    sv->fillRandomInt();
-
-    p_seq->init();
-    auto &level0_seq = p_seq->getLevelAt(0);
-    REQUIRE(level0_seq.getStencilValues().get() == sv.get());
-
-    // init OpenCL problem
-    auto p_gpu = std::make_shared<mgcl::Problem>(m, n, o);
-    p_gpu->setResidualNorm(mgcl::MGCL_L2);
-    p_gpu->setOmega(omega);
-    p_gpu->setDeviceType(deviceType);
-    p_gpu->setV(v_in);
-    p_gpu->setF(f_in);
-    p_gpu->setUseOpencl(true);
-
-    p_gpu->setStencilType(mgcl::MGCL_VARYING_27POINT);
-    auto &sv_gpu = p_gpu->getStencilValues();
-
-    // copy stencil values
-    REQUIRE(sv->field1d().size() == sv_gpu->field1d().size());
-    for (int i = 0; i < sv->field1d().size(); i++)
-        sv_gpu->field1d()[i] = sv->field1d()[i];
-
-    p_gpu->init();
-    auto &level0_gpu = p_gpu->getLevelAt(0);
-    REQUIRE(level0_gpu.getStencilValuesGpu() != nullptr);
-
-    auto &v_in_lv0 = level0_seq.getV();
-    auto &f_in_lv0 = level0_seq.getF();
-    auto &r_in_lv0 = level0_seq.getR();
-    auto &sv_in_lv0 = level0_seq.getStencilValues();
-
-    mgcl_test::TestUtility tu(p_gpu);
-
-    // make sure input is equal
-    auto dv_in_lv0 = level0_gpu.getDVIn();
-    auto dr_in_lv0 = level0_gpu.getDR();
-    auto df_in_lv0 = level0_gpu.getDF();
-    auto dsv_in_lv0 = level0_gpu.getStencilValuesGpu();
-    auto c_r_in = tu.readOpenCLBuffer(dr_in_lv0, m, n, o, 1, 1, 1);
-    auto c_v_in = tu.readOpenCLBuffer(dv_in_lv0, m, n, o, 1, 1, 1);
-    auto c_f_in = tu.readOpenCLBuffer(df_in_lv0, m, n, o, 1, 1, 1);
-    auto c_sv_in = dsv_in_lv0->read<3>(tu.getCommands());
-    tu.finish();
-    REQUIRE(c_r_in->isEqual(r_in_lv0));
-    REQUIRE(c_v_in->isEqual(v_in_lv0));
-    REQUIRE(c_f_in->isEqual(f_in_lv0));
-    REQUIRE(c_sv_in.isEqual(*sv_in_lv0));
-
-    std::cout << std::scientific << "stencilValues[2][3][5][1][1][1] = " << c_sv_in[2][3][5][1][1][1] << std::endl;
-
-    double res_gpu = mgcl::MultigridEngine::jacobi(*p_gpu, level0_gpu, maxiter, 1);
-    tu.finish();
-    double res_seq = mgcl::MultigridEngine::jacobiSeq(v_in_lv0, f_in_lv0, r_in_lv0, omega, maxiter, mgcl::MGCL_L2,
-                                                      mgcl::MGCL_VARYING_27POINT, 1, *sv_in_lv0, 1);
-
-    auto c_r_out = tu.readOpenCLBuffer(dr_in_lv0, m, n, o, 1, 1, 1);
-    auto c_v_out = tu.readOpenCLBuffer(dv_in_lv0, m, n, o, 1, 1, 1);
-    tu.finish();
-
-    REQUIRE(c_r_out->getM() == r_in_lv0.getM());
-    REQUIRE(c_r_out->getN() == r_in_lv0.getN());
-    REQUIRE(c_r_out->getO() == r_in_lv0.getO());
-    REQUIRE(c_r_out->getMgh() == r_in_lv0.getMgh());
-    REQUIRE(c_r_out->getNgh() == r_in_lv0.getNgh());
-    REQUIRE(c_r_out->getOgh() == r_in_lv0.getOgh());
-
-    c_r_out->dumpToFile("../r_gpu.txt");
-    r_in_lv0.dumpToFile("../r_seq.txt");
-    c_v_out->dumpToFile("../v_gpu.txt");
-    v_in_lv0.dumpToFile("../v_seq.txt");
-
-    REQUIRE(fabs(res_seq - res_gpu) < 1e-13);
-    REQUIRE(c_r_out->isEqual(r_in_lv0));
-    REQUIRE(c_v_out->isEqual(v_in_lv0));
 }
 
 TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")

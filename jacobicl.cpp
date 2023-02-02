@@ -48,6 +48,11 @@ namespace mgcl
             }
             else
             {
+                // printf("seq x = %d, omega = %e, res = %e, v_out = %e, sv_self = %e\n", 1, omega, r[1][2][5], vraw[1][2][5], stencilValues[2][3][6][1][1][1]);
+                // print_7point(v_in, index, ioff, joff, koff);
+                // print27point(v, 1, 2, 5);
+                // print27point_sv(v, 1, 2, 5, stencilValues, 2, 3, 6);
+
                 int ghmsv = stencilValues.getGhostsDim1();
                 int ghnsv = stencilValues.getGhostsDim2();
                 int ghosv = stencilValues.getGhostsDim3();
@@ -59,6 +64,16 @@ namespace mgcl
                             //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, vraw[i][j][k],
                             //     i,j,k,r[i][j][k], omega);
                             vraw[i][j][k] = vraw[i][j][k] + omega * (1.0 / stencilValues[isv][jsv][ksv][1][1][1]) * r[i][j][k];
+
+                            // if (j == 2 && k == 5 && i == 1)
+                            // {
+                            //     // printf("seq omega * (1.0 / sv_self) * res = %e\n", omega * (1.0 / stencilValues[isv][jsv][ksv][1][1][1]) * r[i][j][k]);
+                            //     // printf("seq omega = %e, (1.0 / sv_self) = %e, res = %e\n", omega, (1.0 / stencilValues[isv][jsv][ksv][1][1][1]), r[i][j][k]);
+                            //     // printf("seq res = %e, f = %e\n", r[i][j][k], f[i][j][k]);
+                            //     // printf("seq x = %d, omega = %e, res = %e, v_out = %e, sv_self = %e\n", i, omega, r[i][j][k], vraw[i][j][k], stencilValues[isv][jsv][ksv][1][1][1]);
+                            //     // // print_7point(v_in, index, ioff, joff, koff);
+                            //     // print27point(v, i, j, k);
+                            // }
                         }
             }
         }
@@ -875,9 +890,9 @@ namespace mgcl
         if (stencilType == MGCL_VARYING_7POINT || stencilType == MGCL_VARYING_19POINT || stencilType == MGCL_VARYING_27POINT)
         {
             stencilValues = stencilValuesCuboid.getData();
-            int ghmsv = stencilValuesCuboid.getGhostsDim1();
-            int ghnsv = stencilValuesCuboid.getGhostsDim2();
-            int ghosv = stencilValuesCuboid.getGhostsDim3();
+            ghmsv = stencilValuesCuboid.getGhostsDim1();
+            ghnsv = stencilValuesCuboid.getGhostsDim2();
+            ghosv = stencilValuesCuboid.getGhostsDim3();
             // if (ghmsv != ghm ||
             //     ghnsv != ghn ||
             //     ghosv != gho)
@@ -979,35 +994,41 @@ namespace mgcl
                     {
                         // clang-format off
                         stencilsum = stencilValues[isv][jsv][ksv][1][1][1]  * vraw[i][j][k]
-                            + stencilValues[isv][jsv][ksv][1][1][0]         * vraw[i][j][k - 1]
-                            + stencilValues[isv][jsv][ksv][1][1][2]         * vraw[i][j][k + 1]
-                            + stencilValues[isv][jsv][ksv][1][0][1]         * vraw[i][j - 1][k]
-                            + stencilValues[isv][jsv][ksv][1][2][1]         * vraw[i][j + 1][k]
-                            + stencilValues[isv][jsv][ksv][0][1][1]         * vraw[i - 1][j][k]
-                            + stencilValues[isv][jsv][ksv][2][1][1]         * vraw[i + 1][j][k]
+                            + stencilValues[isv][jsv][ksv][1][1][0] * vraw[ i ][ j ][k-1]
+                            + stencilValues[isv][jsv][ksv][1][1][2] * vraw[ i ][ j ][k+1]
+                            + stencilValues[isv][jsv][ksv][1][0][1] * vraw[ i ][j-1][ k ]
+                            + stencilValues[isv][jsv][ksv][1][2][1] * vraw[ i ][j+1][ k ]
+                            + stencilValues[isv][jsv][ksv][0][1][1] * vraw[i-1][ j ][ k ]
+                            + stencilValues[isv][jsv][ksv][2][1][1] * vraw[i+1][ j ][ k ]
                             
-                            + stencilValues[isv][jsv][ksv][1][0][0] * vraw[i][j - 1][k - 1]
-                            + stencilValues[isv][jsv][ksv][1][0][2] * vraw[i][j - 1][k + 1]
-                            + stencilValues[isv][jsv][ksv][1][2][0] * vraw[i][j + 1][k - 1]
-                            + stencilValues[isv][jsv][ksv][1][2][2] * vraw[i][j + 1][k + 1]
-                            + stencilValues[isv][jsv][ksv][0][1][0] * vraw[i - 1][j][k - 1]
-                            + stencilValues[isv][jsv][ksv][0][1][2] * vraw[i - 1][j][k + 1]
-                            + stencilValues[isv][jsv][ksv][2][1][0] * vraw[i + 1][j][k - 1]
-                            + stencilValues[isv][jsv][ksv][2][1][2] * vraw[i + 1][j][k + 1]
-                            + stencilValues[isv][jsv][ksv][0][0][1] * vraw[i - 1][j - 1][k]
-                            + stencilValues[isv][jsv][ksv][0][2][1] * vraw[i - 1][j + 1][k]
-                            + stencilValues[isv][jsv][ksv][2][0][1] * vraw[i + 1][j - 1][k]
-                            + stencilValues[isv][jsv][ksv][2][2][1] * vraw[i + 1][j + 1][k]
+                            + stencilValues[isv][jsv][ksv][1][0][0] * vraw[ i ][j-1][k-1]
+                            + stencilValues[isv][jsv][ksv][1][0][2] * vraw[ i ][j-1][k+1]
+                            + stencilValues[isv][jsv][ksv][1][2][0] * vraw[ i ][j+1][k-1]
+                            + stencilValues[isv][jsv][ksv][1][2][2] * vraw[ i ][j+1][k+1]
+                            + stencilValues[isv][jsv][ksv][0][1][0] * vraw[i-1][ j ][k-1]
+                            + stencilValues[isv][jsv][ksv][0][1][2] * vraw[i-1][ j ][k+1]
+                            + stencilValues[isv][jsv][ksv][2][1][0] * vraw[i+1][ j ][k-1]
+                            + stencilValues[isv][jsv][ksv][2][1][2] * vraw[i+1][ j ][k+1]
+                            + stencilValues[isv][jsv][ksv][0][0][1] * vraw[i-1][j-1][ k ]
+                            + stencilValues[isv][jsv][ksv][0][2][1] * vraw[i-1][j+1][ k ]
+                            + stencilValues[isv][jsv][ksv][2][0][1] * vraw[i+1][j-1][ k ]
+                            + stencilValues[isv][jsv][ksv][2][2][1] * vraw[i+1][j+1][ k ]
                             
-                            + stencilValues[isv][jsv][ksv][0][0][0] * vraw[i - 1][j - 1][k - 1]
-                            + stencilValues[isv][jsv][ksv][0][0][2] * vraw[i - 1][j - 1][k + 1]
-                            + stencilValues[isv][jsv][ksv][0][2][0] * vraw[i - 1][j + 1][k - 1]
-                            + stencilValues[isv][jsv][ksv][0][2][2] * vraw[i - 1][j + 1][k + 1]
-                            + stencilValues[isv][jsv][ksv][2][0][0] * vraw[i + 1][j - 1][k - 1]
-                            + stencilValues[isv][jsv][ksv][2][0][2] * vraw[i + 1][j - 1][k + 1]
-                            + stencilValues[isv][jsv][ksv][2][2][0] * vraw[i + 1][j + 1][k - 1]
-                            + stencilValues[isv][jsv][ksv][2][2][2] * vraw[i + 1][j + 1][k + 1];
+                            + stencilValues[isv][jsv][ksv][0][0][0] * vraw[i-1][j-1][k-1]
+                            + stencilValues[isv][jsv][ksv][0][0][2] * vraw[i-1][j-1][k+1]
+                            + stencilValues[isv][jsv][ksv][0][2][0] * vraw[i-1][j+1][k-1]
+                            + stencilValues[isv][jsv][ksv][0][2][2] * vraw[i-1][j+1][k+1]
+                            + stencilValues[isv][jsv][ksv][2][0][0] * vraw[i+1][j-1][k-1]
+                            + stencilValues[isv][jsv][ksv][2][0][2] * vraw[i+1][j-1][k+1]
+                            + stencilValues[isv][jsv][ksv][2][2][0] * vraw[i+1][j+1][k-1]
+                            + stencilValues[isv][jsv][ksv][2][2][2] * vraw[i+1][j+1][k+1];
                         // clang-format on
+
+                        // if (j == 2 && k == 5 && i == 1)
+                        // {
+                        //     printf("seq stencilsum = %e\n", stencilsum);
+                        //     print27point_sv(v, i, j, k, stencilValuesCuboid, isv, jsv, ksv);
+                        // }
                     }
 
                     // r = f - A*v
