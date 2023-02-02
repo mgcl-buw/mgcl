@@ -709,6 +709,12 @@ namespace mgcl
         {
             kernel_name = "residual_27point";
         }
+        else if (problem.stencilType == MGCL_VARYING_7POINT ||
+                 problem.stencilType == MGCL_VARYING_19POINT ||
+                 problem.stencilType == MGCL_VARYING_27POINT)
+        {
+            kernel_name = "residual_27point_varying_stencil";
+        }
 
         // Create the compute kernel from the program
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
@@ -716,14 +722,35 @@ namespace mgcl
 
         // assign kernel arguments
         int pos = 0;
-        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &level.dVIn);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dF);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dR);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(double), &h2inv);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
+
+        if (problem.stencilType == MGCL_VARYING_7POINT ||
+            problem.stencilType == MGCL_VARYING_19POINT ||
+            problem.stencilType == MGCL_VARYING_27POINT)
+        {
+            auto svbuf = level.stencilValuesGpu->getBuf();
+            int svgh = level.stencilValuesGpu->getGh();
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &level.dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dR);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &svbuf);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
+        }
+        else
+        {
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &level.dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dR);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &h2inv);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
+        }
+
         mgclCheckError(err, "Setting residual kernel arguments");
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes

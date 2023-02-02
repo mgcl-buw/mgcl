@@ -107,49 +107,112 @@ TEST_CASE("residual")
     }
 }
 
-// TODO maybe this test doesn't make sense after all
-// TEST_CASE("residual galerkin")
-// {
-//     // creates 7p Laplace stencil on fine grid, applies galerkin operator and calculates residual on coarse grid
-//     SECTION("residualSeq L2-norm 7point galerkin")
-//     {
-//         int n = 16;
-//         double h = 1.0 / (double)n;
-//         double stencilFactor = 1.0 / (h * h);
+TEST_CASE("residual varying stencil")
+{
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
-//         mgcl::Cuboid c_in_f(n, n, n, 2, 2, 2);
-//         mgcl::Cuboid c_in_v(n, n, n, 2, 2, 2);
-//         mgcl::Cuboid c_r_galerkin(n, n, n, 2, 2, 2, 0);
-//         mgcl::Cuboid c_r_explicit(n, n, n, 2, 2, 2, 0);
-//         auto vals_fine = mgcl::VaryingStencil3x3x3(2 * n, 2 * n, 2 * n, 2, 2, 2);
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    {
+        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+        return;
+    }
 
-//         c_in_f.fillRandom();
-//         c_in_v.fillRandom();
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    double omega = 0.8;
+    int maxiter = GENERATE(1, 2, 3, 4);
 
-//         // fill fine grid stencil with 7p Laplace on which galerkin will be applied
-//         double h2inv_fine = static_cast<double>(2 * n * 2 * n);
-//         for (int i = 0; i < vals_fine.getDim1gh(); i++)
-//             for (int j = 0; j < vals_fine.getDim2gh(); j++)
-//                 for (int k = 0; k < vals_fine.getDim3gh(); k++)
-//                 {
-//                     vals_fine[i][j][k][1][1][1] = 6.0 * h2inv_fine;
-//                     vals_fine[i][j][k][1][1][0] = -1.0 * h2inv_fine;
-//                     vals_fine[i][j][k][1][1][2] = -1.0 * h2inv_fine;
-//                     vals_fine[i][j][k][1][0][1] = -1.0 * h2inv_fine;
-//                     vals_fine[i][j][k][1][2][1] = -1.0 * h2inv_fine;
-//                     vals_fine[i][j][k][0][1][1] = -1.0 * h2inv_fine;
-//                     vals_fine[i][j][k][2][1][1] = -1.0 * h2inv_fine;
-//                 }
+    auto v_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
+    auto f_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
+    auto r_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
+    f_in->fillRandomInt();
 
-//         auto vals_coarse = mgcl::MultigridEngine::galerkin(vals_fine);
+    // init sequential Problem
+    auto p_seq = std::make_shared<mgcl::Problem>(m, n, o);
+    p_seq->setResidualNorm(mgcl::MGCL_L2);
+    p_seq->setOmega(omega);
+    p_seq->setDeviceType(deviceType);
+    p_seq->setV(v_in);
+    p_seq->setF(f_in);
 
-//         double res_galerkin = mgcl::MultigridEngine::residualSeq(c_in_f, c_in_v, c_r_galerkin, mgcl::MGCL_L2,
-//                                                                  mgcl::MGCL_VARYING_7POINT, stencilFactor, vals_coarse, true);
+    p_seq->setStencilType(mgcl::MGCL_VARYING_27POINT);
+    auto &sv = p_seq->getStencilValues();
+    sv->fillRandomInt();
 
-//         double res_explicit = mgcl::MultigridEngine::residualSeq(c_in_f, c_in_v, c_r_explicit, mgcl::MGCL_L2,
-//                                                                  mgcl::MGCL_LAPLACE_7POINT, stencilFactor, vals_coarse, true);
+    p_seq->init();
+    auto &level0_seq = p_seq->getLevelAt(0);
+    REQUIRE(level0_seq.getStencilValues().get() == sv.get());
 
-//         CHECK(fabs(res_galerkin - res_explicit) < 1e-7);
-//         REQUIRE(c_r_galerkin.isEqual(c_r_explicit));
-//     }
-// }
+    // init OpenCL problem
+    auto p_gpu = std::make_shared<mgcl::Problem>(m, n, o);
+    p_gpu->setResidualNorm(mgcl::MGCL_L2);
+    p_gpu->setOmega(omega);
+    p_gpu->setDeviceType(deviceType);
+    p_gpu->setV(v_in);
+    p_gpu->setF(f_in);
+    p_gpu->setUseOpencl(true);
+
+    p_gpu->setStencilType(mgcl::MGCL_VARYING_27POINT);
+    auto &sv_gpu = p_gpu->getStencilValues();
+
+    // copy stencil values
+    REQUIRE(sv->field1d().size() == sv_gpu->field1d().size());
+    for (int i = 0; i < sv->field1d().size(); i++)
+        sv_gpu->field1d()[i] = sv->field1d()[i];
+
+    p_gpu->init();
+    auto &level0_gpu = p_gpu->getLevelAt(0);
+    REQUIRE(level0_gpu.getStencilValuesGpu() != nullptr);
+
+    auto &v_in_lv0 = level0_seq.getV();
+    auto &f_in_lv0 = level0_seq.getF();
+    auto &r_in_lv0 = level0_seq.getR();
+    auto &sv_in_lv0 = level0_seq.getStencilValues();
+
+    mgcl_test::TestUtility tu(p_gpu);
+
+    // make sure input is equal
+    auto dv_in_lv0 = level0_gpu.getDVIn();
+    auto dr_in_lv0 = level0_gpu.getDR();
+    auto df_in_lv0 = level0_gpu.getDF();
+    auto dsv_in_lv0 = level0_gpu.getStencilValuesGpu();
+    auto c_r_in = tu.readOpenCLBuffer(dr_in_lv0, m, n, o, 1, 1, 1);
+    auto c_v_in = tu.readOpenCLBuffer(dv_in_lv0, m, n, o, 1, 1, 1);
+    auto c_f_in = tu.readOpenCLBuffer(df_in_lv0, m, n, o, 1, 1, 1);
+    auto c_sv_in = dsv_in_lv0->read<3>(tu.getCommands());
+    tu.finish();
+    REQUIRE(c_r_in->isEqual(r_in_lv0));
+    REQUIRE(c_v_in->isEqual(v_in_lv0));
+    REQUIRE(c_f_in->isEqual(f_in_lv0));
+    REQUIRE(c_sv_in.isEqual(*sv_in_lv0));
+
+    double res_gpu = mgcl::MultigridEngine::residual(*p_gpu, level0_gpu, 1);
+    tu.finish();
+    double res_seq = mgcl::MultigridEngine::residualSeq(f_in_lv0, v_in_lv0, r_in_lv0, mgcl::MGCL_L2,
+                                                        mgcl::MGCL_VARYING_27POINT, 1, *sv_in_lv0, 1);
+
+    auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
+    auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
+    tu.finish();
+
+    REQUIRE(c_r_out->getM() == r_in_lv0.getM());
+    REQUIRE(c_r_out->getN() == r_in_lv0.getN());
+    REQUIRE(c_r_out->getO() == r_in_lv0.getO());
+    REQUIRE(c_r_out->getMgh() == r_in_lv0.getMgh());
+    REQUIRE(c_r_out->getNgh() == r_in_lv0.getNgh());
+    REQUIRE(c_r_out->getOgh() == r_in_lv0.getOgh());
+
+    // c_r_out->dumpToFile("../r_gpu.txt");
+    // r_in_lv0.dumpToFile("../r_seq.txt");
+    // c_v_out->dumpToFile("../v_gpu.txt");
+    // v_in_lv0.dumpToFile("../v_seq.txt");
+
+    // sv_in_lv0->dumpToFile("../sv_seq.txt");
+    // c_sv_in.dumpToFile("../sv_gpu.txt");
+
+    REQUIRE(fabs(res_seq - res_gpu) < 1e-13);
+    REQUIRE(c_r_out->isEqual(r_in_lv0));
+    REQUIRE(c_v_out->isEqual(v_in_lv0));
+}

@@ -494,6 +494,70 @@ __kernel void residual_27point(
     }
 }
 
+/* Calculates residual without dinv */
+__kernel void residual_27point_varying_stencil(
+    __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double *restrict f,
+    __global double *restrict r,
+    __global double *restrict stencilValues,
+    const int m, const int n, const int o,
+    const int ghosts, const int ghosts_sv)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
+
+    // calculate residual only for real cells since ghost cells do not have further ghost cells for themselves
+    if (i > ghosts - 1 && j > ghosts - 1 && k > ghosts - 1 && i < m - ghosts && j < n - ghosts && k < o - ghosts)
+    {
+        int ioff = n * o;
+        int joff = o;
+        int koff = 1;
+        int index = i * ioff + j * o + k;
+
+        int koff_sv = 27;
+        int joff_sv = ((o - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
+        int ioff_sv = ((n - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
+        int index_sv = ghosts_sv * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
+
+        // A*v
+        // clang-format off
+        double stencilsum = stencilValues[index_sv + 9 + 3 + 1] * v_in[index]
+            + stencilValues[index_sv + 9 + 3]      * v_in[index - 1]
+            + stencilValues[index_sv + 9 + 3 + 2]  * v_in[index + 1]
+            + stencilValues[index_sv + 9 + 1]      * v_in[index - joff]
+            + stencilValues[index_sv + 9 + 6 + 1]  * v_in[index + joff]
+            + stencilValues[index_sv + 3 + 1]      * v_in[index - ioff]
+            + stencilValues[index_sv + 18 + 3 + 1] * v_in[index + ioff]
+            
+            + stencilValues[index_sv + 9]          * v_in[index - joff - koff]
+            + stencilValues[index_sv + 9 + 2]      * v_in[index - joff + koff]
+            + stencilValues[index_sv + 9 + 6]      * v_in[index + joff - koff]
+            + stencilValues[index_sv + 9 + 6 + 2]  * v_in[index + joff + koff]
+            + stencilValues[index_sv + 3]          * v_in[index - ioff - koff]
+            + stencilValues[index_sv + 3 + 2]      * v_in[index - ioff + koff]
+            + stencilValues[index_sv + 18 + 3]     * v_in[index + ioff - koff]
+            + stencilValues[index_sv + 18 + 3 + 2] * v_in[index + ioff + koff]
+            + stencilValues[index_sv + 1]          * v_in[index - ioff - joff]
+            + stencilValues[index_sv + 6 + 1]      * v_in[index - ioff + joff]
+            + stencilValues[index_sv + 18 + 1]     * v_in[index + ioff - joff]
+            + stencilValues[index_sv + 18 + 6 + 1] * v_in[index + ioff + joff]
+
+            + stencilValues[index_sv]              * v_in[index - ioff - joff - koff]
+            + stencilValues[index_sv + 2]          * v_in[index - ioff - joff + koff]
+            + stencilValues[index_sv + 6]          * v_in[index - ioff + joff - koff]
+            + stencilValues[index_sv + 6 + 2]      * v_in[index - ioff + joff + koff]
+            + stencilValues[index_sv + 18]         * v_in[index + ioff - joff - koff]
+            + stencilValues[index_sv + 18 + 2]     * v_in[index + ioff - joff + koff]
+            + stencilValues[index_sv + 18 + 6]     * v_in[index + ioff + joff - koff]
+            + stencilValues[index_sv + 18 + 6 + 2] * v_in[index + ioff + joff + koff];
+        // clang-format on
+
+        // r = f - A*v
+        r[index] = f[index] - stencilsum;
+    }
+}
+
 /* Calculates the squares of the residual.
  * TODO use local memory and do sum reduction */
 __kernel void residual_squared(__global double *restrict r, __global double *restrict rsquares, const int m,
