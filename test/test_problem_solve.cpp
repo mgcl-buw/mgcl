@@ -85,80 +85,83 @@ TEST_CASE("Problem solving: periodic 4th order")
 
     SECTION("Sequential")
     {
-        p.solveSeq();
-
-        // check if input v is equal to the v stored in Problem instance
-        REQUIRE(v.get() == p.getVPtr().get());
-        REQUIRE(v->isEqual(p.getV()));
-
-        // check if solution is good
-        auto err = calculateError(solution, *v);
-        auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-        auto errMax = calculateMaxError(*err);
-
-        // solution.dumpToFile("out_solution.txt");
-        // (*v).dumpToFile("out_v.txt");
-
-        std::cout
-            << "seq" << std::endl
-            << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
-            << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
-
-        CHECK(errNorm < 1e-2);
-        CHECK(errMax < 1e-2);
-
-        // check if error is equal to old mgcl implementation (problem params must match)
-        if (p.getMaxiterVcycles() == 10 && N == 32 && p.getTol() == 1e-14 &&
-            p.getNu1() == 2 && p.getNu2() == 2 && p.getOmega() == 0.8 &&
-            p.getStencilType() == mgcl::MGCL_LAPLACE_7POINT)
+        SECTION("Laplace")
         {
-            CHECK(fabs(errNorm - 3.93115528889639940e-03) < 1e-14);
-            CHECK(fabs(errMax - 3.95723982871564600e-03) < 1e-14);
+            p.solveSeq();
+
+            // check if input v is equal to the v stored in Problem instance
+            REQUIRE(v.get() == p.getVPtr().get());
+            REQUIRE(v->isEqual(p.getV()));
+
+            // check if solution is good
+            auto err = calculateError(solution, *v);
+            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = calculateMaxError(*err);
+
+            // solution.dumpToFile("out_solution.txt");
+            // (*v).dumpToFile("out_v.txt");
+
+            std::cout
+                << "seq" << std::endl
+                << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
+
+            // check if error is equal to old mgcl implementation (problem params must match)
+            if (p.getMaxiterVcycles() == 10 && N == 32 && p.getTol() == 1e-14 &&
+                p.getNu1() == 2 && p.getNu2() == 2 && p.getOmega() == 0.8 &&
+                p.getStencilType() == mgcl::MGCL_LAPLACE_7POINT)
+            {
+                CHECK(fabs(errNorm - 3.93115528889639940e-03) < 1e-14);
+                CHECK(fabs(errMax - 3.95723982871564600e-03) < 1e-14);
+            }
         }
-    }
 
-    SECTION("Varying stencil, galerkin")
-    {
-        p.setStencilType(mgcl::MGCL_VARYING_7POINT);
-        auto &s = *p.getStencilValues();
-        double h2inv = N * N; // h = 1/N -> 1/h = N
+        SECTION("Galerkin (varying stencil)")
+        {
+            p.setStencilType(mgcl::MGCL_VARYING_7POINT);
+            auto &s = *p.getStencilValues();
+            double h2inv = N * N; // h = 1/N -> 1/h = N
 
-        // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
-        for (int i = 0; i < s.getDim1gh(); i++)
-            for (int j = 0; j < s.getDim2gh(); j++)
-                for (int k = 0; k < s.getDim3gh(); k++)
-                {
-                    // 7-point Laplace
-                    s[i][j][k][0][1][1] = h2inv * -1.0;
-                    s[i][j][k][1][0][1] = h2inv * -1.0;
-                    s[i][j][k][1][1][0] = h2inv * -1.0;
-                    s[i][j][k][1][1][1] = h2inv * 6.0;
-                    s[i][j][k][1][1][2] = h2inv * -1.0;
-                    s[i][j][k][1][2][1] = h2inv * -1.0;
-                    s[i][j][k][2][1][1] = h2inv * -1.0;
-                }
+            // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
+            for (int i = 0; i < s.getDim1gh(); i++)
+                for (int j = 0; j < s.getDim2gh(); j++)
+                    for (int k = 0; k < s.getDim3gh(); k++)
+                    {
+                        // 7-point Laplace
+                        s[i][j][k][0][1][1] = h2inv * -1.0;
+                        s[i][j][k][1][0][1] = h2inv * -1.0;
+                        s[i][j][k][1][1][0] = h2inv * -1.0;
+                        s[i][j][k][1][1][1] = h2inv * 6.0;
+                        s[i][j][k][1][1][2] = h2inv * -1.0;
+                        s[i][j][k][1][2][1] = h2inv * -1.0;
+                        s[i][j][k][2][1][1] = h2inv * -1.0;
+                    }
 
-        p.solveSeq();
+            p.solveSeq();
 
-        // check if input v is equal to the v stored in Problem instance
-        REQUIRE(v.get() == p.getVPtr().get());
-        REQUIRE(v->isEqual(p.getV()));
+            // check if input v is equal to the v stored in Problem instance
+            REQUIRE(v.get() == p.getVPtr().get());
+            REQUIRE(v->isEqual(p.getV()));
 
-        // check if solution is good
-        auto err = calculateError(solution, *v);
-        auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-        auto errMax = calculateMaxError(*err);
+            // check if solution is good
+            auto err = calculateError(solution, *v);
+            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = calculateMaxError(*err);
 
-        // solution.dumpToFile("out_solution.txt");
-        // (*v).dumpToFile("out_v.txt");
+            // solution.dumpToFile("out_solution.txt");
+            // (*v).dumpToFile("out_v.txt");
 
-        std::cout
-            << "seq galerkin" << std::endl
-            << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
-            << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+            std::cout
+                << "seq galerkin" << std::endl
+                << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
-        CHECK(errNorm < 1e-2);
-        CHECK(errMax < 1e-2);
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
+        }
     }
 
     SECTION("OpenCL")
@@ -176,28 +179,72 @@ TEST_CASE("Problem solving: periodic 4th order")
         p.setReadResults(true);
         p.setDeviceType(deviceType);
         // p.setDeviceName("Quadro");
-        p.solve();
 
-        // check if solution is good
-        auto err = calculateError(solution, *v);
-        auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-        auto errMax = calculateMaxError(*err);
-
-        std::cout
-            << "OpenCL" << std::endl
-            << std::scientific << "  ||e||_2 = " << errNorm << std::endl
-            << std::scientific << "  e_max = " << errMax << std::endl;
-
-        CHECK(errNorm < 1e-2);
-        CHECK(errMax < 1e-2);
-
-        // check if error is equal to old mgcl implementation (problem params must match)
-        if (p.getMaxiterVcycles() == 10 && N == 32 && p.getTol() == 1e-14 &&
-            p.getNu1() == 2 && p.getNu2() == 2 && p.getOmega() == 0.8 &&
-            p.getDeviceName() == "Quadro" && p.getDeviceType() == CL_DEVICE_TYPE_GPU)
+        SECTION("Laplace")
         {
-            CHECK(fabs(errNorm - 3.93115528889612358e-03) < 1e-14);
-            CHECK(fabs(errMax - 3.95723982871536324e-03) < 1e-14);
+            p.solve();
+
+            // check if solution is good
+            auto err = calculateError(solution, *v);
+            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = calculateMaxError(*err);
+
+            std::cout
+                << "OpenCL" << std::endl
+                << std::scientific << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << "  e_max = " << errMax << std::endl;
+
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
+
+            // check if error is equal to old mgcl implementation (problem params must match)
+            if (p.getMaxiterVcycles() == 10 && N == 32 && p.getTol() == 1e-14 &&
+                p.getNu1() == 2 && p.getNu2() == 2 && p.getOmega() == 0.8 &&
+                p.getDeviceName() == "Quadro" && p.getDeviceType() == CL_DEVICE_TYPE_GPU)
+            {
+                CHECK(fabs(errNorm - 3.93115528889612358e-03) < 1e-14);
+                CHECK(fabs(errMax - 3.95723982871536324e-03) < 1e-14);
+            }
+        }
+
+        SECTION("Galerkin (varying stencil)")
+        {
+            p.setStencilType(mgcl::MGCL_VARYING_7POINT);
+            auto &s = *p.getStencilValues();
+            double h2inv = N * N; // h = 1/N -> 1/h = N
+
+            // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
+            for (int i = 0; i < s.getDim1gh(); i++)
+                for (int j = 0; j < s.getDim2gh(); j++)
+                    for (int k = 0; k < s.getDim3gh(); k++)
+                    {
+                        // 7-point Laplace
+                        s[i][j][k][0][1][1] = h2inv * -1.0;
+                        s[i][j][k][1][0][1] = h2inv * -1.0;
+                        s[i][j][k][1][1][0] = h2inv * -1.0;
+                        s[i][j][k][1][1][1] = h2inv * 6.0;
+                        s[i][j][k][1][1][2] = h2inv * -1.0;
+                        s[i][j][k][1][2][1] = h2inv * -1.0;
+                        s[i][j][k][2][1][1] = h2inv * -1.0;
+                    }
+
+            p.solve();
+
+            // check if solution is good
+            auto err = calculateError(solution, *v);
+            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = calculateMaxError(*err);
+
+            // solution.dumpToFile("out_solution.txt");
+            // (*v).dumpToFile("out_v.txt");
+
+            std::cout
+                << "ocl galerkin" << std::endl
+                << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
         }
     }
 
