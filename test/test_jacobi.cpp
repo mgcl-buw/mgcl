@@ -94,6 +94,71 @@ TEST_CASE("jacobi")
 
 TEST_CASE("jacobi GPU varying stencil")
 {
+    SECTION("indices")
+    {
+        int mreal = 8;
+        int nreal = 8;
+        int oreal = 8;
+        int ghosts = 1;
+        int m = 8 + 2 * ghosts;
+        int n = 8 + 2 * ghosts;
+        int o = 8 + 2 * ghosts;
+
+        mgcl::VaryingStencil3x3x3 stencilValues(mreal, nreal, oreal, 2, 2, 2);
+        for (int i = 0; i < stencilValues.field1d().size(); i++)
+            stencilValues.field1d()[i] = i;
+
+        int ghosts_sv = 2;
+
+        for (int j = ghosts, jsv = ghosts_sv; j < n - ghosts; j++, jsv++)
+            for (int k = ghosts, ksv = ghosts_sv; k < o - ghosts; k++, ksv++)
+            {
+                int ioff = n * o;
+                int joff = o;
+                int koff = 1;
+                int index = ghosts * ioff + j * o + k;
+
+                int koff_sv = 27;
+                int joff_sv = ((o - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
+                int ioff_sv = ((n - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
+                int index_sv = ghosts_sv * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
+
+                for (int i = ghosts, isv = ghosts_sv; i < m - ghosts; i++, isv++)
+                {
+                    REQUIRE(index_sv == isv * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv);
+
+                    REQUIRE(stencilValues[isv][jsv][ksv][1][1][1] == stencilValues.field1d()[index_sv + 9 + 3 + 1]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][1][1][0] == stencilValues.field1d()[index_sv + 9 + 3]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][1][1][2] == stencilValues.field1d()[index_sv + 9 + 3 + 2]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][1][0][1] == stencilValues.field1d()[index_sv + 9 + 1]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][1][2][1] == stencilValues.field1d()[index_sv + 9 + 6 + 1]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][0][1][1] == stencilValues.field1d()[index_sv + 3 + 1]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][2][1][1] == stencilValues.field1d()[index_sv + 18 + 3 + 1]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][1][0][0] == stencilValues.field1d()[index_sv + 9]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][1][0][2] == stencilValues.field1d()[index_sv + 9 + 2]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][1][2][0] == stencilValues.field1d()[index_sv + 9 + 6]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][1][2][2] == stencilValues.field1d()[index_sv + 9 + 6 + 2]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][0][1][0] == stencilValues.field1d()[index_sv + 3]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][0][1][2] == stencilValues.field1d()[index_sv + 3 + 2]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][2][1][0] == stencilValues.field1d()[index_sv + 18 + 3]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][2][1][2] == stencilValues.field1d()[index_sv + 18 + 3 + 2]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][0][0][1] == stencilValues.field1d()[index_sv + 1]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][0][2][1] == stencilValues.field1d()[index_sv + 6 + 1]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][2][0][1] == stencilValues.field1d()[index_sv + 18 + 1]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][2][2][1] == stencilValues.field1d()[index_sv + 18 + 6 + 1]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][0][0][0] == stencilValues.field1d()[index_sv]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][0][0][2] == stencilValues.field1d()[index_sv + 2]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][0][2][0] == stencilValues.field1d()[index_sv + 6]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][0][2][2] == stencilValues.field1d()[index_sv + 6 + 2]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][2][0][0] == stencilValues.field1d()[index_sv + 18]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][2][0][2] == stencilValues.field1d()[index_sv + 18 + 2]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][2][2][0] == stencilValues.field1d()[index_sv + 18 + 6]);
+                    REQUIRE(stencilValues[isv][jsv][ksv][2][2][2] == stencilValues.field1d()[index_sv + 18 + 6 + 2]);
+
+                    index_sv += ioff_sv;
+                }
+            }
+    }
     auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
