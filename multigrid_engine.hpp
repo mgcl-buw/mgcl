@@ -68,6 +68,9 @@ namespace mgcl
 
         static void print7point(Cuboid &v, int i, int j, int k);
         static void print19point(Cuboid &v, int i, int j, int k);
+        static void print27point(Cuboid &v, int i, int j, int k);
+        static void print27point_sv(Cuboid &v, int i, int j, int k,
+                                    VaryingStencil3x3x3 &sv, int i_sv, int j_sv, int k_sv);
     };
 }
 
