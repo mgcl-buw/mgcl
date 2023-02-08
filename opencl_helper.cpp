@@ -123,6 +123,8 @@ namespace mgcl
             // Print the log
             if (!problem->silent)
                 printf("%s\n", log);
+
+            free(log);
             return false;
         }
 
