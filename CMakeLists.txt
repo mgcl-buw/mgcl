@@ -220,6 +220,7 @@ benchmarks/bench_steps.cpp
 benchmarks/bench_stencil.cpp
 benchmarks/bench_galerkin.cpp
 benchmarks/bench_stencil_arithmetic.cpp
+benchmarks/bench_stencil_arithmetic_kernels.cpp
 )
 
 add_executable(benchmarks ${SOURCES_NANOBENCH})
@@ -229,6 +230,20 @@ target_link_libraries(benchmarks PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(benchmarks PRIVATE mgcl)
 target_link_libraries(benchmarks PRIVATE pmg)
 target_link_libraries(benchmarks PRIVATE mgcl_c)
+
+# copy kernel file to build directory
+add_custom_command(
+  OUTPUT "${CMAKE_BINARY_DIR}/kernel_optimizations.cl"
+  COMMAND ${CMAKE_COMMAND} -E copy
+  "${CMAKE_SOURCE_DIR}/benchmarks/kernel_optimizations.cl" "${CMAKE_BINARY_DIR}"
+  DEPENDS "${CMAKE_SOURCE_DIR}/benchmarks/kernel_optimizations.cl"
+)
+
+# Custom target for activate the custom command above
+add_custom_target(copy_kernel_optimizations DEPENDS "${CMAKE_BINARY_DIR}/kernel_optimizations.cl")
+
+# Whenever target 'mgcl' is requested, the custom target will be evaluated.
+add_dependencies(benchmarks copy_kernel_optimizations)
 
 # ==========================
 # example main that can be profiled using e.g. gprof
