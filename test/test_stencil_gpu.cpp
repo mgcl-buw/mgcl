@@ -1036,6 +1036,96 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
     }
 }
 
+// Tests if indices are still correct for reordered loops (which make possible to write to global c only once).
+// The test is done only for one cell, since it's independent of the actual cell.
+TEST_CASE("VaryingStencilGpu::multiply loop index reordering", "[stencilIndexReordering]")
+{
+
+    int wa = 3; // GENERATE(3, 5, 7);
+    int wb = 3; // GENERATE(3, 5, 7);
+    int wc = wa + wb - 1;
+
+    // Test results are stored in 2d arrays where one row is one iteration having the columns:
+    // ai aj ak bi bj bk ai+bi aj+bj ak+bk 1didx
+    std::vector<std::vector<int>> indices_original;
+    std::vector<std::vector<int>> indices_new;
+
+    // original
+    // clang-format off
+    for (int a_i = 0; a_i < wa; a_i++)
+    for (int a_j = 0; a_j < wa; a_j++)
+    for (int a_k = 0; a_k < wa; a_k++)
+        for (int b_i = 0; b_i < wb; b_i++)
+        for (int b_j = 0; b_j < wb; b_j++)
+        for (int b_k = 0; b_k < wb; b_k++)
+        {
+            int ci = a_i + b_i;
+            int cj = a_j + b_j;
+            int ck = a_k + b_k;
+            int idx1d = ci * wc * wc + cj * wc + ck;
+
+            indices_original.push_back(std::vector<int> {
+                a_i, a_j, a_k,
+                b_i, b_j, b_k,
+                ci, cj, ck,
+                idx1d
+            });
+        }
+    // clang-format on
+
+    // reordered
+    // clang-format off
+    for (int ci = 0; ci < wc; ci++)
+    for (int cj = 0; cj < wc; cj++)
+    for (int ck = 0; ck < wc; ck++)
+        for (int a_i = ci - (ci < (wa - 1) ? ci : (wa - 1)), b_i = (ci < (wb - 1) ? ci : (wb - 1)); a_i <= (ci < (wa - 1) ? ci : (wa - 1)) && b_i >= ci - (ci < (wa - 1) ? ci : (wa - 1)); a_i++, b_i--)
+        for (int a_j = cj - (cj < (wa - 1) ? cj : (wa - 1)), b_j = (cj < (wb - 1) ? cj : (wb - 1)); a_j <= (cj < (wa - 1) ? cj : (wa - 1)) && b_j >= cj - (cj < (wa - 1) ? cj : (wa - 1)); a_j++, b_j--)
+        for (int a_k = ck - (ck < (wa - 1) ? ck : (wa - 1)), b_k = (ck < (wb - 1) ? ck : (wb - 1)); a_k <= (ck < (wa - 1) ? ck : (wa - 1)) && b_k >= ck - (ck < (wa - 1) ? ck : (wa - 1)); a_k++, b_k--)
+        {
+            int ci = a_i + b_i;
+            int cj = a_j + b_j;
+            int ck = a_k + b_k;
+            int idx1d = ci * wc * wc + cj * wc + ck;
+
+            indices_new.push_back(std::vector<int> {
+                a_i, a_j, a_k,
+                b_i, b_j, b_k,
+                ci, cj, ck,
+                idx1d
+            });
+
+            // printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n", a_i, a_j, a_k, b_i, b_j, b_k, ci, cj, ck,idx1d);
+        }
+    // clang-format on
+
+    REQUIRE(indices_original.size() == indices_new.size());
+
+    // sort both lists to make comparison easier
+    // clang-format off
+    std::stable_sort(std::begin(indices_original), std::end(indices_original), [](const auto &u, const auto &v){ return u[0] < v[0]; });
+    std::stable_sort(std::begin(indices_original), std::end(indices_original), [](const auto &u, const auto &v){ return u[1] < v[1]; });
+    std::stable_sort(std::begin(indices_original), std::end(indices_original), [](const auto &u, const auto &v){ return u[2] < v[2]; });
+    std::stable_sort(std::begin(indices_original), std::end(indices_original), [](const auto &u, const auto &v){ return u[3] < v[3]; });
+    std::stable_sort(std::begin(indices_original), std::end(indices_original), [](const auto &u, const auto &v){ return u[4] < v[4]; });
+    std::stable_sort(std::begin(indices_original), std::end(indices_original), [](const auto &u, const auto &v){ return u[5] < v[5]; });
+    std::stable_sort(std::begin(indices_new), std::end(indices_new), [](const auto &u, const auto &v){ return u[0] < v[0]; });
+    std::stable_sort(std::begin(indices_new), std::end(indices_new), [](const auto &u, const auto &v){ return u[1] < v[1]; });
+    std::stable_sort(std::begin(indices_new), std::end(indices_new), [](const auto &u, const auto &v){ return u[2] < v[2]; });
+    std::stable_sort(std::begin(indices_new), std::end(indices_new), [](const auto &u, const auto &v){ return u[3] < v[3]; });
+    std::stable_sort(std::begin(indices_new), std::end(indices_new), [](const auto &u, const auto &v){ return u[4] < v[4]; });
+    std::stable_sort(std::begin(indices_new), std::end(indices_new), [](const auto &u, const auto &v){ return u[5] < v[5]; });
+    // clang-format on
+
+    for (int i = 0; i < indices_original.size(); i++)
+    {
+        REQUIRE(indices_original[i].size() == indices_new[i].size());
+        for (int j = 0; j < indices_original[0].size(); j++)
+        {
+            REQUIRE(indices_original[i][j] == indices_new[i][j]);
+        }
+    }
+}
+
 TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
 {
     auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
