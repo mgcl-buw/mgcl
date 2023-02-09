@@ -2,6 +2,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include <algorithm>
 #include <ctgmath>
 #include <memory>
 
@@ -12,6 +13,8 @@
 
 #include "matrix2d.hpp"
 #include "test_utility.hpp"
+
+using std::min;
 
 TEST_CASE("VaryingStencilGpu ctor+dtor")
 {
@@ -1049,6 +1052,7 @@ TEST_CASE("VaryingStencilGpu::multiply loop index reordering", "[stencilIndexReo
     // ai aj ak bi bj bk ai+bi aj+bj ak+bk 1didx
     std::vector<std::vector<int>> indices_original;
     std::vector<std::vector<int>> indices_new;
+    std::vector<std::vector<int>> indices_new_minfn;
 
     // original
     // clang-format off
@@ -1098,7 +1102,39 @@ TEST_CASE("VaryingStencilGpu::multiply loop index reordering", "[stencilIndexReo
         }
     // clang-format on
 
+    // reordered using min function
+    // clang-format off
+    for (int ci = 0; ci < wc; ci++)
+    for (int cj = 0; cj < wc; cj++)
+    for (int ck = 0; ck < wc; ck++)
+        for (int a_i = ci - (min(ci, wa - 1)), b_i = min(ci, wb - 1);
+                a_i <= min(ci, wa - 1) && b_i >= ci - min(ci, wa - 1);
+                a_i++, b_i--)
+        for (int a_j = cj - (min(cj, wa - 1)), b_j = min(cj, wb - 1);
+                a_j <= min(cj, wa - 1) && b_j >= cj - min(cj, wa - 1);
+                a_j++, b_j--)
+        for (int a_k = ck - (min(ck, wa - 1)), b_k = min(ck, wb - 1);
+                a_k <= min(ck, wa - 1) && b_k >= ck - min(ck, wa - 1);
+                a_k++, b_k--)
+        {
+            int ci = a_i + b_i;
+            int cj = a_j + b_j;
+            int ck = a_k + b_k;
+            int idx1d = ci * wc * wc + cj * wc + ck;
+
+            indices_new_minfn.push_back(std::vector<int> {
+                a_i, a_j, a_k,
+                b_i, b_j, b_k,
+                ci, cj, ck,
+                idx1d
+            });
+
+            // printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n", a_i, a_j, a_k, b_i, b_j, b_k, ci, cj, ck,idx1d);
+        }
+    // clang-format on
+
     REQUIRE(indices_original.size() == indices_new.size());
+    REQUIRE(indices_original.size() == indices_new_minfn.size());
 
     // sort both lists to make comparison easier
     // clang-format off
@@ -1114,14 +1150,22 @@ TEST_CASE("VaryingStencilGpu::multiply loop index reordering", "[stencilIndexReo
     std::stable_sort(std::begin(indices_new), std::end(indices_new), [](const auto &u, const auto &v){ return u[3] < v[3]; });
     std::stable_sort(std::begin(indices_new), std::end(indices_new), [](const auto &u, const auto &v){ return u[4] < v[4]; });
     std::stable_sort(std::begin(indices_new), std::end(indices_new), [](const auto &u, const auto &v){ return u[5] < v[5]; });
+    std::stable_sort(std::begin(indices_new_minfn), std::end(indices_new_minfn), [](const auto &u, const auto &v){ return u[0] < v[0]; });
+    std::stable_sort(std::begin(indices_new_minfn), std::end(indices_new_minfn), [](const auto &u, const auto &v){ return u[1] < v[1]; });
+    std::stable_sort(std::begin(indices_new_minfn), std::end(indices_new_minfn), [](const auto &u, const auto &v){ return u[2] < v[2]; });
+    std::stable_sort(std::begin(indices_new_minfn), std::end(indices_new_minfn), [](const auto &u, const auto &v){ return u[3] < v[3]; });
+    std::stable_sort(std::begin(indices_new_minfn), std::end(indices_new_minfn), [](const auto &u, const auto &v){ return u[4] < v[4]; });
+    std::stable_sort(std::begin(indices_new_minfn), std::end(indices_new_minfn), [](const auto &u, const auto &v){ return u[5] < v[5]; });
     // clang-format on
 
     for (int i = 0; i < indices_original.size(); i++)
     {
         REQUIRE(indices_original[i].size() == indices_new[i].size());
+        REQUIRE(indices_original[i].size() == indices_new_minfn[i].size());
         for (int j = 0; j < indices_original[0].size(); j++)
         {
             REQUIRE(indices_original[i][j] == indices_new[i][j]);
+            REQUIRE(indices_original[i][j] == indices_new_minfn[i][j]);
         }
     }
 }
