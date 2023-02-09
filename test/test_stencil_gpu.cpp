@@ -1044,8 +1044,8 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
 TEST_CASE("VaryingStencilGpu::multiply loop index reordering", "[stencilIndexReordering]")
 {
 
-    int wa = 3; // GENERATE(3, 5, 7);
-    int wb = 3; // GENERATE(3, 5, 7);
+    int wa = GENERATE(3, 5);
+    int wb = GENERATE(3, 5);
     int wc = wa + wb - 1;
 
     // Test results are stored in 2d arrays where one row is one iteration having the columns:
@@ -1082,9 +1082,15 @@ TEST_CASE("VaryingStencilGpu::multiply loop index reordering", "[stencilIndexReo
     for (int ci = 0; ci < wc; ci++)
     for (int cj = 0; cj < wc; cj++)
     for (int ck = 0; ck < wc; ck++)
-        for (int a_i = ci - (ci < (wa - 1) ? ci : (wa - 1)), b_i = (ci < (wb - 1) ? ci : (wb - 1)); a_i <= (ci < (wa - 1) ? ci : (wa - 1)) && b_i >= ci - (ci < (wa - 1) ? ci : (wa - 1)); a_i++, b_i--)
-        for (int a_j = cj - (cj < (wa - 1) ? cj : (wa - 1)), b_j = (cj < (wb - 1) ? cj : (wb - 1)); a_j <= (cj < (wa - 1) ? cj : (wa - 1)) && b_j >= cj - (cj < (wa - 1) ? cj : (wa - 1)); a_j++, b_j--)
-        for (int a_k = ck - (ck < (wa - 1) ? ck : (wa - 1)), b_k = (ck < (wb - 1) ? ck : (wb - 1)); a_k <= (ck < (wa - 1) ? ck : (wa - 1)) && b_k >= ck - (ck < (wa - 1) ? ck : (wa - 1)); a_k++, b_k--)
+        for (int a_i = ci - (ci < (wb - 1) ? ci : (wb - 1)), b_i = (ci < (wb - 1) ? ci : (wb - 1));
+             a_i <= (ci < (wa - 1) ? ci : (wa - 1)) && b_i >= ci - (ci < (wa - 1) ? ci : (wa - 1)); 
+             a_i++, b_i--)
+        for (int a_j = cj - (cj < (wb - 1) ? cj : (wb - 1)), b_j = (cj < (wb - 1) ? cj : (wb - 1));
+             a_j <= (cj < (wa - 1) ? cj : (wa - 1)) && b_j >= cj - (cj < (wa - 1) ? cj : (wa - 1)); 
+             a_j++, b_j--)
+        for (int a_k = ck - (ck < (wb - 1) ? ck : (wb - 1)), b_k = (ck < (wb - 1) ? ck : (wb - 1));
+             a_k <= (ck < (wa - 1) ? ck : (wa - 1)) && b_k >= ck - (ck < (wa - 1) ? ck : (wa - 1)); 
+             a_k++, b_k--)
         {
             int ci = a_i + b_i;
             int cj = a_j + b_j;
@@ -1107,13 +1113,13 @@ TEST_CASE("VaryingStencilGpu::multiply loop index reordering", "[stencilIndexReo
     for (int ci = 0; ci < wc; ci++)
     for (int cj = 0; cj < wc; cj++)
     for (int ck = 0; ck < wc; ck++)
-        for (int a_i = ci - (min(ci, wa - 1)), b_i = min(ci, wb - 1);
+        for (int a_i = ci - (min(ci, wb - 1)), b_i = min(ci, wb - 1);
                 a_i <= min(ci, wa - 1) && b_i >= ci - min(ci, wa - 1);
                 a_i++, b_i--)
-        for (int a_j = cj - (min(cj, wa - 1)), b_j = min(cj, wb - 1);
+        for (int a_j = cj - (min(cj, wb - 1)), b_j = min(cj, wb - 1);
                 a_j <= min(cj, wa - 1) && b_j >= cj - min(cj, wa - 1);
                 a_j++, b_j--)
-        for (int a_k = ck - (min(ck, wa - 1)), b_k = min(ck, wb - 1);
+        for (int a_k = ck - (min(ck, wb - 1)), b_k = min(ck, wb - 1);
                 a_k <= min(ck, wa - 1) && b_k >= ck - min(ck, wa - 1);
                 a_k++, b_k--)
         {
@@ -1129,7 +1135,7 @@ TEST_CASE("VaryingStencilGpu::multiply loop index reordering", "[stencilIndexReo
                 idx1d
             });
 
-            // printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n", a_i, a_j, a_k, b_i, b_j, b_k, ci, cj, ck,idx1d);
+            printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n", a_i, a_j, a_k, b_i, b_j, b_k, ci, cj, ck,idx1d);
         }
     // clang-format on
 
