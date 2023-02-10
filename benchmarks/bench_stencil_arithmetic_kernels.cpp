@@ -69,12 +69,22 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarkernelopt
     OCLWrapper oclw(CL_DEVICE_TYPE_GPU,
                     tu.deviceAvailable("Quadro", CL_DEVICE_TYPE_GPU) ? "Quadro" : "",
                     "./kernel_optimizations.cl");
-    // bool gpuAvailable = tu.deviceAvailable("Quadro", CL_DEVICE_TYPE_GPU);
-    // bool cpuAvailable = tu.deviceAvailable("", CL_DEVICE_TYPE_CPU);
 
-    // mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-    // mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands);
-    // mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+    // set specific work-group sizes that seemed to be fastest (info gathered in other benchmark, see below).
+    int lm = 1;
+    int ln = 1;
+    int lo = 32;
+
+    if (N == 8)
+    {
+        lo = 8;
+        ln = 4;
+    }
+    else if (N == 16)
+    {
+        lo = 16;
+        ln = 2;
+    }
 
     // naive
     {
@@ -114,8 +124,8 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarkernelopt
 
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
-        const size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m), static_cast<size_t>(n > 4 ? 4 : n),
-                                 static_cast<size_t>(o > 4 ? 4 : o)};
+        const size_t local[3] = {static_cast<size_t>(lm), static_cast<size_t>(ln),
+                                 static_cast<size_t>(lo)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
@@ -181,8 +191,8 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarkernelopt
 
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
-        const size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m), static_cast<size_t>(n > 4 ? 4 : n),
-                                 static_cast<size_t>(o > 4 ? 4 : o)};
+        const size_t local[3] = {static_cast<size_t>(lm), static_cast<size_t>(ln),
+                                 static_cast<size_t>(lo)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
@@ -248,8 +258,8 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarkernelopt
 
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
-        const size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m), static_cast<size_t>(n > 4 ? 4 : n),
-                                 static_cast<size_t>(o > 4 ? 4 : o)};
+        const size_t local[3] = {static_cast<size_t>(lm), static_cast<size_t>(ln),
+                                 static_cast<size_t>(lo)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
@@ -315,8 +325,8 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarkernelopt
 
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
-        const size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m), static_cast<size_t>(n > 4 ? 4 : n),
-                                 static_cast<size_t>(o > 4 ? 4 : o)};
+        const size_t local[3] = {static_cast<size_t>(lm), static_cast<size_t>(ln),
+                                 static_cast<size_t>(lo)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
@@ -392,8 +402,8 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarkernelopt
 
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
-        const size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m), static_cast<size_t>(n > 4 ? 4 : n),
-                                 static_cast<size_t>(o > 4 ? 4 : o)};
+        const size_t local[3] = {static_cast<size_t>(lm), static_cast<size_t>(ln),
+                                 static_cast<size_t>(lo)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
@@ -460,8 +470,8 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarkernelopt
 
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
-        const size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m), static_cast<size_t>(n > 4 ? 4 : n),
-                                 static_cast<size_t>(o > 4 ? 4 : o)};
+        const size_t local[3] = {static_cast<size_t>(lm), static_cast<size_t>(ln),
+                                 static_cast<size_t>(lo)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
