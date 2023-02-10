@@ -260,3 +260,66 @@ __kernel void mult_stencils_var_var_reordered_minfn(
         // clang-format on
     }
 }
+
+// Same as mult_stencils_var_var_reordered_minfn but using smaller data types, too.
+__kernel void mult_stencils_var_var_reordered_minfn_small_types(
+    __global double *restrict a,
+    __global double *restrict b,
+    __global double *restrict c,
+    ushort m, ushort n, ushort o,
+    uchar wa, uchar wb,
+    uchar gha, uchar ghb, uchar ghc)
+{
+    ushort i = get_global_id(0);
+    ushort j = get_global_id(1);
+    ushort k = get_global_id(2);
+
+    uchar wa2 = wa >> 1;
+    uchar wc = wa + wb - 1;
+
+    // 1d indices
+    ushort wcPow2 = wc * wc;
+    ushort wcPow3 = wcPow2 * wc;
+    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) * wcPow3 + (j + ghc) * (o + 2 * ghc) * wcPow3 + (k + ghc) * wcPow3;
+
+    ushort waPow2 = wa * wa;
+    ushort waPow3 = waPow2 * wa;
+    int cell_a = (i + gha) * (n + 2 * gha) * (o + 2 * gha) * waPow3 + (j + gha) * (o + 2 * gha) * waPow3 + (k + gha) * waPow3;
+
+    ushort wbPow2 = wb * wb;
+    ushort wbPow3 = wbPow2 * wb;
+
+    if (i < m && j < n && k < o)
+    {
+        // clang-format off
+        for (int ci = 0; ci < wc; ci++)
+        for (int cj = 0; cj < wc; cj++)
+        for (int ck = 0; ck < wc; ck++)
+        {
+            double csum = 0;
+            for (uchar a_i = ci - (min(ci, wb - 1)), b_i = min(ci, wb - 1);
+                a_i <= min(ci, wa - 1) && b_i >= ci - min(ci, wa - 1);
+                a_i++, b_i--)
+            for (uchar a_j = cj - (min(cj, wb - 1)), b_j = min(cj, wb - 1);
+                    a_j <= min(cj, wa - 1) && b_j >= cj - min(cj, wa - 1);
+                    a_j++, b_j--)
+            for (uchar a_k = ck - (min(ck, wb - 1)), b_k = min(ck, wb - 1);
+                    a_k <= min(ck, wa - 1) && b_k >= ck - min(ck, wa - 1);
+                    a_k++, b_k--)
+            {
+                ushort gpi = i + a_i - wa2 + ghb;
+                ushort gpj = j + a_j - wa2 + ghb;
+                ushort gpk = k + a_k - wa2 + ghb;
+
+                int cell_b = gpi * (n + 2 * ghb) * (o + 2 * ghb) * wbPow3 + gpj * (o + 2 * ghb) * wbPow3 + gpk * wbPow3;
+
+                csum +=
+                    a[cell_a + a_i * waPow2 + a_j * wa + a_k] *
+                    b[cell_b + b_i * wbPow2 + b_j * wb + b_k];
+            }
+
+            c[cell_c + ci * wcPow2 + cj * wc + ck] = csum;
+        }
+        // clang-format on
+    }
+}
