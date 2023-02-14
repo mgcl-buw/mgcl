@@ -1985,15 +1985,15 @@ __kernel void mult_stencils_var_fix(
         for (int ck = 0; ck < wc; ck++)
         {
             double csum = 0;
-            for (int a_i = ci - (ci < (wb - 1) ? ci : (wb - 1)), b_i = (ci < (wb - 1) ? ci : (wb - 1));
-             a_i <= (ci < (wa - 1) ? ci : (wa - 1)) && b_i >= ci - (ci < (wa - 1) ? ci : (wa - 1)); 
-             a_i++, b_i--)
-            for (int a_j = cj - (cj < (wb - 1) ? cj : (wb - 1)), b_j = (cj < (wb - 1) ? cj : (wb - 1));
-                a_j <= (cj < (wa - 1) ? cj : (wa - 1)) && b_j >= cj - (cj < (wa - 1) ? cj : (wa - 1)); 
-                a_j++, b_j--)
-            for (int a_k = ck - (ck < (wb - 1) ? ck : (wb - 1)), b_k = (ck < (wb - 1) ? ck : (wb - 1));
-                a_k <= (ck < (wa - 1) ? ck : (wa - 1)) && b_k >= ck - (ck < (wa - 1) ? ck : (wa - 1)); 
-                a_k++, b_k--)
+            for (int a_i = ci - (min(ci, wb - 1)), b_i = min(ci, wb - 1);
+                a_i <= min(ci, wa - 1) && b_i >= ci - min(ci, wa - 1);
+                a_i++, b_i--)
+            for (int a_j = cj - (min(cj, wb - 1)), b_j = min(cj, wb - 1);
+                    a_j <= min(cj, wa - 1) && b_j >= cj - min(cj, wa - 1);
+                    a_j++, b_j--)
+            for (int a_k = ck - (min(ck, wb - 1)), b_k = min(ck, wb - 1);
+                    a_k <= min(ck, wa - 1) && b_k >= ck - min(ck, wa - 1);
+                    a_k++, b_k--)
             {
                 csum +=
                     a[cell_a + a_i * waPow2 + a_j * wa + a_k] *
