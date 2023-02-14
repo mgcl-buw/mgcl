@@ -1979,33 +1979,29 @@ __kernel void mult_stencils_var_fix(
 
     if (i < m && j < n && k < o)
     {
-        // TODO temporary values in private array
-
         // clang-format off
-        for (int a_i = 0; a_i < wa; a_i++)
-        for (int a_j = 0; a_j < wa; a_j++)
-        for (int a_k = 0; a_k < wa; a_k++)
-            for (int b_i = 0; b_i < wb; b_i++)
-            for (int b_j = 0; b_j < wb; b_j++)
-            for (int b_k = 0; b_k < wb; b_k++)
+        for (int ci = 0; ci < wc; ci++)
+        for (int cj = 0; cj < wc; cj++)
+        for (int ck = 0; ck < wc; ck++)
+        {
+            double csum = 0;
+            for (int a_i = ci - (ci < (wb - 1) ? ci : (wb - 1)), b_i = (ci < (wb - 1) ? ci : (wb - 1));
+             a_i <= (ci < (wa - 1) ? ci : (wa - 1)) && b_i >= ci - (ci < (wa - 1) ? ci : (wa - 1)); 
+             a_i++, b_i--)
+            for (int a_j = cj - (cj < (wb - 1) ? cj : (wb - 1)), b_j = (cj < (wb - 1) ? cj : (wb - 1));
+                a_j <= (cj < (wa - 1) ? cj : (wa - 1)) && b_j >= cj - (cj < (wa - 1) ? cj : (wa - 1)); 
+                a_j++, b_j--)
+            for (int a_k = ck - (ck < (wb - 1) ? ck : (wb - 1)), b_k = (ck < (wb - 1) ? ck : (wb - 1));
+                a_k <= (ck < (wa - 1) ? ck : (wa - 1)) && b_k >= ck - (ck < (wa - 1) ? ck : (wa - 1)); 
+                a_k++, b_k--)
             {
-                int ci = a_i + b_i;
-                int cj = a_j + b_j;
-                int ck = a_k + b_k;
-
-                if (ci >= 0 && ci < wc &&
-                    cj >= 0 && cj < wc &&
-                    ck >= 0 && ck < wc)
-                {
-                    c[cell_c + ci * wcPow2 + cj * wc + ck] +=
-                        a[cell_a + a_i * waPow2 + a_j * wa + a_k] *
-                        b[b_i * wbPow2 + b_j * wb + b_k];
-
-                    // c[i + ghc][j + ghc][k + ghc][a_i + b_i][a_j + b_j][a_k + b_k] +=
-                    //     a[i + gha][j + gha][k + gha][a_i][a_j][a_k] *
-                    //     b[gpi][gpj][gpk][b_i][b_j][b_k];
-                }
+                csum +=
+                    a[cell_a + a_i * waPow2 + a_j * wa + a_k] *
+                    b[b_i * wbPow2 + b_j * wb + b_k];
             }
+
+            c[cell_c + ci * wcPow2 + cj * wc + ck] = csum;
+        }
         // clang-format on
     }
 }
