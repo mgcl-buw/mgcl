@@ -707,3 +707,49 @@ __kernel void mult_stencils_var_fix_reordered_localb(
         // clang-format on
     }
 }
+
+// this version has the widths of the stencils as inline numbers (e.g. replaced via string manipulation and recompiled)
+// only for wa = wb = 3 for now
+__kernel void mult_stencils_var_fix_reordered_widths_inline(
+    __global double *restrict a,
+    __global double *restrict b,
+    __global double *restrict c,
+    int m, int n, int o,
+    int gha, int ghc)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
+
+    // 1d indices
+    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) * 125 + (j + ghc) * (o + 2 * ghc) * 125 + (k + ghc) * 125;
+    int cell_a = (i + gha) * (n + 2 * gha) * (o + 2 * gha) * 27 + (j + gha) * (o + 2 * gha) * 27 + (k + gha) * 27;
+
+    if (i < m && j < n && k < o)
+    {
+        // clang-format off
+        for (int ci = 0; ci < 5; ci++)
+        for (int cj = 0; cj < 5; cj++)
+        for (int ck = 0; ck < 5; ck++)
+        {
+            double csum = 0;
+            for (int a_i = ci - (min(ci, 2)), b_i = min(ci, 2);
+                a_i <= min(ci, 2) && b_i >= ci - min(ci, 2);
+                a_i++, b_i--)
+            for (int a_j = cj - (min(cj, 2)), b_j = min(cj, 2);
+                    a_j <= min(cj, 2) && b_j >= cj - min(cj, 2);
+                    a_j++, b_j--)
+            for (int a_k = ck - (min(ck, 2)), b_k = min(ck, 2);
+                    a_k <= min(ck, 2) && b_k >= ck - min(ck, 2);
+                    a_k++, b_k--)
+            {
+                csum +=
+                    a[cell_a + a_i * 9 + a_j * 3 + a_k] *
+                    b[b_i * 9 + b_j * 3 + b_k];
+            }
+
+            c[cell_c + ci * 25 + cj * 5 + ck] = csum;
+        }
+        // clang-format on
+    }
+}
