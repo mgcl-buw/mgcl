@@ -929,7 +929,74 @@ TEST_CASE("benchmark var*fix stencils optimizations", "[console][VarFixKernelOpt
         // b.updateGhosts(program, queue);
 
         // enqueue multiplication kernel
-        std::string name = std::string("reordered var*fix, N = ").append(std::to_string(N));
+        std::string name = std::string("reordered __constant b var*fix, N = ").append(std::to_string(N));
+        bench.run(std::string(name).c_str(), [&]
+                  { 
+            err = clEnqueueNDRangeKernel(oclw.commands, kernel, 3, NULL, global, local, 0, NULL, NULL);
+            mgcl::mgclCheckError(err, "Enqueueing stencil multiplication kernel");
+            clFinish(oclw.commands); });
+
+        // update ghosts of c
+        // if (ghc > 0)
+        //     c.updateGhosts(oclw.program, oclw.commands);
+
+        clReleaseKernel(kernel);
+    }
+
+    // reordered for loops (only 1 write to global buffer c) using min function instead of ternary operator
+    // no benefit on laptop gpu (and somewhat insecure execution because dependence of wg size)
+    {
+        int err;
+
+        // Create the compute kernel from the program
+        cl_kernel kernel = clCreateKernel(oclw.program, "mult_stencils_var_fix_reordered_localb", &err);
+        mgcl::mgclCheckError(err, "clCreateKernel");
+
+        // create output buffer c
+        // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
+
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
+        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+
+        auto abuf = a.getBuf();
+        auto bbuf = b.getBuf();
+        auto cbuf = c.getBuf();
+        // auto wb = b.getWidth();
+        // auto ghb = b.getGh();
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &abuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &bbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &cbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &wa);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &wb);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gha);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghc);
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
+        size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
+        const size_t local[3] = {static_cast<size_t>(lm), static_cast<size_t>(ln),
+                                 static_cast<size_t>(lo)};
+
+        for (int i = 0; i < 3; i++)
+            if (global[i] % local[i] != 0)
+            {
+                // printf("padding global size %d from %ld to ", i, global[i]);
+                global[i] += local[i] - (global[i] % local[i]);
+                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
+            }
+
+        // update ghosts of b first (maybe not needed if done earlier)
+        // b.updateGhosts(program, queue);
+
+        // enqueue multiplication kernel
+        std::string name = std::string("reordered __local b var*fix, N = ").append(std::to_string(N));
         bench.run(std::string(name).c_str(), [&]
                   { 
             err = clEnqueueNDRangeKernel(oclw.commands, kernel, 3, NULL, global, local, 0, NULL, NULL);

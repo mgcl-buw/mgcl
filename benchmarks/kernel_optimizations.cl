@@ -641,3 +641,69 @@ __kernel void mult_stencils_var_fix_reordered_constb(
         // clang-format on
     }
 }
+
+__kernel void mult_stencils_var_fix_reordered_localb(
+    __global double *restrict a,
+    __global double *restrict b,
+    __global double *restrict c,
+    int m, int n, int o,
+    int wa, int wb,
+    int gha, int ghc)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
+
+    int wa2 = wa >> 1;
+    int wc = wa + wb - 1;
+
+    // 1d indices
+    int wcPow2 = wc * wc;
+    int wcPow3 = wcPow2 * wc;
+    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) * wcPow3 + (j + ghc) * (o + 2 * ghc) * wcPow3 + (k + ghc) * wcPow3;
+
+    int waPow2 = wa * wa;
+    int waPow3 = waPow2 * wa;
+    int cell_a = (i + gha) * (n + 2 * gha) * (o + 2 * gha) * waPow3 + (j + gha) * (o + 2 * gha) * waPow3 + (k + gha) * waPow3;
+
+    int wbPow2 = wb * wb;
+    int wbPow3 = wbPow2 * wb;
+
+    __local double b_loc[27];
+    int locId = get_local_id(2);
+    if (get_local_size(1) > 1)
+        locId = get_local_id(1) * get_local_size(2) + get_local_id(2);
+
+    if (locId < 27)
+        b_loc[locId] = b[locId];
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (i < m && j < n && k < o)
+    {
+        // clang-format off
+        for (int ci = 0; ci < wc; ci++)
+        for (int cj = 0; cj < wc; cj++)
+        for (int ck = 0; ck < wc; ck++)
+        {
+            double csum = 0;
+            for (int a_i = ci - (min(ci, wb - 1)), b_i = min(ci, wb - 1);
+                a_i <= min(ci, wa - 1) && b_i >= ci - min(ci, wa - 1);
+                a_i++, b_i--)
+            for (int a_j = cj - (min(cj, wb - 1)), b_j = min(cj, wb - 1);
+                    a_j <= min(cj, wa - 1) && b_j >= cj - min(cj, wa - 1);
+                    a_j++, b_j--)
+            for (int a_k = ck - (min(ck, wb - 1)), b_k = min(ck, wb - 1);
+                    a_k <= min(ck, wa - 1) && b_k >= ck - min(ck, wa - 1);
+                    a_k++, b_k--)
+            {
+                csum +=
+                    a[cell_a + a_i * waPow2 + a_j * wa + a_k] *
+                    b_loc[b_i * wbPow2 + b_j * wb + b_k];
+            }
+
+            c[cell_c + ci * wcPow2 + cj * wc + ck] = csum;
+        }
+        // clang-format on
+    }
+}
