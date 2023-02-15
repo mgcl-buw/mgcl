@@ -218,6 +218,20 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
         // mgcl::MGCL_VARYING_19POINT,
         mgcl::MGCL_VARYING_27POINT};
 
+    // Problem parameters
+    double tol = 1e-20;
+    int nu1 = 2;
+    int nu2 = 2;
+    double omega = 0.8;
+    int maxIterVCycles = 30;
+
+    std::cout << "Problem parameters:" << std::endl
+              << "  tol: " << tol << std::endl
+              << "  nu1: " << nu1 << std::endl
+              << "  nu2: " << nu2 << std::endl
+              << "  omega: " << omega << std::endl
+              << "  v-cycle iterations: " << maxIterVCycles << std::endl;
+
     for (auto N : grids)
     {
         for (auto stencil : stencils)
@@ -226,13 +240,6 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
             int m = N;
             int n = N;
             int o = N;
-
-            // Problem parameters
-            double tol = 1e-20;
-            int nu1 = 2;
-            int nu2 = 2;
-            double omega = 0.8;
-            int maxIterVCycles = 30;
 
             ankerl::nanobench::Bench b;
             b.timeUnit(1ms, "ms")
