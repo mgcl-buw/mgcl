@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <fstream>
 
-#include "../cuboid.hpp"
+#include "../src/cuboid.hpp"
 
 TEST_CASE("cuboid alloc + free")
 {

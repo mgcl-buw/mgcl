@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 
-#include "../stencil.hpp"
+#include "../src/stencil.hpp"
 
 namespace mgcl_test
 {

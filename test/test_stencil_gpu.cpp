@@ -6,10 +6,10 @@
 #include <ctgmath>
 #include <memory>
 
-#include "../cuboid.hpp"
-#include "../multigrid_engine.hpp"
-#include "../opencl_helper.hpp"
-#include "../stencil.hpp"
+#include "../src/cuboid.hpp"
+#include "../src/multigrid_engine.hpp"
+#include "../src/opencl_helper.hpp"
+#include "../src/stencil.hpp"
 
 #include "matrix2d.hpp"
 #include "test_utility.hpp"

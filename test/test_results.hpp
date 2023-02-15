@@ -14,7 +14,7 @@
 
 #include <memory>
 
-#include "../stencil.hpp"
+#include "../src/stencil.hpp"
 #include "matrix2d.hpp"
 
 namespace mgcl_test

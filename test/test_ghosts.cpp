@@ -2,8 +2,8 @@
 
 #include <cmath>
 
-#include "../cuboid.hpp"
-#include "../multigrid_engine.hpp"
+#include "../src/cuboid.hpp"
+#include "../src/multigrid_engine.hpp"
 #include "test_utility.hpp"
 
 TEST_CASE("updateGhosts")

@@ -8,8 +8,8 @@
 #include <vector>
 using namespace std::chrono_literals;
 
-#include "../cuboid.hpp"
-#include "../problem.hpp"
+#include "../src/cuboid.hpp"
+#include "../src/problem.hpp"
 #include "../test/test_utility.hpp"
 
 TEST_CASE("mgcl benchmarks console: init", "[!benchmark][init][console]")

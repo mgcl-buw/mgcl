@@ -1,6 +1,6 @@
 #include "test_results.hpp"
 
-#include "../multigrid_engine.hpp"
+#include "../src/multigrid_engine.hpp"
 
 namespace mgcl_test
 {
@@ -27138,7 +27138,7 @@ namespace mgcl_test
      *
      * @return mgcl::Cuboid Cuboid filled with test input.
      */
-    std::shared_ptr<mgcl::Cuboid> test_jacobi::inputV16() 
+    std::shared_ptr<mgcl::Cuboid> test_jacobi::inputV16()
     {
         int n = 16;
         auto cret = std::make_shared<mgcl::Cuboid>(n, n, n, 1, 1, 1);
@@ -27160,7 +27160,7 @@ namespace mgcl_test
      *
      * @return mgcl::Cuboid Cuboid filled with test output of r.
      */
-    std::shared_ptr<mgcl::Cuboid> test_jacobi::inputR16() 
+    std::shared_ptr<mgcl::Cuboid> test_jacobi::inputR16()
     {
         int n = 16;
         return std::make_shared<mgcl::Cuboid>(n, n, n, 1, 1, 1, 0);
@@ -27171,7 +27171,7 @@ namespace mgcl_test
      *
      * @return mgcl::Cuboid Cuboid filled with test input.
      */
-    std::shared_ptr<mgcl::Cuboid> test_jacobi::inputF16() 
+    std::shared_ptr<mgcl::Cuboid> test_jacobi::inputF16()
     {
         int n = 16;
         return std::make_shared<mgcl::Cuboid>(n, n, n, 1, 1, 1, 0);
@@ -27182,7 +27182,7 @@ namespace mgcl_test
      *
      * @return mgcl::Cuboid Cuboid filled with test output of r.
      */
-    std::shared_ptr<mgcl::Cuboid> test_jacobi::outputV16() 
+    std::shared_ptr<mgcl::Cuboid> test_jacobi::outputV16()
     {
         auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
         auto &c = *cret;
@@ -33028,7 +33028,7 @@ namespace mgcl_test
      *
      * @return mgcl::Cuboid Cuboid filled with test output of r.
      */
-    std::shared_ptr<mgcl::Cuboid> test_jacobi::outputR16() 
+    std::shared_ptr<mgcl::Cuboid> test_jacobi::outputR16()
     {
         auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
         auto &c = *cret;

@@ -24,25 +24,25 @@ endif()
 find_package(OpenCL REQUIRED)
 
 set(SOURCES_LIB 
-cuboid.hpp
-cuboid.cpp
-ghostscl.cpp
-jacobicl.cpp
-mgcl.hpp
-problem.hpp
-problem.cpp
-level.hpp
-level.cpp
-opencl_helper.hpp
-opencl_helper.cpp
-multigrid_engine.hpp
-multigrid_engine.cpp
-prolongation.cpp
-restriction.cpp
-stencil.hpp
-stencil.cpp
-hypercube.hpp
-hypercube.cpp
+src/cuboid.hpp
+src/cuboid.cpp
+src/ghostscl.cpp
+src/jacobicl.cpp
+src/mgcl.hpp
+src/problem.hpp
+src/problem.cpp
+src/level.hpp
+src/level.cpp
+src/opencl_helper.hpp
+src/opencl_helper.cpp
+src/multigrid_engine.hpp
+src/multigrid_engine.cpp
+src/prolongation.cpp
+src/restriction.cpp
+src/stencil.hpp
+src/stencil.cpp
+src/hypercube.hpp
+src/hypercube.cpp
 )
 
 add_library(mgcl ${SOURCES_LIB})
@@ -59,8 +59,8 @@ target_link_libraries (mgcl ${OpenCL_LIBRARY})
 add_custom_command(
   OUTPUT "${CMAKE_BINARY_DIR}/mgcl.cl"
   COMMAND ${CMAKE_COMMAND} -E copy
-  "${CMAKE_CURRENT_SOURCE_DIR}/mgcl.cl" "${CMAKE_BINARY_DIR}"
-  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/mgcl.cl"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/mgcl.cl" "${CMAKE_BINARY_DIR}"
+  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/mgcl.cl"
   )
 
 # Custom target for activate the custom command above

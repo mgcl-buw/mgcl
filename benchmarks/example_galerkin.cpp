@@ -2,9 +2,9 @@
 #include <iostream>
 #include <memory>
 
-#include "../cuboid.hpp"
-#include "../mgcl.hpp"
-#include "../problem.hpp"
+#include "../src/cuboid.hpp"
+#include "../src/mgcl.hpp"
+#include "../src/problem.hpp"
 #include "../test/test_utility.hpp"
 
 enum RUNS

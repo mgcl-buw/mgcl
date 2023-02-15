@@ -4,8 +4,8 @@
 #include <cmath>
 #include <iostream>
 
-#include "../cuboid.hpp"
-#include "../multigrid_engine.hpp"
+#include "../src/cuboid.hpp"
+#include "../src/multigrid_engine.hpp"
 #include "test_utility.hpp"
 
 std::shared_ptr<mgcl::Cuboid> prolongationTestInputFine();

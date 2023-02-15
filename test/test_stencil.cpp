@@ -4,9 +4,9 @@
 
 #include <memory>
 
-#include "../cuboid.hpp"
-#include "../multigrid_engine.hpp"
-#include "../stencil.hpp"
+#include "../src/cuboid.hpp"
+#include "../src/multigrid_engine.hpp"
+#include "../src/stencil.hpp"
 
 #include "matrix2d.hpp"
 

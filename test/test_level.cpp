@@ -4,8 +4,8 @@
 #include <iostream>
 #include <memory>
 
-#include "../cuboid.hpp"
-#include "../problem.hpp"
+#include "../src/cuboid.hpp"
+#include "../src/problem.hpp"
 #include "test_utility.hpp"
 
 /**

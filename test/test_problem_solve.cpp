@@ -7,8 +7,8 @@
 #include <iostream>
 
 #include "../benchmarks/pmg_utility.hpp"
-#include "../cuboid.hpp"
-#include "../problem.hpp"
+#include "../src/cuboid.hpp"
+#include "../src/problem.hpp"
 #include "../thirdparty/pmg/mg.h"
 #include "test_utility.hpp"
 
