@@ -328,6 +328,93 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
     }
 }
 
+TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][varyingStencil][gpuOnly]")
+{
+    if (!mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+    {
+        std::cout << "Cannot run benchmark, no GPU available!" << std::endl;
+        return;
+    }
+
+    std::vector grids{4, 8, 16, 32, 64, 128, 256, 512};
+    std::vector stencils{
+        mgcl::MGCL_VARYING_27POINT};
+
+    // Problem parameters
+    double tol = 1e-20;
+    int nu1 = 2;
+    int nu2 = 2;
+    double omega = 0.8;
+    int maxIterVCycles = 20;
+
+    std::cout << "Problem parameters:" << std::endl
+              << "  tol: " << tol << std::endl
+              << "  nu1: " << nu1 << std::endl
+              << "  nu2: " << nu2 << std::endl
+              << "  omega: " << omega << std::endl
+              << "  v-cycle iterations: " << maxIterVCycles << std::endl;
+
+    for (auto N : grids)
+    {
+        for (auto stencil : stencils)
+        {
+            // int N = 16;
+            int m = N;
+            int n = N;
+            int o = N;
+
+            ankerl::nanobench::Bench b;
+            b.timeUnit(1ms, "ms")
+                // .epochs(1)
+                // .epochIterations(1)
+                .minEpochTime(100ms)
+                .relative(false);
+
+            if (N <= 16)
+                b.minEpochIterations(20);
+
+            auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
+            f->fillRandom(0, 10);
+
+            std::string stencilName = "Laplace7p";
+            if (stencil == mgcl::MGCL_LAPLACE_19POINT)
+                stencilName = "Laplace19p";
+            else if (stencil == mgcl::MGCL_LAPLACE_27POINT)
+                stencilName = "Laplace27p";
+            else if (stencil == mgcl::MGCL_VARYING_7POINT)
+                stencilName = "Varying7p";
+            else if (stencil == mgcl::MGCL_VARYING_19POINT)
+                stencilName = "Varying19p";
+            else if (stencil == mgcl::MGCL_VARYING_27POINT)
+                stencilName = "Varying27p";
+
+            auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+
+            mgcl::Problem p(m, n, o, f, v);
+            p.setMaxiterVcycles(maxIterVCycles);
+            p.setIgnoreTol(true);
+            p.setUseOpencl(true);
+            p.setDeviceType(CL_DEVICE_TYPE_GPU);
+            p.setSilent(true);
+            p.setNu1(nu1);
+            p.setNu2(nu2);
+            p.setOmega(omega);
+            p.setStencilType(stencil);
+            p.setReadResults(true);
+
+            if (stencil == mgcl::MGCL_VARYING_27POINT)
+                p.getStencilValues()->fillRandomInt();
+
+            if (mgcl_test::TestUtility::deviceAvailable("Quadro", p.getDeviceType()))
+                p.setDeviceName("Quadro");
+
+            // p.init();
+            b.run(std::string("opencl gpu random values, N = ").append(std::to_string(N)).append(", ").append(stencilName).c_str(), [&]
+                    { p.solve(); });
+        }
+    }
+}
+
 TEST_CASE("mgcl old vs new: solve equality", "[!benchmark][solve][console][equality]")
 {
     std::vector grids{16};
