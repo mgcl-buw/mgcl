@@ -945,6 +945,7 @@ TEST_CASE("benchmark var*fix stencils optimizations", "[console][VarFixKernelOpt
 
     // reordered for loops (only 1 write to global buffer c) using min function instead of ternary operator
     // no benefit on laptop gpu (and somewhat insecure execution because dependence of wg size)
+    // CAUTION: Probably does not yield correct results for small grids, only for experimental purposes!
     {
         int err;
 
@@ -1062,6 +1063,187 @@ TEST_CASE("benchmark var*fix stencils optimizations", "[console][VarFixKernelOpt
 
         // enqueue multiplication kernel
         std::string name = std::string("reordered inline widths var*fix, N = ").append(std::to_string(N));
+        bench.run(std::string(name).c_str(), [&]
+                  { 
+            err = clEnqueueNDRangeKernel(oclw.commands, kernel, 3, NULL, global, local, 0, NULL, NULL);
+            mgcl::mgclCheckError(err, "Enqueueing stencil multiplication kernel");
+            clFinish(oclw.commands); });
+
+        // update ghosts of c
+        // if (ghc > 0)
+        //     c.updateGhosts(oclw.program, oclw.commands);
+
+        clReleaseKernel(kernel);
+    }
+}
+
+TEST_CASE("benchmark fix*var stencils optimizations", "[console][FixVarKernelOptimizations]")
+{
+    int N = GENERATE(8, 16, 32, 64);
+    // int N = 16;
+    int m = N;
+    int n = N;
+    int o = N;
+
+    int wa = 3;
+    int wb = 3;
+    int gha = 2;
+    int ghb = 2;
+    int ghc = 2;
+
+    ankerl::nanobench::Bench bench;
+    bench.timeUnit(1ms, "ms")
+        // .epochs(1)
+        // .epochIterations(1)
+        .minEpochTime(100ms)
+        .relative(false);
+
+    // if (N >= 32)
+    //     bench.epochs(1).epochIterations(2);
+
+    // if (N >= 64)
+    //     bench.epochs(1).epochIterations(1);
+
+    mgcl_test::TestUtility tu;
+    OCLWrapper oclw(CL_DEVICE_TYPE_GPU,
+                    tu.deviceAvailable("Quadro", CL_DEVICE_TYPE_GPU) ? "Quadro" : "",
+                    "./kernel_optimizations.cl");
+
+    // set specific work-group sizes that seemed to be fastest (info gathered in other benchmark, see below).
+    int lm = 1;
+    int ln = 1;
+    int lo = 32;
+
+    if (N == 8)
+    {
+        lo = 8;
+        ln = 4;
+    }
+    else if (N == 16)
+    {
+        lo = 16;
+        ln = 2;
+    }
+
+    // naive
+    {
+        int err;
+
+        // Create the compute kernel from the program
+        cl_kernel kernel = clCreateKernel(oclw.program, "mult_stencils_fix_var", &err);
+        mgcl::mgclCheckError(err, "clCreateKernel");
+
+        // create output buffer c
+        // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
+
+        mgcl::FixedStencilGpu a(wa, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+
+        auto abuf = a.getBuf();
+        auto bbuf = b.getBuf();
+        auto cbuf = c.getBuf();
+        // auto wb = b.getWidth();
+        // auto ghb = b.getGh();
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &abuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &bbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &cbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &wa);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &wb);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghb);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghc);
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
+        size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
+        const size_t local[3] = {static_cast<size_t>(lm), static_cast<size_t>(ln),
+                                 static_cast<size_t>(lo)};
+
+        for (int i = 0; i < 3; i++)
+            if (global[i] % local[i] != 0)
+            {
+                // printf("padding global size %d from %ld to ", i, global[i]);
+                global[i] += local[i] - (global[i] % local[i]);
+                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
+            }
+
+        // update ghosts of b first (maybe not needed if done earlier)
+        // b.updateGhosts(program, queue);
+
+        // enqueue multiplication kernel
+        std::string name = std::string("naive fix*var, N = ").append(std::to_string(N));
+        bench.run(std::string(name).c_str(), [&]
+                  { 
+            err = clEnqueueNDRangeKernel(oclw.commands, kernel, 3, NULL, global, local, 0, NULL, NULL);
+            mgcl::mgclCheckError(err, "Enqueueing stencil multiplication kernel");
+            clFinish(oclw.commands); });
+
+        // update ghosts of c
+        // if (ghc > 0)
+        //     c.updateGhosts(oclw.program, oclw.commands);
+
+        clReleaseKernel(kernel);
+    }
+
+    // reordered for loops (only 1 write to global buffer c) using min function instead of ternary operator
+    {
+        int err;
+
+        // Create the compute kernel from the program
+        cl_kernel kernel = clCreateKernel(oclw.program, "mult_stencils_fix_var_reordered", &err);
+        mgcl::mgclCheckError(err, "clCreateKernel");
+
+        // create output buffer c
+        // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
+
+        mgcl::FixedStencilGpu a(wa, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+
+        auto abuf = a.getBuf();
+        auto bbuf = b.getBuf();
+        auto cbuf = c.getBuf();
+        // auto wb = b.getWidth();
+        // auto ghb = b.getGh();
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &abuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &bbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &cbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &wa);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &wb);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghb);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghc);
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
+        size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
+        const size_t local[3] = {static_cast<size_t>(lm), static_cast<size_t>(ln),
+                                 static_cast<size_t>(lo)};
+
+        for (int i = 0; i < 3; i++)
+            if (global[i] % local[i] != 0)
+            {
+                // printf("padding global size %d from %ld to ", i, global[i]);
+                global[i] += local[i] - (global[i] % local[i]);
+                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
+            }
+
+        // update ghosts of b first (maybe not needed if done earlier)
+        // b.updateGhosts(program, queue);
+
+        // enqueue multiplication kernel
+        std::string name = std::string("reordered fix*var, N = ").append(std::to_string(N));
         bench.run(std::string(name).c_str(), [&]
                   { 
             err = clEnqueueNDRangeKernel(oclw.commands, kernel, 3, NULL, global, local, 0, NULL, NULL);
