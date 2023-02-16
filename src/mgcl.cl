@@ -1890,7 +1890,7 @@ __kernel void mult_stencils_var_var(
  * wa and wb are the widths of the stencils. Must be odd and >= 3.
  * gha and ghc are ghosts of the stencils at one border.
  * These restrictions are not checked in the kernel but shall be checked beforehand!
- * This kernel is supposed to be launched with one work-item per grid cell.
+ * This kernel is supposed to be launched with m x n x o*wc*wc*wc work-items.
  * Remember to update ghosts of c if ghc > 0 afterwards.
  */
 __kernel void mult_stencils_var_fix(
@@ -1953,7 +1953,7 @@ __kernel void mult_stencils_var_fix(
  * wa and wb are the widths of the stencils. Must be odd and >= 3.
  * ghb and ghc are ghosts of the varying stencils at one border. ghb must be >= floor(wa / 2)
  * These restrictions are not checked in the kernel but shall be checked beforehand!
- * This kernel is supposed to be launched with one work-item per grid cell.
+ * This kernel is supposed to be launched with m x n x o*wc*wc*wc work-items.
  * Remember to update ghosts of c if ghc > 0 afterwards.
  */
 __kernel void mult_stencils_fix_var(
@@ -1964,16 +1964,19 @@ __kernel void mult_stencils_fix_var(
     int wa, int wb,
     int ghb, int ghc)
 {
-    int i = get_global_id(0);
-    int j = get_global_id(1);
-    int k = get_global_id(2);
-
     int wa2 = wa >> 1;
     int wc = wa + wb - 1;
-
-    // 1d indices
     int wcPow2 = wc * wc;
     int wcPow3 = wcPow2 * wc;
+
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2) / wcPow3;
+    int ci = (get_global_id(2) / wcPow2) % wc;
+    int cj = (get_global_id(2) / wc) % wc;
+    int ck = get_global_id(2) % wc;
+
+    // 1d indices
     int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) * wcPow3 + (j + ghc) * (o + 2 * ghc) * wcPow3 + (k + ghc) * wcPow3;
 
     int waPow2 = wa * wa;
@@ -1984,34 +1987,29 @@ __kernel void mult_stencils_fix_var(
     if (i < m && j < n && k < o)
     {
         // clang-format off
-        for (int ci = 0; ci < wc; ci++)
-        for (int cj = 0; cj < wc; cj++)
-        for (int ck = 0; ck < wc; ck++)
+        double csum = 0;
+        for (int a_i = ci - (min(ci, wb - 1)), b_i = min(ci, wb - 1);
+            a_i <= min(ci, wa - 1) && b_i >= ci - min(ci, wa - 1);
+            a_i++, b_i--)
+        for (int a_j = cj - (min(cj, wb - 1)), b_j = min(cj, wb - 1);
+                a_j <= min(cj, wa - 1) && b_j >= cj - min(cj, wa - 1);
+                a_j++, b_j--)
+        for (int a_k = ck - (min(ck, wb - 1)), b_k = min(ck, wb - 1);
+                a_k <= min(ck, wa - 1) && b_k >= ck - min(ck, wa - 1);
+                a_k++, b_k--)
         {
-            double csum = 0;
-            for (int a_i = ci - (min(ci, wb - 1)), b_i = min(ci, wb - 1);
-                a_i <= min(ci, wa - 1) && b_i >= ci - min(ci, wa - 1);
-                a_i++, b_i--)
-            for (int a_j = cj - (min(cj, wb - 1)), b_j = min(cj, wb - 1);
-                    a_j <= min(cj, wa - 1) && b_j >= cj - min(cj, wa - 1);
-                    a_j++, b_j--)
-            for (int a_k = ck - (min(ck, wb - 1)), b_k = min(ck, wb - 1);
-                    a_k <= min(ck, wa - 1) && b_k >= ck - min(ck, wa - 1);
-                    a_k++, b_k--)
-            {
-                int gpi = i + a_i - wa2 + ghb;
-                int gpj = j + a_j - wa2 + ghb;
-                int gpk = k + a_k - wa2 + ghb;
+            int gpi = i + a_i - wa2 + ghb;
+            int gpj = j + a_j - wa2 + ghb;
+            int gpk = k + a_k - wa2 + ghb;
 
-                int cell_b = gpi * (n + 2 * ghb) * (o + 2 * ghb) * wbPow3 + gpj * (o + 2 * ghb) * wbPow3 + gpk * wbPow3;
+            int cell_b = gpi * (n + 2 * ghb) * (o + 2 * ghb) * wbPow3 + gpj * (o + 2 * ghb) * wbPow3 + gpk * wbPow3;
 
-                csum +=
-                    a[a_i * waPow2 + a_j * wa + a_k] *
-                    b[cell_b + b_i * wbPow2 + b_j * wb + b_k];
-            }
-
-            c[cell_c + ci * wcPow2 + cj * wc + ck] = csum;
+            csum +=
+                a[a_i * waPow2 + a_j * wa + a_k] *
+                b[cell_b + b_i * wbPow2 + b_j * wb + b_k];
         }
+
+        c[cell_c + ci * wcPow2 + cj * wc + ck] = csum;
         // clang-format on
     }
 }

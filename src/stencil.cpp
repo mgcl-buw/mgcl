@@ -370,8 +370,9 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghc);
         mgclCheckError(err, "Setting kernel arguments");
 
+        int wc = c.getWidth();
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
-        size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
+        size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o * wc * wc * wc)};
         const size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m), static_cast<size_t>(n > 4 ? 4 : n),
                                  static_cast<size_t>(o > 4 ? 4 : o)};
 
