@@ -831,6 +831,61 @@ __kernel void mult_stencils_var_fix_reordered_loop_bounds_preserved(
     }
 }
 
+// reordered + parallel c loop. Must be called with m x n x o*wc*wc*wc work-items
+__kernel void mult_stencils_var_fix_reordered_parallel_c(
+    __global double *restrict a,
+    __global double *restrict b,
+    __global double *restrict c,
+    int m, int n, int o,
+    int wa, int wb,
+    int gha, int ghc)
+{
+    int wa2 = wa >> 1;
+    int wc = wa + wb - 1;
+    int wcPow2 = wc * wc;
+    int wcPow3 = wcPow2 * wc;
+
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2) / wcPow3;
+    int ci = (get_global_id(2) / wcPow2) % wc;
+    int cj = (get_global_id(2) / wc) % wc;
+    int ck = get_global_id(2) % wc;
+
+    // 1d indices
+    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) * wcPow3 + (j + ghc) * (o + 2 * ghc) * wcPow3 + (k + ghc) * wcPow3;
+
+    int waPow2 = wa * wa;
+    int waPow3 = waPow2 * wa;
+    int cell_a = (i + gha) * (n + 2 * gha) * (o + 2 * gha) * waPow3 + (j + gha) * (o + 2 * gha) * waPow3 + (k + gha) * waPow3;
+
+    int wbPow2 = wb * wb;
+    int wbPow3 = wbPow2 * wb;
+
+    if (i < m && j < n && k < o)
+    {
+        // clang-format off
+        double csum = 0;
+        for (int a_i = ci - (min(ci, wb - 1)), b_i = min(ci, wb - 1);
+            a_i <= min(ci, wa - 1) && b_i >= ci - min(ci, wa - 1);
+            a_i++, b_i--)
+        for (int a_j = cj - (min(cj, wb - 1)), b_j = min(cj, wb - 1);
+                a_j <= min(cj, wa - 1) && b_j >= cj - min(cj, wa - 1);
+                a_j++, b_j--)
+        for (int a_k = ck - (min(ck, wb - 1)), b_k = min(ck, wb - 1);
+                a_k <= min(ck, wa - 1) && b_k >= ck - min(ck, wa - 1);
+                a_k++, b_k--)
+        {
+            csum +=
+                a[cell_a + a_i * waPow2 + a_j * wa + a_k] *
+                b[b_i * wbPow2 + b_j * wb + b_k];
+        }
+
+        c[cell_c + ci * wcPow2 + cj * wc + ck] = csum;
+        // clang-format on
+    }
+}
+
 /**
  * Multiplies a fixed stencil a with a varying stencilb, i.e. c = a * b.
  * m, n and o are dimensions of the grid.
