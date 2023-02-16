@@ -345,7 +345,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][varyi
     int nu1 = 2;
     int nu2 = 2;
     double omega = 0.8;
-    int maxIterVCycles = 20;
+    int maxIterVCycles = 30;
 
     std::cout << "Problem parameters:" << std::endl
               << "  tol: " << tol << std::endl
@@ -410,7 +410,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][varyi
 
             // p.init();
             b.run(std::string("opencl gpu random values, N = ").append(std::to_string(N)).append(", ").append(stencilName).c_str(), [&]
-                    { p.solve(); });
+                  { p.solve(); });
         }
     }
 }
