@@ -45,6 +45,8 @@ namespace mgcl
         gh = std::exchange(s.gh, 0);
         buf = s.buf;
 
+        // TODO retain here?
+
         return *this;
     }
 

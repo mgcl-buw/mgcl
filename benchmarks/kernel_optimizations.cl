@@ -755,6 +755,82 @@ __kernel void mult_stencils_var_fix_reordered_widths_inline(
     }
 }
 
+// stores bounds of innermost loop in variables to reduce calls to min
+__kernel void mult_stencils_var_fix_reordered_loop_bounds_preserved(
+    __global double *restrict a,
+    __global double *restrict b,
+    __global double *restrict c,
+    int m, int n, int o,
+    int wa, int wb,
+    int gha, int ghc)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
+
+    int wa2 = wa >> 1;
+    int wc = wa + wb - 1;
+
+    // 1d indices
+    int wcPow2 = wc * wc;
+    int wcPow3 = wcPow2 * wc;
+    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) * wcPow3 + (j + ghc) * (o + 2 * ghc) * wcPow3 + (k + ghc) * wcPow3;
+
+    int waPow2 = wa * wa;
+    int waPow3 = waPow2 * wa;
+    int cell_a = (i + gha) * (n + 2 * gha) * (o + 2 * gha) * waPow3 + (j + gha) * (o + 2 * gha) * waPow3 + (k + gha) * waPow3;
+
+    int wbPow2 = wb * wb;
+    int wbPow3 = wbPow2 * wb;
+
+    if (i < m && j < n && k < o)
+    {
+        // clang-format off
+        for (int ci = 0; ci < wc; ci++)
+        {
+            int start_ai = ci - (min(ci, wb - 1));
+            int start_bi = min(ci, wb - 1);
+            int end_ai = min(ci, wa - 1);
+            int end_bi = ci - min(ci, wa - 1);
+
+            for (int cj = 0; cj < wc; cj++)
+            {
+                int start_aj = cj - (min(cj, wb - 1));
+                int start_bj = min(cj, wb - 1);
+                int end_aj = min(cj, wa - 1);
+                int end_bj = cj - min(cj, wa - 1);
+
+                for (int ck = 0; ck < wc; ck++)
+                {
+                    int start_ak = ck - (min(ck, wb - 1));
+                    int start_bk = min(ck, wb - 1);
+                    int end_ak = min(ck, wa - 1);
+                    int end_bk = ck - min(ck, wa - 1);
+
+                    double csum = 0;
+                    for (int a_i = start_ai, b_i = start_bi;
+                        a_i <= end_ai && b_i >= end_bi;
+                        a_i++, b_i--)
+                    for (int a_j = start_aj, b_j = start_bj;
+                            a_j <= end_aj && b_j >= end_bj;
+                            a_j++, b_j--)
+                    for (int a_k = start_ak, b_k = start_bk;
+                            a_k <= end_ak && b_k >= end_bk;
+                            a_k++, b_k--)
+                    {
+                        csum +=
+                            a[cell_a + a_i * waPow2 + a_j * wa + a_k] *
+                            b[b_i * wbPow2 + b_j * wb + b_k];
+                    }
+
+                    c[cell_c + ci * wcPow2 + cj * wc + ck] = csum;
+                }
+            }
+        }
+        // clang-format on
+    }
+}
+
 /**
  * Multiplies a fixed stencil a with a varying stencilb, i.e. c = a * b.
  * m, n and o are dimensions of the grid.
