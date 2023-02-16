@@ -1446,7 +1446,7 @@ TEST_CASE("benchmark fix*var stencils optimizations", "[console][FixVarKernelOpt
         // b.updateGhosts(program, queue);
 
         // enqueue multiplication kernel
-        std::string name = std::string("reordered fix*var, N = ").append(std::to_string(N));
+        std::string name = std::string("reordered parallel c fix*var, N = ").append(std::to_string(N));
         bench.run(std::string(name).c_str(), [&]
                   { 
             err = clEnqueueNDRangeKernel(oclw.commands, kernel, 3, NULL, global, local, 0, NULL, NULL);
