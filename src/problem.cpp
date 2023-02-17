@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <ctgmath>
 #include <exception>
+#include <functional>
 #include <iostream>
 #include <string>
 
@@ -88,14 +90,26 @@ namespace mgcl
 
         // Check which size can be allocated.
         cl_ulong sizeAvailable;
-        int err = clGetDeviceInfo(getDeviceId(), CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong),
+        cl_ulong sizeAllocablePerBuffer;
+        int err = clGetDeviceInfo(getDeviceId(), CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong),
                                   &sizeAvailable, nullptr);
+        mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_GLOBAL_MEM_SIZE)");
+        err = clGetDeviceInfo(getDeviceId(), CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong),
+                              &sizeAllocablePerBuffer, nullptr);
         mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_MEM_ALLOC_SIZE)");
 
         // Buffers needed for each level, dependent on settings, are:
         // Permanent: dVIn, dVOut, dF, dR, stencilValuesGpu
         // Temporary galerkin results: sr, sp, sr * a_h, sas = sr * a_h * sp
         ulong sizeNeeded = 0;
+        ulong maxBufferSizeNeeded = 0;
+
+        // updates sizeNeeded and maxBufferSizeNeeded
+        std::function<void(ulong)> upd = [&sizeNeeded, &maxBufferSizeNeeded](ulong inc)
+        {
+            sizeNeeded += inc;
+            maxBufferSizeNeeded = std::max(maxBufferSizeNeeded, inc);
+        };
 
         for (int l = 0; l <= maxlevel; l++)
         {
@@ -108,33 +122,40 @@ namespace mgcl
 
             if ((l == 0 && !reuse_opencl_buffers) || l > 0)
             {
-                sizeNeeded += sizeof(double) * mgh * ngh * ogh; // dVIn
-                sizeNeeded += sizeof(double) * mgh * ngh * ogh; // dF
+                upd(sizeof(double) * mgh * ngh * ogh); // dVIn
+                upd(sizeof(double) * mgh * ngh * ogh); // dF
             }
 
-            sizeNeeded += sizeof(double) * mgh * ngh * ogh; // dVOut
-            sizeNeeded += sizeof(double) * mgh * ngh * ogh; // dR
+            upd(sizeof(double) * mgh * ngh * ogh); // dVOut
+            upd(sizeof(double) * mgh * ngh * ogh); // dR
 
             if (stencilType == MGCL_VARYING)
             {
                 // Ghost cell amount per border of varying stencil is 2 for each level (required for galerkin)
                 int gh = 2;
-                sizeNeeded += sizeof(double) * (ml + 2 * gh) * (nl + 2 * gh) * (ol + 2 * gh) * 3 * 3 * 3; // stencilValues
+                upd(sizeof(double) * (ml + 2 * gh) * (nl + 2 * gh) * (ol + 2 * gh) * 3 * 3 * 3); // stencilValues
 
                 // Temporary buffers created in galerkin
-                sizeNeeded += sizeof(double) * 3 * 3 * 3; // full-weight restriction stencil
-                sizeNeeded += sizeof(double) * 3 * 3 * 3; // bilinear prolongation stencil
+                upd(sizeof(double) * 3 * 3 * 3); // full-weight restriction stencil
+                upd(sizeof(double) * 3 * 3 * 3); // bilinear prolongation stencil
 
                 // intermediate result of sr * a_h, gh = 2
-                sizeNeeded += sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * 5 * 5 * 5;
+                upd(sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * 5 * 5 * 5);
 
                 // intermediate result of sas = sr * a_h * sp, gh = 0
-                sizeNeeded += sizeof(double) * ml * nl * ol * 7 * 7 * 7;
+                upd(sizeof(double) * ml * nl * ol * 7 * 7 * 7);
             }
         }
 
+        if (maxBufferSizeNeeded > sizeAllocablePerBuffer)
+            throw "Not enough space allocable for one buffer on device!\n  Allocable: " +
+                std::to_string(sizeAllocablePerBuffer / 1024 / 1024)
+                    .append(" MiB\n  Needed: ")
+                    .append(std::to_string(maxBufferSizeNeeded / 1024 / 1024))
+                    .append(" MiB");
+
         if (sizeNeeded > sizeAvailable)
-            throw "Not enough space allocable on device!\n  Available: " +
+            throw "Not enough total space available on device!\n  Available: " +
                 std::to_string(sizeAvailable / 1024 / 1024)
                     .append(" MiB\n  Needed: ")
                     .append(std::to_string(sizeNeeded / 1024 / 1024))

@@ -122,9 +122,30 @@ TEST_CASE("Problem::checkGpuSizes")
     SECTION("not enough space available")
     {
         // We can be quiet sure no device can handle such a big grid...
-        mgcl::Problem p(32768, 32768, 32768);
+        int N = 32768;
+
+        mgcl::Problem p(N, N, N);
         p.setUseOpencl(true);
         p.setDeviceType(deviceType);
+
+        REQUIRE_THROWS(p.checkGpuSizes());
+    }
+
+    SECTION("not enough space available (on Quadro, varying stencil)")
+    {
+        // Quadro can't handle 128^3 AND varying stencil
+        int N = 128;
+
+        if (!mgcl_test::TestUtility::deviceAvailable("Quadro", CL_DEVICE_TYPE_GPU))
+        {
+            std::cout << "Quadro not available!" << std::endl;
+            return;
+        }
+
+        mgcl::Problem p(N, N, N);
+        p.setUseOpencl(true);
+        p.setDeviceType(deviceType);
+        p.setStencilType(mgcl::MGCL_VARYING);
 
         REQUIRE_THROWS(p.checkGpuSizes());
     }
