@@ -175,6 +175,8 @@ TEST_CASE("Problem solving: periodic 4th order")
             return;
         }
 
+        std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
+
         p.setUseOpencl(true);
         p.setReadResults(true);
         p.setDeviceType(deviceType);
@@ -190,7 +192,7 @@ TEST_CASE("Problem solving: periodic 4th order")
             auto errMax = calculateMaxError(*err);
 
             std::cout
-                << "ocl Laplace" << std::endl
+                << "ocl " << oclDeviceType << " Laplace" << std::endl
                 << std::scientific << "  ||e||_2 = " << errNorm << std::endl
                 << std::scientific << "  e_max = " << errMax << std::endl;
 
@@ -239,7 +241,7 @@ TEST_CASE("Problem solving: periodic 4th order")
             // (*v).dumpToFile("out_v.txt");
 
             std::cout
-                << "ocl Galerkin" << std::endl
+                << "ocl " << oclDeviceType << " Galerkin" << std::endl
                 << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
                 << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
