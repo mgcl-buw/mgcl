@@ -4,8 +4,8 @@ A multigrid implementation using OpenCL for solving PDEs.
 
 ## Basic usage
 ```
-#include "Problem.hpp"
-#include "Cuboid.hpp"
+#include "problem.hpp"
+#include "cuboid.hpp"
 
 int N = 64;
 mgcl::Cuboid v(N, N, N);
@@ -35,9 +35,9 @@ p.solve();
 
 ## Using a varying stencil that differs for each grid point
 ```
-#include "Problem.hpp"
-#include "Cuboid.hpp"
-#include "Hypercube.hpp"
+#include "problem.hpp"
+#include "cuboid.hpp"
+#include "stencil.hpp"
 
 int N = 64;
 mgcl::Cuboid v(N, N, N);
@@ -46,14 +46,28 @@ f.fillRandom();
 
 mgcl::Problem p(N, N, N, f, v);
 
-// Retrieve a 4d Hypercube in which stencil values are stored.
-// Size of 4th dimension differs depending on the stencil in use, e.g.
-// 7 for 7p varying stencil,
-// 19 for 19p varying stencil and
-// 27 for 27p varying stencil.
-mgcl::Hypercube4d stencilValues = p.getStencilValues();
+// Retrieve a 6d VaryingStencil in which stencil values are stored.
+// First three dimensions match grid size + ghost size, last three
+// dimensions are 3.
+p.setStencilType(mgcl::MGCL_VARYING);
+auto &s = *p.getStencilValues();
 
-// ... fill stencil values e.g. in a for-loop using stencilValues[i][j][k][pos] = ...
+double h2inv = N * N;
+
+// i.e. fill with 7-point Laplace
+for (int i = 0; i < s.getDim1gh(); i++)
+    for (int j = 0; j < s.getDim2gh(); j++)
+        for (int k = 0; k < s.getDim3gh(); k++)
+        {
+            // 7-point Laplace
+            s[i][j][k][0][1][1] = h2inv * -1.0;
+            s[i][j][k][1][0][1] = h2inv * -1.0;
+            s[i][j][k][1][1][0] = h2inv * -1.0;
+            s[i][j][k][1][1][1] = h2inv * 6.0;
+            s[i][j][k][1][1][2] = h2inv * -1.0;
+            s[i][j][k][1][2][1] = h2inv * -1.0;
+            s[i][j][k][2][1][1] = h2inv * -1.0;
+        }
 
 p.solve();
 // solution is now in v
