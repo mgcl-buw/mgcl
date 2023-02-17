@@ -93,6 +93,43 @@ TEST_CASE("Problem::checkParameters")
     }
 }
 
+TEST_CASE("Problem::checkGpuSizes")
+{
+    auto deviceType = CL_DEVICE_TYPE_GPU;
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+    {
+        deviceType = CL_DEVICE_TYPE_CPU;
+        if (!mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_CPU))
+        {
+            std::cout << "Neither GPU nor CPU OpenCL device available! Skipping test." << std::endl;
+            return;
+        }
+    }
+
+    std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
+
+    SECTION("enough space available")
+    {
+        // 4x4x4 should be no problem
+        mgcl::Problem p(4, 4, 4);
+        p.setUseOpencl(true);
+        p.setDeviceType(deviceType);
+
+        REQUIRE(p.checkGpuSizes());
+    }
+
+    SECTION("not enough space available")
+    {
+        // We can be quiet sure no device can handle such a big grid...
+        mgcl::Problem p(32768, 32768, 32768);
+        p.setUseOpencl(true);
+        p.setDeviceType(deviceType);
+
+        REQUIRE_THROWS(p.checkGpuSizes());
+    }
+}
+
 TEST_CASE("Problem::calculateAndSetMaxLevel")
 {
     SECTION("m min")

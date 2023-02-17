@@ -70,6 +70,80 @@ namespace mgcl
     }
 
     /**
+     * @brief Checks if there is enough space available on the OpenCL device s.t. every buffer that is needed
+     * can be created. Sets maxlevel and initialized OpenCL environment if not done yet.
+     *
+     * @return true Enough space available.
+     * @return false Otherwise.
+     */
+    bool Problem::checkGpuSizes()
+    {
+        // Set maxlevel if not done yet.
+        if (maxlevel == -1)
+            calculateAndSetMaxLevel();
+
+        // Init OpenCL if not done yet.
+        if (!openCLHelper.isInitialized())
+            initOpenCL();
+
+        // Check which size can be allocated.
+        cl_ulong sizeAvailable;
+        int err = clGetDeviceInfo(getDeviceId(), CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong),
+                                  &sizeAvailable, nullptr);
+        mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_MEM_ALLOC_SIZE)");
+
+        // Buffers needed for each level, dependent on settings, are:
+        // Permanent: dVIn, dVOut, dF, dR, stencilValuesGpu
+        // Temporary galerkin results: sr, sp, sr * a_h, sas = sr * a_h * sp
+        ulong sizeNeeded = 0;
+
+        for (int l = 0; l <= maxlevel; l++)
+        {
+            int ml = (m >> l);
+            int nl = (n >> l);
+            int ol = (o >> l);
+            int mgh = ml + 2 * ghosts;
+            int ngh = nl + 2 * ghosts;
+            int ogh = ol + 2 * ghosts;
+
+            if ((l == 0 && !reuse_opencl_buffers) || l > 0)
+            {
+                sizeNeeded += sizeof(double) * mgh * ngh * ogh; // dVIn
+                sizeNeeded += sizeof(double) * mgh * ngh * ogh; // dF
+            }
+
+            sizeNeeded += sizeof(double) * mgh * ngh * ogh; // dVOut
+            sizeNeeded += sizeof(double) * mgh * ngh * ogh; // dR
+
+            if (stencilType == MGCL_VARYING)
+            {
+                // Ghost cell amount per border of varying stencil is 2 for each level (required for galerkin)
+                int gh = 2;
+                sizeNeeded += sizeof(double) * (ml + 2 * gh) * (nl + 2 * gh) * (ol + 2 * gh) * 3 * 3 * 3; // stencilValues
+
+                // Temporary buffers created in galerkin
+                sizeNeeded += sizeof(double) * 3 * 3 * 3; // full-weight restriction stencil
+                sizeNeeded += sizeof(double) * 3 * 3 * 3; // bilinear prolongation stencil
+
+                // intermediate result of sr * a_h, gh = 2
+                sizeNeeded += sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * 5 * 5 * 5;
+
+                // intermediate result of sas = sr * a_h * sp, gh = 0
+                sizeNeeded += sizeof(double) * ml * nl * ol * 7 * 7 * 7;
+            }
+        }
+
+        if (sizeNeeded > sizeAvailable)
+            throw "Not enough space allocable on device!\n  Available: " +
+                std::to_string(sizeAvailable / 1024 / 1024)
+                    .append(" MiB\n  Needed: ")
+                    .append(std::to_string(sizeNeeded / 1024 / 1024))
+                    .append(" MiB");
+
+        return true;
+    }
+
+    /**
      * @brief Calculates 0-based max level using the minimum of real grid dimensions or uses user set max level if
      * it's valid.
      *
@@ -108,10 +182,17 @@ namespace mgcl
         if (!checkParameters())
             return false;
 
+        calculateAndSetMaxLevel();
+        if (!silent)
+            printf("maxlevel = %d\n", maxlevel);
+
         // create opencl environment with default parameters if not done yet
         if (use_opencl)
         {
             if (initOpenCL() != CL_SUCCESS)
+                return false;
+
+            if (!checkGpuSizes())
                 return false;
         }
 
@@ -121,10 +202,6 @@ namespace mgcl
             if (!openCLHelper.checkParameters())
                 return false;
         }
-
-        calculateAndSetMaxLevel();
-        if (!silent)
-            printf("maxlevel = %d\n", maxlevel);
 
         // initialize levels
         for (int level = 0; level <= maxlevel; level++)

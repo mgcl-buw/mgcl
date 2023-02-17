@@ -143,6 +143,7 @@ namespace mgcl
         ~Problem() = default;
 
         bool checkParameters();
+        bool checkGpuSizes();
         int calculateAndSetMaxLevel();
         bool init();
 
