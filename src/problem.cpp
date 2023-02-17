@@ -147,19 +147,27 @@ namespace mgcl
             }
         }
 
-        if (maxBufferSizeNeeded > sizeAllocablePerBuffer)
-            throw "Not enough space allocable for one buffer on device!\n  Allocable: " +
-                std::to_string(sizeAllocablePerBuffer / 1024 / 1024)
-                    .append(" MiB\n  Needed: ")
-                    .append(std::to_string(maxBufferSizeNeeded / 1024 / 1024))
-                    .append(" MiB");
+        if (maxBufferSizeNeeded > sizeAllocablePerBuffer || sizeNeeded > sizeAvailable)
+        {
+            std::string msg("Not enough memory available on device for a grid of size ");
+            msg.append(std::to_string(m))
+                .append("x")
+                .append(std::to_string(n))
+                .append("x")
+                .append(std::to_string(o))
+                .append("!\n")
+                .append("  Total global memory available: ")
+                .append(std::to_string(sizeAvailable / 1024 / 1024))
+                .append(" MiB\n      Max. allocable per buffer: ")
+                .append(std::to_string(sizeAllocablePerBuffer / 1024 / 1024))
+                .append(" MiB\n     Total global memory needed: ")
+                .append(std::to_string(sizeNeeded / 1024 / 1024))
+                .append(" MiB\n        Max. buffer size needed: ")
+                .append(std::to_string(maxBufferSizeNeeded / 1024 / 1024))
+                .append(" MiB");
 
-        if (sizeNeeded > sizeAvailable)
-            throw "Not enough total space available on device!\n  Available: " +
-                std::to_string(sizeAvailable / 1024 / 1024)
-                    .append(" MiB\n  Needed: ")
-                    .append(std::to_string(sizeNeeded / 1024 / 1024))
-                    .append(" MiB");
+            throw msg;
+        }
 
         return true;
     }
