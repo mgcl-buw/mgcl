@@ -1,4 +1,6 @@
+#ifndef NULL
 #define NULL 0
+#endif
 
 /* Prints components of 7-point laplacian stencil for debugging purposes */
 void print_7point(__global double *A, int index, int ioff, int joff, int koff)
