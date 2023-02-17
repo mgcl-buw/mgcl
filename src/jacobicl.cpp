@@ -126,9 +126,7 @@ namespace mgcl
             kernel_name = "jacobi_iter_27point";
             dinv = (30.0 * h2) / 128.0;
         }
-        else if (problem.stencilType == MGCL_VARYING_7POINT ||
-                 problem.stencilType == MGCL_VARYING_19POINT ||
-                 problem.stencilType == MGCL_VARYING_27POINT)
+        else if (problem.stencilType == MGCL_VARYING)
         {
             kernel_name = "jacobi_iter_27point_varying_stencil";
         }
@@ -139,9 +137,7 @@ namespace mgcl
         // assign kernel arguments
         int pos = 0;
 
-        if (problem.stencilType == MGCL_VARYING_7POINT ||
-            problem.stencilType == MGCL_VARYING_19POINT ||
-            problem.stencilType == MGCL_VARYING_27POINT)
+        if (problem.stencilType == MGCL_VARYING)
         {
             auto svbuf = level.stencilValuesGpu->getBuf();
             int svgh = level.stencilValuesGpu->getGh();
@@ -649,9 +645,7 @@ namespace mgcl
         {
             kernel_name = "residual_27point";
         }
-        else if (problem.stencilType == MGCL_VARYING_7POINT ||
-                 problem.stencilType == MGCL_VARYING_19POINT ||
-                 problem.stencilType == MGCL_VARYING_27POINT)
+        else if (problem.stencilType == MGCL_VARYING)
         {
             kernel_name = "residual_27point_varying_stencil";
         }
@@ -663,9 +657,7 @@ namespace mgcl
         // assign kernel arguments
         int pos = 0;
 
-        if (problem.stencilType == MGCL_VARYING_7POINT ||
-            problem.stencilType == MGCL_VARYING_19POINT ||
-            problem.stencilType == MGCL_VARYING_27POINT)
+        if (problem.stencilType == MGCL_VARYING)
         {
             auto svbuf = level.stencilValuesGpu->getBuf();
             int svgh = level.stencilValuesGpu->getGh();
@@ -806,7 +798,7 @@ namespace mgcl
         int ghnsv = 0;
         int ghosv = 0;
 
-        if (stencilType == MGCL_VARYING_7POINT || stencilType == MGCL_VARYING_19POINT || stencilType == MGCL_VARYING_27POINT)
+        if (stencilType == MGCL_VARYING)
         {
             stencilValues = stencilValuesCuboid.getData();
             ghmsv = stencilValuesCuboid.getGhostsDim1();
@@ -872,44 +864,7 @@ namespace mgcl
                                 ) * stencilFactor;
                         // clang-format on
                     }
-                    else if (stencilType == MGCL_VARYING_7POINT)
-                    {
-                        // clang-format off
-                        stencilsum = stencilValues[isv][jsv][ksv][1][1][1]  * vraw[i][j][k]
-                            + stencilValues[isv][jsv][ksv][1][1][0]         * vraw[i][j][k - 1]
-                            + stencilValues[isv][jsv][ksv][1][1][2]         * vraw[i][j][k + 1]
-                            + stencilValues[isv][jsv][ksv][1][0][1]         * vraw[i][j - 1][k]
-                            + stencilValues[isv][jsv][ksv][1][2][1]         * vraw[i][j + 1][k]
-                            + stencilValues[isv][jsv][ksv][0][1][1]         * vraw[i - 1][j][k]
-                            + stencilValues[isv][jsv][ksv][2][1][1]         * vraw[i + 1][j][k];
-                        // clang-format on
-                    }
-                    else if (stencilType == MGCL_VARYING_19POINT)
-                    {
-                        // clang-format off
-                        stencilsum = stencilValues[isv][jsv][ksv][1][1][1]  * vraw[i][j][k]
-                            + stencilValues[isv][jsv][ksv][1][1][0]         * vraw[i][j][k - 1]
-                            + stencilValues[isv][jsv][ksv][1][1][2]         * vraw[i][j][k + 1]
-                            + stencilValues[isv][jsv][ksv][1][0][1]         * vraw[i][j - 1][k]
-                            + stencilValues[isv][jsv][ksv][1][2][1]         * vraw[i][j + 1][k]
-                            + stencilValues[isv][jsv][ksv][0][1][1]         * vraw[i - 1][j][k]
-                            + stencilValues[isv][jsv][ksv][2][1][1]         * vraw[i + 1][j][k]
-                            
-                            + stencilValues[isv][jsv][ksv][1][0][0] * vraw[i][j - 1][k - 1]
-                            + stencilValues[isv][jsv][ksv][1][0][2] * vraw[i][j - 1][k + 1]
-                            + stencilValues[isv][jsv][ksv][1][2][0] * vraw[i][j + 1][k - 1]
-                            + stencilValues[isv][jsv][ksv][1][2][2] * vraw[i][j + 1][k + 1]
-                            + stencilValues[isv][jsv][ksv][0][1][0] * vraw[i - 1][j][k - 1]
-                            + stencilValues[isv][jsv][ksv][0][1][2] * vraw[i - 1][j][k + 1]
-                            + stencilValues[isv][jsv][ksv][2][1][0] * vraw[i + 1][j][k - 1]
-                            + stencilValues[isv][jsv][ksv][2][1][2] * vraw[i + 1][j][k + 1]
-                            + stencilValues[isv][jsv][ksv][0][0][1] * vraw[i - 1][j - 1][k]
-                            + stencilValues[isv][jsv][ksv][0][2][1] * vraw[i - 1][j + 1][k]
-                            + stencilValues[isv][jsv][ksv][2][0][1] * vraw[i + 1][j - 1][k]
-                            + stencilValues[isv][jsv][ksv][2][2][1] * vraw[i + 1][j + 1][k];
-                        // clang-format on
-                    }
-                    else if (stencilType == MGCL_VARYING_27POINT)
+                    else if (stencilType == MGCL_VARYING)
                     {
                         // clang-format off
                         stencilsum = stencilValues[isv][jsv][ksv][1][1][1]  * vraw[i][j][k]

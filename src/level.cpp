@@ -78,9 +78,7 @@ namespace mgcl
         if (num == 0)
         {
             // move stencilsValues pointer from Problem to first Level
-            if (stencilType == MGCL_VARYING_7POINT ||
-                stencilType == MGCL_VARYING_19POINT ||
-                stencilType == MGCL_VARYING_27POINT)
+            if (stencilType == MGCL_VARYING)
                 stencilValues = problem->stencilValues;
 
             // create ghosted arrays for v and f on host if device buffer should not be reused
@@ -140,9 +138,7 @@ namespace mgcl
         auto deviceType = problem->getOpenCLHelper().getDeviceType();
 
         // create gpu buffer for varying stencil if needed
-        if (stencilType == MGCL_VARYING_7POINT ||
-            stencilType == MGCL_VARYING_19POINT ||
-            stencilType == MGCL_VARYING_27POINT)
+        if (stencilType == MGCL_VARYING)
         {
             stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
                 m, n, o, 3, 2, problem->getContext(), problem->getCommands());

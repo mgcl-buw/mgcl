@@ -100,7 +100,7 @@ TEST_CASE("residual")
                 }
 
         double res = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r, mgcl::MGCL_L2,
-                                                        mgcl::MGCL_VARYING_7POINT, stencilFactor, vals, true);
+                                                        mgcl::MGCL_VARYING, stencilFactor, vals, true);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_in_r->isEqual(*c_expected_out_r));
@@ -137,7 +137,7 @@ TEST_CASE("residual varying stencil")
     p_seq->setV(v_in);
     p_seq->setF(f_in);
 
-    p_seq->setStencilType(mgcl::MGCL_VARYING_27POINT);
+    p_seq->setStencilType(mgcl::MGCL_VARYING);
     auto &sv = p_seq->getStencilValues();
     sv->fillRandomInt();
 
@@ -154,7 +154,7 @@ TEST_CASE("residual varying stencil")
     p_gpu->setF(f_in);
     p_gpu->setUseOpencl(true);
 
-    p_gpu->setStencilType(mgcl::MGCL_VARYING_27POINT);
+    p_gpu->setStencilType(mgcl::MGCL_VARYING);
     auto &sv_gpu = p_gpu->getStencilValues();
 
     // copy stencil values
@@ -191,7 +191,7 @@ TEST_CASE("residual varying stencil")
     double res_gpu = mgcl::MultigridEngine::residual(*p_gpu, level0_gpu, 1);
     tu.finish();
     double res_seq = mgcl::MultigridEngine::residualSeq(f_in_lv0, v_in_lv0, r_in_lv0, mgcl::MGCL_L2,
-                                                        mgcl::MGCL_VARYING_27POINT, 1, *sv_in_lv0, 1);
+                                                        mgcl::MGCL_VARYING, 1, *sv_in_lv0, 1);
 
     auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
     auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);

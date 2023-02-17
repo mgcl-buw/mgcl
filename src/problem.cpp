@@ -660,9 +660,7 @@ namespace mgcl
     void Problem::setStencilType(const MGCL_STENCIL &stencilType_)
     {
         stencilType = stencilType_;
-        if (stencilType == MGCL_VARYING_7POINT ||
-            stencilType == MGCL_VARYING_19POINT ||
-            stencilType == MGCL_VARYING_27POINT)
+        if (stencilType == MGCL_VARYING)
             stencilValues = std::make_shared<VaryingStencil3x3x3>(m, n, o, 2, 2, 2);
         else
             stencilValues = nullptr;

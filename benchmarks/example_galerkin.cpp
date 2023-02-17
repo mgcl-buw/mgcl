@@ -101,7 +101,7 @@ int main(int argc, char **argv)
         p.setNu2(nu2);
         p.setOmega(omega);
 
-        p.setStencilType(mgcl::MGCL_VARYING_7POINT);
+        p.setStencilType(mgcl::MGCL_VARYING);
         auto &s = *p.getStencilValues();
 
         // fill with 7-point Laplace

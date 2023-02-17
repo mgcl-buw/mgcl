@@ -190,7 +190,7 @@ TEST_CASE("jacobi GPU varying stencil")
         p_seq->setV(v_in);
         p_seq->setF(f_in);
 
-        p_seq->setStencilType(mgcl::MGCL_VARYING_27POINT);
+        p_seq->setStencilType(mgcl::MGCL_VARYING);
         auto &sv = p_seq->getStencilValues();
         sv->fillRandomInt();
 
@@ -207,7 +207,7 @@ TEST_CASE("jacobi GPU varying stencil")
         p_gpu->setF(f_in);
         p_gpu->setUseOpencl(true);
 
-        p_gpu->setStencilType(mgcl::MGCL_VARYING_27POINT);
+        p_gpu->setStencilType(mgcl::MGCL_VARYING);
         auto &sv_gpu = p_gpu->getStencilValues();
 
         // copy stencil values
@@ -244,7 +244,7 @@ TEST_CASE("jacobi GPU varying stencil")
         double res_gpu = mgcl::MultigridEngine::jacobi(*p_gpu, level0_gpu, maxiter, 1);
         tu.finish();
         double res_seq = mgcl::MultigridEngine::jacobiSeq(v_in_lv0, f_in_lv0, r_in_lv0, omega, maxiter, mgcl::MGCL_L2,
-                                                          mgcl::MGCL_VARYING_27POINT, 1, *sv_in_lv0, 1);
+                                                          mgcl::MGCL_VARYING, 1, *sv_in_lv0, 1);
 
         auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
         auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);

@@ -214,9 +214,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
         // mgcl::MGCL_LAPLACE_7POINT,
         // mgcl::MGCL_LAPLACE_19POINT,
         // mgcl::MGCL_LAPLACE_27POINT,
-        // mgcl::MGCL_VARYING_7POINT,
-        // mgcl::MGCL_VARYING_19POINT,
-        mgcl::MGCL_VARYING_27POINT};
+        mgcl::MGCL_VARYING};
 
     // Problem parameters
     double tol = 1e-20;
@@ -259,11 +257,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
                 stencilName = "Laplace19p";
             else if (stencil == mgcl::MGCL_LAPLACE_27POINT)
                 stencilName = "Laplace27p";
-            else if (stencil == mgcl::MGCL_VARYING_7POINT)
-                stencilName = "Varying7p";
-            else if (stencil == mgcl::MGCL_VARYING_19POINT)
-                stencilName = "Varying19p";
-            else if (stencil == mgcl::MGCL_VARYING_27POINT)
+            else if (stencil == mgcl::MGCL_VARYING)
                 stencilName = "Varying27p";
 
             // auto stencilValues;
@@ -284,7 +278,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
                 p.setStencilType(stencil);
                 p.setReadResults(true);
 
-                if (stencil == mgcl::MGCL_VARYING_27POINT)
+                if (stencil == mgcl::MGCL_VARYING)
                     p.getStencilValues()->fillRandomInt();
                 // p.init();
 
@@ -308,7 +302,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
                 p.setStencilType(stencil);
                 p.setReadResults(true);
 
-                if (stencil == mgcl::MGCL_VARYING_27POINT)
+                if (stencil == mgcl::MGCL_VARYING)
                     p.getStencilValues()->fillRandomInt();
 
                 if (mgcl_test::TestUtility::deviceAvailable("Quadro", p.getDeviceType()))
@@ -338,7 +332,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][varyi
 
     std::vector grids{4, 8, 16, 32, 64, 128, 256, 512};
     std::vector stencils{
-        mgcl::MGCL_VARYING_27POINT};
+        mgcl::MGCL_VARYING};
 
     // Problem parameters
     double tol = 1e-20;
@@ -381,11 +375,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][varyi
                 stencilName = "Laplace19p";
             else if (stencil == mgcl::MGCL_LAPLACE_27POINT)
                 stencilName = "Laplace27p";
-            else if (stencil == mgcl::MGCL_VARYING_7POINT)
-                stencilName = "Varying7p";
-            else if (stencil == mgcl::MGCL_VARYING_19POINT)
-                stencilName = "Varying19p";
-            else if (stencil == mgcl::MGCL_VARYING_27POINT)
+            else if (stencil == mgcl::MGCL_VARYING)
                 stencilName = "Varying27p";
 
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
@@ -402,7 +392,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][varyi
             p.setStencilType(stencil);
             p.setReadResults(true);
 
-            if (stencil == mgcl::MGCL_VARYING_27POINT)
+            if (stencil == mgcl::MGCL_VARYING)
                 p.getStencilValues()->fillRandomInt();
 
             if (mgcl_test::TestUtility::deviceAvailable("Quadro", p.getDeviceType()))

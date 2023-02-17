@@ -66,7 +66,7 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
 
             mgcl::Problem p(m, n, o, f, v);
             p.setSilent(true);
-            p.setStencilType(mgcl::MGCL_VARYING_7POINT);
+            p.setStencilType(mgcl::MGCL_VARYING);
             auto &s = *p.getStencilValues();
 
             // Fill with 7-point Laplace, which is also used by the other two Sections in this test case

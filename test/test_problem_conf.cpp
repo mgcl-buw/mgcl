@@ -577,7 +577,7 @@ TEST_CASE("Problem::init")
         // Checks if varying stencils are properly set for each level. Does not check actual values for validity, this
         // is done in an own galerkin test.
 
-        p.setStencilType(mgcl::MGCL_VARYING_7POINT);
+        p.setStencilType(mgcl::MGCL_VARYING);
         auto &s = *p.getStencilValues();
 
         REQUIRE(s.getDim1() == m);
@@ -690,7 +690,7 @@ TEST_CASE("Problem::setStencilType")
     p.setStencilType(mgcl::MGCL_LAPLACE_7POINT);
     CHECK(p.getStencilValues() == nullptr);
 
-    p.setStencilType(mgcl::MGCL_VARYING_7POINT);
+    p.setStencilType(mgcl::MGCL_VARYING);
     REQUIRE(p.getStencilValues() != nullptr);
     CHECK(p.getStencilValues()->getDim1() == p.getM());
     CHECK(p.getStencilValues()->getDim2() == p.getN());
@@ -699,7 +699,7 @@ TEST_CASE("Problem::setStencilType")
     CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 4);
     CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 4);
 
-    p.setStencilType(mgcl::MGCL_VARYING_19POINT);
+    p.setStencilType(mgcl::MGCL_VARYING);
     REQUIRE(p.getStencilValues() != nullptr);
     CHECK(p.getStencilValues()->getDim1() == p.getM());
     CHECK(p.getStencilValues()->getDim2() == p.getN());
@@ -708,7 +708,7 @@ TEST_CASE("Problem::setStencilType")
     CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 4);
     CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 4);
 
-    p.setStencilType(mgcl::MGCL_VARYING_27POINT);
+    p.setStencilType(mgcl::MGCL_VARYING);
     REQUIRE(p.getStencilValues() != nullptr);
     CHECK(p.getStencilValues()->getDim1() == p.getM());
     CHECK(p.getStencilValues()->getDim2() == p.getN());

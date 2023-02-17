@@ -121,7 +121,7 @@ TEST_CASE("Problem solving: periodic 4th order")
 
         SECTION("Galerkin (varying stencil)")
         {
-            p.setStencilType(mgcl::MGCL_VARYING_7POINT);
+            p.setStencilType(mgcl::MGCL_VARYING);
             auto &s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
@@ -209,7 +209,7 @@ TEST_CASE("Problem solving: periodic 4th order")
 
         SECTION("Galerkin (varying stencil)")
         {
-            p.setStencilType(mgcl::MGCL_VARYING_7POINT);
+            p.setStencilType(mgcl::MGCL_VARYING);
             auto &s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
