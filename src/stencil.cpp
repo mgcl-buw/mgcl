@@ -45,7 +45,12 @@ namespace mgcl
         gh = std::exchange(s.gh, 0);
         buf = s.buf;
 
-        // TODO retain here?
+        // retain buffers (i.e. increase internal reference count so they won't be released by accident in dtor)
+        if (buf)
+        {
+            int err = clRetainMemObject(buf);
+            mgclCheckError(err, "clRetainMemObject(buf)");
+        }
 
         return *this;
     }

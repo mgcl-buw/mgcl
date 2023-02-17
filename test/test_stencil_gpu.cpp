@@ -101,14 +101,15 @@ TEST_CASE("VaryingStencilGpu move ctor")
                         }
 
     // check move ctor
-    auto h2gpu(std::move(*hgpu));
+    auto h2gpu = std::make_unique<mgcl::VaryingStencilGpu>(std::move(*hgpu));
+    // auto h2gpu(std::move(*hgpu));
 
     REQUIRE(hgpu->getM() == 0);
     REQUIRE(hgpu->getN() == 0);
     REQUIRE(hgpu->getO() == 0);
     REQUIRE(hgpu->getGh() == 0);
     REQUIRE(hgpu->getWidth() == 0);
-    auto h2 = h2gpu.read<3>(t.getCommands());
+    auto h2 = h2gpu->read<3>(t.getCommands());
     t.finish();
     REQUIRE(h2.isEqual(h_check));
 
@@ -123,22 +124,36 @@ TEST_CASE("VaryingStencilGpu move ctor")
     // now delete object, ref count should be 1
     hgpu.reset();
     t.finish();
-    err = clGetMemObjectInfo(h2gpu.getBuf(), CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+    err = clGetMemObjectInfo(h2gpu->getBuf(), CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
     mgcl::mgclCheckError(err, "clGetMemObjectInfo(hgpu->getBuf(), CL_MEM_REFERENCE_COUNT)");
     REQUIRE(err == CL_SUCCESS);
     REQUIRE(refCount == 1);
 
     // check move assignment
-    auto h3gpu = std::move(h2gpu);
+    auto h3gpu = std::move(*h2gpu);
 
-    REQUIRE(h2gpu.getM() == 0);
-    REQUIRE(h2gpu.getN() == 0);
-    REQUIRE(h2gpu.getO() == 0);
-    REQUIRE(h2gpu.getGh() == 0);
-    REQUIRE(h2gpu.getWidth() == 0);
+    REQUIRE(h2gpu->getM() == 0);
+    REQUIRE(h2gpu->getN() == 0);
+    REQUIRE(h2gpu->getO() == 0);
+    REQUIRE(h2gpu->getGh() == 0);
+    REQUIRE(h2gpu->getWidth() == 0);
     auto h3 = h3gpu.read<3>(t.getCommands());
     t.finish();
     REQUIRE(h3.isEqual(h_check));
+
+    // check if buffer has count 2 (since hgpu is not deleted yet)
+    err = clGetMemObjectInfo(h2gpu->getBuf(), CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+    mgcl::mgclCheckError(err, "clGetMemObjectInfo(hgpu->getBuf(), CL_MEM_REFERENCE_COUNT)");
+    REQUIRE(err == CL_SUCCESS);
+    REQUIRE(refCount == 2);
+
+    // now delete object, ref count should be 1
+    h2gpu.reset();
+    t.finish();
+    err = clGetMemObjectInfo(h3gpu.getBuf(), CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+    mgcl::mgclCheckError(err, "clGetMemObjectInfo(hgpu->getBuf(), CL_MEM_REFERENCE_COUNT)");
+    REQUIRE(err == CL_SUCCESS);
+    REQUIRE(refCount == 1);
 }
 
 TEST_CASE("VaryingStencilGpu::fill")
