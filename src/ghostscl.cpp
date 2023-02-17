@@ -112,35 +112,4 @@ namespace mgcl
         clReleaseKernel(kernel);
         return err;
     }
-
-    /* Tests the update of ghost cells on opencl device.
-     * m,n,o must be size of ghosted grid.
-     * Creates device buffers, enqueues kernel, waits for completion and reads back results */
-    int MultigridEngine::updateGhostsTest(Problem &problem, double ***v, int m, int n, int o, int ghosts_m, int ghosts_n,
-                                          int ghosts_o)
-    {
-        int err;
-
-        // create device buffers
-        int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
-        cl_mem d_v =
-            clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, v[0][0], &err);
-
-        // call update ghosts
-        auto t_start_iter = std::chrono::steady_clock::now();
-        MultigridEngine::updateGhosts(problem, d_v, m, n, o, ghosts_m, ghosts_n, ghosts_o);
-
-        // Wait for the commands to complete before stopping the timer
-        err = clFinish(problem.getOpenCLHelper().getCommands());
-        mgclCheckError(err, "Waiting for kernel to finish");
-        auto t_end_iter = mgcl_since(t_start_iter).count() * 1000.0;
-        printf("update ghosts on opencl took %2.5lf s\n", t_end_iter);
-
-        // read back results
-        err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), d_v, CL_TRUE, 0, sizeof(double) * m * n * o, v[0][0], 0, NULL, NULL);
-        mgclCheckError(err, "Error: Failed to read output arrays from device!");
-
-        clReleaseMemObject(d_v);
-        return err;
-    }
 }

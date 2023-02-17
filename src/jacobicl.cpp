@@ -81,66 +81,6 @@ namespace mgcl
         return res;
     }
 
-    /* Tests jacobi method using OpenCL. Creates buffers and copies memory from host to device and back.
-     * v, f and r must be of size [m][n][o] for periodic boundary condition.
-     * m, n and o must be the dimensions of grid + 2*ghosts */
-    void MultigridEngine::jacobiTest(Problem &problem, double ***v, double ***f, double ***r, int m, int n, int o, int maxiter,
-                                     int readResults)
-    {
-        // int err;
-
-        // // create device buffers
-        // int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
-        // cl_mem dVIn =
-        //     clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, v[0][0], &err);
-        // cl_mem dVOut =
-        //     clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, v[0][0], &err);
-        // cl_mem d_f =
-        //     clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_ONLY | pointer_flag, sizeof(double) * m * n * o, f[0][0], &err);
-        // cl_mem dR =
-        //     clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, r[0][0], &err);
-
-        // // create level data
-        // mgcl_level_data data;
-        // data.dVIn = dVIn;
-        // data.dVOut = dVOut;
-        // data.dF = d_f;
-        // data.dR = dR;
-        // data.m = m;
-        // data.n = n;
-        // data.o = o;
-
-        // MultigridEngine::updateGhosts(problem, dVIn, m, n, o, problem.ghosts, problem.ghosts, problem.ghosts);
-        // MultigridEngine::updateGhosts(problem, d_f, m, n, o, problem.ghosts, problem.ghosts, problem.ghosts);
-
-        // auto t_start_iter = std::chrono::steady_clock::now();
-        // jacobi(problem, &data, maxiter, readResults);
-
-        // // Wait for the commands to complete before stopping the timer
-        // err = clFinish(problem.getOpenCLHelper().getCommands());
-        // mgclCheckError(err, "Waiting for kernel to finish");
-        // auto t_end_iter = mgcl_since(t_start_iter).count() * 1000.0;
-        // printf("jacobi on opencl took %.3e s\n", t_end_iter);
-
-        // // reassign pointers to v since they might've been swapped
-        // dVIn = data.dVIn;
-        // dVOut = data.dVOut;
-
-        // // read back results TODO: only for testing purposes, maybe define TESTING?
-        // err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dVIn, CL_FALSE, 0, sizeof(double) * m * n * o, v[0][0], 0, NULL, NULL);
-        // err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dR, CL_TRUE, 0, sizeof(double) * m * n * o, r[0][0], 0, NULL, NULL);
-        // if (err != CL_SUCCESS)
-        // {
-        //     printf("Error: Failed to read output arrays from device!\n%s\n", mgcl_err_code(err));
-        //     exit(1);
-        // }
-
-        // clReleaseMemObject(dVIn);
-        // clReleaseMemObject(dVOut);
-        // clReleaseMemObject(d_f);
-        // clReleaseMemObject(dR);
-    }
-
     /* Runs jacobi method using OpenCL.
      * Doesn't creates ocl buffers and doesn't copy data from host to device and vice versa
      * v, f and r must be of size [m][n][o] for periodic boundary condition.
@@ -846,54 +786,6 @@ namespace mgcl
 
         clReleaseKernel(kernel); // TODO maybe clFinish before release?
         return res;
-    }
-
-    /* Tests residual calculation using OpenCL.
-     * Creates ocl buffers, copies data from host to device and vice versa
-     * v, f and r must be of size [m][n][o] for periodic boundary condition.
-     * m, n and o must be the dimensions of grid + 2.
-     * If return_residual is true, the residual's 2-norm will be read back from device and returned, else -1. It's not
-     * really performant to do so because we have to wait for all kernels to complete and reading a buffer to host is slow.
-     */
-    double MultigridEngine::residualTest(Problem &problem, double ***v, double ***f, double ***r, int m, int n, int o,
-                                         int return_residual)
-    {
-        // int err;
-
-        // // create device buffers
-        // int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
-        // cl_mem d_v =
-        //     clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, v[0][0], &err);
-        // cl_mem d_f =
-        //     clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, f[0][0], &err);
-        // cl_mem dR =
-        //     clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_READ_WRITE | pointer_flag, sizeof(double) * m * n * o, r[0][0], &err);
-
-        // mgcl_level_data data;
-        // data.dR = dR;
-        // data.dVIn = d_v;
-        // data.dF = d_f;
-        // data.m = m;
-        // data.n = n;
-        // data.o = o;
-
-        // double res = mgcl_residual(problem, &data, 1);
-
-        // // read back results
-        // err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), d_v, CL_FALSE, 0, sizeof(double) * m * n * o, v[0][0], 0, NULL, NULL);
-        // err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), d_f, CL_FALSE, 0, sizeof(double) * m * n * o, f[0][0], 0, NULL, NULL);
-        // err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dR, CL_TRUE, 0, sizeof(double) * m * n * o, r[0][0], 0, NULL, NULL);
-        // if (err != CL_SUCCESS)
-        // {
-        //     printf("Error: Failed to read output arrays from device!\n%s\n", mgcl_err_code(err));
-        //     exit(1);
-        // }
-
-        // clReleaseMemObject(d_v);
-        // clReleaseMemObject(d_f);
-        // clReleaseMemObject(dR);
-        // return res;
-        return 0;
     }
 
     /* Calculates r = f - A*v using 7-point stencil of 3D laplacian.

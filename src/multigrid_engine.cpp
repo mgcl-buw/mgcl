@@ -172,29 +172,6 @@ namespace mgcl
         return err;
     }
 
-    /* Reads values for one level from device for testing purposes */
-    void MultigridEngine::testRead(Problem &problem, Level &level)
-    {
-        int err = clFinish(problem.openCLHelper.getCommands());
-        mgclCheckError(err, "Waiting for kernels to finish");
-
-        // read back results TODO: only for testing purposes, maybe define TESTING?
-        err = clEnqueueReadBuffer(problem.openCLHelper.getCommands(), level.dVIn, CL_TRUE, 0,
-                                  sizeof(double) * level.m * level.n * level.o, level.getV()[0][0], 0,
-                                  NULL, NULL);
-        err = clEnqueueReadBuffer(problem.openCLHelper.getCommands(), level.dF, CL_TRUE, 0,
-                                  sizeof(double) * level.m * level.n * level.o, level.getF()[0][0], 0,
-                                  NULL, NULL);
-        err = clEnqueueReadBuffer(problem.openCLHelper.getCommands(), level.dR, CL_TRUE, 0,
-                                  sizeof(double) * level.m * level.n * level.o, level.getR()[0][0], 0,
-                                  NULL, NULL);
-        mgclCheckError(err, "Error: Failed to read output arrays from device!");
-
-        printf("0 level = %d, v[1,1,1] = %e\n", level.getNum(), level.getV()[1][1][1]);
-        printf("0 level = %d, f[1,1,1] = %e\n", level.getNum(), level.getF()[1][1][1]);
-        printf("0 level = %d, r[1,1,1] = %e\n", level.getNum(), level.getR()[1][1][1]);
-    }
-
     /**
      * @brief Calculates and sets the stencil (i.e. the matrix A) for the current level by applying the
      * Galerkin operator, which is defined as A_2h = R * A_h * P with R being restriction and P being prolongation
