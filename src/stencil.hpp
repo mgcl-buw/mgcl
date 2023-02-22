@@ -1,6 +1,7 @@
 #ifndef MGCL_STENCIL_HPP
 #define MGCL_STENCIL_HPP
 
+#include <algorithm>
 #include <memory>
 #include <stdexcept>
 #include <vector>
@@ -31,6 +32,8 @@ namespace mgcl
     class VaryingStencil;
     class FixedStencilGpu;
     class VaryingStencilGpu;
+
+    using std::min;
 
     /**
      * @brief Fixed 3x3x3 stencil (same stencil entries for each grid point).
@@ -71,36 +74,38 @@ namespace mgcl
 
             // TODO ghosts of c?
             auto c = VaryingStencil<(N + NB - 1)>(b.getDim1(), b.getDim2(), b.getDim3(), ghc, ghc, ghc);
-            int width_c = c.getDim4();
+            int wc = c.getDim4();
 
             // clang-format off
             for (int x = 0; x < b.getDim1(); x++)
             for (int y = 0; y < b.getDim2(); y++)
             for (int z = 0; z < b.getDim3(); z++)
-                for (int a_i = 0; a_i < N; a_i++)
-                for (int a_j = 0; a_j < N; a_j++)
-                for (int a_k = 0; a_k < N; a_k++)
-                    for (int b_i = 0; b_i < NB; b_i++)
-                    for (int b_j = 0; b_j < NB; b_j++)
-                    for (int b_k = 0; b_k < NB; b_k++)
+                for (int ci = 0; ci < wc; ci++)
+                for (int cj = 0; cj < wc; cj++)
+                for (int ck = 0; ck < wc; ck++)
+                {
+                    double csum = 0;
+                    for (int a_i = ci - (min(ci, NB - 1)), b_i = min(ci, NB - 1);
+                        a_i <= min(ci, N - 1) && b_i >= ci - min(ci, N - 1);
+                        a_i++, b_i--)
+                    for (int a_j = cj - (min(cj, NB - 1)), b_j = min(cj, NB - 1);
+                            a_j <= min(cj, N - 1) && b_j >= cj - min(cj, N - 1);
+                            a_j++, b_j--)
+                    for (int a_k = ck - (min(ck, NB - 1)), b_k = min(ck, NB - 1);
+                            a_k <= min(ck, N - 1) && b_k >= ck - min(ck, N - 1);
+                            a_k++, b_k--)
                     {
                         int gpi = x + a_i - N2 + ghb;
                         int gpj = y + a_j - N2 + ghb;
                         int gpk = z + a_k - N2 + ghb;
 
-                        int ci = a_i + b_i;
-                        int cj = a_j + b_j;
-                        int ck = a_k + b_k;
-
-                        if (ci >= 0 && ci < width_c &&
-                            cj >= 0 && cj < width_c &&
-                            ck >= 0 && ck < width_c)
-                        {
-                            c[x + ghc][y + ghc][z + ghc][a_i + b_i][a_j + b_j][a_k + b_k] +=
-                                field_3d[a_i][a_j][a_k] *
-                                b[gpi][gpj][gpk][b_i][b_j][b_k];
-                        }
+                        csum +=
+                            field_3d[a_i][a_j][a_k] *
+                            b[gpi][gpj][gpk][b_i][b_j][b_k];
                     }
+
+                    c[x + ghc][y + ghc][z + ghc][ci][cj][ck] = csum;
+                }
             // clang-format on
 
             if (ghc > 0)
@@ -236,32 +241,34 @@ namespace mgcl
             int gha = getGhostsDim1();
 
             auto c = VaryingStencil<(N + NB - 1)>(dim1, dim2, dim3, ghc, ghc, ghc);
-            int width_c = c.getDim4();
+            int wc = c.getDim4();
 
             // clang-format off
             for (int x = 0; x < m; x++)
             for (int y = 0; y < n; y++)
             for (int z = 0; z < o; z++)
-                for (int a_i = 0; a_i < N; a_i++)
-                for (int a_j = 0; a_j < N; a_j++)
-                for (int a_k = 0; a_k < N; a_k++)
-                    for (int b_i = 0; b_i < NB; b_i++)
-                    for (int b_j = 0; b_j < NB; b_j++)
-                    for (int b_k = 0; b_k < NB; b_k++)
+                for (int ci = 0; ci < wc; ci++)
+                for (int cj = 0; cj < wc; cj++)
+                for (int ck = 0; ck < wc; ck++)
+                {
+                    double csum = 0;
+                    for (int a_i = ci - (min(ci, NB - 1)), b_i = min(ci, NB - 1);
+                        a_i <= min(ci, N - 1) && b_i >= ci - min(ci, N - 1);
+                        a_i++, b_i--)
+                    for (int a_j = cj - (min(cj, NB - 1)), b_j = min(cj, NB - 1);
+                            a_j <= min(cj, N - 1) && b_j >= cj - min(cj, N - 1);
+                            a_j++, b_j--)
+                    for (int a_k = ck - (min(ck, NB - 1)), b_k = min(ck, NB - 1);
+                            a_k <= min(ck, N - 1) && b_k >= ck - min(ck, N - 1);
+                            a_k++, b_k--)
                     {
-                        int ci = a_i + b_i;
-                        int cj = a_j + b_j;
-                        int ck = a_k + b_k;
+                        csum +=
+                            field_6d[x + gha][y + gha][z + gha][a_i][a_j][a_k] *
+                            b[b_i][b_j][b_k];
+                    }                              
 
-                        if (ci >= 0 && ci < width_c &&
-                            cj >= 0 && cj < width_c &&
-                            ck >= 0 && ck < width_c)
-                        {
-                            c[x + ghc][y + ghc][z + ghc][a_i + b_i][a_j + b_j][a_k + b_k] +=
-                                field_6d[x + gha][y + gha][z + gha][a_i][a_j][a_k] *
-                                b[b_i][b_j][b_k];
-                        }
-                    }
+                    c[x + ghc][y + ghc][z + ghc][ci][cj][ck] = csum;
+                }
             // clang-format on
 
             if (ghc > 0)
