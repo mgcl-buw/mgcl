@@ -96,6 +96,12 @@ thirdparty/pmg/stencil.h
 
 add_library(pmg ${SOURCES_PMG})
 
+# don't use iwyu for pmg
+set_property(
+  TARGET pmg
+  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
+)
+
 # maybe need to run cmake with
 # cmake -DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/openmpi
 # in order to find MPI libraries
@@ -114,6 +120,12 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(Catch2)
+
+# don't use iwyu for Catch2
+set_property(
+  TARGET Catch2
+  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
+)
 
 # Test binary for unit testing mgcl
 # These tests can use the Catch2-provided main
@@ -145,6 +157,12 @@ add_executable(tests ${SOURCES_TEST})
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(tests PRIVATE mgcl)
 
+# don't use iwyu for tests
+set_property(
+  TARGET tests
+  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
+)
+
 # Test binary for solving problems
 # These tests can use the Catch2-provided main
 set(SOURCES_TEST_SOLVING
@@ -161,6 +179,12 @@ add_executable(tests_solving ${SOURCES_TEST_SOLVING})
 target_link_libraries(tests_solving PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(tests_solving PRIVATE mgcl)
 target_link_libraries(tests_solving PRIVATE pmg)
+
+# don't use iwyu for tests_solving
+set_property(
+  TARGET tests_solving
+  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
+)
 
 # ==========================
 # old mgcl c configuration for comparison in benchmarks
@@ -185,6 +209,13 @@ find_package(MPI)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 add_definitions(-DOMPI_SKIP_MPICXX)
 target_link_libraries(mgcl_c PRIVATE MPI::MPI_C)
+target_link_libraries (mgcl_c PRIVATE OpenCL::OpenCL)
+
+# don't use iwyu for mgcl_c
+set_property(
+  TARGET mgcl_c
+  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
+)
 
 # copy kernel file to build directory
 add_custom_command(
@@ -209,6 +240,12 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE)
 
 FetchContent_MakeAvailable(nanobench)
+
+# don't use iwyu for nanobench
+set_property(
+  TARGET nanobench
+  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
+)
 
 set(SOURCES_NANOBENCH 
 test/test_utility.hpp
