@@ -50,7 +50,7 @@ add_library(mgcl ${SOURCES_LIB})
 # target_link_libraries(main OpenCL::OpenCL)
 # target_link_options(main PRIVATE -lOpenCL)
 #target_link_libraries(mgcl PRIVATE "-lOpenCL")
-target_link_libraries (mgcl ${OpenCL_LIBRARY})
+target_link_libraries (mgcl OpenCL::OpenCL)
 
 # Uncomment this to get Debug output in mgcl
 # target_compile_definitions(mgcl PRIVATE MGCL_DEBUG)
