@@ -1,4 +1,4 @@
-#include "cuboid.hpp"           // for Cuboid, cuboid_alloc, cuboid_free
+#include "cuboid.hpp"           // for Cuboid
 #include "hypercube.hpp"        // for Hypercube6d
 #include "level.hpp"            // for Level
 #include "mgcl.hpp"             // for mgcl_debug, MGCL_LAPLACE_19POINT
@@ -254,7 +254,8 @@ namespace mgcl
             if (problem.residual_norm == MGCL_L2)
             {
                 // calculate 2-Norm
-                double ***rsquares = cuboid_alloc(mgh, ngh, ogh);
+                Cuboid rsq(mgh, ngh, ogh);
+                double ***rsquares = rsq.getData();
                 int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
                 cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
                                                   sizeof(double) * mgh * ngh * ogh, rsquares[0][0], &err);
@@ -305,7 +306,6 @@ namespace mgcl
                 res = sqrt(res);
 
                 clReleaseMemObject(dRsquares);
-                cuboid_free(rsquares, mgh, ngh, ogh);
                 clReleaseKernel(kernel_square);
             }
             else
@@ -314,7 +314,8 @@ namespace mgcl
                 err = clFinish(problem.getOpenCLHelper().getCommands());
                 mgclCheckError(err, "Waiting for kernels to finish");
 
-                double ***rtmp = cuboid_alloc(mgh, ngh, ogh);
+                Cuboid c(mgh, ngh, ogh);
+                double ***rtmp = c.getData();
 
                 err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * mgh * ngh * ogh, rtmp[0][0], 0,
                                           NULL, NULL);
@@ -327,8 +328,6 @@ namespace mgcl
                         for (int k = problem.ghosts; k < ogh - problem.ghosts; k++)
                             if (fabs(rtmp[i][j][k]) > res)
                                 res = rtmp[i][j][k];
-
-                cuboid_free(rtmp, mgh, ngh, ogh);
             }
         }
 
@@ -543,7 +542,8 @@ namespace mgcl
             if (problem.residual_norm == MGCL_L2)
             {
                 // calculate 2-Norm
-                double ***rsquares = cuboid_alloc(mgh, ngh, ogh);
+                Cuboid rsq(mgh, ngh, ogh);
+                double ***rsquares = rsq.getData();
                 int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
                 cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
                                                   sizeof(double) * mgh * ngh * ogh, rsquares[0][0], &err);
@@ -594,7 +594,6 @@ namespace mgcl
                 res = sqrt(res);
 
                 clReleaseMemObject(dRsquares);
-                cuboid_free(rsquares, mgh, ngh, ogh);
                 clReleaseKernel(kernel_square);
             }
             else
@@ -603,7 +602,8 @@ namespace mgcl
                 err = clFinish(problem.getOpenCLHelper().getCommands());
                 mgclCheckError(err, "Waiting for kernels to finish");
 
-                double ***rtmp = cuboid_alloc(mgh, ngh, ogh);
+                Cuboid c(mgh, ngh, ogh);
+                double ***rtmp = c.getData();
 
                 err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * mgh * ngh * ogh, rtmp[0][0], 0,
                                           NULL, NULL);
@@ -616,8 +616,6 @@ namespace mgcl
                         for (int k = problem.ghosts; k < ogh - problem.ghosts; k++)
                             if (fabs(rtmp[i][j][k]) > res)
                                 res = rtmp[i][j][k];
-
-                cuboid_free(rtmp, mgh, ngh, ogh);
             }
         }
 
@@ -724,7 +722,8 @@ namespace mgcl
             if (problem.residual_norm == MGCL_L2)
             {
                 // calculate 2-Norm
-                double ***rsquares = cuboid_alloc(mgh, ngh, ogh);
+                Cuboid rsq(mgh, ngh, ogh);
+                double ***rsquares = rsq.getData();
                 int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
                 cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
                                                   sizeof(double) * mgh * ngh * ogh, rsquares[0][0], &err);
@@ -762,7 +761,6 @@ namespace mgcl
                 res = sqrt(res);
 
                 clReleaseMemObject(dRsquares);
-                cuboid_free(rsquares, mgh, ngh, ogh);
                 clReleaseKernel(kernel_square);
             }
             else
@@ -771,7 +769,8 @@ namespace mgcl
                 err = clFinish(problem.getOpenCLHelper().getCommands());
                 mgclCheckError(err, "Waiting for kernels to finish");
 
-                double ***rtmp = cuboid_alloc(mgh, ngh, ogh);
+                Cuboid c(mgh, ngh, ogh);
+                double ***rtmp = c.getData();
 
                 err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * mgh * ngh * ogh, rtmp[0][0], 0,
                                           NULL, NULL);
@@ -784,8 +783,6 @@ namespace mgcl
                         for (int k = problem.ghosts; k < ogh - problem.ghosts; k++)
                             if (fabs(rtmp[i][j][k]) > res)
                                 res = rtmp[i][j][k];
-
-                cuboid_free(rtmp, mgh, ngh, ogh);
             }
         }
 

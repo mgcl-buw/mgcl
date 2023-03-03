@@ -7,23 +7,6 @@
 
 #include "../src/cuboid.hpp"
 
-TEST_CASE("cuboid alloc + free")
-{
-    SECTION("cuboid_alloc")
-    {
-        auto c = mgcl::cuboid_alloc(3, 3, 3);
-        REQUIRE(c != NULL);
-        mgcl::cuboid_free(c, 3, 3, 3);
-    }
-
-    SECTION("cube_alloc")
-    {
-        auto c = mgcl::cube_alloc(3);
-        REQUIRE(c != NULL);
-        mgcl::cube_free(c, 3);
-    }
-}
-
 TEST_CASE("cuboid class")
 {
 

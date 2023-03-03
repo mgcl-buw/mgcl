@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cuboid.hpp"
 #include <string>
 
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -52,7 +53,7 @@ namespace mgcl
         bool checkParameters();
         int copyInputBuffers();
         int copyOutputBuffers();
-        int readBuffer(double ****out, cl_mem d_buf, int m, int n, int o);
+        Cuboid readBuffer(cl_mem d_buf, int m, int n, int o);
         void printBuffer(cl_mem d_buf, int m, int n, int o);
         static char *loadKernelSource(const char *file);
         static int outputDeviceInfo(cl_device_id device_id);

@@ -1,5 +1,5 @@
 #include "opencl_helper.hpp"
-#include "cuboid.hpp"  // for cuboid_alloc, cuboid_free
+#include "cuboid.hpp"  // for
 #include "level.hpp"   // for Level
 #include "problem.hpp" // for Problem
 
@@ -370,19 +370,19 @@ namespace mgcl
      * @param o Size of buffer.
      * @return int OpenCL error code.
      */
-    int OpenCLHelper::readBuffer(double ****out, cl_mem d_buf, int m, int n, int o)
+    Cuboid OpenCLHelper::readBuffer(cl_mem d_buf, int m, int n, int o)
     {
         int err;
         err = clFinish(commands);
         mgclCheckError(err, "Waiting for kernel to finish");
 
-        if (!(*out))
-            *out = cuboid_alloc(m, n, o);
+        Cuboid ret(m, n, o);
+        double ***tmp = ret.getData();
 
-        err = clEnqueueReadBuffer(commands, d_buf, CL_TRUE, 0, sizeof(double) * m * n * o, out[0][0][0], 0, NULL, NULL);
+        err = clEnqueueReadBuffer(commands, d_buf, CL_TRUE, 0, sizeof(double) * m * n * o, tmp[0][0], 0, NULL, NULL);
         mgclCheckError(err, "clEnqueueReadBuffer");
 
-        return err;
+        return ret;
     }
 
     /**
@@ -396,15 +396,14 @@ namespace mgcl
     void OpenCLHelper::printBuffer(cl_mem d_buf, int m, int n, int o)
     {
         printf("printing buffer with size %d,%d,%d\n", m, n, o);
-        double ***out = nullptr;
-        readBuffer(&out, d_buf, m, n, o);
+        auto c = readBuffer(d_buf, m, n, o);
+
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)
                 for (int k = 0; k < o; k++)
                 {
-                    printf("i,j,k, %d,%d,%d val = %f\n", i, j, k, out[i][j][k]);
+                    printf("i,j,k, %d,%d,%d val = %f\n", i, j, k, c[i][j][k]);
                 }
-        cuboid_free(out, m, n, o);
     }
 
     /**
