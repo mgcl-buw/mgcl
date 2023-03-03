@@ -21,7 +21,28 @@ endif()
 # set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
 
 add_subdirectory(src)
-add_subdirectory(thirdparty)
-add_subdirectory(test)
-add_subdirectory(benchmarks)
-add_subdirectory(examples)
+
+# Only add other subdirs if mgcl is not used in another project.
+# See https://www.foonathan.net/2022/06/cmake-fetchcontent/
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+  # We're in the root, define additional targets for developers.
+  option(MGCL_BUILD_TESTS      "whether or not tests should be built" ON)
+  option(MGCL_BUILD_BENCHMARKS "whether or not benchmarks should be built" ON)
+  option(MGCL_BUILD_EXAMPLES   "whether or not examples should be built" ON)
+
+  if (MGCL_BUILD_TESTS OR MGCL_BUILD_BENCHMARKS)
+    add_subdirectory(thirdparty)
+  endif()
+
+  if (MGCL_BUILD_TESTS)
+    add_subdirectory(test)
+  endif()
+
+  if (MGCL_BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
+  endif()
+  
+  if (MGCL_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+  endif()
+endif()
