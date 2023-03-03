@@ -11,9 +11,11 @@
 #endif // CL_TARGET_OPENCL_VERSION
 
 #ifdef __APPLE__
+#include <OpenCL/cl_platform.h>
 #include <OpenCL/opencl.h>
 #else
 #include <CL/cl.h>
+#include <CL/cl_platform.h>
 #endif
 
 namespace mgcl

@@ -1,7 +1,18 @@
 #include "multigrid_engine.hpp"
+#include "cuboid.hpp"        // for Cuboid
+#include "hypercube.hpp"     // for Hypercube6d
+#include "level.hpp"         // for Level
+#include "opencl_helper.hpp" // for mgclCheckError, OpenCLHelper
+#include "problem.hpp"       // for Problem
 
-#include <iomanip>
-#include <iostream>
+#include <cstddef> // for size_t, NULL
+#include <memory>  // for __shared_ptr_access, shared_ptr
+
+#ifdef __APPLE__
+#include <OpenCL/cl_platform.h>
+#else
+#include <CL/cl_platform.h> // for cl_double
+#endif
 
 namespace mgcl
 {

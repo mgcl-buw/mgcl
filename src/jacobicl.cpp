@@ -1,9 +1,22 @@
-#include <cstdio>
-#include <ctgmath>
+#include "cuboid.hpp"           // for Cuboid, cuboid_alloc, cuboid_free
+#include "hypercube.hpp"        // for Hypercube6d
+#include "level.hpp"            // for Level
+#include "mgcl.hpp"             // for mgcl_debug, MGCL_LAPLACE_19POINT
+#include "multigrid_engine.hpp" // for Problem, VaryingStencil3x3x3, Multig...
+#include "problem.hpp"          // for Problem
+#include "stencil.hpp"          // for mgclCheckError, VaryingStencil3x3x3
 
-#include "cuboid.hpp"
-#include "hypercube.hpp"
-#include "multigrid_engine.hpp"
+#include <cstdio> // for printf, size_t, NULL
+#include <math.h> // for fabs, sqrt, ceil
+#include <memory> // for __shared_ptr_access, shared_ptr
+
+#ifdef __APPLE__
+#include <OpenCL/cl.h>          // for clSetKernelArg, _cl_mem, cl_mem, clE...
+#include <OpenCL/cl_platform.h> // for cl_ulong
+#else
+#include <CL/cl.h>          // for clSetKernelArg, _cl_mem, cl_mem, clE...
+#include <CL/cl_platform.h> // for cl_ulong
+#endif
 
 namespace mgcl
 {

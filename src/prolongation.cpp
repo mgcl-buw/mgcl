@@ -1,7 +1,21 @@
-#include "multigrid_engine.hpp"
+#include "cuboid.hpp"           // for Cuboid
+#include "level.hpp"            // for Level
+#include "multigrid_engine.hpp" // for Problem, MultigridEngine
+#include "opencl_helper.hpp"    // for mgclCheckError, OpenCLHelper
+#include "problem.hpp"          // for Problem
+
+#include <cstddef> // for size_t, NULL
+
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
+#include <CL/cl.h>
+#endif
 
 namespace mgcl
 {
+    using std::size_t;
+
     /* Prolongates from coarse to fine grid.
      * m, n and o must be dimensions of the fine grid without ghost cells. */
     void MultigridEngine::prolongateSeq(Level &fine, Level &coarse, Cuboid &fineVals, Cuboid &coarseVals)

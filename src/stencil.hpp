@@ -2,9 +2,8 @@
 #define MGCL_STENCIL_HPP
 
 #include <algorithm>
-#include <memory>
-#include <stdexcept>
-#include <vector>
+#include <cstddef>
+#include <string>
 
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -22,7 +21,6 @@
 
 #include "cuboid.hpp"
 #include "hypercube.hpp"
-#include "mgcl.hpp"
 #include "opencl_helper.hpp"
 
 namespace mgcl
@@ -31,7 +29,6 @@ namespace mgcl
     template <int N>
     class VaryingStencil;
     class FixedStencilGpu;
-    class VaryingStencilGpu;
 
     using std::min;
 

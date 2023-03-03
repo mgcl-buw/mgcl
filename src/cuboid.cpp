@@ -1,14 +1,16 @@
 #include "cuboid.hpp"
 
-#include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <exception>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <random>
-#include <tuple>
+#include <algorithm> // for fill
+#include <cmath>     // for fabs
+#include <cstdio>    // for NULL
+#include <cstdlib>   // for free, malloc, calloc
+#include <fstream>   // IWYU pragma: keep
+#include <iomanip>   // for operator<<, setw, setprecision
+#include <iostream>  // for basic_ostream::operator<<, basic_ostream, opera...
+#include <random>    // for mt19937, default_random_engine, uniform_int_dis...
+#include <stdexcept> // for invalid_argument, runtime_error
+#include <tuple>     // for tuple, get, make_tuple
+#include <utility>   // for move
 
 namespace mgcl
 {

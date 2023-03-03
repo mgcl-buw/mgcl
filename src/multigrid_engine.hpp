@@ -24,6 +24,7 @@ namespace mgcl
     // forward declaration
     class Problem;
     class Level;
+    class Cuboid;
 
     /**
      * @brief Encapsulates all relevant methods that execute the logic of the multigrid method.

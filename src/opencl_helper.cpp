@@ -1,5 +1,10 @@
 #include "opencl_helper.hpp"
-#include "level.hpp"
+#include "cuboid.hpp"  // for cuboid_alloc, cuboid_free
+#include "level.hpp"   // for Level
+#include "problem.hpp" // for Problem
+
+#include <cstdio>  // for printf, size_t, NULL, fprintf, fclose, fopen
+#include <cstdlib> // for malloc, exit, free, EXIT_FAILURE
 
 namespace mgcl
 {

@@ -1,7 +1,19 @@
+#include "cuboid.hpp"
 #include "multigrid_engine.hpp"
+#include "opencl_helper.hpp"
+
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
+#include <CL/cl.h>
+#endif
+
+#include <cstddef>
 
 namespace mgcl
 {
+    using std::size_t;
+
     /* updates ghost cells for periodic boundary condition
      * m,n,o are dimensions of real grid without ghost cells */
     void MultigridEngine::updateGhostsSeq(Cuboid &c)

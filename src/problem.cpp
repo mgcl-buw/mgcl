@@ -1,13 +1,18 @@
-#include <algorithm>
-#include <ctgmath>
-#include <exception>
-#include <functional>
-#include <iostream>
-#include <string>
-
-#include "cuboid.hpp"
-#include "multigrid_engine.hpp"
 #include "problem.hpp"
+#include "cuboid.hpp"           // for Cuboid
+#include "level.hpp"            // for Level
+#include "multigrid_engine.hpp" // for Problem, MultigridEngine
+
+#include <CL/cl_platform.h> // for cl_ulong
+#include <algorithm>        // for max
+#include <chrono>           // for __enable_if_is_duration, steady_clock
+#include <cmath>            // for log2
+#include <cstdio>           // for printf, NULL
+#include <functional>       // for function
+#include <stdexcept>        // for runtime_error
+#include <string>           // for to_string, basic_string, string
+#include <sys/types.h>      // for ulong
+#include <utility>          // for move
 
 namespace mgcl
 {

@@ -1,6 +1,14 @@
 #include "stencil.hpp"
 #include "opencl_helper.hpp"
 
+#include <utility> // for exchange
+
+#ifdef __APPLE__
+#include <OpenCL/cl_platform.h>
+#else
+#include <CL/cl_platform.h>
+#endif
+
 namespace mgcl
 {
 

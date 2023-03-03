@@ -1,7 +1,11 @@
 #include "level.hpp"
+#include "cuboid.hpp"           // for Cuboid
+#include "multigrid_engine.hpp" // for Problem, MultigridEngine
+#include "problem.hpp"
 
-#include <stdexcept>
-#include <string>
+#include <cstddef>   // for NULL
+#include <stdexcept> // for invalid_argument
+#include <string>    // for to_string, allocator, basic_string
 
 namespace mgcl
 {

@@ -8,26 +8,25 @@
 #define CL_TARGET_OPENCL_VERSION 120
 #endif // CL_TARGET_OPENCL_VERSION
 
+#include "level.hpp"
+#include "mgcl.hpp"          // for MGCL_RESIDUAL_NORM, MGCL_STENCIL, MGCL_L2
+#include "opencl_helper.hpp" // for OpenCLHelper
+#include "stencil.hpp"       // for VaryingStencil3x3x3
+
+#include <memory> // for shared_ptr, unique_ptr
+#include <string> // for string
+#include <vector> // for vector
+
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
-#include <CL/cl.h>
+#include <CL/cl.h> // for cl_mem, _cl_mem, cl_command_queue, cl_c...
 #endif
-#include <memory>
-#include <string>
-#include <vector>
-
-#include "cuboid.hpp"
-#include "level.hpp"
-#include "mgcl.hpp"
-#include "multigrid_engine.hpp"
-#include "opencl_helper.hpp"
-#include "stencil.hpp"
 
 namespace mgcl
 {
     // forward declarations
-    class Level;
+    class Cuboid;
 
     /**
      * @brief Main interface class for using mgcl. Defines all the parameters which can be set using the appropriate

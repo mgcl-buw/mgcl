@@ -1,7 +1,21 @@
-#include "multigrid_engine.hpp"
+#include "cuboid.hpp"           // for Cuboid
+#include "level.hpp"            // for Level
+#include "multigrid_engine.hpp" // for Problem, MultigridEngine
+#include "opencl_helper.hpp"    // for mgclCheckError, OpenCLHelper
+#include "problem.hpp"
+
+#include <cstddef> // for size_t, NULL
+
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
+#include <CL/cl.h>
+#endif
 
 namespace mgcl
 {
+    using std::size_t;
+
     /* Restricts residual to coarser grid using full-weighted restriction operator.
      * m, n and o must be the dimensions of the coarser grid without ghost cells. */
     void MultigridEngine::restrictSeq(Level &fine, Level &coarse, Cuboid &fine_vals, Cuboid &coarse_vals)

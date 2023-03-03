@@ -1,15 +1,22 @@
 #ifndef MGCL_LEVEL_HPP
 #define MGCL_LEVEL_HPP
 
-#include "cuboid.hpp"
-#include "multigrid_engine.hpp"
-#include "opencl_helper.hpp"
-#include "stencil.hpp"
+#include "mgcl.hpp"    // for MGCL_STENCIL
+#include "stencil.hpp" // for VaryingStencil3x3x3
+
+#include <memory> // for shared_ptr
+
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
+#include <CL/cl.h>
+#endif
 
 namespace mgcl
 {
     // forward declarations
     class Problem;
+    class Cuboid;
 
     class Level
     {
