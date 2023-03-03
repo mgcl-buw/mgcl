@@ -34,7 +34,7 @@ set_property(
 # maybe need to run cmake with
 # cmake -DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/openmpi
 # in order to find MPI libraries
-find_package(MPI)
+find_package(MPI REQUIRED)
 # target_include_directories(pmg SYSTEM PUBLIC ${MPI_INCLUDE_PATH})
 set(MPI_CXX_SKIP_MPICXX TRUE)
 target_link_libraries(pmg PRIVATE MPI::MPI_C)
@@ -60,7 +60,7 @@ mgcl_c/stencilcl.hpp
 
 add_library(mgcl_c ${SOURCES_MGCL_C})
 
-find_package(MPI)
+find_package(MPI REQUIRED)
 # target_include_directories(mgcl_c SYSTEM PUBLIC ${MPI_INCLUDE_PATH})
 add_definitions(-DOMPI_SKIP_MPICXX)
 target_link_libraries(mgcl_c PRIVATE MPI::MPI_C)

@@ -26,6 +26,8 @@ add_subdirectory(src)
 # See https://www.foonathan.net/2022/06/cmake-fetchcontent/
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   # We're in the root, define additional targets for developers.
+  cmake_minimum_required(VERSION 3.24)
+
   option(MGCL_BUILD_TESTS      "whether or not tests should be built" ON)
   option(MGCL_BUILD_BENCHMARKS "whether or not benchmarks should be built" ON)
   option(MGCL_BUILD_EXAMPLES   "whether or not examples should be built" ON)

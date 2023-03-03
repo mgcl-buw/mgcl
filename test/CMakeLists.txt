@@ -6,6 +6,7 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
   GIT_TAG        v3.3.2 # or a later release
   GIT_SHALLOW TRUE
+  FIND_PACKAGE_ARGS # try to find using find_package first
 )
 
 FetchContent_MakeAvailable(Catch2)
@@ -70,7 +71,7 @@ test_results.cpp
 
 add_executable(tests_solving ${SOURCES_TEST_SOLVING})
 
-find_package(MPI)
+find_package(MPI REQUIRED)
 # target_include_directories(pmg SYSTEM PUBLIC ${MPI_INCLUDE_PATH})
 # set(MPI_CXX_SKIP_MPICXX TRUE)
 target_link_libraries(tests_solving PRIVATE MPI::MPI_CXX)

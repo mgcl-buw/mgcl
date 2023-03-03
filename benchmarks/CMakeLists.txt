@@ -6,7 +6,9 @@ FetchContent_Declare(
     nanobench
     GIT_REPOSITORY https://github.com/martinus/nanobench.git
     GIT_TAG v4.3.11
-    GIT_SHALLOW TRUE)
+    GIT_SHALLOW TRUE
+    FIND_PACKAGE_ARGS # try to find using find_package first
+)
 
 FetchContent_MakeAvailable(nanobench)
 
@@ -15,6 +17,7 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
   GIT_TAG        v3.3.2 # or a later release
   GIT_SHALLOW TRUE
+  FIND_PACKAGE_ARGS # try to find using find_package first
 )
 
 FetchContent_MakeAvailable(Catch2)
@@ -56,7 +59,7 @@ set_property(
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
 
-find_package(MPI)
+find_package(MPI REQUIRED)
 # target_include_directories(benchmarks SYSTEM PRIVATE ${MPI_INCLUDE_PATH})
 add_definitions(-DOMPI_SKIP_MPICXX)
 target_link_libraries(benchmarks PRIVATE MPI::MPI_C)
