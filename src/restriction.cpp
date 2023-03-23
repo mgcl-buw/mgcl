@@ -1,5 +1,6 @@
 #include "cuboid.hpp"           // for Cuboid
 #include "level.hpp"            // for Level
+#include "mgcl.hpp"             // for BC
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "opencl_helper.hpp"    // for mgclCheckError, OpenCLHelper
 #include "problem.hpp"

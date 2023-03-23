@@ -34,11 +34,11 @@ TEST_CASE("residual")
     double h = 1.0 / (double)m;
     double stencilFactor = 1.0 / (h * h);
 
-    SECTION("residualSeq L2-norm 7point")
+    SECTION("residualSeq L2-norm 7point periodic")
     {
         auto stencilValues = std::make_unique<mgcl::VaryingStencil3x3x3>(1, 1, 1, 0, 0, 0); // just a dummy
         double res = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r, mgcl::MGCL_L2,
-                                                        mgcl::MGCL_LAPLACE_7POINT, stencilFactor, *stencilValues, true);
+                                                        mgcl::MGCL_LAPLACE_7POINT, stencilFactor, *stencilValues, true, true);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_in_r->isEqual(*c_expected_out_r));
@@ -80,7 +80,7 @@ TEST_CASE("residual")
         REQUIRE(c_r_out->isEqual(*c_expected_out_r));
     }
 
-    SECTION("residualSeq L2-norm 7point varying stencil")
+    SECTION("residualSeq L2-norm 7point varying stencil periodic")
     {
         int n = 16;
         auto vals = mgcl::VaryingStencil3x3x3(n, n, n, 1, 1, 1);
@@ -100,14 +100,14 @@ TEST_CASE("residual")
                 }
 
         double res = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r, mgcl::MGCL_L2,
-                                                        mgcl::MGCL_VARYING, stencilFactor, vals, true);
+                                                        mgcl::MGCL_VARYING, stencilFactor, vals, true, true);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_in_r->isEqual(*c_expected_out_r));
     }
 }
 
-TEST_CASE("residual varying stencil")
+TEST_CASE("residual varying stencil  periodic")
 {
     auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
@@ -191,7 +191,7 @@ TEST_CASE("residual varying stencil")
     double res_gpu = mgcl::MultigridEngine::residual(*p_gpu, level0_gpu, 1);
     tu.finish();
     double res_seq = mgcl::MultigridEngine::residualSeq(f_in_lv0, v_in_lv0, r_in_lv0, mgcl::MGCL_L2,
-                                                        mgcl::MGCL_VARYING, 1, *sv_in_lv0, 1);
+                                                        mgcl::MGCL_VARYING, 1, *sv_in_lv0, 1, true);
 
     auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
     auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);

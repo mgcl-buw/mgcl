@@ -1,14 +1,15 @@
-#include "cuboid.hpp"
-#include "multigrid_engine.hpp"
-#include "opencl_helper.hpp"
+#include "cuboid.hpp"           // for Cuboid
+#include "mgcl.hpp"             // for BC
+#include "multigrid_engine.hpp" // for Problem, MultigridEngine
+#include "opencl_helper.hpp"    // for mgclCheckError, OpenCLHelper
+
+#include <cstddef> // for size_t, NULL
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
 #include <CL/cl.h>
 #endif
-
-#include <cstddef>
 
 namespace mgcl
 {

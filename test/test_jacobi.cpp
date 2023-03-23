@@ -39,18 +39,18 @@ TEST_CASE("jacobi")
     double h = 1.0 / (double)m;
     double stencilFactor = 1.0 / (h * h);
 
-    SECTION("seq L2-norm 7point")
+    SECTION("seq L2-norm 7point periodic")
     {
         auto stencilValues = std::make_unique<mgcl::VaryingStencil3x3x3>(1, 1, 1, 0, 0, 0); // just a dummy
         double res = mgcl::MultigridEngine::jacobiSeq(*c_in_v, *c_in_f, *c_in_r, omega, maxiter,
-                                                      mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_7POINT, stencilFactor, *stencilValues, true);
+                                                      mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_7POINT, stencilFactor, *stencilValues, true, true);
 
         CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
         CHECK(c_in_v->isEqual(*c_expected_out_v));
         CHECK(c_in_r->isEqual(*c_expected_out_r));
     }
 
-    SECTION("OpenCL GPU L2-norm 7point")
+    SECTION("OpenCL GPU L2-norm 7point periodic")
     {
         auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
@@ -160,7 +160,7 @@ TEST_CASE("jacobi GPU varying stencil")
             }
     }
 
-    SECTION("ocl vs seq")
+    SECTION("ocl vs seq periodic")
     {
         auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
@@ -244,7 +244,7 @@ TEST_CASE("jacobi GPU varying stencil")
         double res_gpu = mgcl::MultigridEngine::jacobi(*p_gpu, level0_gpu, maxiter, 1);
         tu.finish();
         double res_seq = mgcl::MultigridEngine::jacobiSeq(v_in_lv0, f_in_lv0, r_in_lv0, omega, maxiter, mgcl::MGCL_L2,
-                                                          mgcl::MGCL_VARYING, 1, *sv_in_lv0, 1);
+                                                          mgcl::MGCL_VARYING, 1, *sv_in_lv0, 1, true);
 
         auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
         auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);

@@ -10,7 +10,7 @@
 
 #include "matrix2d.hpp"
 
-TEST_CASE("StencilLaplace7p")
+TEST_CASE("StencilLaplace7p periodic")
 {
     int N = 4;
     int gh = 1;
@@ -30,13 +30,13 @@ TEST_CASE("StencilLaplace7p")
     mgcl::Cuboid r(N, N, N, gh, gh, gh);
     mgcl::VaryingStencil3x3x3 stencilValues(1, 1, 1, 0, 0, 0); // just a dummy
 
-    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_7POINT, expectedFactor, stencilValues, 0);
+    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_7POINT, expectedFactor, stencilValues, 0, true);
 
     double expected = expectedFactor * (6.0 * 8 - 4 - 16 - 4 - 2 - 1 - 2);
     REQUIRE(-r[1][1][1] == Catch::Approx(expected));
 }
 
-TEST_CASE("StencilLaplace19p")
+TEST_CASE("StencilLaplace19p periodic")
 {
     int N = 4;
     int gh = 1;
@@ -71,13 +71,13 @@ TEST_CASE("StencilLaplace19p")
     mgcl::Cuboid r(N, N, N, gh, gh, gh);
     mgcl::VaryingStencil3x3x3 stencilValues(1, 1, 1, 0, 0, 0); // just a dummy
 
-    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_19POINT, expectedFactor, stencilValues, 0);
+    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_19POINT, expectedFactor, stencilValues, 0, true);
 
     double expected = expectedFactor * (24.0 * 8 - 2.0 * (4 + 16 + 4 + 2 + 1 + 2) - 8 - 4 - 1 - 2 - 16 - 32 - 8 - 4 - 4 - 4 - 2 - 1);
     REQUIRE(-r[1][1][1] == Catch::Approx(expected));
 }
 
-TEST_CASE("StencilLaplace27p")
+TEST_CASE("StencilLaplace27p periodic")
 {
     int N = 4;
     int gh = 1;
@@ -121,7 +121,7 @@ TEST_CASE("StencilLaplace27p")
     mgcl::Cuboid r(N, N, N, gh, gh, gh);
     mgcl::VaryingStencil3x3x3 stencilValues(1, 1, 1, 0, 0, 0); // just a dummy
 
-    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_27POINT, expectedFactor, stencilValues, 0);
+    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_27POINT, expectedFactor, stencilValues, 0, true);
 
     double expected = expectedFactor * (128.0 * 8 - 14.0 * (4 + 16 + 4 + 2 + 1 + 2) -
                                         3.0 * (8 + 4 + 1 + 2 + 16 + 32 + 8 + 4 + 4 + 4 + 2 + 1) -
@@ -129,7 +129,7 @@ TEST_CASE("StencilLaplace27p")
     REQUIRE(-r[1][1][1] == Catch::Approx(expected));
 }
 
-TEST_CASE("StencilVarying7p")
+TEST_CASE("StencilVarying7p periodic")
 {
     int N = 4;
     int gh = 1;
@@ -166,13 +166,13 @@ TEST_CASE("StencilVarying7p")
     mgcl::Cuboid f(N, N, N, gh, gh, gh);
     mgcl::Cuboid r(N, N, N, gh, gh, gh);
 
-    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_VARYING, 1, vals, 0);
+    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_VARYING, 1, vals, 0, true);
 
     double expected = h2inv * (6.0 * 8 - 4 - 16 - 4 - 2 - 1 - 2);
     REQUIRE(-r[1][1][1] == Catch::Approx(expected));
 }
 
-TEST_CASE("StencilVarying19p")
+TEST_CASE("StencilVarying19p periodic")
 {
     int N = 4;
     int gh = 1;
@@ -236,13 +236,13 @@ TEST_CASE("StencilVarying19p")
     mgcl::Cuboid f(N, N, N, gh, gh, gh);
     mgcl::Cuboid r(N, N, N, gh, gh, gh);
 
-    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_VARYING, 1, vals, 0);
+    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_VARYING, 1, vals, 0, true);
 
     double expected = h2inv * (24.0 * 8 - 2.0 * (4 + 16 + 4 + 2 + 1 + 2) - 8 - 4 - 1 - 2 - 16 - 32 - 8 - 4 - 4 - 4 - 2 - 1);
     REQUIRE(-r[1][1][1] == Catch::Approx(expected));
 }
 
-TEST_CASE("StencilVarying27p")
+TEST_CASE("StencilVarying27p periodic")
 {
     int N = 4;
     int gh = 1;
@@ -323,7 +323,7 @@ TEST_CASE("StencilVarying27p")
     mgcl::Cuboid f(N, N, N, gh, gh, gh);
     mgcl::Cuboid r(N, N, N, gh, gh, gh);
 
-    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_VARYING, 1, vals, 0);
+    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_VARYING, 1, vals, 0, true);
 
     double expected = h2inv * (128.0 * 8 - 14.0 * (4 + 16 + 4 + 2 + 1 + 2) -
                                3.0 * (8 + 4 + 1 + 2 + 16 + 32 + 8 + 4 + 4 + 4 + 2 + 1) -

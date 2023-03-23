@@ -27,6 +27,9 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
     int n = N;
     int o = N;
 
+    mgcl::BC bc = mgcl::BC::PERIODIC;
+    bool periodic = bc == mgcl::BC::PERIODIC;
+
     ankerl::nanobench::Bench b;
     b.timeUnit(1us, "us")
         // .epochs(1)
@@ -42,6 +45,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
         f->fillRandom(0, 10);
 
         mgcl::Problem p(m, n, o, f, v);
+        p.setBc(bc);
         p.setSilent(true);
         p.init();
 
@@ -56,11 +60,11 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
         // jacobi
         b.run(std::string("seq jacobi, N = ").append(std::to_string(N)).c_str(), [&]
               { mgcl::MultigridEngine::jacobiSeq(v0, f0, r0, p.getOmega(), p.getNu1(), p.getResidualNorm(),
-                                                 p.getStencilType(), stencilFactor0, *p.getStencilValues(), false); });
+                                                 p.getStencilType(), stencilFactor0, *p.getStencilValues(), false, periodic); });
 
         // residual
         b.run(std::string("seq residual, N = ").append(std::to_string(N)).c_str(), [&]
-              { mgcl::MultigridEngine::residualSeq(f0, v0, r0, p.getResidualNorm(), p.getStencilType(), stencilFactor0, *p.getStencilValues(), false); });
+              { mgcl::MultigridEngine::residualSeq(f0, v0, r0, p.getResidualNorm(), p.getStencilType(), stencilFactor0, *p.getStencilValues(), false, periodic); });
 
         // updateGhosts
         b.run(std::string("seq updateGhosts, N = ").append(std::to_string(N)).c_str(), [&]
@@ -156,6 +160,9 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
     int n = N;
     int o = N;
 
+    mgcl::BC bc = mgcl::BC::PERIODIC;
+    bool periodic = bc == mgcl::BC::PERIODIC;
+
     ankerl::nanobench::Bench b;
     b.timeUnit(1us, "us")
         // .epochs(1)
@@ -173,6 +180,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
 
             mgcl::Problem p(m, n, o, f, v);
+            p.setBc(bc);
             p.setSilent(true);
             p.init();
 
@@ -186,7 +194,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
 
             b.run(std::string("seq jacobi, N = ").append(std::to_string(N)).c_str(), [&]
                   { mgcl::MultigridEngine::jacobiSeq(v0, f0, r0, p.getOmega(), p.getNu1(), p.getResidualNorm(),
-                                                     p.getStencilType(), stencilFactor0, *p.getStencilValues(), false); });
+                                                     p.getStencilType(), stencilFactor0, *p.getStencilValues(), false, periodic); });
         }
 
         {
@@ -237,7 +245,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
 
             b.run(std::string("seq residual, N = ").append(std::to_string(N)).c_str(), [&]
                   { mgcl::MultigridEngine::residualSeq(f0, v0, r0, p.getResidualNorm(), p.getStencilType(),
-                                                       stencilFactor0, *p.getStencilValues(), false); });
+                                                       stencilFactor0, *p.getStencilValues(), false, periodic); });
         }
 
         {

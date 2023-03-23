@@ -21,6 +21,7 @@ namespace mgcl
      */
     int OpenCLHelper::init()
     {
+        // TODO return actually useful information
         int err, i;
         cl_uint numPlatforms;
         cl_device_id device_id_;
