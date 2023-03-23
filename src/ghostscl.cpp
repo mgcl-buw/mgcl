@@ -89,6 +89,9 @@ namespace mgcl
      * Only enqueues the kernel. Neither waits for kernel to finish nor reads back results */
     int MultigridEngine::updateGhosts(Problem &problem, cl_mem dBuffer, int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o)
     {
+        if (problem.bc != BC::PERIODIC)
+            return CL_SUCCESS;
+
         int err;
 
         // Create the compute kernel from the program
