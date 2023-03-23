@@ -37,4 +37,11 @@ namespace mgcl
         MGCL_LAPLACE_27POINT,
         MGCL_VARYING
     } MGCL_STENCIL;
+
+    enum class BC
+    {
+        // TODO maybe add Hybrid antyime in the future, need do adjust ghosts_in logic then.
+        PERIODIC,
+        DIRICHLET
+    };
 }

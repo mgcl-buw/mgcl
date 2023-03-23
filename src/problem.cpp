@@ -73,6 +73,11 @@ namespace mgcl
             throw "mgcl: ghosts_in must be >= 0. Aborting.\n";
         }
 
+        if (ghosts_in <= 0 && bc != BC::PERIODIC)
+        {
+            throw "mgcl: ghosts_in must be > 0 if boundary conditions are not periodic. Aborting.\n";
+        }
+
         return true;
     }
 
@@ -406,9 +411,12 @@ namespace mgcl
             throw std::runtime_error("Failed to initialize mgcl data structures.");
 
         // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
-        MultigridEngine::updateGhostsSeq(levels[0]->getV());
+        if (bc == BC::PERIODIC)
+            MultigridEngine::updateGhostsSeq(levels[0]->getV());
+
         double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(),
-                                                      residual_norm, stencilType, levels[0]->stencilFactor, *levels[0]->stencilValues, !ignoreTol);
+                                                      residual_norm, stencilType, levels[0]->stencilFactor,
+                                                      *levels[0]->stencilValues, !ignoreTol, bc == BC::PERIODIC);
         if (!silent && !ignoreTol)
             printf("Starting mgcl with initres = %e\n", initres);
 
@@ -758,6 +766,16 @@ namespace mgcl
         return stencilType;
     }
 
+    BC Problem::getBc() const
+    {
+        return bc;
+    }
+
+    void Problem::setBc(const BC &bc_)
+    {
+        bc = bc_;
+    }
+
     cl_program Problem::getProgram() const
     {
         return openCLHelper.program;
@@ -771,6 +789,7 @@ namespace mgcl
     void Problem::setStencilType(const MGCL_STENCIL &stencilType_)
     {
         stencilType = stencilType_;
+        // TODO move to getStencilValues?
         if (stencilType == MGCL_VARYING)
             stencilValues = std::make_shared<VaryingStencil3x3x3>(m, n, o, 2, 2, 2);
         else

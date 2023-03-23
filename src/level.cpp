@@ -102,7 +102,8 @@ namespace mgcl
                                 problem->getF()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
                         }
 
-                MultigridEngine::updateGhostsSeq(getF());
+                if (problem->bc == BC::PERIODIC)
+                    MultigridEngine::updateGhostsSeq(getF());
             }
 
             // r on host is only needed if opencl should not be used

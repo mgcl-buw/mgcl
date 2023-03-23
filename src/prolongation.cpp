@@ -25,7 +25,9 @@ namespace mgcl
         int n = fine.n;
         int o = fine.o;
 
-        MultigridEngine::updateGhostsSeq(coarseVals);
+        if (fine.problem->bc == BC::PERIODIC)
+            MultigridEngine::updateGhostsSeq(coarseVals);
+
         int ioff = 1, joff = 1, koff = 1; // offset grows by 1 for each step
         int i2, j2, k2;
         for (int i = ghosts; i < m / 2 + ghosts; i++, ioff++)

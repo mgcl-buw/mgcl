@@ -25,7 +25,9 @@ namespace mgcl
         int n = coarse.n;
         int o = coarse.o;
 
-        MultigridEngine::updateGhostsSeq(fine_vals);
+        if (fine.problem->bc == BC::PERIODIC)
+            MultigridEngine::updateGhostsSeq(fine_vals);
+
         int ioff = 1, joff = 1, koff = 1; // offset grows by 1 for each step
         int i2, j2, k2;
         for (int i = ghosts; i < m + ghosts; i++, ioff++)
@@ -66,7 +68,9 @@ namespace mgcl
                 }
             }
         }
-        MultigridEngine::updateGhostsSeq(coarse_vals);
+
+        if (fine.problem->bc == BC::PERIODIC)
+            MultigridEngine::updateGhostsSeq(coarse_vals);
     }
 
     void MultigridEngine::restrict(Level &fine, Level &coarse, cl_mem d_fine_values, cl_mem d_coarse_values)
