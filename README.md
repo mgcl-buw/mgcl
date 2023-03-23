@@ -1,6 +1,10 @@
 # mgcl
 
-A multigrid implementation using OpenCL for solving PDEs.
+A multigrid implementation using OpenCL for solving elliptic PDEs with varying coefficients.
+
+**Important: This library is work in progress and neither feature-complete nor bug-free (probably)!**
+
+Currently only unit cube shaped domains are supported.
 
 ## Basic usage
 ```
@@ -12,9 +16,36 @@ mgcl::Cuboid v(N, N, N);
 mgcl::Cuboid f(N, N, N);
 f.fillRandom();
 
-// default stencil is Laplace 7p
+// default stencil is Laplace 7p with periodic bcs
 mgcl::Problem p(N, N, N, f, v);
 p.setUseOpenCL(true);
+p.solve();
+// solution is now in v
+```
+
+## Using Dirichlet bcs
+```
+#include "problem.hpp"
+#include "cuboid.hpp"
+
+int N = 64;
+int gh_in = 1;
+int Ngh = N + 2 * gh_in;
+mgcl::Cuboid v(Ngh, Ngh, Ngh);
+mgcl::Cuboid f(Ngh, Ngh, Ngh);
+f.fillRandom();
+
+// Define boundary values in halo region of v, e.g. 1.0 for left side.
+// If gh_in > 1, only those halo cells sitting directly at the boundary are read.
+for (int j = 0; j < Ngh; j++)
+    for (int k = 0; k < Ngh; k++)
+        v[0][j][k] = 1.0;
+
+// default stencil is Laplace 7p with periodic bcs
+mgcl::Problem p(N, N, N, f, v);
+p.setUseOpenCL(true);
+p.setGhostsIn(gh_in);
+p.setBc(mgcl::BC::DIRICHLET);
 p.solve();
 // solution is now in v
 ```
