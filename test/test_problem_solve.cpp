@@ -340,11 +340,11 @@ std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid &solution, mgcl::Cuboi
         throw std::invalid_argument("Dimensions do not match.");
 
     auto ret = std::make_shared<mgcl::Cuboid>(solution.getM(), solution.getN(), solution.getO());
-    for (int i = 0; i < solution.getM(); i++)
-        for (int j = 0; j < solution.getN(); j++)
-            for (int k = 0; k < solution.getO(); k++)
+    for (int i = 0, is = solution.getGhostsM(), ia = approximation.getGhostsM(); is < solution.getMgh(); i++, is++, ia++)
+        for (int j = 0, js = solution.getGhostsN(), ja = approximation.getGhostsN(); js < solution.getNgh(); j++, js++, ja++)
+            for (int k = 0, ks = solution.getGhostsO(), ka = approximation.getGhostsO(); ks < solution.getOgh(); k++, ks++, ka++)
             {
-                (*ret)[i][j][k] = fabs(solution[i][j][k] - approximation[i][j][k]);
+                (*ret)[i][j][k] = fabs(solution[is][js][ks] - approximation[ia][ja][ka]);
             }
 
     return ret;
