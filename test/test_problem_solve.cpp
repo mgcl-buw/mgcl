@@ -321,7 +321,11 @@ TEST_CASE("Problem solving: periodic 4th order")
                 CHECK(fabs(errMax - 3.95723982871536324e-03) < 1e-14);
             }
         }
-        MPI_Finalize();
+
+        // Gets called in custom catch2 main
+        // MPI_Finalize();
+    }
+}
     }
 }
 
