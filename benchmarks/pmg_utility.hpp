@@ -8,23 +8,17 @@ inline MPI_Comm *init_mpi_for_pmg()
     // setup MPI
     int mpi_size;
     int mpi_rank;
-    int mpi_dims[3] = {0, 0, 0};
-    int mpi_periods[3];
+    int mpi_dims[3] = {1, 1, 1};
+    int mpi_periods[3] = {1, 1, 1};
     int mpi_coords[3];
     MPI_Comm *mpi_comm_cart = (MPI_Comm *)malloc(sizeof(MPI_Comm));
-    int argcMock = 0;
-
-    char arg0[] = "programName";
-    char *argv[] = {&arg0[0], NULL};
-    int argc = (int)(sizeof(argv) / sizeof(argv[0])) - 1;
-    char **argvPtr = &argv[0];
 
     // init only once
     int initialized;
     MPI_Initialized(&initialized);
 
     if (!initialized)
-        MPI_Init(&argc, &argvPtr);
+        MPI_Init(NULL, NULL);
 
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
