@@ -7,6 +7,12 @@
 #include <stdexcept> // for invalid_argument
 #include <string>    // for to_string, allocator, basic_string
 
+#ifdef __APPLE__
+#include <OpenCL/cl_platform.h>
+#else
+#include <CL/cl_platform.h> // for cl_double
+#endif
+
 namespace mgcl
 {
     /**
@@ -102,7 +108,8 @@ namespace mgcl
                                 problem->getF()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
                         }
 
-                MultigridEngine::updateGhostsSeq(getF());
+                if (problem->bc == BC::PERIODIC)
+                    MultigridEngine::updateGhostsSeq(getF());
             }
 
             // r on host is only needed if opencl should not be used
@@ -203,6 +210,16 @@ namespace mgcl
         dR = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(double) * mgh * ngh * ogh,
                             NULL, &err);
         mgclCheckError(err, "clCreateBuffer");
+
+        // Init dVOut and dR to zero.
+        double zero = 0.0;
+        err = clEnqueueFillBuffer(problem->getCommands(), dVOut, &zero, sizeof(cl_double), 0,
+                                  sizeof(double) * mgh * ngh * ogh, 0, NULL, NULL);
+        mgclCheckError(err, "initializing dVOut to 0");
+
+        err = clEnqueueFillBuffer(problem->getCommands(), dR, &zero, sizeof(cl_double), 0,
+                                  sizeof(double) * mgh * ngh * ogh, 0, NULL, NULL);
+        mgclCheckError(err, "initializing dR to 0");
 
         err = MultigridEngine::updateGhosts(*problem, dF, mgh, ngh, ogh, problem->ghosts, problem->ghosts,
                                             problem->ghosts);

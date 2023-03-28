@@ -25,7 +25,8 @@ namespace mgcl
      * m,n,o is size of real grid */
     double MultigridEngine::jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
-                                      double stencilFactor, VaryingStencil3x3x3 &stencilValues, bool returnResidualNorm)
+                                      double stencilFactor, VaryingStencil3x3x3 &stencilValues, bool returnResidualNorm,
+                                      bool periodic)
     {
         double res = 0.0;
         double h2 = 1.0 / ((double)(v.getM() * v.getM()));
@@ -40,12 +41,13 @@ namespace mgcl
         for (int iter = 0; iter < maxiter; iter++)
         {
             // update ghost cells for periodic boundary condition
-            MultigridEngine::updateGhostsSeq(v);
+            if (periodic)
+                MultigridEngine::updateGhostsSeq(v);
 
             // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
 
             // r = f - A*v
-            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, returnResidualNorm);
+            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, returnResidualNorm, periodic);
 
             if (stencilType == MGCL_LAPLACE_7POINT || stencilType == MGCL_LAPLACE_19POINT || stencilType == MGCL_LAPLACE_27POINT)
             {
@@ -90,7 +92,10 @@ namespace mgcl
                         }
             }
         }
-        MultigridEngine::updateGhostsSeq(v);
+
+        if (periodic)
+            MultigridEngine::updateGhostsSeq(v);
+
         return res;
     }
 
@@ -793,7 +798,7 @@ namespace mgcl
     /* Calculates r = f - A*v using 7-point stencil of 3D laplacian.
      * m,n,o is size of real grid */
     double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
-                                        MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil3x3x3 &stencilValuesCuboid, bool returnResidualNorm)
+                                        MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil3x3x3 &stencilValuesCuboid, bool returnResidualNorm, bool periodic)
     {
         // TODO adjust when stencilValues are stored with ghosts
         double res = 0.0;
@@ -926,7 +931,10 @@ namespace mgcl
                             res = r[i][j][k];
                     }
                 }
-        MultigridEngine::updateGhostsSeq(r);
+
+        if (periodic)
+            MultigridEngine::updateGhostsSeq(r);
+
         return (returnResidualNorm && resnorm == MGCL_L2) ? sqrt(res) : res;
     }
 

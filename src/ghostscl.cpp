@@ -1,14 +1,15 @@
-#include "cuboid.hpp"
-#include "multigrid_engine.hpp"
-#include "opencl_helper.hpp"
+#include "cuboid.hpp"           // for Cuboid
+#include "mgcl.hpp"             // for BC
+#include "multigrid_engine.hpp" // for Problem, MultigridEngine
+#include "opencl_helper.hpp"    // for mgclCheckError, OpenCLHelper
+
+#include <cstddef> // for size_t, NULL
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
 #include <CL/cl.h>
 #endif
-
-#include <cstddef>
 
 namespace mgcl
 {
@@ -89,6 +90,9 @@ namespace mgcl
      * Only enqueues the kernel. Neither waits for kernel to finish nor reads back results */
     int MultigridEngine::updateGhosts(Problem &problem, cl_mem dBuffer, int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o)
     {
+        if (problem.bc != BC::PERIODIC)
+            return CL_SUCCESS;
+
         int err;
 
         // Create the compute kernel from the program

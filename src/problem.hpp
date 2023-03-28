@@ -59,8 +59,9 @@ namespace mgcl
          * max(nu1, nu2). Must fit to buffers ghosts size if reuse_opencl_buffers is set. Defaults to 1. */
         int ghosts = 1;
 
-        /* Amount of ghost cells of input data. Defaults to 0. Only relevant if buffers are not reused. */
-        int ghosts_in = 0;
+        /* Amount of ghost cells of input data. Defaults to 0. Only relevant if buffers are not reused or bc is not
+           periodic. */
+        int ghosts_in = 0; // TODO remove, use ghosts attribute from cuboids?
 
         /* maximum grid level, starting from 0 as the finest level */
         int maxlevel = -1;
@@ -89,6 +90,11 @@ namespace mgcl
         /* Stencil that will be used in Jacobi's method */
         MGCL_STENCIL stencilType = MGCL_LAPLACE_7POINT;
         std::shared_ptr<VaryingStencil3x3x3> stencilValues = nullptr;
+
+        /* Boundary condition that shall be used. Only affects whether ghosts are updated. Values need to be set
+           in input v.
+           If not using periodic, ghosts_in must be set appropriately, see readme. */
+        BC bc = BC::PERIODIC;
 
         /* Whether to use opencl or not. Defaults to 0 (not using opencl) */
         // TODO needed?
@@ -263,5 +269,8 @@ namespace mgcl
         void setStencilType(const MGCL_STENCIL &stencilType_);
 
         std::shared_ptr<VaryingStencil3x3x3> &getStencilValues();
+
+        BC getBc() const;
+        void setBc(const BC &bc_);
     };
 }
