@@ -26,7 +26,12 @@ add_subdirectory(src)
 # See https://www.foonathan.net/2022/06/cmake-fetchcontent/
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   # We're in the root, define additional targets for developers.
-  cmake_minimum_required(VERSION 3.24)
+
+  # Not requiring 3.24 for now (would enable FIND_PACKAGE_ARGS for FetchContent, but Pleiades does not support 3.24 yet)
+  # cmake_minimum_required(VERSION 3.24)
+
+  set(MGCL_catch2_version "v3.3.2")
+  set(MGCL_nanobench_version "v4.3.11")
 
   option(MGCL_BUILD_TESTS      "whether or not tests should be built" ON)
   option(MGCL_BUILD_BENCHMARKS "whether or not benchmarks should be built" ON)

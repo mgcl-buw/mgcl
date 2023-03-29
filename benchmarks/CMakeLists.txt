@@ -1,24 +1,43 @@
 # ==========================
 Include(FetchContent)
 
-# Nanobench configuration
-FetchContent_Declare(
-    nanobench
-    GIT_REPOSITORY https://github.com/martinus/nanobench.git
-    GIT_TAG v4.3.11
+if(${CMAKE_VERSION} VERSION_LESS "3.24.0") 
+  # Nanobench configuration
+  FetchContent_Declare(
+      nanobench
+      GIT_REPOSITORY https://github.com/martinus/nanobench.git
+      GIT_TAG ${MGCL_nanobench_version}
+      GIT_SHALLOW TRUE
+  )
+
+  FetchContent_MakeAvailable(nanobench)
+
+  FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG        ${MGCL_catch2_version} # or a later release
+    GIT_SHALLOW TRUE
+  )
+else()
+  # Nanobench configuration
+  FetchContent_Declare(
+      nanobench
+      GIT_REPOSITORY https://github.com/martinus/nanobench.git
+      GIT_TAG ${MGCL_nanobench_version}
+      GIT_SHALLOW TRUE
+      FIND_PACKAGE_ARGS # try to find using find_package first
+  )
+
+  FetchContent_MakeAvailable(nanobench)
+
+  FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG        ${MGCL_catch2_version} # or a later release
     GIT_SHALLOW TRUE
     FIND_PACKAGE_ARGS # try to find using find_package first
-)
-
-FetchContent_MakeAvailable(nanobench)
-
-FetchContent_Declare(
-  Catch2
-  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        v3.3.2 # or a later release
-  GIT_SHALLOW TRUE
-  FIND_PACKAGE_ARGS # try to find using find_package first
-)
+  )
+endif()
 
 FetchContent_MakeAvailable(Catch2)
 

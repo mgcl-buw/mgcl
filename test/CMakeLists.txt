@@ -1,13 +1,22 @@
 # ==========================
 Include(FetchContent)
 
-FetchContent_Declare(
-  Catch2
-  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        v3.3.2 # or a later release
-  GIT_SHALLOW TRUE
-  FIND_PACKAGE_ARGS # try to find using find_package first
-)
+if(${CMAKE_VERSION} VERSION_LESS "3.24.0") 
+  FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG        ${MGCL_catch2_version} # or a later release
+    GIT_SHALLOW TRUE
+  )
+else()
+  FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG        ${MGCL_catch2_version} # or a later release
+    GIT_SHALLOW TRUE
+    FIND_PACKAGE_ARGS # try to find using find_package first
+  )
+endif()
 
 FetchContent_MakeAvailable(Catch2)
 
