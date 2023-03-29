@@ -10,8 +10,6 @@ if(${CMAKE_VERSION} VERSION_LESS "3.24.0")
       GIT_SHALLOW TRUE
   )
 
-  FetchContent_MakeAvailable(nanobench)
-
   FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
@@ -28,8 +26,6 @@ else()
       FIND_PACKAGE_ARGS # try to find using find_package first
   )
 
-  FetchContent_MakeAvailable(nanobench)
-
   FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
@@ -39,6 +35,7 @@ else()
   )
 endif()
 
+FetchContent_MakeAvailable(nanobench)
 FetchContent_MakeAvailable(Catch2)
 
 # don't use iwyu for Catch2
