@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --exclusive
+## not running exclusively #SBATCH --exclusive
 #SBATCH --job-name=mgcl_build
 #SBATCH --partition=gpu
 #SBATCH --account=imacm_gpu
