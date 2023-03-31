@@ -45,6 +45,14 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
             v->fillRandom(0, 10);
             f->fillRandom(0, 10);
 
+            std::function<mgcl::Problem *()> createProblem = [m, n, o, &f, &v, vcycleIters]()
+            {
+                auto p = new mgcl::Problem(m, n, o, f, v);
+                p->setSilent(true);
+                p->setMaxiterVcycles(vcycleIters);
+                return p;
+            };
+
             std::string name = std::string("seq fixed 7p Laplace, N = ")
                                    .append(std::to_string(N))
                                    .append(", iters: ")
@@ -52,27 +60,20 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
 
             b.run(std::string(name).append(", overhead").c_str(), [&]
                   {
-                      auto p = new mgcl::Problem(m, n, o, f, v);
-                      p->setSilent(true);
-                      p->setMaxiterVcycles(vcycleIters);
-                      // p.init();
+                      auto p = createProblem();
                       delete p; //
                   });
 
             b.run(std::string(name).append(", init").c_str(), [&]
                   {
-                      auto p = new mgcl::Problem(m, n, o, f, v);
-                      p->setSilent(true);
-                      p->setMaxiterVcycles(vcycleIters);
+                      auto p = createProblem();
                       p->init();
                       delete p; //
                   });
 
             b.run(std::string(name).append(", init+solve").c_str(), [&]
                   {
-                      auto p = new mgcl::Problem(m, n, o, f, v);
-                      p->setSilent(true);
-                      p->setMaxiterVcycles(vcycleIters);
+                      auto p = createProblem();
                       p->solve();
                       delete p; //
                   });
@@ -85,13 +86,14 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
             v->fillRandom(0, 10);
             f->fillRandom(0, 10);
 
-            // mgcl::Problem p(m, n, o, f, v);
-            // p.setSilent(true);
-            // p.setStencilType(mgcl::MGCL_VARYING);
-            // auto &s = *p.getStencilValues();
-
-            std::function<void(mgcl::VaryingStencil3x3x3 &)> fillStencil = [N](mgcl::VaryingStencil3x3x3 &s)
+            std::function<mgcl::Problem *()> createProblem = [m, n, o, &f, &v, vcycleIters, N]()
             {
+                auto p = new mgcl::Problem(m, n, o, f, v);
+                p->setSilent(true);
+                p->setMaxiterVcycles(vcycleIters);
+                p->setStencilType(mgcl::MGCL_VARYING);
+                auto &s = *p->getStencilValues();
+
                 // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
                 for (int i = 0; i < N; i++)
                     for (int j = 0; j < N; j++)
@@ -106,6 +108,8 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
                             s[i][j][k][1][2][1] = 1;
                             s[i][j][k][2][1][1] = 1;
                         }
+
+                return p;
             };
 
             std::string name = std::string("seq varying 7p Laplace, N = ")
@@ -115,13 +119,7 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
 
             b.run(std::string(name).append(", overhead").c_str(), [&]
                   {
-                      auto p = new mgcl::Problem(m, n, o, f, v);
-                      p->setSilent(true);
-                      p->setMaxiterVcycles(vcycleIters);
-                      p->setStencilType(mgcl::MGCL_VARYING);
-                      fillStencil(*p->getStencilValues());
-
-                      // p.init();
+                      auto p = createProblem();
                       delete p; //
                   });
 
@@ -130,24 +128,14 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
 
             b.run(std::string(name).append(", init").c_str(), [&]
                   {
-                      auto p = new mgcl::Problem(m, n, o, f, v);
-                      p->setSilent(true);
-                      p->setMaxiterVcycles(vcycleIters);
-                      p->setStencilType(mgcl::MGCL_VARYING);
-                      fillStencil(*p->getStencilValues());
-
+                      auto p = createProblem();
                       p->init();
                       delete p; //
                   });
 
             b.run(std::string(name).append(", init+solve").c_str(), [&]
                   {
-                      auto p = new mgcl::Problem(m, n, o, f, v);
-                      p->setSilent(true);
-                      p->setMaxiterVcycles(vcycleIters);
-                      p->setStencilType(mgcl::MGCL_VARYING);
-                      fillStencil(*p->getStencilValues());
-
+                      auto p = createProblem();
                       p->solve();
                       delete p; //
                   });
