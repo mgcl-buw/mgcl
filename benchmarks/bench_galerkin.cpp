@@ -62,13 +62,13 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
             auto tmp = b.minEpochIterations();
             b.minEpochIterations(300);
 
-            b.run(std::string(name).append(", overhead").c_str(), [&]
+            b.run(std::string(name).append(", overhead (oh)").c_str(), [&]
                   {
                       auto p = createProblem();
                       delete p; //
                   });
 
-            b.run(std::string(name).append(", init").c_str(), [&]
+            b.run(std::string(name).append(", init+oh").c_str(), [&]
                   {
                       auto p = createProblem();
                       p->init();
@@ -77,7 +77,7 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
 
             b.minEpochIterations(tmp);
 
-            b.run(std::string(name).append(", init+solve").c_str(), [&]
+            b.run(std::string(name).append(", init+oh+solve").c_str(), [&]
                   {
                       auto p = createProblem();
                       p->solve();
@@ -123,7 +123,7 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
                                    .append(", iters: ")
                                    .append(std::to_string(vcycleIters));
 
-            b.run(std::string(name).append(", overhead").c_str(), [&]
+            b.run(std::string(name).append(", overhead (oh)").c_str(), [&]
                   {
                       auto p = createProblem();
                       delete p; //
@@ -132,14 +132,14 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
             if (N >= 32)
                 b.epochs(1).epochIterations(1);
 
-            b.run(std::string(name).append(", init").c_str(), [&]
+            b.run(std::string(name).append(", init+oh").c_str(), [&]
                   {
                       auto p = createProblem();
                       p->init();
                       delete p; //
                   });
 
-            b.run(std::string(name).append(", init+solve").c_str(), [&]
+            b.run(std::string(name).append(", init+oh+solve").c_str(), [&]
                   {
                       auto p = createProblem();
                       p->solve();
@@ -177,7 +177,7 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
             auto tmp = b.minEpochIterations();
             b.minEpochIterations(300);
 
-            b.run(std::string(name).append(", overhead").c_str(), [&]
+            b.run(std::string(name).append(", overhead (oh)").c_str(), [&]
                   {
                       auto p = createProblem();
                       delete p; //
@@ -192,14 +192,14 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
                       delete p; //
                   });
 
-            b.run(std::string(name).append(", init").c_str(), [&]
+            b.run(std::string(name).append(", init+oh").c_str(), [&]
                   {
                       auto p = createProblem();
                       p->init();
                       delete p; //
                   });
 
-            b.run(std::string(name).append(", init+solve").c_str(), [&]
+            b.run(std::string(name).append(", init+oh+solve").c_str(), [&]
                   {
                       auto p = createProblem();
                       p->solve();
@@ -250,7 +250,7 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
             // if (N >= 32)
             //     b.epochs(1).epochIterations(1);
 
-            b.run(std::string(name).append(", overhead").c_str(), [&]
+            b.run(std::string(name).append(", overhead (oh)").c_str(), [&]
                   {
                       auto p = createProblem();
                       delete p; //
@@ -263,14 +263,14 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
                       delete p; //
                   });
 
-            b.run(std::string(name).append(", init").c_str(), [&]
+            b.run(std::string(name).append(", init+oh").c_str(), [&]
                   {
                       auto p = createProblem();
                       p->init();
                       delete p; //
                   });
 
-            b.run(std::string(name).append(", init+solve").c_str(), [&]
+            b.run(std::string(name).append(", init+oh+solve").c_str(), [&]
                   {
                       auto p = createProblem();
                       p->solve();
