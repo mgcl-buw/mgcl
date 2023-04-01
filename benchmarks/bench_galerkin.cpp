@@ -58,6 +58,10 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
                                    .append(", iters: ")
                                    .append(std::to_string(vcycleIters));
 
+            // Increase epoch count for overhead and init
+            auto tmp = b.minEpochIterations();
+            b.minEpochIterations(300);
+
             b.run(std::string(name).append(", overhead").c_str(), [&]
                   {
                       auto p = createProblem();
@@ -70,6 +74,8 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
                       p->init();
                       delete p; //
                   });
+
+            b.minEpochIterations(tmp);
 
             b.run(std::string(name).append(", init+solve").c_str(), [&]
                   {
@@ -167,11 +173,17 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
                                    .append(", iters: ")
                                    .append(std::to_string(vcycleIters));
 
+            // Increase epoch count for overhead
+            auto tmp = b.minEpochIterations();
+            b.minEpochIterations(300);
+
             b.run(std::string(name).append(", overhead").c_str(), [&]
                   {
                       auto p = createProblem();
                       delete p; //
                   });
+
+            b.minEpochIterations(tmp);
 
             b.run(std::string(name).append(", init ocl env").c_str(), [&]
                   {
@@ -269,4 +281,7 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
             //     b.epochs(11).epochIterations(0);
         }
     }
+
+    std::ofstream renderOutCsv(std::string("bench_initVsSolve_").append(std::to_string(N)).append(".csv"));
+    b.render(ankerl::nanobench::templates::csv(), renderOutCsv);
 }
