@@ -12,6 +12,7 @@ using namespace std::chrono_literals;
 #include "../src/problem.hpp"
 #include "../test/test_utility.hpp"
 
+// TODO this benchmark needs rework, does not give reliable results (cmp. bench_galerkin)
 TEST_CASE("mgcl benchmarks console: init", "[!benchmark][init][console]")
 {
     int N = GENERATE(16, 32, 64, 128);

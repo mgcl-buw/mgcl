@@ -17,13 +17,25 @@ using namespace std::chrono_literals;
 
 TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
 {
+    // Problem parameters
+    double tol = 1e-20;
+    int nu1 = 2;
+    int nu2 = 2;
+    double omega = 0.8;
+    int vcycleIters = 30;
+
+    std::cout << "Problem parameters:" << std::endl
+              << "  tol: " << tol << std::endl
+              << "  nu1: " << nu1 << std::endl
+              << "  nu2: " << nu2 << std::endl
+              << "  omega: " << omega << std::endl
+              << "  v-cycle iterations: " << vcycleIters << std::endl;
+
     // int N = GENERATE(8, 16, 32, 64);
     int N = 64;
     int m = N;
     int n = N;
     int o = N;
-
-    int vcycleIters = 30;
 
     ankerl::nanobench::Bench b;
     b.timeUnit(1ns, "ns")
