@@ -11,10 +11,10 @@
 
 current_time=$(date "+%Y.%m.%d-%H.%M.%S")
 
-cd "$HOME"/projects/mgcl/build || exit
+cd "$HOME"/projects/mgcl/build/benchmarks || exit
 
 # run e.g. with 
-# sbatch run_benchmarks.sh --chdir /beegfs/shoffmann/projects/mgcl/build/ [solve][console]
+# sbatch --chdir /beegfs/shoffmann/projects/mgcl/build/ run_benchmarks.sh [solve][console]
 "$HOME"/projects/mgcl/build/benchmarks/benchmarks "$@" > ~/output/"$current_time"-mgcl-bench.txt
 
 cd "$HOME"/projects/mgcl || exit
