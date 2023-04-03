@@ -35,7 +35,7 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
     // Build csv with aggregated values
     bool exportAggregated = true;
     std::stringstream ss;
-    ss << std::scientific << "grid;type;step;minTime\n";
+    ss << std::scientific << "\"grid\";\"type\";\"step\";\"minTime\"\n";
 
     std::vector<int> grids = {8, 16, 32, 64};
     for (auto N : grids)
@@ -319,13 +319,13 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
                 ss << ("\"seq fixed 27p\";");
                 ss << ("\"init\";");
                 ss << (b.results()[idx + 1].minimum(elapsed) - b.results()[idx].minimum(elapsed));
-                ss << (";\n");
+                ss << ("\n");
 
                 ss << ("\"") << (std::to_string(N)) << ("\";");
                 ss << ("\"seq fixed 27p\";");
                 ss << ("\"solve\";");
                 ss << (b.results()[idx + 2].minimum(elapsed) - b.results()[idx + 1].minimum(elapsed));
-                ss << (";\n");
+                ss << ("\n");
             }
 
             if (resSize >= 5)
@@ -335,13 +335,13 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
                 ss << ("\"seq varying 27p\";");
                 ss << ("\"init\";");
                 ss << (b.results()[idx + 1].minimum(elapsed) - b.results()[idx].minimum(elapsed));
-                ss << (";\n");
+                ss << ("\n");
 
                 ss << ("\"") << (std::to_string(N)) << ("\";");
                 ss << ("\"seq varying 27p\";");
                 ss << ("\"solve\";");
                 ss << (b.results()[idx + 2].minimum(elapsed) - b.results()[idx + 1].minimum(elapsed));
-                ss << (";\n");
+                ss << ("\n");
             }
 
             if (resSize >= 9)
@@ -351,19 +351,19 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
                 ss << ("\"ocl fixed 27p\";");
                 ss << ("\"init_ocl\";");
                 ss << (b.results()[idx + 1].minimum(elapsed) - b.results()[idx].minimum(elapsed));
-                ss << (";\n");
+                ss << ("\n");
 
                 ss << ("\"") << (std::to_string(N)) << ("\";");
                 ss << ("\"ocl fixed 27p\";");
                 ss << ("\"init\";");
                 ss << (b.results()[idx + 2].minimum(elapsed) - b.results()[idx + 1].minimum(elapsed));
-                ss << (";\n");
+                ss << ("\n");
 
                 ss << ("\"") << (std::to_string(N)) << ("\";");
                 ss << ("\"ocl fixed 27p\";");
                 ss << ("\"solve\";");
                 ss << (b.results()[idx + 3].minimum(elapsed) - b.results()[idx + 2].minimum(elapsed));
-                ss << (";\n");
+                ss << ("\n");
             }
 
             if (resSize >= 13)
@@ -373,19 +373,19 @@ TEST_CASE("galerkin init vs solve", "[console][galerkinInitVsSolve]")
                 ss << ("\"ocl varying 27p\";");
                 ss << ("\"init_ocl\";");
                 ss << (b.results()[idx + 1].minimum(elapsed) - b.results()[idx].minimum(elapsed));
-                ss << (";\n");
+                ss << ("\n");
 
                 ss << ("\"") << (std::to_string(N)) << ("\";");
                 ss << ("\"ocl varying 27p\";");
                 ss << ("\"init\";");
                 ss << (b.results()[idx + 2].minimum(elapsed) - b.results()[idx + 1].minimum(elapsed));
-                ss << (";\n");
+                ss << ("\n");
 
                 ss << ("\"") << (std::to_string(N)) << ("\";");
                 ss << ("\"ocl varying 27p\";");
                 ss << ("\"solve\";");
                 ss << (b.results()[idx + 3].minimum(elapsed) - b.results()[idx + 2].minimum(elapsed));
-                ss << (";\n");
+                ss << ("\n");
             }
         }
     }
