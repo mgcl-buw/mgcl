@@ -6,6 +6,7 @@
 // cmd args as global variables
 std::vector<int> CLI_ARGS::grids;
 int CLI_ARGS::minEpochIterations = 0;
+int CLI_ARGS::vCycleIterations = 10;
 
 // helper functions
 std::vector<int> split_int(std::string s, std::string delimiter);
@@ -26,19 +27,23 @@ int main(int argc, char *argv[])
     Catch::Session session; // There must be exactly one instance
 
     std::string grids;
-    int minEpochIterations;
+    int minEpochIterations = CLI_ARGS::minEpochIterations;
+    int vCycleIterations = CLI_ARGS::vCycleIterations;
 
     // Build a new parser on top of Catch2's
     using namespace Catch::Clara;
-    auto cli = session.cli()                             // Get Catch2's command line parser
-               | Opt(grids, "grids")                     // bind variable to a new option, with a hint string
-                     ["--grids"]                         // the option names it will respond to
-               ("grids seperated by ',', i.e. 8,16,32"); // description string for the help output
+    auto cli = session.cli()                            // Get Catch2's command line parser
+               | Opt(grids, "grids")                    // bind variable to a new option, with a hint string
+                     ["--grids"]                        // the option names it will respond to
+               ("grids seperated by ',', i.e. 8,16,32") // description string for the help output
 
-    auto cli = session.cli()                                         // Get Catch2's command line parser
-               | Opt(grids, "minEpochIterations")                    // bind variable to a new option, with a hint string
-                     ["--minEpochIterations"]                        // the option names it will respond to
-               ("minEpochIterations, 0 is auto, see nanobench doc"); // description string for the help output
+               | Opt(minEpochIterations, "minEpochIterations")      // bind variable to a new option, with a hint string
+                     ["--minEpochIterations"]                       // the option names it will respond to
+               ("minEpochIterations, 0 is auto, see nanobench doc") // description string for the help output
+
+               | Opt(vCycleIterations, "vCycleIterations") // bind variable to a new option, with a hint string
+                     ["--vCycleIterations"]                // the option names it will respond to
+               ("vCycleIterations, 10 is default");        // description string for the help output
 
     // Now pass the new composite back to Catch2 so it uses that
     session.cli(cli);
@@ -59,6 +64,12 @@ int main(int argc, char *argv[])
     {
         std::cout << "minEpochIterations: " << minEpochIterations << std::endl;
         CLI_ARGS::minEpochIterations = minEpochIterations;
+    }
+
+    if (vCycleIterations != 10)
+    {
+        std::cout << "vCycleIterations: " << vCycleIterations << std::endl;
+        CLI_ARGS::vCycleIterations = vCycleIterations;
     }
 
     return session.run();

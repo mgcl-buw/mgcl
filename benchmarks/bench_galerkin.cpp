@@ -24,7 +24,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
     int nu1 = 2;
     int nu2 = 2;
     double omega = 0.8;
-    int vcycleIters = 10;
+    int vcycleIters = CLI_ARGS::vCycleIterations;
 
     std::cout << "Problem parameters:" << std::endl
               << "  tol: " << tol << std::endl
@@ -433,7 +433,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
     int nu1 = 2;
     int nu2 = 2;
     double omega = 0.8;
-    int vcycleIters = 10;
+    int vcycleIters = CLI_ARGS::vCycleIterations;
 
     std::cout << "Problem parameters:" << std::endl
               << "  tol: " << tol << std::endl
