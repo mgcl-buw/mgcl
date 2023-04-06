@@ -43,13 +43,21 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 
   if (MGCL_BUILD_TESTS)
     add_subdirectory(test)
+
+    add_dependencies(tests copy_kernels)
+    add_dependencies(tests_solving copy_kernels)
   endif()
 
   if (MGCL_BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
+
+    add_dependencies(benchmarks copy_kernels)
   endif()
   
   if (MGCL_BUILD_EXAMPLES)
     add_subdirectory(examples)
+
+    add_dependencies(example_galerkin copy_kernels)
+    add_dependencies(example_main copy_kernels)
   endif()
 endif()

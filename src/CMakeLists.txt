@@ -31,6 +31,9 @@ target_link_libraries (mgcl OpenCL::OpenCL)
 # copy kernel file to build directory
 add_custom_command(
   OUTPUT "${CMAKE_BINARY_DIR}/src/mgcl.cl"
+  "${CMAKE_BINARY_DIR}/test/mgcl.cl"
+  "${CMAKE_BINARY_DIR}/benchmarks/mgcl.cl"
+  "${CMAKE_BINARY_DIR}/examples/mgcl.cl"
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mgcl.cl" "${CMAKE_BINARY_DIR}/src"
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mgcl.cl" "${CMAKE_BINARY_DIR}/test"
   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mgcl.cl" "${CMAKE_BINARY_DIR}/benchmarks"
