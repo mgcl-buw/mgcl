@@ -65,6 +65,8 @@ bench_stencil.cpp
 bench_galerkin.cpp
 bench_stencil_arithmetic.cpp
 bench_stencil_arithmetic_kernels.cpp
+cli_args.hpp
+catch2_main_benchs.cpp
 )
 
 add_executable(benchmarks ${SOURCES_BENCH})
@@ -82,7 +84,7 @@ target_link_libraries(benchmarks PRIVATE MPI::MPI_C)
 
 # target_include_directories(benchmarks_nanobench PRIVATE include/)
 target_link_libraries(benchmarks PRIVATE nanobench)
-target_link_libraries(benchmarks PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(benchmarks PRIVATE Catch2::Catch2)
 target_link_libraries(benchmarks PRIVATE mgcl)
 target_link_libraries(benchmarks PRIVATE pmg)
 target_link_libraries(benchmarks PRIVATE mgcl_c)

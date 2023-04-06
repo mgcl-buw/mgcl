@@ -15,6 +15,7 @@ using namespace std::chrono_literals;
 #include "../src/problem.hpp"
 #include "../test/test_utility.hpp"
 #include "bench_render_templates.hpp"
+#include "cli_args.hpp"
 
 TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
 {
@@ -37,7 +38,13 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
     std::stringstream ss;
     ss << std::scientific << "\"grid\";\"type\";\"step\";\"minTime\"\n";
 
-    std::vector<int> grids = {8, 16, 32, 64, 128};
+    // auto grids = CLI_ARGS::grids;
+    auto grids = CLI_ARGS::grids;
+    if (grids.empty())
+        std::vector<int> grids = {8, 16, 32, 64};
+
+    int minEpochIterations = CLI_ARGS::minEpochIterations;
+
     for (auto N : grids)
     {
         int m = N;
@@ -49,6 +56,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
             // .epochs(1)
             // .epochIterations(1)
             .minEpochTime(100ms)
+            .minEpochIterations(minEpochIterations)
             .relative(false);
         // .warmup(1); // especially for init OpenCL environment
 
@@ -439,7 +447,14 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
     std::stringstream ss;
     ss << std::scientific << "\"grid\";\"type\";\"step\";\"minTime\"\n";
 
-    std::vector<int> grids = {8, 16, 32, 64, 128};
+    // auto grids = CLI_ARGS::grids;
+    auto grids = CLI_ARGS::grids;
+    if (grids.empty())
+        std::vector<int> grids = {8, 16, 32, 64};
+
+    int minEpochIterations = CLI_ARGS::minEpochIterations;
+
+    // std::vector<int> grids = {8, 16, 32, 64, 128};
     for (auto N : grids)
     {
         int m = N;
@@ -450,7 +465,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
         b.timeUnit(1ns, "ns")
             // .epochs(1)
             // .epochIterations(1)
-            .minEpochIterations(30)
+            .minEpochIterations(minEpochIterations)
             .minEpochTime(100ms)
             .relative(false);
         // .warmup(1); // especially for init OpenCL environment
