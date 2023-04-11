@@ -17,7 +17,7 @@ using namespace std::chrono_literals;
 #include "bench_render_templates.hpp"
 #include "cli_args.hpp"
 
-TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
+TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][all]")
 {
     // Problem parameters
     double tol = 1e-20;
@@ -36,7 +36,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
     // Build csv with aggregated values
     bool exportAggregated = true;
     std::stringstream ss;
-    ss << std::scientific << "\"grid\";\"type\";\"step\";\"minTime\"\n";
+    ss << std::scientific << "\"grid\";\"type\";\"step\";\"minTime\";\"medianTime\";\"maxTime\";\"avgTime\"\n";
 
     // auto grids = CLI_ARGS::grids;
     auto grids = CLI_ARGS::grids;
@@ -63,8 +63,6 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
         bool gpuAvailable = mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU);
         // bool cpuAvailable = tu->deviceAvailable("", CL_DEVICE_TYPE_CPU);
 
-        // SECTION(std::string("N = ").append(std::to_string(N)).c_str())
-        // {
         {
             // CPU fixed Laplace stencil
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
@@ -86,10 +84,6 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
                                    .append(", iters: ")
                                    .append(std::to_string(vcycleIters));
 
-            // Increase epoch count for overhead and init
-            auto tmp = b.minEpochIterations();
-            b.minEpochIterations(300);
-
             b.run(std::string(name).append(", overhead (oh)").c_str(), [&]
                   {
                       auto p = createProblem();
@@ -102,8 +96,6 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
                       p->init();
                       delete p; //
                   });
-
-            b.minEpochIterations(tmp);
 
             b.run(std::string(name).append(", init+oh+solve").c_str(), [&]
                   {
@@ -157,9 +149,6 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
                       delete p; //
                   });
 
-            if (N >= 32)
-                b.epochs(1).epochIterations(1);
-
             b.run(std::string(name).append(", init+oh").c_str(), [&]
                   {
                       auto p = createProblem();
@@ -173,17 +162,10 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
                       p->solve();
                       delete p; //
                   });
-
-            if (N >= 32)
-                b.epochs(11).epochIterations(0);
         }
 
         if (gpuAvailable)
         {
-            // increase epoch count for gpu code
-            auto tmp = b.minEpochIterations();
-            b.minEpochIterations(300);
-
             // OpenCL fixed Laplace stencil
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
             auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
@@ -206,19 +188,11 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
                                    .append(", iters: ")
                                    .append(std::to_string(vcycleIters));
 
-            // Increase epoch count for overhead
-            // auto tmp = b.minEpochIterations();
-            // b.minEpochIterations(300);
-
             b.run(std::string(name).append(", overhead (oh)").c_str(), [&]
                   {
                       auto p = createProblem();
                       delete p; //
                   });
-
-            // b.minEpochIterations(tmp);
-
-            // b.minEpochIterations(10);
 
             b.run(std::string(name).append(", oh+init_ocl").c_str(), [&]
                   {
@@ -240,16 +214,10 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
                       p->solve();
                       delete p; //
                   });
-
-            b.minEpochIterations(tmp);
         }
 
         if (gpuAvailable)
         {
-            // increase epoch count for gpu code
-            auto tmp = b.minEpochIterations();
-            b.minEpochIterations(300);
-
             // OpenCL varying stencil (Galerkin)
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
             auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
@@ -288,11 +256,6 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
                                    .append(", iters: ")
                                    .append(std::to_string(vcycleIters));
 
-            // if (N >= 32)
-            //     b.epochs(1).epochIterations(1);
-
-            // b.minEpochIterations(10);
-
             b.run(std::string(name).append(", overhead (oh)").c_str(), [&]
                   {
                       auto p = createProblem();
@@ -319,13 +282,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
                       p->solve();
                       delete p; //
                   });
-
-            b.minEpochIterations(tmp);
-
-            // if (N >= 32)
-            //     b.epochs(11).epochIterations(0);
         }
-        // }
 
         if (exportAggregated)
         {
@@ -336,80 +293,48 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve]")
             auto resSize = b.results().size();
             int idx = 0;
 
+            auto wr = [&b, &idx, &ss](int N, std::string type, std::string step, int d1, int d2)
+            {
+                auto elapsed = ankerl::nanobench::Result::Measure::elapsed;
+
+                ss << "\"" << std::to_string(N) << "\";";
+                ss << "\"" << type << "\";";
+                ss << "\"" << step << "\";";
+                ss << b.results()[idx + d1].minimum(elapsed) - b.results()[idx + d2].minimum(elapsed) << ";";
+                ss << b.results()[idx + d1].median(elapsed) - b.results()[idx + d2].median(elapsed) << ";";
+                ss << b.results()[idx + d1].maximum(elapsed) - b.results()[idx + d2].maximum(elapsed) << ";";
+                ss << b.results()[idx + d1].average(elapsed) - b.results()[idx + d2].average(elapsed);
+                ss << "\n";
+            };
+
             if (resSize >= 2)
             {
                 idx = 0;
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"seq fixed 27p\";");
-                ss << ("\"init\";");
-                ss << (b.results()[idx + 1].minimum(elapsed) - b.results()[idx].minimum(elapsed));
-                ss << ("\n");
-
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"seq fixed 27p\";");
-                ss << ("\"solve\";");
-                ss << (b.results()[idx + 2].minimum(elapsed) - b.results()[idx + 1].minimum(elapsed));
-                ss << ("\n");
+                wr(N, "seq fixed 27p", "init", 1, 0);
+                wr(N, "seq fixed 27p", "solve", 2, 1);
             }
 
             if (resSize >= 5)
             {
                 idx = 3;
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"seq varying 27p\";");
-                ss << ("\"init\";");
-                ss << (b.results()[idx + 1].minimum(elapsed) - b.results()[idx].minimum(elapsed));
-                ss << ("\n");
-
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"seq varying 27p\";");
-                ss << ("\"solve\";");
-                ss << (b.results()[idx + 2].minimum(elapsed) - b.results()[idx + 1].minimum(elapsed));
-                ss << ("\n");
+                wr(N, "seq varying 27p", "init", 1, 0);
+                wr(N, "seq varying 27p", "solve", 2, 1);
             }
 
             if (resSize >= 9)
             {
                 idx = 6;
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"ocl fixed 27p\";");
-                ss << ("\"init_ocl\";");
-                ss << (b.results()[idx + 1].minimum(elapsed) - b.results()[idx].minimum(elapsed));
-                ss << ("\n");
-
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"ocl fixed 27p\";");
-                ss << ("\"init\";");
-                ss << (b.results()[idx + 2].minimum(elapsed) - b.results()[idx + 1].minimum(elapsed));
-                ss << ("\n");
-
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"ocl fixed 27p\";");
-                ss << ("\"solve\";");
-                ss << (b.results()[idx + 3].minimum(elapsed) - b.results()[idx + 2].minimum(elapsed));
-                ss << ("\n");
+                wr(N, "ocl fixed 27p", "init_ocl", 1, 0);
+                wr(N, "ocl fixed 27p", "init", 2, 1);
+                wr(N, "ocl fixed 27p", "solve", 3, 2);
             }
 
             if (resSize >= 13)
             {
                 idx = 10;
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"ocl varying 27p\";");
-                ss << ("\"init_ocl\";");
-                ss << (b.results()[idx + 1].minimum(elapsed) - b.results()[idx].minimum(elapsed));
-                ss << ("\n");
-
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"ocl varying 27p\";");
-                ss << ("\"init\";");
-                ss << (b.results()[idx + 2].minimum(elapsed) - b.results()[idx + 1].minimum(elapsed));
-                ss << ("\n");
-
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"ocl varying 27p\";");
-                ss << ("\"solve\";");
-                ss << (b.results()[idx + 3].minimum(elapsed) - b.results()[idx + 2].minimum(elapsed));
-                ss << ("\n");
+                wr(N, "ocl varying 27p", "init_ocl", 1, 0);
+                wr(N, "ocl varying 27p", "init", 2, 1);
+                wr(N, "ocl varying 27p", "solve", 3, 2);
             }
         }
     }
@@ -445,7 +370,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
     // Build csv with aggregated values
     bool exportAggregated = true;
     std::stringstream ss;
-    ss << std::scientific << "\"grid\";\"type\";\"step\";\"minTime\"\n";
+    ss << std::scientific << "\"grid\";\"type\";\"step\";\"minTime\";\"medianTime\";\"maxTime\";\"avgTime\"\n";
 
     // auto grids = CLI_ARGS::grids;
     auto grids = CLI_ARGS::grids;
@@ -475,10 +400,6 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
 
         if (gpuAvailable)
         {
-            // increase epoch count for gpu code
-            // auto tmp = b.minEpochIterations();
-            // b.minEpochIterations(300);
-
             // OpenCL fixed Laplace stencil
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
             auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
@@ -501,19 +422,11 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
                                    .append(", iters: ")
                                    .append(std::to_string(vcycleIters));
 
-            // Increase epoch count for overhead
-            // auto tmp = b.minEpochIterations();
-            // b.minEpochIterations(300);
-
             b.run(std::string(name).append(", overhead (oh)").c_str(), [&]
                   {
                       auto p = createProblem();
                       delete p; //
                   });
-
-            // b.minEpochIterations(tmp);
-
-            // b.minEpochIterations(10);
 
             b.run(std::string(name).append(", oh+init_ocl").c_str(), [&]
                   {
@@ -535,16 +448,10 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
                       p->solve();
                       delete p; //
                   });
-
-            // b.minEpochIterations(tmp);
         }
 
         if (gpuAvailable)
         {
-            // increase epoch count for gpu code
-            // auto tmp = b.minEpochIterations();
-            // b.minEpochIterations(300);
-
             // OpenCL varying stencil (Galerkin)
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
             auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
@@ -583,11 +490,6 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
                                    .append(", iters: ")
                                    .append(std::to_string(vcycleIters));
 
-            // if (N >= 32)
-            //     b.epochs(1).epochIterations(1);
-
-            // b.minEpochIterations(10);
-
             b.run(std::string(name).append(", overhead (oh)").c_str(), [&]
                   {
                       auto p = createProblem();
@@ -614,8 +516,6 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
                       p->solve();
                       delete p; //
                   });
-
-            // b.minEpochIterations(tmp);
         }
 
         if (exportAggregated)
@@ -627,48 +527,34 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
             auto resSize = b.results().size();
             int idx = 0;
 
+            auto wr = [&b, &idx, &ss](int N, std::string type, std::string step, int d1, int d2)
+            {
+                auto elapsed = ankerl::nanobench::Result::Measure::elapsed;
+
+                ss << "\"" << std::to_string(N) << "\";";
+                ss << "\"" << type << "\";";
+                ss << "\"" << step << "\";";
+                ss << b.results()[idx + d1].minimum(elapsed) - b.results()[idx + d2].minimum(elapsed) << ";";
+                ss << b.results()[idx + d1].median(elapsed) - b.results()[idx + d2].median(elapsed) << ";";
+                ss << b.results()[idx + d1].maximum(elapsed) - b.results()[idx + d2].maximum(elapsed) << ";";
+                ss << b.results()[idx + d1].average(elapsed) - b.results()[idx + d2].average(elapsed);
+                ss << "\n";
+            };
+
             if (resSize >= 4)
             {
                 idx = 0;
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"ocl fixed 27p\";");
-                ss << ("\"init_ocl\";");
-                ss << (b.results()[idx + 1].minimum(elapsed) - b.results()[idx].minimum(elapsed));
-                ss << ("\n");
-
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"ocl fixed 27p\";");
-                ss << ("\"init\";");
-                ss << (b.results()[idx + 2].minimum(elapsed) - b.results()[idx + 1].minimum(elapsed));
-                ss << ("\n");
-
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"ocl fixed 27p\";");
-                ss << ("\"solve\";");
-                ss << (b.results()[idx + 3].minimum(elapsed) - b.results()[idx + 2].minimum(elapsed));
-                ss << ("\n");
+                wr(N, "ocl fixed 27p", "init_ocl", 1, 0);
+                wr(N, "ocl fixed 27p", "init", 2, 1);
+                wr(N, "ocl fixed 27p", "solve", 3, 2);
             }
 
             if (resSize >= 8)
             {
                 idx = 4;
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"ocl varying 27p\";");
-                ss << ("\"init_ocl\";");
-                ss << (b.results()[idx + 1].minimum(elapsed) - b.results()[idx].minimum(elapsed));
-                ss << ("\n");
-
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"ocl varying 27p\";");
-                ss << ("\"init\";");
-                ss << (b.results()[idx + 2].minimum(elapsed) - b.results()[idx + 1].minimum(elapsed));
-                ss << ("\n");
-
-                ss << ("\"") << (std::to_string(N)) << ("\";");
-                ss << ("\"ocl varying 27p\";");
-                ss << ("\"solve\";");
-                ss << (b.results()[idx + 3].minimum(elapsed) - b.results()[idx + 2].minimum(elapsed));
-                ss << ("\n");
+                wr(N, "ocl varying 27p", "init_ocl", 1, 0);
+                wr(N, "ocl varying 27p", "init", 2, 1);
+                wr(N, "ocl varying 27p", "solve", 3, 2);
             }
         }
     }
