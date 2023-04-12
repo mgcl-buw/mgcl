@@ -2,3 +2,4 @@
 - aggregate residual norm on gpu
 - hybrid vcycle (coarse levels on cpu, fine levels on gpu)
 - fix local memory jacobi kernel
+- bench and optimize work group sizes of all kernels
