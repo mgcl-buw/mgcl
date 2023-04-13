@@ -1,59 +1,80 @@
 #include "ocl_wrapper.hpp"
 #include "../src/opencl_helper.hpp"
 
-OCLWrapper::OCLWrapper(cl_device_type deviceType, std::string deviceName, std::string kernelString, std::string kernelFilePath)
+OCLWrapper::OCLWrapper(cl_device_type deviceType, std::string deviceName, std::string kernelString,
+                       std::string kernelFilePath, cl_context _context)
+    : context(_context)
 {
     int i;
     cl_uint numPlatforms;
     cl_device_id device_id_;
 
-    // Find number of platforms
-    err = clGetPlatformIDs(0, nullptr, &numPlatforms);
-    mgcl::mgclCheckError(err, "Finding platforms");
-    if (numPlatforms == 0)
+    // Query device id of given context, or find a device and create a context if none is given.
+    if (context)
     {
-        printf("Found 0 platforms!\n");
-        // return w;
+        err = clRetainContext(context);
+        mgcl::mgclCheckError(err, "clRetainContext");
+
+        cl_uint numDevices;
+        err = clGetContextInfo(context, CL_CONTEXT_NUM_DEVICES, sizeof(cl_uint), &numDevices, nullptr);
+        mgcl::mgclCheckError(err, "CL_CONTEXT_NUM_DEVICES");
+
+        cl_device_id devs[numDevices];
+        err = clGetContextInfo(context, CL_CONTEXT_DEVICES, sizeof(cl_device_id) * numDevices, devs, nullptr);
+        mgcl::mgclCheckError(err, "CL_CONTEXT_DEVICES");
+
+        deviceId = devs[0];
     }
-
-    // Get all platforms
-    cl_platform_id Platform[numPlatforms];
-    err = clGetPlatformIDs(numPlatforms, Platform, nullptr);
-    mgcl::mgclCheckError(err, "Getting platforms");
-
-    cl_char device_name_available[1024] = {0}; // string to hold name of compute device
-
-    // take first device that conforms given device_type and name
-    for (i = 0; i < numPlatforms; i++)
+    else
     {
-        err = clGetDeviceIDs(Platform[i], deviceType, 1, &device_id_, nullptr);
-        if (err == CL_SUCCESS)
+        // Find number of platforms
+        err = clGetPlatformIDs(0, nullptr, &numPlatforms);
+        mgcl::mgclCheckError(err, "Finding platforms");
+        if (numPlatforms == 0)
         {
-            if (deviceName != "" && deviceName != "default")
-            {
-                err = clGetDeviceInfo(device_id_, CL_DEVICE_NAME, sizeof(device_name_available),
-                                      &device_name_available, nullptr);
-                mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
-
-                // continue to next device if name doesn't fit
-                if (std::string((char *)device_name_available).find(deviceName) == std::string::npos)
-                    continue;
-            }
-
-            deviceId = device_id_;
-            break;
+            printf("Found 0 platforms!\n");
+            // return w;
         }
+
+        // Get all platforms
+        cl_platform_id Platform[numPlatforms];
+        err = clGetPlatformIDs(numPlatforms, Platform, nullptr);
+        mgcl::mgclCheckError(err, "Getting platforms");
+
+        cl_char device_name_available[1024] = {0}; // string to hold name of compute device
+
+        // take first device that conforms given device_type and name
+        for (i = 0; i < numPlatforms; i++)
+        {
+            err = clGetDeviceIDs(Platform[i], deviceType, 1, &device_id_, nullptr);
+            if (err == CL_SUCCESS)
+            {
+                if (deviceName != "" && deviceName != "default")
+                {
+                    err = clGetDeviceInfo(device_id_, CL_DEVICE_NAME, sizeof(device_name_available),
+                                          &device_name_available, nullptr);
+                    mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
+
+                    // continue to next device if name doesn't fit
+                    if (std::string((char *)device_name_available).find(deviceName) == std::string::npos)
+                        continue;
+                }
+
+                deviceId = device_id_;
+                break;
+            }
+        }
+
+        if (deviceId == nullptr)
+            mgcl::mgclCheckError(-1, "Finding a device");
+
+        err = mgcl::OpenCLHelper::outputDeviceInfo(deviceId);
+        mgcl::mgclCheckError(err, "Printing device output");
+
+        // Create a compute context
+        context = clCreateContext(0, 1, &deviceId, nullptr, nullptr, &err);
+        mgcl::mgclCheckError(err, "Creating context");
     }
-
-    if (deviceId == nullptr)
-        mgcl::mgclCheckError(-1, "Finding a device");
-
-    err = mgcl::OpenCLHelper::outputDeviceInfo(deviceId);
-    mgcl::mgclCheckError(err, "Printing device output");
-
-    // Create a compute context
-    context = clCreateContext(0, 1, &deviceId, nullptr, nullptr, &err);
-    mgcl::mgclCheckError(err, "Creating context");
 
     // Create a command queue
     commands = clCreateCommandQueue(context, deviceId, 0, &err);
@@ -98,6 +119,12 @@ OCLWrapper::OCLWrapper(cl_device_type deviceType, std::string deviceName, std::s
         free(log);
         // return w;
     }
+}
+
+OCLWrapper::OCLWrapper(cl_device_type deviceType, std::string deviceName, std::string kernelString,
+                       std::string kernelFilePath)
+{
+    OCLWrapper(deviceType, deviceName, kernelString, kernelFilePath, nullptr);
 }
 
 OCLWrapper::~OCLWrapper()

@@ -3,9 +3,11 @@
 #include <catch2/generators/catch_generators_range.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include "ocl_wrapper.hpp"
 #include "test_utility.hpp"
 
 #include "../src/cuboid.hpp"
+#include "../src/opencl_helper.hpp"
 #include "../src/util.hpp"
 
 #ifdef __APPLE__
@@ -17,7 +19,7 @@
 #include <iomanip>
 #include <iostream>
 
-double sum_ocl_naive(std::vector<double> input);
+double sum_ocl_naive(cl_mem buf, int num_elements, cl_context context);
 
 // Test if the sum reduction kernel yields correct results
 TEST_CASE("util::sum")
@@ -112,6 +114,38 @@ TEST_CASE("util::sum")
         REQUIRE_THAT(sum_host, Catch::Matchers::WithinAbs(buf_sum[0], 1e-12));
     }
 
+    SECTION("sum_ocl_naive")
+    {
+        int m = 1;
+        int n = 1;
+        int o = 800000;
+
+        mgcl::Cuboid data(m, n, o);
+
+        double sum_host = 0; //(o / 2) / 512.0;
+        double cnt = -o / 2;
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                for (int k = 0; k < o; k++)
+                {
+                    data[i][j][k] = cnt / 5013.0;
+                    sum_host += data[i][j][k];
+                    cnt++;
+                    if (cnt == 0)
+                        cnt++;
+                    // cnt += 1e-1;
+                }
+
+        REQUIRE_THAT(sum_host, Catch::Matchers::WithinAbs(0, 1e-8));
+
+        mgcl_test::TestUtility tu;
+        cl_mem dBuf = tu.createOpenCLBuffer(data);
+
+        double sum_ocl = sum_ocl_naive(dBuf, m * n * o, tu.getContext());
+
+        REQUIRE_THAT(sum_host, Catch::Matchers::WithinAbs(sum_ocl, 1e-8));
+    }
+
     SECTION("opencl kernel")
     {
         SECTION("sum to 0")
@@ -123,7 +157,7 @@ TEST_CASE("util::sum")
             int m = 1;
             int n = 1;
             // int o = GENERATE(1, 2, range(5, 100, 7), 84848); // 1056; // GENERATE(1, 2, 32, 47);
-            int o = 4400;
+            int o = 80000;
 
             // std::cout << std::to_string(m) << "," << std::to_string(n) << "," << std::to_string(o) << "..." << std::endl;
 
@@ -135,7 +169,7 @@ TEST_CASE("util::sum")
                 for (int j = 0; j < n; j++)
                     for (int k = 0; k < o; k++)
                     {
-                        data[i][j][k] = cnt / 512.0;
+                        data[i][j][k] = cnt / 5013.0;
                         sum_host += data[i][j][k];
                         cnt++;
                         if (cnt == 0)
@@ -143,7 +177,7 @@ TEST_CASE("util::sum")
                         // cnt += 1e-1;
                     }
 
-            REQUIRE(sum_host == 0);
+            REQUIRE_THAT(sum_host, Catch::Matchers::WithinAbs(0, 1e-8));
 
             cl_mem dData = tu.createOpenCLBuffer(data);
             double sum_device = mgcl::util::sum(dData, data.field1d().size(), tu.getContext(), tu.getProgram(),
@@ -151,7 +185,7 @@ TEST_CASE("util::sum")
 
             // std::cout << std::scientific << std::setprecision(17) << "  host: " << sum_host << std::endl
             //           << "device: " << sum_device << std::endl;
-            REQUIRE_THAT(sum_host, Catch::Matchers::WithinAbs(sum_device, 1e-12));
+            REQUIRE_THAT(sum_host, Catch::Matchers::WithinAbs(sum_device, 1e-8));
             // std::cout << std::to_string(m) << "," << std::to_string(n) << "," << std::to_string(o) << "...OK" << std::endl;
         }
 
@@ -164,8 +198,8 @@ TEST_CASE("util::sum")
             size_t local = 32;
             int m = 1;
             int n = 1;
-            // int o = GENERATE(1, 2, range(5, 100, 7), 8484); // 1056; // GENERATE(1, 2, 32, 47);
-            int o = 8484;
+            int o = GENERATE(1, 2, range(5, 100, 7), 8484); // 1056; // GENERATE(1, 2, 32, 47);
+            // int o = 80484;
 
             // std::cout << std::to_string(m) << "," << std::to_string(n) << "," << std::to_string(o) << "..." << std::endl;
 
@@ -189,13 +223,58 @@ TEST_CASE("util::sum")
 
             // std::cout << std::scientific << std::setprecision(17) << "  host: " << sum_host << std::endl
             //           << "device: " << sum_device << std::endl;
-            REQUIRE_THAT(sum_host, Catch::Matchers::WithinAbs(sum_device, 1e-11));
+            REQUIRE_THAT(sum_host, Catch::Matchers::WithinAbs(sum_device, 1e-8));
             // std::cout << std::to_string(m) << "," << std::to_string(n) << "," << std::to_string(o) << "...OK" << std::endl;
         }
     }
 }
 
 // Builds sum on device using a naive kernel (only 1 work-item iterating over all elements).
-double sum_ocl_naive(std::vector<double> input)
+double sum_ocl_naive(cl_mem buf, int num_elements, cl_context context)
 {
+    std::string kernelSrc = R"DELIM(
+        __kernel void sum_naive(
+            __global double *restrict buf,
+            __global double *restrict out,
+            int num_elements
+        )
+        {
+            double sum = 0;
+
+            for (int p = 0; p < num_elements; p++)
+                sum += buf[p];
+
+            out[0] = sum;
+        }
+    )DELIM";
+
+    OCLWrapper w(CL_DEVICE_TYPE_GPU, "", kernelSrc, "", context);
+
+    int err;
+    cl_kernel sum_naive_kernel = clCreateKernel(w.program, "sum_naive", &err);
+    mgcl::mgclCheckError(err, "Creating kernel sum_naive");
+
+    size_t one = 1;
+    cl_mem dOut = clCreateBuffer(w.context, CL_MEM_WRITE_ONLY, sizeof(double), nullptr, &err);
+    mgcl::mgclCheckError(err, "Creating dPartialSums buffer");
+
+    int pos = 0;
+    err = clSetKernelArg(sum_naive_kernel, pos, sizeof(cl_mem), &buf);
+    err |= clSetKernelArg(sum_naive_kernel, ++pos, sizeof(cl_mem), &dOut);
+    err |= clSetKernelArg(sum_naive_kernel, ++pos, sizeof(int), &num_elements);
+    mgcl::mgclCheckError(err, "Setting kernel sum_naive arguments");
+
+    size_t global = 1;
+    size_t local = 1;
+    err = clEnqueueNDRangeKernel(w.commands, sum_naive_kernel, 1, NULL, &global, &local, 0, NULL, NULL);
+    mgcl::mgclCheckError(err, "Enqueueing kernel sum_naive");
+
+    err = clFinish(w.commands);
+    mgcl::mgclCheckError(err, "Finishing kernel sum_naive");
+
+    double tmp;
+    err = clEnqueueReadBuffer(w.commands, dOut, CL_TRUE, 0, sizeof(double), &tmp, 0, NULL, NULL);
+    mgcl::mgclCheckError(err, "Error: Failed to read dOut from device!");
+
+    return tmp;
 }

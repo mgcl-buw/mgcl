@@ -55,24 +55,6 @@ namespace mgcl::util
         err = clEnqueueNDRangeKernel(commands, kernel_sum_partial, 1, NULL, &global, &localSize, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing kernel sum_partial");
 
-        // double ret2 = 0;
-        // if (return_sum)
-        // {
-        //     clFinish(commands);
-
-        //     double tmp[num_partials];
-        //     err = clEnqueueReadBuffer(commands, dPartialSums, CL_TRUE, 0, sizeof(double) * num_partials,
-        //                               &tmp, 0, NULL, NULL);
-        //     mgclCheckError(err, "Error: Failed to read dTotalSum from device!");
-
-        //     for (int i = 0; i < num_partials; i++)
-        //     {
-        //         ret2 += tmp[i];
-        //     }
-        // }
-
-        // return ret2;
-
         // Create the compute kernel from the program
         cl_kernel kernel_sum_finish = clCreateKernel(program, "sum_finish", &err);
         mgclCheckError(err, "Creating sum_finish kernel");

@@ -3,7 +3,7 @@
  * @Email: shoffmann@uni-wuppertal.de
  * @Date: 2023-04-13 14:30:16
  * @Last Modified by: Simon Hoffmann
- * @Last Modified time: 2023-04-13 14:32:50
+ * @Last Modified time: 2023-04-13 14:53:24
  * @Description: Wrapper for OpenCL Environment
  */
 
@@ -23,6 +23,8 @@ class OCLWrapper
 {
 public:
     OCLWrapper(cl_device_type deviceType, std::string deviceName, std::string kernelString, std::string kernelFilePath);
+    OCLWrapper(cl_device_type deviceType, std::string deviceName, std::string kernelString, std::string kernelFilePath,
+               cl_context _context);
     OCLWrapper(const OCLWrapper &) = delete;
     OCLWrapper &operator=(const OCLWrapper &) = delete;
     OCLWrapper(const OCLWrapper &&) = delete;
