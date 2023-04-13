@@ -17,6 +17,8 @@
 #include <iomanip>
 #include <iostream>
 
+double sum_ocl_naive(std::vector<double> input);
+
 // Test if the sum reduction kernel yields correct results
 TEST_CASE("util::sum")
 {
@@ -162,8 +164,8 @@ TEST_CASE("util::sum")
             size_t local = 32;
             int m = 1;
             int n = 1;
-            int o = GENERATE(1, 2, range(5, 100, 7), 8484); // 1056; // GENERATE(1, 2, 32, 47);
-            // int o = 4400;
+            // int o = GENERATE(1, 2, range(5, 100, 7), 8484); // 1056; // GENERATE(1, 2, 32, 47);
+            int o = 8484;
 
             // std::cout << std::to_string(m) << "," << std::to_string(n) << "," << std::to_string(o) << "..." << std::endl;
 
@@ -191,4 +193,9 @@ TEST_CASE("util::sum")
             // std::cout << std::to_string(m) << "," << std::to_string(n) << "," << std::to_string(o) << "...OK" << std::endl;
         }
     }
+}
+
+// Builds sum on device using a naive kernel (only 1 work-item iterating over all elements).
+double sum_ocl_naive(std::vector<double> input)
+{
 }

@@ -57,6 +57,8 @@ set_property(
 set(SOURCES_BENCH
 ../test/test_utility.hpp
 ../test/test_utility.cpp
+../test/ocl_wrapper.hpp
+../test/ocl_wrapper.cpp
 bench_solve.cpp
 bench_solve_catch2.cpp
 bench_init.cpp

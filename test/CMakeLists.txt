@@ -55,6 +55,8 @@ test_matrix2d.cpp
 test_results.hpp
 test_results.cpp
 test_util.cpp
+ocl_wrapper.hpp
+ocl_wrapper.cpp
 )
 
 add_executable(tests ${SOURCES_TEST})
