@@ -54,6 +54,7 @@ matrix2d.cpp
 test_matrix2d.cpp
 test_results.hpp
 test_results.cpp
+test_util.cpp
 )
 
 add_executable(tests ${SOURCES_TEST})

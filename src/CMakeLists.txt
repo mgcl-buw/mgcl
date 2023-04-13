@@ -20,6 +20,8 @@ stencil.hpp
 stencil.cpp
 hypercube.hpp
 hypercube.cpp
+util.hpp
+util.cpp
 )
 
 add_library(mgcl ${SOURCES_LIB})
