@@ -82,6 +82,12 @@ namespace mgcl::util
             mgclCheckError(err, "Error: Failed to read dTotalSum from device!");
         }
 
+        err = clReleaseMemObject(dPartialSums);
+        mgclCheckError(err, "clReleaseMemObject dPartialSums");
+
+        err = clReleaseMemObject(dTotalSum);
+        mgclCheckError(err, "clReleaseMemObject dTotalSum");
+
         return ret;
     }
 
