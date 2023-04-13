@@ -18,17 +18,12 @@ std::vector<int> split_int(std::string s, std::string delimiter);
 // --minEpochIterations N
 int main(int argc, char *argv[])
 {
-    // CLI_ARGS::parseArgs(argc, argv);
-
-    // int result = Catch::Session().run(argc, argv);
-
-    // return result;
-
     Catch::Session session; // There must be exactly one instance
 
     std::string grids;
     int minEpochIterations = CLI_ARGS::minEpochIterations;
     int vCycleIterations = CLI_ARGS::vCycleIterations;
+    std::string outputPath = ".";
 
     // Build a new parser on top of Catch2's
     using namespace Catch::Clara;
@@ -43,7 +38,11 @@ int main(int argc, char *argv[])
 
                | Opt(vCycleIterations, "vCycleIterations") // bind variable to a new option, with a hint string
                      ["--vCycleIterations"]                // the option names it will respond to
-               ("vCycleIterations, 10 is default");        // description string for the help output
+               ("vCycleIterations, 10 is default")         // description string for the help output
+
+               | Opt(outputPath, "outputPath")                                         // bind variable to a new option, with a hint string
+                     ["--outputPath"]                                                  // the option names it will respond to
+               ("specify a path where any output should be written to. Default is ."); // description string for the help output
 
     // Now pass the new composite back to Catch2 so it uses that
     session.cli(cli);
@@ -70,6 +69,16 @@ int main(int argc, char *argv[])
     {
         std::cout << "vCycleIterations: " << vCycleIterations << std::endl;
         CLI_ARGS::vCycleIterations = vCycleIterations;
+    }
+
+    if (!outputPath.empty() && outputPath != ".")
+    {
+        // Add trailing slash if not given
+        if (outputPath.back() != '/')
+            outputPath.append("/");
+
+        std::cout << "outputPath: " << outputPath << std::endl;
+        CLI_ARGS::outputPath = outputPath;
     }
 
     return session.run();

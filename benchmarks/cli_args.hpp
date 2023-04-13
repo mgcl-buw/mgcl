@@ -10,6 +10,7 @@ namespace CLI_ARGS
     extern std::vector<int> grids;
     extern int minEpochIterations;
     extern int vCycleIterations;
+    extern std::string outputPath;
 }
 
 // // Simple wrapper for command line args which are static variables.

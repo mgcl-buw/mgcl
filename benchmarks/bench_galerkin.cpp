@@ -342,7 +342,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][all]")
     if (exportAggregated)
     {
         std::ofstream out;
-        out.open("bench_initVsSolve.csv");
+        out.open(CLI_ARGS::outputPath + "bench_initVsSolve.csv");
         out << ss.str();
         out.close();
     }
@@ -562,7 +562,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
     if (exportAggregated)
     {
         std::ofstream out;
-        out.open("bench_initVsSolve_oclOnly.csv");
+        out.open(CLI_ARGS::outputPath + "bench_initVsSolve_oclOnly.csv");
         out << ss.str();
         out.close();
     }
