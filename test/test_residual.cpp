@@ -107,7 +107,7 @@ TEST_CASE("residual")
     }
 }
 
-TEST_CASE("residual varying stencil  periodic")
+TEST_CASE("residual varying stencil periodic")
 {
     auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 

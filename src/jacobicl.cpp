@@ -5,6 +5,7 @@
 #include "multigrid_engine.hpp" // for Problem, VaryingStencil3x3x3, Multig...
 #include "problem.hpp"          // for Problem
 #include "stencil.hpp"          // for mgclCheckError, VaryingStencil3x3x3
+#include "util.hpp"
 
 #include <cstdio> // for printf, size_t, NULL
 #include <math.h> // for fabs, sqrt, ceil
@@ -295,20 +296,24 @@ namespace mgcl
                 err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 3, NULL, global3d, local3d, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing residual squared kernel");
 
-                err = clFinish(problem.getOpenCLHelper().getCommands());
-                mgclCheckError(err, "Waiting for kernels to finish");
-
-                err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * mgh * ngh * ogh,
-                                          rsquares[0][0], 0, NULL, NULL);
-                mgclCheckError(err, "Error: Failed to read rsquares array from device!");
-
                 // sum up residual squares
-                res = 0;
-                for (int i = problem.ghosts; i < mgh - problem.ghosts; i++)
-                    for (int j = problem.ghosts; j < ngh - problem.ghosts; j++)
-                        for (int k = problem.ghosts; k < ogh - problem.ghosts; k++)
-                            res += rsquares[i][j][k];
-                res = sqrt(res);
+                res = sqrt(util::sum(dRsquares, mgh * ngh * ogh,
+                                     problem.getContext(), problem.getProgram(), problem.getCommands(), true));
+
+                // err = clFinish(problem.getOpenCLHelper().getCommands());
+                // mgclCheckError(err, "Waiting for kernels to finish");
+
+                // err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * mgh * ngh * ogh,
+                //                           rsquares[0][0], 0, NULL, NULL);
+                // mgclCheckError(err, "Error: Failed to read rsquares array from device!");
+
+                // // sum up residual squares
+                // res = 0;
+                // for (int i = problem.ghosts; i < mgh - problem.ghosts; i++)
+                //     for (int j = problem.ghosts; j < ngh - problem.ghosts; j++)
+                //         for (int k = problem.ghosts; k < ogh - problem.ghosts; k++)
+                //             res += rsquares[i][j][k];
+                // res = sqrt(res);
 
                 clReleaseMemObject(dRsquares);
                 clReleaseKernel(kernel_square);
@@ -750,20 +755,24 @@ namespace mgcl
                 err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 3, NULL, global, local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing residual squared kernel");
 
-                err = clFinish(problem.getOpenCLHelper().getCommands());
-                mgclCheckError(err, "Waiting for kernels to finish");
-
-                err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * mgh * ngh * ogh,
-                                          rsquares[0][0], 0, NULL, NULL);
-                mgclCheckError(err, "Error: Failed to read rsquares array from device!");
-
                 // sum up residual squares
-                res = 0;
-                for (int i = problem.ghosts; i < mgh - problem.ghosts; i++)
-                    for (int j = problem.ghosts; j < ngh - problem.ghosts; j++)
-                        for (int k = problem.ghosts; k < ogh - problem.ghosts; k++)
-                            res += rsquares[i][j][k];
-                res = sqrt(res);
+                res = sqrt(util::sum(dRsquares, mgh * ngh * ogh,
+                                     problem.getContext(), problem.getProgram(), problem.getCommands(), true));
+
+                // err = clFinish(problem.getOpenCLHelper().getCommands());
+                // mgclCheckError(err, "Waiting for kernels to finish");
+
+                // err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * mgh * ngh * ogh,
+                //                           rsquares[0][0], 0, NULL, NULL);
+                // mgclCheckError(err, "Error: Failed to read rsquares array from device!");
+
+                // // sum up residual squares
+                // res = 0;
+                // for (int i = problem.ghosts; i < mgh - problem.ghosts; i++)
+                //     for (int j = problem.ghosts; j < ngh - problem.ghosts; j++)
+                //         for (int k = problem.ghosts; k < ogh - problem.ghosts; k++)
+                //             res += rsquares[i][j][k];
+                // res = sqrt(res);
 
                 clReleaseMemObject(dRsquares);
                 clReleaseKernel(kernel_square);

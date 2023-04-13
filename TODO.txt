@@ -1,9 +1,16 @@
 - bench and optimize init opencl
 - aggregate residual norm on gpu
+  - bench sum
+  - retest jacobi / residual
+  - implement max kernel
 - hybrid vcycle (coarse levels on cpu, fine levels on gpu)
 - fix local memory jacobi kernel
 - bench and optimize work group sizes of all kernels
 - adjust stencil storage for 7p stencil on finest grid + flag
 - multi-gpu for bigger problems (+ mpi)
  -> compare opencl + mpi vs. opencl only
- 
+
+Done:
+- aggregate residual norm on gpu
+  - implement + test sum
+

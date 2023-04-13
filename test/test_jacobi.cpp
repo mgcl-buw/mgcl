@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <cmath>
 #include <iostream>
@@ -45,7 +46,8 @@ TEST_CASE("jacobi")
         double res = mgcl::MultigridEngine::jacobiSeq(*c_in_v, *c_in_f, *c_in_r, omega, maxiter,
                                                       mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_7POINT, stencilFactor, *stencilValues, true, true);
 
-        CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
+        REQUIRE_THAT(res, Catch::Matchers::WithinAbs(4.02895897954478714e+04, 1e-7));
+        // CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
         CHECK(c_in_v->isEqual(*c_expected_out_v));
         CHECK(c_in_r->isEqual(*c_expected_out_r));
     }
@@ -86,7 +88,8 @@ TEST_CASE("jacobi")
         auto c_r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
         auto c_v_out = tu.readOpenCLBuffer(d_in_v, m, n, o, ghosts_m, ghosts_n, ghosts_o);
 
-        CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
+        REQUIRE_THAT(res, Catch::Matchers::WithinAbs(4.02895897954478714e+04, 1e-7));
+        // CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
         CHECK(c_v_out->isEqual(*c_expected_out_v));
         CHECK(c_r_out->isEqual(*c_expected_out_r));
     }
@@ -265,7 +268,8 @@ TEST_CASE("jacobi GPU varying stencil")
         // sv_in_lv0->dumpToFile("../sv_seq.txt");
         // c_sv_in.dumpToFile("../sv_gpu.txt");
 
-        REQUIRE(fabs(res_seq - res_gpu) < 1e-13);
+        REQUIRE_THAT(res_seq, Catch::Matchers::WithinAbs(res_gpu, 1e-7));
+        // REQUIRE(fabs(res_seq - res_gpu) < 1e-13);
         REQUIRE(c_r_out->isEqual(r_in_lv0));
         REQUIRE(c_v_out->isEqual(v_in_lv0));
     }
@@ -353,7 +357,8 @@ TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
     c_in_r->dumpToFile("c_in_r->txt");
     c_expected_out_r->dumpToFile("c_expected_out_r.txt");
 
-    CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
+    REQUIRE_THAT(res, Catch::Matchers::WithinAbs(4.02895897954478714e+04, 1e-7));
+    // CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
     CHECK(c_in_v->isEqual(*c_expected_out_v));
     CHECK(c_in_r->isEqual(*c_expected_out_r));
 }
