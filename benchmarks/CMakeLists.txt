@@ -67,6 +67,7 @@ bench_stencil.cpp
 bench_galerkin.cpp
 bench_stencil_arithmetic.cpp
 bench_stencil_arithmetic_kernels.cpp
+bench_sum.cpp
 cli_args.hpp
 catch2_main_benchs.cpp
 )

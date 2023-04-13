@@ -2100,7 +2100,6 @@ __kernel void sum_partial(
             // fold upper half onto lower half
             if (iloc < stride && iloc + stride < wg_size)
             {
-                printf("%d\n", get_global_id(0));
                 buf_local[iloc] += buf_local[iloc + stride];
             }
         }
@@ -2108,7 +2107,6 @@ __kernel void sum_partial(
         // write into output partial_sums
         if (iloc == 0)
         {
-            // printf("%d;%.17e\n", get_group_id(0), buf_local[iloc]);
             partial_sums[get_group_id(0)] = buf_local[iloc];
         }
     }
