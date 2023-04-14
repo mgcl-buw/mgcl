@@ -2071,15 +2071,17 @@ __kernel void cut_stencils_w7_to_w3(
 // Form partial sum of buf per work-group and write result into buf_local.
 // For full sum of buf sum_finish must be enqueued after this kernel (so global memory gets synchronized between work-groups).
 // Not that using barrier(CLK_GLOBAL_MEM_FENCE) does not work for this as it does not synchronize work-groups.
-// Must be called with a 1-D kernel range with #work-items = #elements in buf.
-// num_elements must be #elements in buf.
+// Must be called with a 1-D kernel range with #work-items = 1/fractions * #elements in buf.
+// num_elements must be half of #elements in buf.
 // partial_sums's size must be equal to number of work-groups.
 // buf_local's size must be equal to work-group size.
-__kernel void sum_partial(
+// fractions determines the size of mapping of work-items to num_elements, i.e. 4 means #wi = 1/4 * #elements
+__kernel void sum_partial_global_eq_x_num_elements(
     __global double *restrict buf,
     __global double *restrict partial_sums,
     __local double *buf_local,
-    int num_elements)
+    int num_elements,
+    int fractions)
 {
     int i = get_global_id(0);
     int wg_size = get_local_size(0);
@@ -2087,8 +2089,12 @@ __kernel void sum_partial(
 
     if (i < num_elements)
     {
-        // copy buf of this work-item into local storage
+        // copy buf of this work-item into local storage. Two values since #wi = num_elements / 2 + padding
         buf_local[iloc] = buf[i];
+
+        for (int f = 1; f < fractions; f++)
+            if (i + f * get_global_size(0) < num_elements)
+                buf_local[iloc] += buf[i + f * get_global_size(0)];
 
         // sum up buf using parallel sum reduction, "a >> 1" == "a / 2" for int
         // TODO: ensure that stride is even (or handle odd strides)

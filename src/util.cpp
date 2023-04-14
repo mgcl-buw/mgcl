@@ -2,6 +2,8 @@
 
 #include "opencl_helper.hpp"
 
+#include <cmath>
+
 namespace mgcl::util
 {
 
@@ -20,8 +22,17 @@ namespace mgcl::util
     {
         int err;
 
+        // Determine number of work-items worked out in benchmarks manually.
+        int fractions = 4;
+        if (num_elements > 16e6) // > 256^3
+            fractions = 512;
+        else if (num_elements > 2e6) // > 128^3
+            fractions = 128;
+        else if (num_elements > 250000) // > 64^3
+            fractions = 32;
+
         // One work-item per element in buf
-        size_t global = num_elements;
+        size_t global = ceil((1.0 / fractions) * num_elements);
 
         // Pad global work-item count to fit wg-size
         if (global % localSize != 0)
@@ -42,14 +53,15 @@ namespace mgcl::util
         mgclCheckError(err, "setting dPartialSums to 0");
 
         // Create the compute kernel from the program
-        cl_kernel kernel_sum_partial = clCreateKernel(program, "sum_partial", &err);
-        mgclCheckError(err, "Creating kernel sum_partial");
+        cl_kernel kernel_sum_partial = clCreateKernel(program, "sum_partial_global_eq_x_num_elements", &err);
+        mgclCheckError(err, "Creating kernel sum_partial_global_eq_x_num_elements");
 
         int pos = 0;
         err = clSetKernelArg(kernel_sum_partial, pos, sizeof(cl_mem), &buf);
         err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(cl_mem), &dPartialSums);
         err |= clSetKernelArg(kernel_sum_partial, ++pos, localSize * sizeof(double), nullptr);
         err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(int), &num_elements);
+        err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(int), &fractions);
         mgclCheckError(err, "Setting kernel sum_partial arguments");
 
         err = clEnqueueNDRangeKernel(commands, kernel_sum_partial, 1, NULL, &global, &localSize, 0, NULL, NULL);
