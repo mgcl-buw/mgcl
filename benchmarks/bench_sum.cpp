@@ -30,7 +30,7 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][seqVsOcl]")
 {
     std::vector grids{4, 8, 16, 32, 64, 128, 256, 512};
     // std::vector<size_t> locals{16, 32, 64};
-    size_t local = 32;
+    size_t local = 512;
 
     // for (auto local : locals)
     for (auto N : grids)
