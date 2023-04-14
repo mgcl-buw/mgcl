@@ -94,14 +94,14 @@ target_link_libraries(benchmarks PRIVATE mgcl_c)
 
 # copy kernel file to build directory
 add_custom_command(
-  OUTPUT "${CMAKE_BINARY_DIR}/kernel_optimizations.cl"
+  OUTPUT "${CMAKE_BINARY_DIR}/benchmarks/kernel_optimizations.cl"
   COMMAND ${CMAKE_COMMAND} -E copy
-  "${CMAKE_CURRENT_SOURCE_DIR}/kernel_optimizations.cl" "${CMAKE_BINARY_DIR}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/kernel_optimizations.cl" "${CMAKE_BINARY_DIR}/benchmarks"
   DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/kernel_optimizations.cl"
 )
 
 # Custom target for activate the custom command above
-add_custom_target(copy_kernel_optimizations DEPENDS "${CMAKE_BINARY_DIR}/kernel_optimizations.cl")
+add_custom_target(copy_kernel_optimizations DEPENDS "${CMAKE_BINARY_DIR}/benchmarks/kernel_optimizations.cl")
 
 # Whenever target 'benchmarks' is requested, the custom target will be evaluated.
 add_dependencies(benchmarks copy_kernel_optimizations)

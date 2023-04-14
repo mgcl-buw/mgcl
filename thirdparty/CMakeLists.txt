@@ -74,14 +74,14 @@ set_property(
 
 # copy kernel file to build directory
 add_custom_command(
-  OUTPUT "${CMAKE_BINARY_DIR}/mgcl_old.cl"
+  OUTPUT "${CMAKE_BINARY_DIR}/thirdparty/mgcl_old.cl"
   COMMAND ${CMAKE_COMMAND} -E copy
-  "${CMAKE_CURRENT_SOURCE_DIR}/mgcl_c/mgcl_old.cl" "${CMAKE_BINARY_DIR}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/mgcl_c/mgcl_old.cl" "${CMAKE_BINARY_DIR}/thirdparty"
   DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/mgcl_c/mgcl_old.cl"
 )
 
 # Custom target for activate the custom command above
-add_custom_target(copy_kernels_mgcl_c DEPENDS "${CMAKE_BINARY_DIR}/mgcl_old.cl")
+add_custom_target(copy_kernels_mgcl_c DEPENDS "${CMAKE_BINARY_DIR}/thirdparty/mgcl_old.cl")
 
 # Whenever target 'mgcl' is requested, the custom target will be evaluated.
 add_dependencies(mgcl_c copy_kernels_mgcl_c)
