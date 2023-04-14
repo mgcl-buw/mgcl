@@ -7,6 +7,7 @@
 std::vector<int> CLI_ARGS::grids;
 int CLI_ARGS::minEpochIterations = 0;
 int CLI_ARGS::vCycleIterations = 10;
+std::string CLI_ARGS::outputPath = ".";
 
 // helper functions
 std::vector<int> split_int(std::string s, std::string delimiter);
