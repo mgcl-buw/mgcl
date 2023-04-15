@@ -2132,3 +2132,79 @@ __kernel void sum_finish(
 
     buf_sum[0] = sum;
 }
+
+// Form partial maximum of buf per work-group and write result into buf_local.
+// For full maximum of buf max_finish must be enqueued after this kernel (so global memory gets synchronized between work-groups).
+// Not that using barrier(CLK_GLOBAL_MEM_FENCE) does not work for this as it does not synchronize work-groups.
+// Must be called with a 1-D kernel range with #work-items = 1/fractions * #elements in buf.
+// num_elements must be half of #elements in buf.
+// partial_max's size must be equal to number of work-groups.
+// buf_local's size must be equal to work-group size.
+// fractions determines the size of mapping of work-items to num_elements, i.e. 4 means #wi = 1/4 * #elements.
+// Work-group size must be even or the reduction will not work, i.e. miss the last element of each wg.
+__kernel void max_partial_global_eq_x_num_elements(
+    __global double *restrict buf,
+    __global double *restrict partial_max,
+    __local double *buf_local,
+    int num_elements,
+    int fractions)
+{
+    int i = get_global_id(0);
+    int wg_size = get_local_size(0);
+    int iloc = get_local_id(0);
+
+    if (i < num_elements)
+    {
+        // copy buf of this work-item into local storage. Two values since #wi = num_elements / 2 + padding
+        buf_local[iloc] = buf[i];
+
+        for (int f = 1; f < fractions; f++)
+            if (i + f * get_global_size(0) < num_elements)
+            {
+                double next = buf[i + f * get_global_size(0)];
+                if (next > buf_local[iloc])
+                    buf_local[iloc] = next;
+            }
+
+        // find maximum using parallel reduction, "a >> 1" == "a / 2" for int
+        // TODO: ensure that stride is even (or handle odd strides)
+        for (int stride = wg_size >> 1; stride > 0; stride >>= 1)
+        {
+            // synchronize local memory
+            barrier(CLK_LOCAL_MEM_FENCE);
+
+            // fold upper half onto lower half
+            if (iloc < stride && iloc + stride < wg_size && iloc + stride < num_elements)
+            {
+                double next = buf_local[iloc + stride];
+                if (next > buf_local[iloc])
+                    buf_local[iloc] = next;
+            }
+        }
+
+        // write into output
+        if (iloc == 0)
+        {
+            partial_max[get_group_id(0)] = buf_local[iloc];
+        }
+    }
+}
+
+// Finds maximum in buf_partial_max and writes result into buf_max. buf_partial_max needs to be filled using max_partial before using this kernel.
+// Must be called with only one work-item which iterates over the partial maxima.
+__kernel void max_finish(
+    __global double *restrict buf_partial_max,
+    __global double *restrict buf_max,
+    int partial_max_count)
+{
+    double max = buf_partial_max[0];
+
+    for (int p = 1; p < partial_max_count; p++)
+    {
+        double next = buf_partial_max[p];
+        if (next > max)
+            max = next;
+    }
+
+    buf_max[0] = max;
+}

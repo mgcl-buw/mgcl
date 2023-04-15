@@ -229,6 +229,47 @@ TEST_CASE("util::sum")
     }
 }
 
+// Test if the sum reduction kernel yields correct results
+TEST_CASE("util::max")
+{
+    mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+
+    // size_t local = GENERATE(8, 32, 43);
+    size_t local = 32;
+    int m = 1;
+    int n = 1;
+    int o = GENERATE(1, 2, range(5, 100, 7), 8484); // 1056; // GENERATE(1, 2, 32, 47);
+    // int o = 80484;
+
+    // std::cout << std::to_string(m) << "," << std::to_string(n) << "," << std::to_string(o) << "..." << std::endl;
+
+    mgcl::Cuboid data(m, n, o);
+    data.fillRandom(-10, 10);
+
+    double max_host = -100000;
+    // double cnt = 0;
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++)
+            for (int k = 0; k < o; k++)
+            {
+                // data[i][j][k] = cnt;
+                if (data[i][j][k] > max_host)
+                    max_host = data[i][j][k];
+                // cnt += 1.0 / 5013.0;
+                // cnt++;
+                // cnt += 1e-1;
+            }
+
+    cl_mem dData = tu.createOpenCLBuffer(data);
+    double max_device = mgcl::util::max(dData, data.field1d().size(), tu.getContext(), tu.getProgram(),
+                                        tu.getCommands(), true, local);
+
+    // std::cout << std::scientific << std::setprecision(17) << "  host: " << sum_host << std::endl
+    //           << "device: " << sum_device << std::endl;
+    REQUIRE_THAT(max_host, Catch::Matchers::WithinAbs(max_device, 1e-8));
+    // std::cout << std::to_string(m) << "," << std::to_string(n) << "," << std::to_string(o) << "...OK" << std::endl;
+}
+
 // Builds sum on device using a naive kernel (only 1 work-item iterating over all elements).
 double sum_ocl_naive(cl_mem buf, int num_elements, cl_context context)
 {

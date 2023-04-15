@@ -22,6 +22,8 @@ namespace mgcl::util
 {
     double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
                bool return_sum, size_t localSize = 512);
+    double max(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
+               bool return_sum, size_t localSize = 512);
 }
 
 #endif // MGCL_UTIL_HPP
