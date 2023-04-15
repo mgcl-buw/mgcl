@@ -24,6 +24,8 @@ using namespace std::chrono_literals;
 
 double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
            bool return_sum, size_t localSize, std::string kernelName, size_t globalSize, int fractions = 1);
+double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
+                         bool return_sum, size_t localSize, std::string kernelName, size_t global, int fractions);
 
 // Checks sum sequentially vs opencl
 TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][seqVsOcl]")
@@ -490,8 +492,12 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][kernelVersions]")
         sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
                            oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 256.0), 256));
 
-        for (auto s : sums)
-            std::cout << "  sum: " << s << std::endl;
+        sums.push_back(sum_finish_on_cpu(dData, data.field1d().size(), oclw.context, oclw.program,
+                                         oclw.commands, true, local, "sum_partial_global_eq_x_num_elements",
+                                         ceil(o / 256.0), 256));
+
+        // for (auto s : sums)
+        //     std::cout << "  sum: " << s << std::endl;
 
         for (auto s : sums)
             REQUIRE_THAT(sums[0], Catch::Matchers::WithinAbs(s, 1e-14));
@@ -603,6 +609,14 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][kernelVersions]")
                               sum(dData, num_elements, oclw.context, oclw.program,
                                   oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 512.0), 512)); //
                       });
+
+                b.run(std::string("sum_partial_global_eq_1/512_num_elements + sum_finish on cpu, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
+                      {
+                          ankerl::nanobench::doNotOptimizeAway(
+                              sum_finish_on_cpu(dData, num_elements, oclw.context, oclw.program,
+                                                oclw.commands, true, local, "sum_partial_global_eq_x_num_elements",
+                                                ceil(num_elements / 512.0), 512)); //
+                      });
             }
             std::cout << "=============" << std::endl;
         }
@@ -692,6 +706,78 @@ double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program progr
 
     err = clReleaseMemObject(dTotalSum);
     mgcl::mgclCheckError(err, "clReleaseMemObject dTotalSum");
+
+    return ret;
+}
+
+// Copied and slightly modified for different inputs from mgcl::util::sum.
+// Sums up partial sums sequentially on cpu.
+double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
+                         bool return_sum, size_t localSize, std::string kernelName, size_t global, int fractions)
+{
+    int err;
+
+    // One work-item per element in buf
+    // size_t global = num_elements;
+
+    // should not happen, but for e.g. global = o/2, o = 1
+    if (global <= 0)
+        global = 2;
+
+    // make localSize even so reduction in kernel works properly
+    if (localSize % 2 != 0)
+        localSize++;
+
+    // Pad global work-item count to fit wg-size
+    if (global % localSize != 0)
+        global += localSize - (global % localSize);
+
+    // number of partial sums = num of work-groups
+    int num_partials = global / localSize;
+
+    // int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
+    cl_mem dPartialSums = clCreateBuffer(context, CL_MEM_READ_WRITE,
+                                         sizeof(double) * num_partials, nullptr, &err);
+    mgcl::mgclCheckError(err, "Creating dPartialSums buffer");
+
+    // fill buffer with zeros
+    double zero = 0;
+    err = clEnqueueFillBuffer(commands, dPartialSums, &zero, sizeof(double), 0,
+                              sizeof(double) * num_partials, 0, NULL, NULL);
+    mgcl::mgclCheckError(err, "setting dPartialSums to 0");
+
+    // Create the compute kernel from the program
+    cl_kernel kernel_sum_partial = clCreateKernel(program, kernelName.c_str(), &err);
+    mgcl::mgclCheckError(err, std::string("Creating kernel ").append(kernelName).c_str());
+
+    int pos = 0;
+    err = clSetKernelArg(kernel_sum_partial, pos, sizeof(cl_mem), &buf);
+    err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(cl_mem), &dPartialSums);
+    err |= clSetKernelArg(kernel_sum_partial, ++pos, localSize * sizeof(double), nullptr);
+    err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(int), &num_elements);
+    if (kernelName == "sum_partial_global_eq_x_num_elements")
+        err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(int), &fractions);
+    mgcl::mgclCheckError(err, "Setting kernel sum_partial arguments");
+
+    err = clEnqueueNDRangeKernel(commands, kernel_sum_partial, 1, NULL, &global, &localSize, 0, NULL, NULL);
+    mgcl::mgclCheckError(err, "Enqueueing kernel sum_partial");
+
+    double ret = 0;
+    if (return_sum)
+    {
+        clFinish(commands);
+        mgcl::mgclCheckError(err, "clFinish");
+
+        double tmp[num_partials];
+        err = clEnqueueReadBuffer(commands, dPartialSums, CL_TRUE, 0, sizeof(double), tmp, 0, NULL, NULL);
+        mgcl::mgclCheckError(err, "Error: Failed to read dPartialSums from device!");
+
+        for (int i = 0; i < num_partials; i++)
+            ret += tmp[i];
+    }
+
+    err = clReleaseMemObject(dPartialSums);
+    mgcl::mgclCheckError(err, "clReleaseMemObject dPartialSums");
 
     return ret;
 }
