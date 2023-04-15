@@ -16,6 +16,7 @@
 #include <CL/cl.h> // for clSetKernelArg, _cl_mem, cl_mem, clE...
 #endif
 
+#include <cmath>
 #include <iomanip>
 #include <iostream>
 
@@ -267,6 +268,35 @@ TEST_CASE("util::max")
     // std::cout << std::scientific << std::setprecision(17) << "  host: " << sum_host << std::endl
     //           << "device: " << sum_device << std::endl;
     REQUIRE_THAT(max_host, Catch::Matchers::WithinAbs(max_device, 1e-8));
+    // std::cout << std::to_string(m) << "," << std::to_string(n) << "," << std::to_string(o) << "...OK" << std::endl;
+}
+
+// Test if the sum reduction kernel yields correct results
+TEST_CASE("util::max_abs")
+{
+    mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+
+    // size_t local = GENERATE(8, 32, 43);
+    size_t local = 32;
+    int m = 1;
+    int n = 1;
+    int o = GENERATE(1, 2, range(5, 100, 7), 8484); // 1056; // GENERATE(1, 2, 32, 47);
+    // int o = 80484;
+
+    // std::cout << std::to_string(m) << "," << std::to_string(n) << "," << std::to_string(o) << "..." << std::endl;
+
+    mgcl::Cuboid data(m, n, o);
+    data.fillRandom(-10, 10);
+    data[0][0][0] = -10000;
+    double max_abs_host = fabs(data[0][0][0]);
+
+    cl_mem dData = tu.createOpenCLBuffer(data);
+    double max_abs_device = mgcl::util::max_abs(dData, data.field1d().size(), tu.getContext(), tu.getProgram(),
+                                                tu.getCommands(), true, local);
+
+    // std::cout << std::scientific << std::setprecision(17) << "  host: " << sum_host << std::endl
+    //           << "device: " << sum_device << std::endl;
+    REQUIRE_THAT(max_abs_host, Catch::Matchers::WithinAbs(max_abs_device, 1e-8));
     // std::cout << std::to_string(m) << "," << std::to_string(n) << "," << std::to_string(o) << "...OK" << std::endl;
 }
 
