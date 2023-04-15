@@ -93,6 +93,54 @@ TEST_CASE("jacobi")
         CHECK(c_v_out->isEqual(*c_expected_out_v));
         CHECK(c_r_out->isEqual(*c_expected_out_r));
     }
+
+    SECTION("Inf-norm seq vs ocl")
+    {
+        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+        {
+            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+            return;
+        }
+
+        auto p = std::make_shared<mgcl::Problem>(m, n, o);
+        p->setResidualNorm(mgcl::MGCL_INF);
+        p->setStencilType(stencil);
+        p->setGhosts(1);
+        p->setOmega(omega);
+        p->setDeviceType(deviceType);
+
+        mgcl_test::TestUtility tu(p);
+        cl_mem d_in_f = tu.createOpenCLBuffer(*c_in_f);
+        cl_mem d_in_v = tu.createOpenCLBuffer(*c_in_v);
+        cl_mem d_in_v_out = tu.createOpenCLBuffer(*c_in_v);
+        cl_mem d_in_r = tu.createOpenCLBuffer(*c_in_r);
+
+        mgcl::Level level(p.get(), 0);
+        level.setDF(d_in_f);
+        level.setDVIn(d_in_v);
+        level.setDVOut(d_in_v_out);
+        level.setDR(d_in_r);
+
+        double res_ocl = mgcl::MultigridEngine::jacobi(*p, level, maxiter, 1);
+        tu.finish();
+
+        auto c_r_out_ocl = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        auto c_v_out_ocl = tu.readOpenCLBuffer(d_in_v, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+
+        auto stencilValues = std::make_unique<mgcl::VaryingStencil3x3x3>(1, 1, 1, 0, 0, 0); // just a dummy
+        double res_seq = mgcl::MultigridEngine::jacobiSeq(*c_in_v, *c_in_f, *c_in_r, omega, maxiter,
+                                                          mgcl::MGCL_INF, mgcl::MGCL_LAPLACE_7POINT, stencilFactor, *stencilValues, true, true);
+
+        c_r_out_ocl->dumpToFile("/home/simon/tmp/c_r_out_ocl.csv");
+        c_in_r->dumpToFile("/home/simon/tmp/c_in_r.csv");
+
+        CHECK(c_in_v->isEqual(*c_v_out_ocl));
+        CHECK(c_in_r->isEqual(*c_r_out_ocl));
+        REQUIRE_THAT(res_seq, Catch::Matchers::WithinAbs(res_ocl, 1e-7));
+    }
 }
 
 TEST_CASE("jacobi GPU varying stencil")

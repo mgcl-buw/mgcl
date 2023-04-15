@@ -320,24 +320,9 @@ namespace mgcl
             }
             else
             {
-                // calculate Infinity-Norm (on host, TODO do on opencl)
-                err = clFinish(problem.getOpenCLHelper().getCommands());
-                mgclCheckError(err, "Waiting for kernels to finish");
-
-                Cuboid c(mgh, ngh, ogh);
-                double ***rtmp = c.getData();
-
-                err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * mgh * ngh * ogh, rtmp[0][0], 0,
-                                          NULL, NULL);
-                mgclCheckError(err, "Error: Failed to read rsquares array from device!");
-
-                // find maximum residual
-                res = 0;
-                for (int i = problem.ghosts; i < mgh - problem.ghosts; i++)
-                    for (int j = problem.ghosts; j < ngh - problem.ghosts; j++)
-                        for (int k = problem.ghosts; k < ogh - problem.ghosts; k++)
-                            if (fabs(rtmp[i][j][k]) > res)
-                                res = rtmp[i][j][k];
+                // calculate Infinity-Norm
+                res = util::max_abs(level.dR, mgh * ngh * ogh,
+                                    problem.getContext(), problem.getProgram(), problem.getCommands(), true);
             }
         }
 
@@ -648,7 +633,7 @@ namespace mgcl
         int mgh = level.mgh;
         int ngh = level.ngh;
         int ogh = level.ogh;
-        double res = -1;
+        double res = 0.0;
 
         double h2 = (1.0 / (double)level.m) *
                     (1.0 / (double)level.m); // TODO minimum of m,n,o when not cube?
@@ -779,24 +764,9 @@ namespace mgcl
             }
             else
             {
-                // calculate Infinity-Norm (on host, TODO do on opencl)
-                err = clFinish(problem.getOpenCLHelper().getCommands());
-                mgclCheckError(err, "Waiting for kernels to finish");
-
-                Cuboid c(mgh, ngh, ogh);
-                double ***rtmp = c.getData();
-
-                err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * mgh * ngh * ogh, rtmp[0][0], 0,
-                                          NULL, NULL);
-                mgclCheckError(err, "Error: Failed to read rsquares array from device!");
-
-                // find maximum residual
-                res = 0;
-                for (int i = problem.ghosts; i < mgh - problem.ghosts; i++)
-                    for (int j = problem.ghosts; j < ngh - problem.ghosts; j++)
-                        for (int k = problem.ghosts; k < ogh - problem.ghosts; k++)
-                            if (fabs(rtmp[i][j][k]) > res)
-                                res = rtmp[i][j][k];
+                // calculate Infinity-Norm
+                res = util::max_abs(level.dR, mgh * ngh * ogh,
+                                    problem.getContext(), problem.getProgram(), problem.getCommands(), true);
             }
         }
 
@@ -937,7 +907,7 @@ namespace mgcl
                         if (resnorm == MGCL_L2)
                             res += r[i][j][k] * r[i][j][k];
                         else if (fabs(r[i][j][k]) > res)
-                            res = r[i][j][k];
+                            res = fabs(r[i][j][k]);
                     }
                 }
 
