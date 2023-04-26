@@ -1,8 +1,6 @@
 - bench and optimize init opencl
   - precreate all kernels once?
   - precompile program?
-- aggregate residual norm on gpu
-  - implement max kernel
 - hybrid vcycle (coarse levels on cpu, fine levels on gpu)
 - fix local memory jacobi kernel
 - bench and optimize work group sizes of all kernels
@@ -12,6 +10,7 @@
 
 Done:
 - aggregate residual norm on gpu
+  - implement max kernel
   - implement + test sum
   - retest jacobi / residual
   - bench sum
