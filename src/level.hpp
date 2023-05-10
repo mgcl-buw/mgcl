@@ -4,6 +4,10 @@
 #include "mgcl.hpp"    // for MGCL_STENCIL
 #include "stencil.hpp" // for VaryingStencil3x3x3
 
+#ifdef MGCL_USE_MPI
+#include "mpi_data.hpp"
+#endif // MGCL_USE_MPI
+
 #include <memory> // for shared_ptr
 
 #ifdef __APPLE__
@@ -56,6 +60,10 @@ namespace mgcl
         cl_mem dVOut = nullptr;
         cl_mem dF = nullptr;
         cl_mem dR = nullptr;
+
+#ifdef MGCL_USE_MPI
+        MPIData mpiData;
+#endif // MGCL_USE_MPI
 
         friend class OpenCLHelper;
         friend class MultigridEngine;

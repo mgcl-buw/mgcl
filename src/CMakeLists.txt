@@ -1,5 +1,10 @@
 find_package(OpenCL REQUIRED)
 
+if (MGCL_USE_MPI)
+  find_package(MPI REQUIRED)
+  add_compile_definitions("MGCL_USE_MPI")
+endif()
+
 set(SOURCES_LIB 
 cuboid.hpp
 cuboid.cpp
@@ -22,10 +27,16 @@ hypercube.hpp
 hypercube.cpp
 util.hpp
 util.cpp
+mpi_data.hpp
+mpi_data.cpp
 )
 
 add_library(mgcl ${SOURCES_LIB})
-target_link_libraries (mgcl OpenCL::OpenCL)
+target_link_libraries(mgcl PRIVATE OpenCL::OpenCL)
+
+if (MGCL_USE_MPI)
+  target_link_libraries(mgcl PRIVATE MPI::MPI_CXX)
+endif()
 
 # Uncomment this to get Debug output in mgcl
 # target_compile_definitions(mgcl PRIVATE MGCL_DEBUG)

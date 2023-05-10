@@ -9,6 +9,11 @@
  -> compare opencl + mpi vs. opencl only
  -> MPI optional using preprocessor directives
  -> aggregate data on one MPI node for small grids (i.e. 64^3?, tbd) and many nodes for big grids
+- add MPI Support
+  - update ghosts
+  - Helper class
+  - Galerkin
+  - initialize Levels
 
 Done:
 - aggregate residual norm on gpu
