@@ -47,6 +47,8 @@ namespace mgcl
                                             .append(std::to_string(num_))
                                             .append(", problem.maxlevel: ")
                                             .append(std::to_string(problem->getMaxlevel())));
+
+        // TODO init mpiData
     }
 
     Level::~Level()

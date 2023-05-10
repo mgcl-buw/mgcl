@@ -62,7 +62,7 @@ namespace mgcl
         cl_mem dR = nullptr;
 
 #ifdef MGCL_USE_MPI
-        MPIData mpiData;
+        std::unique_ptr<MPIData> mpiData = nullptr;
 #endif // MGCL_USE_MPI
 
         friend class OpenCLHelper;
@@ -98,6 +98,18 @@ namespace mgcl
 
         double getH() const;
         void setH(double h_);
+
+#ifdef MGCL_USE_MPI
+        inline MPIData *getMpiDataPtr()
+        {
+            return mpiData.get();
+        }
+
+        inline MPIData &getMpiData()
+        {
+            return *mpiData;
+        }
+#endif // MGCL_USE_MPI
 
         cl_mem getDVIn() const;
         void setDVIn(const cl_mem &dVIn_);

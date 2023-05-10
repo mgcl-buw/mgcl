@@ -1,14 +1,5 @@
-/*
- *  cuboid.h
- *  mgab
- *
- *  Created by Matthias Bolten on 08.08.06.
- *  Copyright 2006 Matthias Bolten. All rights reserved.
- *
- */
-
-#ifndef _CUBOID__H_
-#define _CUBOID__H_
+#ifndef MGCL_CUBOID__HPP
+#define MGCL_CUBOID__HPP
 
 #include <string>
 #include <vector>
@@ -61,4 +52,4 @@ namespace mgcl
         static Cuboid copyFrom(Cuboid &c);
     };
 }
-#endif /* ifndef _CUBOID__H_ */
+#endif /* ifndef MGCL_CUBOID__HPP */
