@@ -42,7 +42,7 @@ namespace mgcl
         int ystart;
         int zstart;
 
-        MPIData(MPI_Comm _comm, int lm, int ln, int lo);
+        MPIData(MPI_Comm _comm, int mgh, int ngh, int ogh);
         MPIData(const MPIData &) = delete;
         MPIData &operator=(const MPIData &) = delete;
         MPIData(const MPIData &&) = delete;
