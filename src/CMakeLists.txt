@@ -28,8 +28,11 @@ hypercube.cpp
 util.hpp
 util.cpp
 mpi_data.hpp
-mpi_data.cpp
 )
+
+if (MGCL_USE_MPI)
+  list(APPEND SOURCES_LIB mpi_data.cpp)
+endif()
 
 add_library(mgcl ${SOURCES_LIB})
 target_link_libraries(mgcl PRIVATE OpenCL::OpenCL)
