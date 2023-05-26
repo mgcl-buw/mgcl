@@ -347,4 +347,22 @@ namespace mgcl
 
         return ret;
     }
+
+    /**
+     * @brief Fills real cells from Cuboid c. Dimensions of real cells must match. Ghost cells are left untouched.
+     *
+     * @param c
+     */
+    void Cuboid::fillRealFrom(Cuboid &c)
+    {
+        if (m != c.getM() || n != c.getN() || o != c.getO())
+            throw "Dimensions do not match!";
+
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                for (int k = 0; k < o; k++)
+                {
+                    field_3d[i + ghostsM][j + ghostsN][k + ghostsO] = c[i + c.getGhostsM()][j + c.getGhostsN()][k + c.getGhostsO()];
+                }
+    }
 }

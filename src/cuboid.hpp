@@ -38,6 +38,7 @@ namespace mgcl
         std::vector<double> &field1d();
         bool isEqual(Cuboid &c, double tol = 1e-7, bool printDiffs = false);
         void dumpToFile(std::string path);
+        void fillRealFrom(Cuboid &c);
 
         int getO() const;
         int getN() const;
