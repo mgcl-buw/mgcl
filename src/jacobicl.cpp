@@ -48,7 +48,7 @@ namespace mgcl
             // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
 
             // r = f - A*v
-            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, returnResidualNorm, periodic);
+            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, false, periodic);
 
             if (stencilType == MGCL_LAPLACE_7POINT || stencilType == MGCL_LAPLACE_19POINT || stencilType == MGCL_LAPLACE_27POINT)
             {
@@ -97,6 +97,9 @@ namespace mgcl
         if (periodic)
             MultigridEngine::updateGhostsSeq(v);
 
+        if (returnResidualNorm)
+            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, returnResidualNorm, periodic);
+
         return res;
     }
 
@@ -108,7 +111,7 @@ namespace mgcl
      * It's not
      * really performant to do so because we have to wait for all kernels to complete and reading a buffer to host is slow.
      */
-    double MultigridEngine::jacobi(Problem &problem, Level &level, int maxiter, int return_residual)
+    double MultigridEngine::jacobi(Problem &problem, Level &level, int maxiter, bool return_residual)
     {
         int err;
         int mgh = level.mgh;
@@ -257,6 +260,9 @@ namespace mgcl
         // calculate residual's 2-norm. Square elements on device and sum up on host
         if (return_residual)
         {
+            // update residual to use current approximation v
+            MultigridEngine::residual(problem, level, false);
+
             if (problem.residual_norm == MGCL_L2)
             {
                 // calculate 2-Norm
@@ -534,6 +540,9 @@ namespace mgcl
         // calculate residual's 2-norm. Square elements on device and sum up on host
         if (return_residual)
         {
+            // update residual to use current approximation v
+            MultigridEngine::residual(problem, level, false);
+
             if (problem.residual_norm == MGCL_L2)
             {
                 // calculate 2-Norm

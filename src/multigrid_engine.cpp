@@ -43,9 +43,10 @@ namespace mgcl
                                          problem.omega, problem.nu1, problem.residual_norm, problem.stencilType,
                                          level.stencilFactor, *level.stencilValues, false, problem.bc == BC::PERIODIC);
 
-        // update residual without D^-1
-        // res = residual(level.f, level.v, level.r, level.m-2, level.n-2, level.o-2,
-        // problem.residual_norm, problem.stencil);
+        // update residual before restriction
+        res = residualSeq(level.getF(), level.getV(), level.getR(), problem.residual_norm, problem.stencilType,
+                          level.stencilFactor, *level.stencilValues, false, problem.bc == BC::PERIODIC);
+
         // printf("res on level %d, upwards: %.17e\n", level.getNum(), res);
         // std::cout << "v[3][3][3] = " << std::scientific << std::setprecision(17) << level.getV()[3][3][3] << std::endl
         //           << "f[3][3][3] = " << std::scientific << std::setprecision(17) << level.getF()[3][3][3] << std::endl
@@ -112,10 +113,10 @@ namespace mgcl
         }
 
         // relax nu1 times
-        jacobi(problem, level, problem.nu1, 0);
+        res = jacobi(problem, level, problem.nu1, false);
 
-        // update residual without D^-1
-        // res = residual(problem, level, 1);
+        // update residual before restriction
+        res = residual(problem, level, false);
         // printf("res on level.getNum() %d, upwards: %e\n", level.getNum(), res);
 
         // restrict to coarser grid
