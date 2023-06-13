@@ -9,6 +9,15 @@
  -> compare opencl + mpi vs. opencl only
  -> MPI optional using preprocessor directives
  -> aggregate data on one MPI node for small grids (i.e. 64^3?, tbd) and many nodes for big grids
+- add MPI Support
+  - update ghosts
+  - Helper class
+  - Galerkin
+  - initialize Levels
+- multiple jacobi iters without ghost update in-between, requires #ghosts = #iters
+  (especially good for MPI since for every ghost update data needs to be transferred
+  from device to host, process to process and back to device again)
+- check if residual must be recalculated after last jacobi iteration in v-cycle (before restriction)
 
 Done:
 - aggregate residual norm on gpu
