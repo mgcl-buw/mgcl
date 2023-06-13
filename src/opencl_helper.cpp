@@ -630,6 +630,7 @@ namespace mgcl
 
     void OpenCLHelper::setKernelDir(const std::string &kernelDir_)
     {
+        // TODO add trailing slash and test
         kernelDir = kernelDir_;
     }
 
