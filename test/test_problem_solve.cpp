@@ -20,7 +20,7 @@ double calculateErrorNorm(double h, mgcl::Cuboid &error);
  * @brief Tests if solving works correctly for u = x^4 * (x-1)^4.
  *
  */
-TEST_CASE("Problem solving: periodic 4th order")
+TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
 {
     int N = 16;
     double h = 1.0 / (double)N;
@@ -327,7 +327,7 @@ TEST_CASE("Problem solving: periodic 4th order")
     }
 }
 
-TEST_CASE("Problem solving: Dirichlet 4th order")
+TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
 {
     int N = 16;
     double h = 1.0 / (double)N;
