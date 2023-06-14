@@ -655,10 +655,12 @@ namespace mgcl
         else if (problem.stencilType == MGCL_LAPLACE_19POINT)
         {
             kernel_name = "residual_19point";
+            h2inv = 1.0 / (6.0 * h2);
         }
         else if (problem.stencilType == MGCL_LAPLACE_27POINT)
         {
             kernel_name = "residual_27point";
+            h2inv = 1.0 / (30.0 * h2);
         }
         else if (problem.stencilType == MGCL_VARYING)
         {
@@ -717,8 +719,12 @@ namespace mgcl
         mgclCheckError(err, "Updating ghosts");
         err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing residual kernel");
-        err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-        mgclCheckError(err, "Updating ghosts of r");
+
+        if (problem.isPeriodic())
+        {
+            err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+            mgclCheckError(err, "Updating ghosts of r");
+        }
 
         // calculate residual's 2-norm. Square elements on device and sum up on host
         if (return_residual)
@@ -784,7 +790,9 @@ namespace mgcl
     }
 
     /* Calculates r = f - A*v using 7-point stencil of 3D laplacian.
-     * m,n,o is size of real grid */
+     * m,n,o is size of real grid
+     * v needs to have updated ghost cells if the problem is periodic!
+     */
     double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
                                         MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil3x3x3 &stencilValuesCuboid, bool returnResidualNorm, bool periodic)
     {

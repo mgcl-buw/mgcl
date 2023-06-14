@@ -107,7 +107,105 @@ TEST_CASE("residual")
     }
 }
 
-TEST_CASE("residual varying stencil periodic")
+TEST_CASE("residual periodic Laplace seq vs ocl")
+{
+    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+    {
+        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+        return;
+    }
+
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+    mgcl::MGCL_STENCIL stencilType = GENERATE(mgcl::MGCL_LAPLACE_7POINT, mgcl::MGCL_LAPLACE_19POINT, mgcl::MGCL_LAPLACE_27POINT);
+    mgcl::BC bc = mgcl::BC::PERIODIC;
+
+    auto v_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
+    auto f_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
+    auto r_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
+    v_in->fillRandomInt();
+    mgcl::MultigridEngine::updateGhostsSeq(*v_in);
+    f_in->fillRandomInt();
+
+    // init sequential Problem
+    auto p_seq = std::make_shared<mgcl::Problem>(m, n, o);
+    p_seq->setResidualNorm(resnorm);
+    p_seq->setDeviceType(deviceType);
+    p_seq->setV(v_in);
+    p_seq->setF(f_in);
+    p_seq->setStencilType(stencilType);
+    p_seq->setBc(bc);
+
+    p_seq->init();
+    auto &level0_seq = p_seq->getLevelAt(0);
+
+    // init OpenCL problem
+    auto p_gpu = std::make_shared<mgcl::Problem>(m, n, o);
+    p_gpu->setResidualNorm(resnorm);
+    p_gpu->setDeviceType(deviceType);
+    p_gpu->setV(v_in);
+    p_gpu->setF(f_in);
+    p_gpu->setUseOpencl(true);
+    p_gpu->setStencilType(stencilType);
+    p_gpu->setBc(bc);
+
+    p_gpu->init();
+    auto &level0_gpu = p_gpu->getLevelAt(0);
+
+    auto &v_in_lv0 = level0_seq.getV();
+    auto &f_in_lv0 = level0_seq.getF();
+    auto &r_in_lv0 = level0_seq.getR();
+
+    mgcl_test::TestUtility tu(p_gpu);
+
+    // make sure input is equal
+    auto dv_in_lv0 = level0_gpu.getDVIn();
+    auto dr_in_lv0 = level0_gpu.getDR();
+    auto df_in_lv0 = level0_gpu.getDF();
+    auto c_r_in = tu.readOpenCLBuffer(dr_in_lv0, m, n, o, 1, 1, 1);
+    auto c_v_in = tu.readOpenCLBuffer(dv_in_lv0, m, n, o, 1, 1, 1);
+    auto c_f_in = tu.readOpenCLBuffer(df_in_lv0, m, n, o, 1, 1, 1);
+    REQUIRE(c_r_in->isEqual(r_in_lv0));
+    REQUIRE(c_v_in->isEqual(v_in_lv0));
+    REQUIRE(c_f_in->isEqual(f_in_lv0));
+
+    double res_gpu = mgcl::MultigridEngine::residual(*p_gpu, level0_gpu, true);
+    tu.finish();
+
+    auto stencilValues = std::make_unique<mgcl::VaryingStencil3x3x3>(1, 1, 1, 0, 0, 0); // just a dummy
+    double res_seq = mgcl::MultigridEngine::residualSeq(f_in_lv0, v_in_lv0, r_in_lv0, resnorm,
+                                                        stencilType, level0_seq.getStencilFactor(), *stencilValues, true, true);
+
+    auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
+    auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
+    auto c_f_out = tu.readOpenCLBuffer(level0_gpu.getDF(), m, n, o, 1, 1, 1);
+
+    REQUIRE(c_r_out->getM() == r_in_lv0.getM());
+    REQUIRE(c_r_out->getN() == r_in_lv0.getN());
+    REQUIRE(c_r_out->getO() == r_in_lv0.getO());
+    REQUIRE(c_r_out->getMgh() == r_in_lv0.getMgh());
+    REQUIRE(c_r_out->getNgh() == r_in_lv0.getNgh());
+    REQUIRE(c_r_out->getOgh() == r_in_lv0.getOgh());
+
+    c_r_out->dumpToFile("../r_gpu.txt");
+    r_in_lv0.dumpToFile("../r_seq.txt");
+    // c_v_out->dumpToFile("../v_gpu.txt");
+    // v_in_lv0.dumpToFile("../v_seq.txt");
+
+    // sv_in_lv0->dumpToFile("../sv_seq.txt");
+    // c_sv_in.dumpToFile("../sv_gpu.txt");
+
+    REQUIRE(c_v_out->isEqual(v_in_lv0)); // should be untouched
+    REQUIRE(c_f_out->isEqual(f_in_lv0)); // should be untouched
+
+    REQUIRE_THAT(res_seq, Catch::Matchers::WithinAbs(res_gpu, 1e-7));
+    REQUIRE(c_r_out->isEqual(r_in_lv0));
+}
 {
     auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
