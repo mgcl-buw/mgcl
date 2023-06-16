@@ -261,75 +261,7 @@ namespace mgcl
         if (return_residual)
         {
             // update residual to use current approximation v
-            MultigridEngine::residual(problem, level, false);
-
-            if (problem.residual_norm == MGCL_L2)
-            {
-                // calculate 2-Norm
-                Cuboid rsq(mgh, ngh, ogh);
-                double ***rsquares = rsq.getData();
-                int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
-                cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
-                                                  sizeof(double) * mgh * ngh * ogh, rsquares[0][0], &err);
-                mgclCheckError(err, "Creating rsquares buffer");
-
-                // Create the compute kernel from the program
-                cl_kernel kernel_square = clCreateKernel(problem.openCLHelper.getProgram(), "residual_squared", &err);
-                mgclCheckError(err, "Creating residual squared kernel");
-
-                pos = 0;
-                err = clSetKernelArg(kernel_square, pos, sizeof(cl_mem), &level.dR);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(cl_mem), &dRsquares);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &mgh);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &ngh);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &ogh);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &problem.ghosts);
-                mgclCheckError(err, "Setting residual squared kernel arguments");
-
-                // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
-                size_t global3d[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-                const size_t local3d[3] = {static_cast<size_t>(mgh > 4 ? 4 : mgh), static_cast<size_t>(ngh > 4 ? 4 : ngh),
-                                           static_cast<size_t>(ogh > 4 ? 4 : ogh)};
-
-                for (int i = 0; i < 3; i++)
-                    if (global3d[i] % local3d[i] != 0)
-                    {
-                        // printf("padding global size %d from %ld to ", i, global[i]);
-                        global3d[i] += local3d[i] - (global3d[i] % local3d[i]);
-                        // printf("%ld (multiple of %ld)\n", global[i], local[i]);
-                    }
-
-                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 3, NULL, global3d, local3d, 0, NULL, NULL);
-                mgclCheckError(err, "Enqueueing residual squared kernel");
-
-                // sum up residual squares
-                res = sqrt(util::sum(dRsquares, mgh * ngh * ogh,
-                                     problem.getContext(), problem.getProgram(), problem.getCommands(), true));
-
-                // err = clFinish(problem.getOpenCLHelper().getCommands());
-                // mgclCheckError(err, "Waiting for kernels to finish");
-
-                // err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * mgh * ngh * ogh,
-                //                           rsquares[0][0], 0, NULL, NULL);
-                // mgclCheckError(err, "Error: Failed to read rsquares array from device!");
-
-                // // sum up residual squares
-                // res = 0;
-                // for (int i = problem.ghosts; i < mgh - problem.ghosts; i++)
-                //     for (int j = problem.ghosts; j < ngh - problem.ghosts; j++)
-                //         for (int k = problem.ghosts; k < ogh - problem.ghosts; k++)
-                //             res += rsquares[i][j][k];
-                // res = sqrt(res);
-
-                clReleaseMemObject(dRsquares);
-                clReleaseKernel(kernel_square);
-            }
-            else
-            {
-                // calculate Infinity-Norm
-                res = util::max_abs(level.dR, mgh * ngh * ogh,
-                                    problem.getContext(), problem.getProgram(), problem.getCommands(), true);
-            }
+            res = MultigridEngine::residual(problem, level, true);
         }
 
         clReleaseKernel(kernel); // TODO maybe clFinish before release?
@@ -541,86 +473,7 @@ namespace mgcl
         if (return_residual)
         {
             // update residual to use current approximation v
-            MultigridEngine::residual(problem, level, false);
-
-            if (problem.residual_norm == MGCL_L2)
-            {
-                // calculate 2-Norm
-                Cuboid rsq(mgh, ngh, ogh);
-                double ***rsquares = rsq.getData();
-                int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
-                cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
-                                                  sizeof(double) * mgh * ngh * ogh, rsquares[0][0], &err);
-                mgclCheckError(err, "Creating rsquares buffer");
-
-                // Create the compute kernel from the program
-                cl_kernel kernel_square = clCreateKernel(problem.openCLHelper.getProgram(), "residual_squared", &err);
-                mgclCheckError(err, "Creating residual squared kernel");
-
-                pos = 0;
-                err = clSetKernelArg(kernel_square, pos, sizeof(cl_mem), &level.dR);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(cl_mem), &dRsquares);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &mgh);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &ngh);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &ogh);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &problem.ghosts);
-                mgclCheckError(err, "Setting residual squared kernel arguments");
-
-                // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
-                size_t global3d[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-                const size_t local3d[3] = {static_cast<size_t>(mgh > 4 ? 4 : mgh), static_cast<size_t>(ngh > 4 ? 4 : ngh),
-                                           static_cast<size_t>(ogh > 4 ? 4 : ogh)};
-
-                for (int i = 0; i < 3; i++)
-                    if (global3d[i] % local3d[i] != 0)
-                    {
-                        // printf("padding global size %d from %ld to ", i, global[i]);
-                        global3d[i] += local3d[i] - (global3d[i] % local3d[i]);
-                        // printf("%ld (multiple of %ld)\n", global[i], local[i]);
-                    }
-
-                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 3, NULL, global3d, local3d, 0, NULL, NULL);
-                mgclCheckError(err, "Enqueueing residual squared kernel");
-
-                err = clFinish(problem.getOpenCLHelper().getCommands());
-                mgclCheckError(err, "Waiting for kernels to finish");
-
-                err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * mgh * ngh * ogh,
-                                          rsquares[0][0], 0, NULL, NULL);
-                mgclCheckError(err, "Error: Failed to read rsquares array from device!");
-
-                // sum up residual squares
-                res = 0;
-                for (int i = problem.ghosts; i < mgh - problem.ghosts; i++)
-                    for (int j = problem.ghosts; j < ngh - problem.ghosts; j++)
-                        for (int k = problem.ghosts; k < ogh - problem.ghosts; k++)
-                            res += rsquares[i][j][k];
-                res = sqrt(res);
-
-                clReleaseMemObject(dRsquares);
-                clReleaseKernel(kernel_square);
-            }
-            else
-            {
-                // calculate Infinity-Norm (on host, TODO do on opencl)
-                err = clFinish(problem.getOpenCLHelper().getCommands());
-                mgclCheckError(err, "Waiting for kernels to finish");
-
-                Cuboid c(mgh, ngh, ogh);
-                double ***rtmp = c.getData();
-
-                err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), level.dR, CL_TRUE, 0, sizeof(double) * mgh * ngh * ogh, rtmp[0][0], 0,
-                                          NULL, NULL);
-                mgclCheckError(err, "Error: Failed to read rsquares array from device!");
-
-                // find maximum residual
-                res = 0;
-                for (int i = problem.ghosts; i < mgh - problem.ghosts; i++)
-                    for (int j = problem.ghosts; j < ngh - problem.ghosts; j++)
-                        for (int k = problem.ghosts; k < ogh - problem.ghosts; k++)
-                            if (fabs(rtmp[i][j][k]) > res)
-                                res = rtmp[i][j][k];
-            }
+            res = MultigridEngine::residual(problem, level, true);
         }
 
         clReleaseKernel(kernel); // TODO maybe clFinish before release?
@@ -633,8 +486,9 @@ namespace mgcl
      * v, f and r must be of size [m][n][o] for periodic boundary condition.
      * m, n and o must be the dimensions of ghosted grid.
      * If return_residual is true, the residual's 2-norm or inf-norm will be read back from device and returned, else -1.
-     * It's not
-     * really performant to do so because we have to wait for all kernels to complete and reading a buffer to host is slow.
+     * It's not really performant to do so because we have to wait for all kernels to complete and
+     * reading a buffer to host is slow.
+     * v needs to have updated ghost cells if the problem is periodic!
      */
     double MultigridEngine::residual(Problem &problem, Level &level, bool return_residual)
     {
@@ -715,8 +569,6 @@ namespace mgcl
                 // printf("%ld (multiple of %ld)\n", global[i], local[i]);
             }
 
-        err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-        mgclCheckError(err, "Updating ghosts");
         err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing residual kernel");
 
@@ -758,21 +610,6 @@ namespace mgcl
                 // sum up residual squares
                 res = sqrt(util::sum(dRsquares, mgh * ngh * ogh,
                                      problem.getContext(), problem.getProgram(), problem.getCommands(), true));
-
-                // err = clFinish(problem.getOpenCLHelper().getCommands());
-                // mgclCheckError(err, "Waiting for kernels to finish");
-
-                // err = clEnqueueReadBuffer(problem.getOpenCLHelper().getCommands(), dRsquares, CL_TRUE, 0, sizeof(double) * mgh * ngh * ogh,
-                //                           rsquares[0][0], 0, NULL, NULL);
-                // mgclCheckError(err, "Error: Failed to read rsquares array from device!");
-
-                // // sum up residual squares
-                // res = 0;
-                // for (int i = problem.ghosts; i < mgh - problem.ghosts; i++)
-                //     for (int j = problem.ghosts; j < ngh - problem.ghosts; j++)
-                //         for (int k = problem.ghosts; k < ogh - problem.ghosts; k++)
-                //             res += rsquares[i][j][k];
-                // res = sqrt(res);
 
                 clReleaseMemObject(dRsquares);
                 clReleaseKernel(kernel_square);
@@ -909,7 +746,7 @@ namespace mgcl
                             + stencilValues[isv][jsv][ksv][2][2][2] * vraw[i+1][j+1][k+1];
                         // clang-format on
 
-                        // if (j == 2 && k == 5 && i == 1)
+                        // if (j == 2 && k == 2 && i == 2)
                         // {
                         //     printf("seq stencilsum = %e\n", stencilsum);
                         //     print27point_sv(v, i, j, k, stencilValuesCuboid, isv, jsv, ksv);

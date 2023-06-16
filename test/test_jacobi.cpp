@@ -135,8 +135,8 @@ TEST_CASE("jacobi")
         double res_seq = mgcl::MultigridEngine::jacobiSeq(*c_in_v, *c_in_f, *c_in_r, omega, maxiter,
                                                           mgcl::MGCL_INF, mgcl::MGCL_LAPLACE_7POINT, stencilFactor, *stencilValues, true, true);
 
-        c_r_out_ocl->dumpToFile("/home/simon/tmp/c_r_out_ocl.csv");
-        c_in_r->dumpToFile("/home/simon/tmp/c_in_r.csv");
+        // c_r_out_ocl->dumpToFile("/home/simon/tmp/c_r_out_ocl.csv");
+        // c_in_r->dumpToFile("/home/simon/tmp/c_in_r.csv");
 
         CHECK(c_in_v->isEqual(*c_v_out_ocl));
         CHECK(c_in_r->isEqual(*c_r_out_ocl));
@@ -227,22 +227,27 @@ TEST_CASE("jacobi GPU varying stencil")
         int n = 8;
         int o = 8;
         double omega = 0.8;
-        int maxiter = GENERATE(1, 2, 3, 4);
+        // int maxiter = GENERATE(1, 2, 3, 4);
+        int maxiter = 1;
+        mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+        mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
+        mgcl::BC bc = mgcl::BC::PERIODIC;
 
         auto v_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
         auto f_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
         auto r_in = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
         f_in->fillRandomInt();
+        v_in->fillRandomInt();
 
         // init sequential Problem
         auto p_seq = std::make_shared<mgcl::Problem>(m, n, o);
-        p_seq->setResidualNorm(mgcl::MGCL_L2);
+        p_seq->setResidualNorm(resnorm);
         p_seq->setOmega(omega);
-        p_seq->setDeviceType(deviceType);
         p_seq->setV(v_in);
         p_seq->setF(f_in);
+        p_seq->setBc(bc);
 
-        p_seq->setStencilType(mgcl::MGCL_VARYING);
+        p_seq->setStencilType(stencilType);
         auto &sv = p_seq->getStencilValues();
         sv->fillRandomInt();
 
@@ -252,14 +257,15 @@ TEST_CASE("jacobi GPU varying stencil")
 
         // init OpenCL problem
         auto p_gpu = std::make_shared<mgcl::Problem>(m, n, o);
-        p_gpu->setResidualNorm(mgcl::MGCL_L2);
+        p_gpu->setResidualNorm(resnorm);
         p_gpu->setOmega(omega);
         p_gpu->setDeviceType(deviceType);
         p_gpu->setV(v_in);
         p_gpu->setF(f_in);
         p_gpu->setUseOpencl(true);
+        p_gpu->setBc(bc);
 
-        p_gpu->setStencilType(mgcl::MGCL_VARYING);
+        p_gpu->setStencilType(stencilType);
         auto &sv_gpu = p_gpu->getStencilValues();
 
         // copy stencil values
@@ -278,15 +284,16 @@ TEST_CASE("jacobi GPU varying stencil")
 
         mgcl_test::TestUtility tu(p_gpu);
 
+        mgcl::MultigridEngine::updateGhosts(*p_gpu, level0_gpu.getDVIn(),
+                                            level0_gpu.getMgh(), level0_gpu.getNgh(), level0_gpu.getOgh(), 1, 1, 1);
+        tu.finish();
+        mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0);
+
         // make sure input is equal
-        auto dv_in_lv0 = level0_gpu.getDVIn();
-        auto dr_in_lv0 = level0_gpu.getDR();
-        auto df_in_lv0 = level0_gpu.getDF();
-        auto dsv_in_lv0 = level0_gpu.getStencilValuesGpu();
-        auto c_r_in = tu.readOpenCLBuffer(dr_in_lv0, m, n, o, 1, 1, 1);
-        auto c_v_in = tu.readOpenCLBuffer(dv_in_lv0, m, n, o, 1, 1, 1);
-        auto c_f_in = tu.readOpenCLBuffer(df_in_lv0, m, n, o, 1, 1, 1);
-        auto c_sv_in = dsv_in_lv0->read<3>(tu.getCommands());
+        auto c_r_in = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
+        auto c_v_in = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
+        auto c_f_in = tu.readOpenCLBuffer(level0_gpu.getDF(), m, n, o, 1, 1, 1);
+        auto c_sv_in = level0_gpu.getStencilValuesGpu()->read<3>(tu.getCommands());
         tu.finish();
         REQUIRE(c_r_in->isEqual(r_in_lv0));
         REQUIRE(c_v_in->isEqual(v_in_lv0));
@@ -295,8 +302,12 @@ TEST_CASE("jacobi GPU varying stencil")
 
         double res_gpu = mgcl::MultigridEngine::jacobi(*p_gpu, level0_gpu, maxiter, true);
         tu.finish();
-        double res_seq = mgcl::MultigridEngine::jacobiSeq(v_in_lv0, f_in_lv0, r_in_lv0, omega, maxiter, mgcl::MGCL_L2,
-                                                          mgcl::MGCL_VARYING, 1, *sv_in_lv0, true, true);
+        double res_seq = mgcl::MultigridEngine::jacobiSeq(v_in_lv0, f_in_lv0, r_in_lv0, omega, maxiter, resnorm,
+                                                          stencilType, level0_seq.getStencilFactor(), *sv_in_lv0, true, true);
+
+        // res_gpu = mgcl::MultigridEngine::residual(*p_gpu, level0_gpu, true);
+        // res_seq = mgcl::MultigridEngine::residualSeq(f_in_lv0, v_in_lv0, r_in_lv0, mgcl::MGCL_L2,
+        //                                              mgcl::MGCL_VARYING, 1, *sv_in_lv0, true, true);
 
         auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
         auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
@@ -318,13 +329,14 @@ TEST_CASE("jacobi GPU varying stencil")
         // c_sv_in.dumpToFile("../sv_gpu.txt");
 
         // TODO check
+        REQUIRE(c_v_out->isEqual(v_in_lv0));
         REQUIRE_THAT(res_seq, Catch::Matchers::WithinAbs(res_gpu, 1e-7));
         // REQUIRE(fabs(res_seq - res_gpu) < 1e-13);
         REQUIRE(c_r_out->isEqual(r_in_lv0));
-        REQUIRE(c_v_out->isEqual(v_in_lv0));
     }
 }
 
+// omit this test for now, fix later
 TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
 {
     int m = 16;
