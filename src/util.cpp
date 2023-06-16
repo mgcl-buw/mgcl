@@ -295,4 +295,24 @@ namespace mgcl::util
         return ret;
     }
 
+    // Returns minimum of a, b and c
+    int seq::min3(int a, int b, int c)
+    {
+        if (a < b && a < c)
+            return a;
+        else if (b < a && b < c)
+            return b;
+        return c;
+    }
+
+    // Returns minimum of a, b and c
+    double seq::min3(double a, double b, double c)
+    {
+        if (a < b && a < c)
+            return a;
+        else if (b < a && b < c)
+            return b;
+        return c;
+    }
+
 } // namespace util

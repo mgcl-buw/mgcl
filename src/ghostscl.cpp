@@ -32,6 +32,7 @@ namespace mgcl
         int ghosts_o = c.getGhostsO();
 
 #ifdef MGCL_USE_MPI
+        // TODO adjust for ghosts > 1
         // TODO test
         assert(mpiData != nullptr && "mpiData must not be null if MGCL_USE_MPI is true!");
 
