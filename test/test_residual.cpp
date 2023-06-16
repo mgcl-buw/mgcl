@@ -324,3 +324,54 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
     REQUIRE_THAT(res_seq, Catch::Matchers::WithinAbs(res_gpu, 1e-7));
     REQUIRE(c_r_out->isEqual(r_in_lv0));
 }
+
+// tests if residual works if v_gh > 1
+TEST_CASE("residual gh > 1")
+{
+    int m = 16;
+    int n = 16;
+    int o = 16;
+    int ghm = GENERATE(1, 2, 3);
+    int ghn = GENERATE(1, 2, 3);
+    int gho = GENERATE(1, 2, 3);
+
+    double h = 1.0 / ((double)m);
+    mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
+    double stencilFactor = 1.0 / (30.0 * h * h);
+    mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+
+    mgcl::Cuboid f_in(m, n, o, 0, 0, 0);
+
+    // v and r with extended ghosts, i.e. no ghost update between iterations
+    mgcl::Cuboid v_in_gh(m, n, o, ghm, ghn, gho);
+    mgcl::Cuboid r_in_gh(m, n, o, ghm, ghn, gho);
+
+    // v and r with gh = 1, i.e. regular ghost update between iterations
+    mgcl::Cuboid v_in(m, n, o, 1, 1, 1);
+    mgcl::Cuboid r_in(m, n, o, 1, 1, 1);
+
+    v_in.fillRandom(-10, 10);
+    f_in.fillRandom(-10, 10);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in);
+
+    // copy real cells from v_in to v_in_gh
+    v_in_gh.fillRealFrom(v_in);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in_gh);
+
+    mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
+
+    SECTION("seq")
+    {
+        // First calculate exptected result with gh = 1
+        double res_exp = mgcl::MultigridEngine::residualSeq(f_in, v_in, r_in, resnorm, stencilType, stencilFactor, dummy, true, true);
+
+        // Now calculate with gh > 1
+        double res_act = mgcl::MultigridEngine::residualSeq(f_in, v_in_gh, r_in_gh, resnorm, stencilType, stencilFactor, dummy, true, true);
+
+        REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
+        REQUIRE(v_in.isEqual(v_in_gh));
+        REQUIRE(r_in.isEqual(r_in_gh));
+    }
+
+    // TODO test varying stencil
+}

@@ -424,3 +424,58 @@ TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
     CHECK(c_in_v->isEqual(*c_expected_out_v));
     CHECK(c_in_r->isEqual(*c_expected_out_r));
 }
+
+// tests if jacobi works if v_gh > 1, i.e. multiple iterations can be done without ghost update in between
+TEST_CASE("jacobi gh > 1 multiple iters")
+{
+    int iters = 3;
+
+    int m = 16;
+    int n = 16;
+    int o = 16;
+    int ghm = iters + 1;
+    int ghn = iters + 1;
+    int gho = iters + 1;
+
+    double omega = 0.8;
+
+    double h = 1.0 / ((double)m);
+    mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
+    double stencilFactor = 1.0 / (30.0 * h * h);
+    mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+
+    mgcl::Cuboid f_in(m, n, o, 0, 0, 0);
+
+    // v and r with extended ghosts, i.e. no ghost update between iterations
+    mgcl::Cuboid v_in_gh(m, n, o, ghm, ghn, gho);
+    mgcl::Cuboid r_in_gh(m, n, o, ghm, ghn, gho);
+
+    // v and r with gh = 1, i.e. regular ghost update between iterations
+    mgcl::Cuboid v_in(m, n, o, 1, 1, 1);
+    mgcl::Cuboid r_in(m, n, o, 1, 1, 1);
+
+    v_in.fillRandom(-10, 10);
+    f_in.fillRandom(-10, 10);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in);
+
+    // copy real cells from v_in to v_in_gh
+    v_in_gh.fillRealFrom(v_in);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in_gh);
+
+    mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
+
+    SECTION("seq")
+    {
+        // First calculate exptected result with regular ghost updates between iterations
+        double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, true);
+
+        // Now calculate with gh > 1
+        double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, true);
+
+        REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
+        REQUIRE(v_in.isEqual(v_in_gh));
+        REQUIRE(r_in.isEqual(r_in_gh));
+    }
+
+    // TODO test varying stencil
+}

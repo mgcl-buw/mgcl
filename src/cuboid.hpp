@@ -1,14 +1,5 @@
-/*
- *  cuboid.h
- *  mgab
- *
- *  Created by Matthias Bolten on 08.08.06.
- *  Copyright 2006 Matthias Bolten. All rights reserved.
- *
- */
-
-#ifndef _CUBOID__H_
-#define _CUBOID__H_
+#ifndef MGCL_CUBOID__HPP
+#define MGCL_CUBOID__HPP
 
 #include <string>
 #include <vector>
@@ -47,6 +38,7 @@ namespace mgcl
         std::vector<double> &field1d();
         bool isEqual(Cuboid &c, double tol = 1e-7, bool printDiffs = false);
         void dumpToFile(std::string path);
+        void fillRealFrom(Cuboid &c);
 
         int getO() const;
         int getN() const;
@@ -61,4 +53,4 @@ namespace mgcl
         static Cuboid copyFrom(Cuboid &c);
     };
 }
-#endif /* ifndef _CUBOID__H_ */
+#endif /* ifndef MGCL_CUBOID__HPP */

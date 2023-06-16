@@ -30,6 +30,8 @@ namespace mgcl
                                       bool periodic)
     {
         double res = 0.0;
+
+        // TODO adjust for mpi, need global m, not local m
         double h2 = 1.0 / ((double)(v.getM() * v.getM()));
         double dinv = h2 / 6.0;
         if (stencilType == MGCL_LAPLACE_19POINT)
@@ -38,59 +40,66 @@ namespace mgcl
             dinv = (30.0 * h2) / 128.0;
 
         double ***vraw = v.getData();
+        int gh = util::seq::min3(v.getGhostsM(), v.getGhostsN(), v.getGhostsO());
 
-        for (int iter = 0; iter < maxiter; iter++)
+        // TODO check f gh, r gh, v gh
+
+        for (int iter = 0; iter < maxiter; iter += gh)
         {
             // update ghost cells for periodic boundary condition
             if (periodic)
                 MultigridEngine::updateGhostsSeq(v);
 
-            // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
-
-            // r = f - A*v
-            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, false, periodic);
-
-            if (stencilType == MGCL_LAPLACE_7POINT || stencilType == MGCL_LAPLACE_19POINT || stencilType == MGCL_LAPLACE_27POINT)
+            // if gh > 1, multiple iterations can be done without updating ghosts in-between
+            for (int inner_iter = iter; inner_iter < iter + gh; inner_iter++)
             {
-                for (int i = f.getGhostsM(); i < f.getM() + f.getGhostsM(); i++)
-                    for (int j = f.getGhostsN(); j < f.getN() + f.getGhostsN(); j++)
-                        for (int k = f.getGhostsO(); k < f.getO() + f.getGhostsO(); k++)
-                        {
-                            // if (i == 1 && j == 1 && k == 1)
-                            //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, vraw[i][j][k],
-                            //     i,j,k,r[i][j][k], omega);
-                            vraw[i][j][k] = vraw[i][j][k] + omega * dinv * r[i][j][k];
-                        }
-            }
-            else
-            {
-                // printf("seq x = %d, omega = %e, res = %e, v_out = %e, sv_self = %e\n", 1, omega, r[1][2][5], vraw[1][2][5], stencilValues[2][3][6][1][1][1]);
-                // print_7point(v_in, index, ioff, joff, koff);
-                // print27point(v, 1, 2, 5);
-                // print27point_sv(v, 1, 2, 5, stencilValues, 2, 3, 6);
+                // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
 
-                int ghmsv = stencilValues.getGhostsDim1();
-                int ghnsv = stencilValues.getGhostsDim2();
-                int ghosv = stencilValues.getGhostsDim3();
-                for (int i = f.getGhostsM(), isv = ghmsv; i < f.getM() + f.getGhostsM(); i++, isv++)
-                    for (int j = f.getGhostsN(), jsv = ghnsv; j < f.getN() + f.getGhostsN(); j++, jsv++)
-                        for (int k = f.getGhostsO(), ksv = ghosv; k < f.getO() + f.getGhostsO(); k++, ksv++)
-                        {
-                            // if (i == 1 && j == 1 && k == 1)
-                            //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, vraw[i][j][k],
-                            //     i,j,k,r[i][j][k], omega);
-                            vraw[i][j][k] = vraw[i][j][k] + omega * (1.0 / stencilValues[isv][jsv][ksv][1][1][1]) * r[i][j][k];
+                // r = f - A*v
+                res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, false, periodic);
 
-                            // if (j == 2 && k == 5 && i == 1)
-                            // {
-                            //     // printf("seq omega * (1.0 / sv_self) * res = %e\n", omega * (1.0 / stencilValues[isv][jsv][ksv][1][1][1]) * r[i][j][k]);
-                            //     // printf("seq omega = %e, (1.0 / sv_self) = %e, res = %e\n", omega, (1.0 / stencilValues[isv][jsv][ksv][1][1][1]), r[i][j][k]);
-                            //     // printf("seq res = %e, f = %e\n", r[i][j][k], f[i][j][k]);
-                            //     // printf("seq x = %d, omega = %e, res = %e, v_out = %e, sv_self = %e\n", i, omega, r[i][j][k], vraw[i][j][k], stencilValues[isv][jsv][ksv][1][1][1]);
-                            //     // // print_7point(v_in, index, ioff, joff, koff);
-                            //     // print27point(v, i, j, k);
-                            // }
-                        }
+                if (stencilType == MGCL_LAPLACE_7POINT || stencilType == MGCL_LAPLACE_19POINT || stencilType == MGCL_LAPLACE_27POINT)
+                {
+                    for (int iv = v.getGhostsM(), ir = r.getGhostsM(); iv < v.getM() + v.getGhostsM(); iv++, ir++)
+                        for (int jv = v.getGhostsN(), jr = r.getGhostsN(); jv < v.getN() + v.getGhostsN(); jv++, jr++)
+                            for (int kv = v.getGhostsO(), kr = r.getGhostsO(); kv < v.getO() + v.getGhostsO(); kv++, kr++)
+                            {
+                                // if (i == 1 && j == 1 && k == 1)
+                                //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, vraw[i][j][k],
+                                //     i,j,k,r[i][j][k], omega);
+                                vraw[iv][jv][kv] = vraw[iv][jv][kv] + omega * dinv * r[ir][jr][kr];
+                            }
+                }
+                else
+                {
+                    // printf("seq x = %d, omega = %e, res = %e, v_out = %e, sv_self = %e\n", 1, omega, r[1][2][5], vraw[1][2][5], stencilValues[2][3][6][1][1][1]);
+                    // print_7point(v_in, index, ioff, joff, koff);
+                    // print27point(v, 1, 2, 5);
+                    // print27point_sv(v, 1, 2, 5, stencilValues, 2, 3, 6);
+
+                    int ghmsv = stencilValues.getGhostsDim1();
+                    int ghnsv = stencilValues.getGhostsDim2();
+                    int ghosv = stencilValues.getGhostsDim3();
+                    for (int iv = v.getGhostsM(), ir = r.getGhostsM(), isv = ghmsv; iv < v.getM() + v.getGhostsM(); iv++, ir++, isv++)
+                        for (int jv = v.getGhostsN(), jr = r.getGhostsN(), jsv = ghnsv; jv < v.getN() + v.getGhostsN(); jv++, jr++, jsv++)
+                            for (int kv = v.getGhostsO(), kr = r.getGhostsO(), ksv = ghosv; kv < v.getO() + v.getGhostsO(); kv++, kr++, ksv++)
+                            {
+                                // if (i == 1 && j == 1 && k == 1)
+                                //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, vraw[i][j][k],
+                                //     i,j,k,r[i][j][k], omega);
+                                vraw[iv][jv][kv] = vraw[iv][jv][kv] + omega * (1.0 / stencilValues[isv][jsv][ksv][1][1][1]) * r[ir][jr][kr];
+
+                                // if (j == 2 && k == 5 && i == 1)
+                                // {
+                                //     // printf("seq omega * (1.0 / sv_self) * res = %e\n", omega * (1.0 / stencilValues[isv][jsv][ksv][1][1][1]) * r[i][j][k]);
+                                //     // printf("seq omega = %e, (1.0 / sv_self) = %e, res = %e\n", omega, (1.0 / stencilValues[isv][jsv][ksv][1][1][1]), r[i][j][k]);
+                                //     // printf("seq res = %e, f = %e\n", r[i][j][k], f[i][j][k]);
+                                //     // printf("seq x = %d, omega = %e, res = %e, v_out = %e, sv_self = %e\n", i, omega, r[i][j][k], vraw[i][j][k], stencilValues[isv][jsv][ksv][1][1][1]);
+                                //     // // print_7point(v_in, index, ioff, joff, koff);
+                                //     // print27point(v, i, j, k);
+                                // }
+                            }
+                }
             }
         }
 
@@ -639,9 +648,6 @@ namespace mgcl
         double ******stencilValues;
         double ***vraw = v.getData();
 
-        int ghm = f.getGhostsM();
-        int ghn = f.getGhostsN();
-        int gho = f.getGhostsO();
         int ghmsv = 0;
         int ghnsv = 0;
         int ghosv = 0;
@@ -658,92 +664,92 @@ namespace mgcl
             //     throw "Ghosts of inputs and stencilValues must be the same!";
         }
 
-        for (int i = ghm, isv = ghmsv; i < f.getM() + ghm; i++, isv++)
-            for (int j = ghn, jsv = ghnsv; j < f.getN() + ghn; j++, jsv++)
-                for (int k = gho, ksv = ghosv; k < f.getO() + gho; k++, ksv++)
+        for (int iv = v.getGhostsM(), ir = r.getGhostsM(), fi = f.getGhostsM(), isv = ghmsv; iv < v.getM() + v.getGhostsM(); iv++, ir++, fi++, isv++)
+            for (int jv = v.getGhostsN(), jr = r.getGhostsN(), fj = f.getGhostsN(), jsv = ghnsv; jv < v.getN() + v.getGhostsN(); jv++, jr++, fj++, jsv++)
+                for (int kv = v.getGhostsO(), kr = r.getGhostsO(), fk = f.getGhostsO(), ksv = ghosv; kv < v.getO() + v.getGhostsO(); kv++, kr++, fk++, ksv++)
                 {
                     // A*v
                     if (stencilType == MGCL_LAPLACE_7POINT)
                     {
                         // clang-format off
-                        stencilsum = (6.0 * vraw[i][j][k]
-                            - vraw[i][j][k - 1] - vraw[i][j][k + 1]
-                            - vraw[i][j - 1][k] - vraw[i][j + 1][k]
-                            - vraw[i - 1][j][k] - vraw[i + 1][j][k]
+                        stencilsum = (6.0 * vraw[iv][jv][kv]
+                            - vraw[iv][jv][kv - 1] - vraw[iv][jv][kv + 1]
+                            - vraw[iv][jv - 1][kv] - vraw[iv][jv + 1][kv]
+                            - vraw[iv - 1][jv][kv] - vraw[iv + 1][jv][kv]
                             ) * stencilFactor;
                         // clang-format on
                     }
                     else if (stencilType == MGCL_LAPLACE_19POINT)
                     {
                         // clang-format off
-                        stencilsum = (24.0 * vraw[i][j][k]
-                                - 2.0 * vraw[i][j][k - 1] - 2.0 * vraw[i][j][k + 1]
-                                - 2.0 * vraw[i][j - 1][k] - 2.0 * vraw[i][j + 1][k]
-                                - 2.0 * vraw[i - 1][j][k] - 2.0 * vraw[i + 1][j][k]
+                        stencilsum = (24.0 * vraw[iv][jv][kv]
+                                - 2.0 * vraw[iv][jv][kv - 1] - 2.0 * vraw[iv][jv][kv + 1]
+                                - 2.0 * vraw[iv][jv - 1][kv] - 2.0 * vraw[iv][jv + 1][kv]
+                                - 2.0 * vraw[iv - 1][jv][kv] - 2.0 * vraw[iv + 1][jv][kv]
                                 
-                                - vraw[i][j - 1][k - 1] - vraw[i][j - 1][k + 1]
-                                - vraw[i][j + 1][k - 1] - vraw[i][j + 1][k + 1]
-                                - vraw[i - 1][j][k - 1] - vraw[i - 1][j][k + 1]
-                                - vraw[i + 1][j][k - 1] - vraw[i + 1][j][k + 1]
-                                - vraw[i - 1][j - 1][k] - vraw[i - 1][j + 1][k]
-                                - vraw[i + 1][j - 1][k] - vraw[i + 1][j + 1][k]
+                                - vraw[iv][jv - 1][kv - 1] - vraw[iv][jv - 1][kv + 1]
+                                - vraw[iv][jv + 1][kv - 1] - vraw[iv][jv + 1][kv + 1]
+                                - vraw[iv - 1][jv][kv - 1] - vraw[iv - 1][jv][kv + 1]
+                                - vraw[iv + 1][jv][kv - 1] - vraw[iv + 1][jv][kv + 1]
+                                - vraw[iv - 1][jv - 1][kv] - vraw[iv - 1][jv + 1][kv]
+                                - vraw[iv + 1][jv - 1][kv] - vraw[iv + 1][jv + 1][kv]
                                 ) * stencilFactor;
                         // clang-format on
                     }
                     else if (stencilType == MGCL_LAPLACE_27POINT)
                     {
                         // clang-format off
-                        stencilsum = (128.0 * vraw[i][j][k]
-                                - 14.0 * vraw[i][j][k - 1] - 14.0 * vraw[i][j][k + 1]
-                                - 14.0 * vraw[i][j - 1][k] - 14.0 * vraw[i][j + 1][k]
-                                - 14.0 * vraw[i - 1][j][k] - 14.0 * vraw[i + 1][j][k]
+                        stencilsum = (128.0 * vraw[iv][jv][kv]
+                                - 14.0 * vraw[iv][jv][kv - 1] - 14.0 * vraw[iv][jv][kv + 1]
+                                - 14.0 * vraw[iv][jv - 1][kv] - 14.0 * vraw[iv][jv + 1][kv]
+                                - 14.0 * vraw[iv - 1][jv][kv] - 14.0 * vraw[iv + 1][jv][kv]
 
-                                - 3.0 * vraw[i][j - 1][k - 1] - 3.0 * vraw[i][j - 1][k + 1]
-                                - 3.0 * vraw[i][j + 1][k - 1] - 3.0 * vraw[i][j + 1][k + 1]
-                                - 3.0 * vraw[i - 1][j][k - 1] - 3.0 * vraw[i - 1][j][k + 1]
-                                - 3.0 * vraw[i + 1][j][k - 1] - 3.0 * vraw[i + 1][j][k + 1]
-                                - 3.0 * vraw[i - 1][j - 1][k] - 3.0 * vraw[i - 1][j + 1][k]
-                                - 3.0 * vraw[i + 1][j - 1][k] - 3.0 * vraw[i + 1][j + 1][k]
+                                - 3.0 * vraw[iv][jv - 1][kv - 1] - 3.0 * vraw[iv][jv - 1][kv + 1]
+                                - 3.0 * vraw[iv][jv + 1][kv - 1] - 3.0 * vraw[iv][jv + 1][kv + 1]
+                                - 3.0 * vraw[iv - 1][jv][kv - 1] - 3.0 * vraw[iv - 1][jv][kv + 1]
+                                - 3.0 * vraw[iv + 1][jv][kv - 1] - 3.0 * vraw[iv + 1][jv][kv + 1]
+                                - 3.0 * vraw[iv - 1][jv - 1][kv] - 3.0 * vraw[iv - 1][jv + 1][kv]
+                                - 3.0 * vraw[iv + 1][jv - 1][kv] - 3.0 * vraw[iv + 1][jv + 1][kv]
 
-                                - vraw[i - 1][j - 1][k - 1] - vraw[i - 1][j - 1][k + 1]
-                                - vraw[i - 1][j + 1][k - 1] - vraw[i - 1][j + 1][k + 1]
-                                - vraw[i + 1][j - 1][k - 1] - vraw[i + 1][j - 1][k + 1]
-                                - vraw[i + 1][j + 1][k - 1] - vraw[i + 1][j + 1][k + 1]
+                                - vraw[iv - 1][jv - 1][kv - 1] - vraw[iv - 1][jv - 1][kv + 1]
+                                - vraw[iv - 1][jv + 1][kv - 1] - vraw[iv - 1][jv + 1][kv + 1]
+                                - vraw[iv + 1][jv - 1][kv - 1] - vraw[iv + 1][jv - 1][kv + 1]
+                                - vraw[iv + 1][jv + 1][kv - 1] - vraw[iv + 1][jv + 1][kv + 1]
                                 ) * stencilFactor;
                         // clang-format on
                     }
                     else if (stencilType == MGCL_VARYING)
                     {
                         // clang-format off
-                        stencilsum = stencilValues[isv][jsv][ksv][1][1][1]  * vraw[i][j][k]
-                            + stencilValues[isv][jsv][ksv][1][1][0] * vraw[ i ][ j ][k-1]
-                            + stencilValues[isv][jsv][ksv][1][1][2] * vraw[ i ][ j ][k+1]
-                            + stencilValues[isv][jsv][ksv][1][0][1] * vraw[ i ][j-1][ k ]
-                            + stencilValues[isv][jsv][ksv][1][2][1] * vraw[ i ][j+1][ k ]
-                            + stencilValues[isv][jsv][ksv][0][1][1] * vraw[i-1][ j ][ k ]
-                            + stencilValues[isv][jsv][ksv][2][1][1] * vraw[i+1][ j ][ k ]
+                        stencilsum = stencilValues[isv][jsv][ksv][1][1][1]  * vraw[iv][jv][kv]
+                            + stencilValues[isv][jsv][ksv][1][1][0] * vraw[ iv ][ jv ][kv-1]
+                            + stencilValues[isv][jsv][ksv][1][1][2] * vraw[ iv ][ jv ][kv+1]
+                            + stencilValues[isv][jsv][ksv][1][0][1] * vraw[ iv ][jv-1][ kv ]
+                            + stencilValues[isv][jsv][ksv][1][2][1] * vraw[ iv ][jv+1][ kv ]
+                            + stencilValues[isv][jsv][ksv][0][1][1] * vraw[iv-1][ jv ][ kv ]
+                            + stencilValues[isv][jsv][ksv][2][1][1] * vraw[iv+1][ jv ][ kv ]
                             
-                            + stencilValues[isv][jsv][ksv][1][0][0] * vraw[ i ][j-1][k-1]
-                            + stencilValues[isv][jsv][ksv][1][0][2] * vraw[ i ][j-1][k+1]
-                            + stencilValues[isv][jsv][ksv][1][2][0] * vraw[ i ][j+1][k-1]
-                            + stencilValues[isv][jsv][ksv][1][2][2] * vraw[ i ][j+1][k+1]
-                            + stencilValues[isv][jsv][ksv][0][1][0] * vraw[i-1][ j ][k-1]
-                            + stencilValues[isv][jsv][ksv][0][1][2] * vraw[i-1][ j ][k+1]
-                            + stencilValues[isv][jsv][ksv][2][1][0] * vraw[i+1][ j ][k-1]
-                            + stencilValues[isv][jsv][ksv][2][1][2] * vraw[i+1][ j ][k+1]
-                            + stencilValues[isv][jsv][ksv][0][0][1] * vraw[i-1][j-1][ k ]
-                            + stencilValues[isv][jsv][ksv][0][2][1] * vraw[i-1][j+1][ k ]
-                            + stencilValues[isv][jsv][ksv][2][0][1] * vraw[i+1][j-1][ k ]
-                            + stencilValues[isv][jsv][ksv][2][2][1] * vraw[i+1][j+1][ k ]
+                            + stencilValues[isv][jsv][ksv][1][0][0] * vraw[ iv ][jv-1][kv-1]
+                            + stencilValues[isv][jsv][ksv][1][0][2] * vraw[ iv ][jv-1][kv+1]
+                            + stencilValues[isv][jsv][ksv][1][2][0] * vraw[ iv ][jv+1][kv-1]
+                            + stencilValues[isv][jsv][ksv][1][2][2] * vraw[ iv ][jv+1][kv+1]
+                            + stencilValues[isv][jsv][ksv][0][1][0] * vraw[iv-1][ jv ][kv-1]
+                            + stencilValues[isv][jsv][ksv][0][1][2] * vraw[iv-1][ jv ][kv+1]
+                            + stencilValues[isv][jsv][ksv][2][1][0] * vraw[iv+1][ jv ][kv-1]
+                            + stencilValues[isv][jsv][ksv][2][1][2] * vraw[iv+1][ jv ][kv+1]
+                            + stencilValues[isv][jsv][ksv][0][0][1] * vraw[iv-1][jv-1][ kv ]
+                            + stencilValues[isv][jsv][ksv][0][2][1] * vraw[iv-1][jv+1][ kv ]
+                            + stencilValues[isv][jsv][ksv][2][0][1] * vraw[iv+1][jv-1][ kv ]
+                            + stencilValues[isv][jsv][ksv][2][2][1] * vraw[iv+1][jv+1][ kv ]
                             
-                            + stencilValues[isv][jsv][ksv][0][0][0] * vraw[i-1][j-1][k-1]
-                            + stencilValues[isv][jsv][ksv][0][0][2] * vraw[i-1][j-1][k+1]
-                            + stencilValues[isv][jsv][ksv][0][2][0] * vraw[i-1][j+1][k-1]
-                            + stencilValues[isv][jsv][ksv][0][2][2] * vraw[i-1][j+1][k+1]
-                            + stencilValues[isv][jsv][ksv][2][0][0] * vraw[i+1][j-1][k-1]
-                            + stencilValues[isv][jsv][ksv][2][0][2] * vraw[i+1][j-1][k+1]
-                            + stencilValues[isv][jsv][ksv][2][2][0] * vraw[i+1][j+1][k-1]
-                            + stencilValues[isv][jsv][ksv][2][2][2] * vraw[i+1][j+1][k+1];
+                            + stencilValues[isv][jsv][ksv][0][0][0] * vraw[iv-1][jv-1][kv-1]
+                            + stencilValues[isv][jsv][ksv][0][0][2] * vraw[iv-1][jv-1][kv+1]
+                            + stencilValues[isv][jsv][ksv][0][2][0] * vraw[iv-1][jv+1][kv-1]
+                            + stencilValues[isv][jsv][ksv][0][2][2] * vraw[iv-1][jv+1][kv+1]
+                            + stencilValues[isv][jsv][ksv][2][0][0] * vraw[iv+1][jv-1][kv-1]
+                            + stencilValues[isv][jsv][ksv][2][0][2] * vraw[iv+1][jv-1][kv+1]
+                            + stencilValues[isv][jsv][ksv][2][2][0] * vraw[iv+1][jv+1][kv-1]
+                            + stencilValues[isv][jsv][ksv][2][2][2] * vraw[iv+1][jv+1][kv+1];
                         // clang-format on
 
                         // if (j == 2 && k == 2 && i == 2)
@@ -754,14 +760,14 @@ namespace mgcl
                     }
 
                     // r = f - A*v
-                    r[i][j][k] = f[i][j][k] - stencilsum;
+                    r[ir][jr][kr] = f[fi][fj][fk] - stencilsum;
 
                     if (returnResidualNorm)
                     {
                         if (resnorm == MGCL_L2)
-                            res += r[i][j][k] * r[i][j][k];
-                        else if (fabs(r[i][j][k]) > res)
-                            res = fabs(r[i][j][k]);
+                            res += r[ir][jr][kr] * r[ir][jr][kr];
+                        else if (fabs(r[ir][jr][kr]) > res)
+                            res = fabs(r[ir][jr][kr]);
                     }
                 }
 

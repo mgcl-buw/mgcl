@@ -3,7 +3,12 @@
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "opencl_helper.hpp"    // for mgclCheckError, OpenCLHelper
 
+#include <cassert>
 #include <cstddef> // for size_t, NULL
+
+#ifdef MGCL_USE_MPI
+#include "mpi_data.hpp"
+#endif // MGCL_USE_MPI
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -15,9 +20,9 @@ namespace mgcl
 {
     using std::size_t;
 
-    /* updates ghost cells for periodic boundary condition
-     * m,n,o are dimensions of real grid without ghost cells */
-    void MultigridEngine::updateGhostsSeq(Cuboid &c)
+    /* Updates ghost cells for periodic boundary condition.
+     * mpiData parameter is optional (i.e. nullable) and is only used when MPI is used. */
+    void MultigridEngine::updateGhostsSeq(Cuboid &c, MPIData *mpiData, bool periodic)
     {
         int m = c.getM();
         int n = c.getN();
@@ -26,6 +31,214 @@ namespace mgcl
         int ghosts_n = c.getGhostsN();
         int ghosts_o = c.getGhostsO();
 
+#ifdef MGCL_USE_MPI
+        // TODO adjust for ghosts > 1
+        // TODO test
+        assert(mpiData != nullptr && "mpiData must not be null if MGCL_USE_MPI is true!");
+
+        /* MPI variables */
+        int myid;
+        MPI_Status stats[2];
+        MPI_Request reqs[2];
+
+        /* Loop variables */
+        int i, j, k;
+        // int m = data[level].m_l, n = data[level].n_l, o = data[level].o_l;
+
+        // Rectangle buffers
+        double **sbufxy = mpiData->sbufxy();
+        double **sbufxz = mpiData->sbufxz();
+        double **sbufyz = mpiData->sbufyz();
+        double **rbufxy = mpiData->rbufxy();
+        double **rbufxz = mpiData->rbufxz();
+        double **rbufyz = mpiData->rbufyz();
+
+        /* Getting local rank */
+        MPI_Comm_rank(mpiData->comm, &myid);
+
+        /* Sending data to left */
+        for (j = 0; j < n; j++)
+        {
+            for (k = 0; k < o; k++)
+            {
+                sbufyz[j][k] = c[1][j][k];
+            }
+        }
+        reqs[0] = MPI_REQUEST_NULL;
+        reqs[1] = MPI_REQUEST_NULL;
+        if (myid != mpiData->left)
+            MPI_Isend((void *)sbufyz[0], n * o, MPI_DOUBLE, mpiData->left, 0, mpiData->comm, &reqs[0]);
+        if (myid != mpiData->right)
+            MPI_Irecv((void *)rbufyz[0], n * o, MPI_DOUBLE, mpiData->right, 0, mpiData->comm, &reqs[1]);
+        MPI_Waitall(2, reqs, stats);
+        if (MPI_PROC_NULL != mpiData->right)
+            for (j = 0; j < n; j++)
+            {
+                for (k = 0; k < o; k++)
+                {
+                    c[m - 1][j][k] = rbufyz[j][k];
+                }
+            }
+
+        /* Sending data to right */
+        for (j = 0; j < n; j++)
+        {
+            for (k = 0; k < o; k++)
+            {
+                sbufyz[j][k] = c[m - 2][j][k];
+            }
+        }
+        reqs[0] = MPI_REQUEST_NULL;
+        reqs[1] = MPI_REQUEST_NULL;
+        if (myid != mpiData->right)
+            MPI_Isend((void *)sbufyz[0], n * o, MPI_DOUBLE, mpiData->right, 0, mpiData->comm, &reqs[0]);
+        if (myid != mpiData->left)
+            MPI_Irecv((void *)rbufyz[0], n * o, MPI_DOUBLE, mpiData->left, 0, mpiData->comm, &reqs[1]);
+        MPI_Waitall(2, reqs, stats);
+        if (MPI_PROC_NULL != mpiData->left)
+            for (j = 0; j < n; j++)
+            {
+                for (k = 0; k < o; k++)
+                {
+                    c[0][j][k] = rbufyz[j][k];
+                }
+            }
+
+        /* Sending data downwards */
+        for (i = 0; i < m; i++)
+        {
+            for (k = 0; k < o; k++)
+            {
+                sbufxz[i][k] = c[i][1][k];
+            }
+        }
+        reqs[0] = MPI_REQUEST_NULL;
+        reqs[1] = MPI_REQUEST_NULL;
+        if (myid != mpiData->down)
+            MPI_Isend((void *)sbufxz[0], m * o, MPI_DOUBLE, mpiData->down, 0, mpiData->comm, &reqs[0]);
+        if (myid != mpiData->up)
+            MPI_Irecv((void *)rbufxz[0], m * o, MPI_DOUBLE, mpiData->up, 0, mpiData->comm, &reqs[1]);
+        MPI_Waitall(2, reqs, stats);
+        if (MPI_PROC_NULL != mpiData->up)
+            for (i = 0; i < m; i++)
+            {
+                for (k = 0; k < o; k++)
+                {
+                    c[i][n - 1][k] = rbufxz[i][k];
+                }
+            }
+
+        /* Sending data upwards */
+        for (i = 0; i < m; i++)
+        {
+            for (k = 0; k < o; k++)
+            {
+                sbufxz[i][k] = c[i][n - 2][k];
+            }
+        }
+        reqs[0] = MPI_REQUEST_NULL;
+        reqs[1] = MPI_REQUEST_NULL;
+        if (myid != mpiData->up)
+            MPI_Isend((void *)sbufxz[0], m * o, MPI_DOUBLE, mpiData->up, 0, mpiData->comm, &reqs[0]);
+        if (myid != mpiData->down)
+            MPI_Irecv((void *)rbufxz[0], m * o, MPI_DOUBLE, mpiData->down, 0, mpiData->comm, &reqs[1]);
+        MPI_Waitall(2, reqs, stats);
+        if (MPI_PROC_NULL != mpiData->down)
+            for (i = 0; i < m; i++)
+            {
+                for (k = 0; k < o; k++)
+                {
+                    c[i][0][k] = rbufxz[i][k];
+                }
+            }
+
+        /* Sending data backwards */
+        for (i = 0; i < m; i++)
+        {
+            for (j = 0; j < n; j++)
+            {
+                sbufxy[i][j] = c[i][j][1];
+            }
+        }
+        reqs[0] = MPI_REQUEST_NULL;
+        reqs[1] = MPI_REQUEST_NULL;
+        if (myid != mpiData->back)
+            MPI_Isend((void *)sbufxy[0], m * n, MPI_DOUBLE, mpiData->back, 0, mpiData->comm, &reqs[0]);
+        if (myid != mpiData->front)
+            MPI_Irecv((void *)rbufxy[0], m * n, MPI_DOUBLE, mpiData->front, 0, mpiData->comm, &reqs[1]);
+        MPI_Waitall(2, reqs, stats);
+        if (MPI_PROC_NULL != mpiData->front)
+            for (i = 0; i < m; i++)
+            {
+                for (j = 0; j < n; j++)
+                {
+                    c[i][j][o - 1] = rbufxy[i][j];
+                }
+            }
+
+        /* Sending data to front */
+        for (i = 0; i < m; i++)
+        {
+            for (j = 0; j < n; j++)
+            {
+                sbufxy[i][j] = c[i][j][o - 2];
+            }
+        }
+        reqs[0] = MPI_REQUEST_NULL;
+        reqs[1] = MPI_REQUEST_NULL;
+        if (myid != mpiData->front)
+            MPI_Isend((void *)sbufxy[0], m * n, MPI_DOUBLE, mpiData->front, 0, mpiData->comm, &reqs[0]);
+        if (myid != mpiData->back)
+            MPI_Irecv((void *)rbufxy[0], m * n, MPI_DOUBLE, mpiData->back, 0, mpiData->comm, &reqs[1]);
+        MPI_Waitall(2, reqs, stats);
+        if (MPI_PROC_NULL != mpiData->back)
+            for (i = 0; i < m; i++)
+            {
+                for (j = 0; j < n; j++)
+                {
+                    c[i][j][0] = rbufxy[i][j];
+                }
+            }
+
+        if (periodic)
+        {
+            if (myid == mpiData->back && myid == mpiData->front)
+            {
+                for (i = 0; i < m; i++)
+                {
+                    for (j = 0; j < n; j++)
+                    {
+                        c[i][j][0] = c[i][j][o - 2];
+                        c[i][j][o - 1] = c[i][j][1];
+                    }
+                }
+            }
+
+            if (myid == mpiData->down && myid == mpiData->up)
+            {
+                for (i = 0; i < m; i++)
+                {
+                    for (k = 0; k < o; k++)
+                    {
+                        c[i][0][k] = c[i][n - 2][k];
+                        c[i][n - 1][k] = c[i][1][k];
+                    }
+                }
+            }
+
+            if (myid == mpiData->left && myid == mpiData->right)
+            {
+                for (j = 0; j < n; j++)
+                {
+                    for (k = 0; k < o; k++)
+                    {
+                        c[0][j][k] = c[m - 2][j][k];
+                        c[m - 1][j][k] = c[1][j][k];
+                    }
+                }
+            }
+        }
+#else
         // sending data in x-direction
         for (int i = 0; i < n + 2 * ghosts_n; i++)
             for (int j = 0; j < o + 2 * ghosts_o; j++)
@@ -53,36 +266,7 @@ namespace mgcl
                     c[i][j][o + ghosts_o + k] = c[i][j][ghosts_o + k]; // back ghost cell = front real cell
                 }
 
-        // now send diagonal edges in each direction
-        // for (int i = 1; i < m + 1; i++)
-        // {
-        //     c[i][0][0] = c[i][n][o]; // top front
-        //     c[i][0][o+1] = c[i][n][1]; // top back
-        //     c[i][n+1][0] = c[i][1][o]; // bottom front
-        //     c[i][n+1][o+1] = c[i][1][1]; // bottom back
-
-        //     c[0][i][0] = c[m][i][o]; // front left
-        //     c[0][i][o+1] = c[m][i][1]; // back left
-        //     c[m+1][i][0] = c[1][i][o]; // front left
-        //     c[m+1][i][o+1] = c[1][i][1]; // back right
-
-        //     c[0][0][i] = c[m][n][i]; // top left
-        //     c[0][n+1][i] = c[m][1][i]; // bottom left
-        //     c[m+1][0][i] = c[1][n][i]; // top right
-        //     c[m+1][n+1][i] = c[1][1][i]; // bottom right
-        // }
-
-        // // corners
-        // c[0][0][0] = c[m][n][o]; // top left front
-        // c[0][0][o+1] = c[m][n][1]; // top left back
-        // c[0][n+1][0] = c[m][1][o]; // bottom left front
-        // c[0][n+1][o+1] = c[m][1][1]; // bottom left back
-        // c[m+1][0][0] = c[1][n][o]; // top right front
-        // c[m+1][0][o+1] = c[1][n][1]; // top right back
-        // c[m+1][n+1][0] = c[1][1][o]; // bottom right front
-        // c[m+1][n+1][o+1] = c[1][1][1]; // bottom right back
-
-        // printf("c[1,0,0] = %f\n", c[1][0][0]);
+#endif // MGCL_USE_MPI
     }
 
     /* updates ghost cells on opencl device.

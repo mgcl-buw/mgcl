@@ -4,6 +4,10 @@
 #include "mgcl.hpp"    // for MGCL_STENCIL
 #include "stencil.hpp" // for VaryingStencil3x3x3
 
+#ifdef MGCL_USE_MPI
+#include "mpi_data.hpp"
+#endif // MGCL_USE_MPI
+
 #include <memory> // for shared_ptr
 
 #ifdef __APPLE__
@@ -57,6 +61,10 @@ namespace mgcl
         cl_mem dF = nullptr;
         cl_mem dR = nullptr;
 
+#ifdef MGCL_USE_MPI
+        std::unique_ptr<MPIData> mpiData = nullptr;
+#endif // MGCL_USE_MPI
+
         friend class OpenCLHelper;
         friend class MultigridEngine;
         friend class Problem;
@@ -90,6 +98,18 @@ namespace mgcl
 
         double getH() const;
         void setH(double h_);
+
+#ifdef MGCL_USE_MPI
+        inline MPIData *getMpiDataPtr()
+        {
+            return mpiData.get();
+        }
+
+        inline MPIData &getMpiData()
+        {
+            return *mpiData;
+        }
+#endif // MGCL_USE_MPI
 
         cl_mem getDVIn() const;
         void setDVIn(const cl_mem &dVIn_);

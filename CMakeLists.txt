@@ -20,6 +20,8 @@ endif()
 
 # set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
 
+option(MGCL_USE_MPI "Compile with MPI" ON)
+
 add_subdirectory(src)
 
 # Only add other subdirs if mgcl is not used in another project.
