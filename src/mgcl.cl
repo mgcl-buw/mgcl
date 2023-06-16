@@ -520,7 +520,7 @@ __kernel void residual_27point_varying_stencil(
         int koff_sv = 27;
         int joff_sv = ((o - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
         int ioff_sv = ((n - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
-        int index_sv = ghosts_sv * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
+        int index_sv = (i + (ghosts_sv - ghosts)) * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
 
         // A*v
         // clang-format off
@@ -554,6 +554,12 @@ __kernel void residual_27point_varying_stencil(
             + stencilValues[index_sv + 18 + 6]     * v_in[index + ioff + joff - koff]
             + stencilValues[index_sv + 18 + 6 + 2] * v_in[index + ioff + joff + koff];
         // clang-format on
+
+        // if (i == 2 && j == 2 && k == 2)
+        // {
+        //     printf("ocl stencilsum = %e\n", stencilsum);
+        //     print27point_sv(v_in, index, ioff, joff, koff, stencilValues, index_sv);
+        // }
 
         // r = f - A*v
         r[index] = f[index] - stencilsum;

@@ -162,6 +162,8 @@ namespace mgcl
         Level &getLevelAt(int index) const;
         int getLevelsSize() const;
 
+        inline bool isPeriodic() const { return bc == BC::PERIODIC; }
+
         /********************************
          * Getters and Setters
          ********************************/
