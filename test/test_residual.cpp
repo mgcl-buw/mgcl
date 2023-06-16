@@ -372,4 +372,6 @@ TEST_CASE("residual gh > 1")
         REQUIRE(v_in.isEqual(v_in_gh));
         REQUIRE(r_in.isEqual(r_in_gh));
     }
+
+    // TODO test varying stencil
 }
