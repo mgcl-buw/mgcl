@@ -22,7 +22,7 @@ namespace mgcl
 
     /* Updates ghost cells for periodic boundary condition.
      * mpiData parameter is optional (i.e. nullable) and is only used when MPI is used. */
-    void MultigridEngine::updateGhostsSeq(Cuboid &c, MPIData *mpiData, bool periodic)
+    void MultigridEngine::updateGhostsSeq(Cuboid &c, /* MPIData *mpiData, */ bool periodic)
     {
         int m = c.getM();
         int n = c.getN();

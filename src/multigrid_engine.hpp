@@ -43,7 +43,7 @@ namespace mgcl
         static void prolongateSeq(Level &fine, Level &coarse, Cuboid &fineVals, Cuboid &coarseVals);
         static void prolongate(Level &fine, Level &coarse, cl_mem d_fine_values, cl_mem d_coarse_values);
 
-        static void updateGhostsSeq(Cuboid &c, MPIData *mpiData = nullptr, bool periodic = true);
+        static void updateGhostsSeq(Cuboid &c, /* MPIData *mpiData = nullptr, */ bool periodic = true);
         static int updateGhosts(Problem &problem, cl_mem dBuffer, int m, int n, int o, int ghostsM, int ghostsN, int ghostsO);
 
         static double residual(Problem &problem, Level &level, bool returnResidual);
