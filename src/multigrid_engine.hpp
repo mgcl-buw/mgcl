@@ -49,7 +49,7 @@ namespace mgcl
         static double residual(Problem &problem, Level &level, bool returnResidual);
         static double residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
                                   MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil3x3x3 &stencilValues,
-                                  bool returnResidualNorm, bool periodic);
+                                  bool returnResidualNorm, bool periodic, int m = 0, int n = 0, int o = 0);
 
         static double jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
                                 int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType, double stencilFactor,

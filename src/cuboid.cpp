@@ -301,6 +301,42 @@ namespace mgcl
     }
 
     /**
+     * @brief Returns true if all cells contents of this Cuboid are equal to the one of another Cuboid c within a
+     * given tolerance tol, not respecting ghost cell amount. Dimensions of ghosted cell amount of this Cuboid and c
+     * must be equal (ghost cell amounts can differ as long as sums are equal).
+     *
+     * @param c Other Cuboid
+     * @param tol tolerance that is used for checking equality. Defaults to 1e-7.
+     * @return true Cuboids equal.
+     * @return false Cuboids not equal.
+     * @throws invalid_argument When dimensions of Cuboids don't match.
+     */
+    bool Cuboid::isEqualAllCells(Cuboid &c, double tol)
+    {
+        if (mgh != c.getMgh() ||
+            ngh != c.getNgh() ||
+            ogh != c.getOgh())
+        {
+            throw std::invalid_argument("Cannot check equality for Cuboids. Dimensions differ.");
+        }
+
+        double diff = 0;
+
+        for (int i = 0; i < mgh; i++)
+            for (int j = 0; j < ngh; j++)
+                for (int k = 0; k < ogh; k++)
+                {
+                    diff = fabs(field_3d[i][j][k] - c[i][j][k]);
+                    if (diff > tol)
+                    {
+                        return false;
+                    }
+                }
+
+        return true;
+    }
+
+    /**
      * @brief Dumps content to file fiven by path overwriting existing files
      *
      * @param path Path to file, overwrites existing one.
@@ -363,6 +399,25 @@ namespace mgcl
                 for (int k = 0; k < o; k++)
                 {
                     field_3d[i + ghostsM][j + ghostsN][k + ghostsO] = c[i + c.getGhostsM()][j + c.getGhostsN()][k + c.getGhostsO()];
+                }
+    }
+
+    /**
+     * @brief Fills all cells from Cuboid c. Ghosted dimensions of real cells must match. It doesn't matter if ghost
+     * cell amount varies as long as the sum fits.
+     *
+     * @param c
+     */
+    void Cuboid::fillAllFrom(Cuboid &c)
+    {
+        if (mgh != c.getMgh() || ngh != c.getNgh() || ogh != c.getOgh())
+            throw "Dimensions do not match!";
+
+        for (int i = 0; i < mgh; i++)
+            for (int j = 0; j < ngh; j++)
+                for (int k = 0; k < ogh; k++)
+                {
+                    field_3d[i][j][k] = c[i][j][k];
                 }
     }
 }

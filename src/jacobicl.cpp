@@ -635,14 +635,19 @@ namespace mgcl
         return res;
     }
 
-    /* Calculates r = f - A*v using 7-point stencil of 3D laplacian.
-     * m,n,o is size of real grid
+    /* Calculates r = f - A*v using 7-point, 19-point or 27-point stencil of 3D laplacian or a varying stencil.
+     * m,n,o is the size of the real grid.
      * v needs to have updated ghost cells if the problem is periodic!
+     * moff, noff and ooff can be used to change the size of the grid that the residual shall be calculated for.
+     *   Per default only real cells are considered (moff = 0), but with e.g. moff = -1, the first ghost cell border is
+     *   considered, too. Analogously, with moff = 1 the outermost set of real cells is ignored. The calculation
+     *   of the boundaries is e.g. istart = v.ghosts_m + moff.
      */
     double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
-                                        MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil3x3x3 &stencilValuesCuboid, bool returnResidualNorm, bool periodic)
+                                        MGCL_STENCIL stencilType, double stencilFactor,
+                                        VaryingStencil3x3x3 &stencilValuesCuboid, bool returnResidualNorm,
+                                        bool periodic, int moff, int noff, int ooff)
     {
-        // TODO adjust when stencilValues are stored with ghosts
         double res = 0.0;
         double stencilsum = 0;
         double ******stencilValues;
@@ -651,6 +656,14 @@ namespace mgcl
         int ghmsv = 0;
         int ghnsv = 0;
         int ghosv = 0;
+
+        // check if off is too small (i.e. start < 0)
+        if (moff <= -v.getGhostsM() || noff <= -v.getGhostsN() || ooff <= -v.getGhostsO())
+            throw "moff, noff and ooff must not be <= -ghosts";
+
+        // check if off is too large (i.e. start > end)
+        if (moff * 2 >= v.getM() || noff * 2 >= v.getN() || ooff * 2 >= v.getO())
+            throw "2*moff, 2*noff and 2*ooff must not be >= m, n or o";
 
         if (stencilType == MGCL_VARYING)
         {
@@ -664,9 +677,22 @@ namespace mgcl
             //     throw "Ghosts of inputs and stencilValues must be the same!";
         }
 
-        for (int iv = v.getGhostsM(), ir = r.getGhostsM(), fi = f.getGhostsM(), isv = ghmsv; iv < v.getM() + v.getGhostsM(); iv++, ir++, fi++, isv++)
-            for (int jv = v.getGhostsN(), jr = r.getGhostsN(), fj = f.getGhostsN(), jsv = ghnsv; jv < v.getN() + v.getGhostsN(); jv++, jr++, fj++, jsv++)
-                for (int kv = v.getGhostsO(), kr = r.getGhostsO(), fk = f.getGhostsO(), ksv = ghosv; kv < v.getO() + v.getGhostsO(); kv++, kr++, fk++, ksv++)
+        int istart_v = v.getGhostsM() + moff;
+        int jstart_v = v.getGhostsN() + noff;
+        int kstart_v = v.getGhostsO() + ooff;
+        int iend_v = v.getMgh() - v.getGhostsM() - moff;
+        int jend_v = v.getNgh() - v.getGhostsN() - noff;
+        int kend_v = v.getOgh() - v.getGhostsO() - ooff;
+        int istart_r = r.getGhostsM() + moff;
+        int jstart_r = r.getGhostsN() + noff;
+        int kstart_r = r.getGhostsO() + ooff;
+        int istart_f = f.getGhostsM() + moff;
+        int jstart_f = f.getGhostsN() + noff;
+        int kstart_f = f.getGhostsO() + ooff;
+
+        for (int iv = istart_v, ir = istart_r, fi = istart_f, isv = ghmsv; iv < iend_v; iv++, ir++, fi++, isv++)
+            for (int jv = jstart_v, jr = jstart_r, fj = jstart_f, jsv = ghnsv; jv < jend_v; jv++, jr++, fj++, jsv++)
+                for (int kv = kstart_v, kr = kstart_r, fk = kstart_f, ksv = ghosv; kv < kend_v; kv++, kr++, fk++, ksv++)
                 {
                     // A*v
                     if (stencilType == MGCL_LAPLACE_7POINT)
