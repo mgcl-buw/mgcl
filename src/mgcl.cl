@@ -118,212 +118,40 @@ void print27point_sv(__global double *v, int index, int ioff, int joff, int koff
     printf(" sv * v[i+1][j+1][k+1] = %e * %e\n", sv[index_sv + 18 + 6 + 2], v[index + ioff + joff + koff]);
 }
 
-/* Updates ghost cells. m,n,o must be size of ghosted grid
- * One cell per work-item */
-__kernel void update_ghosts(__global double *restrict v, const int m, const int n, const int o)
+/**
+ * Updates ghosts of a cuboid, respecting small grids, e.g. gh > m.
+ * Needs to be called with one work-item per cell of ghosted grid.
+ * Work-items that map to a real cell simply do nothing (optimization potential here!).
+ * m,n,o are sizes of real grid.
+ * ghm, ghn, gho are amount of ghosts at one border.
+ */
+__kernel void update_ghosts_periodic(
+    __global double *restrict c,
+    int m, int n, int o,
+    int ghm, int ghn, int gho)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
     int k = get_global_id(2);
 
-    if (i < m && j < n && k < o)
+    int mgh = m + 2 * ghm;
+    int ngh = n + 2 * ghn;
+    int ogh = o + 2 * gho;
+
+    if ((i < ghm || j < ghn || k < gho ||
+         i >= ghm + m || j >= ghn + n || k >= gho + o) &&
+        (i < mgh && j < ngh && k < ogh))
     {
-        int index = i * n * o + j * o + k;
-        int ghosts = 1;
+        int ireal = i + floor(((double)(ghm - 1 - i)) / m + 1) * m;
+        int jreal = j + floor(((double)(ghn - 1 - j)) / n + 1) * n;
+        int kreal = k + floor(((double)(gho - 1 - k)) / o + 1) * o;
 
-        // indices of right real cells per left ghost cell
-        int mr = i + (m - 2 * ghosts);
-        int nr = j + (n - 2 * ghosts);
-        int or = k + (o - 2 * ghosts);
+        // 1d indices
+        int idx_gh_cell = i * ngh * ogh + j * ogh + k;
+        int idx_real_cell = ireal * ngh * ogh + jreal * ogh + kreal;
 
-        // indices of left real cells per right ghost cell
-        int ml = i - (m - 2 * ghosts);
-        int nl = j - (n - 2 * ghosts);
-        int ol = k - (o - 2 * ghosts);
-        // update ghost cells for periodic boundary condition
-        // make sure that every cell gets written only once to avoid race condition by using if-statements.
-        // cells are divided by xy-planes (behind, self and in front of grid)
-        // same xy-plane as grid
-        if (k >= ghosts && k < o - ghosts)
-        {
-            if (i < ghosts && j >= ghosts && j < n - ghosts) // middle left
-                v[index] = v[mr * n * o + j * o + k];
-            if (i >= m - ghosts && j >= ghosts && j < n - ghosts) // middle right
-                v[index] = v[ml * n * o + j * o + k];
-            if (j < ghosts && i >= ghosts && i < m - ghosts) // top middle
-                v[index] = v[i * n * o + nr * o + k];
-            if (j >= n - ghosts && i >= ghosts && i < m - ghosts) // bottom middle
-                v[index] = v[i * n * o + nl * o + k];
-            if (i < ghosts && j < ghosts) // top left
-                v[index] = v[mr * n * o + nr * o + k];
-            if (i >= m - ghosts && j < ghosts) // top right
-                v[index] = v[ml * n * o + nr * o + k];
-            if (i < ghosts && j >= n - ghosts) // bottom left
-                v[index] = v[mr * n * o + nl * o + k];
-            if (i >= m - ghosts && j >= n - ghosts) // bottom right
-                v[index] = v[ml * n * o + nl * o + k];
-        }
-
-        // xy-plane in front of grid
-        if (k < ghosts)
-        {
-            if (i < ghosts && j < ghosts) // top left
-                v[index] = v[mr * n * o + nr * o + or ];
-            if (i < ghosts && j >= ghosts && j < n - ghosts) // middle left
-                v[index] = v[mr * n * o + j * o + or ];
-            if (i < ghosts && j >= n - ghosts) // bottom left
-                v[index] = v[mr * n * o + nl * o + or ];
-
-            if (i >= ghosts && i < m - ghosts && j >= ghosts && j < n - ghosts)
-                v[index] = v[i * n * o + j * o + or ];       // center middle
-            if (i >= ghosts && i < m - ghosts && j < ghosts) // top middle
-                v[index] = v[i * n * o + nr * o + or ];
-            if (i >= ghosts && i < m - ghosts && j >= n - ghosts) // bottom middle
-                v[index] = v[i * n * o + nl * o + or ];
-
-            if (i >= m - ghosts && j < ghosts) // top right
-                v[index] = v[ml * n * o + nr * o + or ];
-            if (i >= m - ghosts && j >= ghosts && j < n - ghosts) // middle right
-                v[index] = v[ml * n * o + j * o + or ];
-            if (i >= m - ghosts && j >= n - ghosts) // bottom right
-                v[index] = v[ml * n * o + nl * o + or ];
-        }
-
-        // xy-plane behind grid
-        if (k >= o - ghosts)
-        {
-            if (i < ghosts && j < ghosts) // top left
-                v[index] = v[mr * n * o + nr * o + ol];
-            if (i < ghosts && j >= ghosts && j < n - ghosts) // middle left
-                v[index] = v[mr * n * o + j * o + ol];
-            if (i < ghosts && j >= n - ghosts) // bottom left
-                v[index] = v[mr * n * o + nl * o + ol];
-
-            if (i >= ghosts && i < m - ghosts && j >= ghosts && j < n - ghosts)
-                v[index] = v[i * n * o + j * o + ol];        // center middle
-            if (i >= ghosts && i < n - ghosts && j < ghosts) // top middle
-                v[index] = v[i * n * o + nr * o + ol];
-            if (i >= ghosts && i < n - ghosts && j >= n - ghosts) // bottom middle
-                v[index] = v[i * n * o + nl * o + ol];
-
-            if (i >= m - ghosts && j < ghosts) // top right
-                v[index] = v[ml * n * o + nr * o + ol];
-            if (i >= m - ghosts && j >= ghosts && j < n - ghosts) // middle right
-                v[index] = v[ml * n * o + j * o + ol];
-            if (i >= m - ghosts && j >= n - ghosts) // bottom right
-                v[index] = v[ml * n * o + nl * o + ol];
-        }
-    }
-}
-
-/* Updates ghost cells. m,n,o must be size of ghosted grid
- * One cell per work-item */
-__kernel void update_ghosts_2d(global double *v, const int m, const int n, const int o, const int ghosts_m,
-                               const int ghosts_n, const int ghosts_o)
-{
-    int j = get_global_id(0);
-    int k = get_global_id(1);
-    // int k = blockIdx.z*blockDim.z + threadIdx.z;
-    // printf("i,j,k = %d %d %d\n", i,j,k);
-
-    if (j < n && k < o)
-    {
-        int indexghosts = j * o + k;
-        int ioff = o * n;
-
-        int wm = m - 2 * ghosts_m;
-
-        int nr = j + (n - 2 * ghosts_n);
-        int orr = k + (o - 2 * ghosts_o);
-
-        int nl = j - (n - 2 * ghosts_n);
-        int ol = k - (o - 2 * ghosts_o);
-
-        for (int i = 0; i < m; i++)
-        {
-
-            // indices of right real cells per left ghost cell
-            int mr = i + wm;
-
-            // indices of left real cells per right ghost cell
-            int ml = i - wm;
-
-            // update ghost cells for periodic boundary condition
-            // make sure that every cell gets written only once to avoid race condition by using if-statements.
-            // cells are divided by xy-planes (behind, self and in front of grid)
-            // same xy-plane as grid
-            if (k >= ghosts_o && k < o - ghosts_o)
-            {
-                if (i < ghosts_m && j >= ghosts_n && j < n - ghosts_n) // middle left
-                    v[indexghosts] = v[mr * n * o + j * o + k];
-                if (i >= m - ghosts_m && j >= ghosts_n && j < n - ghosts_n) // middle right
-                    v[indexghosts] = v[ml * n * o + j * o + k];
-                if (j < ghosts_n && i >= ghosts_m && i < m - ghosts_m) // top middle
-                    v[indexghosts] = v[i * n * o + nr * o + k];
-                if (j >= n - ghosts_n && i >= ghosts_m && i < m - ghosts_m) // bottom middle
-                    v[indexghosts] = v[i * n * o + nl * o + k];
-                if (i < ghosts_m && j < ghosts_n) // top left
-                    v[indexghosts] = v[mr * n * o + nr * o + k];
-                if (i >= m - ghosts_m && j < ghosts_n) // top right
-                    v[indexghosts] = v[ml * n * o + nr * o + k];
-                if (i < ghosts_m && j >= n - ghosts_n) // bottom left
-                    v[indexghosts] = v[mr * n * o + nl * o + k];
-                if (i >= m - ghosts_m && j >= n - ghosts_n) // bottom right
-                    v[indexghosts] = v[ml * n * o + nl * o + k];
-            }
-
-            // xy-plane in front of grid
-            if (k < ghosts_o)
-            {
-                if (i < ghosts_m && j < ghosts_n) // top left
-                    v[indexghosts] = v[mr * n * o + nr * o + orr];
-                if (i < ghosts_m && j >= ghosts_n && j < n - ghosts_n) // middle left
-                    v[indexghosts] = v[mr * n * o + j * o + orr];
-                if (i < ghosts_m && j >= n - ghosts_n) // bottom left
-                    v[indexghosts] = v[mr * n * o + nl * o + orr];
-
-                if (i >= ghosts_m && i < m - ghosts_m && j >= ghosts_n && j < n - ghosts_n)
-                    v[indexghosts] = v[i * n * o + j * o + orr];       // center middle
-                if (i >= ghosts_m && i < m - ghosts_m && j < ghosts_n) // top middle
-                    v[indexghosts] = v[i * n * o + nr * o + orr];
-                if (i >= ghosts_m && i < m - ghosts_m && j >= n - ghosts_n) // bottom middle
-                    v[indexghosts] = v[i * n * o + nl * o + orr];
-
-                if (i >= m - ghosts_m && j < ghosts_n) // top right
-                    v[indexghosts] = v[ml * n * o + nr * o + orr];
-                if (i >= m - ghosts_m && j >= ghosts_n && j < n - ghosts_n) // middle right
-                    v[indexghosts] = v[ml * n * o + j * o + orr];
-                if (i >= m - ghosts_m && j >= n - ghosts_n) // bottom right
-                    v[indexghosts] = v[ml * n * o + nl * o + orr];
-            }
-
-            // xy-plane behind grid
-            if (k >= o - ghosts_o)
-            {
-                if (i < ghosts_m && j < ghosts_n) // top left
-                    v[indexghosts] = v[mr * n * o + nr * o + ol];
-                if (i < ghosts_m && j >= ghosts_n && j < n - ghosts_n) // middle left
-                    v[indexghosts] = v[mr * n * o + j * o + ol];
-                if (i < ghosts_m && j >= n - ghosts_n) // bottom left
-                    v[indexghosts] = v[mr * n * o + nl * o + ol];
-
-                if (i >= ghosts_m && i < m - ghosts_m && j >= ghosts_n && j < n - ghosts_n)
-                    v[indexghosts] = v[i * n * o + j * o + ol];        // center middle
-                if (i >= ghosts_m && i < n - ghosts_m && j < ghosts_n) // top middle
-                    v[indexghosts] = v[i * n * o + nr * o + ol];
-                if (i >= ghosts_m && i < n - ghosts_m && j >= n - ghosts_n) // bottom middle
-                    v[indexghosts] = v[i * n * o + nl * o + ol];
-
-                if (i >= m - ghosts_m && j < ghosts_n) // top right
-                    v[indexghosts] = v[ml * n * o + nr * o + ol];
-                if (i >= m - ghosts_m && j >= ghosts_n && j < n - ghosts_n) // middle right
-                    v[indexghosts] = v[ml * n * o + j * o + ol];
-                if (i >= m - ghosts_m && j >= n - ghosts_n) // bottom right
-                    v[indexghosts] = v[ml * n * o + nl * o + ol];
-            }
-
-            indexghosts += ioff;
-        }
+        // update ghost cell
+        c[idx_gh_cell] = c[idx_real_cell];
     }
 }
 

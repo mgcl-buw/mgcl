@@ -305,25 +305,36 @@ namespace mgcl
         int err;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper().getProgram(), "update_ghosts_2d", &err);
-        mgclCheckError(err, "Creating kernel");
+        cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper().getProgram(), "update_ghosts_periodic", &err);
+        mgclCheckError(err, "clCreateKernel");
+
+        // TODO actually request these as arguments
+        int m = mgh - 2 * ghosts_m;
+        int n = ngh - 2 * ghosts_n;
+        int o = ogh - 2 * ghosts_o;
 
         // assign kernel arguments
         int pos = 0;
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dBuffer);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_n);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
         mgclCheckError(err, "Setting kernel arguments");
 
-        // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
-        size_t global[2] = {static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-        const size_t local[2] = {static_cast<size_t>(ngh > 4 ? 4 : ngh), static_cast<size_t>(ogh > 4 ? 4 : ogh)};
+        // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
+        // int mgh = m + 2 * gh;
+        // int ngh = n + 2 * gh;
+        // int ogh = o + 2 * gh;
+        size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
+        const size_t local[3] = {
+            static_cast<size_t>(mgh > 4 ? 4 : mgh),
+            static_cast<size_t>(ngh > 4 ? 4 : ngh),
+            static_cast<size_t>(ogh > 4 ? 4 : ogh)};
 
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
             {
                 // printf("padding global size %d from %ld to ", i, global[i]);
@@ -331,10 +342,13 @@ namespace mgcl
                 // printf("%ld (multiple of %ld)\n", global[i], local[i]);
             }
 
-        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
-        mgclCheckError(err, "Enqueueing kernel");
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
+        mgclCheckError(err, "Enqueueing update_ghosts_periodic kernel");
 
-        clReleaseKernel(kernel);
+        err = clReleaseKernel(kernel);
+        mgclCheckError(err, "Releasing update_ghosts_periodic kernel");
+
         return err;
     }
 }
