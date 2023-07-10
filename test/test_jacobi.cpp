@@ -435,16 +435,16 @@ TEST_CASE("jacobi gh > 1 multiple iters")
     int m = 16;
     int n = 16;
     int o = 16;
-    int ghm_v = stepsPerIter;      // GENERATE(stepsPerIter, stepsPerIter + 1);
-    int ghn_v = stepsPerIter;      // GENERATE(stepsPerIter, stepsPerIter + 1);
-    int gho_v = stepsPerIter;      // GENERATE(stepsPerIter, stepsPerIter + 1);
-    int ghm_rf = stepsPerIter - 1; // GENERATE(stepsPerIter - 1, stepsPerIter);
-    int ghn_rf = stepsPerIter - 1; // GENERATE(stepsPerIter - 1, stepsPerIter);
-    int gho_rf = stepsPerIter - 1; // GENERATE(stepsPerIter - 1, stepsPerIter);
+    int ghm_v = GENERATE(3, 4);
+    int ghn_v = GENERATE(3, 4);
+    int gho_v = stepsPerIter;
+    int ghm_rf = GENERATE(2, 3);
+    int ghn_rf = stepsPerIter - 1;
+    int gho_rf = stepsPerIter - 1;
 
-    std::cout << "iters, stepsPerIter: " << iters << ", " << stepsPerIter << std::endl;
-    std::cout << "gh_v: " << ghm_v << "," << ghn_v << "," << gho_v << std::endl;
-    std::cout << "gh_rf: " << ghm_rf << "," << ghn_rf << "," << gho_rf << std::endl;
+    // std::cout << "iters, stepsPerIter: " << iters << ", " << stepsPerIter << std::endl;
+    // std::cout << "gh_v: " << ghm_v << "," << ghn_v << "," << gho_v << std::endl;
+    // std::cout << "gh_rf: " << ghm_rf << "," << ghn_rf << "," << gho_rf << std::endl;
 
     double omega = 0.8;
 
