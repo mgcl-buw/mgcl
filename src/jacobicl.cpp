@@ -23,13 +23,16 @@ namespace mgcl
 {
     /* Runs jacobi method sequentially.
      * v, f and r must be of size [m+2][n+2][o+2] for periodic boundary condition.
-     * m,n,o is size of real grid */
+     * m,n,o is size of real grid
+     * stepsPerIter is the amount of iterations done without ghost update in-between. v and r must have adequate ghost
+     * cells, i.e. v_gh >= stepsPerIter per border. Defaults to 1. */
     double MultigridEngine::jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
                                       double stencilFactor, VaryingStencil3x3x3 &stencilValues, bool returnResidualNorm,
-                                      bool periodic)
+                                      bool periodic, int stepsPerIter)
     {
         double res = 0.0;
+        double ***vraw = v.getData();
 
         // TODO adjust for mpi, need global m, not local m
         double h2 = 1.0 / ((double)(v.getM() * v.getM()));
@@ -39,30 +42,58 @@ namespace mgcl
         else if (stencilType == MGCL_LAPLACE_27POINT)
             dinv = (30.0 * h2) / 128.0;
 
-        double ***vraw = v.getData();
-        int gh = util::seq::min3(v.getGhostsM(), v.getGhostsN(), v.getGhostsO());
+        // decrease stepsPerIter if it's less than maxIter
+        if (maxiter < stepsPerIter)
+            stepsPerIter = maxiter;
 
-        // TODO check f gh, r gh, v gh
+        // Check if amount of ghost cells is large enough
+        if (util::seq::min3(v.getGhostsM(), v.getGhostsN(), v.getGhostsO()) < stepsPerIter)
+        {
+            throw "#ghosts of v must be >= stepsPerIter!";
+        }
 
-        for (int iter = 0; iter < maxiter; iter += gh)
+        if (util::seq::min3(r.getGhostsM(), r.getGhostsN(), r.getGhostsO()) < stepsPerIter - 1)
+        {
+            throw "#ghosts of r must be >= stepsPerIter - 1!";
+        }
+
+        if (util::seq::min3(f.getGhostsM(), f.getGhostsN(), f.getGhostsO()) < stepsPerIter - 1)
+        {
+            throw "#ghosts of f must be >= stepsPerIter - 1!";
+        }
+
+        for (int iter = 0; iter < maxiter; iter += stepsPerIter)
         {
             // update ghost cells for periodic boundary condition
             if (periodic)
                 MultigridEngine::updateGhostsSeq(v);
+            // TODO else update only neighboring processes if using mpi
 
-            // if gh > 1, multiple iterations can be done without updating ghosts in-between
-            for (int inner_iter = iter; inner_iter < iter + gh; inner_iter++)
+            // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
+            for (int innerIter = 0; innerIter < stepsPerIter && iter + innerIter < maxiter; innerIter++)
             {
                 // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
 
+                int off = (stepsPerIter - innerIter) - 1;
+                int istart_v = v.getGhostsM() - off;
+                int jstart_v = v.getGhostsN() - off;
+                int kstart_v = v.getGhostsO() - off;
+                int iend_v = v.getMgh() - istart_v;
+                int jend_v = v.getNgh() - jstart_v;
+                int kend_v = v.getOgh() - kstart_v;
+                int istart_r = r.getGhostsM() - off;
+                int jstart_r = r.getGhostsN() - off;
+                int kstart_r = r.getGhostsO() - off;
+
                 // r = f - A*v
-                res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, false, periodic);
+                res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, false, periodic,
+                                  -off, -off, -off);
 
                 if (stencilType == MGCL_LAPLACE_7POINT || stencilType == MGCL_LAPLACE_19POINT || stencilType == MGCL_LAPLACE_27POINT)
                 {
-                    for (int iv = v.getGhostsM(), ir = r.getGhostsM(); iv < v.getM() + v.getGhostsM(); iv++, ir++)
-                        for (int jv = v.getGhostsN(), jr = r.getGhostsN(); jv < v.getN() + v.getGhostsN(); jv++, jr++)
-                            for (int kv = v.getGhostsO(), kr = r.getGhostsO(); kv < v.getO() + v.getGhostsO(); kv++, kr++)
+                    for (int iv = istart_v, ir = istart_r; iv < iend_v; iv++, ir++)
+                        for (int jv = jstart_v, jr = jstart_r; jv < jend_v; jv++, jr++)
+                            for (int kv = kstart_v, kr = kstart_r; kv < kend_v; kv++, kr++)
                             {
                                 // if (i == 1 && j == 1 && k == 1)
                                 //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, vraw[i][j][k],
@@ -80,9 +111,9 @@ namespace mgcl
                     int ghmsv = stencilValues.getGhostsDim1();
                     int ghnsv = stencilValues.getGhostsDim2();
                     int ghosv = stencilValues.getGhostsDim3();
-                    for (int iv = v.getGhostsM(), ir = r.getGhostsM(), isv = ghmsv; iv < v.getM() + v.getGhostsM(); iv++, ir++, isv++)
-                        for (int jv = v.getGhostsN(), jr = r.getGhostsN(), jsv = ghnsv; jv < v.getN() + v.getGhostsN(); jv++, jr++, jsv++)
-                            for (int kv = v.getGhostsO(), kr = r.getGhostsO(), ksv = ghosv; kv < v.getO() + v.getGhostsO(); kv++, kr++, ksv++)
+                    for (int iv = istart_v, ir = istart_r, isv = ghmsv; iv < iend_v; iv++, ir++, isv++)
+                        for (int jv = jstart_v, jr = jstart_r, jsv = ghnsv; jv < jend_v; jv++, jr++, jsv++)
+                            for (int kv = kstart_v, kr = kstart_r, ksv = ghosv; kv < kend_v; kv++, kr++, ksv++)
                             {
                                 // if (i == 1 && j == 1 && k == 1)
                                 //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, vraw[i][j][k],

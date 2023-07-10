@@ -18,6 +18,7 @@
   (especially good for MPI since for every ghost update data needs to be transferred
   from device to host, process to process and back to device again)
 - check if residual must be recalculated after last jacobi iteration in v-cycle (before restriction)
+- add flag, e.g. UNSAFE, where, if set, checks and exceptions are skipped for performance's sake
 
 Done:
 - aggregate residual norm on gpu
