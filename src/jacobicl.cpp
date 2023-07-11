@@ -633,7 +633,7 @@ namespace mgcl
                 double ***rsquares = rsq.getData();
                 int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
                 cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
-                                                  sizeof(double) * mgh * ngh * ogh, rsquares[0][0], &err);
+                                                  sizeof(double) * level.m * level.n * level.o, rsquares[0][0], &err);
                 mgclCheckError(err, "Creating rsquares buffer");
 
                 // Create the compute kernel from the program
@@ -643,9 +643,9 @@ namespace mgcl
                 pos = 0;
                 err = clSetKernelArg(kernel_square, pos, sizeof(cl_mem), &level.dR);
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(cl_mem), &dRsquares);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &mgh);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &ngh);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &ogh);
+                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &level.m);
+                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &level.n);
+                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &level.o);
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &problem.ghosts);
                 mgclCheckError(err, "Setting residual squared kernel arguments");
 
@@ -653,7 +653,7 @@ namespace mgcl
                 mgclCheckError(err, "Enqueueing residual squared kernel");
 
                 // sum up residual squares
-                res = sqrt(util::sum(dRsquares, mgh * ngh * ogh,
+                res = sqrt(util::sum(dRsquares, level.m * level.n * level.o,
                                      problem.getContext(), problem.getProgram(), problem.getCommands(), true));
 
                 clReleaseMemObject(dRsquares);

@@ -395,20 +395,27 @@ __kernel void residual_27point_varying_stencil(
 }
 
 /* Calculates the squares of the residual.
- * TODO use local memory and do sum reduction */
-__kernel void residual_squared(__global double *restrict r, __global double *restrict rsquares, const int m,
-                               const int n, const int o, const int ghosts)
+ * r is ghosted, rsquares must be only real cells.
+ * m, n and o must be real grid size.
+ * ghosts is amount of ghost cells at one border for r.
+ * Kernel must be called with m x n x o work-items.
+ */
+__kernel void residual_squared(
+    __global double *restrict r,
+    __global double *restrict rsquares,
+    const int m, const int n, const int o, const int ghosts)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
     int k = get_global_id(2);
 
-    // only for real cells
-    if (i > ghosts - 1 && j > ghosts - 1 && k > ghosts - 1 && i < m - ghosts && j < n - ghosts && k < o - ghosts)
+    // account for padding
+    if (i < m && j < n && k < o)
     {
-        int index = i * n * o + j * o + k;
+        int index = i * (n + 2 * ghosts) * (o + 2 * ghosts) + j * (o + 2 * ghosts) + k;
+        int index_sq = i * n * o + j * o + k;
         double ridx = r[index];
-        rsquares[index] = ridx * ridx;
+        rsquares[index_sq] = ridx * ridx;
     }
 }
 
