@@ -176,14 +176,26 @@ namespace mgcl
      * @brief Fills Cuboid with random values between low and high, which default to 0 and 1.
      *
      */
-    void Cuboid::fillRandom(double low, double high)
+    void Cuboid::fillRandom(double low, double high, bool realCellsOnly)
     {
         std::random_device dev;
         std::mt19937 rng(dev());
         std::uniform_real_distribution<double> dist(low, high);
 
-        for (int i = 0; i < field_1d.size(); i++)
-            field_1d[i] = dist(rng);
+        if (realCellsOnly)
+        {
+            for (int d1 = ghostsM; d1 < m + ghostsM; d1++)
+                for (int d2 = ghostsN; d2 < n + ghostsN; d2++)
+                    for (int d3 = ghostsM; d3 < o + ghostsO; d3++)
+                    {
+                        field_3d[d1][d2][d3] = dist(rng);
+                    }
+        }
+        else
+        {
+            for (int i = 0; i < field_1d.size(); i++)
+                field_1d[i] = dist(rng);
+        }
     }
 
     /**

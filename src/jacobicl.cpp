@@ -46,6 +46,11 @@ namespace mgcl
         if (maxiter < stepsPerIter)
             stepsPerIter = maxiter;
 
+        // Ghosts only need to be updated in the periodic case, so set stepsPerIter = 1 for non-periodic.
+        // TODO adjust for MPI
+        if (!periodic)
+            stepsPerIter = 1;
+
         // Check if amount of ghost cells is large enough
         if (util::seq::min3(v.getGhostsM(), v.getGhostsN(), v.getGhostsO()) < stepsPerIter)
         {

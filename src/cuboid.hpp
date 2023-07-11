@@ -32,7 +32,7 @@ namespace mgcl
 
         double ***getData() const;
         inline double **operator[](int index) { return field_3d[index]; }
-        void fillRandom(double low = 0, double high = 1);
+        void fillRandom(double low = 0, double high = 1, bool realCellsOnly = false);
         void fillRandomInt(int low = 1, int high = 10, bool realCellsOnly = false);
         void fill(double value, bool realCellsOnly = false);
         std::vector<double> &field1d();
