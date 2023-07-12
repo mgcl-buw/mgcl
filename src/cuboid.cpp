@@ -354,20 +354,33 @@ namespace mgcl
      * @param path Path to file, overwrites existing one.
      * @throws runtime_error When file could not be opened.
      */
-    void Cuboid::dumpToFile(std::string path)
+    void Cuboid::dumpToFile(std::string path, bool realCellsOnly)
     {
         std::ofstream myfile;
         myfile.open(path, std::ios::out | std::ios::trunc);
 
         if (myfile.is_open())
         {
-            for (int i = 0; i < mgh; i++)
-                for (int j = 0; j < ngh; j++)
-                    for (int k = 0; k < ogh; k++)
-                    {
-                        myfile << i << "\t" << j << "\t" << k << "\t"
-                               << std::scientific << std::setprecision(17) << field_3d[i][j][k] << std::endl;
-                    }
+            if (realCellsOnly)
+            {
+                for (int i = ghostsM; i < mgh - ghostsM; i++)
+                    for (int j = ghostsN; j < ngh - ghostsN; j++)
+                        for (int k = ghostsO; k < ogh - ghostsO; k++)
+                        {
+                            myfile << i - ghostsM << "\t" << j - ghostsN << "\t" << k - ghostsO << "\t"
+                                   << std::scientific << std::setprecision(17) << field_3d[i][j][k] << std::endl;
+                        }
+            }
+            else
+            {
+                for (int i = 0; i < mgh; i++)
+                    for (int j = 0; j < ngh; j++)
+                        for (int k = 0; k < ogh; k++)
+                        {
+                            myfile << i << "\t" << j << "\t" << k << "\t"
+                                   << std::scientific << std::setprecision(17) << field_3d[i][j][k] << std::endl;
+                        }
+            }
             myfile.close();
         }
         else
