@@ -677,7 +677,7 @@ TEST_CASE("residual moff, noff, koff < 0")
                                                               stencilFactor, dummy, true, true, moff, 50, ooff));
         }
 
-        SECTION("success")
+        SECTION("Laplace 27p")
         {
             // First calculate exptected result with gh = 1, off = 0
             double res_exp = mgcl::MultigridEngine::residualSeq(f_exp, v_exp, r_exp, resnorm, stencilType, stencilFactor,
@@ -690,7 +690,23 @@ TEST_CASE("residual moff, noff, koff < 0")
             REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
             REQUIRE(r_act.isEqualAllCells(r_exp));
         }
-    }
 
-    // TODO test varying stencil
+        SECTION("Varying 27p")
+        {
+            mgcl::VaryingStencil3x3x3 sv(m, n, o, 2, 2, 2);
+            sv.fillRandom();
+            sv.updateGhosts();
+
+            // First calculate exptected result with gh = 1
+            double res_exp = mgcl::MultigridEngine::residualSeq(f_exp, v_exp, r_exp, resnorm, mgcl::MGCL_VARYING,
+                                                                stencilFactor, sv, true, true);
+
+            // Now calculate with gh > 1
+            double res_act = mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, mgcl::MGCL_VARYING,
+                                                                stencilFactor, sv, true, true, moff, noff, ooff);
+
+            REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
+            REQUIRE(r_act.isEqualAllCells(r_exp));
+        }
+    }
 }
