@@ -72,7 +72,7 @@ TEST_CASE("residual")
         level.setDVIn(d_in_v);
         level.setDR(d_in_r);
 
-        double res = mgcl::MultigridEngine::residual(*p, level, 1);
+        double res = mgcl::MultigridEngine::residual(*p, level, true);
         tu.finish();
 
         auto c_r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
@@ -494,11 +494,11 @@ TEST_CASE("residual gpu gh > 1")
             pgh->setStencilType(mgcl::MGCL_LAPLACE_7POINT);
 
             // First calculate exptected result with gh = 1
-            double res_exp = mgcl::MultigridEngine::residual(*p, level, 1);
+            double res_exp = mgcl::MultigridEngine::residual(*p, level, true);
             tu.finish();
 
             // Now calculate with gh > 1
-            double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, 1);
+            double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, true);
             tu_gh.finish();
 
             auto r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, p->getGhosts(), p->getGhosts(), p->getGhosts());
@@ -517,11 +517,11 @@ TEST_CASE("residual gpu gh > 1")
             pgh->setStencilType(mgcl::MGCL_LAPLACE_7POINT);
 
             // First calculate exptected result with gh = 1
-            double res_exp = mgcl::MultigridEngine::residual(*p, level, 1);
+            double res_exp = mgcl::MultigridEngine::residual(*p, level, true);
             tu.finish();
 
             // Now calculate with gh > 1
-            double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, 1);
+            double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, true);
             tu_gh.finish();
 
             auto r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, p->getGhosts(), p->getGhosts(), p->getGhosts());
@@ -540,11 +540,11 @@ TEST_CASE("residual gpu gh > 1")
             pgh->setStencilType(mgcl::MGCL_LAPLACE_27POINT);
 
             // First calculate exptected result with gh = 1
-            double res_exp = mgcl::MultigridEngine::residual(*p, level, 1);
+            double res_exp = mgcl::MultigridEngine::residual(*p, level, true);
             tu.finish();
 
             // Now calculate with gh > 1
-            double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, 1);
+            double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, true);
             tu_gh.finish();
 
             auto r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, p->getGhosts(), p->getGhosts(), p->getGhosts());
@@ -578,11 +578,11 @@ TEST_CASE("residual gpu gh > 1")
             level_gh.setStencilValuesGpu(d_in_sv_gh);
 
             // First calculate exptected result with gh = 1
-            double res_exp = mgcl::MultigridEngine::residual(*p, level, 1);
+            double res_exp = mgcl::MultigridEngine::residual(*p, level, true);
             tu.finish();
 
             // Now calculate with gh > 1
-            double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, 1);
+            double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, true);
             tu_gh.finish();
 
             auto r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, p->getGhosts(), p->getGhosts(), p->getGhosts());
