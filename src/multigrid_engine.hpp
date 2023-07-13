@@ -46,10 +46,11 @@ namespace mgcl
         static void updateGhostsSeq(Cuboid &c, /* MPIData *mpiData = nullptr, */ bool periodic = true);
         static int updateGhosts(Problem &problem, cl_mem dBuffer, int m, int n, int o, int ghostsM, int ghostsN, int ghostsO);
 
-        static double residual(Problem &problem, Level &level, bool returnResidual);
+        static double residual(Problem &problem, Level &level, bool returnResidual,
+                               int moff = 0, int noff = 0, int ooff = 0);
         static double residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
                                   MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil3x3x3 &stencilValues,
-                                  bool returnResidualNorm, bool periodic, int m = 0, int n = 0, int o = 0);
+                                  bool returnResidualNorm, bool periodic, int moff = 0, int noff = 0, int ooff = 0);
 
         static double jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
                                 int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType, double stencilFactor,

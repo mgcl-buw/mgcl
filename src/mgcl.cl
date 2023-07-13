@@ -219,15 +219,26 @@ __kernel void correct_error(__global double *restrict v, __global double *restri
 /* Calculates residual without dinv */
 __kernel void residual_7point(
     __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict f, __global double *restrict r, const double h2inv, const int m, const int n, const int o,
-    const int ghosts)
+    __global double *restrict f,
+    __global double *restrict r,
+    const double h2inv, const int m, const int n, const int o,
+    const int ghosts, const int moff, const int noff, const int ooff)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
     int k = get_global_id(2);
 
-    // calculate residual only for real cells since ghost cells do not have further ghost cells for themselves
-    if (i > ghosts - 1 && j > ghosts - 1 && k > ghosts - 1 && i < m - ghosts && j < n - ghosts && k < o - ghosts)
+    // loop boundaries
+    // TODO maybe refactor to use v_ghm, etc.?
+    int istart_v = ghosts + moff;
+    int jstart_v = ghosts + noff;
+    int kstart_v = ghosts + ooff;
+    int iend_v = m - ghosts - moff;
+    int jend_v = n - ghosts - noff;
+    int kend_v = o - ghosts - ooff;
+
+    // calculate residual only for relevant cells (off = 0: only real cells)
+    if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
     {
         int index = i * n * o + j * o + k;
 
@@ -249,15 +260,26 @@ __kernel void residual_7point(
 /* Calculates residual without dinv */
 __kernel void residual_19point(
     __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict f, __global double *restrict r, const double h2inv, const int m, const int n, const int o,
-    const int ghosts)
+    __global double *restrict f,
+    __global double *restrict r,
+    const double h2inv, const int m, const int n, const int o,
+    const int ghosts, const int moff, const int noff, const int ooff)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
     int k = get_global_id(2);
 
-    // calculate residual only for real cells since ghost cells do not have further ghost cells for themselves
-    if (i > ghosts - 1 && j > ghosts - 1 && k > ghosts - 1 && i < m - ghosts && j < n - ghosts && k < o - ghosts)
+    // loop boundaries
+    // TODO maybe refactor to use v_ghm, etc.?
+    int istart_v = ghosts + moff;
+    int jstart_v = ghosts + noff;
+    int kstart_v = ghosts + ooff;
+    int iend_v = m - ghosts - moff;
+    int jend_v = n - ghosts - noff;
+    int kend_v = o - ghosts - ooff;
+
+    // calculate residual only for relevant cells (off = 0: only real cells)
+    if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
     {
         int index = i * n * o + j * o + k;
 
@@ -285,15 +307,32 @@ __kernel void residual_19point(
 /* Calculates residual without dinv */
 __kernel void residual_27point(
     __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict f, __global double *restrict r, const double h2inv, const int m, const int n, const int o,
-    const int ghosts)
+    __global double *restrict f,
+    __global double *restrict r,
+    const double h2inv, const int m, const int n, const int o,
+    const int ghosts, const int moff, const int noff, const int ooff)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
     int k = get_global_id(2);
 
-    // calculate residual only for real cells since ghost cells do not have further ghost cells for themselves
-    if (i > ghosts - 1 && j > ghosts - 1 && k > ghosts - 1 && i < m - ghosts && j < n - ghosts && k < o - ghosts)
+    // loop boundaries
+    // TODO maybe refactor to use v_ghm, etc.?
+    int istart_v = ghosts + moff;
+    int jstart_v = ghosts + noff;
+    int kstart_v = ghosts + ooff;
+    int iend_v = m - ghosts - moff;
+    int jend_v = n - ghosts - noff;
+    int kend_v = o - ghosts - ooff;
+    // int istart_r = r.getGhostsM() + moff;
+    // int jstart_r = r.getGhostsN() + noff;
+    // int kstart_r = r.getGhostsO() + ooff;
+    // int istart_f = f.getGhostsM() + moff;
+    // int jstart_f = f.getGhostsN() + noff;
+    // int kstart_f = f.getGhostsO() + ooff;
+
+    // calculate residual only for relevant cells (off = 0: only real cells)
+    if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
     {
         int index = i * n * o + j * o + k;
         int ioff = n * o;
@@ -331,14 +370,24 @@ __kernel void residual_27point_varying_stencil(
     __global double *restrict r,
     __global double *restrict stencilValues,
     const int m, const int n, const int o,
-    const int ghosts, const int ghosts_sv)
+    const int ghosts, const int ghosts_sv,
+    const int moff, const int noff, const int ooff)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
     int k = get_global_id(2);
 
-    // calculate residual only for real cells since ghost cells do not have further ghost cells for themselves
-    if (i > ghosts - 1 && j > ghosts - 1 && k > ghosts - 1 && i < m - ghosts && j < n - ghosts && k < o - ghosts)
+    // loop boundaries
+    // TODO maybe refactor to use v_ghm, etc.?
+    int istart_v = ghosts + moff;
+    int jstart_v = ghosts + noff;
+    int kstart_v = ghosts + ooff;
+    int iend_v = m - ghosts - moff;
+    int jend_v = n - ghosts - noff;
+    int kend_v = o - ghosts - ooff;
+
+    // calculate residual only for relevant cells (off = 0: only real cells)
+    if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
     {
         int ioff = n * o;
         int joff = o;

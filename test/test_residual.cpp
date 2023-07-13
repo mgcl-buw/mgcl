@@ -706,6 +706,7 @@ TEST_CASE("residual seq moff, noff, koff < 0")
     }
 }
 
+// TODO adjust for gpu
 // Tests if residual works if moff, noff or koff < 0, i.e. changing the grid size the residual shall be calculated for.
 // TODO off > 0 is not tested yet since it's not needed in practice.
 TEST_CASE("residual gpu moff, noff, koff < 0")
@@ -719,9 +720,10 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
     double stencilFactor = 1.0 / (30.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
 
-    int moff = -1; // GENERATE(-2,-1,0);
-    int noff = -1; // GENERATE(-1,0);
-    int ooff = -1; // GENERATE(-1,0);
+    // Must be equal for now since gpu residual does not support varying ghosts for different dimensions yet.
+    int moff = -1;   // GENERATE(-2,-1,0);
+    int noff = moff; // -1; // GENERATE(-1,0);
+    int ooff = moff; // -1; // GENERATE(-1,0);
 
     // calculate grid sizes for expected result (ghosts = 1)
     int exp_m = m - 2 * moff;
@@ -766,51 +768,155 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
 
     mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
 
-    SECTION("throwing")
+    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
     {
-        REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, dummy, true, true, -50, noff, ooff));
-        REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, dummy, true, true, 50, noff, ooff));
-        REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, dummy, true, true, moff, -50, ooff));
-        REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, dummy, true, true, moff, 50, ooff));
-        REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, dummy, true, true, moff, -50, ooff));
-        REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, dummy, true, true, moff, 50, ooff));
-    }
+        // init problem with ghosts = 1
+        auto p_exp = std::make_shared<mgcl::Problem>(m, n, o);
+        p_exp->setResidualNorm(mgcl::MGCL_L2);
+        p_exp->setGhosts(1);
+        p_exp->setDeviceType(CL_DEVICE_TYPE_GPU);
 
-    SECTION("Laplace 27p")
-    {
-        // First calculate exptected result with gh = 1, off = 0
-        double res_exp = mgcl::MultigridEngine::residualSeq(f_exp, v_exp, r_exp, resnorm, stencilType, stencilFactor,
-                                                            dummy, true, true);
+        mgcl_test::TestUtility tu_exp(p_exp);
+        cl_mem d_f_exp = tu_exp.createOpenCLBuffer(f_exp);
+        cl_mem d_v_exp = tu_exp.createOpenCLBuffer(v_exp);
+        cl_mem d_r_exp = tu_exp.createOpenCLBuffer(r_exp);
 
-        // Now calculate with gh > 1 and off < 0
-        double res_act = mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                            stencilFactor, dummy, true, true, moff, noff, ooff);
+        mgcl::Level level_exp(p_exp.get(), 0);
+        level_exp.setDF(d_f_exp);
+        level_exp.setDVIn(d_v_exp);
+        level_exp.setDR(d_r_exp);
 
-        REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
-        REQUIRE(r_act.isEqualAllCells(r_exp));
-    }
+        // init problem with ghosts = act_ghm
+        auto p_act = std::make_shared<mgcl::Problem>(m, n, o);
+        p_act->setResidualNorm(mgcl::MGCL_L2);
+        p_act->setGhosts(act_ghm);
+        p_act->setDeviceType(CL_DEVICE_TYPE_GPU);
 
-    SECTION("Varying 27p")
-    {
-        mgcl::VaryingStencil3x3x3 sv(exp_m, exp_n, exp_o, 2, 2, 2);
-        sv.fillRandom();
-        sv.updateGhosts();
+        mgcl_test::TestUtility tu_act(p_act);
+        cl_mem d_f_act = tu_act.createOpenCLBuffer(f_act);
+        cl_mem d_v_act = tu_act.createOpenCLBuffer(v_act);
+        cl_mem d_r_act = tu_act.createOpenCLBuffer(r_act);
 
-        // First calculate exptected result with gh = 1
-        double res_exp = mgcl::MultigridEngine::residualSeq(f_exp, v_exp, r_exp, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, sv, true, true);
+        mgcl::Level level_act(p_act.get(), 0);
+        level_act.setDF(d_f_act);
+        level_act.setDVIn(d_v_act);
+        level_act.setDR(d_r_act);
 
-        // Now calculate with gh > 1
-        double res_act = mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, sv, true, true, moff, noff, ooff);
+        // Make sure input is equal.
+        REQUIRE(v_exp.isEqualAllCells(v_act));
+        REQUIRE(r_exp.isEqualAllCells(r_act));
+        REQUIRE(f_exp.isEqualAllCells(f_act));
 
-        REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
-        REQUIRE(r_act.isEqualAllCells(r_exp));
+        SECTION("throwing")
+        {
+            REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_act, level_act, true, -50, noff, ooff));
+            REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_act, level_act, true, 50, noff, ooff));
+            REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, -50, ooff));
+            REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, 50, ooff));
+            REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, -50, ooff));
+            REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, 50, ooff));
+        }
+
+        SECTION("Laplace 7p")
+        {
+            p_exp->setStencilType(mgcl::MGCL_LAPLACE_7POINT);
+            p_act->setStencilType(mgcl::MGCL_LAPLACE_7POINT);
+
+            // First calculate exptected result with gh = 1, off = 0
+            double res_exp = mgcl::MultigridEngine::residual(*p_exp, level_exp, true);
+            tu_exp.finish();
+
+            // Now calculate with gh > 1 and off < 0
+            double res_act = mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, noff, ooff);
+            tu_act.finish();
+
+            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, exp_m, exp_n, exp_o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
+            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+
+            REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
+            REQUIRE(r_out_act->isEqualAllCells(*r_out_exp));
+        }
+
+        SECTION("Laplace 19p")
+        {
+            p_exp->setStencilType(mgcl::MGCL_LAPLACE_19POINT);
+            p_act->setStencilType(mgcl::MGCL_LAPLACE_19POINT);
+
+            // First calculate exptected result with gh = 1, off = 0
+            double res_exp = mgcl::MultigridEngine::residual(*p_exp, level_exp, true);
+            tu_exp.finish();
+
+            // Now calculate with gh > 1 and off < 0
+            double res_act = mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, noff, ooff);
+            tu_act.finish();
+
+            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, exp_m, exp_n, exp_o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
+            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+
+            REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
+            REQUIRE(r_out_act->isEqualAllCells(*r_out_exp));
+        }
+
+        SECTION("Laplace 27p")
+        {
+            p_exp->setStencilType(mgcl::MGCL_LAPLACE_27POINT);
+            p_act->setStencilType(mgcl::MGCL_LAPLACE_27POINT);
+
+            // First calculate exptected result with gh = 1, off = 0
+            double res_exp = mgcl::MultigridEngine::residual(*p_exp, level_exp, true);
+            tu_exp.finish();
+
+            // Now calculate with gh > 1 and off < 0
+            double res_act = mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, noff, ooff);
+            tu_act.finish();
+
+            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, exp_m, exp_n, exp_o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
+            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+
+            REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
+            REQUIRE(r_out_act->isEqualAllCells(*r_out_exp));
+        }
+
+        SECTION("Varying 27p")
+        {
+            p_exp->setStencilType(mgcl::MGCL_VARYING);
+            p_act->setStencilType(mgcl::MGCL_VARYING);
+
+            auto sv_exp = p_exp->getStencilValues();
+            sv_exp->fillRandom();
+            sv_exp->updateGhosts();
+
+            // copy stencil values
+            auto sv_act = p_act->getStencilValues();
+            for (int i = 0; i < sv_exp->field1d().size(); i++)
+                sv_act->field1d()[i] = sv_exp->field1d()[i];
+
+            auto d_sv_exp = std::make_shared<mgcl::VaryingStencilGpu>(sv_exp->getDim1(), sv_exp->getDim2(), sv_exp->getDim3(), 3,
+                                                                      sv_exp->getGhostsDim1(),
+                                                                      tu_exp.getContext(), tu_exp.getCommands());
+            auto d_sv_act = std::make_shared<mgcl::VaryingStencilGpu>(sv_act->getDim1(), sv_act->getDim2(), sv_act->getDim3(), 3,
+                                                                      sv_act->getGhostsDim1(),
+                                                                      tu_act.getContext(), tu_act.getCommands());
+
+            d_sv_exp->fill(*sv_exp, tu_exp.getCommands());
+            d_sv_act->fill(*sv_act, tu_act.getCommands());
+
+            level_exp.setStencilValuesGpu(d_sv_exp);
+            level_act.setStencilValuesGpu(d_sv_act);
+
+            // First calculate exptected result with gh = 1
+            double res_exp = mgcl::MultigridEngine::residual(*p_exp, level_exp, true);
+            tu_exp.finish();
+
+            // Now calculate with gh > 1
+            double res_act = mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, noff, ooff);
+            tu_act.finish();
+
+            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, exp_m, exp_n, exp_o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
+            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+
+            REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
+            REQUIRE(r_out_act->isEqualAllCells(*r_out_exp));
+        }
     }
 }

@@ -302,14 +302,14 @@ namespace mgcl
         err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
         mgclCheckError(err, "Updating ghosts of v_in");
 
-        // calculate residual's 2-norm. Square elements on device and sum up on host
+        // calculate residual and its norm
         if (return_residual)
         {
             // update residual to use current approximation v
             res = MultigridEngine::residual(problem, level, true);
         }
 
-        clReleaseKernel(kernel); // TODO maybe clFinish before release?
+        clReleaseKernel(kernel);
 
         return res;
     }
@@ -534,8 +534,13 @@ namespace mgcl
      * It's not really performant to do so because we have to wait for all kernels to complete and
      * reading a buffer to host is slow.
      * v needs to have updated ghost cells if the problem is periodic!
+     * moff, noff and ooff can be used to change the size of the grid that the residual shall be calculated for.
+     *   Per default only real cells are considered (moff = 0), but with e.g. moff = -1, the first ghost cell border is
+     *   considered, too. Analogously, with moff = 1 the outermost set of real cells is ignored. The calculation
+     *   of the boundaries is e.g. istart = v.ghosts_m + moff.
      */
-    double MultigridEngine::residual(Problem &problem, Level &level, bool return_residual)
+    double MultigridEngine::residual(Problem &problem, Level &level, bool return_residual,
+                                     int moff, int noff, int ooff)
     {
         int err;
         int mgh = level.mgh;
@@ -546,6 +551,15 @@ namespace mgcl
         double h2 = (1.0 / (double)level.m) *
                     (1.0 / (double)level.m); // TODO minimum of m,n,o when not cube?
         double h2inv = 1.0 / h2;             // divisor of the stencil, inverted to use * instead of / in kernel
+
+        // check if off is too small (i.e. start < 0)
+        // TODO refactor to use GPUCuboid and check against v.getGhosts
+        if (moff <= -problem.ghosts || noff <= -problem.ghosts || ooff <= -problem.ghosts)
+            throw "moff, noff and ooff must not be <= -ghosts";
+
+        // check if off is too large (i.e. start > end)
+        if (moff * 2 >= level.m || noff * 2 >= level.n || ooff * 2 >= level.o)
+            throw "2*moff, 2*noff and 2*ooff must not be >= m, n or o";
 
         // Create the compute kernel from the program
         const char *kernel_name;
@@ -586,6 +600,9 @@ namespace mgcl
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &moff);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &noff);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ooff);
         }
         else
         {
@@ -597,6 +614,9 @@ namespace mgcl
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &moff);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &noff);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ooff);
         }
 
         mgclCheckError(err, "Setting residual kernel arguments");
