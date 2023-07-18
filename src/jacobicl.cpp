@@ -155,8 +155,9 @@ namespace mgcl
      * If return_residual is true, the residual's 2-norm or inf-norm will be read back from device and returned, else -1.
      * It's not
      * really performant to do so because we have to wait for all kernels to complete and reading a buffer to host is slow.
+     * stepsPerIter is amount iterations without ghost update in-between. Ghost cells must be adequate. Defaults to 1.
      */
-    double MultigridEngine::jacobi(Problem &problem, Level &level, int maxiter, bool return_residual)
+    double MultigridEngine::jacobi(Problem &problem, Level &level, int maxiter, bool return_residual, int stepsPerIter)
     {
         int err;
         int mgh = level.mgh;
@@ -164,6 +165,7 @@ namespace mgcl
         int ogh = level.ogh;
         int store_res = 0;
         double res = -1;
+        int idx_start = 0;
 
         if (problem.use_local_memory)
         {
@@ -172,6 +174,21 @@ namespace mgcl
                 return res;
 
             mgcl_debug("jacobiLocalMem apparently failed. Running global mem version instead.\n");
+        }
+
+        // decrease stepsPerIter if it's less than maxIter
+        if (maxiter < stepsPerIter)
+            stepsPerIter = maxiter;
+
+        // Ghosts only need to be updated in the periodic case, so set stepsPerIter = 1 for non-periodic.
+        // TODO adjust for MPI
+        if (!problem.isPeriodic())
+            stepsPerIter = 1;
+
+        // Check if amount of ghost cells is large enough
+        if (problem.ghosts < stepsPerIter)
+        {
+            throw "#ghosts must be >= stepsPerIter!";
         }
 
         double h2 = (1.0 / (double)level.m) *
@@ -219,6 +236,7 @@ namespace mgcl
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
         }
         else
@@ -234,6 +252,7 @@ namespace mgcl
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
         }
         mgclCheckError(err, "Setting kernel arguments");
@@ -253,36 +272,54 @@ namespace mgcl
 
         for (int iter = 0; iter < maxiter; iter++)
         {
-            // switch arguments dVIn -> dVOut to use latest values in next iteration
-            if (iter % 2 == 1)
+            // TODO
+            // 1. innere schleife für stepsPerIter
+            // 2. start und ende berechnen und an kernel geben
+            // 3. ghost update in aeusserer schleife
+            // Kernel muesste gleich bleiben koennen, da immer noch nur ein aufruf per iteration.
+            //   Nur Argumente fuer Grenzen anpassen
+
+            // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
+            for (int innerIter = 0; innerIter < stepsPerIter && iter + innerIter < maxiter; innerIter++)
             {
-                err = clSetKernelArg(kernel, 1, sizeof(cl_mem), &level.dVIn);
-                err |= clSetKernelArg(kernel, 0, sizeof(cl_mem), &level.dVOut);
+                // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
+
+                // switch arguments dVIn -> dVOut to use latest values in next iteration
+                if (iter % 2 == 1)
+                {
+                    err = clSetKernelArg(kernel, 1, sizeof(cl_mem), &level.dVIn);
+                    err |= clSetKernelArg(kernel, 0, sizeof(cl_mem), &level.dVOut);
+                    mgclCheckError(err, "Setting kernel arguments");
+
+                    err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+                    mgclCheckError(err, "Updating ghosts");
+                }
+                else
+                {
+                    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &level.dVIn);
+                    err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &level.dVOut);
+                    mgclCheckError(err, "Setting kernel arguments");
+
+                    err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+                    mgclCheckError(err, "Updating ghosts");
+                }
+
+                // set flag to store residual in last iteration
+                if (iter == maxiter - 1)
+                {
+                    store_res = 1;
+                    err = clSetKernelArg(kernel, pos, sizeof(int), &store_res);
+                    mgclCheckError(err, "Setting kernel arguments");
+                }
+
+                // recalculate and set idx_start
+                idx_start = problem.ghosts - ((stepsPerIter - innerIter) - 1);
+                err = clSetKernelArg(kernel, pos - 1, sizeof(int), &idx_start);
                 mgclCheckError(err, "Setting kernel arguments");
 
-                err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-                mgclCheckError(err, "Updating ghosts");
+                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
+                mgclCheckError(err, "Enqueueing kernel");
             }
-            else
-            {
-                err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &level.dVIn);
-                err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &level.dVOut);
-                mgclCheckError(err, "Setting kernel arguments");
-
-                err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-                mgclCheckError(err, "Updating ghosts");
-            }
-
-            // set flag to store residual in last iteration
-            if (iter == maxiter - 1)
-            {
-                store_res = 1;
-                err = clSetKernelArg(kernel, pos, sizeof(int), &store_res);
-                mgclCheckError(err, "Setting kernel arguments");
-            }
-
-            err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
-            mgclCheckError(err, "Enqueueing kernel");
         }
 
         if (store_res)

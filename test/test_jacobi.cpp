@@ -425,9 +425,9 @@ TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
     CHECK(c_in_r->isEqual(*c_expected_out_r));
 }
 
-// tests if jacobi works if v_gh > 1, i.e. multiple iterations can be done without ghost update in between
+// tests if jacobi seq works if v_gh > 1, i.e. multiple iterations can be done without ghost update in between
 // TODO test for non-periodic and varying stencil
-TEST_CASE("jacobi gh > 1 multiple iters")
+TEST_CASE("jacobi seq gh > 1 multiple iters")
 {
     int iters = GENERATE(1, 2, 5);
     int stepsPerIter = GENERATE(1, 2, 3);
@@ -442,9 +442,9 @@ TEST_CASE("jacobi gh > 1 multiple iters")
     int ghn_rf = stepsPerIter - 1;
     int gho_rf = stepsPerIter - 1;
 
-    std::cout << "iters, stepsPerIter: " << iters << ", " << stepsPerIter << std::endl;
-    std::cout << "gh_v: " << ghm_v << "," << ghn_v << "," << gho_v << std::endl;
-    std::cout << "gh_rf: " << ghm_rf << "," << ghn_rf << "," << gho_rf << std::endl;
+    // std::cout << "iters, stepsPerIter: " << iters << ", " << stepsPerIter << std::endl;
+    // std::cout << "gh_v: " << ghm_v << "," << ghn_v << "," << gho_v << std::endl;
+    // std::cout << "gh_rf: " << ghm_rf << "," << ghn_rf << "," << gho_rf << std::endl;
 
     double omega = 0.8;
 
@@ -471,58 +471,261 @@ TEST_CASE("jacobi gh > 1 multiple iters")
 
     mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
 
-    SECTION("seq")
+    SECTION("throws when not enough ghost cells and periodic")
     {
+        if (iters >= stepsPerIter)
+        {
+            if (stepsPerIter > 1)
+            {
+                // ghosts of v too small
+                REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_in, f_in_gh, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
+            }
+
+            if (stepsPerIter > 2)
+            {
+                // ghosts of f too small
+                REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
+
+                // ghosts of r too small
+                REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
+            }
+        }
+    }
+
+    SECTION("periodic 27p-Laplace")
+    {
+        mgcl::MultigridEngine::updateGhostsSeq(v_in);
+        mgcl::MultigridEngine::updateGhostsSeq(v_in_gh);
+        mgcl::MultigridEngine::updateGhostsSeq(f_in_gh);
+
+        // First calculate exptected result with regular ghost updates between iterations
+        double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, true, 1);
+
+        // Now calculate with gh > 1
+        double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, true, stepsPerIter);
+
+        REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
+        REQUIRE(v_in.isEqual(v_in_gh));
+        REQUIRE(r_in.isEqual(r_in_gh));
+    }
+
+    SECTION("Dirichlet 27p-Laplace")
+    {
+        // First calculate exptected result with regular ghost updates between iterations
+        double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, false, 1);
+
+        // Now calculate with gh > 1
+        double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, false, stepsPerIter);
+
+        REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
+        REQUIRE(v_in.isEqual(v_in_gh));
+        REQUIRE(r_in.isEqual(r_in_gh));
+    }
+
+    // TODO test varying stencil
+}
+
+// tests if jacobi on gpu works if v_gh > 1, i.e. multiple iterations can be done without ghost update in between
+// TODO test for non-periodic and varying stencil
+TEST_CASE("jacobi gpu gh > 1 multiple iters")
+{
+    int iters = GENERATE(1, 2, 5);
+    int stepsPerIter = GENERATE(1, 2, 3);
+
+    int m = 16;
+    int n = 16;
+    int o = 16;
+
+    // gpu implementation currently only supports one ghost cell amount for all fields and directions
+    int gh = 3;
+    // int ghm_v = GENERATE(3, 4);
+    // int ghn_v = GENERATE(3, 4);
+    // int gho_v = stepsPerIter;
+    // int ghm_rf = GENERATE(2, 3);
+    // int ghn_rf = stepsPerIter - 1;
+    // int gho_rf = stepsPerIter - 1;
+
+    std::cout << "iters, stepsPerIter: " << iters << ", " << stepsPerIter << std::endl;
+    std::cout << "gh: " << gh << std::endl;
+    // std::cout << "gh_v: " << ghm_v << "," << ghn_v << "," << gho_v << std::endl;
+    // std::cout << "gh_rf: " << ghm_rf << "," << ghn_rf << "," << gho_rf << std::endl;
+
+    double omega = 0.8;
+
+    double h = 1.0 / ((double)m);
+    mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
+    double stencilFactor = 1.0 / (30.0 * h * h);
+    mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+
+    // v, r and f with extended ghosts, i.e. no ghost update between iterations
+    mgcl::Cuboid v_act(m, n, o, gh, gh, gh);
+    mgcl::Cuboid r_act(m, n, o, gh, gh, gh);
+    mgcl::Cuboid f_act(m, n, o, gh, gh, gh);
+
+    // v and r with gh = 1, i.e. regular ghost update between iterations
+    mgcl::Cuboid v_exp(m, n, o, 1, 1, 1);
+    mgcl::Cuboid r_exp(m, n, o, 1, 1, 1);
+    mgcl::Cuboid f_exp(m, n, o, 1, 1, 1);
+    v_exp.fillRandom(-10, 10, true);
+    f_exp.fillRandom(-10, 10, true);
+
+    // copy real cells from v_in to v_in_gh
+    v_act.fillRealFrom(v_exp);
+    f_act.fillRealFrom(f_exp);
+
+    mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
+
+    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+    {
+        // init problem with ghosts = 1
+        auto p_exp = std::make_shared<mgcl::Problem>(m, n, o);
+        p_exp->setResidualNorm(mgcl::MGCL_L2);
+        p_exp->setGhosts(1);
+        p_exp->setDeviceType(CL_DEVICE_TYPE_GPU);
+
+        mgcl_test::TestUtility tu_exp(p_exp);
+        cl_mem d_f_exp = tu_exp.createOpenCLBuffer(f_exp);
+        cl_mem d_v_exp = tu_exp.createOpenCLBuffer(v_exp);
+        cl_mem d_v_out_exp = tu_exp.createOpenCLBuffer(v_exp);
+        cl_mem d_r_exp = tu_exp.createOpenCLBuffer(r_exp);
+
+        mgcl::Level level_exp(p_exp.get(), 0);
+        level_exp.setDF(d_f_exp);
+        level_exp.setDVIn(d_v_exp);
+        level_exp.setDVOut(d_v_out_exp);
+        level_exp.setDR(d_r_exp);
+
+        // init problem with ghosts = act_ghm
+        auto p_act = std::make_shared<mgcl::Problem>(m, n, o);
+        p_act->setResidualNorm(mgcl::MGCL_L2);
+        p_act->setGhosts(gh);
+        p_act->setDeviceType(CL_DEVICE_TYPE_GPU);
+
+        mgcl_test::TestUtility tu_act(p_act);
+        cl_mem d_f_act = tu_act.createOpenCLBuffer(f_act);
+        cl_mem d_v_act = tu_act.createOpenCLBuffer(v_act);
+        cl_mem d_v_out_act = tu_act.createOpenCLBuffer(v_act);
+        cl_mem d_r_act = tu_act.createOpenCLBuffer(r_act);
+
+        mgcl::Level level_act(p_act.get(), 0);
+        level_act.setDF(d_f_act);
+        level_act.setDVIn(d_v_act);
+        level_act.setDVOut(d_v_out_act);
+        level_act.setDR(d_r_act);
+
+        // Make sure input is equal (real cells only).
+        REQUIRE(v_exp.isEqual(v_act));
+        REQUIRE(r_exp.isEqual(r_act));
+        REQUIRE(f_exp.isEqual(f_act));
+
         SECTION("throws when not enough ghost cells and periodic")
         {
-            if (iters >= stepsPerIter)
-            {
-                if (stepsPerIter > 1)
-                {
-                    // ghosts of v too small
-                    REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_in, f_in_gh, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
-                }
+            // ghosts too small
+            REQUIRE_THROWS(mgcl::MultigridEngine::jacobi(*p_act, level_act, gh + 10, false, gh + 5));
+        }
 
-                if (stepsPerIter > 2)
-                {
-                    // ghosts of f too small
-                    REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
+        SECTION("periodic 7p-Laplace")
+        {
+            p_exp->setStencilType(mgcl::MGCL_LAPLACE_7POINT);
+            p_act->setStencilType(mgcl::MGCL_LAPLACE_7POINT);
 
-                    // ghosts of r too small
-                    REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
-                }
-            }
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
+            tu_act.finish();
+            tu_exp.finish();
+
+            // First calculate exptected result with regular ghost updates between iterations
+            double res_exp = mgcl::MultigridEngine::jacobi(*p_exp, level_exp, iters, true, 1);
+            tu_exp.finish();
+
+            // Now calculate with gh > 1
+            double res_act = mgcl::MultigridEngine::jacobi(*p_act, level_act, iters, true, stepsPerIter);
+            tu_act.finish();
+
+            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
+            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto v_out_exp = tu_exp.readOpenCLBuffer(d_v_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
+            auto v_out_act = tu_act.readOpenCLBuffer(d_v_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+
+            REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
+            REQUIRE(r_out_act->isEqual(*r_out_exp));
+            REQUIRE(v_out_act->isEqual(*v_out_exp));
+        }
+
+        SECTION("periodic 19p-Laplace")
+        {
+            p_exp->setStencilType(mgcl::MGCL_LAPLACE_19POINT);
+            p_act->setStencilType(mgcl::MGCL_LAPLACE_19POINT);
+
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
+            tu_act.finish();
+            tu_exp.finish();
+
+            // First calculate exptected result with regular ghost updates between iterations
+            double res_exp = mgcl::MultigridEngine::jacobi(*p_exp, level_exp, iters, true, 1);
+            tu_exp.finish();
+
+            // Now calculate with gh > 1
+            double res_act = mgcl::MultigridEngine::jacobi(*p_act, level_act, iters, true, stepsPerIter);
+            tu_act.finish();
+
+            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
+            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto v_out_exp = tu_exp.readOpenCLBuffer(d_v_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
+            auto v_out_act = tu_act.readOpenCLBuffer(d_v_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+
+            REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
+            REQUIRE(r_out_act->isEqual(*r_out_exp));
+            REQUIRE(v_out_act->isEqual(*v_out_exp));
         }
 
         SECTION("periodic 27p-Laplace")
         {
-            mgcl::MultigridEngine::updateGhostsSeq(v_in);
-            mgcl::MultigridEngine::updateGhostsSeq(v_in_gh);
-            mgcl::MultigridEngine::updateGhostsSeq(f_in_gh);
+            p_exp->setStencilType(mgcl::MGCL_LAPLACE_27POINT);
+            p_act->setStencilType(mgcl::MGCL_LAPLACE_27POINT);
+
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
+            tu_act.finish();
+            tu_exp.finish();
 
             // First calculate exptected result with regular ghost updates between iterations
-            double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, true, 1);
+            double res_exp = mgcl::MultigridEngine::jacobi(*p_exp, level_exp, iters, true, 1);
+            tu_exp.finish();
 
             // Now calculate with gh > 1
-            double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, true, stepsPerIter);
+            double res_act = mgcl::MultigridEngine::jacobi(*p_act, level_act, iters, true, stepsPerIter);
+            tu_act.finish();
+
+            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
+            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto v_out_exp = tu_exp.readOpenCLBuffer(d_v_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
+            auto v_out_act = tu_act.readOpenCLBuffer(d_v_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
 
             REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
-            REQUIRE(v_in.isEqual(v_in_gh));
-            REQUIRE(r_in.isEqual(r_in_gh));
+            REQUIRE(r_out_act->isEqual(*r_out_exp));
+            REQUIRE(v_out_act->isEqual(*v_out_exp));
         }
 
-        SECTION("Dirichlet 27p-Laplace")
-        {
-            // First calculate exptected result with regular ghost updates between iterations
-            double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, false, 1);
+        // SECTION("Dirichlet 27p-Laplace")
+        // {
+        //     // First calculate exptected result with regular ghost updates between iterations
+        //     double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, false, 1);
 
-            // Now calculate with gh > 1
-            double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, false, stepsPerIter);
+        //     // Now calculate with gh > 1
+        //     double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, false, stepsPerIter);
 
-            REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
-            REQUIRE(v_in.isEqual(v_in_gh));
-            REQUIRE(r_in.isEqual(r_in_gh));
-        }
+        //     REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
+        //     REQUIRE(v_in.isEqual(v_in_gh));
+        //     REQUIRE(r_in.isEqual(r_in_gh));
+        // }
     }
 
     // TODO test varying stencil

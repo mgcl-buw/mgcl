@@ -477,22 +477,26 @@ __kernel void residual_squared(
  * if store_residual is true, the residual will be stored into global field r */
 __kernel void jacobi_iter_7point(
     __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict v_out, __global double *restrict f, __global double *restrict r, const double h2inv,
-    const double dinv, const double omega, const int m, const int n, const int o, const int ghosts,
-    const int store_residual)
+    __global double *restrict v_out,
+    __global double *restrict f,
+    __global double *restrict r,
+    const double h2inv,
+    const double dinv, const double omega,
+    const int mgh, const int ngh, const int ogh, const int ghosts,
+    const int idx_start, const int store_residual)
 {
     int j = get_global_id(0);
     int k = get_global_id(1);
 
     // calculate residual only for real cells since ghost cells do not have further ghost cells for themselves
-    if (j > ghosts - 1 && k > ghosts - 1 && j < n - ghosts && k < o - ghosts)
+    if (j >= idx_start && k >= idx_start && j < ngh - idx_start && k < ogh - idx_start)
     {
-        int ioff = n * o;
-        int joff = o;
+        int ioff = ngh * ogh;
+        int joff = ogh;
         int koff = 1;
-        int index = ghosts * ioff + j * o + k;
+        int index = ghosts * ioff + j * ogh + k;
 
-        for (int i = ghosts; i < m - ghosts; i++)
+        for (int i = idx_start; i < mgh - idx_start; i++)
         {
             double res;
             double v_in_index = v_in[index];
@@ -530,22 +534,26 @@ __kernel void jacobi_iter_7point(
  * if store_residual is true, the residual will be stored into global field r */
 __kernel void jacobi_iter_19point(
     __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict v_out, __global double *restrict f, __global double *restrict r, const double h2inv,
-    const double dinv, const double omega, const int m, const int n, const int o, const int ghosts,
-    const int store_residual)
+    __global double *restrict v_out,
+    __global double *restrict f,
+    __global double *restrict r,
+    const double h2inv,
+    const double dinv, const double omega,
+    const int mgh, const int ngh, const int ogh, const int ghosts,
+    const int idx_start, const int store_residual)
 {
     int j = get_global_id(0);
     int k = get_global_id(1);
 
     // calculate residual only for real cells since ghost cells do not have further ghost cells for themselves
-    if (j > ghosts - 1 && k > ghosts - 1 && j < n - ghosts && k < o - ghosts)
+    if (j >= idx_start && k >= idx_start && j < ngh - idx_start && k < ogh - idx_start)
     {
-        int ioff = n * o;
-        int joff = o;
+        int ioff = ngh * ogh;
+        int joff = ogh;
         int koff = 1;
-        int index = ghosts * ioff + j * o + k;
+        int index = ghosts * ioff + j * ogh + k;
 
-        for (int i = ghosts; i < m - ghosts; i++)
+        for (int i = idx_start; i < mgh - idx_start; i++)
         {
             double res;
             double v_in_index = v_in[index];
@@ -577,27 +585,34 @@ __kernel void jacobi_iter_19point(
 /* runs one iteration of jacobi's method using 27-point stencil and one work-item per cell.
  * global size must be of ghosted grid.
  * m, n and o must be dimensions of ghosted grid, too.
- * h2 is grid spacing to the power of 2
- * dinv is h2/A(i,i), e.g. h2/6.0 for 3D laplacian stencil
- * if store_residual is true, the residual will be stored into global field r */
+ * h2 is grid spacing to the power of 2.
+ * dinv is h2/A(i,i), e.g. h2/6.0 for 3D laplacian stencil.
+ * If store_residual is true, the residual will be stored into global field r.
+ * idx_start determines which cells shall be calculated, which is relevant for running
+ *   Jacobi with multiple iterations without ghost cell update in-between. I.e. when
+ *   stepsPerIter = 1: idx_start = ghosts.
+ */
 __kernel void jacobi_iter_27point(
     __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict v_out, __global double *restrict f, __global double *restrict r, const double h2inv,
-    const double dinv, const double omega, const int m, const int n, const int o, const int ghosts,
-    const int store_residual)
+    __global double *restrict v_out,
+    __global double *restrict f,
+    __global double *restrict r,
+    const double h2inv, const double dinv, const double omega,
+    const int mgh, const int ngh, const int ogh, const int ghosts,
+    const int idx_start, const int store_residual)
 {
     int j = get_global_id(0);
     int k = get_global_id(1);
 
-    // calculate residual only for real cells since ghost cells do not have further ghost cells for themselves
-    if (j > ghosts - 1 && k > ghosts - 1 && j < n - ghosts && k < o - ghosts)
+    // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
+    if (j >= idx_start && k >= idx_start && j < ngh - idx_start && k < ogh - idx_start)
     {
-        int ioff = n * o;
-        int joff = o;
+        int ioff = ngh * ogh;
+        int joff = ogh;
         int koff = 1;
-        int index = ghosts * ioff + j * o + k;
+        int index = ghosts * ioff + j * ogh + k;
 
-        for (int i = ghosts; i < m - ghosts; i++)
+        for (int i = idx_start; i < mgh - idx_start; i++)
         {
             double res;
             double v_in_index = v_in[index];
@@ -649,28 +664,28 @@ __kernel void jacobi_iter_27point_varying_stencil(
     __global double *restrict r,
     __global double *restrict stencilValues,
     const double omega,
-    const int m, const int n, const int o,
+    const int mgh, const int ngh, const int ogh,
     const int ghosts, const int ghosts_sv,
-    const int store_residual)
+    const int idx_start, const int store_residual)
 {
     int j = get_global_id(0);
     int k = get_global_id(1);
 
     // calculate residual only for real cells since ghost cells do not have further ghost cells for themselves
     // TODO start kernel for only real cells and offset indices by ghosts
-    if (j > ghosts - 1 && k > ghosts - 1 && j < n - ghosts && k < o - ghosts)
+    if (j >= idx_start && k >= idx_start && j < ngh - idx_start && k < ogh - idx_start)
     {
-        int ioff = n * o;
-        int joff = o;
+        int ioff = ngh * ogh;
+        int joff = ogh;
         int koff = 1;
-        int index = ghosts * ioff + j * o + k;
+        int index = ghosts * ioff + j * ogh + k;
 
         int koff_sv = 27;
-        int joff_sv = ((o - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
-        int ioff_sv = ((n - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
+        int joff_sv = ((ogh - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
+        int ioff_sv = ((ngh - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
         int index_sv = ghosts_sv * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
 
-        for (int i = ghosts; i < m - ghosts; i++)
+        for (int i = idx_start; i < mgh - idx_start; i++)
         {
             double res;
             double v_in_index = v_in[index];

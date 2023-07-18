@@ -56,7 +56,7 @@ namespace mgcl
                                 int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType, double stencilFactor,
                                 VaryingStencil3x3x3 &stencilValuesCuboid, bool returnResidualNorm, bool periodic,
                                 int stepsPerIter = 1);
-        static double jacobi(Problem &problem, Level &level, int maxiter, bool returnResidual);
+        static double jacobi(Problem &problem, Level &level, int maxiter, bool returnResidual, int stepsPerIter = 1);
         static double jacobiLocalMem(Problem &problem, Level &level, int maxiter, int returnResidual);
 
         static VaryingStencil3x3x3 galerkin(VaryingStencil3x3x3 &a_h);
