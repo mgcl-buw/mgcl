@@ -272,13 +272,6 @@ namespace mgcl
 
         for (int iter = 0; iter < maxiter; iter++)
         {
-            // TODO
-            // 1. innere schleife für stepsPerIter
-            // 2. start und ende berechnen und an kernel geben
-            // 3. ghost update in aeusserer schleife
-            // Kernel muesste gleich bleiben koennen, da immer noch nur ein aufruf per iteration.
-            //   Nur Argumente fuer Grenzen anpassen
-
             // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
             for (int innerIter = 0; innerIter < stepsPerIter && iter + innerIter < maxiter; innerIter++)
             {

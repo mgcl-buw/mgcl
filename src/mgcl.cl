@@ -474,7 +474,11 @@ __kernel void residual_squared(
  * m, n and o must be dimensions of ghosted grid, too.
  * h2 is grid spacing to the power of 2
  * dinv is h2/A(i,i), e.g. h2/6.0 for 3D laplacian stencil
- * if store_residual is true, the residual will be stored into global field r */
+ * if store_residual is true, the residual will be stored into global field r
+ * idx_start determines which cells shall be calculated, which is relevant for running
+ *   Jacobi with multiple iterations without ghost cell update in-between. I.e. when
+ *   stepsPerIter = 1: idx_start = ghosts.
+ */
 __kernel void jacobi_iter_7point(
     __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
     __global double *restrict v_out,
@@ -488,7 +492,7 @@ __kernel void jacobi_iter_7point(
     int j = get_global_id(0);
     int k = get_global_id(1);
 
-    // calculate residual only for real cells since ghost cells do not have further ghost cells for themselves
+    // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
     if (j >= idx_start && k >= idx_start && j < ngh - idx_start && k < ogh - idx_start)
     {
         int ioff = ngh * ogh;
@@ -531,7 +535,11 @@ __kernel void jacobi_iter_7point(
  * m, n and o must be dimensions of ghosted grid, too.
  * h2 is grid spacing to the power of 2
  * dinv is h2/A(i,i), e.g. h2/6.0 for 3D laplacian stencil
- * if store_residual is true, the residual will be stored into global field r */
+ * if store_residual is true, the residual will be stored into global field r
+ * idx_start determines which cells shall be calculated, which is relevant for running
+ *   Jacobi with multiple iterations without ghost cell update in-between. I.e. when
+ *   stepsPerIter = 1: idx_start = ghosts.
+ */
 __kernel void jacobi_iter_19point(
     __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
     __global double *restrict v_out,
@@ -545,7 +553,7 @@ __kernel void jacobi_iter_19point(
     int j = get_global_id(0);
     int k = get_global_id(1);
 
-    // calculate residual only for real cells since ghost cells do not have further ghost cells for themselves
+    // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
     if (j >= idx_start && k >= idx_start && j < ngh - idx_start && k < ogh - idx_start)
     {
         int ioff = ngh * ogh;
@@ -656,7 +664,11 @@ __kernel void jacobi_iter_27point(
  * dinv is h2/A(i,i), e.g. h2/6.0 for 3D laplacian stencil
  * if store_residual is true, the residual will be stored into global field r.
  * stencilValues is a VaryingStencilGpu having width 3 (i.e. a 6d array).
- * ghosts_sv is the amount of ghost cells of stencilValues. */
+ * ghosts_sv is the amount of ghost cells of stencilValues.
+ * idx_start determines which cells shall be calculated, which is relevant for running
+ *   Jacobi with multiple iterations without ghost cell update in-between. I.e. when
+ *   stepsPerIter = 1: idx_start = ghosts.
+ */
 __kernel void jacobi_iter_27point_varying_stencil(
     __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
     __global double *restrict v_out,
@@ -671,8 +683,7 @@ __kernel void jacobi_iter_27point_varying_stencil(
     int j = get_global_id(0);
     int k = get_global_id(1);
 
-    // calculate residual only for real cells since ghost cells do not have further ghost cells for themselves
-    // TODO start kernel for only real cells and offset indices by ghosts
+    // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
     if (j >= idx_start && k >= idx_start && j < ngh - idx_start && k < ogh - idx_start)
     {
         int ioff = ngh * ogh;
