@@ -531,6 +531,8 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
 {
     int iters = GENERATE(1, 2, 5);
     int stepsPerIter = GENERATE(1, 2, 3);
+    // int iters = 1;
+    // int stepsPerIter = 1;
 
     int m = 16;
     int n = 16;
@@ -726,7 +728,57 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
         //     REQUIRE(v_in.isEqual(v_in_gh));
         //     REQUIRE(r_in.isEqual(r_in_gh));
         // }
-    }
 
-    // TODO test varying stencil
+        SECTION("Varying 27p")
+        {
+            p_exp->setStencilType(mgcl::MGCL_VARYING);
+            p_act->setStencilType(mgcl::MGCL_VARYING);
+
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
+            tu_act.finish();
+            tu_exp.finish();
+
+            auto sv_exp = p_exp->getStencilValues();
+            sv_exp->fillRandom();
+            sv_exp->updateGhosts();
+
+            // copy stencil values
+            auto sv_act = p_act->getStencilValues();
+            for (int i = 0; i < sv_exp->field1d().size(); i++)
+                sv_act->field1d()[i] = sv_exp->field1d()[i];
+
+            auto d_sv_exp = std::make_shared<mgcl::VaryingStencilGpu>(sv_exp->getDim1(), sv_exp->getDim2(), sv_exp->getDim3(), 3,
+                                                                      sv_exp->getGhostsDim1(),
+                                                                      tu_exp.getContext(), tu_exp.getCommands());
+            auto d_sv_act = std::make_shared<mgcl::VaryingStencilGpu>(sv_act->getDim1(), sv_act->getDim2(), sv_act->getDim3(), 3,
+                                                                      sv_act->getGhostsDim1(),
+                                                                      tu_act.getContext(), tu_act.getCommands());
+
+            d_sv_exp->fill(*sv_exp, tu_exp.getCommands());
+            d_sv_act->fill(*sv_act, tu_act.getCommands());
+
+            level_exp.setStencilValuesGpu(d_sv_exp);
+            level_act.setStencilValuesGpu(d_sv_act);
+
+            // First calculate exptected result with gh = 1
+            double res_exp = mgcl::MultigridEngine::jacobi(*p_exp, level_exp, iters, true, 1);
+            tu_exp.finish();
+
+            // Now calculate with gh > 1
+            double res_act = mgcl::MultigridEngine::jacobi(*p_act, level_act, iters, true, stepsPerIter);
+            tu_act.finish();
+
+            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
+            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto v_out_exp = tu_exp.readOpenCLBuffer(d_v_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
+            auto v_out_act = tu_act.readOpenCLBuffer(d_v_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+
+            REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
+            REQUIRE(r_out_act->isEqual(*r_out_exp));
+            REQUIRE(v_out_act->isEqual(*v_out_exp));
+        }
+    }
 }
