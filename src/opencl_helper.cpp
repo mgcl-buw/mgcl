@@ -3,6 +3,9 @@
 #include "level.hpp"   // for Level
 #include "problem.hpp" // for Problem
 
+#include <fstream>
+#include <sstream>
+
 #include <cstdio>  // for printf, size_t, NULL, fprintf, fclose, fopen
 #include <cstdlib> // for malloc, exit, free, EXIT_FAILURE
 
@@ -104,12 +107,11 @@ namespace mgcl
 
         // read kernel source
         std::string filename = kernelDir + "mgcl.cl";
-        const char *KernelSource = loadKernelSource(filename.c_str());
-        if (KernelSource == nullptr)
-            return false;
+        std::string kernelSource = loadKernelSource(filename);
+        const char *ksc = kernelSource.c_str();
 
         // Create the compute program from the source buffer
-        program = clCreateProgramWithSource(context, 1, &KernelSource, nullptr, &err);
+        program = clCreateProgramWithSource(context, 1, &ksc, nullptr, &err);
         mgclCheckError(err, "Creating program");
 
         // Build the program
@@ -408,32 +410,17 @@ namespace mgcl
     }
 
     /**
-     * @brief Loads kernel source from file into char*.
+     * @brief Loads kernel source from file into std::string.
      *
      * @param file File to be read from.
-     * @return char* File contents.
+     * @return std::string File contents.
      */
-    char *OpenCLHelper::loadKernelSource(const char *file)
+    std::string OpenCLHelper::loadKernelSource(std::string file)
     {
-        FILE *fp;
-        char *src;
-        size_t source_size, program_size;
-
-        fp = fopen(file, "rb");
-        if (!fp)
-        {
-            printf("Failed to load kernel file: %s\n", file);
-            return NULL;
-        }
-
-        fseek(fp, 0, SEEK_END);
-        program_size = ftell(fp);
-        rewind(fp);
-        src = (char *)malloc(program_size + 1);
-        src[program_size] = '\0';
-        size_t ret = fread(src, sizeof(char), program_size, fp);
-        fclose(fp);
-        return src;
+        std::ifstream t(file);
+        std::stringstream buffer;
+        buffer << t.rdbuf();
+        return buffer.str();
     }
 
     /**

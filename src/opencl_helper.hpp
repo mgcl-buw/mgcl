@@ -55,7 +55,8 @@ namespace mgcl
         int copyOutputBuffers();
         Cuboid readBuffer(cl_mem d_buf, int m, int n, int o);
         void printBuffer(cl_mem d_buf, int m, int n, int o);
-        static char *loadKernelSource(const char *file);
+
+        static std::string loadKernelSource(std::string file);
         static int outputDeviceInfo(cl_device_id device_id);
 
         std::string getKernelDir() const;

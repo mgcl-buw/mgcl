@@ -85,15 +85,10 @@ OCLWrapper::OCLWrapper(cl_device_type deviceType, std::string deviceName, std::s
     mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
 
     // Read kernel source, if kernelString is not given
-    const char *kernelSource = kernelString.c_str();
     if (kernelString == "")
-    {
-        kernelSource = mgcl::OpenCLHelper::loadKernelSource(kernelFilePath.c_str());
-        if (kernelSource == nullptr)
-            throw "kernel source is null!";
+        kernelString = mgcl::OpenCLHelper::loadKernelSource(kernelFilePath);
 
-        kernelString = std::string(kernelSource);
-    }
+    const char *kernelSource = kernelString.c_str();
 
     // Create the compute program from the source buffer
     program = clCreateProgramWithSource(context, 1, &kernelSource, nullptr, &err);
