@@ -100,6 +100,9 @@ namespace mgcl::util
         err = clReleaseMemObject(dTotalSum);
         mgclCheckError(err, "clReleaseMemObject dTotalSum");
 
+        mgclCheckError(clReleaseKernel(kernel_sum_partial), "clReleaseKernel(kernel_sum_partial)");
+        mgclCheckError(clReleaseKernel(kernel_sum_finish), "clReleaseKernel(kernel_sum_partial)");
+
         return ret;
     }
 
@@ -196,6 +199,9 @@ namespace mgcl::util
         err = clReleaseMemObject(dTotalMax);
         mgclCheckError(err, "clReleaseMemObject dTotalMax");
 
+        mgclCheckError(clReleaseKernel(kernel_max_partial), "clReleaseKernel(kernel_max_partial)");
+        mgclCheckError(clReleaseKernel(kernel_max_finish), "clReleaseKernel(kernel_max_finish)");
+
         return ret;
     }
 
@@ -291,6 +297,9 @@ namespace mgcl::util
 
         err = clReleaseMemObject(dTotalMax);
         mgclCheckError(err, "clReleaseMemObject dTotalMax");
+
+        mgclCheckError(clReleaseKernel(kernel_max_partial), "clReleaseKernel(kernel_max_partial)");
+        mgclCheckError(clReleaseKernel(kernel_max_finish), "clReleaseKernel(kernel_max_finish)");
 
         return ret;
     }
