@@ -593,6 +593,97 @@ TEST_CASE("residual gpu gh > 1")
     }
 }
 
+// Test if exceptions are thrown for wrong parameters in residual. Only needed for periodic case.
+// TODO check Dirichlet MPI
+TEST_CASE("residual throwing")
+{
+    int m = 16;
+    int n = 16;
+    int o = 16;
+
+    double omega = 0.8;
+    double h = 1.0 / ((double)m);
+    mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
+    double stencilFactor = 1.0 / (30.0 * h * h);
+    mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+
+    int moff = -1;
+    int noff = moff;
+    int ooff = moff;
+
+    // Ghost cell amounts needed for off
+    int act_ghm = -moff + 1;
+    int act_ghn = -noff + 1;
+    int act_gho = -ooff + 1;
+
+    // Create ghosted fields that are ok and fields with too little ghost cells
+    mgcl::Cuboid v_gh(m, n, o, act_ghm, act_ghn, act_gho);
+    mgcl::Cuboid r_gh(m, n, o, act_ghm, act_ghn, act_gho);
+    mgcl::Cuboid f_gh(m, n, o, act_ghm, act_ghn, act_gho);
+
+    mgcl::Cuboid v(m, n, o, 1, 1, 1);
+    mgcl::Cuboid r(m, n, o, 1, 1, 1);
+    mgcl::Cuboid f(m, n, o, 1, 1, 1);
+
+    SECTION("seq")
+    {
+        SECTION("off too little or too large")
+        {
+            REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
+                                                              stencilFactor, nullptr, true, true, -50, noff, ooff));
+            REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
+                                                              stencilFactor, nullptr, true, true, 50, noff, ooff));
+            REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
+                                                              stencilFactor, nullptr, true, true, moff, -50, ooff));
+            REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
+                                                              stencilFactor, nullptr, true, true, moff, 50, ooff));
+            REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
+                                                              stencilFactor, nullptr, true, true, moff, -50, ooff));
+            REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
+                                                              stencilFactor, nullptr, true, true, moff, 50, ooff));
+        }
+
+        SECTION("stencilValues null and stencilType varying")
+        {
+            REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, mgcl::MGCL_VARYING,
+                                                              stencilFactor, nullptr, true, true, moff, noff, ooff));
+        }
+    }
+
+    SECTION("gpu")
+    {
+        if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+        {
+            // init problem with ghosts = 1
+            auto p_exp = std::make_shared<mgcl::Problem>(m, n, o);
+            p_exp->setGhosts(1);
+            p_exp->setDeviceType(CL_DEVICE_TYPE_GPU);
+
+            mgcl_test::TestUtility tu_exp(p_exp);
+            cl_mem d_f_exp = tu_exp.createOpenCLBuffer(f);
+            cl_mem d_v_exp = tu_exp.createOpenCLBuffer(v);
+            cl_mem d_v_out_exp = tu_exp.createOpenCLBuffer(v);
+            cl_mem d_r_exp = tu_exp.createOpenCLBuffer(r);
+
+            mgcl::Level level_exp(p_exp.get(), 0);
+            level_exp.setDF(d_f_exp);
+            level_exp.setDVIn(d_v_exp);
+            level_exp.setDVOut(d_v_out_exp);
+            level_exp.setDR(d_r_exp);
+
+            SECTION("off too little or too large")
+            {
+                REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_exp, level_exp, false, 50, noff, ooff));
+                REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_exp, level_exp, false, -50, noff, ooff));
+                REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_exp, level_exp, false, moff, 50, ooff));
+                REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_exp, level_exp, false, moff, -50, ooff));
+                REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_exp, level_exp, false, moff, noff, 50));
+                REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_exp, level_exp, false, moff, noff, -50));
+            }
+        }
+    }
+}
+
 // Tests if residual works if moff, noff or koff < 0, i.e. changing the grid size the residual shall be calculated for.
 // TODO off > 0 is not tested yet since it's not needed in practice.
 TEST_CASE("residual seq moff, noff, koff < 0")
@@ -650,22 +741,6 @@ TEST_CASE("residual seq moff, noff, koff < 0")
     // copy all cells from extended ghost variants to standard variants for inputs v and f
     v_act.fillAllFrom(v_exp);
     f_act.fillAllFrom(f_exp);
-
-    SECTION("throwing")
-    {
-        REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, nullptr, true, true, -50, noff, ooff));
-        REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, nullptr, true, true, 50, noff, ooff));
-        REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, nullptr, true, true, moff, -50, ooff));
-        REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, nullptr, true, true, moff, 50, ooff));
-        REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, nullptr, true, true, moff, -50, ooff));
-        REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, nullptr, true, true, moff, 50, ooff));
-    }
 
     SECTION("Laplace 27p")
     {
@@ -800,16 +875,6 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
         REQUIRE(v_exp.isEqualAllCells(v_act));
         REQUIRE(r_exp.isEqualAllCells(r_act));
         REQUIRE(f_exp.isEqualAllCells(f_act));
-
-        SECTION("throwing")
-        {
-            REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_act, level_act, true, -50, noff, ooff));
-            REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_act, level_act, true, 50, noff, ooff));
-            REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, -50, ooff));
-            REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, 50, ooff));
-            REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, -50, ooff));
-            REQUIRE_THROWS(mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, 50, ooff));
-        }
 
         SECTION("Laplace 7p")
         {
