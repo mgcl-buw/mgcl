@@ -425,6 +425,85 @@ TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
     CHECK(c_in_r->isEqual(*c_expected_out_r));
 }
 
+// Test if exceptions are thrown for wrong parameters in Jacobi. Only needed for periodic case.
+// TODO check Dirichlet MPI
+TEST_CASE("jacobi multiple iters throwing")
+{
+    int iters = 5;
+    int stepsPerIter = 3;
+
+    int m = 16;
+    int n = 16;
+    int o = 16;
+
+    double omega = 0.8;
+    double h = 1.0 / ((double)m);
+    mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
+    double stencilFactor = 1.0 / (30.0 * h * h);
+    mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+    mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
+
+    // Ghost cell amounts needed for stepsPerIter
+    int ghm_v = stepsPerIter;
+    int ghn_v = stepsPerIter;
+    int gho_v = stepsPerIter;
+    int ghm_rf = stepsPerIter - 1;
+    int ghn_rf = stepsPerIter - 1;
+    int gho_rf = stepsPerIter - 1;
+
+    // Create ghosted fields that are ok and fields with too little ghost cells
+    mgcl::Cuboid v_gh(m, n, o, ghm_v, ghn_v, gho_v);
+    mgcl::Cuboid r_gh(m, n, o, ghm_rf, ghn_rf, gho_rf);
+    mgcl::Cuboid f_gh(m, n, o, ghm_rf, ghn_rf, gho_rf);
+
+    mgcl::Cuboid v(m, n, o, 1, 1, 1);
+    mgcl::Cuboid r(m, n, o, 1, 1, 1);
+    mgcl::Cuboid f(m, n, o, 1, 1, 1);
+
+    SECTION("seq")
+    {
+        SECTION("throws when not enough ghost cells and periodic")
+        {
+            // ghosts of v too small
+            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v, f_gh, r_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
+
+            // ghosts of f too small
+            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f, r_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
+
+            // ghosts of r too small
+            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f_gh, r, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
+        }
+    }
+
+    SECTION("gpu")
+    {
+        if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+        {
+            // init problem with ghosts = 1
+            auto p_exp = std::make_shared<mgcl::Problem>(m, n, o);
+            p_exp->setGhosts(1);
+            p_exp->setDeviceType(CL_DEVICE_TYPE_GPU);
+
+            mgcl_test::TestUtility tu_exp(p_exp);
+            cl_mem d_f_exp = tu_exp.createOpenCLBuffer(f);
+            cl_mem d_v_exp = tu_exp.createOpenCLBuffer(v);
+            cl_mem d_v_out_exp = tu_exp.createOpenCLBuffer(v);
+            cl_mem d_r_exp = tu_exp.createOpenCLBuffer(r);
+
+            mgcl::Level level_exp(p_exp.get(), 0);
+            level_exp.setDF(d_f_exp);
+            level_exp.setDVIn(d_v_exp);
+            level_exp.setDVOut(d_v_out_exp);
+            level_exp.setDR(d_r_exp);
+
+            SECTION("throws when not enough ghost cells and periodic")
+            {
+                REQUIRE_THROWS(mgcl::MultigridEngine::jacobi(*p_exp, level_exp, iters, false, stepsPerIter));
+            }
+        }
+    }
+}
+
 // tests if jacobi seq works if v_gh > 1, i.e. multiple iterations can be done without ghost update in between
 // TODO test for non-periodic and varying stencil
 TEST_CASE("jacobi seq gh > 1 multiple iters")
@@ -470,27 +549,6 @@ TEST_CASE("jacobi seq gh > 1 multiple iters")
     f_in_gh.fillRealFrom(f_in);
 
     mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
-
-    SECTION("throws when not enough ghost cells and periodic")
-    {
-        if (iters >= stepsPerIter)
-        {
-            if (stepsPerIter > 1)
-            {
-                // ghosts of v too small
-                REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_in, f_in_gh, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
-            }
-
-            if (stepsPerIter > 2)
-            {
-                // ghosts of f too small
-                REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
-
-                // ghosts of r too small
-                REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
-            }
-        }
-    }
 
     SECTION("periodic 27p-Laplace")
     {
@@ -619,12 +677,6 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
         REQUIRE(v_exp.isEqual(v_act));
         REQUIRE(r_exp.isEqual(r_act));
         REQUIRE(f_exp.isEqual(f_act));
-
-        SECTION("throws when not enough ghost cells and periodic")
-        {
-            // ghosts too small
-            REQUIRE_THROWS(mgcl::MultigridEngine::jacobi(*p_act, level_act, gh + 10, false, gh + 5));
-        }
 
         SECTION("periodic 7p-Laplace")
         {
