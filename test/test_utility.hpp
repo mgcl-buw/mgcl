@@ -35,8 +35,9 @@ namespace mgcl_test
         TestUtility(std::shared_ptr<mgcl::Problem> problem);
         ~TestUtility();
         cl_mem createOpenCLBuffer(mgcl::Cuboid &c);
-        std::shared_ptr<mgcl::Cuboid> readOpenCLBuffer(cl_mem buf, int m, int n, int o, int ghosts_m = 0, int ghosts_n = 0, int ghosts_o = 0);
+        std::unique_ptr<mgcl::Cuboid> readOpenCLBuffer(cl_mem buf, int m, int n, int o, int ghosts_m = 0, int ghosts_n = 0, int ghosts_o = 0);
         int finish();
+        void releaseBuffers();
 
         static bool deviceAvailable(std::string deviceName, cl_device_type deviceType);
 

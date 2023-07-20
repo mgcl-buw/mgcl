@@ -91,14 +91,14 @@ cl_mem mgcl_test::TestUtility::createOpenCLBuffer(mgcl::Cuboid &c)
  * @param ghosts_o Amount of ghost cells in one z-direction.
  * @return mgcl::Cuboid
  */
-std::shared_ptr<mgcl::Cuboid> mgcl_test::TestUtility::readOpenCLBuffer(cl_mem buf, int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o)
+std::unique_ptr<mgcl::Cuboid> mgcl_test::TestUtility::readOpenCLBuffer(cl_mem buf, int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o)
 {
     if (!buf)
         throw std::invalid_argument("Can't read OpenCL buffer, buf is null!");
 
     finish();
 
-    auto c = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+    auto c = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
     int size = c->getMgh() * c->getNgh() * c->getOgh();
     double *tmp = c->field1d().data();
 
@@ -115,6 +115,17 @@ int mgcl_test::TestUtility::finish()
     int err = clFinish(problem->getCommands());
     mgcl::mgclCheckError(err, "clFinish");
     return err;
+}
+
+/**
+ * @brief Releases all buffers created by this TestUtility instance and clears buffer vector.
+ *
+ */
+void mgcl_test::TestUtility::releaseBuffers()
+{
+    for (auto buf : openclBuffers)
+        mgcl::mgclCheckError(clReleaseMemObject(buf), "clReleaseMemObject");
+    openclBuffers.clear();
 }
 
 /**
