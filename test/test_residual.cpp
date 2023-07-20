@@ -37,9 +37,8 @@ TEST_CASE("residual")
 
     SECTION("residualSeq L2-norm 7point periodic")
     {
-        auto stencilValues = std::make_unique<mgcl::VaryingStencil3x3x3>(1, 1, 1, 0, 0, 0); // just a dummy
         double res = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r, mgcl::MGCL_L2,
-                                                        mgcl::MGCL_LAPLACE_7POINT, stencilFactor, *stencilValues, true, true);
+                                                        mgcl::MGCL_LAPLACE_7POINT, stencilFactor, nullptr, true, true);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_in_r->isEqual(*c_expected_out_r));
@@ -101,7 +100,7 @@ TEST_CASE("residual")
                 }
 
         double res = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r, mgcl::MGCL_L2,
-                                                        mgcl::MGCL_VARYING, stencilFactor, vals, true, true);
+                                                        mgcl::MGCL_VARYING, stencilFactor, &vals, true, true);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_in_r->isEqual(*c_expected_out_r));
@@ -179,9 +178,8 @@ TEST_CASE("residual periodic Laplace seq vs ocl")
     double res_gpu = mgcl::MultigridEngine::residual(*p_gpu, level0_gpu, true);
     tu.finish();
 
-    auto stencilValues = std::make_unique<mgcl::VaryingStencil3x3x3>(1, 1, 1, 0, 0, 0); // just a dummy
     double res_seq = mgcl::MultigridEngine::residualSeq(f_in_lv0, v_in_lv0, r_in_lv0, resnorm,
-                                                        stencilType, level0_seq.getStencilFactor(), *stencilValues, true, true);
+                                                        stencilType, level0_seq.getStencilFactor(), nullptr, true, true);
 
     auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
     auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
@@ -296,7 +294,7 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
     double res_gpu = mgcl::MultigridEngine::residual(*p_gpu, level0_gpu, true);
     tu.finish();
     double res_seq = mgcl::MultigridEngine::residualSeq(f_in_lv0, v_in_lv0, r_in_lv0, resnorm,
-                                                        stencilType, level0_seq.getStencilFactor(), *sv_in_lv0, true, true);
+                                                        stencilType, level0_seq.getStencilFactor(), sv_in_lv0.get(), true, true);
 
     auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
     auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
@@ -367,15 +365,13 @@ TEST_CASE("residual seq gh > 1")
     mgcl::MultigridEngine::updateGhostsSeq(v_in_gh);
     mgcl::MultigridEngine::updateGhostsSeq(f_in_gh);
 
-    mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
-
     SECTION("Laplace 27p")
     {
         // First calculate exptected result with gh = 1
-        double res_exp = mgcl::MultigridEngine::residualSeq(f_in, v_in, r_in, resnorm, stencilType, stencilFactor, dummy, true, true);
+        double res_exp = mgcl::MultigridEngine::residualSeq(f_in, v_in, r_in, resnorm, stencilType, stencilFactor, nullptr, true, true);
 
         // Now calculate with gh > 1
-        double res_act = mgcl::MultigridEngine::residualSeq(f_in_gh, v_in_gh, r_in_gh, resnorm, stencilType, stencilFactor, dummy, true, true);
+        double res_act = mgcl::MultigridEngine::residualSeq(f_in_gh, v_in_gh, r_in_gh, resnorm, stencilType, stencilFactor, nullptr, true, true);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(v_in.isEqual(v_in_gh));
@@ -390,11 +386,11 @@ TEST_CASE("residual seq gh > 1")
 
         // First calculate exptected result with gh = 1
         double res_exp = mgcl::MultigridEngine::residualSeq(f_in, v_in, r_in, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, sv, true, true);
+                                                            stencilFactor, &sv, true, true);
 
         // Now calculate with gh > 1
         double res_act = mgcl::MultigridEngine::residualSeq(f_in_gh, v_in_gh, r_in_gh, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, sv, true, true);
+                                                            stencilFactor, &sv, true, true);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(v_in.isEqual(v_in_gh));
@@ -655,33 +651,31 @@ TEST_CASE("residual seq moff, noff, koff < 0")
     v_act.fillAllFrom(v_exp);
     f_act.fillAllFrom(f_exp);
 
-    mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
-
     SECTION("throwing")
     {
         REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, dummy, true, true, -50, noff, ooff));
+                                                          stencilFactor, nullptr, true, true, -50, noff, ooff));
         REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, dummy, true, true, 50, noff, ooff));
+                                                          stencilFactor, nullptr, true, true, 50, noff, ooff));
         REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, dummy, true, true, moff, -50, ooff));
+                                                          stencilFactor, nullptr, true, true, moff, -50, ooff));
         REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, dummy, true, true, moff, 50, ooff));
+                                                          stencilFactor, nullptr, true, true, moff, 50, ooff));
         REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, dummy, true, true, moff, -50, ooff));
+                                                          stencilFactor, nullptr, true, true, moff, -50, ooff));
         REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                          stencilFactor, dummy, true, true, moff, 50, ooff));
+                                                          stencilFactor, nullptr, true, true, moff, 50, ooff));
     }
 
     SECTION("Laplace 27p")
     {
         // First calculate exptected result with gh = 1, off = 0
         double res_exp = mgcl::MultigridEngine::residualSeq(f_exp, v_exp, r_exp, resnorm, stencilType, stencilFactor,
-                                                            dummy, true, true);
+                                                            nullptr, true, true);
 
         // Now calculate with gh > 1 and off < 0
         double res_act = mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                            stencilFactor, dummy, true, true, moff, noff, ooff);
+                                                            stencilFactor, nullptr, true, true, moff, noff, ooff);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(r_act.isEqualAllCells(r_exp));
@@ -695,11 +689,11 @@ TEST_CASE("residual seq moff, noff, koff < 0")
 
         // First calculate exptected result with gh = 1
         double res_exp = mgcl::MultigridEngine::residualSeq(f_exp, v_exp, r_exp, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, sv, true, true);
+                                                            stencilFactor, &sv, true, true);
 
         // Now calculate with gh > 1
         double res_act = mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, sv, true, true, moff, noff, ooff);
+                                                            stencilFactor, &sv, true, true, moff, noff, ooff);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(r_act.isEqualAllCells(r_exp));

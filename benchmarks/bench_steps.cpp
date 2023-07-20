@@ -60,11 +60,11 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
         // jacobi
         b.run(std::string("seq jacobi, N = ").append(std::to_string(N)).c_str(), [&]
               { mgcl::MultigridEngine::jacobiSeq(v0, f0, r0, p.getOmega(), p.getNu1(), p.getResidualNorm(),
-                                                 p.getStencilType(), stencilFactor0, *p.getStencilValues(), false, periodic); });
+                                                 p.getStencilType(), stencilFactor0, p.getStencilValues().get(), false, periodic); });
 
         // residual
         b.run(std::string("seq residual, N = ").append(std::to_string(N)).c_str(), [&]
-              { mgcl::MultigridEngine::residualSeq(f0, v0, r0, p.getResidualNorm(), p.getStencilType(), stencilFactor0, *p.getStencilValues(), false, periodic); });
+              { mgcl::MultigridEngine::residualSeq(f0, v0, r0, p.getResidualNorm(), p.getStencilType(), stencilFactor0, p.getStencilValues().get(), false, periodic); });
 
         // updateGhosts
         b.run(std::string("seq updateGhosts, N = ").append(std::to_string(N)).c_str(), [&]
@@ -194,7 +194,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
 
             b.run(std::string("seq jacobi, N = ").append(std::to_string(N)).c_str(), [&]
                   { mgcl::MultigridEngine::jacobiSeq(v0, f0, r0, p.getOmega(), p.getNu1(), p.getResidualNorm(),
-                                                     p.getStencilType(), stencilFactor0, *p.getStencilValues(), false, periodic); });
+                                                     p.getStencilType(), stencilFactor0, p.getStencilValues().get(), false, periodic); });
         }
 
         {
@@ -245,7 +245,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
 
             b.run(std::string("seq residual, N = ").append(std::to_string(N)).c_str(), [&]
                   { mgcl::MultigridEngine::residualSeq(f0, v0, r0, p.getResidualNorm(), p.getStencilType(),
-                                                       stencilFactor0, *p.getStencilValues(), false, periodic); });
+                                                       stencilFactor0, p.getStencilValues().get(), false, periodic); });
         }
 
         {

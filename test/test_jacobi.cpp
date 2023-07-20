@@ -43,9 +43,8 @@ TEST_CASE("jacobi")
     // TODO adjust expected results for expected r and norm of r?
     SECTION("seq L2-norm 7point periodic")
     {
-        auto stencilValues = std::make_unique<mgcl::VaryingStencil3x3x3>(1, 1, 1, 0, 0, 0); // just a dummy
         double res = mgcl::MultigridEngine::jacobiSeq(*c_in_v, *c_in_f, *c_in_r, omega, maxiter,
-                                                      mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_7POINT, stencilFactor, *stencilValues, true, true);
+                                                      mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_7POINT, stencilFactor, nullptr, true, true);
 
         // REQUIRE_THAT(res, Catch::Matchers::WithinAbs(4.02895897954478714e+04, 1e-7));
         CHECK(c_in_v->isEqual(*c_expected_out_v));
@@ -131,9 +130,8 @@ TEST_CASE("jacobi")
         auto c_r_out_ocl = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
         auto c_v_out_ocl = tu.readOpenCLBuffer(d_in_v, m, n, o, ghosts_m, ghosts_n, ghosts_o);
 
-        auto stencilValues = std::make_unique<mgcl::VaryingStencil3x3x3>(1, 1, 1, 0, 0, 0); // just a dummy
         double res_seq = mgcl::MultigridEngine::jacobiSeq(*c_in_v, *c_in_f, *c_in_r, omega, maxiter,
-                                                          mgcl::MGCL_INF, mgcl::MGCL_LAPLACE_7POINT, stencilFactor, *stencilValues, true, true);
+                                                          mgcl::MGCL_INF, mgcl::MGCL_LAPLACE_7POINT, stencilFactor, nullptr, true, true);
 
         // c_r_out_ocl->dumpToFile("/home/simon/tmp/c_r_out_ocl.csv");
         // c_in_r->dumpToFile("/home/simon/tmp/c_in_r.csv");
@@ -303,7 +301,7 @@ TEST_CASE("jacobi GPU varying stencil")
         double res_gpu = mgcl::MultigridEngine::jacobi(*p_gpu, level0_gpu, maxiter, true);
         tu.finish();
         double res_seq = mgcl::MultigridEngine::jacobiSeq(v_in_lv0, f_in_lv0, r_in_lv0, omega, maxiter, resnorm,
-                                                          stencilType, level0_seq.getStencilFactor(), *sv_in_lv0, true, true);
+                                                          stencilType, level0_seq.getStencilFactor(), sv_in_lv0.get(), true, true);
 
         // res_gpu = mgcl::MultigridEngine::residual(*p_gpu, level0_gpu, true);
         // res_seq = mgcl::MultigridEngine::residualSeq(f_in_lv0, v_in_lv0, r_in_lv0, mgcl::MGCL_L2,
@@ -427,7 +425,7 @@ TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
 
 // Test if exceptions are thrown for wrong parameters in Jacobi. Only needed for periodic case.
 // TODO check Dirichlet MPI
-TEST_CASE("jacobi multiple iters throwing")
+TEST_CASE("jacobi throwing")
 {
     int iters = 5;
     int stepsPerIter = 3;
@@ -441,7 +439,6 @@ TEST_CASE("jacobi multiple iters throwing")
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
     double stencilFactor = 1.0 / (30.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
-    mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
 
     // Ghost cell amounts needed for stepsPerIter
     int ghm_v = stepsPerIter;
@@ -462,16 +459,21 @@ TEST_CASE("jacobi multiple iters throwing")
 
     SECTION("seq")
     {
-        SECTION("throws when not enough ghost cells and periodic")
+        SECTION("throws when stepsPerIter > ghosts and periodic")
         {
             // ghosts of v too small
-            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v, f_gh, r_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
+            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v, f_gh, r_gh, omega, iters, resnorm, stencilType, stencilFactor, nullptr, false, true, stepsPerIter));
 
             // ghosts of f too small
-            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f, r_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
+            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f, r_gh, omega, iters, resnorm, stencilType, stencilFactor, nullptr, false, true, stepsPerIter));
 
             // ghosts of r too small
-            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f_gh, r, omega, iters, resnorm, stencilType, stencilFactor, dummy, false, true, stepsPerIter));
+            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f_gh, r, omega, iters, resnorm, stencilType, stencilFactor, nullptr, false, true, stepsPerIter));
+        }
+
+        SECTION("throws when stencilValues null and stencilType varying")
+        {
+            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f_gh, r_gh, omega, iters, resnorm, mgcl::MGCL_VARYING, stencilFactor, nullptr, false, true, stepsPerIter));
         }
     }
 
@@ -496,7 +498,7 @@ TEST_CASE("jacobi multiple iters throwing")
             level_exp.setDVOut(d_v_out_exp);
             level_exp.setDR(d_r_exp);
 
-            SECTION("throws when not enough ghost cells and periodic")
+            SECTION("throws when stepsPerIter > ghosts and periodic")
             {
                 REQUIRE_THROWS(mgcl::MultigridEngine::jacobi(*p_exp, level_exp, iters, false, stepsPerIter));
             }
@@ -548,8 +550,6 @@ TEST_CASE("jacobi seq gh > 1 multiple iters")
     v_in_gh.fillRealFrom(v_in);
     f_in_gh.fillRealFrom(f_in);
 
-    mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
-
     SECTION("periodic 27p-Laplace")
     {
         mgcl::MultigridEngine::updateGhostsSeq(v_in);
@@ -557,10 +557,10 @@ TEST_CASE("jacobi seq gh > 1 multiple iters")
         mgcl::MultigridEngine::updateGhostsSeq(f_in_gh);
 
         // First calculate exptected result with regular ghost updates between iterations
-        double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, true, 1);
+        double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, iters, resnorm, stencilType, stencilFactor, nullptr, true, true, 1);
 
         // Now calculate with gh > 1
-        double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, true, stepsPerIter);
+        double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, nullptr, true, true, stepsPerIter);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(v_in.isEqual(v_in_gh));
@@ -570,10 +570,10 @@ TEST_CASE("jacobi seq gh > 1 multiple iters")
     SECTION("Dirichlet 27p-Laplace")
     {
         // First calculate exptected result with regular ghost updates between iterations
-        double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, false, 1);
+        double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, iters, resnorm, stencilType, stencilFactor, nullptr, true, false, 1);
 
         // Now calculate with gh > 1
-        double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, dummy, true, false, stepsPerIter);
+        double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, iters, resnorm, stencilType, stencilFactor, nullptr, true, false, stepsPerIter);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(v_in.isEqual(v_in_gh));

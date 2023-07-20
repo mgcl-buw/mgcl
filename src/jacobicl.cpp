@@ -28,7 +28,7 @@ namespace mgcl
      * cells, i.e. v_gh >= stepsPerIter per border. Defaults to 1. */
     double MultigridEngine::jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
-                                      double stencilFactor, VaryingStencil3x3x3 &stencilValues, bool returnResidualNorm,
+                                      double stencilFactor, VaryingStencil3x3x3 *stencilValues, bool returnResidualNorm,
                                       bool periodic, int stepsPerIter)
     {
         double res = 0.0;
@@ -66,6 +66,10 @@ namespace mgcl
         {
             throw "#ghosts of f must be >= stepsPerIter - 1!";
         }
+
+        // check that stencilValues is not null if stencil type is varying
+        if (stencilType == MGCL_VARYING && stencilValues == nullptr)
+            throw "stencilType is varying but stencilValues is null!";
 
         for (int iter = 0; iter < maxiter; iter += stepsPerIter)
         {
@@ -113,9 +117,9 @@ namespace mgcl
                     // print27point(v, 1, 2, 5);
                     // print27point_sv(v, 1, 2, 5, stencilValues, 2, 3, 6);
 
-                    int ghmsv = stencilValues.getGhostsDim1();
-                    int ghnsv = stencilValues.getGhostsDim2();
-                    int ghosv = stencilValues.getGhostsDim3();
+                    int ghmsv = stencilValues->getGhostsDim1();
+                    int ghnsv = stencilValues->getGhostsDim2();
+                    int ghosv = stencilValues->getGhostsDim3();
                     for (int iv = istart_v, ir = istart_r, isv = ghmsv; iv < iend_v; iv++, ir++, isv++)
                         for (int jv = jstart_v, jr = jstart_r, jsv = ghnsv; jv < jend_v; jv++, jr++, jsv++)
                             for (int kv = kstart_v, kr = kstart_r, ksv = ghosv; kv < kend_v; kv++, kr++, ksv++)
@@ -123,7 +127,7 @@ namespace mgcl
                                 // if (i == 1 && j == 1 && k == 1)
                                 //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, vraw[i][j][k],
                                 //     i,j,k,r[i][j][k], omega);
-                                vraw[iv][jv][kv] = vraw[iv][jv][kv] + omega * (1.0 / stencilValues[isv][jsv][ksv][1][1][1]) * r[ir][jr][kr];
+                                vraw[iv][jv][kv] = vraw[iv][jv][kv] + omega * (1.0 / (*stencilValues)[isv][jsv][ksv][1][1][1]) * r[ir][jr][kr];
 
                                 // if (j == 2 && k == 5 && i == 1)
                                 // {
@@ -731,7 +735,7 @@ namespace mgcl
      */
     double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
                                         MGCL_STENCIL stencilType, double stencilFactor,
-                                        VaryingStencil3x3x3 &stencilValuesCuboid, bool returnResidualNorm,
+                                        VaryingStencil3x3x3 *stencilValuesCuboid, bool returnResidualNorm,
                                         bool periodic, int moff, int noff, int ooff)
     {
         double res = 0.0;
@@ -751,12 +755,16 @@ namespace mgcl
         if (moff * 2 >= v.getM() || noff * 2 >= v.getN() || ooff * 2 >= v.getO())
             throw "2*moff, 2*noff and 2*ooff must not be >= m, n or o";
 
+        // check that stencilValues is not null if stencil type is varying
+        if (stencilType == MGCL_VARYING && stencilValuesCuboid == nullptr)
+            throw "stencilType is varying but stencilValues is null!";
+
         if (stencilType == MGCL_VARYING)
         {
-            stencilValues = stencilValuesCuboid.getData();
-            ghmsv = stencilValuesCuboid.getGhostsDim1();
-            ghnsv = stencilValuesCuboid.getGhostsDim2();
-            ghosv = stencilValuesCuboid.getGhostsDim3();
+            stencilValues = stencilValuesCuboid->getData();
+            ghmsv = stencilValuesCuboid->getGhostsDim1();
+            ghnsv = stencilValuesCuboid->getGhostsDim2();
+            ghosv = stencilValuesCuboid->getGhostsDim3();
             // if (ghmsv != ghm ||
             //     ghnsv != ghn ||
             //     ghosv != gho)

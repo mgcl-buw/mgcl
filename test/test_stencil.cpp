@@ -28,9 +28,8 @@ TEST_CASE("StencilLaplace7p periodic")
 
     mgcl::Cuboid f(N, N, N, gh, gh, gh);
     mgcl::Cuboid r(N, N, N, gh, gh, gh);
-    mgcl::VaryingStencil3x3x3 stencilValues(1, 1, 1, 0, 0, 0); // just a dummy
 
-    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_7POINT, expectedFactor, stencilValues, 0, true);
+    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_7POINT, expectedFactor, nullptr, 0, true);
 
     double expected = expectedFactor * (6.0 * 8 - 4 - 16 - 4 - 2 - 1 - 2);
     REQUIRE(-r[1][1][1] == Catch::Approx(expected));
@@ -69,9 +68,8 @@ TEST_CASE("StencilLaplace19p periodic")
 
     mgcl::Cuboid f(N, N, N, gh, gh, gh);
     mgcl::Cuboid r(N, N, N, gh, gh, gh);
-    mgcl::VaryingStencil3x3x3 stencilValues(1, 1, 1, 0, 0, 0); // just a dummy
 
-    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_19POINT, expectedFactor, stencilValues, 0, true);
+    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_19POINT, expectedFactor, nullptr, 0, true);
 
     double expected = expectedFactor * (24.0 * 8 - 2.0 * (4 + 16 + 4 + 2 + 1 + 2) - 8 - 4 - 1 - 2 - 16 - 32 - 8 - 4 - 4 - 4 - 2 - 1);
     REQUIRE(-r[1][1][1] == Catch::Approx(expected));
@@ -119,9 +117,8 @@ TEST_CASE("StencilLaplace27p periodic")
 
     mgcl::Cuboid f(N, N, N, gh, gh, gh);
     mgcl::Cuboid r(N, N, N, gh, gh, gh);
-    mgcl::VaryingStencil3x3x3 stencilValues(1, 1, 1, 0, 0, 0); // just a dummy
 
-    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_27POINT, expectedFactor, stencilValues, 0, true);
+    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_27POINT, expectedFactor, nullptr, 0, true);
 
     double expected = expectedFactor * (128.0 * 8 - 14.0 * (4 + 16 + 4 + 2 + 1 + 2) -
                                         3.0 * (8 + 4 + 1 + 2 + 16 + 32 + 8 + 4 + 4 + 4 + 2 + 1) -
@@ -166,7 +163,7 @@ TEST_CASE("StencilVarying7p periodic")
     mgcl::Cuboid f(N, N, N, gh, gh, gh);
     mgcl::Cuboid r(N, N, N, gh, gh, gh);
 
-    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_VARYING, 1, vals, 0, true);
+    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_VARYING, 1, &vals, 0, true);
 
     double expected = h2inv * (6.0 * 8 - 4 - 16 - 4 - 2 - 1 - 2);
     REQUIRE(-r[1][1][1] == Catch::Approx(expected));
@@ -236,7 +233,7 @@ TEST_CASE("StencilVarying19p periodic")
     mgcl::Cuboid f(N, N, N, gh, gh, gh);
     mgcl::Cuboid r(N, N, N, gh, gh, gh);
 
-    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_VARYING, 1, vals, 0, true);
+    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_VARYING, 1, &vals, 0, true);
 
     double expected = h2inv * (24.0 * 8 - 2.0 * (4 + 16 + 4 + 2 + 1 + 2) - 8 - 4 - 1 - 2 - 16 - 32 - 8 - 4 - 4 - 4 - 2 - 1);
     REQUIRE(-r[1][1][1] == Catch::Approx(expected));
@@ -323,7 +320,7 @@ TEST_CASE("StencilVarying27p periodic")
     mgcl::Cuboid f(N, N, N, gh, gh, gh);
     mgcl::Cuboid r(N, N, N, gh, gh, gh);
 
-    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_VARYING, 1, vals, 0, true);
+    mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_VARYING, 1, &vals, 0, true);
 
     double expected = h2inv * (128.0 * 8 - 14.0 * (4 + 16 + 4 + 2 + 1 + 2) -
                                3.0 * (8 + 4 + 1 + 2 + 16 + 32 + 8 + 4 + 4 + 4 + 2 + 1) -

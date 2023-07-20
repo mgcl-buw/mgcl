@@ -41,11 +41,11 @@ namespace mgcl
         // relax nu1 times
         res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
                                          problem.omega, problem.nu1, problem.residual_norm, problem.stencilType,
-                                         level.stencilFactor, *level.stencilValues, false, problem.bc == BC::PERIODIC);
+                                         level.stencilFactor, level.stencilValues.get(), false, problem.bc == BC::PERIODIC);
 
         // update residual before restriction
         res = residualSeq(level.getF(), level.getV(), level.getR(), problem.residual_norm, problem.stencilType,
-                          level.stencilFactor, *level.stencilValues, false, problem.bc == BC::PERIODIC);
+                          level.stencilFactor, level.stencilValues.get(), false, problem.bc == BC::PERIODIC);
 
         // printf("res on level %d, upwards: %.17e\n", level.getNum(), res);
         // std::cout << "v[3][3][3] = " << std::scientific << std::setprecision(17) << level.getV()[3][3][3] << std::endl
@@ -69,7 +69,7 @@ namespace mgcl
         {
             MultigridEngine::jacobiSeq(levelAbove.getV(), levelAbove.getF(), levelAbove.getR(), problem.omega,
                                        problem.nu1 + problem.nu2, problem.residual_norm, problem.stencilType,
-                                       level.stencilFactor, *level.stencilValues, false, problem.bc == BC::PERIODIC);
+                                       level.stencilFactor, level.stencilValues.get(), false, problem.bc == BC::PERIODIC);
 
             // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
         }
@@ -87,7 +87,7 @@ namespace mgcl
         // relax nu2 times
         res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
                                          problem.omega, problem.nu2, problem.residual_norm, problem.stencilType,
-                                         level.stencilFactor, *level.stencilValues, !problem.ignoreTol,
+                                         level.stencilFactor, level.stencilValues.get(), !problem.ignoreTol,
                                          problem.bc == BC::PERIODIC);
         // printf("res on level %d, downwards: %.17e\n", level.getNum(), res);
         return res;

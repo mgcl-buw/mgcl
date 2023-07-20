@@ -416,7 +416,7 @@ namespace mgcl
 
         double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(),
                                                       residual_norm, stencilType, levels[0]->stencilFactor,
-                                                      *levels[0]->stencilValues, !ignoreTol, bc == BC::PERIODIC);
+                                                      levels[0]->stencilValues.get(), !ignoreTol, bc == BC::PERIODIC);
         if (!silent && !ignoreTol)
             printf("Starting mgcl with initres = %e\n", initres);
 
