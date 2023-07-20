@@ -112,16 +112,16 @@ namespace mgcl
 #endif // MGCL_USE_MPI
 
         cl_mem getDVIn() const;
-        void setDVIn(const cl_mem &dVIn_);
+        void setDVIn(const cl_mem dVIn_);
 
         cl_mem getDVOut() const;
-        void setDVOut(const cl_mem &dVOut_);
+        void setDVOut(const cl_mem dVOut_);
 
         cl_mem getDF() const;
-        void setDF(const cl_mem &dF_);
+        void setDF(const cl_mem dF_);
 
         cl_mem getDR() const;
-        void setDR(const cl_mem &dR_);
+        void setDR(const cl_mem dR_);
 
         int getMgh() const;
 

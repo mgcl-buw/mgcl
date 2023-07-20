@@ -335,7 +335,7 @@ namespace mgcl
         return dVIn;
     }
 
-    void Level::setDVIn(const cl_mem &dVIn_)
+    void Level::setDVIn(const cl_mem dVIn_)
     {
         dVIn = dVIn_;
         if (dVIn_)
@@ -347,7 +347,7 @@ namespace mgcl
         return dF;
     }
 
-    void Level::setDF(const cl_mem &dF_)
+    void Level::setDF(const cl_mem dF_)
     {
         dF = dF_;
         if (dF_)
@@ -374,7 +374,7 @@ namespace mgcl
         return dVOut;
     }
 
-    void Level::setDVOut(const cl_mem &dVOut_)
+    void Level::setDVOut(const cl_mem dVOut_)
     {
         dVOut = dVOut_;
         if (dVOut_)
@@ -386,7 +386,7 @@ namespace mgcl
         return dR;
     }
 
-    void Level::setDR(const cl_mem &dR_)
+    void Level::setDR(const cl_mem dR_)
     {
         dR = dR_;
         if (dR_)
