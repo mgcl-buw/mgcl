@@ -46,10 +46,15 @@ namespace mgcl
         cl_mem dF = nullptr;
         cl_mem dStencilValues = nullptr;
 
-        /* grid dimensions */
+        /* local grid dimensions (on one MPI process if MPI is used) */
         int m;
         int n;
         int o;
+
+        /* global grid dimensions (is equal to local grid dimensions if MPI is not used) */
+        int m_global;
+        int n_global;
+        int o_global;
 
         /* Holds level-dependent data for each level */
         std::vector<std::unique_ptr<Level>> levels;
@@ -137,10 +142,11 @@ namespace mgcl
         friend class MultigridEngine;
 
     public:
-        Problem(int m_, int n_, int o_);
-        Problem(int m_, int n_, int o_, Cuboid *f_, Cuboid *v_);
-        Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_);
-        Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_);
+        Problem(int m_, int n_, int o_, int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
+        Problem(int m_, int n_, int o_, Cuboid *f_, Cuboid *v_, int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
+        Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_,
+                int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
+        Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_, int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
         Problem(const Problem &) = delete;
         Problem &operator=(const Problem &) = delete;
         Problem(const Problem &&) = delete;

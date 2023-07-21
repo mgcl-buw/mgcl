@@ -151,6 +151,24 @@ TEST_CASE("Problem::checkGpuSizes")
     }
 }
 
+// Global dimensions must be a whole multiple of local dims
+TEST_CASE("Problem::checkGlobalDimensions")
+{
+    SECTION("throwing when invalid")
+    {
+        REQUIRE_THROWS(mgcl::Problem(4, 4, 4, 3, 3, 3));
+        REQUIRE_THROWS(mgcl::Problem(4, 4, 4, 2, 2, 2));
+    }
+
+    SECTION("not throwing when valid")
+    {
+        REQUIRE_NOTHROW(mgcl::Problem(4, 4, 4));
+        REQUIRE_NOTHROW(mgcl::Problem(2, 2, 2, 4, 4, 4));
+        REQUIRE_NOTHROW(mgcl::Problem(1, 1, 1, 4, 4, 4));
+        REQUIRE_NOTHROW(mgcl::Problem(1, 1, 1, 1, 1, 1));
+    }
+}
+
 TEST_CASE("Problem::calculateAndSetMaxLevel")
 {
     SECTION("m min")

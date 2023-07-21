@@ -16,32 +16,64 @@
 
 namespace mgcl
 {
-    Problem::Problem(int m_, int n_, int o_)
+
+    Problem::Problem(int m_, int n_, int o_, int m_global_, int n_global_, int o_global_)
         : m(m_), n(n_), o(o_),
+          m_global(m_global_ == -1 ? m_ : m_global_),
+          n_global(n_global_ == -1 ? n_ : n_global_),
+          o_global(o_global_ == -1 ? o_ : o_global_),
           openCLHelper(this)
     {
+        checkGlobalDimensions();
         calculateAndSetMaxLevel();
     }
 
-    Problem::Problem(int m_, int n_, int o_, Cuboid *f_, Cuboid *v_)
+    Problem::Problem(int m_, int n_, int o_, Cuboid *f_, Cuboid *v_, int m_global_, int n_global_, int o_global_)
         : m(m_), n(n_), o(o_), f(f_), v(v_),
+          m_global(m_global_ == -1 ? m_ : m_global_),
+          n_global(n_global_ == -1 ? n_ : n_global_),
+          o_global(o_global_ == -1 ? o_ : o_global_),
           openCLHelper(this)
     {
+        checkGlobalDimensions();
         calculateAndSetMaxLevel();
     }
 
-    Problem::Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_)
+    Problem::Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_,
+                     int m_global_, int n_global_, int o_global_)
         : m(m_), n(n_), o(o_), f(f_), v(v_),
+          m_global(m_global_ == -1 ? m_ : m_global_),
+          n_global(n_global_ == -1 ? n_ : n_global_),
+          o_global(o_global_ == -1 ? o_ : o_global_),
           openCLHelper(this)
     {
+        checkGlobalDimensions();
         calculateAndSetMaxLevel();
     }
 
-    Problem::Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_)
+    Problem::Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_,
+                     int m_global_, int n_global_, int o_global_)
         : m(m_), n(n_), o(o_), dF(d_f_), dV(d_v_),
+          m_global(m_global_ == -1 ? m_ : m_global_),
+          n_global(n_global_ == -1 ? n_ : n_global_),
+          o_global(o_global_ == -1 ? o_ : o_global_),
           openCLHelper(this)
     {
+        checkGlobalDimensions();
         calculateAndSetMaxLevel();
+    }
+
+    // throws an exception if global dimensions are not a multiple of local dims.
+    void Problem::checkGlobalDimensions()
+    {
+        if (m_global % m != 0)
+            throw "m_global must be a multiple of m!";
+
+        if (n_global % n != 0)
+            throw "n_global must be a multiple of n!";
+
+        if (o_global % o != 0)
+            throw "o_global must be a multiple of o!";
     }
 
     /**
