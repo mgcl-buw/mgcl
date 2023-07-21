@@ -16,7 +16,7 @@
 namespace mgcl
 {
     /**
-     * @brief Construct a new Level:: Level object. m, n and o must be dims of real grid.
+     * @brief Construct a new Level object. m, n and o must be dims of real grid.
      *
      * @param problem_ Problem this Level belongs to.
      * @param num_ Number of level in the Problem (finest grid is level 0)
@@ -26,13 +26,13 @@ namespace mgcl
     Level::Level(Problem *problem_, int num_)
         : problem(problem_),
           num(num_),
-          m(problem_->getM() >> num_),
+          m(problem_->getM() >> num_), // TODO m, n and o must be power of 2 for this
           n(problem_->getN() >> num_),
           o(problem_->getO() >> num_),
           mgh(m + 2 * problem->getGhosts()),
           ngh(n + 2 * problem->getGhosts()),
           ogh(o + 2 * problem->getGhosts()),
-          h(1.0 / (double)m),
+          h(1.0 / (double)problem->m_global), // TODO differentiate for non-cube-like domains
           stencilType(problem_->stencilType)
     {
         if (stencilType == MGCL_LAPLACE_7POINT)
