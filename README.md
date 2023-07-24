@@ -104,6 +104,9 @@ p.solve();
 // solution is now in v
 ```
 
+## Using MPI
+To use MPI configure CMake with `-DMGCL_USE_MPI`. A custom communicator with attached topology information must be set using `Problem::setMpiComm`. See exmaples/example_mpi.cpp for more information.
+
 ## Dependencies
 - [cmake](https://cmake.org/) for the build system
 - [catch2](https://github.com/catchorg/Catch2) for Unit Tests

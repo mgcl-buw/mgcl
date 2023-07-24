@@ -39,3 +39,25 @@ set_property(
   TARGET example_galerkin
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
+
+# ==========================
+if (MGCL_USE_MPI)
+  find_package(MPI REQUIRED)
+
+  # example program that uses MPI
+  set(SOURCES_EXAMPLE_GALERKIN
+    example_mpi.cpp
+  )
+
+  add_executable(example_mpi ${SOURCES_EXAMPLE_GALERKIN})
+  target_link_libraries(example_mpi PRIVATE mgcl MPI::MPI_CXX)
+  add_dependencies(example_mpi copy_kernels)
+  #target_compile_options(example_galerkin PRIVATE "-pg")
+  #target_link_options(example_galerkin PRIVATE "-pg")
+
+  # don't use iwyu for example_galerkin
+  set_property(
+    TARGET example_mpi
+    PROPERTY CXX_INCLUDE_WHAT_YOU_USE
+  )
+endif()
