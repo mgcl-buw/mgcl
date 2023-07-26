@@ -1,3 +1,8 @@
+if (MGCL_USE_MPI)
+  find_package(MPI REQUIRED)
+  add_compile_definitions("MGCL_USE_MPI")
+endif()
+
 # ==========================
 Include(FetchContent)
 
@@ -63,14 +68,20 @@ add_executable(tests ${SOURCES_TEST})
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(tests PRIVATE mgcl)
 
+if (MGCL_USE_MPI)
+  target_link_libraries(tests PRIVATE MPI::MPI_CXX)
+endif()
+
 # don't use iwyu for tests
 set_property(
   TARGET tests
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
 
+# ==========================
+
 # Test binary for solving problems
-# These tests can use the Catch2-provided main
+# These tests must use custom Catch2-Main for MPI
 set(SOURCES_TEST_SOLVING
 test_problem_solve.cpp
 test_utility.hpp
@@ -84,7 +95,7 @@ catch2_main_mpi.cpp
 
 add_executable(tests_solving ${SOURCES_TEST_SOLVING})
 
-find_package(MPI REQUIRED)
+# find_package(MPI REQUIRED)
 # target_include_directories(pmg SYSTEM PUBLIC ${MPI_INCLUDE_PATH})
 # set(MPI_CXX_SKIP_MPICXX TRUE)
 target_link_libraries(tests_solving PRIVATE MPI::MPI_CXX)
@@ -95,5 +106,28 @@ target_link_libraries(tests_solving PRIVATE pmg)
 # don't use iwyu for tests_solving
 set_property(
   TARGET tests_solving
+  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
+)
+
+# ==========================
+
+# Test binary for mpi
+# These tests must use custom Catch2-Main for MPI
+set(SOURCES_TEST_MPI
+test_mpi_level.cpp
+catch2_main_mpi.cpp
+)
+
+add_executable(tests_mpi ${SOURCES_TEST_MPI})
+
+# find_package(MPI REQUIRED)
+# target_include_directories(pmg SYSTEM PUBLIC ${MPI_INCLUDE_PATH})
+# set(MPI_CXX_SKIP_MPICXX TRUE)
+target_link_libraries(tests_mpi PRIVATE MPI::MPI_CXX Catch2::Catch2 mgcl)
+# add_compile_definitions(tests_mpi "MGCL_USE_MPI")
+
+# don't use iwyu for tests_solving
+set_property(
+  TARGET tests_mpi
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
