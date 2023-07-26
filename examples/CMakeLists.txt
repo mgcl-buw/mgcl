@@ -1,3 +1,8 @@
+if (MGCL_USE_MPI)
+  find_package(MPI REQUIRED)
+  add_compile_definitions("MGCL_USE_MPI")
+endif()
+
 # ==========================
 # example main that can be profiled using e.g. gprof
 set(SOURCES_EXAMPLE_MAIN
@@ -13,6 +18,10 @@ add_dependencies(example_main copy_kernels)
 add_dependencies(example_main copy_kernels_mgcl_c)
 #target_compile_options(example_main PRIVATE "-pg")
 #target_link_options(example_main PRIVATE "-pg")
+
+if (MGCL_USE_MPI)
+  target_link_libraries(example_main PRIVATE MPI::MPI_CXX) 
+endif()
 
 # don't use iwyu for example_main
 set_property(
@@ -34,6 +43,10 @@ add_dependencies(example_galerkin copy_kernels)
 #target_compile_options(example_galerkin PRIVATE "-pg")
 #target_link_options(example_galerkin PRIVATE "-pg")
 
+if (MGCL_USE_MPI)
+  target_link_libraries(example_galerkin PRIVATE MPI::MPI_CXX) 
+endif()
+
 # don't use iwyu for example_galerkin
 set_property(
   TARGET example_galerkin
@@ -42,14 +55,13 @@ set_property(
 
 # ==========================
 if (MGCL_USE_MPI)
-  find_package(MPI REQUIRED)
 
   # example program that uses MPI
-  set(SOURCES_EXAMPLE_GALERKIN
+  set(SOURCES_EXAMPLE_MPI
     example_mpi.cpp
   )
 
-  add_executable(example_mpi ${SOURCES_EXAMPLE_GALERKIN})
+  add_executable(example_mpi ${SOURCES_EXAMPLE_MPI})
   target_link_libraries(example_mpi PRIVATE mgcl MPI::MPI_CXX)
   add_dependencies(example_mpi copy_kernels)
   #target_compile_options(example_galerkin PRIVATE "-pg")

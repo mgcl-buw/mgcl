@@ -16,6 +16,9 @@
 #include <string>
 #include <vector>
 
+#include "../src/cuboid.hpp"
+#include "../src/problem.hpp"
+
 // forward declarations
 static std::vector<std::string> split(std::string s, std::string delimiter);
 static std::vector<int> split_int(std::string s, std::string delimiter);
@@ -118,12 +121,10 @@ int main(int argc, char *argv[])
     int n_end = (m / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
     int o_start = (m / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
     int o_end = (m / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
-    int x_start = 1.0 / mpi_dims[0] * mpi_coords[0];
-    int x_end = 1.0 / mpi_dims[0] * (mpi_coords[0] + 1);
-    int y_start = 1.0 / mpi_dims[1] * mpi_coords[1];
-    int y_end = 1.0 / mpi_dims[1] * (mpi_coords[1] + 1);
-    int z_start = 1.0 / mpi_dims[2] * mpi_coords[2];
-    int z_end = 1.0 / mpi_dims[2] * (mpi_coords[2] + 1);
+
+    int ml = (m_start - m_end) + 1;
+    int nl = (n_start - n_end) + 1;
+    int ol = (o_start - o_end) + 1;
 
     if (mpi_rank == 0)
     {
@@ -131,7 +132,7 @@ int main(int argc, char *argv[])
         std::cout << "  m,n,o: " << m << "," << n << "," << o << "," << std::endl;
         std::cout << "  periodic: " << periodic << std::endl
                   << std::endl;
-        std::cout << "rank;ms;me;ns;ne;os;oe" << std::endl;
+        std::cout << "rank;ms;me;ns;ne;os;oe;ml;nl;ol" << std::endl;
     }
 
     MPI_Barrier(mpi_comm);
@@ -139,10 +140,20 @@ int main(int argc, char *argv[])
     std::cout << mpi_rank << ";"
               << m_start << ";" << m_end << ";"
               << n_start << ";" << n_end << ";"
-              << o_start << ";" << o_end
+              << o_start << ";" << o_end << ";"
+              << ml << ";" << nl << ";" << ol
               << std::endl;
 
-    // TODO call mgcl here
+    // Init some random data
+    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    v->fillRandom();
+    f->fillRandom();
+
+    // Create problem, set mpi communicator (needed for topology information) and solve.
+    mgcl::Problem p(ml, nl, ol, v, f, m, n, o);
+    p.setMpiComm(mpi_comm);
+    p.solve();
 
     MPI_Finalize();
 
