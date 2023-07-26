@@ -47,7 +47,7 @@ namespace mgcl
         MPIData &operator=(const MPIData &) = delete;
         MPIData(const MPIData &&) = delete;
         MPIData &operator=(MPIData &&) = delete;
-        ~MPIData();
+        ~MPIData() {}
 
         // Access to Rectangle buffers (2d view of Cuboid)
         inline double **sbufxy() { return (*_sbufxy)[0]; };
@@ -56,7 +56,11 @@ namespace mgcl
         inline double **rbufxy() { return (*_rbufxy)[0]; };
         inline double **rbufxz() { return (*_rbufxz)[0]; };
         inline double **rbufyz() { return (*_rbufyz)[0]; };
+
+        static void mgcl_check_mpi_error(int err, const char *operation, const char *filename, int line);
     };
+
+#define mgclCheckMpiError(E, S) MPIData::mgcl_check_mpi_error(E, S, __FILE__, __LINE__);
 #else
     class MPIData; // Just a stub
 #endif

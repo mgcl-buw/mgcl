@@ -42,12 +42,12 @@ namespace mgcl
         std::shared_ptr<VaryingStencil3x3x3> stencilValues = nullptr;
         std::shared_ptr<VaryingStencilGpu> stencilValuesGpu = nullptr;
 
-        /* grid dimensions of real grid */
+        /* grid dimensions of local real grid */
         int m;
         int n;
         int o;
 
-        /* grid dimensions of ghosted grid */
+        /* grid dimensions of local ghosted grid */
         int mgh;
         int ngh;
         int ogh;
@@ -79,6 +79,7 @@ namespace mgcl
 
         bool init();
         int initOpenCLBuffers();
+        int initMpiData();
 
         int getNum() const;
 

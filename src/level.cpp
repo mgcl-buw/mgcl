@@ -26,7 +26,7 @@ namespace mgcl
     Level::Level(Problem *problem_, int num_)
         : problem(problem_),
           num(num_),
-          m(problem_->getM() >> num_), // TODO m, n and o must be power of 2 for this
+          m(problem_->getM() >> num_),
           n(problem_->getN() >> num_),
           o(problem_->getO() >> num_),
           mgh(m + 2 * problem->getGhosts()),
@@ -48,7 +48,9 @@ namespace mgcl
                                             .append(", problem.maxlevel: ")
                                             .append(std::to_string(problem->getMaxlevel())));
 
-        // TODO init mpiData
+#ifdef MGCL_USE_MPI
+        mpiData = std::make_unique<MPIData>(problem->getMpiComm(), mgh, ngh, ogh);
+#endif // MGCL_USE_MPI
     }
 
     Level::~Level()
@@ -87,6 +89,11 @@ namespace mgcl
      */
     bool Level::init()
     {
+        // First init MPI data, so dimensions of Cuboids is updated.
+        initMpiData();
+
+        // TODO F does not need ghosts
+        // TODO R needs same amount of ghosts as V
         if (num == 0)
         {
             // move stencilsValues pointer from Problem to first Level
@@ -228,6 +235,255 @@ namespace mgcl
         mgclCheckError(err, "Updating ghosts of d_f");
 
         return CL_SUCCESS;
+    }
+
+    /**
+     * @brief Initializes MPI data for the current level and sets dimensions.
+     * Mainly taken from pmg from Matthias Bolten.
+     *
+     * @return int
+     */
+    int Level::initMpiData()
+    {
+        int ret = 0;
+
+#ifdef MGCL_USE_MPI
+        // MPI variables
+        MPI_Comm mpi_comm = problem->getMpiComm();
+        bool periodic = problem->isPeriodic();
+
+        if (num == 0)
+        {
+            int mpi_size;
+            int mpi_rank;
+            int mpi_dims[3] = {0, 0, 0};
+            int mpi_periods[3] = {periodic, periodic, periodic};
+            int mpi_coords[3];
+
+            /* Initialize cartesian process grid */
+            // TODO do this in example program
+            // ret = MPI_Comm_size(mpi_comm, &mpi_size);
+            // mgcl::mgclCheckMpiError(ret, "MPI_Comm_size");
+            // ret = MPI_Dims_create(mpi_size, 3, mpi_dims);
+            // mgcl::mgclCheckMpiError(ret, "MPI_Dims_create");
+            // ret = MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+            // mgcl::mgclCheckMpiError(ret, "MPI_Cart_create");
+            // ret = MPI_Comm_rank(mpi_comm, &mpi_rank);
+            // mgcl::mgclCheckMpiError(ret, "MPI_Comm_rank");
+            // ret = MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+            // mgcl::mgclCheckMpiError(ret, "MPI_Cart_coords");
+
+            /* Getting processes coordinates */
+            // ret = MPI_Cart_get(mpiData->comm, 3, mpi_dims, mpi_periods, mpi_coords);
+            // mgcl::mgclCheckMpiError(ret, "MPI_Cart_get");
+
+            /* Calculating neighbours */
+            ret = MPI_Cart_shift(mpiData->comm, 0, 1, &mpiData->left, &mpiData->right);
+            mgcl::mgclCheckMpiError(ret, "MPI_Cart_shift x-direction");
+            ret = MPI_Cart_shift(mpiData->comm, 1, 1, &mpiData->down, &mpiData->up);
+            mgcl::mgclCheckMpiError(ret, "MPI_Cart_shift y-direction");
+            ret = MPI_Cart_shift(mpiData->comm, 2, 1, &mpiData->back, &mpiData->front);
+            mgcl::mgclCheckMpiError(ret, "MPI_Cart_shift z-direction");
+        }
+        else
+        {
+            // Send and get ranks of neighbours that still have nodes (i.e. m,n,o > 0).
+
+            /* Temporary buffer (for receiving unused messages) */
+            int tmpbuf;
+
+            /* MPI variables */
+            int myid;
+            MPI_Request reqs[2];
+            MPI_Status stats[2];
+
+            Level &levelAbove = problem->getLevelAt(num - 1);
+
+            /* Getting local rank */
+            MPI_Comm_rank(mpi_comm, &myid);
+
+            if (periodic)
+            {
+                /* Initializing neighbours */
+                mpiData->left = myid;
+                mpiData->right = myid;
+                mpiData->down = myid;
+                mpiData->up = myid;
+                mpiData->back = myid;
+                mpiData->front = myid;
+            }
+            else
+            {
+                /* Initializing neighbours */
+                mpiData->left = MPI_PROC_NULL;
+                mpiData->right = MPI_PROC_NULL;
+                mpiData->down = MPI_PROC_NULL;
+                mpiData->up = MPI_PROC_NULL;
+                mpiData->back = MPI_PROC_NULL;
+                mpiData->front = MPI_PROC_NULL;
+            }
+
+            if (m > 0)
+            {
+                /* Sending data to left */
+                reqs[0] = MPI_REQUEST_NULL;
+                reqs[1] = MPI_REQUEST_NULL;
+
+                if ((myid != levelAbove.mpiData->left) && (MPI_PROC_NULL != levelAbove.mpiData->left))
+                    MPI_Isend((void *)&myid, 1, MPI_INT, levelAbove.mpiData->left, 0, mpi_comm, &reqs[0]);
+
+                if ((myid != levelAbove.mpiData->right) && (MPI_PROC_NULL != levelAbove.mpiData->right))
+                    MPI_Irecv((void *)&mpiData->right, 1, MPI_INT, levelAbove.mpiData->right, 0, mpi_comm, &reqs[1]);
+
+                MPI_Waitall(2, reqs, stats);
+
+                /* Sending data to right */
+                reqs[0] = MPI_REQUEST_NULL;
+                reqs[1] = MPI_REQUEST_NULL;
+                if ((myid != levelAbove.mpiData->right) && (MPI_PROC_NULL != levelAbove.mpiData->right))
+                    MPI_Isend((void *)&myid, 1, MPI_INT, levelAbove.mpiData->right, 0, mpi_comm,
+                              &reqs[0]);
+                if ((myid != levelAbove.mpiData->left) && (MPI_PROC_NULL != levelAbove.mpiData->left))
+                    MPI_Irecv((void *)&mpiData->left, 1, MPI_INT, levelAbove.mpiData->left, 0,
+                              mpi_comm, &reqs[1]);
+                MPI_Waitall(2, reqs, stats);
+            }
+            else
+            {
+                /* Sending data to left */
+                reqs[0] = MPI_REQUEST_NULL;
+                reqs[1] = MPI_REQUEST_NULL;
+                if ((myid != levelAbove.mpiData->left) && (MPI_PROC_NULL != levelAbove.mpiData->left))
+                    MPI_Isend((void *)&levelAbove.mpiData->right, 1, MPI_INT, levelAbove.mpiData->left,
+                              0, mpi_comm, &reqs[0]);
+                if ((myid != levelAbove.mpiData->right) && (MPI_PROC_NULL != levelAbove.mpiData->right))
+                    MPI_Irecv((void *)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->right,
+                              0, mpi_comm, &reqs[1]);
+                MPI_Waitall(2, reqs, stats);
+
+                /* Sending data to right */
+                reqs[0] = MPI_REQUEST_NULL;
+                reqs[1] = MPI_REQUEST_NULL;
+                if ((myid != levelAbove.mpiData->right) && (MPI_PROC_NULL != levelAbove.mpiData->right))
+                    MPI_Isend((void *)&levelAbove.mpiData->left, 1, MPI_INT, levelAbove.mpiData->right,
+                              0, mpi_comm, &reqs[0]);
+                if ((myid != levelAbove.mpiData->left) && (MPI_PROC_NULL != levelAbove.mpiData->left))
+                    MPI_Irecv((void *)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->left, 0,
+                              mpi_comm, &reqs[1]);
+                MPI_Waitall(2, reqs, stats);
+            }
+
+            if (n > 0)
+            {
+                /* Sending data downwards */
+                reqs[0] = MPI_REQUEST_NULL;
+                reqs[1] = MPI_REQUEST_NULL;
+                if ((myid != levelAbove.mpiData->down) && (MPI_PROC_NULL != levelAbove.mpiData->down))
+                    MPI_Isend((void *)&myid, 1, MPI_INT, levelAbove.mpiData->down, 0, mpi_comm,
+                              &reqs[0]);
+                if ((myid != levelAbove.mpiData->up) && (MPI_PROC_NULL != levelAbove.mpiData->up))
+                    MPI_Irecv((void *)&mpiData->up, 1, MPI_INT, levelAbove.mpiData->up,
+                              0, mpi_comm, &reqs[1]);
+                MPI_Waitall(2, reqs, stats);
+
+                /* Sending data upwards */
+                reqs[0] = MPI_REQUEST_NULL;
+                reqs[1] = MPI_REQUEST_NULL;
+                if ((myid != levelAbove.mpiData->up) && (MPI_PROC_NULL != levelAbove.mpiData->up))
+                    MPI_Isend((void *)&myid, 1, MPI_INT, levelAbove.mpiData->up, 0, mpi_comm,
+                              &reqs[0]);
+                if ((myid != levelAbove.mpiData->down) && (MPI_PROC_NULL != levelAbove.mpiData->down))
+                    MPI_Irecv((void *)&mpiData->down, 1, MPI_INT, levelAbove.mpiData->down,
+                              0, mpi_comm, &reqs[1]);
+                MPI_Waitall(2, reqs, stats);
+            }
+            else
+            {
+                /* Sending data downwards */
+                reqs[0] = MPI_REQUEST_NULL;
+                reqs[1] = MPI_REQUEST_NULL;
+                if ((myid != levelAbove.mpiData->down) && (MPI_PROC_NULL != levelAbove.mpiData->down))
+                    MPI_Isend((void *)&levelAbove.mpiData->up, 1, MPI_INT,
+                              levelAbove.mpiData->down, 0, mpi_comm, &reqs[0]);
+                if ((myid != levelAbove.mpiData->up) && (MPI_PROC_NULL != levelAbove.mpiData->up))
+                    MPI_Irecv((void *)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->up,
+                              0, mpi_comm, &reqs[1]);
+                MPI_Waitall(2, reqs, stats);
+
+                /* Sending data upwards */
+                reqs[0] = MPI_REQUEST_NULL;
+                reqs[1] = MPI_REQUEST_NULL;
+                if ((myid != levelAbove.mpiData->up) && (MPI_PROC_NULL != levelAbove.mpiData->up))
+                    MPI_Isend((void *)&levelAbove.mpiData->down, 1, MPI_INT,
+                              levelAbove.mpiData->up, 0, mpi_comm, &reqs[0]);
+                if ((myid != levelAbove.mpiData->down) && (MPI_PROC_NULL != levelAbove.mpiData->down))
+                    MPI_Irecv((void *)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->down,
+                              0, mpi_comm, &reqs[1]);
+                MPI_Waitall(2, reqs, stats);
+            }
+
+            if (o > 0)
+            {
+                /* Sending data to back */
+                reqs[0] = MPI_REQUEST_NULL;
+                reqs[1] = MPI_REQUEST_NULL;
+                if ((myid != levelAbove.mpiData->back) && (MPI_PROC_NULL != levelAbove.mpiData->back))
+                    MPI_Isend((void *)&myid, 1, MPI_INT, levelAbove.mpiData->back, 0, mpi_comm,
+                              &reqs[0]);
+                if ((myid != levelAbove.mpiData->front) && (MPI_PROC_NULL != levelAbove.mpiData->front))
+                    MPI_Irecv((void *)&mpiData->front, 1, MPI_INT, levelAbove.mpiData->front,
+                              0, mpi_comm, &reqs[1]);
+                MPI_Waitall(2, reqs, stats);
+
+                /* Sending data to front */
+                reqs[0] = MPI_REQUEST_NULL;
+                reqs[1] = MPI_REQUEST_NULL;
+                if ((myid != levelAbove.mpiData->front) && (MPI_PROC_NULL != levelAbove.mpiData->front))
+                    MPI_Isend((void *)&myid, 1, MPI_INT, levelAbove.mpiData->front, 0, mpi_comm,
+                              &reqs[0]);
+                if ((myid != levelAbove.mpiData->back) && (MPI_PROC_NULL != levelAbove.mpiData->back))
+                    MPI_Irecv((void *)&mpiData->back, 1, MPI_INT, levelAbove.mpiData->back,
+                              0, mpi_comm, &reqs[1]);
+                MPI_Waitall(2, reqs, stats);
+            }
+            else
+            {
+                /* Sending data to back */
+                reqs[0] = MPI_REQUEST_NULL;
+                reqs[1] = MPI_REQUEST_NULL;
+                if ((myid != levelAbove.mpiData->back) && (MPI_PROC_NULL != levelAbove.mpiData->back))
+                    MPI_Isend((void *)&levelAbove.mpiData->front, 1, MPI_INT,
+                              levelAbove.mpiData->back, 0, mpi_comm, &reqs[0]);
+                if ((myid != levelAbove.mpiData->front) && (MPI_PROC_NULL != levelAbove.mpiData->front))
+                    MPI_Irecv((void *)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->front,
+                              0, mpi_comm, &reqs[1]);
+                MPI_Waitall(2, reqs, stats);
+
+                /* Sending data to front */
+                reqs[0] = MPI_REQUEST_NULL;
+                reqs[1] = MPI_REQUEST_NULL;
+                if ((myid != levelAbove.mpiData->front) && (MPI_PROC_NULL != levelAbove.mpiData->front))
+                    MPI_Isend((void *)&levelAbove.mpiData->back, 1, MPI_INT,
+                              levelAbove.mpiData->front, 0, mpi_comm, &reqs[0]);
+                if ((myid != levelAbove.mpiData->back) && (MPI_PROC_NULL != levelAbove.mpiData->back))
+                    MPI_Irecv((void *)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->back,
+                              0, mpi_comm, &reqs[1]);
+                MPI_Waitall(2, reqs, stats);
+            }
+
+            if (m <= 0 || n <= 0 || o <= 0)
+            {
+                mpiData->left = myid;
+                mpiData->right = myid;
+                mpiData->down = myid;
+                mpiData->up = myid;
+                mpiData->back = myid;
+                mpiData->front = myid;
+            }
+        }
+#endif // MGCL_USE_MPI
+
+        return ret;
     }
 
     void Level::setV(const std::shared_ptr<Cuboid> &v_)

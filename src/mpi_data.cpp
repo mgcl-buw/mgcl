@@ -18,3 +18,14 @@ mgcl::MPIData::MPIData(MPI_Comm _comm, int mgh, int ngh, int ogh)
     _rbufxz = std::make_unique<Cuboid>(1, mgh, ogh);
     _rbufyz = std::make_unique<Cuboid>(1, ngh, ogh);
 }
+
+void mgcl::MPIData::mgcl_check_mpi_error(int err, const char *operation, const char *filename, int line)
+{
+    if (err != MPI_SUCCESS)
+    {
+        fprintf(stderr, "Error during operation '%s', ", operation);
+        fprintf(stderr, "in '%s' on line %d\n", filename, line);
+        fprintf(stderr, "Error code was %d\n", err);
+        exit(EXIT_FAILURE);
+    }
+}
