@@ -26,8 +26,8 @@ namespace mgcl
     public:
         MPI_Comm comm;
 
-        // ID of this process
-        int id;
+        // rank of this process
+        int rank;
 
         // IDs of neighbouring processes
         int left;
@@ -57,10 +57,10 @@ namespace mgcl
         inline double **rbufxz() { return (*_rbufxz)[0]; };
         inline double **rbufyz() { return (*_rbufyz)[0]; };
 
-        static void mgcl_check_mpi_error(int err, const char *operation, const char *filename, int line);
+        static void mgcl_check_mpi_error(MPI_Comm comm, int err, const char *operation, const char *filename, int line);
     };
 
-#define mgclCheckMpiError(E, S) MPIData::mgcl_check_mpi_error(E, S, __FILE__, __LINE__);
+#define mgclCheckMpiError(C, E, S) MPIData::mgcl_check_mpi_error(C, E, S, __FILE__, __LINE__);
 #else
     class MPIData; // Just a stub
 #endif

@@ -279,11 +279,11 @@ namespace mgcl
 
             /* Calculating neighbours */
             ret = MPI_Cart_shift(mpiData->comm, 0, 1, &mpiData->left, &mpiData->right);
-            mgcl::mgclCheckMpiError(ret, "MPI_Cart_shift x-direction");
+            mgcl::mgclCheckMpiError(mpiData->comm, ret, "MPI_Cart_shift x-direction");
             ret = MPI_Cart_shift(mpiData->comm, 1, 1, &mpiData->down, &mpiData->up);
-            mgcl::mgclCheckMpiError(ret, "MPI_Cart_shift y-direction");
+            mgcl::mgclCheckMpiError(mpiData->comm, ret, "MPI_Cart_shift y-direction");
             ret = MPI_Cart_shift(mpiData->comm, 2, 1, &mpiData->back, &mpiData->front);
-            mgcl::mgclCheckMpiError(ret, "MPI_Cart_shift z-direction");
+            mgcl::mgclCheckMpiError(mpiData->comm, ret, "MPI_Cart_shift z-direction");
         }
         else
         {
