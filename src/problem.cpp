@@ -3,6 +3,10 @@
 #include "level.hpp"            // for Level
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 
+#ifdef MGCL_USE_MPI
+#include "mpi_data.hpp"
+#endif // MGCL_USE_MPI
+
 #include <CL/cl_platform.h> // for cl_ulong
 #include <algorithm>        // for max
 #include <chrono>           // for __enable_if_is_duration, steady_clock
@@ -852,4 +856,24 @@ namespace mgcl
     {
         v = v_;
     }
+
+#ifdef MGCL_USE_MPI
+    // Sets MPI communicator and checks that cartesian topology is attached to it.
+    void Problem::setMpiComm(MPI_Comm _comm)
+    {
+        comm = _comm;
+
+        int type;
+        int err = MPI_Topo_test(_comm, &type);
+        mgclCheckMpiError(_comm, err, "MPI_Topo_test");
+
+        if (type != MPI_CART)
+            throw "MPI Comm must have a cartesian topology attached!";
+    }
+
+    MPI_Comm Problem::getMpiComm()
+    {
+        return comm;
+    }
+#endif // MGCL_USE_MPI
 }

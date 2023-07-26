@@ -115,6 +115,7 @@ set_property(
 # These tests must use custom Catch2-Main for MPI
 set(SOURCES_TEST_MPI
 test_mpi_level.cpp
+test_mpi_problem.cpp
 catch2_main_mpi.cpp
 )
 

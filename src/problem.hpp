@@ -292,15 +292,8 @@ namespace mgcl
         void setBc(const BC &bc_);
 
 #ifdef MGCL_USE_MPI
-        inline void setMpiComm(MPI_Comm _comm)
-        {
-            comm = _comm;
-        }
-
-        inline MPI_Comm getMpiComm()
-        {
-            return comm;
-        }
+        void setMpiComm(MPI_Comm _comm);
+        MPI_Comm getMpiComm();
 #endif // MGCL_USE_MPI
     };
 }
