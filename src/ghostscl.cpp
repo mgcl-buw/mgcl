@@ -24,7 +24,7 @@ namespace mgcl
      * If periodic is true, every ghost cell will be updated. Otherwise the outermost ghost cells will be excluded. It
      *   also affects the update using MPI where nodes are wrapped around in the periodic case.
      * mpiData parameter is optional (i.e. nullable) and is only used when MPI is used. */
-    void MultigridEngine::updateGhostsSeq(Cuboid &c, /* MPIData *mpiData, */ bool periodic)
+    void MultigridEngine::updateGhostsSeq(Cuboid &c, MPIData *mpiData, bool periodic)
     {
         int m = c.getM();
         int n = c.getN();
