@@ -129,6 +129,7 @@ if (MGCL_USE_MPI)
 set(SOURCES_TEST_MPI
 test_mpi_level.cpp
 test_mpi_problem.cpp
+test_mpi_ghosts.cpp
 catch2_main_mpi.cpp
 )
 
