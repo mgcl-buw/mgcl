@@ -47,7 +47,11 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     add_subdirectory(test)
 
     add_dependencies(tests copy_kernels)
-    add_dependencies(tests_solving copy_kernels)
+
+    if (MGCL_USE_MPI)
+      add_dependencies(tests_solving copy_kernels)
+      add_dependencies(tests_mpi copy_kernels)
+    endif()
   endif()
 
   if (MGCL_BUILD_BENCHMARKS)

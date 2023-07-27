@@ -63,13 +63,13 @@ TEST_CASE("Problem::checkParameters")
 
     SECTION("m,n,o wrong")
     {
-        mgcl::Problem pm(0, 1, 1, v, f);
-        mgcl::Problem pn(1, 0, 1, v, f);
-        mgcl::Problem po(1, 1, 0, v, f);
+        REQUIRE_THROWS(std::make_unique<mgcl::Problem>(0, 1, 1, v, f));
+        REQUIRE_THROWS(std::make_unique<mgcl::Problem>(1, 0, 1, v, f));
+        REQUIRE_THROWS(std::make_unique<mgcl::Problem>(1, 1, 0, v, f));
 
-        REQUIRE_THROWS(pm.checkParameters());
-        REQUIRE_THROWS(pn.checkParameters());
-        REQUIRE_THROWS(po.checkParameters());
+        // REQUIRE_THROWS(pm.checkParameters());
+        // REQUIRE_THROWS(pn.checkParameters());
+        // REQUIRE_THROWS(po.checkParameters());
     }
 
     SECTION("ghosts 0")

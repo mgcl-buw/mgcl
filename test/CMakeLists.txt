@@ -80,6 +80,7 @@ set_property(
 
 # ==========================
 
+if (MGCL_USE_MPI)
 # Test binary for solving problems
 # These tests must use custom Catch2-Main for MPI
 set(SOURCES_TEST_SOLVING
@@ -109,7 +110,11 @@ set_property(
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
 
+endif() # MGCL_USE_MPI
+
 # ==========================
+
+if (MGCL_USE_MPI)
 
 # Test binary for mpi
 # These tests must use custom Catch2-Main for MPI
@@ -132,3 +137,5 @@ set_property(
   TARGET tests_mpi
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
+
+endif() # MGCL_USE_MPI

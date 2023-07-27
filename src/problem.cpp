@@ -70,13 +70,13 @@ namespace mgcl
     // throws an exception if global dimensions are not a multiple of local dims.
     void Problem::checkGlobalDimensions()
     {
-        if (m_global % m != 0)
+        if (m_global <= 0 || m_global % m != 0)
             throw "m_global must be a multiple of m!";
 
-        if (n_global % n != 0)
+        if (n_global <= 0 || n_global % n != 0)
             throw "n_global must be a multiple of n!";
 
-        if (o_global % o != 0)
+        if (o_global <= 0 || o_global % o != 0)
             throw "o_global must be a multiple of o!";
     }
 
@@ -447,12 +447,13 @@ namespace mgcl
             throw std::runtime_error("Failed to initialize mgcl data structures.");
 
         // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
-        if (bc == BC::PERIODIC)
-            MultigridEngine::updateGhostsSeq(levels[0]->getV());
+        if (isPeriodic())
+            MultigridEngine::updateGhostsSeq(levels[0]->getV(), levels[0]->getMpiDataPtr());
 
         double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(),
                                                       residual_norm, stencilType, levels[0]->stencilFactor,
-                                                      levels[0]->stencilValues.get(), !ignoreTol, bc == BC::PERIODIC);
+                                                      levels[0]->stencilValues.get(), !ignoreTol, isPeriodic(),
+                                                      0, 0, 0, getLevelAt(0).getMpiDataPtr());
         if (!silent && !ignoreTol)
             printf("Starting mgcl with initres = %e\n", initres);
 

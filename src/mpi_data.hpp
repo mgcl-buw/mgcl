@@ -62,7 +62,9 @@ namespace mgcl
 
 #define mgclCheckMpiError(C, E, S) MPIData::mgcl_check_mpi_error(C, E, S, __FILE__, __LINE__);
 #else
-    class MPIData; // Just a stub
+    class MPIData
+    {
+    }; // Just a stub
 #endif
 }
 #endif // MGCL_MPIDATA_HPP

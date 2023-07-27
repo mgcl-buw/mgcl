@@ -1,7 +1,8 @@
-#include "cuboid.hpp"           // for Cuboid
-#include "hypercube.hpp"        // for Hypercube6d
-#include "level.hpp"            // for Level
-#include "mgcl.hpp"             // for mgcl_debug, MGCL_LAPLACE_19POINT
+#include "cuboid.hpp"    // for Cuboid
+#include "hypercube.hpp" // for Hypercube6d
+#include "level.hpp"     // for Level
+#include "mgcl.hpp"      // for mgcl_debug, MGCL_LAPLACE_19POINT
+#include "mpi_data.hpp"
 #include "multigrid_engine.hpp" // for Problem, VaryingStencil3x3x3, Multig...
 #include "problem.hpp"          // for Problem
 #include "stencil.hpp"          // for mgclCheckError, VaryingStencil3x3x3
@@ -29,7 +30,7 @@ namespace mgcl
     double MultigridEngine::jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
                                       double stencilFactor, VaryingStencil3x3x3 *stencilValues, bool returnResidualNorm,
-                                      bool periodic, int stepsPerIter)
+                                      bool periodic, int stepsPerIter, MPIData *mpiData)
     {
         double res = 0.0;
         double ***vraw = v.getData();
@@ -75,7 +76,7 @@ namespace mgcl
         {
             // update ghost cells for periodic boundary condition
             if (periodic)
-                MultigridEngine::updateGhostsSeq(v);
+                MultigridEngine::updateGhostsSeq(v, mpiData);
             // TODO else update only neighboring processes if using mpi
 
             // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
@@ -96,7 +97,7 @@ namespace mgcl
 
                 // r = f - A*v
                 res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, false, periodic,
-                                  -off, -off, -off);
+                                  -off, -off, -off, mpiData);
 
                 if (stencilType == MGCL_LAPLACE_7POINT || stencilType == MGCL_LAPLACE_19POINT || stencilType == MGCL_LAPLACE_27POINT)
                 {
@@ -144,10 +145,11 @@ namespace mgcl
         }
 
         if (periodic)
-            MultigridEngine::updateGhostsSeq(v);
+            MultigridEngine::updateGhostsSeq(v, mpiData);
 
         if (returnResidualNorm)
-            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, returnResidualNorm, periodic);
+            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, returnResidualNorm, periodic,
+                              0, 0, 0, mpiData);
 
         return res;
     }
@@ -736,7 +738,7 @@ namespace mgcl
     double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
                                         MGCL_STENCIL stencilType, double stencilFactor,
                                         VaryingStencil3x3x3 *stencilValuesCuboid, bool returnResidualNorm,
-                                        bool periodic, int moff, int noff, int ooff)
+                                        bool periodic, int moff, int noff, int ooff, MPIData *mpiData)
     {
         double res = 0.0;
         double stencilsum = 0;
@@ -892,7 +894,7 @@ namespace mgcl
                 }
 
         if (periodic)
-            MultigridEngine::updateGhostsSeq(r);
+            MultigridEngine::updateGhostsSeq(r, mpiData);
 
         return (returnResidualNorm && resnorm == MGCL_L2) ? sqrt(res) : res;
     }

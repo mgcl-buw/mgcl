@@ -1,12 +1,9 @@
 #ifndef MGCL_LEVEL_HPP
 #define MGCL_LEVEL_HPP
 
-#include "mgcl.hpp"    // for MGCL_STENCIL
-#include "stencil.hpp" // for VaryingStencil3x3x3
-
-#ifdef MGCL_USE_MPI
+#include "mgcl.hpp" // for MGCL_STENCIL
 #include "mpi_data.hpp"
-#endif // MGCL_USE_MPI
+#include "stencil.hpp" // for VaryingStencil3x3x3
 
 #include <memory> // for shared_ptr
 
@@ -61,9 +58,8 @@ namespace mgcl
         cl_mem dF = nullptr;
         cl_mem dR = nullptr;
 
-#ifdef MGCL_USE_MPI
+        /* MPI relevant data, e.g. neighbour process ranks. Null if MGCL_USE_MPI is false and MPIData then just a stub. */
         std::unique_ptr<MPIData> mpiData = nullptr;
-#endif // MGCL_USE_MPI
 
         friend class OpenCLHelper;
         friend class MultigridEngine;
@@ -100,17 +96,8 @@ namespace mgcl
         double getH() const;
         void setH(double h_);
 
-#ifdef MGCL_USE_MPI
-        inline MPIData *getMpiDataPtr()
-        {
-            return mpiData.get();
-        }
-
-        inline MPIData &getMpiData()
-        {
-            return *mpiData;
-        }
-#endif // MGCL_USE_MPI
+        MPIData *getMpiDataPtr();
+        MPIData &getMpiData();
 
         cl_mem getDVIn() const;
         void setDVIn(const cl_mem dVIn_);

@@ -118,7 +118,7 @@ namespace mgcl
                         }
 
                 if (problem->bc == BC::PERIODIC)
-                    MultigridEngine::updateGhostsSeq(getF());
+                    MultigridEngine::updateGhostsSeq(getF(), mpiData.get());
             }
 
             // r on host is only needed if opencl should not be used
@@ -647,5 +647,15 @@ namespace mgcl
         dR = dR_;
         if (dR_)
             mgclCheckError(clRetainMemObject(dR_), "clRetainMemObject(dR)");
+    }
+
+    MPIData *Level::getMpiDataPtr()
+    {
+        return mpiData.get();
+    }
+
+    MPIData &Level::getMpiData()
+    {
+        return *mpiData;
     }
 }
