@@ -64,13 +64,21 @@ ocl_wrapper.hpp
 ocl_wrapper.cpp
 )
 
+if (MGCL_USE_MPI)
+  # use custom main if MPI is used
+  list(APPEND SOURCES_TEST catch2_main_mpi.cpp)
+endif()
+
 add_executable(tests ${SOURCES_TEST})
-target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
-target_link_libraries(tests PRIVATE mgcl)
 
 if (MGCL_USE_MPI)
-  target_link_libraries(tests PRIVATE MPI::MPI_CXX)
+  # link against catch2 without main and MPI if MPI is used
+  target_link_libraries(tests PRIVATE Catch2::Catch2 MPI::MPI_CXX)
+else()
+  target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 endif()
+
+target_link_libraries(tests PRIVATE mgcl)
 
 # don't use iwyu for tests
 set_property(
