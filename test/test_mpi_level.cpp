@@ -52,7 +52,7 @@ TEST_CASE("Level::initMpiData (1 process)", "[mpi1]")
     p.setMpiComm(mpi_comm);
     p.init();
 
-    for (int i = 0; i < p.getMaxlevel() - 1; i++)
+    for (int i = 0; i < p.getMaxlevel(); i++)
     {
         auto &lv = p.getLevelAt(i);
         auto &mpiData = lv.getMpiData();
@@ -110,9 +110,8 @@ TEST_CASE("Level::initMpiData (2 processes)", "[mpi2]")
     p.init();
 
     int other_rank = mpi_rank == 0 ? 1 : 0;
-    int maxlv = p.getMaxlevel() - 1;
 
-    for (int i = 0; i < maxlv; i++)
+    for (int i = 0; i < p.getMaxlevel(); i++)
     {
         auto &lv = p.getLevelAt(i);
         auto &mpiData = lv.getMpiData();
