@@ -254,29 +254,6 @@ namespace mgcl
 
         if (num == 0)
         {
-            int mpi_size;
-            int mpi_rank;
-            int mpi_dims[3] = {0, 0, 0};
-            int mpi_periods[3] = {periodic, periodic, periodic};
-            int mpi_coords[3];
-
-            /* Initialize cartesian process grid */
-            // TODO do this in example program
-            // ret = MPI_Comm_size(mpi_comm, &mpi_size);
-            // mgcl::mgclCheckMpiError(ret, "MPI_Comm_size");
-            // ret = MPI_Dims_create(mpi_size, 3, mpi_dims);
-            // mgcl::mgclCheckMpiError(ret, "MPI_Dims_create");
-            // ret = MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
-            // mgcl::mgclCheckMpiError(ret, "MPI_Cart_create");
-            // ret = MPI_Comm_rank(mpi_comm, &mpi_rank);
-            // mgcl::mgclCheckMpiError(ret, "MPI_Comm_rank");
-            // ret = MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
-            // mgcl::mgclCheckMpiError(ret, "MPI_Cart_coords");
-
-            /* Getting processes coordinates */
-            // ret = MPI_Cart_get(mpiData->comm, 3, mpi_dims, mpi_periods, mpi_coords);
-            // mgcl::mgclCheckMpiError(ret, "MPI_Cart_get");
-
             /* Calculating neighbours */
             ret = MPI_Cart_shift(mpiData->comm, 0, 1, &mpiData->left, &mpiData->right);
             mgcl::mgclCheckMpiError(mpiData->comm, ret, "MPI_Cart_shift x-direction");
