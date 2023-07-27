@@ -261,6 +261,7 @@ namespace mgcl
         if (!silent)
             printf("maxlevel = %d\n", maxlevel);
 
+#ifdef MGCL_USE_MPI
         // Create cartesian process grid if none was set, so mgcl is still usable without mpiexec on one process.
         int type;
         int mpi_size;
@@ -284,6 +285,7 @@ namespace mgcl
             // err = MPI_Cart_coords(comm, mpi_rank, 3, mpi_coords);
             // mgcl::mgclCheckMpiError(comm, err, "MPI_Cart_coords");
         }
+#endif // MGCL_USE_MPI
 
         // create opencl environment with default parameters if not done yet
         if (use_opencl)
