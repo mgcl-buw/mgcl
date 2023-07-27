@@ -14,7 +14,7 @@
 // Checks ghost update for 1 process.
 // Run with: mpiexec -n 1 tests_mpi [mpi1]
 // TODO differentiate for gh>m and non-periodic
-TEST_CASE("updateGhostsSeq (1 process)", "[mpi1]")
+TEST_CASE("MPI updateGhostsSeq (1 process)", "[mpi1]")
 {
     int N = 4;
     int periodic = 1;

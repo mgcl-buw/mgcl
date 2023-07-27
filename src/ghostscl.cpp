@@ -20,11 +20,8 @@ namespace mgcl
 {
     using std::size_t;
 
-    /* Updates ghost cells.
-     * If periodic is true, every ghost cell will be updated. Otherwise the outermost ghost cells will be excluded. It
-     *   also affects the update using MPI where nodes are wrapped around in the periodic case.
-     * mpiData parameter is optional (i.e. nullable) and is only used when MPI is used. */
-    void MultigridEngine::updateGhostsSeq(Cuboid &c, MPIData *mpiData, bool periodic)
+    // Private helper function for updating ghosts without MPI.
+    void updateGhostsSeqLocally(Cuboid &c, bool periodic)
     {
         int m = c.getM();
         int n = c.getN();
@@ -33,7 +30,6 @@ namespace mgcl
         int ghosts_n = c.getGhostsN();
         int ghosts_o = c.getGhostsO();
 
-#ifndef MGCL_USE_MPI
         int ghm_start_right = ghosts_m + m;
         int ghn_start_right = ghosts_n + n;
         int gho_start_right = ghosts_o + o;
@@ -84,10 +80,32 @@ namespace mgcl
                 }
         }
         // clang-format on
+    }
+
+    /* Updates ghost cells.
+     * If periodic is true, every ghost cell will be updated. Otherwise the outermost ghost cells will be excluded. It
+     *   also affects the update using MPI where nodes are wrapped around in the periodic case.
+     * mpiData parameter is optional (i.e. nullable) and is only used when MPI is used. If MGCL_USE_MPI is true but
+     *   mgcl is called with only one MPI process, updateGhostsSeqLocally will be used instead. */
+    void MultigridEngine::updateGhostsSeq(Cuboid &c, MPIData *mpiData, bool periodic)
+    {
+#ifndef MGCL_USE_MPI
+        updateGhostsSeqLocally(c, periodic);
 #else
         // TODO adjust for ghosts > 1
         // TODO test
-        assert(mpiData != nullptr && "mpiData must not be null if MGCL_USE_MPI is true!");
+        if (mpiData == nullptr || mpiData->mpiSize() == 1)
+        {
+            updateGhostsSeqLocally(c, periodic);
+            return;
+        }
+
+        int m = c.getM();
+        int n = c.getN();
+        int o = c.getO();
+        int ghosts_m = c.getGhostsM();
+        int ghosts_n = c.getGhostsN();
+        int ghosts_o = c.getGhostsO();
 
         /* MPI variables */
         int myid;

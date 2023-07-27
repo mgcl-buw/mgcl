@@ -240,6 +240,7 @@ namespace mgcl
     /**
      * @brief Initializes MPI data for the current level and sets dimensions.
      * Mainly taken from pmg from Matthias Bolten.
+     * If mgcl is used on one MPI process only, no intialization is needed and this functions returns early.
      *
      * @return int
      */
@@ -251,6 +252,17 @@ namespace mgcl
         // MPI variables
         MPI_Comm mpi_comm = problem->getMpiComm();
         bool periodic = problem->isPeriodic();
+
+        if (mpiData->mpiSize() == 1)
+        {
+            mpiData->left = mpiData->rank;
+            mpiData->right = mpiData->rank;
+            mpiData->down = mpiData->rank;
+            mpiData->up = mpiData->rank;
+            mpiData->back = mpiData->rank;
+            mpiData->front = mpiData->rank;
+            return MPI_SUCCESS;
+        }
 
         if (num == 0)
         {

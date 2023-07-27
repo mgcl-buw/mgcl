@@ -262,17 +262,17 @@ namespace mgcl
             printf("maxlevel = %d\n", maxlevel);
 
 #ifdef MGCL_USE_MPI
-        // Create cartesian process grid if none was set, so mgcl is still usable without mpiexec on one process.
+        // Create cartesian process grid if none was set and more than one processes are used.
         int type;
         int mpi_size;
-        int mpi_rank;
         int mpi_dims[3] = {0, 0, 0};
         int mpi_periods[3] = {isPeriodic(), isPeriodic(), isPeriodic()};
-        int mpi_coords[3];
 
         int err = MPI_Topo_test(comm, &type);
         mgclCheckMpiError(comm, err, "MPI_Topo_test");
-        if (type != MPI_CART)
+        err = MPI_Comm_size(comm, &mpi_size);
+        mgcl::mgclCheckMpiError(comm, err, "MPI_Comm_size");
+        if (mpi_size > 1 && type != MPI_CART)
         {
             err = MPI_Comm_size(comm, &mpi_size);
             mgcl::mgclCheckMpiError(comm, err, "MPI_Comm_size");
@@ -280,10 +280,6 @@ namespace mgcl
             mgcl::mgclCheckMpiError(comm, err, "MPI_Dims_create");
             err = MPI_Cart_create(comm, 3, mpi_dims, mpi_periods, 1, &comm);
             mgcl::mgclCheckMpiError(comm, err, "MPI_Cart_create");
-            // err = MPI_Comm_rank(comm, &mpi_rank);
-            // mgcl::mgclCheckMpiError(comm, err, "MPI_Comm_rank");
-            // err = MPI_Cart_coords(comm, mpi_rank, 3, mpi_coords);
-            // mgcl::mgclCheckMpiError(comm, err, "MPI_Cart_coords");
         }
 #endif // MGCL_USE_MPI
 

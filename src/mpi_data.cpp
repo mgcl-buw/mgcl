@@ -21,6 +21,14 @@ mgcl::MPIData::MPIData(MPI_Comm _comm, int mgh, int ngh, int ogh)
     _rbufyz = std::make_unique<Cuboid>(1, ngh, ogh);
 }
 
+bool mgcl::MPIData::mpiSize()
+{
+    int mpi_size;
+    int err = MPI_Comm_size(comm, &mpi_size);
+    mgcl::mgclCheckMpiError(comm, err, "MPI_Comm_size");
+    return mpi_size;
+}
+
 void mgcl::MPIData::mgcl_check_mpi_error(MPI_Comm comm, int err, const char *operation, const char *filename, int line)
 {
     if (err != MPI_SUCCESS)
