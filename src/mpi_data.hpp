@@ -58,7 +58,7 @@ namespace mgcl
         inline double **rbufyz() { return (*_rbufyz)[0]; };
 
         // utility functions
-        bool mpiSize();
+        int mpiSize();
 
         static void mgcl_check_mpi_error(MPI_Comm comm, int err, const char *operation, const char *filename, int line);
     };

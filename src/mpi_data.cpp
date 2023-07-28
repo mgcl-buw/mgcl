@@ -21,7 +21,7 @@ mgcl::MPIData::MPIData(MPI_Comm _comm, int mgh, int ngh, int ogh)
     _rbufyz = std::make_unique<Cuboid>(1, ngh, ogh);
 }
 
-bool mgcl::MPIData::mpiSize()
+int mgcl::MPIData::mpiSize()
 {
     int mpi_size;
     int err = MPI_Comm_size(comm, &mpi_size);
