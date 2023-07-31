@@ -227,8 +227,8 @@ namespace mgcl
     int Problem::calculateAndSetMaxLevel()
     {
         // find max level or use user specified one
-        int minsize = m < n ? m : n;
-        minsize = minsize < o ? minsize : o;
+        int minsize = m_global < n_global ? m_global : n_global;
+        minsize = minsize < o_global ? minsize : o_global;
         int maxlv = log2(minsize);
 
         if (maxlevel >= 0) // user has specified a maxlevel

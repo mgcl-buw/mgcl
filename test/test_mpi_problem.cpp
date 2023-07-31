@@ -11,7 +11,7 @@
 #include "mpi.h"
 
 // Checks that an exception is thrown if the communicator has no cartesian topology attached.
-TEST_CASE("Problem::setMpiComm")
+TEST_CASE("MPI Problem::setMpiComm")
 {
     int N = 8;
     int periodic = 1;
@@ -51,4 +51,56 @@ TEST_CASE("Problem::setMpiComm")
 
     mgcl::Problem p2(N, N, N);
     REQUIRE_THROWS(p.setMpiComm(mpi_comm));
+}
+
+// Max level should be calculated using global size, not local size of grid.
+// For one process, m local equals m global.
+// Run with: mpiexec -n 1 tests_mpi [mpi1]
+TEST_CASE("MPI Problem::calculateAndSetMaxLevel (1 process)", "[mpi1]")
+{
+    int N = 8;
+    int periodic = 1;
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    REQUIRE(mpi_size == 1);
+
+    mgcl::Problem p(N, N, N);
+    REQUIRE(p.getMaxlevel() == 3);
+
+    mgcl::Problem p2(N, N, N, N, N, N);
+    REQUIRE(p2.getMaxlevel() == 3);
+}
+
+// Max level should be calculated using global size, not local size of grid.
+// For 4 processes, m local = 1/4 * m global.
+// Run with: mpiexec -n 4 tests_mpi [mpi4]
+TEST_CASE("MPI Problem::calculateAndSetMaxLevel (4 processes)", "[mpi4]")
+{
+    int N = 4;
+    int Ng = N * 4;
+    int periodic = 1;
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    REQUIRE(mpi_size == 4);
+
+    mgcl::Problem p(N, N, N, Ng, Ng, Ng);
+    REQUIRE(p.getMaxlevel() == 4);
 }
