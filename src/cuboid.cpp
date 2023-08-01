@@ -349,9 +349,10 @@ namespace mgcl
     }
 
     /**
-     * @brief Dumps content to file fiven by path overwriting existing files
+     * @brief Dumps content to file fiven by path overwriting existing files.
      *
      * @param path Path to file, overwrites existing one.
+     * @param realCellsOnly If true, only real cells will be written. Defaults to false.
      * @throws runtime_error When file could not be opened.
      */
     void Cuboid::dumpToFile(std::string path, bool realCellsOnly)
@@ -444,5 +445,39 @@ namespace mgcl
                 {
                     field_3d[i][j][k] = c[i][j][k];
                 }
+    }
+
+    /**
+     * @brief Creates and returns a slice of this Cuboid and returns it as a new Cuboid. Boundaries must fit, else an
+     * exception is thrown. Ghost cells are not included, i.e. m_end < this->m must hold.
+     * By default the new Cuboid will have the same ghost cell amount as the original one.
+     * Boundaries are 0-based, i.e. both start and end will be included.
+     *
+     * @return std::unique_ptr<Cuboid>
+     */
+    std::unique_ptr<Cuboid> Cuboid::slice(int m_start, int m_end, int n_start, int n_end, int o_start, int o_end,
+                                          int ghm, int ghn, int gho)
+    {
+        if (m_start < 0 || n_start < 0 || o_start < 0 ||
+            m_end > m || n_end > n || o_end > o)
+            throw "Boundaries out of range!";
+
+        if (ghm < 0)
+            ghm = ghostsM;
+        if (ghn < 0)
+            ghn = ghostsN;
+        if (gho < 0)
+            gho = ghostsO;
+
+        auto ret = std::make_unique<Cuboid>((m_end - m_start) + 1, (n_end - n_start) + 1, (o_end - o_start) + 1,
+                                            ghm, ghn, gho);
+        for (int i = m_start, is = (i - m_start) + ghm, ib = i + ghostsM; i <= m_end; i++, is++, ib++)
+            for (int j = n_start, js = (j - n_start) + ghn, jb = j + ghostsN; j <= n_end; j++, js++, jb++)
+                for (int k = o_start, ks = (k - o_start) + gho, kb = k + ghostsO; k <= o_end; k++, ks++, kb++)
+                {
+                    ret->getData()[is][js][ks] = getData()[ib][jb][kb];
+                }
+
+        return ret;
     }
 }

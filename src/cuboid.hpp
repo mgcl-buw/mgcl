@@ -1,6 +1,7 @@
 #ifndef MGCL_CUBOID__HPP
 #define MGCL_CUBOID__HPP
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -41,6 +42,8 @@ namespace mgcl
         void dumpToFile(std::string path, bool realCellsOnly = false);
         void fillRealFrom(Cuboid &c);
         void fillAllFrom(Cuboid &c);
+        std::unique_ptr<Cuboid> slice(int m_start, int m_end, int n_start, int n_end, int o_start, int o_end,
+                                      int ghm = -1, int ghn = -1, int gho = -1);
 
         int getO() const;
         int getN() const;

@@ -210,3 +210,30 @@ TEST_CASE("cuboid class")
         CHECK(remove(path.c_str()) == 0);
     }
 }
+
+TEST_CASE("Cuboid::slice")
+{
+    int m = 4;
+    int n = 4;
+    int o = 4;
+
+    mgcl::Cuboid cb(m, n, o, 1, 1, 1);
+    cb.fillRandom();
+
+    auto cs = cb.slice(0, 1, 0, 2, 2, 3, 3, 2);
+
+    REQUIRE(cs->getM() == 2);
+    REQUIRE(cs->getN() == 3);
+    REQUIRE(cs->getO() == 2);
+    REQUIRE(cs->getGhostsM() == 3);
+    REQUIRE(cs->getGhostsN() == 2);
+    REQUIRE(cs->getGhostsO() == cb.getGhostsO());
+
+    for (int i = 0; i < cs->getM(); i++)
+        for (int j = 0; j < cs->getN(); j++)
+            for (int k = 0; k < cs->getO(); k++)
+            {
+                REQUIRE(cs->getData()[i + cs->getGhostsM()][j + cs->getGhostsN()][k + cs->getGhostsO()] ==
+                        cb[i + cb.getGhostsM()][j + cb.getGhostsN()][k + cb.getGhostsO() + 2]);
+            }
+}
