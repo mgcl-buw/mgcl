@@ -31,7 +31,7 @@ TEST_CASE("Level::initMpiData (1 process)", "[mpi1]")
 
     /* MPI variables */
     int mpi_rank;
-    int mpi_dims[3];
+    int mpi_dims[3] = {0, 0, 0};
     int mpi_periods[3] = {periodic, periodic, periodic};
     int mpi_coords[3];
 
@@ -89,7 +89,7 @@ TEST_CASE("Level::initMpiData (2 processes)", "[mpi2]")
 
     /* MPI variables */
     int mpi_rank;
-    int mpi_dims[3];
+    int mpi_dims[3] = {0, 0, 0};
     int mpi_periods[3] = {periodic, periodic, periodic};
     int mpi_coords[3];
 
