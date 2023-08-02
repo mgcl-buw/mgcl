@@ -44,6 +44,8 @@ namespace mgcl
         void fillAllFrom(Cuboid &c);
         std::unique_ptr<Cuboid> slice(int m_start, int m_end, int n_start, int n_end, int o_start, int o_end,
                                       int ghm = -1, int ghn = -1, int gho = -1);
+        std::unique_ptr<Cuboid> sliceIncGhosts(int m_start, int m_end, int n_start, int n_end,
+                                               int o_start, int o_end);
 
         int getO() const;
         int getN() const;

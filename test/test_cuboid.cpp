@@ -220,20 +220,74 @@ TEST_CASE("Cuboid::slice")
     mgcl::Cuboid cb(m, n, o, 1, 1, 1);
     cb.fillRandom();
 
-    auto cs = cb.slice(0, 1, 0, 2, 2, 3, 3, 2);
+    SECTION("throwing")
+    {
+        REQUIRE_THROWS(cb.slice(-1, 0, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, -1, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, 0, -1, 0));
 
-    REQUIRE(cs->getM() == 2);
-    REQUIRE(cs->getN() == 3);
-    REQUIRE(cs->getO() == 2);
-    REQUIRE(cs->getGhostsM() == 3);
-    REQUIRE(cs->getGhostsN() == 2);
-    REQUIRE(cs->getGhostsO() == cb.getGhostsO());
+        REQUIRE_THROWS(cb.slice(0, m + 1, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, n + 1, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, 0, 0, n + 1));
+    }
 
-    for (int i = 0; i < cs->getM(); i++)
-        for (int j = 0; j < cs->getN(); j++)
-            for (int k = 0; k < cs->getO(); k++)
-            {
-                REQUIRE(cs->getData()[i + cs->getGhostsM()][j + cs->getGhostsN()][k + cs->getGhostsO()] ==
-                        cb[i + cb.getGhostsM()][j + cb.getGhostsN()][k + cb.getGhostsO() + 2]);
-            }
+    SECTION("success")
+    {
+        auto cs = cb.slice(0, 1, 0, 2, 2, 3, 3, 2);
+
+        REQUIRE(cs->getM() == 2);
+        REQUIRE(cs->getN() == 3);
+        REQUIRE(cs->getO() == 2);
+        REQUIRE(cs->getGhostsM() == 3);
+        REQUIRE(cs->getGhostsN() == 2);
+        REQUIRE(cs->getGhostsO() == cb.getGhostsO());
+
+        for (int i = 0; i < cs->getM(); i++)
+            for (int j = 0; j < cs->getN(); j++)
+                for (int k = 0; k < cs->getO(); k++)
+                {
+                    REQUIRE(cs->getData()[i + cs->getGhostsM()][j + cs->getGhostsN()][k + cs->getGhostsO()] ==
+                            cb[i + cb.getGhostsM()][j + cb.getGhostsN()][k + cb.getGhostsO() + 2]);
+                }
+    }
+}
+
+TEST_CASE("Cuboid::sliceIncGhosts")
+{
+    int m = 4;
+    int n = 4;
+    int o = 4;
+
+    mgcl::Cuboid cb(m, n, o, 1, 1, 1);
+    cb.fillRandom();
+
+    SECTION("throwing")
+    {
+        REQUIRE_THROWS(cb.slice(-1, 0, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, -1, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, 0, -1, 0));
+
+        REQUIRE_THROWS(cb.slice(0, m + 1, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, n + 1, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, 0, 0, n + 1));
+    }
+
+    SECTION("success")
+    {
+        auto cs = cb.sliceIncGhosts(0, 1, 0, 2, 2, 3);
+
+        REQUIRE(cs->getM() == 2);
+        REQUIRE(cs->getN() == 3);
+        REQUIRE(cs->getO() == 2);
+        REQUIRE(cs->getGhostsM() == 0);
+        REQUIRE(cs->getGhostsN() == 0);
+        REQUIRE(cs->getGhostsO() == 0);
+
+        for (int i = 0; i < cs->getM(); i++)
+            for (int j = 0; j < cs->getN(); j++)
+                for (int k = 0; k < cs->getO(); k++)
+                {
+                    REQUIRE(cs->getData()[i][j][k] == cb[i][j][k + 2]);
+                }
+    }
 }
