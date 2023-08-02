@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <cstddef> // for size_t, NULL
+#include <iostream>
 
 #ifdef MGCL_USE_MPI
 #include "mpi_data.hpp"
@@ -106,6 +107,69 @@ namespace mgcl
         int ghosts_m = c.getGhostsM();
         int ghosts_n = c.getGhostsN();
         int ghosts_o = c.getGhostsO();
+        int mgh = c.getMgh();
+        int ngh = c.getNgh();
+        int ogh = c.getOgh();
+        int err;
+
+        MPI_Comm comm = mpiData->comm;
+
+        // // Create subarray type for the ghost slices for each direction
+        // MPI_Datatype ghostsSliceX;
+        // int sizesX[3] = {mgh, ngh, ogh};
+        // int subsizesX[3] = {ghosts_m, ngh, ogh};
+        // int startsX[3] = {0, 0, 0};
+        // err = MPI_Type_create_subarray(2, sizesX, subsizesX, startsX, MPI_ORDER_C, MPI_DOUBLE, &ghostsSliceX);
+        // mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
+        // err = MPI_Type_commit(&ghostsSliceX);
+        // mgclCheckMpiError(comm, err, "MPI_Type_commit");
+
+        // MPI_Datatype ghostsSliceY;
+        // int sizesY[3] = {mgh, ngh, ogh};
+        // int subsizesY[3] = {mgh, ghosts_n, ogh};
+        // int startsY[3] = {0, 0, 0};
+        // err = MPI_Type_create_subarray(2, sizesY, subsizesY, startsY, MPI_ORDER_C, MPI_DOUBLE, &ghostsSliceY);
+        // mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
+        // err = MPI_Type_commit(&ghostsSliceY);
+        // mgclCheckMpiError(comm, err, "MPI_Type_commit");
+
+        // MPI_Datatype ghostsSliceZ;
+        // int sizesZ[3] = {mgh, ngh, ogh};
+        // int subsizesZ[3] = {mgh, ngh, ghosts_o};
+        // int startsZ[3] = {0, 0, 0};
+        // err = MPI_Type_create_subarray(2, sizesZ, subsizesZ, startsZ, MPI_ORDER_C, MPI_DOUBLE, &ghostsSliceZ);
+        // mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
+        // err = MPI_Type_commit(&ghostsSliceZ);
+        // mgclCheckMpiError(comm, err, "MPI_Type_commit");
+
+        // // Exchange data in x-direction
+        // // Send data left
+        // MPI_Sendrecv(&(c[ghosts_m][0][0]), 1, ghostsSliceX, mpiData->left, 0,
+        //              &(c[0][0][0]), 1, ghostsSliceX, mpiData->right, 0, comm, MPI_STATUS_IGNORE);
+        // // Send data right
+        // MPI_Sendrecv(&(c[0][0][0]), 1, ghostsSliceX, mpiData->right, 0,
+        //              &(c[ghosts_m + m][0][0]), 1, ghostsSliceX, mpiData->left, 0, comm, MPI_STATUS_IGNORE);
+
+        // // Exchange data in y-direction
+        // // Send data upwards
+        // MPI_Sendrecv(&(c[0][ghosts_n][0]), 1, ghostsSliceY, mpiData->up, 0,
+        //              &(c[0][0][0]), 1, ghostsSliceY, mpiData->down, 0, comm, MPI_STATUS_IGNORE);
+        // // Send data downwards
+        // MPI_Sendrecv(&(c[0][0][0]), 1, ghostsSliceY, mpiData->down, 0,
+        //              &(c[0][ghosts_n + n][0]), 1, ghostsSliceY, mpiData->up, 0, comm, MPI_STATUS_IGNORE);
+
+        // // Exchange data in z-direction
+        // // Send data to the back
+        // MPI_Sendrecv(&(c[0][0][ghosts_o]), 1, ghostsSliceZ, mpiData->back, 0,
+        //              &(c[0][0][0]), 1, ghostsSliceZ, mpiData->front, 0, comm, MPI_STATUS_IGNORE);
+        // // Send data to the front
+        // MPI_Sendrecv(&(c[0][0][0]), 1, ghostsSliceZ, mpiData->front, 0,
+        //              &(c[0][0][ghosts_o + o]), 1, ghostsSliceZ, mpiData->back, 0, comm, MPI_STATUS_IGNORE);
+
+        // // Free types
+        // MPI_Type_free(&ghostsSliceX);
+        // MPI_Type_free(&ghostsSliceY);
+        // MPI_Type_free(&ghostsSliceZ);
 
         /* MPI variables */
         int myid;
@@ -114,201 +178,131 @@ namespace mgcl
 
         /* Loop variables */
         int i, j, k;
-        // int m = data[level].m_l, n = data[level].n_l, o = data[level].o_l;
 
-        // Rectangle buffers
-        double **sbufxy = mpiData->sbufxy();
-        double **sbufxz = mpiData->sbufxz();
-        double **sbufyz = mpiData->sbufyz();
-        double **rbufxy = mpiData->rbufxy();
-        double **rbufxz = mpiData->rbufxz();
-        double **rbufyz = mpiData->rbufyz();
+        // int ghm_start_right = ghosts_m + m;
+        // int ghn_start_right = ghosts_n + n;
+        // int gho_start_right = ghosts_o + o;
+
+        // // clang-format off
+        // // sending data in z-direction
+        // for (int i = 0; i < ghosts_m; i++)
+        // {
+        //     int factor_left = (ghosts_m - 1 - i) / m + 1;
+        //     int factor_right = (ghm_start_right + i - ghosts_m) / m;
+
+        //     for (int j = 0; j < n + 2 * ghosts_n; j++)
+        //     for (int k = 0; k < o + 2 * ghosts_o; k++)
+        //         {
+
+        //             c[i][j][k] = c[i + factor_left * m][j][k]; // left ghost cell = right real cell
+        //             c[ghm_start_right + i][j][k] = c[ghm_start_right + i - factor_right * m][j][k]; // right ghost cell = left real cell
+        //         }
+        // }
+        // // clang-format on
 
         /* Getting local rank */
         MPI_Comm_rank(mpiData->comm, &myid);
 
-        /* Sending data to left */
-        for (j = 0; j < n; j++)
-        {
-            for (k = 0; k < o; k++)
-            {
-                sbufyz[j][k] = c[1][j][k];
-            }
-        }
-        reqs[0] = MPI_REQUEST_NULL;
-        reqs[1] = MPI_REQUEST_NULL;
-        if (myid != mpiData->left)
-            MPI_Isend((void *)sbufyz[0], n * o, MPI_DOUBLE, mpiData->left, 0, mpiData->comm, &reqs[0]);
-        if (myid != mpiData->right)
-            MPI_Irecv((void *)rbufyz[0], n * o, MPI_DOUBLE, mpiData->right, 0, mpiData->comm, &reqs[1]);
-        MPI_Waitall(2, reqs, stats);
-        if (MPI_PROC_NULL != mpiData->right)
-            for (j = 0; j < n; j++)
-            {
-                for (k = 0; k < o; k++)
-                {
-                    c[m - 1][j][k] = rbufyz[j][k];
-                }
-            }
+        /* Sending data to the front */
+        auto sbufyz_ptr = c.sliceIncGhosts(ghosts_m, 2 * ghosts_m - 1, 0, ngh - 1, 0, ogh - 1); // TODO max when gh > m
+        auto sbufyz = sbufyz_ptr->getData();
+        auto rbufyz_ptr = std::make_unique<Cuboid>(sbufyz_ptr->getM(), sbufyz_ptr->getN(), sbufyz_ptr->getO(), 0, 0, 0);
+        auto rbufyz = rbufyz_ptr->getData();
 
-        /* Sending data to right */
-        for (j = 0; j < n; j++)
-        {
-            for (k = 0; k < o; k++)
-            {
-                sbufyz[j][k] = c[m - 2][j][k];
-            }
-        }
         reqs[0] = MPI_REQUEST_NULL;
         reqs[1] = MPI_REQUEST_NULL;
-        if (myid != mpiData->right)
-            MPI_Isend((void *)sbufyz[0], n * o, MPI_DOUBLE, mpiData->right, 0, mpiData->comm, &reqs[0]);
-        if (myid != mpiData->left)
-            MPI_Irecv((void *)rbufyz[0], n * o, MPI_DOUBLE, mpiData->left, 0, mpiData->comm, &reqs[1]);
-        MPI_Waitall(2, reqs, stats);
-        if (MPI_PROC_NULL != mpiData->left)
-            for (j = 0; j < n; j++)
-            {
-                for (k = 0; k < o; k++)
-                {
-                    c[0][j][k] = rbufyz[j][k];
-                }
-            }
+        MPI_Sendrecv((void *)sbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
+                     (void *)rbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
+                     mpiData->comm, MPI_STATUS_IGNORE);
+
+        if (MPI_PROC_NULL != mpiData->back)
+            for (i = 0; i < ghosts_m; i++)
+                for (j = 0; j < ngh; j++)
+                    for (k = 0; k < ogh; k++)
+                        c[mgh - ghosts_m + i][j][k] = rbufyz[i][j][k];
+
+        /* Sending data to the back */
+        sbufyz_ptr = c.sliceIncGhosts(m, m + ghosts_m - 1, 0, ngh - 1, 0, ogh - 1); // TODO max when gh > m
+        sbufyz = sbufyz_ptr->getData();
+        rbufyz_ptr = std::make_unique<Cuboid>(sbufyz_ptr->getM(), sbufyz_ptr->getN(), sbufyz_ptr->getO(), 0, 0, 0);
+        rbufyz = rbufyz_ptr->getData();
+
+        MPI_Sendrecv((void *)sbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
+                     (void *)rbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
+                     mpiData->comm, MPI_STATUS_IGNORE);
+
+        if (MPI_PROC_NULL != mpiData->back)
+            for (i = 0; i < ghosts_m; i++)
+                for (j = 0; j < ngh; j++)
+                    for (k = 0; k < ogh; k++)
+                        c[i][j][k] = rbufyz[i][j][k];
 
         /* Sending data downwards */
-        for (i = 0; i < m; i++)
-        {
-            for (k = 0; k < o; k++)
-            {
-                sbufxz[i][k] = c[i][1][k];
-            }
-        }
-        reqs[0] = MPI_REQUEST_NULL;
-        reqs[1] = MPI_REQUEST_NULL;
-        if (myid != mpiData->down)
-            MPI_Isend((void *)sbufxz[0], m * o, MPI_DOUBLE, mpiData->down, 0, mpiData->comm, &reqs[0]);
-        if (myid != mpiData->up)
-            MPI_Irecv((void *)rbufxz[0], m * o, MPI_DOUBLE, mpiData->up, 0, mpiData->comm, &reqs[1]);
-        MPI_Waitall(2, reqs, stats);
+        auto sbufxz_ptr = c.sliceIncGhosts(0, mgh - 1, ghosts_m, 2 * ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
+        auto sbufxz = sbufxz_ptr->getData();
+        auto rbufxz_ptr = std::make_unique<Cuboid>(sbufxz_ptr->getM(), sbufxz_ptr->getN(), sbufxz_ptr->getO(), 0, 0, 0);
+        auto rbufxz = rbufxz_ptr->getData();
+
+        MPI_Sendrecv((void *)sbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
+                     (void *)rbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
+                     mpiData->comm, MPI_STATUS_IGNORE);
+
         if (MPI_PROC_NULL != mpiData->up)
-            for (i = 0; i < m; i++)
-            {
-                for (k = 0; k < o; k++)
-                {
-                    c[i][n - 1][k] = rbufxz[i][k];
-                }
-            }
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ghosts_n; j++)
+                    for (k = 0; k < ogh; k++)
+                        c[i][ngh - ghosts_n + j][k] = rbufxz[i][j][k];
 
         /* Sending data upwards */
-        for (i = 0; i < m; i++)
-        {
-            for (k = 0; k < o; k++)
-            {
-                sbufxz[i][k] = c[i][n - 2][k];
-            }
-        }
-        reqs[0] = MPI_REQUEST_NULL;
-        reqs[1] = MPI_REQUEST_NULL;
-        if (myid != mpiData->up)
-            MPI_Isend((void *)sbufxz[0], m * o, MPI_DOUBLE, mpiData->up, 0, mpiData->comm, &reqs[0]);
-        if (myid != mpiData->down)
-            MPI_Irecv((void *)rbufxz[0], m * o, MPI_DOUBLE, mpiData->down, 0, mpiData->comm, &reqs[1]);
-        MPI_Waitall(2, reqs, stats);
+        sbufxz_ptr = c.sliceIncGhosts(0, mgh - 1, n, n + ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
+        sbufxz = sbufxz_ptr->getData();
+        rbufxz_ptr = std::make_unique<Cuboid>(sbufxz_ptr->getM(), sbufxz_ptr->getN(), sbufxz_ptr->getO(), 0, 0, 0);
+        rbufxz = rbufxz_ptr->getData();
+
+        MPI_Sendrecv((void *)sbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
+                     (void *)rbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
+                     mpiData->comm, MPI_STATUS_IGNORE);
+
         if (MPI_PROC_NULL != mpiData->down)
-            for (i = 0; i < m; i++)
-            {
-                for (k = 0; k < o; k++)
-                {
-                    c[i][0][k] = rbufxz[i][k];
-                }
-            }
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ghosts_n; j++)
+                    for (k = 0; k < ogh; k++)
+                        c[i][j][k] = rbufxz[i][j][k];
 
-        /* Sending data backwards */
-        for (i = 0; i < m; i++)
-        {
-            for (j = 0; j < n; j++)
-            {
-                sbufxy[i][j] = c[i][j][1];
-            }
-        }
-        reqs[0] = MPI_REQUEST_NULL;
-        reqs[1] = MPI_REQUEST_NULL;
-        if (myid != mpiData->back)
-            MPI_Isend((void *)sbufxy[0], m * n, MPI_DOUBLE, mpiData->back, 0, mpiData->comm, &reqs[0]);
-        if (myid != mpiData->front)
-            MPI_Irecv((void *)rbufxy[0], m * n, MPI_DOUBLE, mpiData->front, 0, mpiData->comm, &reqs[1]);
-        MPI_Waitall(2, reqs, stats);
-        if (MPI_PROC_NULL != mpiData->front)
-            for (i = 0; i < m; i++)
-            {
-                for (j = 0; j < n; j++)
-                {
-                    c[i][j][o - 1] = rbufxy[i][j];
-                }
-            }
+        /* Sending data to the left */
+        sbufxz_ptr = c.sliceIncGhosts(0, mgh - 1, 0, ngh - 1, ghosts_o, 2 * ghosts_o - 1); // TODO max when gh > m
+        sbufxz = sbufxz_ptr->getData();
+        rbufxz_ptr = std::make_unique<Cuboid>(sbufxz_ptr->getM(), sbufxz_ptr->getN(), sbufxz_ptr->getO(), 0, 0, 0);
+        rbufxz = rbufxz_ptr->getData();
 
-        /* Sending data to front */
-        for (i = 0; i < m; i++)
-        {
-            for (j = 0; j < n; j++)
-            {
-                sbufxy[i][j] = c[i][j][o - 2];
-            }
-        }
-        reqs[0] = MPI_REQUEST_NULL;
-        reqs[1] = MPI_REQUEST_NULL;
-        if (myid != mpiData->front)
-            MPI_Isend((void *)sbufxy[0], m * n, MPI_DOUBLE, mpiData->front, 0, mpiData->comm, &reqs[0]);
-        if (myid != mpiData->back)
-            MPI_Irecv((void *)rbufxy[0], m * n, MPI_DOUBLE, mpiData->back, 0, mpiData->comm, &reqs[1]);
-        MPI_Waitall(2, reqs, stats);
-        if (MPI_PROC_NULL != mpiData->back)
-            for (i = 0; i < m; i++)
-            {
-                for (j = 0; j < n; j++)
-                {
-                    c[i][j][0] = rbufxy[i][j];
-                }
-            }
+        // std::cout << myid << "," << mpiData->left << std::endl;
+        // MPI_Barrier(comm);
+        // sbufxz_ptr->dumpToFile("sbufyz_ptr_left" + std::to_string(myid) + ".txt");
 
-        if (periodic)
-        {
-            if (myid == mpiData->back && myid == mpiData->front)
-            {
-                for (i = 0; i < m; i++)
-                {
-                    for (j = 0; j < n; j++)
-                    {
-                        c[i][j][0] = c[i][j][o - 2];
-                        c[i][j][o - 1] = c[i][j][1];
-                    }
-                }
-            }
+        MPI_Sendrecv((void *)sbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
+                     (void *)rbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
+                     mpiData->comm, MPI_STATUS_IGNORE);
+        if (MPI_PROC_NULL != mpiData->right)
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ngh; j++)
+                    for (k = 0; k < ghosts_o; k++)
+                        c[i][j][ogh - ghosts_o + k] = rbufxz[i][j][k];
 
-            if (myid == mpiData->down && myid == mpiData->up)
-            {
-                for (i = 0; i < m; i++)
-                {
-                    for (k = 0; k < o; k++)
-                    {
-                        c[i][0][k] = c[i][n - 2][k];
-                        c[i][n - 1][k] = c[i][1][k];
-                    }
-                }
-            }
+        /* Sending data to the right */
+        sbufxz_ptr = c.sliceIncGhosts(0, mgh - 1, 0, ngh - 1, o, o + ghosts_o - 1); // TODO max when gh > m
+        sbufxz = sbufxz_ptr->getData();
+        rbufxz_ptr = std::make_unique<Cuboid>(sbufxz_ptr->getM(), sbufxz_ptr->getN(), sbufxz_ptr->getO(), 0, 0, 0);
+        rbufxz = rbufxz_ptr->getData();
 
-            if (myid == mpiData->left && myid == mpiData->right)
-            {
-                for (j = 0; j < n; j++)
-                {
-                    for (k = 0; k < o; k++)
-                    {
-                        c[0][j][k] = c[m - 2][j][k];
-                        c[m - 1][j][k] = c[1][j][k];
-                    }
-                }
-            }
-        }
+        MPI_Sendrecv((void *)sbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
+                     (void *)rbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
+                     mpiData->comm, MPI_STATUS_IGNORE);
+
+        if (MPI_PROC_NULL != mpiData->left)
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ngh; j++)
+                    for (k = 0; k < ghosts_o; k++)
+                        c[i][j][k] = rbufxz[i][j][k];
 #endif // MGCL_USE_MPI
     }
 

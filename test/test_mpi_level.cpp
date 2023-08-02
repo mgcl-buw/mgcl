@@ -215,13 +215,13 @@ TEST_CASE("Level::initMpiData (8 processes)", "[mpi8]")
     int other_rank = mpi_rank == 0 ? 1 : 0;
 
     // Cartesian topology layout:
-    //       x=0        x=1
+    //       z=0        z=1
     //    +---+---+  +---+---+
     // y  + 0 + 1 +  + 4 + 5 +
     // |  +---+---+  +---+---+
     // v  + 2 + 3 +  + 6 + 7 +
     //    +---+---+  +---+---+
-    //       z->        z->
+    //       x->        x->
 
     // Grid points per process and level in one direction:
     // -----+-- p1 ---+-- p2 ---+
