@@ -233,8 +233,7 @@ TEST_CASE("MPI updateGhostsSeq (8 processes)", "[mpi8]")
                     if (mpi_coords[0] > 0) // not the first process
                         REQUIRE(cl[i][j][k] == cg[m_start + i][j + n_start][k + o_start]);
                     else
-                        REQUIRE(cl[i][j][k] == cg[i + m][j + n_start][k + o_start]); // TODO check cg j and k
-                    // i + gh + (m_start - 1)
+                        REQUIRE(cl[i][j][k] == cg[i + m][j + n_start][k + o_start]);
 
                     if (mpi_coords[0] < mpi_dims[0]) // not the last process
                         REQUIRE(cl[i + gh + ml][j][k] == cg[m_end + gh + 1 + i][j + n_start][k + o_start]);
