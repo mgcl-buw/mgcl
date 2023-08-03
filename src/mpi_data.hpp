@@ -14,15 +14,6 @@ namespace mgcl
 #ifdef MGCL_USE_MPI
     class MPIData
     {
-    private:
-        // Rectangle buffers for sending and receiving data (Rectangle = Cuboid with m = 1).
-        std::unique_ptr<Cuboid> _sbufxy = nullptr;
-        std::unique_ptr<Cuboid> _sbufxz = nullptr;
-        std::unique_ptr<Cuboid> _sbufyz = nullptr;
-        std::unique_ptr<Cuboid> _rbufxy = nullptr;
-        std::unique_ptr<Cuboid> _rbufxz = nullptr;
-        std::unique_ptr<Cuboid> _rbufyz = nullptr;
-
     public:
         MPI_Comm comm;
 
@@ -42,20 +33,12 @@ namespace mgcl
         int ystart;
         int zstart;
 
-        MPIData(MPI_Comm _comm, int mgh, int ngh, int ogh);
+        MPIData(MPI_Comm _comm);
         MPIData(const MPIData &) = delete;
         MPIData &operator=(const MPIData &) = delete;
         MPIData(const MPIData &&) = delete;
         MPIData &operator=(MPIData &&) = delete;
         ~MPIData() {}
-
-        // Access to Rectangle buffers (2d view of Cuboid)
-        inline double **sbufxy() { return (*_sbufxy)[0]; };
-        inline double **sbufxz() { return (*_sbufxz)[0]; };
-        inline double **sbufyz() { return (*_sbufyz)[0]; };
-        inline double **rbufxy() { return (*_rbufxy)[0]; };
-        inline double **rbufxz() { return (*_rbufxz)[0]; };
-        inline double **rbufyz() { return (*_rbufyz)[0]; };
 
         // utility functions
         int mpiSize();

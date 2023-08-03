@@ -49,7 +49,7 @@ namespace mgcl
                                             .append(std::to_string(problem->getMaxlevel())));
 
 #ifdef MGCL_USE_MPI
-        mpiData = std::make_unique<MPIData>(problem->getMpiComm(), mgh, ngh, ogh);
+        mpiData = std::make_unique<MPIData>(problem->getMpiComm());
 #endif // MGCL_USE_MPI
     }
 

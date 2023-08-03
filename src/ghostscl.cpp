@@ -171,11 +171,6 @@ namespace mgcl
         // MPI_Type_free(&ghostsSliceY);
         // MPI_Type_free(&ghostsSliceZ);
 
-        /* MPI variables */
-        int myid;
-        MPI_Status stats[2];
-        MPI_Request reqs[2];
-
         /* Loop variables */
         int i, j, k;
 
@@ -201,6 +196,7 @@ namespace mgcl
         // // clang-format on
 
         /* Getting local rank */
+        int myid;
         MPI_Comm_rank(mpiData->comm, &myid);
 
         /* Sending data to the front */
