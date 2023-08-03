@@ -209,8 +209,6 @@ namespace mgcl
         auto rbufyz_ptr = std::make_unique<Cuboid>(sbufyz_ptr->getM(), sbufyz_ptr->getN(), sbufyz_ptr->getO(), 0, 0, 0);
         auto rbufyz = rbufyz_ptr->getData();
 
-        reqs[0] = MPI_REQUEST_NULL;
-        reqs[1] = MPI_REQUEST_NULL;
         MPI_Sendrecv((void *)sbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
                      (void *)rbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
                      mpiData->comm, MPI_STATUS_IGNORE);
@@ -231,7 +229,7 @@ namespace mgcl
                      (void *)rbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
                      mpiData->comm, MPI_STATUS_IGNORE);
 
-        if (MPI_PROC_NULL != mpiData->back)
+        if (MPI_PROC_NULL != mpiData->front)
             for (i = 0; i < ghosts_m; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ogh; k++)

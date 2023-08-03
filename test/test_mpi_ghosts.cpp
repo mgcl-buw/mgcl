@@ -105,17 +105,17 @@ TEST_CASE("MPI updateGhostsSeq (1 process)", "[mpi1]")
     }
 }
 
-// Checks ghost update for 8 processes.
-// Run with: mpiexec -n 1 tests_mpi [mpi1]
+// Checks ghost update for any number of processes that is allowed by mgcl, e.g. 1, 2, 4, 8, 24.
+// Run with: mpiexec -n 8 tests_mpi [mpiN]
 // TODO differentiate for gh>m and non-periodic
-TEST_CASE("MPI updateGhostsSeq (8 processes)", "[mpi8]")
+TEST_CASE("MPI updateGhostsSeq (n processes)", "[mpiN]")
 {
     using std::min;
 
     // global grid sizes
-    int m = 8;
-    int n = 8;
-    int o = 8;
+    int m = 16;
+    int n = 16;
+    int o = 16;
     int periodic = 1;
 
     // check if mpi is initialized
@@ -128,7 +128,7 @@ TEST_CASE("MPI updateGhostsSeq (8 processes)", "[mpi8]")
     // check number of processes
     int mpi_size = -1;
     MPI_Comm_size(mpi_comm, &mpi_size);
-    REQUIRE(mpi_size == 8);
+    // REQUIRE(mpi_size == 8);
 
     /* MPI variables */
     int mpi_rank;
@@ -156,20 +156,20 @@ TEST_CASE("MPI updateGhostsSeq (8 processes)", "[mpi8]")
     int ol = (o_end - o_start) + 1;
 
     // print coords and boundaries per rank
-    if (mpi_rank == 0)
-        std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+    // if (mpi_rank == 0)
+    //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
 
-    for (int i = 0; i < mpi_size; i++)
-    {
-        MPI_Barrier(mpi_comm);
-        if (mpi_rank == i)
-        {
-            std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
-                      << m_start << ";" << m_end << ";"
-                      << n_start << ";" << n_end << ";"
-                      << o_start << ";" << o_end << std::endl;
-        }
-    }
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (mpi_rank == i)
+    //     {
+    //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+    //                   << m_start << ";" << m_end << ";"
+    //                   << n_start << ";" << n_end << ";"
+    //                   << o_start << ";" << o_end << std::endl;
+    //     }
+    // }
 
     REQUIRE(ml > 0);
     REQUIRE(ml <= m);
@@ -198,6 +198,16 @@ TEST_CASE("MPI updateGhostsSeq (8 processes)", "[mpi8]")
         auto &lv = p.getLevelAt(0);
         auto mpiData = lv.getMpiDataPtr();
 
+        // print neighbours per rank
+        // for (int i = 0; i < mpi_size; i++)
+        // {
+        //     MPI_Barrier(mpi_comm);
+        //     if (i == mpi_rank)
+        //         std::cout << mpi_rank << ": " << mpiData->left << "," << mpiData->right << ","
+        //                   << mpiData->up << "," << mpiData->down << ","
+        //                   << mpiData->back << "," << mpiData->front << std::endl;
+        // }
+
         // Create global test data. No random data so values will be the same for all processes. Fill with 1d index.
         mgcl::Cuboid cg(m, n, o, gh, gh, gh);
         int cnt = 0;
@@ -220,9 +230,9 @@ TEST_CASE("MPI updateGhostsSeq (8 processes)", "[mpi8]")
 
         // cl.dumpToFile("cl" + std::to_string(mpi_rank) + ".txt");
 
-        // if (mpi_rank == 2)
+        // if (mpi_rank == 0)
         // {
-        // cg.dumpToFile("cg.txt");
+        //     cg.dumpToFile("cg.txt");
 
         // Check result
         // check in z-direction
