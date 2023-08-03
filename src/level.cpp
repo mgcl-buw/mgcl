@@ -271,7 +271,7 @@ namespace mgcl
             mgcl::mgclCheckMpiError(mpiData->comm, ret, "MPI_Cart_shift x-direction");
             ret = MPI_Cart_shift(mpiData->comm, 1, 1, &mpiData->down, &mpiData->up);
             mgcl::mgclCheckMpiError(mpiData->comm, ret, "MPI_Cart_shift y-direction");
-            ret = MPI_Cart_shift(mpiData->comm, 0, 1, &mpiData->back, &mpiData->front);
+            ret = MPI_Cart_shift(mpiData->comm, 0, 1, &mpiData->front, &mpiData->back);
             mgcl::mgclCheckMpiError(mpiData->comm, ret, "MPI_Cart_shift z-direction");
         }
         else

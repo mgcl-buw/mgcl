@@ -288,3 +288,159 @@ TEST_CASE("Level::initMpiData (8 processes)", "[mpi8]")
     REQUIRE(mpiData3.front == mpi_rank);
     REQUIRE(mpiData3.back == mpi_rank);
 }
+
+// Checks if neighbours are initialized correctly for each level for 24 processes and a non-uniform domain.
+// Run with: mpiexec -n 24 tests_mpi [mpi24]
+TEST_CASE("Level::initMpiData (24 processes)", "[mpi24]")
+{
+    int m = 8; // local size of grid in one direction
+    int n = 4;
+    int o = 4;
+    int mg = m * 2; // global size of grid in one direction
+    int ng = n * 2; // global size of grid in one direction
+    int og = o * 2; // global size of grid in one direction
+    int periodic = 1;
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    REQUIRE(mpi_size == 24);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {4, 3, 2};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    // No need for MPI_Dims_create, since dims are given explicitely to MPI_Cart_create (2x2x2).
+    // Disable reordering in MPI_Cart_create, s.t. a process with given rank will always have the same coordinates.
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 0, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    // if (mpi_rank == 0)
+    //     std::cout << "rank;coords" << std::endl;
+
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (i == mpi_rank)
+    //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << std::endl;
+    // }
+
+    // Check that coordinates are correct for our test setup, i.e.
+    // rank 0: 0,0,0,
+    // rank 1: 0,0,1,
+    // rank 2: 0,1,0 etc.
+    REQUIRE(mpi_rank == ((mpi_coords[0] * mpi_dims[1] * mpi_dims[2]) + (mpi_coords[1] * mpi_dims[2]) + mpi_coords[2]));
+
+    // Init some random data
+    auto v = std::make_shared<mgcl::Cuboid>(m, n, o, 1, 1, 1);
+    auto f = std::make_shared<mgcl::Cuboid>(m, n, o, 1, 1, 1);
+    v->fillRandom();
+    f->fillRandom();
+
+    mgcl::Problem p(m, n, o, v, f, mg, ng, og);
+    p.setMpiComm(mpi_comm);
+    p.init();
+
+    int other_rank = mpi_rank == 0 ? 1 : 0;
+
+    // Cartesian topology layout:
+    //       z=0        z=1
+    //    +---+---+  +---+---+
+    // y  + 0 + 1 +  + 4 + 5 +
+    // |  +---+---+  +---+---+
+    // v  + 2 + 3 +  + 6 + 7 +
+    //    +---+---+  +---+---+
+    //       x->        x->
+
+    // Grid points per process and level in one direction:
+    // -----+-- p1 ---+-- p2 ---+
+    // lv 0 | * * * * | * * * * |
+    // lv 1 |   *   * |   *   * |
+    // lv 2 |       * |       * |
+    // lv 3 |         |       * |
+
+    // print neighbours per rank
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (i == mpi_rank)
+    //         std::cout << mpi_rank << ": " << mpiData0.left << "," << mpiData0.right << ","
+    //                   << mpiData0.up << "," << mpiData0.down << ","
+    //                   << mpiData0.back << "," << mpiData0.front << std::endl;
+    // }
+
+    // ==================================
+
+    // Check level 0-2
+    for (int i = 0; i <= 2; i++)
+    {
+        auto &lv0 = p.getLevelAt(i);
+        auto &mpiData0 = lv0.getMpiData();
+        REQUIRE(mpiData0.mpiSize() == 24);
+
+        // print neighbours per rank
+        // if (0 == mpi_rank)
+        //     std::cout << "rank;left;right;up;down;back;front" << std::endl;
+        // for (int i = 0; i < mpi_size; i++)
+        // {
+        //     MPI_Barrier(mpi_comm);
+        //     if (i == mpi_rank)
+        //         std::cout << mpi_rank << ": " << mpiData0.left << "," << mpiData0.right << ","
+        //                   << mpiData0.up << "," << mpiData0.down << ","
+        //                   << mpiData0.back << "," << mpiData0.front << std::endl;
+        // }
+
+        // clang-format off
+        std::vector<std::vector<int>> neighbours0 = {
+            {1,1,2,4,6,18}, {0,0,3,5,7,19}, {3,3,4,0,8,20}, {2,2,5,1,9,21},
+            {5,5,0,2,10,22}, {4,4,1,3,11,23}, {7,7,8,10,12,0}, {6,6,9,11,13,1},
+            {9,9,10,6,14,2}, {8,8,11,7,15,3}, {11,11,6,8,16,4}, {10,10,7,9,17,5},
+            {13,13,14,16,18,6}, {12,12,15,17,19,7}, {15,15,16,12,20,8}, {14,14,17,13,21,9},
+            {17,17,12,14,22,10}, {16,16,13,15,23,11}, {19,19,20,22,0,12}, {18,18,21,23,1,13},
+            {21,21,22,18,2,14}, {20,20,23,19,3,15}, {23,23,18,20,4,16}, {22,22,19,21,5,17}
+        };
+        // clang-format on
+
+        REQUIRE(mpiData0.left == neighbours0[mpi_rank][0]);
+        REQUIRE(mpiData0.right == neighbours0[mpi_rank][1]);
+        REQUIRE(mpiData0.up == neighbours0[mpi_rank][2]);
+        REQUIRE(mpiData0.down == neighbours0[mpi_rank][3]);
+        REQUIRE(mpiData0.back == neighbours0[mpi_rank][4]);
+        REQUIRE(mpiData0.front == neighbours0[mpi_rank][5]);
+    }
+
+    // ==================================
+
+    // Check level 3
+    auto &lv3 = p.getLevelAt(3);
+    auto &mpiData3 = lv3.getMpiData();
+    REQUIRE(mpiData3.mpiSize() == 24);
+
+    // // print neighbours per rank
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (i == mpi_rank)
+    //         std::cout << mpi_rank << ": " << mpiData3.left << "," << mpiData3.right << ","
+    //                   << mpiData3.up << "," << mpiData3.down << ","
+    //                   << mpiData3.back << "," << mpiData3.front << std::endl;
+    // }
+
+    REQUIRE(mpiData3.left == mpi_rank);
+    REQUIRE(mpiData3.right == mpi_rank);
+    REQUIRE(mpiData3.up == mpi_rank);
+    REQUIRE(mpiData3.down == mpi_rank);
+    REQUIRE(mpiData3.front == mpi_rank);
+    REQUIRE(mpiData3.back == mpi_rank);
+}
