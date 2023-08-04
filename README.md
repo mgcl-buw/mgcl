@@ -107,6 +107,8 @@ p.solve();
 ## Using MPI
 To use MPI configure CMake with `-DMGCL_USE_MPI`. A custom communicator with attached topology information must be set using `Problem::setMpiComm`. See exmaples/example_mpi.cpp for more information.
 
+There is a threshold that prevents coarse levels to be calculated using MPI. It can be set by using `Problem::setMpiLevelThreshold` but it can only go as high as there are still at least 8 grid points (atm) available on each process for each direction.
+
 ## Dependencies
 - [cmake](https://cmake.org/) for the build system
 - [catch2](https://github.com/catchorg/Catch2) for Unit Tests
