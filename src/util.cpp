@@ -307,9 +307,9 @@ namespace mgcl::util
     // Returns minimum of a, b and c
     int seq::min3(int a, int b, int c)
     {
-        if (a < b && a < c)
+        if (a <= b && a <= c)
             return a;
-        else if (b < a && b < c)
+        else if (b <= a && b <= c)
             return b;
         return c;
     }
@@ -317,9 +317,9 @@ namespace mgcl::util
     // Returns minimum of a, b and c
     double seq::min3(double a, double b, double c)
     {
-        if (a < b && a < c)
+        if (a <= b && a <= c)
             return a;
-        else if (b < a && b < c)
+        else if (b <= a && b <= c)
             return b;
         return c;
     }
