@@ -145,6 +145,7 @@ namespace mgcl
 
 #ifdef MGCL_USE_MPI
         MPI_Comm comm = MPI_COMM_WORLD;
+        int mpiLevelThreshold = -1;
 #endif // MGCL_USE_MPI
 
         friend class OpenCLHelper;
@@ -294,6 +295,11 @@ namespace mgcl
 #ifdef MGCL_USE_MPI
         void setMpiComm(MPI_Comm _comm);
         MPI_Comm getMpiComm();
+
+        void setMpiLevelThreshold(int _level);
+        int getMpiLevelThreshold();
+
+        void calculateAndSetMpiLevelThreshold();
 #endif // MGCL_USE_MPI
     };
 }

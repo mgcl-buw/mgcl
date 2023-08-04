@@ -2,6 +2,7 @@
 #include "cuboid.hpp"           // for Cuboid
 #include "level.hpp"            // for Level
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
+#include "util.hpp"
 
 #ifdef MGCL_USE_MPI
 #include "mpi_data.hpp"
@@ -9,14 +10,16 @@
 
 #include <CL/cl_platform.h> // for cl_ulong
 #include <algorithm>        // for max
-#include <chrono>           // for __enable_if_is_duration, steady_clock
-#include <cmath>            // for log2
-#include <cstdio>           // for printf, NULL
-#include <functional>       // for function
-#include <stdexcept>        // for runtime_error
-#include <string>           // for to_string, basic_string, string
-#include <sys/types.h>      // for ulong
-#include <utility>          // for move
+#include <algorithm>
+#include <chrono>     // for __enable_if_is_duration, steady_clock
+#include <cmath>      // for log2
+#include <cstdio>     // for printf, NULL
+#include <functional> // for function
+#include <iostream>
+#include <stdexcept>   // for runtime_error
+#include <string>      // for to_string, basic_string, string
+#include <sys/types.h> // for ulong
+#include <utility>     // for move
 
 namespace mgcl
 {
@@ -246,6 +249,31 @@ namespace mgcl
         return maxlevel;
     }
 
+#ifdef MGCL_USE_MPI
+    /**
+     * @brief Sets the default threshold to a level where there are at least 8 nodes in one direction per process.
+     * If the user has supplied a threshold, i.e. mpiLevelThreshold >= 0, it will be checked for validity. If it's
+     *   invalid, an exception is thrown.
+     *
+     */
+    void Problem::calculateAndSetMpiLevelThreshold()
+    {
+        // TODO check what is the best auto-threshold
+        int minGridPoints = 8;
+        int maxThreshold = std::max(0, static_cast<int>(log2(util::seq::min3(m, n, o))) -
+                                           (static_cast<int>(log2(minGridPoints)) - 1));
+        if (mpiLevelThreshold < 0)
+        {
+            mpiLevelThreshold = maxThreshold;
+            if (!silent)
+                std::cout << "mpiLevelThreshold automatically set to " << mpiLevelThreshold << std::endl;
+        }
+        else if (mpiLevelThreshold > maxThreshold)
+            throw "mpiLevelThreshold = " + std::to_string(mpiLevelThreshold) +
+                " set by user is too high! It must be less than or equal to " + std::to_string(maxThreshold);
+    }
+#endif // MGCL_USE_MPI
+
     /**
      * @brief Creates Level objects, allocates memory.
      *
@@ -281,6 +309,8 @@ namespace mgcl
             err = MPI_Cart_create(comm, 3, mpi_dims, mpi_periods, 1, &comm);
             mgcl::mgclCheckMpiError(comm, err, "MPI_Cart_create");
         }
+
+        calculateAndSetMpiLevelThreshold();
 #endif // MGCL_USE_MPI
 
         // create opencl environment with default parameters if not done yet
@@ -897,6 +927,31 @@ namespace mgcl
     MPI_Comm Problem::getMpiComm()
     {
         return comm;
+    }
+
+    /**
+     * @brief Sets the threshold for levels that will be calculated on multiple MPI processes.
+     * All levels below the threshold (exclusively) will be calculated on multiple MPI processes. All levels above the
+     *   threshold (inclusively) will be calculated locally on only one process. I.e. for threshold = 0, all levels
+     *   will be calculated on only one process.
+     * Level indices are 0-based, i.e. the finest level has index 0, the coarsest one has index log2(min(mg,ng,og)),
+     *   where mg,ng,og are the global sizes of the domain.
+     * The threshold must not exceed the level on which min(ml,nl,ol) <= ghosts, e.g. for 8 processes, global size of
+     *   8x8x8 and ghosts = 2, the maximum level is 3 and the maximum valid threshold is 1, since starting with level
+     *   2, ml <= ghosts. This constraint exists because the update of ghost cells is too expensive for ml <= ghosts.
+     *   It is not checked in this function but later in checkParameters(), which is called when solve()
+     *   is called.
+     *
+     * @param _level
+     */
+    void Problem::setMpiLevelThreshold(int _level)
+    {
+        mpiLevelThreshold = _level;
+    }
+
+    int Problem::getMpiLevelThreshold()
+    {
+        return mpiLevelThreshold;
     }
 #endif // MGCL_USE_MPI
 }
