@@ -1,12 +1,9 @@
 #include "problem.hpp"
-#include "cuboid.hpp"           // for Cuboid
-#include "level.hpp"            // for Level
+#include "cuboid.hpp" // for Cuboid
+#include "level.hpp"  // for Level
+#include "mpi_data.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "util.hpp"
-
-#ifdef MGCL_USE_MPI
-#include "mpi_data.hpp"
-#endif // MGCL_USE_MPI
 
 #include <CL/cl_platform.h> // for cl_ulong
 #include <algorithm>        // for max
@@ -249,7 +246,6 @@ namespace mgcl
         return maxlevel;
     }
 
-#ifdef MGCL_USE_MPI
     /**
      * @brief Sets the default threshold to a level where there are at least 8 nodes in one direction per process.
      * If the user has supplied a threshold, i.e. mpiLevelThreshold >= 0, it will be checked for validity. If it's
@@ -272,7 +268,6 @@ namespace mgcl
             throw "mpiLevelThreshold = " + std::to_string(mpiLevelThreshold) +
                 " set by user is too high! It must be less than or equal to " + std::to_string(maxThreshold);
     }
-#endif // MGCL_USE_MPI
 
     /**
      * @brief Creates Level objects, allocates memory.
@@ -289,29 +284,30 @@ namespace mgcl
         if (!silent)
             printf("maxlevel = %d\n", maxlevel);
 
-#ifdef MGCL_USE_MPI
-        // Create cartesian process grid if none was set and more than one processes are used.
-        int type;
-        int mpi_size;
-        int mpi_dims[3] = {0, 0, 0};
-        int mpi_periods[3] = {isPeriodic(), isPeriodic(), isPeriodic()};
-
-        int err = MPI_Topo_test(comm, &type);
-        mgclCheckMpiError(comm, err, "MPI_Topo_test");
-        err = MPI_Comm_size(comm, &mpi_size);
-        mgcl::mgclCheckMpiError(comm, err, "MPI_Comm_size");
-        if (mpi_size > 1 && type != MPI_CART)
+        if (useMpi())
         {
+            // Create cartesian process grid if none was set and more than one processes are used.
+            int type;
+            int mpi_size;
+            int mpi_dims[3] = {0, 0, 0};
+            int mpi_periods[3] = {isPeriodic(), isPeriodic(), isPeriodic()};
+
+            int err = MPI_Topo_test(comm, &type);
+            mgclCheckMpiError(comm, err, "MPI_Topo_test");
             err = MPI_Comm_size(comm, &mpi_size);
             mgcl::mgclCheckMpiError(comm, err, "MPI_Comm_size");
-            err = MPI_Dims_create(mpi_size, 3, mpi_dims);
-            mgcl::mgclCheckMpiError(comm, err, "MPI_Dims_create");
-            err = MPI_Cart_create(comm, 3, mpi_dims, mpi_periods, 1, &comm);
-            mgcl::mgclCheckMpiError(comm, err, "MPI_Cart_create");
-        }
+            if (mpi_size > 1 && type != MPI_CART)
+            {
+                err = MPI_Comm_size(comm, &mpi_size);
+                mgcl::mgclCheckMpiError(comm, err, "MPI_Comm_size");
+                err = MPI_Dims_create(mpi_size, 3, mpi_dims);
+                mgcl::mgclCheckMpiError(comm, err, "MPI_Dims_create");
+                err = MPI_Cart_create(comm, 3, mpi_dims, mpi_periods, 1, &comm);
+                mgcl::mgclCheckMpiError(comm, err, "MPI_Cart_create");
+            }
 
-        calculateAndSetMpiLevelThreshold();
-#endif // MGCL_USE_MPI
+            calculateAndSetMpiLevelThreshold();
+        }
 
         // create opencl environment with default parameters if not done yet
         if (use_opencl)
@@ -910,7 +906,6 @@ namespace mgcl
         v = v_;
     }
 
-#ifdef MGCL_USE_MPI
     // Sets MPI communicator and checks that cartesian topology is attached to it.
     void Problem::setMpiComm(MPI_Comm _comm)
     {
@@ -953,5 +948,16 @@ namespace mgcl
     {
         return mpiLevelThreshold;
     }
-#endif // MGCL_USE_MPI
+
+    /**
+     * @brief Returns true, if the program is run with more than one MPI processes. Only then the MPI routines
+     * will be used internally.
+     */
+    bool Problem::useMpi()
+    {
+        int mpi_size;
+        int err = MPI_Comm_size(comm, &mpi_size);
+        mgcl::mgclCheckMpiError(comm, err, "MPI_Comm_size");
+        return mpi_size > 1;
+    }
 }

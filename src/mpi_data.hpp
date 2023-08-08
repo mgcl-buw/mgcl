@@ -5,13 +5,10 @@
 
 #include "cuboid.hpp"
 
-#ifdef MGCL_USE_MPI
 #include "mpi.h"
-#endif // MGCL_USE_MPI
 
 namespace mgcl
 {
-#ifdef MGCL_USE_MPI
     class MPIData
     {
     public:
@@ -47,10 +44,5 @@ namespace mgcl
     };
 
 #define mgclCheckMpiError(C, E, S) MPIData::mgcl_check_mpi_error(C, E, S, __FILE__, __LINE__);
-#else
-    class MPIData
-    {
-    }; // Just a stub
-#endif
 }
 #endif // MGCL_MPIDATA_HPP

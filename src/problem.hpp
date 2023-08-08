@@ -17,9 +17,7 @@
 #include <string> // for string
 #include <vector> // for vector
 
-#ifdef MGCL_USE_MPI
 #include "mpi.h"
-#endif // MGCL_USE_MPI
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -141,12 +139,12 @@ namespace mgcl
         /* Manages OpenCL stuff */
         OpenCLHelper openCLHelper;
 
-        void checkGlobalDimensions();
-
-#ifdef MGCL_USE_MPI
+        /* Communicator for MPI. Can be set for using a custom topology. */
         MPI_Comm comm = MPI_COMM_WORLD;
         int mpiLevelThreshold = -1;
-#endif // MGCL_USE_MPI
+
+        void checkGlobalDimensions();
+        bool useMpi();
 
         friend class OpenCLHelper;
         friend class Level;
@@ -292,7 +290,6 @@ namespace mgcl
         BC getBc() const;
         void setBc(const BC &bc_);
 
-#ifdef MGCL_USE_MPI
         void setMpiComm(MPI_Comm _comm);
         MPI_Comm getMpiComm();
 
@@ -300,6 +297,5 @@ namespace mgcl
         int getMpiLevelThreshold();
 
         void calculateAndSetMpiLevelThreshold();
-#endif // MGCL_USE_MPI
     };
 }

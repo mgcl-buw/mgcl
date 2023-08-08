@@ -54,8 +54,6 @@ set_property(
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
 
-add_compile_definitions("MGCL_USE_MPI")
-
 set(SOURCES_BENCH
 ../test/test_utility.hpp
 ../test/test_utility.cpp

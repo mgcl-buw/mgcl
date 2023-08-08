@@ -20,8 +20,6 @@ endif()
 
 # set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
 
-option(MGCL_USE_MPI "Compile with MPI" ON)
-
 add_subdirectory(src)
 
 # Only add other subdirs if mgcl is not used in another project.
@@ -47,11 +45,8 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     add_subdirectory(test)
 
     add_dependencies(tests copy_kernels)
-
-    if (MGCL_USE_MPI)
-      add_dependencies(tests_solving copy_kernels)
-      add_dependencies(tests_mpi copy_kernels)
-    endif()
+    add_dependencies(tests_solving copy_kernels)
+    add_dependencies(tests_mpi copy_kernels)
   endif()
 
   if (MGCL_BUILD_BENCHMARKS)

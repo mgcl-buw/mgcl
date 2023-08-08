@@ -1,7 +1,4 @@
-if (MGCL_USE_MPI)
-  find_package(MPI REQUIRED)
-  add_compile_definitions("MGCL_USE_MPI")
-endif()
+find_package(MPI REQUIRED)
 
 # ==========================
 Include(FetchContent)
@@ -62,22 +59,12 @@ test_results.cpp
 test_util.cpp
 ocl_wrapper.hpp
 ocl_wrapper.cpp
+catch2_main_mpi.cpp
 )
-
-if (MGCL_USE_MPI)
-  # use custom main if MPI is used
-  list(APPEND SOURCES_TEST catch2_main_mpi.cpp)
-endif()
 
 add_executable(tests ${SOURCES_TEST})
 
-if (MGCL_USE_MPI)
-  # link against catch2 without main and MPI if MPI is used
-  target_link_libraries(tests PRIVATE Catch2::Catch2 MPI::MPI_CXX)
-else()
-  target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
-endif()
-
+target_link_libraries(tests PRIVATE Catch2::Catch2 MPI::MPI_CXX)
 target_link_libraries(tests PRIVATE mgcl)
 
 # don't use iwyu for tests
@@ -88,7 +75,6 @@ set_property(
 
 # ==========================
 
-if (MGCL_USE_MPI)
 # Test binary for solving problems
 # These tests must use custom Catch2-Main for MPI
 set(SOURCES_TEST_SOLVING
@@ -118,11 +104,7 @@ set_property(
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
 
-endif() # MGCL_USE_MPI
-
 # ==========================
-
-if (MGCL_USE_MPI)
 
 # Test binary for mpi
 # These tests must use custom Catch2-Main for MPI
@@ -139,12 +121,9 @@ add_executable(tests_mpi ${SOURCES_TEST_MPI})
 # target_include_directories(pmg SYSTEM PUBLIC ${MPI_INCLUDE_PATH})
 # set(MPI_CXX_SKIP_MPICXX TRUE)
 target_link_libraries(tests_mpi PRIVATE MPI::MPI_CXX Catch2::Catch2 mgcl)
-# add_compile_definitions(tests_mpi "MGCL_USE_MPI")
 
 # don't use iwyu for tests_solving
 set_property(
   TARGET tests_mpi
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
-
-endif() # MGCL_USE_MPI

@@ -58,7 +58,7 @@ namespace mgcl
         cl_mem dF = nullptr;
         cl_mem dR = nullptr;
 
-        /* MPI relevant data, e.g. neighbour process ranks. Null if MGCL_USE_MPI is false and MPIData then just a stub. */
+        /* MPI relevant data, e.g. neighbour process ranks. Null if Problem::useMpi is false. */
         std::unique_ptr<MPIData> mpiData = nullptr;
 
         friend class OpenCLHelper;

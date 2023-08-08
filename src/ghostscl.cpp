@@ -7,9 +7,7 @@
 #include <cstddef> // for size_t, NULL
 #include <iostream>
 
-#ifdef MGCL_USE_MPI
 #include "mpi_data.hpp"
-#endif // MGCL_USE_MPI
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -86,13 +84,10 @@ namespace mgcl
     /* Updates ghost cells.
      * If periodic is true, every ghost cell will be updated. Otherwise the outermost ghost cells will be excluded. It
      *   also affects the update using MPI where nodes are wrapped around in the periodic case.
-     * mpiData parameter is optional (i.e. nullable) and is only used when MPI is used. If MGCL_USE_MPI is true but
-     *   mgcl is called with only one MPI process, updateGhostsSeqLocally will be used instead. */
+     * mpiData parameter is optional (i.e. nullable) and is only used when MPI is used. If mgcl is called with
+     *   only one MPI process, updateGhostsSeqLocally will be used instead. */
     void MultigridEngine::updateGhostsSeq(Cuboid &c, MPIData *mpiData, bool periodic)
     {
-#ifndef MGCL_USE_MPI
-        updateGhostsSeqLocally(c, periodic);
-#else
         // TODO adjust for ghosts > 1
         // TODO test
         if (mpiData == nullptr || mpiData->mpiSize() == 1)
@@ -297,7 +292,6 @@ namespace mgcl
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ghosts_o; k++)
                         c[i][j][k] = rbufxz[i][j][k];
-#endif // MGCL_USE_MPI
     }
 
     /* updates ghost cells on opencl device.
