@@ -3,6 +3,8 @@
 #include "cli_args.hpp"
 #include <iostream>
 
+#include "mpi.h"
+
 // cmd args as global variables
 std::vector<int> CLI_ARGS::grids;
 int CLI_ARGS::minEpochIterations = 0;
@@ -19,6 +21,8 @@ std::vector<int> split_int(std::string s, std::string delimiter);
 // --minEpochIterations N
 int main(int argc, char *argv[])
 {
+    MPI_Init(&argc, &argv);
+
     Catch::Session session; // There must be exactly one instance
 
     std::string grids;
@@ -82,7 +86,11 @@ int main(int argc, char *argv[])
         CLI_ARGS::outputPath = outputPath;
     }
 
-    return session.run();
+    int result = session.run();
+
+    MPI_Finalize();
+
+    return result;
 }
 
 std::vector<int> split_int(std::string s, std::string delimiter)

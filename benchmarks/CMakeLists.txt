@@ -54,6 +54,8 @@ set_property(
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
 
+add_compile_definitions("MGCL_USE_MPI")
+
 set(SOURCES_BENCH
 ../test/test_utility.hpp
 ../test/test_utility.cpp
@@ -68,6 +70,7 @@ bench_galerkin.cpp
 bench_stencil_arithmetic.cpp
 bench_stencil_arithmetic_kernels.cpp
 bench_sum.cpp
+bench_jacobi_multiple_iters.cpp
 cli_args.hpp
 catch2_main_benchs.cpp
 )
@@ -82,8 +85,8 @@ set_property(
 
 find_package(MPI REQUIRED)
 # target_include_directories(benchmarks SYSTEM PRIVATE ${MPI_INCLUDE_PATH})
-add_definitions(-DOMPI_SKIP_MPICXX)
-target_link_libraries(benchmarks PRIVATE MPI::MPI_C)
+# add_definitions(-DOMPI_SKIP_MPICXX)
+target_link_libraries(benchmarks PRIVATE MPI::MPI_CXX)
 
 # target_include_directories(benchmarks_nanobench PRIVATE include/)
 target_link_libraries(benchmarks PRIVATE nanobench)
