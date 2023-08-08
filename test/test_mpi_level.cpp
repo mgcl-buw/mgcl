@@ -55,15 +55,8 @@ TEST_CASE("Level::initMpiData (1 process)", "[mpi1]")
     for (int i = 0; i < p.getMaxlevel(); i++)
     {
         auto &lv = p.getLevelAt(i);
-        auto &mpiData = lv.getMpiData();
-
-        REQUIRE(mpiData.rank == mpi_rank);
-        REQUIRE(mpiData.left == mpi_rank);
-        REQUIRE(mpiData.right == mpi_rank);
-        REQUIRE(mpiData.up == mpi_rank);
-        REQUIRE(mpiData.down == mpi_rank);
-        REQUIRE(mpiData.front == mpi_rank);
-        REQUIRE(mpiData.back == mpi_rank);
+        REQUIRE(lv.getMpiDataPtr() == nullptr);
+        REQUIRE_THROWS(lv.getMpiData());
     }
 }
 
@@ -121,7 +114,7 @@ TEST_CASE("Level::initMpiData (2 processes)", "[mpi2]")
 
         // If there are two processes in a direction, the neighbour must be the other process. Else or if no
         // grid points are left on this level, the neighbour is set to self.
-        if (lv.getM() > 0 && mpi_dims[0] > 1)
+        if (lv.getM() > 0 && mpi_dims[2] > 1)
         {
             REQUIRE(mpiData.left == other_rank);
             REQUIRE(mpiData.right == other_rank);
@@ -143,7 +136,7 @@ TEST_CASE("Level::initMpiData (2 processes)", "[mpi2]")
             REQUIRE(mpiData.down == mpi_rank);
         }
 
-        if (lv.getO() > 0 && mpi_dims[2] > 1)
+        if (lv.getO() > 0 && mpi_dims[0] > 1)
         {
             REQUIRE(mpiData.front == other_rank);
             REQUIRE(mpiData.back == other_rank);

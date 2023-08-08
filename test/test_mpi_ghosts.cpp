@@ -66,14 +66,13 @@ TEST_CASE("MPI updateGhostsSeq (1 process)", "[mpi1]")
 
         // Check on level 0
         auto &lv = p.getLevelAt(0);
-        auto &mpiData = lv.getMpiData();
 
         // Create test data
         mgcl::Cuboid c(N, N, N, gh, gh, gh);
         c.fillRandom(-10, 10, true);
 
         // Update ghosts of test data
-        mgcl::MultigridEngine::updateGhostsSeq(c, &mpiData, true);
+        mgcl::MultigridEngine::updateGhostsSeq(c, nullptr, true);
 
         // Check result
         // check in z-direction

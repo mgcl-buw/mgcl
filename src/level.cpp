@@ -645,6 +645,9 @@ namespace mgcl
 
     MPIData &Level::getMpiData()
     {
-        return *mpiData;
+        if (mpiData != nullptr)
+            return *mpiData;
+        else
+            throw "mpiData is null.";
     }
 }
