@@ -46,6 +46,9 @@ namespace mgcl
 
         static void updateGhostsSeq(Cuboid &c, MPIData *mpiData = nullptr, bool periodic = true);
         static int updateGhosts(Problem &problem, cl_mem dBuffer, int m, int n, int o, int ghostsM, int ghostsN, int ghostsO);
+        static void updateGhostsOclMpi(cl_command_queue commands, cl_mem d_buf, MPIData &mpiData,
+                                       int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o,
+                                       bool periodic);
 
         static double residual(Problem &problem, Level &level, bool returnResidual,
                                int moff = 0, int noff = 0, int ooff = 0);

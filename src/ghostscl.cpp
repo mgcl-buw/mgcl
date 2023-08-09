@@ -351,4 +351,41 @@ namespace mgcl
 
         return err;
     }
+
+    /**
+     * @brief Updates ghosts of an OpenCL buffer respecting MPI usage. That is, the buffer is sent to host, ghosts
+     * are updated using MPI routines, and the updated buffer is sent back to the device.
+     * Waits for previous commands to finish before reading the buffer.
+     *
+     * @param commands
+     * @param d_buf
+     * @param mpiData
+     * @param m Real grid's size in 1st dim
+     * @param n Real grid's size in 2nd dim
+     * @param o Real grid's size in 3rd dim
+     * @param ghosts_m
+     * @param ghosts_n
+     * @param ghosts_o
+     * @param periodic
+     */
+    void MultigridEngine::updateGhostsOclMpi(cl_command_queue commands, cl_mem d_buf, MPIData &mpiData,
+                                             int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o,
+                                             bool periodic)
+    {
+        // Read back from GPU and update ghosts on host in order to update neighbouring nodes, too.
+        mgclCheckError(clFinish(commands), "clFinish");
+
+        Cuboid tmp(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+
+        int err = clEnqueueReadBuffer(commands, d_buf, CL_TRUE, 0,
+                                      sizeof(double) * tmp.getMgh() * tmp.getNgh() * tmp.getOgh(),
+                                      tmp.field1d().data(), 0, NULL, NULL);
+        mgclCheckError(err, "clEnqueueReadBuffer");
+
+        MultigridEngine::updateGhostsSeq(tmp, &mpiData, periodic);
+
+        err = clEnqueueWriteBuffer(commands, d_buf, CL_TRUE, 0,
+                                   sizeof(double) * tmp.getMgh() * tmp.getNgh() * tmp.getOgh(),
+                                   tmp.field1d().data(), 0, NULL, NULL);
+    }
 }
