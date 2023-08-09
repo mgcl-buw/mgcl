@@ -605,10 +605,7 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
     // int ghn_rf = stepsPerIter - 1;
     // int gho_rf = stepsPerIter - 1;
 
-    std::cout << "iters, stepsPerIter: " << iters << ", " << stepsPerIter << std::endl;
-    std::cout << "gh: " << gh << std::endl;
-    // std::cout << "gh_v: " << ghm_v << "," << ghn_v << "," << gho_v << std::endl;
-    // std::cout << "gh_rf: " << ghm_rf << "," << ghn_rf << "," << gho_rf << std::endl;
+    CAPTURE(iters, stepsPerIter, gh);
 
     double omega = 0.8;
 
@@ -632,8 +629,6 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
     // copy real cells from v_in to v_in_gh
     v_act.fillRealFrom(v_exp);
     f_act.fillRealFrom(f_exp);
-
-    mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
 
     if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
     {
@@ -702,6 +697,9 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
             auto v_out_exp = tu_exp.readOpenCLBuffer(d_v_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
             auto v_out_act = tu_act.readOpenCLBuffer(d_v_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+
+            // v_out_exp->dumpToFile("v_out_exp.txt", true);
+            // v_out_act->dumpToFile("v_out_act.txt", true);
 
             REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
             REQUIRE(r_out_act->isEqual(*r_out_exp));

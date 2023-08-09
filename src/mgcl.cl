@@ -6,13 +6,13 @@
 void print_7point(__global double *A, int index, int ioff, int joff, int koff)
 {
     printf("7point stencil at %d:\n", index);
-    printf("v[self] = %e\n", A[index]);
-    printf(" v[k-1] = %e\n", A[index - koff]);
-    printf(" v[k+1] = %e\n", A[index + koff]);
-    printf(" v[j-1] = %e\n", A[index - joff]);
-    printf(" v[j+1] = %e\n", A[index + joff]);
-    printf(" v[i-1] = %e\n", A[index - ioff]);
-    printf(" v[i+1] = %e\n", A[index + ioff]);
+    printf("v[self] = %.17e\n", A[index]);
+    printf(" v[k-1] = %.17e\n", A[index - koff]);
+    printf(" v[k+1] = %.17e\n", A[index + koff]);
+    printf(" v[j-1] = %.17e\n", A[index - joff]);
+    printf(" v[j+1] = %.17e\n", A[index + joff]);
+    printf(" v[i-1] = %.17e\n", A[index - ioff]);
+    printf(" v[i+1] = %.17e\n", A[index + ioff]);
 }
 
 void print_7point_local(__local double *A, __local double *rm, __local double *rp, int index, int ioff, int joff,
@@ -498,7 +498,7 @@ __kernel void jacobi_iter_7point(
         int ioff = ngh * ogh;
         int joff = ogh;
         int koff = 1;
-        int index = ghosts * ioff + j * ogh + k;
+        int index = idx_start * ioff + j * ogh + k;
 
         for (int i = idx_start; i < mgh - idx_start; i++)
         {
@@ -516,9 +516,9 @@ __kernel void jacobi_iter_7point(
             // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
             v_out[index] = v_in_index + omega * dinv * res;
 
-            // if (get_global_id(0) == ghosts && get_global_id(1) == ghosts && i >= ghosts && i <= ghosts+2)
+            // if (j == ghosts && k == ghosts && i >= ghosts && i <= ghosts)
             // {
-            //     printf("x = %d, res = %e, v_out = %e\n", i, res, v_out[index]);
+            //     printf("x,y,z = %d,%d,%d, f = %.17e, stencilsum = %.17e, res = %.17e, v_out = %.17e\n", i, j, k, f[index], stencilsum, res, v_out[index]);
             //     print_7point(v_in, index, ioff, joff, koff);
             // }
 
@@ -559,7 +559,7 @@ __kernel void jacobi_iter_19point(
         int ioff = ngh * ogh;
         int joff = ogh;
         int koff = 1;
-        int index = ghosts * ioff + j * ogh + k;
+        int index = idx_start * ioff + j * ogh + k;
 
         for (int i = idx_start; i < mgh - idx_start; i++)
         {
@@ -618,7 +618,7 @@ __kernel void jacobi_iter_27point(
         int ioff = ngh * ogh;
         int joff = ogh;
         int koff = 1;
-        int index = ghosts * ioff + j * ogh + k;
+        int index = idx_start * ioff + j * ogh + k;
 
         for (int i = idx_start; i < mgh - idx_start; i++)
         {
@@ -689,7 +689,7 @@ __kernel void jacobi_iter_27point_varying_stencil(
         int ioff = ngh * ogh;
         int joff = ogh;
         int koff = 1;
-        int index = ghosts * ioff + j * ogh + k;
+        int index = idx_start * ioff + j * ogh + k;
 
         int koff_sv = 27;
         int joff_sv = ((ogh - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;

@@ -9,6 +9,7 @@
 #include "util.hpp"
 
 #include <cstdio> // for printf, size_t, NULL
+#include <iostream>
 #include <math.h> // for fabs, sqrt, ceil
 #include <memory> // for __shared_ptr_access, shared_ptr
 
@@ -156,7 +157,7 @@ namespace mgcl
 
     /* Runs jacobi method using OpenCL.
      * Doesn't creates ocl buffers and doesn't copy data from host to device and vice versa
-     * v, f and r must be of size [m][n][o] for periodic boundary condition.
+     * v, f and r must be of size [m][n][o] for periodic boundary condition. Ghosts of v and f must be updated.
      * m, n and o must be the dimensions of grid + 2*ghosts
      * If return_residual is true, the residual's 2-norm or inf-norm will be read back from device and returned, else -1.
      * It's not
@@ -201,6 +202,7 @@ namespace mgcl
                     (1.0 / (double)level.m); // TODO minimum of m,n,o when not cube?
         double dinv = h2 / 6.0;
         double h2inv = level.stencilFactor; // divisor of the stencil, inverted to use * instead of / in kernel
+        // TODO refactor stencilFactor
 
         // Create the compute kernel from the program
         const char *kernel_name;
@@ -276,22 +278,39 @@ namespace mgcl
                 // printf("%ld (multiple of %ld)\n", global[i], local[i]);
             }
 
-        for (int iter = 0; iter < maxiter; iter++)
+        int globalIter = 0;
+        while (globalIter < maxiter)
         {
+            // Update ghosts of current input v
+            // TODO refactor updateGhosts
+            cl_mem currentDV = (globalIter % 2 == 1) ? level.dVOut : level.dVIn;
+            if (problem.useMpi())
+            {
+                MultigridEngine::updateGhostsOclMpi(problem.getOpenCLHelper().getCommands(), currentDV, level.getMpiData(),
+                                                    level.getM(), level.getN(), level.getO(),
+                                                    problem.getGhosts(), problem.getGhosts(), problem.getGhosts(),
+                                                    problem.isPeriodic());
+            }
+            else
+            {
+                err = MultigridEngine::updateGhosts(problem, currentDV, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+                mgclCheckError(err, "Updating ghosts");
+            }
+
             // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
-            for (int innerIter = 0; innerIter < stepsPerIter && iter + innerIter < maxiter; innerIter++)
+            for (int innerIter = 0; innerIter < stepsPerIter && globalIter < maxiter; innerIter++, globalIter++)
             {
                 // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
 
                 // switch arguments dVIn -> dVOut to use latest values in next iteration
-                if (iter % 2 == 1)
+                if (globalIter % 2 == 1)
                 {
                     err = clSetKernelArg(kernel, 1, sizeof(cl_mem), &level.dVIn);
                     err |= clSetKernelArg(kernel, 0, sizeof(cl_mem), &level.dVOut);
                     mgclCheckError(err, "Setting kernel arguments");
 
-                    err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-                    mgclCheckError(err, "Updating ghosts");
+                    // err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+                    // mgclCheckError(err, "Updating ghosts");
                 }
                 else
                 {
@@ -299,12 +318,12 @@ namespace mgcl
                     err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &level.dVOut);
                     mgclCheckError(err, "Setting kernel arguments");
 
-                    err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-                    mgclCheckError(err, "Updating ghosts");
+                    // err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+                    // mgclCheckError(err, "Updating ghosts");
                 }
 
                 // set flag to store residual in last iteration
-                if (iter == maxiter - 1)
+                if (globalIter == maxiter - 1)
                 {
                     store_res = 1;
                     err = clSetKernelArg(kernel, pos, sizeof(int), &store_res);
@@ -323,6 +342,7 @@ namespace mgcl
 
         if (store_res)
         {
+            // TODO check for mpi
             err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
             mgclCheckError(err, "Updating ghosts of dR");
         }
@@ -335,8 +355,23 @@ namespace mgcl
             mgclCheckError(err, "Update v");
         }
 
-        err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-        mgclCheckError(err, "Updating ghosts of v_in");
+        // Update ghosts of dVIn
+        // TODO refactor updateGhosts
+        if (problem.useMpi())
+        {
+            MultigridEngine::updateGhostsOclMpi(problem.getOpenCLHelper().getCommands(), level.dVIn, level.getMpiData(),
+                                                level.getM(), level.getN(), level.getO(),
+                                                problem.getGhosts(), problem.getGhosts(), problem.getGhosts(),
+                                                problem.isPeriodic());
+        }
+        else
+        {
+            err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+            mgclCheckError(err, "Updating ghosts");
+        }
+
+        // err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+        // mgclCheckError(err, "Updating ghosts of v_in");
 
         // calculate residual and its norm
         if (return_residual)
