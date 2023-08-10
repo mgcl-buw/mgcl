@@ -772,6 +772,31 @@ namespace mgcl
         }
     }
 
+    /**
+     * @brief Copies contents of real cells of another Hypercube6d o to real cells of this one.
+     *
+     * @param o
+     */
+    void Hypercube6d::copyRealFrom(Hypercube6d &o)
+    {
+        // TODO check ranges
+        if (dim1 != o.dim1 || dim2 != o.dim2 || dim3 != o.dim3 ||
+            dim4 != o.dim4 || dim5 != o.dim5 || dim6 != o.dim6)
+            throw "Dimensions must match!";
+
+        // clang-format off
+        for (int i = ghostsDim1, id = o.ghostsDim1; i < dim1 + ghostsDim1; i++, id++)
+        for (int j = ghostsDim2, jd = o.ghostsDim2; j < dim2 + ghostsDim2; j++, jd++)
+        for (int k = ghostsDim3, kd = o.ghostsDim3; k < dim3 + ghostsDim3; k++, kd++)
+            for (int ii = ghostsDim4, iid = o.ghostsDim4; ii < dim4 + ghostsDim4; ii++, iid++)
+            for (int jj = ghostsDim5, jjd = o.ghostsDim5; jj < dim5 + ghostsDim5; jj++, jjd++)
+            for (int kk = ghostsDim6, kkd = o.ghostsDim6; kk < dim6 + ghostsDim6; kk++, kkd++)
+            {
+                (*this)[i][j][k][ii][jj][kk] = o[id][jd][kd][iid][jjd][kkd];
+            }
+        // clang-format on
+    }
+
     int Hypercube6d::getDim1() const
     {
         return dim1;

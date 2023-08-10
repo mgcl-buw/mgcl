@@ -107,6 +107,7 @@ namespace mgcl
         bool isEqual(Hypercube6d &c, double tol = 1e-7, bool printDiffs = true);
         void dumpToFile(std::string path, bool realCellsOnly = false);
         void dumpToFileMatlab(std::string path, std::string varname, bool realCellsOnly = false);
+        void copyRealFrom(Hypercube6d &o);
 
         int getDim1() const;
         int getDim2() const;
