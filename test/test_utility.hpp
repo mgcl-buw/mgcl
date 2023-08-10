@@ -47,4 +47,6 @@ namespace mgcl_test
         cl_device_id getDeviceId();
         mgcl::Problem &getProblem();
     };
+
+    void create4hOrderPeriodicProblem(mgcl::Cuboid &v, mgcl::Cuboid &f, mgcl::Cuboid &solution);
 }
