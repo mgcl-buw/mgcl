@@ -7,11 +7,10 @@
 
 #include <CL/cl_platform.h> // for cl_ulong
 #include <algorithm>        // for max
-#include <algorithm>
-#include <chrono>     // for __enable_if_is_duration, steady_clock
-#include <cmath>      // for log2
-#include <cstdio>     // for printf, NULL
-#include <functional> // for function
+#include <chrono>           // for __enable_if_is_duration, steady_clock
+#include <cmath>            // for log2
+#include <cstdio>           // for printf, NULL
+#include <functional>       // for function
 #include <iostream>
 #include <stdexcept>   // for runtime_error
 #include <string>      // for to_string, basic_string, string
@@ -876,7 +875,10 @@ namespace mgcl
         stencilType = stencilType_;
         // TODO move to getStencilValues?
         if (stencilType == MGCL_VARYING)
-            stencilValues = std::make_shared<VaryingStencil3x3x3>(m, n, o, 2, 2, 2);
+        {
+            int gh = std::max(2, jacobi_iterations_per_kernel);
+            stencilValues = std::make_shared<VaryingStencil3x3x3>(m, n, o, gh, gh, gh);
+        }
         else
             stencilValues = nullptr;
     }

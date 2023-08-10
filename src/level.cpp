@@ -160,7 +160,8 @@ namespace mgcl
         if (stencilType == MGCL_VARYING)
         {
             stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
-                m, n, o, 3, 2, problem->getContext(), problem->getCommands());
+                m, n, o, 3, std::max(2, problem->getJacobiIterationsPerKernel()),
+                problem->getContext(), problem->getCommands());
 
             if (num == 0)
                 // Fill stencil values on gpu on level 0 from input stencil
