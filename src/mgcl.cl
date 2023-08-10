@@ -694,7 +694,7 @@ __kernel void jacobi_iter_27point_varying_stencil(
         int koff_sv = 27;
         int joff_sv = ((ogh - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
         int ioff_sv = ((ngh - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
-        int index_sv = ghosts_sv * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
+        int index_sv = (idx_start - ghosts + ghosts_sv) * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
 
         for (int i = idx_start; i < mgh - idx_start; i++)
         {

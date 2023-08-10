@@ -2,6 +2,7 @@
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 
@@ -597,7 +598,7 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
     int o = 16;
 
     // gpu implementation currently only supports one ghost cell amount for all fields and directions
-    int gh = 3;
+    int gh = std::max(4, stepsPerIter);
     // int ghm_v = GENERATE(3, 4);
     // int ghn_v = GENERATE(3, 4);
     // int gho_v = stepsPerIter;
@@ -637,6 +638,7 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
         p_exp->setResidualNorm(mgcl::MGCL_L2);
         p_exp->setGhosts(1);
         p_exp->setDeviceType(CL_DEVICE_TYPE_GPU);
+        p_exp->setJacobiIterationsPerKernel(1);
 
         mgcl_test::TestUtility tu_exp(p_exp);
         cl_mem d_f_exp = tu_exp.createOpenCLBuffer(f_exp);
@@ -655,6 +657,7 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
         p_act->setResidualNorm(mgcl::MGCL_L2);
         p_act->setGhosts(gh);
         p_act->setDeviceType(CL_DEVICE_TYPE_GPU);
+        p_act->setJacobiIterationsPerKernel(stepsPerIter);
 
         mgcl_test::TestUtility tu_act(p_act);
         cl_mem d_f_act = tu_act.createOpenCLBuffer(f_act);
@@ -797,8 +800,15 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
 
             // copy stencil values
             auto sv_act = p_act->getStencilValues();
-            for (int i = 0; i < sv_exp->field1d().size(); i++)
-                sv_act->field1d()[i] = sv_exp->field1d()[i];
+            sv_act->copyRealFrom(*sv_exp);
+            sv_act->updateGhosts();
+
+            REQUIRE(sv_exp->getGhostsDim1() == 2);
+            REQUIRE(sv_exp->getGhostsDim2() == 2);
+            REQUIRE(sv_exp->getGhostsDim3() == 2);
+            REQUIRE(sv_act->getGhostsDim1() == std::max(2, stepsPerIter));
+            REQUIRE(sv_act->getGhostsDim2() == std::max(2, stepsPerIter));
+            REQUIRE(sv_act->getGhostsDim3() == std::max(2, stepsPerIter));
 
             auto d_sv_exp = std::make_shared<mgcl::VaryingStencilGpu>(sv_exp->getDim1(), sv_exp->getDim2(), sv_exp->getDim3(), 3,
                                                                       sv_exp->getGhostsDim1(),
