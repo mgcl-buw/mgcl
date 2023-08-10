@@ -624,10 +624,15 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
     mgcl::Cuboid v_exp(m, n, o, 1, 1, 1);
     mgcl::Cuboid r_exp(m, n, o, 1, 1, 1);
     mgcl::Cuboid f_exp(m, n, o, 1, 1, 1);
-    v_exp.fillRandom(-10, 10, true);
-    f_exp.fillRandom(-10, 10, true);
 
-    // copy real cells from v_in to v_in_gh
+    // Fill with 4th order periodic Problem
+    mgcl::Cuboid solution(m, n, o);
+    mgcl_test::create4hOrderPeriodicProblem(v_exp, f_exp, solution);
+
+    // v_exp.fillRandom(-10, 10, true);
+    // f_exp.fillRandom(-10, 10, true);
+
+    // copy real cells from exp to act for v and f
     v_act.fillRealFrom(v_exp);
     f_act.fillRealFrom(f_exp);
 
