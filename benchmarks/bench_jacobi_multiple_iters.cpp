@@ -67,53 +67,60 @@ TEST_CASE("benchmark Jacobi seq multiple iters", "[console][jacobiMulti][seq]")
 // TODO jacobi with mpi ghost update before this makes sense
 TEST_CASE("benchmark Jacobi seq multiple iters", "[console][jacobiMulti][ocl]")
 {
-    int N = GENERATE(8, 16, 32, 64);
-    // int N = 16;
-    int m = N;
-    int n = N;
-    int o = N;
-    double h = 1.0 / (double)N;
-
     int maxStepsPerIter = 3;
-    int iters = 3;
 
-    double omega = 0.8;
-    int maxiter = 3;
-    mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
-    mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
-    double stencilFactor = 1.0 / (30.0 * h * h);
-
-    ankerl::nanobench::Bench bench;
-    bench.timeUnit(1ms, "ms")
-        // .epochs(1)
-        // .epochIterations(1)
-        .minEpochTime(100ms)
-        .relative(true);
-
-    for (int spi = 1; spi <= maxStepsPerIter; spi++)
+    std::vector<int> Ns = {8, 16, 32, 64};
+    std::vector<int> itersAll = {3, 5, 10, 20, 50};
+    for (auto N : Ns)
     {
-        auto v = std::make_shared<mgcl::Cuboid>(m, n, o, spi, spi, spi);
-        auto r = std::make_shared<mgcl::Cuboid>(m, n, o, spi, spi, spi);
-        auto f = std::make_shared<mgcl::Cuboid>(m, n, o, spi, spi, spi);
-        v->fillRandom();
-        f->fillRandom();
+        int m = N;
+        int n = N;
+        int o = N;
+        double h = 1.0 / (double)N;
 
-        auto p = std::make_shared<mgcl::Problem>(m, n, o, v, f);
-        p->setGhosts(spi);
-        p->setJacobiIterationsPerKernel(spi);
-        p->setUseOpencl(true);
-        p->setSilent(true);
-        p->init();
-        auto &level = p->getLevelAt(0);
-        mgcl_test::TestUtility tu(p);
+        double omega = 0.8;
+        int maxiter = 3;
+        mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+        mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
+        double stencilFactor = 1.0 / (30.0 * h * h);
 
-        std::string name = std::string("ocl, N = ")
-                               .append(std::to_string(N))
-                               .append(", spi = ")
-                               .append(std::to_string(spi));
-        bench.run(std::string(name).c_str(), [&] { //
-            mgcl::MultigridEngine::jacobi(*p, level, iters, false, spi);
-            tu.finish(); //
-        });
+        for (auto iters : itersAll)
+        {
+            ankerl::nanobench::Bench bench;
+            bench.timeUnit(1ns, "ns")
+                // .epochs(1)
+                // .epochIterations(1)
+                .minEpochTime(100ms)
+                .relative(true);
+
+            for (int spi = 1; spi <= maxStepsPerIter; spi++)
+            {
+                auto v = std::make_shared<mgcl::Cuboid>(m, n, o, spi, spi, spi);
+                auto r = std::make_shared<mgcl::Cuboid>(m, n, o, spi, spi, spi);
+                auto f = std::make_shared<mgcl::Cuboid>(m, n, o, spi, spi, spi);
+                v->fillRandom();
+                f->fillRandom();
+
+                auto p = std::make_shared<mgcl::Problem>(m, n, o, v, f);
+                p->setGhosts(spi);
+                p->setJacobiIterationsPerKernel(spi);
+                p->setUseOpencl(true);
+                p->setSilent(true);
+                p->init();
+                auto &level = p->getLevelAt(0);
+                mgcl_test::TestUtility tu(p);
+
+                std::string name = std::string("ocl, N = ")
+                                       .append(std::to_string(N))
+                                       .append(", spi = ")
+                                       .append(std::to_string(spi))
+                                       .append(", iters = ")
+                                       .append(std::to_string(iters));
+                bench.run(std::string(name).c_str(), [&] { //
+                    mgcl::MultigridEngine::jacobi(*p, level, iters, false, spi);
+                    tu.finish(); //
+                });
+            }
+        }
     }
 }
