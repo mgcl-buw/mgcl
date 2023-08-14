@@ -52,7 +52,7 @@ TEST_CASE("Problem conf")
 
         REQUIRE(p.getJacobiWgSizeX() == 16);
         REQUIRE(p.getJacobiWgSizeY() == 16);
-        REQUIRE(p.getJacobiIterationsPerKernel() == 3);
+        REQUIRE(p.getJacobiIterationsPerKernel() == 1);
     }
 }
 
