@@ -45,7 +45,8 @@ namespace mgcl
         static void prolongate(Level &fine, Level &coarse, cl_mem d_fine_values, cl_mem d_coarse_values);
 
         static void updateGhostsSeq(Cuboid &c, MPIData *mpiData = nullptr, bool periodic = true);
-        static int updateGhosts(Problem &problem, cl_mem dBuffer, int m, int n, int o, int ghostsM, int ghostsN, int ghostsO);
+        static int updateGhosts(Problem &problem, cl_mem dBuffer, int m, int n, int o,
+                                int ghostsM, int ghostsN, int ghostsO, MPIData *mpiData = nullptr);
         static void updateGhostsOclMpi(cl_command_queue commands, cl_mem d_buf, MPIData &mpiData,
                                        int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o,
                                        bool periodic);

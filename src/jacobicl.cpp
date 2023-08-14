@@ -282,18 +282,18 @@ namespace mgcl
         while (globalIter < maxiter)
         {
             // Update ghosts of current input v
-            // TODO refactor updateGhosts
-            cl_mem currentDV = (globalIter % 2 == 1) ? level.dVOut : level.dVIn;
-            if (problem.useMpi())
+            if (globalIter % 2 == 1)
             {
-                MultigridEngine::updateGhostsOclMpi(problem.getOpenCLHelper().getCommands(), currentDV, level.getMpiData(),
-                                                    level.getM(), level.getN(), level.getO(),
-                                                    problem.getGhosts(), problem.getGhosts(), problem.getGhosts(),
-                                                    problem.isPeriodic());
+                err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh,
+                                                    problem.ghosts, problem.ghosts, problem.ghosts,
+                                                    level.getMpiDataPtr());
+                mgclCheckError(err, "Updating ghosts");
             }
             else
             {
-                err = MultigridEngine::updateGhosts(problem, currentDV, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+                err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
+                                                    problem.ghosts, problem.ghosts, problem.ghosts,
+                                                    level.getMpiDataPtr());
                 mgclCheckError(err, "Updating ghosts");
             }
 
@@ -350,25 +350,16 @@ namespace mgcl
         // copy result into dVIn if needed
         if (maxiter % 2 == 1)
         {
-            err = clEnqueueCopyBuffer(problem.getOpenCLHelper().getCommands(), level.dVOut, level.dVIn, 0, 0, sizeof(double) * mgh * ngh * ogh, 0,
-                                      NULL, NULL);
+            err = clEnqueueCopyBuffer(problem.getOpenCLHelper().getCommands(), level.dVOut, level.dVIn, 0, 0,
+                                      sizeof(double) * mgh * ngh * ogh, 0, NULL, NULL);
             mgclCheckError(err, "Update v");
         }
 
         // Update ghosts of dVIn
-        // TODO refactor updateGhosts
-        if (problem.useMpi())
-        {
-            MultigridEngine::updateGhostsOclMpi(problem.getOpenCLHelper().getCommands(), level.dVIn, level.getMpiData(),
-                                                level.getM(), level.getN(), level.getO(),
-                                                problem.getGhosts(), problem.getGhosts(), problem.getGhosts(),
-                                                problem.isPeriodic());
-        }
-        else
-        {
-            err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-            mgclCheckError(err, "Updating ghosts");
-        }
+        err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
+                                            problem.ghosts, problem.ghosts, problem.ghosts,
+                                            level.getMpiDataPtr());
+        mgclCheckError(err, "Updating ghosts");
 
         // err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
         // mgclCheckError(err, "Updating ghosts of v_in");

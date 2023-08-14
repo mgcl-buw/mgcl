@@ -297,9 +297,26 @@ namespace mgcl
     /* updates ghost cells on opencl device.
      * m,n,o must be size of ghosted grid.
      * Only enqueues the kernel. Neither waits for kernel to finish nor reads back results */
-    int MultigridEngine::updateGhosts(Problem &problem, cl_mem dBuffer, int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o)
+    int MultigridEngine::updateGhosts(Problem &problem, cl_mem dBuffer,
+                                      int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
+                                      MPIData *mpiData)
     {
-        if (problem.bc != BC::PERIODIC)
+        // TODO actually request these as arguments
+        int m = mgh - 2 * ghosts_m;
+        int n = ngh - 2 * ghosts_n;
+        int o = ogh - 2 * ghosts_o;
+
+        if (problem.useMpi() && mpiData)
+        {
+            updateGhostsOclMpi(problem.getCommands(), dBuffer, *mpiData, m, n, o,
+                               ghosts_m, ghosts_n, ghosts_o, problem.isPeriodic());
+            return CL_SUCCESS;
+        }
+
+        if (problem.useMpi() && !mpiData)
+            throw "Problem uses MPI but mpiData is null!";
+
+        if (!problem.isPeriodic())
             return CL_SUCCESS;
 
         int err;
@@ -307,11 +324,6 @@ namespace mgcl
         // Create the compute kernel from the program
         cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper().getProgram(), "update_ghosts_periodic", &err);
         mgclCheckError(err, "clCreateKernel");
-
-        // TODO actually request these as arguments
-        int m = mgh - 2 * ghosts_m;
-        int n = ngh - 2 * ghosts_n;
-        int o = ogh - 2 * ghosts_o;
 
         // assign kernel arguments
         int pos = 0;

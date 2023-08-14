@@ -409,7 +409,7 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
     auto d_cl = tu.createOpenCLBuffer(cl);
 
     // Update ghosts of test data
-    mgcl::MultigridEngine::updateGhostsOclMpi(tu.getCommands(), d_cl, *mpiData, ml, nl, ol, gh, gh, gh, true);
+    mgcl::MultigridEngine::updateGhosts(p, d_cl, ml + 2 * gh, nl + 2 * gh, ol + 2 * gh, gh, gh, gh, mpiData);
     tu.finish();
 
     auto cl_res_ptr = tu.readOpenCLBuffer(d_cl, ml, nl, ol, gh, gh, gh);
