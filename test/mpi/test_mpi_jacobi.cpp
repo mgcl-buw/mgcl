@@ -169,6 +169,9 @@ TEST_CASE("MPI jacobi ocl (n processes)", "[mpiN]")
     int o = 16;
     int periodic = 1;
 
+    int stepsPerIter = GENERATE(1, 2);
+    CAPTURE(stepsPerIter);
+
     // check if mpi is initialized
     int isInitialized = 0;
     MPI_Initialized(&isInitialized);
@@ -236,7 +239,7 @@ TEST_CASE("MPI jacobi ocl (n processes)", "[mpiN]")
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
     int maxiter = 10;
 
-    int gh = 1;
+    int gh = stepsPerIter;
 
     // global test data
     mgcl::Cuboid v_glob(m, n, o, gh, gh, gh);
@@ -284,9 +287,9 @@ TEST_CASE("MPI jacobi ocl (n processes)", "[mpiN]")
 
     // Run Jacobi on global dataset for the expected result.
     mgcl::MultigridEngine::jacobiSeq(v_glob, f_glob, r_glob, omega, maxiter, resnorm, stencilType,
-                                     stencilFactor, nullptr, true, true, 1, nullptr);
+                                     stencilFactor, nullptr, true, true, stepsPerIter, nullptr);
 
-    mgcl::MultigridEngine::jacobi(p, lv, maxiter, true, 1);
+    mgcl::MultigridEngine::jacobi(p, lv, maxiter, true, stepsPerIter);
     tu.finish();
 
     auto v_loc_ret_ptr = tu.readOpenCLBuffer(lv.getDVIn(), lv.getM(), lv.getN(), lv.getO(), gh, gh, gh);
