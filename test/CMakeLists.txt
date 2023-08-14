@@ -109,9 +109,12 @@ set_property(
 # Test binary for mpi
 # These tests must use custom Catch2-Main for MPI
 set(SOURCES_TEST_MPI
+test_utility.hpp
+test_utility.cpp
 test_mpi_level.cpp
 test_mpi_problem.cpp
 test_mpi_ghosts.cpp
+test_mpi_jacobi.cpp
 catch2_main_mpi.cpp
 )
 
