@@ -410,6 +410,17 @@ namespace mgcl
     }
 
     /**
+     * @brief Calls clFinish on the command queue.
+     */
+    void OpenCLHelper::finish()
+    {
+        if (commands)
+            mgclCheckError(clFinish(commands), "clFinish");
+        else
+            throw "Command queue is not initialized!";
+    }
+
+    /**
      * @brief Loads kernel source from file into std::string.
      *
      * @param file File to be read from.
