@@ -308,18 +308,12 @@ namespace mgcl
                     err = clSetKernelArg(kernel, 1, sizeof(cl_mem), &level.dVIn);
                     err |= clSetKernelArg(kernel, 0, sizeof(cl_mem), &level.dVOut);
                     mgclCheckError(err, "Setting kernel arguments");
-
-                    // err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-                    // mgclCheckError(err, "Updating ghosts");
                 }
                 else
                 {
                     err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &level.dVIn);
                     err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &level.dVOut);
                     mgclCheckError(err, "Setting kernel arguments");
-
-                    // err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-                    // mgclCheckError(err, "Updating ghosts");
                 }
 
                 // set flag to store residual in last iteration
@@ -343,7 +337,8 @@ namespace mgcl
         if (store_res)
         {
             // TODO check for mpi
-            err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+            err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh,
+                                                problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr());
             mgclCheckError(err, "Updating ghosts of dR");
         }
 
@@ -360,9 +355,6 @@ namespace mgcl
                                             problem.ghosts, problem.ghosts, problem.ghosts,
                                             level.getMpiDataPtr());
         mgclCheckError(err, "Updating ghosts");
-
-        // err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-        // mgclCheckError(err, "Updating ghosts of v_in");
 
         // calculate residual and its norm
         if (return_residual)
@@ -502,7 +494,8 @@ namespace mgcl
             err = clSetKernelArg(kernel, pos, sizeof(int), &store_res);
             mgclCheckError(err, "Setting kernel arguments");
 
-            err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+            err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
+                                                problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr());
             mgclCheckError(err, "Updating ghosts");
 
             err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
@@ -535,7 +528,8 @@ namespace mgcl
                 err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing kernel");
 
-                err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+                err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh,
+                                                    problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr());
                 mgclCheckError(err, "Updating ghosts");
 
                 // swap pointers so result is in dVIn
@@ -562,7 +556,8 @@ namespace mgcl
                 err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing kernel");
 
-                err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+                err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh,
+                                                    problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr());
                 mgclCheckError(err, "Updating ghosts");
 
                 // swap pointers so result is in dVIn
@@ -573,7 +568,8 @@ namespace mgcl
         }
         // result is in dVIn now since pointers were swapped at the end of the loops above
 
-        err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+        err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
+                                            problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr());
         mgclCheckError(err, "Updating ghosts of v_in");
 
         // calculate residual's 2-norm. Square elements on device and sum up on host
@@ -701,7 +697,8 @@ namespace mgcl
 
         if (problem.isPeriodic())
         {
-            err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+            err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh,
+                                                problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr());
             mgclCheckError(err, "Updating ghosts of r");
         }
 

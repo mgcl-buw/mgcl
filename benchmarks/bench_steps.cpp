@@ -122,7 +122,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
               [&]
               {
                   mgcl::MultigridEngine::updateGhosts(p, v0d, v0.getMgh(), v0.getNgh(), v0.getOgh(),
-                                                      v0.getGhostsM(), v0.getGhostsN(), v0.getGhostsO());
+                                                      v0.getGhostsM(), v0.getGhostsN(), v0.getGhostsO(), nullptr);
                   clFinish(p.getCommands());
               });
 
@@ -314,7 +314,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
                   [&]
                   {
                       mgcl::MultigridEngine::updateGhosts(p, v0d, v0.getMgh(), v0.getNgh(), v0.getOgh(),
-                                                          v0.getGhostsM(), v0.getGhostsN(), v0.getGhostsO());
+                                                          v0.getGhostsM(), v0.getGhostsN(), v0.getGhostsO(), nullptr);
                       clFinish(p.getCommands());
                   });
         }

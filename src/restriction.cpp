@@ -109,12 +109,13 @@ namespace mgcl
                 // printf("%ld (multiple of %ld)\n", global[i], local[i]);
             }
 
-        err = MultigridEngine::updateGhosts(*problem, d_fine_values, fine.mgh, fine.ngh, fine.ogh, problem->ghosts, problem->ghosts, problem->ghosts);
+        err = MultigridEngine::updateGhosts(*problem, d_fine_values, fine.mgh, fine.ngh, fine.ogh,
+                                            problem->ghosts, problem->ghosts, problem->ghosts, fine.getMpiDataPtr());
         mgclCheckError(err, "Updating fine ghosts");
         err = clEnqueueNDRangeKernel(problem->openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing restriction kernel");
-        err = MultigridEngine::updateGhosts(*problem, d_coarse_values, coarse.mgh, coarse.ngh, coarse.ogh, problem->ghosts, problem->ghosts,
-                                            problem->ghosts);
+        err = MultigridEngine::updateGhosts(*problem, d_coarse_values, coarse.mgh, coarse.ngh, coarse.ogh,
+                                            problem->ghosts, problem->ghosts, problem->ghosts, coarse.getMpiDataPtr());
         mgclCheckError(err, "Updating coarse ghosts");
 
         clReleaseKernel(kernel);

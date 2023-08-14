@@ -231,7 +231,7 @@ namespace mgcl
         mgclCheckError(err, "initializing dR to 0");
 
         err = MultigridEngine::updateGhosts(*problem, dF, mgh, ngh, ogh, problem->ghosts, problem->ghosts,
-                                            problem->ghosts);
+                                            problem->ghosts, mpiData.get());
         mgclCheckError(err, "Updating ghosts of d_f");
 
         return CL_SUCCESS;

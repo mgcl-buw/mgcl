@@ -284,7 +284,7 @@ TEST_CASE("jacobi GPU varying stencil")
         mgcl_test::TestUtility tu(p_gpu);
 
         mgcl::MultigridEngine::updateGhosts(*p_gpu, level0_gpu.getDVIn(),
-                                            level0_gpu.getMgh(), level0_gpu.getNgh(), level0_gpu.getOgh(), 1, 1, 1);
+                                            level0_gpu.getMgh(), level0_gpu.getNgh(), level0_gpu.getOgh(), 1, 1, 1, nullptr);
         tu.finish();
         mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0);
 
@@ -686,10 +686,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             p_exp->setStencilType(mgcl::MGCL_LAPLACE_7POINT);
             p_act->setStencilType(mgcl::MGCL_LAPLACE_7POINT);
 
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1);
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr);
             tu_act.finish();
             tu_exp.finish();
 
@@ -719,10 +719,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             p_exp->setStencilType(mgcl::MGCL_LAPLACE_19POINT);
             p_act->setStencilType(mgcl::MGCL_LAPLACE_19POINT);
 
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1);
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr);
             tu_act.finish();
             tu_exp.finish();
 
@@ -749,10 +749,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             p_exp->setStencilType(mgcl::MGCL_LAPLACE_27POINT);
             p_act->setStencilType(mgcl::MGCL_LAPLACE_27POINT);
 
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1);
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr);
             tu_act.finish();
             tu_exp.finish();
 
@@ -792,10 +792,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             p_exp->setStencilType(mgcl::MGCL_VARYING);
             p_act->setStencilType(mgcl::MGCL_VARYING);
 
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1);
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr);
+            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr);
             tu_act.finish();
             tu_exp.finish();
 
