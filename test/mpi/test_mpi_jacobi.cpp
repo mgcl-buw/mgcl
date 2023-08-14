@@ -8,7 +8,7 @@
 #include "../src/cuboid.hpp"
 #include "../src/multigrid_engine.hpp"
 #include "../src/problem.hpp"
-#include "test_utility.hpp"
+#include "../test_utility.hpp"
 
 #include "mpi.h"
 

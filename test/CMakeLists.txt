@@ -59,7 +59,7 @@ test_results.cpp
 test_util.cpp
 ocl_wrapper.hpp
 ocl_wrapper.cpp
-catch2_main_mpi.cpp
+mpi/catch2_main_mpi.cpp
 )
 
 add_executable(tests ${SOURCES_TEST})
@@ -85,7 +85,7 @@ matrix2d.hpp
 matrix2d.cpp
 test_results.hpp
 test_results.cpp
-catch2_main_mpi.cpp
+mpi/catch2_main_mpi.cpp
 )
 
 add_executable(tests_solving ${SOURCES_TEST_SOLVING})
@@ -111,11 +111,11 @@ set_property(
 set(SOURCES_TEST_MPI
 test_utility.hpp
 test_utility.cpp
-test_mpi_level.cpp
-test_mpi_problem.cpp
-test_mpi_ghosts.cpp
-test_mpi_jacobi.cpp
-catch2_main_mpi.cpp
+mpi/test_mpi_level.cpp
+mpi/test_mpi_problem.cpp
+mpi/test_mpi_ghosts.cpp
+mpi/test_mpi_jacobi.cpp
+mpi/catch2_main_mpi.cpp
 )
 
 add_executable(tests_mpi ${SOURCES_TEST_MPI})
