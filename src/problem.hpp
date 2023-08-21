@@ -146,7 +146,7 @@ namespace mgcl
         int mpiLevelThreshold = -1;
 
         /* Minimum amount of grid points for which MPI is used. Coarser levels will be run on one process. */
-        int mpiMinGridPoints = 8;
+        int mpiMinGridPoints = 4;
 
         void checkGlobalDimensions();
         bool useMpi();

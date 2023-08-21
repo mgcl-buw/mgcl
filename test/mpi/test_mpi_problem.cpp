@@ -135,7 +135,7 @@ TEST_CASE("MPI Problem::calculateAndSetMpiLevelThreshold valid (1 process)", "[m
         {4,4,4}, {16,16,16}, {64,64,128}
     };
 
-    std::vector<int> expected = {0,1,1,0,2,4};
+    std::vector<int> expected = {1,2,2,1,3,5};
 
     REQUIRE(dims.size() == local.size());
     REQUIRE(dims.size() == expected.size());
