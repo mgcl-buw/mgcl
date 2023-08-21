@@ -26,9 +26,10 @@ namespace mgcl
     Level::Level(Problem *problem_, int num_)
         : problem(problem_),
           num(num_),
-          m(problem_->getM() >> num_),
-          n(problem_->getN() >> num_),
-          o(problem_->getO() >> num_),
+          useMpi(problem_->useMpi() && problem_->getMpiLevelThreshold() > num),
+          m(((problem_->useMpi() && problem_->getMpiLevelThreshold() > num) ? problem_->getM() : problem_->m_global) >> num_),
+          n(((problem_->useMpi() && problem_->getMpiLevelThreshold() > num) ? problem_->getN() : problem_->n_global) >> num_),
+          o(((problem_->useMpi() && problem_->getMpiLevelThreshold() > num) ? problem_->getO() : problem_->o_global) >> num_),
           mgh(m + 2 * problem->getGhosts()),
           ngh(n + 2 * problem->getGhosts()),
           ogh(o + 2 * problem->getGhosts()),
@@ -48,9 +49,8 @@ namespace mgcl
                                             .append(", problem.maxlevel: ")
                                             .append(std::to_string(problem->getMaxlevel())));
 
-        useMpi = problem->useMpi() && problem->getMpiLevelThreshold() > num;
-
-        if (useMpi)
+        // if (useMpi)
+        if (problem->useMpi())
             mpiData = std::make_unique<MPIData>(problem->getMpiComm());
     }
 
@@ -521,6 +521,11 @@ namespace mgcl
     double Level::getStencilFactor() const
     {
         return stencilFactor;
+    }
+
+    bool Level::getUseMpi() const
+    {
+        return useMpi;
     }
 
     int Level::getNum() const

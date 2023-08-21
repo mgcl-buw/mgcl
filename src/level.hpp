@@ -129,6 +129,8 @@ namespace mgcl
 
         std::shared_ptr<VaryingStencilGpu> &getStencilValuesGpu();
         void setStencilValuesGpu(std::shared_ptr<VaryingStencilGpu> sv);
+
+        bool getUseMpi() const;
     };
 }
 

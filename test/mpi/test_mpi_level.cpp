@@ -152,8 +152,10 @@ TEST_CASE("Level::initMpiData (2 processes)", "[mpi2]")
         }
         else
         {
-            REQUIRE(lv.getMpiDataPtr() == nullptr);
-            REQUIRE_THROWS(lv.getMpiData());
+            REQUIRE(!lv.getUseMpi());
+            REQUIRE(lv.getMpiDataPtr() != nullptr);
+            // REQUIRE(lv.getMpiDataPtr() == nullptr);
+            // REQUIRE_THROWS(lv.getMpiData());
         }
     }
 }
@@ -273,8 +275,9 @@ TEST_CASE("Level::initMpiData (8 processes)", "[mpi8]")
     for (int i = p.getMpiLevelThreshold(); i <= p.getMaxlevel(); i++)
     {
         auto &lv = p.getLevelAt(i);
-        REQUIRE(lv.getMpiDataPtr() == nullptr);
-        REQUIRE_THROWS(lv.getMpiData());
+        REQUIRE(!lv.getUseMpi());
+        REQUIRE(lv.getMpiDataPtr() != nullptr);
+        // REQUIRE_THROWS(lv.getMpiData());
     }
 }
 
@@ -416,7 +419,8 @@ TEST_CASE("Level::initMpiData (24 processes)", "[mpi24]")
     for (int i = p.getMpiLevelThreshold(); i <= p.getMaxlevel(); i++)
     {
         auto &lv = p.getLevelAt(i);
-        REQUIRE(lv.getMpiDataPtr() == nullptr);
-        REQUIRE_THROWS(lv.getMpiData());
+        REQUIRE(!lv.getUseMpi());
+        REQUIRE(lv.getMpiDataPtr() != nullptr);
+        // REQUIRE_THROWS(lv.getMpiData());
     }
 }
