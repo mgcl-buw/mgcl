@@ -93,53 +93,58 @@ namespace mgcl
         // First init MPI data, so dimensions of Cuboids is updated.
         initMpiData();
 
-        // TODO F does not need ghosts
-        // TODO R needs same amount of ghosts as V
-        if (num == 0)
+        // Only allocate data if
+        // 1. mgcl is run without MPI at all, or
+        // 2. mgcl is run with MPI and this level is below the level threshold (i.e. enough grid points), or
+        // 3. mgcl is run with MPI, this level is above the level threshold but the rank is 0.
+        if (!problem->useMpi() || useMpi || (!useMpi && mpiData->rank == 0))
         {
-            // move stencilsValues pointer from Problem to first Level
-            if (stencilType == MGCL_VARYING)
-                stencilValues = problem->stencilValues;
-
-            // create ghosted arrays for v and f on host if device buffer should not be reused
-            if (!problem->reuse_opencl_buffers && !problem->copy_buffer_data)
+            if (num == 0)
             {
-                v = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
-                f = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+                // move stencilsValues pointer from Problem to first Level
+                if (stencilType == MGCL_VARYING)
+                    stencilValues = problem->stencilValues;
 
-                // copy initial input data from conf into mgcl data struct
-                for (int i = 0; i < m; i++)
-                    for (int j = 0; j < n; j++)
-                        for (int k = 0; k < o; k++)
-                        {
-                            getV()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts] =
-                                problem->getV()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
-                            getF()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts] =
-                                problem->getF()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
-                        }
+                // create ghosted arrays for v and f on host if device buffer should not be reused
+                if (!problem->reuse_opencl_buffers && !problem->copy_buffer_data)
+                {
+                    v = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+                    f = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
 
-                if (problem->bc == BC::PERIODIC)
-                    MultigridEngine::updateGhostsSeq(getF(), mpiData.get());
+                    // copy initial input data from conf into mgcl data struct
+                    for (int i = 0; i < m; i++)
+                        for (int j = 0; j < n; j++)
+                            for (int k = 0; k < o; k++)
+                            {
+                                getV()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts] =
+                                    problem->getV()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
+                                getF()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts] =
+                                    problem->getF()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
+                            }
+
+                    if (problem->bc == BC::PERIODIC)
+                        MultigridEngine::updateGhostsSeq(getF(), mpiData.get());
+                }
+
+                // r on host is only needed if opencl should not be used
+                if (!problem->use_opencl)
+                {
+                    r = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+                }
+            }
+            else
+            {
+                if (!problem->use_opencl)
+                {
+                    v = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+                    f = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+                    r = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+                }
             }
 
-            // r on host is only needed if opencl should not be used
-            if (!problem->use_opencl)
-            {
-                r = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
-            }
+            if (initOpenCLBuffers() != CL_SUCCESS)
+                return false;
         }
-        else
-        {
-            if (!problem->use_opencl)
-            {
-                v = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
-                f = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
-                r = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
-            }
-        }
-
-        if (initOpenCLBuffers() != CL_SUCCESS)
-            return false;
 
         return true;
     }

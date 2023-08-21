@@ -422,5 +422,17 @@ TEST_CASE("Level::initMpiData (24 processes)", "[mpi24]")
         REQUIRE(!lv.getUseMpi());
         REQUIRE(lv.getMpiDataPtr() != nullptr);
         // REQUIRE_THROWS(lv.getMpiData());
+
+        // Size must be global size on process 0
+        if (mpi_rank == 0)
+        {
+            auto &v = lv.getV();
+            REQUIRE(v.getM() == (mg >> i));
+        }
+        else
+        {
+            // null on other processes
+            REQUIRE(lv.getVPtr() == nullptr);
+        }
     }
 }
