@@ -61,7 +61,7 @@ TEST_CASE("Level::initMpiData (1 process)", "[mpi1]")
 }
 
 // Checks if neighbours are initialized correctly for each level for 2 processes.
-// Run with: mpiexec -n 2 tests_mpi [mpi2]
+// Run with: mpiexec -n 2 tests_mpi "Level::initMpiData (2 processes)"
 TEST_CASE("Level::initMpiData (2 processes)", "[mpi2]")
 {
     int N = 8;      // local size of grid in one direction
@@ -108,43 +108,52 @@ TEST_CASE("Level::initMpiData (2 processes)", "[mpi2]")
     for (int i = 0; i < p.getMaxlevel(); i++)
     {
         auto &lv = p.getLevelAt(i);
-        auto &mpiData = lv.getMpiData();
 
-        REQUIRE(mpiData.rank == mpi_rank);
-
-        // If there are two processes in a direction, the neighbour must be the other process. Else or if no
-        // grid points are left on this level, the neighbour is set to self.
-        if (lv.getM() > 0 && mpi_dims[2] > 1)
+        if (p.getMpiLevelThreshold() > i)
         {
-            REQUIRE(mpiData.left == other_rank);
-            REQUIRE(mpiData.right == other_rank);
+            auto &mpiData = lv.getMpiData();
+
+            REQUIRE(mpiData.rank == mpi_rank);
+
+            // If there are two processes in a direction, the neighbour must be the other process. Else or if no
+            // grid points are left on this level, the neighbour is set to self.
+            if (lv.getM() > 0 && mpi_dims[2] > 1)
+            {
+                REQUIRE(mpiData.left == other_rank);
+                REQUIRE(mpiData.right == other_rank);
+            }
+            else
+            {
+                REQUIRE(mpiData.left == mpi_rank);
+                REQUIRE(mpiData.right == mpi_rank);
+            }
+
+            if (lv.getN() > 0 && mpi_dims[1] > 1)
+            {
+                REQUIRE(mpiData.up == other_rank);
+                REQUIRE(mpiData.down == other_rank);
+            }
+            else
+            {
+                REQUIRE(mpiData.up == mpi_rank);
+                REQUIRE(mpiData.down == mpi_rank);
+            }
+
+            if (lv.getO() > 0 && mpi_dims[0] > 1)
+            {
+                REQUIRE(mpiData.front == other_rank);
+                REQUIRE(mpiData.back == other_rank);
+            }
+            else
+            {
+                REQUIRE(mpiData.front == mpi_rank);
+                REQUIRE(mpiData.back == mpi_rank);
+            }
         }
         else
         {
-            REQUIRE(mpiData.left == mpi_rank);
-            REQUIRE(mpiData.right == mpi_rank);
-        }
-
-        if (lv.getN() > 0 && mpi_dims[1] > 1)
-        {
-            REQUIRE(mpiData.up == other_rank);
-            REQUIRE(mpiData.down == other_rank);
-        }
-        else
-        {
-            REQUIRE(mpiData.up == mpi_rank);
-            REQUIRE(mpiData.down == mpi_rank);
-        }
-
-        if (lv.getO() > 0 && mpi_dims[0] > 1)
-        {
-            REQUIRE(mpiData.front == other_rank);
-            REQUIRE(mpiData.back == other_rank);
-        }
-        else
-        {
-            REQUIRE(mpiData.front == mpi_rank);
-            REQUIRE(mpiData.back == mpi_rank);
+            REQUIRE(lv.getMpiDataPtr() == nullptr);
+            REQUIRE_THROWS(lv.getMpiData());
         }
     }
 }
@@ -203,6 +212,7 @@ TEST_CASE("Level::initMpiData (8 processes)", "[mpi8]")
 
     mgcl::Problem p(N, N, N, v, f, Ng, Ng, Ng);
     p.setMpiComm(mpi_comm);
+    p.setMpiMinGridPoints(2);
     p.init();
 
     int other_rank = mpi_rank == 0 ? 1 : 0;
@@ -235,8 +245,8 @@ TEST_CASE("Level::initMpiData (8 processes)", "[mpi8]")
 
     // ==================================
 
-    // Check level 0-2
-    for (int i = 0; i <= 2; i++)
+    // Check levels for which mpi is used
+    for (int i = 0; i < p.getMpiLevelThreshold(); i++)
     {
         auto &lv0 = p.getLevelAt(i);
         auto &mpiData0 = lv0.getMpiData();
@@ -259,27 +269,13 @@ TEST_CASE("Level::initMpiData (8 processes)", "[mpi8]")
 
     // ==================================
 
-    // Check level 3
-    auto &lv3 = p.getLevelAt(3);
-    auto &mpiData3 = lv3.getMpiData();
-    REQUIRE(mpiData3.mpiSize() == 8);
-
-    // // print neighbours per rank
-    // for (int i = 0; i < mpi_size; i++)
-    // {
-    //     MPI_Barrier(mpi_comm);
-    //     if (i == mpi_rank)
-    //         std::cout << mpi_rank << ": " << mpiData3.left << "," << mpiData3.right << ","
-    //                   << mpiData3.up << "," << mpiData3.down << ","
-    //                   << mpiData3.back << "," << mpiData3.front << std::endl;
-    // }
-
-    REQUIRE(mpiData3.left == mpi_rank);
-    REQUIRE(mpiData3.right == mpi_rank);
-    REQUIRE(mpiData3.up == mpi_rank);
-    REQUIRE(mpiData3.down == mpi_rank);
-    REQUIRE(mpiData3.front == mpi_rank);
-    REQUIRE(mpiData3.back == mpi_rank);
+    // Check levels for which mpi is not used
+    for (int i = p.getMpiLevelThreshold(); i <= p.getMaxlevel(); i++)
+    {
+        auto &lv = p.getLevelAt(i);
+        REQUIRE(lv.getMpiDataPtr() == nullptr);
+        REQUIRE_THROWS(lv.getMpiData());
+    }
 }
 
 // Checks if neighbours are initialized correctly for each level for 24 processes and a non-uniform domain.
@@ -343,6 +339,7 @@ TEST_CASE("Level::initMpiData (24 processes)", "[mpi24]")
 
     mgcl::Problem p(m, n, o, v, f, mg, ng, og);
     p.setMpiComm(mpi_comm);
+    p.setMpiMinGridPoints(2);
     p.init();
 
     int other_rank = mpi_rank == 0 ? 1 : 0;
@@ -375,8 +372,8 @@ TEST_CASE("Level::initMpiData (24 processes)", "[mpi24]")
 
     // ==================================
 
-    // Check level 0-2
-    for (int i = 0; i <= 2; i++)
+    // Check levels for which mpi is used
+    for (int i = 0; i < p.getMpiLevelThreshold(); i++)
     {
         auto &lv0 = p.getLevelAt(i);
         auto &mpiData0 = lv0.getMpiData();
@@ -415,25 +412,11 @@ TEST_CASE("Level::initMpiData (24 processes)", "[mpi24]")
 
     // ==================================
 
-    // Check level 3
-    auto &lv3 = p.getLevelAt(3);
-    auto &mpiData3 = lv3.getMpiData();
-    REQUIRE(mpiData3.mpiSize() == 24);
-
-    // // print neighbours per rank
-    // for (int i = 0; i < mpi_size; i++)
-    // {
-    //     MPI_Barrier(mpi_comm);
-    //     if (i == mpi_rank)
-    //         std::cout << mpi_rank << ": " << mpiData3.left << "," << mpiData3.right << ","
-    //                   << mpiData3.up << "," << mpiData3.down << ","
-    //                   << mpiData3.back << "," << mpiData3.front << std::endl;
-    // }
-
-    REQUIRE(mpiData3.left == mpi_rank);
-    REQUIRE(mpiData3.right == mpi_rank);
-    REQUIRE(mpiData3.up == mpi_rank);
-    REQUIRE(mpiData3.down == mpi_rank);
-    REQUIRE(mpiData3.front == mpi_rank);
-    REQUIRE(mpiData3.back == mpi_rank);
+    // Check levels for which mpi is not used
+    for (int i = p.getMpiLevelThreshold(); i <= p.getMaxlevel(); i++)
+    {
+        auto &lv = p.getLevelAt(i);
+        REQUIRE(lv.getMpiDataPtr() == nullptr);
+        REQUIRE_THROWS(lv.getMpiData());
+    }
 }

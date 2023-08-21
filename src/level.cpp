@@ -48,7 +48,9 @@ namespace mgcl
                                             .append(", problem.maxlevel: ")
                                             .append(std::to_string(problem->getMaxlevel())));
 
-        if (problem->useMpi())
+        useMpi = problem->useMpi() && problem->getMpiLevelThreshold() > num;
+
+        if (useMpi)
             mpiData = std::make_unique<MPIData>(problem->getMpiComm());
     }
 
@@ -248,7 +250,7 @@ namespace mgcl
     {
         int ret = 0;
 
-        if (problem->useMpi())
+        if (useMpi)
         {
             // MPI variables
             MPI_Comm mpi_comm = problem->getMpiComm();
