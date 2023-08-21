@@ -141,7 +141,12 @@ namespace mgcl
 
         /* Communicator for MPI. Can be set for using a custom topology. */
         MPI_Comm comm = MPI_COMM_WORLD;
+
+        /* First coarse level for which MPI is not used anymore. Only for internal purposes. */
         int mpiLevelThreshold = -1;
+
+        /* Minimum amount of grid points for which MPI is used. Coarser levels will be run on one process. */
+        int mpiMinGridPoints = 8;
 
         void checkGlobalDimensions();
         bool useMpi();
@@ -293,8 +298,10 @@ namespace mgcl
         void setMpiComm(MPI_Comm _comm);
         MPI_Comm getMpiComm();
 
-        void setMpiLevelThreshold(int _level);
         int getMpiLevelThreshold();
+
+        int getMpiMinGridPoints() const;
+        void setMpiMinGridPoints(int mpiMinGridPoints_);
 
         void calculateAndSetMpiLevelThreshold();
     };

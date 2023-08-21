@@ -126,25 +126,25 @@ TEST_CASE("MPI Problem::calculateAndSetMpiLevelThreshold valid (1 process)", "[m
     // Set MPI cartesion topology dimenions and appropriate local sizes.
     // clang-format off
     std::vector<std::vector<int>> dims = {
-        {4,4,4}, {2,2,2}, {4,4,4}, {1,2,4},
-        {1,2,4}, {1,2,4}, {1,2,2}, {2,2,1}
+        {4,4,4}, {2,2,2}, {4,4,4}, 
+        {1,2,4},{1,2,2}, {2,2,1}
     };
 
     std::vector<std::vector<int>> local = {
-        {4,4,4}, {8,8,8}, {8,8,8}, {4,4,2},
-        {4,4,4}, {16,4,2}, {16,16,16}, {64,64,128}
+        {4,4,4}, {8,8,8}, {8,8,8}, 
+        {4,4,4}, {16,16,16}, {64,64,128}
     };
 
-    std::vector<int> expected = {0,1,1,0,0,0,2,4};
+    std::vector<int> expected = {0,1,1,0,2,4};
 
     REQUIRE(dims.size() == local.size());
     REQUIRE(dims.size() == expected.size());
     // clang-format on
 
-    // Check for valid
+    // Check for valid with default minGridPoints = 4
     for (int i = 0; i < dims.size(); i++)
     {
-
+        CAPTURE(i);
         // Check with valid topology first
         mgcl::Problem p(local[i][0], local[i][1], local[i][2],
                         local[i][0] * dims[i][0], local[i][1] * dims[i][1], local[i][2] * dims[i][2]);
@@ -152,6 +152,21 @@ TEST_CASE("MPI Problem::calculateAndSetMpiLevelThreshold valid (1 process)", "[m
         p.calculateAndSetMpiLevelThreshold();
 
         REQUIRE(p.getMpiLevelThreshold() == expected[i]);
+    }
+
+    // Now check with different minGridPoints set by user
+    {
+        mgcl::Problem p(8, 8, 8, 16, 16, 16);
+        p.setMpiMinGridPoints(8);
+        p.calculateAndSetMpiLevelThreshold();
+        REQUIRE(p.getMpiLevelThreshold() == 1);
+    }
+
+    {
+        mgcl::Problem p(8, 8, 8, 16, 16, 16);
+        p.setMpiMinGridPoints(16);
+        p.calculateAndSetMpiLevelThreshold();
+        REQUIRE(p.getMpiLevelThreshold() == 0);
     }
 }
 
@@ -187,10 +202,16 @@ TEST_CASE("MPI Problem::calculateAndSetMpiLevelThreshold throwing (1 process)", 
     MPI_Comm_rank(mpi_comm, &mpi_rank);
     MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
 
-    // Check with valid topology first
-    mgcl::Problem p(N, N, N);
-    REQUIRE_NOTHROW(p.setMpiComm(mpi_comm));
-    p.setMpiLevelThreshold(1000);
+    {
+        mgcl::Problem p(N, N, N);
+        REQUIRE_NOTHROW(p.setMpiComm(mpi_comm));
+        p.setMpiMinGridPoints(1);
+        REQUIRE_THROWS(p.calculateAndSetMpiLevelThreshold());
+    }
 
-    REQUIRE_THROWS(p.calculateAndSetMpiLevelThreshold());
+    {
+        mgcl::Problem p(8, 8, 8, 16, 16, 16);
+        p.setMpiMinGridPoints(32);
+        REQUIRE_THROWS(p.calculateAndSetMpiLevelThreshold());
+    }
 }
