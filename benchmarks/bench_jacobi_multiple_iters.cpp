@@ -226,10 +226,10 @@ TEST_CASE("benchmark Jacobi MPI OCL multiple iters", "[console][jacobiMulti][mpi
         /* Initialize start and end for local grid */
         int m_start = (mglob / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (mglob % mpi_dims[0]));
         int m_end = (mglob / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (mglob % mpi_dims[0])) - 1;
-        int n_start = (mglob / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (nglob % mpi_dims[1]));
-        int n_end = (mglob / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (nglob % mpi_dims[1])) - 1;
-        int o_start = (mglob / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (oglob % mpi_dims[2]));
-        int o_end = (mglob / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (oglob % mpi_dims[2])) - 1;
+        int n_start = (nglob / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (nglob % mpi_dims[1]));
+        int n_end = (nglob / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (nglob % mpi_dims[1])) - 1;
+        int o_start = (oglob / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (oglob % mpi_dims[2]));
+        int o_end = (oglob / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (oglob % mpi_dims[2])) - 1;
 
         int m = (m_end - m_start) + 1;
         int n = (n_end - n_start) + 1;
