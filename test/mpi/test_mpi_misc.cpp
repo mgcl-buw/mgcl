@@ -67,16 +67,19 @@ TEST_CASE("MPI_Gatherv")
     int o_start = oloc * mpi_coords[2] + min(mpi_coords[2], (oglob % mpi_dims[2]));
     int o_end = oloc * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (oglob % mpi_dims[2])) - 1;
 
-    for (int i = 0; i < mpi_size; i++)
-    {
-        MPI_Barrier(mpi_comm);
-        if (i == mpi_rank)
-            std::cout << "rank,ms,me,ns,ne,os,oe: "
-                      << mpi_rank << ","
-                      << m_start << "," << m_end << ","
-                      << n_start << "," << n_end << ","
-                      << o_start << "," << o_end << std::endl;
-    }
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (i == mpi_rank)
+    //     {
+    //         std::cout << "rank,ms,me,ns,ne,os,oe: "
+    //                   << mpi_rank << ","
+    //                   << m_start << "," << m_end << ","
+    //                   << n_start << "," << n_end << ","
+    //                   << o_start << "," << o_end << std::endl;
+    //         std::cout << "coords: " << mpi_coords[0] << "," << mpi_coords[1] << "," << mpi_coords[2] << std::endl;
+    //     }
+    // }
 
     // Create test data
     mgcl::Cuboid cglob(mglob, nglob, oglob, gh, gh, gh);
@@ -112,12 +115,16 @@ TEST_CASE("MPI_Gatherv")
         int sizes[3] = {mglobgh, nglobgh, oglobgh};
         int subsizes[3] = {mloc, nloc, oloc};
         int starts[3] = {gh, gh, gh};
+        // int starts[3] = {0, 0, 0};
         err = MPI_Type_create_subarray(3, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &subarrayRecv);
         mgcl::mgclCheckMpiError(mpi_comm, err, "MPI_Type_create_subarray");
         err = MPI_Type_commit(&subarrayRecv);
         mgcl::mgclCheckMpiError(mpi_comm, err, "MPI_Type_commit");
 
+        // Resize recv data to avoid overlapping resulting from ghosts. Enabling explicitely stating start and extent
+        // later in MPI_Gatherv (counts and displ). One unit is the size of a local grid.
         err = MPI_Type_create_resized(subarrayRecv, 0, 1 * sizeof(double), &subarrayRecvResized);
+        // err = MPI_Type_create_resized(subarrayRecv, 0, oglobgh * sizeof(double), &subarrayRecvResized);
         mgcl::mgclCheckMpiError(mpi_comm, err, "MPI_Type_create_resized");
         err = MPI_Type_commit(&subarrayRecvResized);
         mgcl::mgclCheckMpiError(mpi_comm, err, "MPI_Type_commit");
@@ -125,12 +132,37 @@ TEST_CASE("MPI_Gatherv")
 
     MPI_Barrier(mpi_comm);
 
-    // TODO generalize for any number of processes
+    // Calculate displacements for each processor.
+    int counts[mpi_size];
+    int displ[mpi_size];
+    for (int i = 0; i < mpi_size; i++)
+    {
+        int coords[3] = {0, 0, 0};
+        err = MPI_Cart_coords(mpi_comm, i, 3, coords);
+        mgcl::mgclCheckMpiError(mpi_comm, err, "MPI_Cart_coords");
+
+        counts[i] = 1;
+        displ[i] = coords[0] * mloc * nglobgh * oglobgh + coords[1] * nloc * oglobgh + coords[2] * oloc;
+    }
+    MPI_Barrier(mpi_comm);
+
     // int counts[4] = {1, 1, 1, 1};
-    // int displ[4] = {0, nloc * oglobgh, mloc * nglobgh * oglobgh, mloc * nglobgh * oglobgh + nloc * oglobgh};
-    int counts[2] = {1, 1};
-    int displ[2] = {0, mloc * nglobgh * oglobgh};
-    CAPTURE(displ);
+    // int displ[4] = {0, nloc, mloc * nglobgh, mloc * nglobgh + nloc};
+    // int counts[2] = {1, 1};
+    // int displ[2] = {0, mloc * nglobgh * oglobgh};
+
+    // Alternative with
+    // int starts[3] = {0, 0, 0}; and
+    // MPI_Type_create_resized(subarrayRecv, 0, 1 * sizeof(double), &subarrayRecvResized);
+    //
+    // int counts[4] = {1, 1, 1, 1};
+    // int displ[4] = {nglobgh * oglobgh + oglobgh + gh,
+    //                 nglobgh * oglobgh + (nloc + gh) * oglobgh + gh,
+    //                 (mloc + gh) * nglobgh * oglobgh + oglobgh + gh,
+    //                 (mloc + gh) * nglobgh * oglobgh + (nloc + gh) * oglobgh + gh};
+    // int counts[2] = {1, 1};
+    // int displ[2] = {nglobgh * oglobgh + oglobgh + gh, (mloc + gh) * nglobgh * oglobgh + oglobgh + gh};
+    // CAPTURE(displ);
 
     MPI_Gatherv(cloc->field1d().data(), 1, subarraySend,
                 cglob_recv.field1d().data(), counts, displ, subarrayRecvResized, 0, mpi_comm);
@@ -145,9 +177,8 @@ TEST_CASE("MPI_Gatherv")
     if (mpi_rank == 0)
     {
         CAPTURE(cglob_recv.getM(), cglob_recv.getN(), cglob_recv.getO());
-        std::cout << "m,n,o: " << cglob_recv.getM() << "," << cglob_recv.getN() << "," << cglob_recv.getO() << std::endl;
-        cglob_recv.dumpToFile("cglob_recv.txt");
-        cglob.dumpToFile("cglob.txt");
+        // cglob_recv.dumpToFile("cglob_recv.txt");
+        // cglob.dumpToFile("cglob.txt");
 
         // Check result
         REQUIRE(cglob.isEqual(cglob_recv));
