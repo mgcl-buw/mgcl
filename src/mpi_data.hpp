@@ -33,10 +33,6 @@ namespace mgcl
 
         // utility functions
         int mpiSize();
-
-        static void mgcl_check_mpi_error(MPI_Comm comm, int err, const char *operation, const char *filename, int line);
     };
-
-#define mgclCheckMpiError(C, E, S) MPIData::mgcl_check_mpi_error(C, E, S, __FILE__, __LINE__);
 }
 #endif // MGCL_MPIDATA_HPP

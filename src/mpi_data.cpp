@@ -1,6 +1,6 @@
 #include "mpi_data.hpp"
 
-#include <cstdio>
+#include "mpi_util.hpp"
 
 /**
  * @brief Construct a new mgcl::MPIData object
@@ -17,17 +17,6 @@ int mgcl::MPIData::mpiSize()
 {
     int mpi_size;
     int err = MPI_Comm_size(comm, &mpi_size);
-    mgcl::mgclCheckMpiError(comm, err, "MPI_Comm_size");
+    mpi_util::mgclCheckMpiError(comm, err, "MPI_Comm_size");
     return mpi_size;
-}
-
-void mgcl::MPIData::mgcl_check_mpi_error(MPI_Comm comm, int err, const char *operation, const char *filename, int line)
-{
-    if (err != MPI_SUCCESS)
-    {
-        fprintf(stderr, "Error during operation '%s', ", operation);
-        fprintf(stderr, "in '%s' on line %d\n", filename, line);
-        fprintf(stderr, "Error code was %d\n", err);
-        MPI_Abort(comm, err);
-    }
 }

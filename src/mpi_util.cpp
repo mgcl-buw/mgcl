@@ -17,7 +17,7 @@ namespace mgcl::mpi_util
         int err;
         int rank;
         err = MPI_Comm_rank(comm, &rank);
-        mgcl::mgclCheckMpiError(comm, err, "MPI_Comm_rank");
+        mgclCheckMpiError(comm, err, "MPI_Comm_rank");
 
         if (rank == 0 && recv_ptr == nullptr)
             throw "recv_ptr must not be null on root process!";
@@ -42,9 +42,9 @@ namespace mgcl::mpi_util
             int subsizes[3] = {mloc, nloc, oloc};
             int starts[3] = {send.getGhostsM(), send.getGhostsN(), send.getGhostsO()};
             err = MPI_Type_create_subarray(3, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &subarraySend);
-            mgcl::mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
+            mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
             err = MPI_Type_commit(&subarraySend);
-            mgcl::mgclCheckMpiError(comm, err, "MPI_Type_commit");
+            mgclCheckMpiError(comm, err, "MPI_Type_commit");
         }
 
         // Create subarray type for the receive buffer
@@ -56,23 +56,23 @@ namespace mgcl::mpi_util
             int starts[3] = {recv_ptr->getGhostsM(), recv_ptr->getGhostsN(), recv_ptr->getGhostsO()};
             // int starts[3] = {0, 0, 0};
             err = MPI_Type_create_subarray(3, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &subarrayRecv);
-            mgcl::mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
+            mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
             err = MPI_Type_commit(&subarrayRecv);
-            mgcl::mgclCheckMpiError(comm, err, "MPI_Type_commit");
+            mgclCheckMpiError(comm, err, "MPI_Type_commit");
 
             // Resize recv data to avoid overlapping resulting from ghosts. Enabling explicitely stating start and extent
             // later in MPI_Gatherv (counts and displ). One unit is the size of a local grid.
             err = MPI_Type_create_resized(subarrayRecv, 0, 1 * sizeof(double), &subarrayRecvResized);
             // err = MPI_Type_create_resized(subarrayRecv, 0, oglobgh * sizeof(double), &subarrayRecvResized);
-            mgcl::mgclCheckMpiError(comm, err, "MPI_Type_create_resized");
+            mgclCheckMpiError(comm, err, "MPI_Type_create_resized");
             err = MPI_Type_commit(&subarrayRecvResized);
-            mgcl::mgclCheckMpiError(comm, err, "MPI_Type_commit");
+            mgclCheckMpiError(comm, err, "MPI_Type_commit");
         }
 
         // Calculate displacements for each processor.
         int mpi_size;
         err = MPI_Comm_size(comm, &mpi_size);
-        mgcl::mgclCheckMpiError(comm, err, "MPI_Comm_size");
+        mgclCheckMpiError(comm, err, "MPI_Comm_size");
 
         int counts[mpi_size];
         int displ[mpi_size];
@@ -80,7 +80,7 @@ namespace mgcl::mpi_util
         {
             int coords[3] = {0, 0, 0};
             err = MPI_Cart_coords(comm, i, 3, coords);
-            mgcl::mgclCheckMpiError(comm, err, "MPI_Cart_coords");
+            mgclCheckMpiError(comm, err, "MPI_Cart_coords");
 
             counts[i] = 1;
             displ[i] = coords[0] * mloc * nglobgh * oglobgh + coords[1] * nloc * oglobgh + coords[2] * oloc;
@@ -88,11 +88,25 @@ namespace mgcl::mpi_util
 
         MPI_Gatherv(send.field1d().data(), 1, subarraySend,
                     recv_ptr->field1d().data(), counts, displ, subarrayRecvResized, 0, comm);
-        mgcl::mgclCheckMpiError(comm, err, "MPI_Gather");
+        mgclCheckMpiError(comm, err, "MPI_Gather");
 
-        mgcl::mgclCheckMpiError(comm, MPI_Type_free(&subarraySend), "MPI_Type_free");
-        mgcl::mgclCheckMpiError(comm, MPI_Type_free(&subarrayRecv), "MPI_Type_free");
-        mgcl::mgclCheckMpiError(comm, MPI_Type_free(&subarrayRecvResized), "MPI_Type_free");
+        mgclCheckMpiError(comm, MPI_Type_free(&subarraySend), "MPI_Type_free");
+        mgclCheckMpiError(comm, MPI_Type_free(&subarrayRecv), "MPI_Type_free");
+        mgclCheckMpiError(comm, MPI_Type_free(&subarrayRecvResized), "MPI_Type_free");
+    }
+
+    /**
+     * @brief Checks the return code of a MPI call and prints it if not MPI_SUCCESS.
+     */
+    void mgcl_check_mpi_error(MPI_Comm comm, int err, const char *operation, const char *filename, int line)
+    {
+        if (err != MPI_SUCCESS)
+        {
+            fprintf(stderr, "Error during operation '%s', ", operation);
+            fprintf(stderr, "in '%s' on line %d\n", filename, line);
+            fprintf(stderr, "Error code was %d\n", err);
+            MPI_Abort(comm, err);
+        }
     }
 
 } // namespace mpi_util

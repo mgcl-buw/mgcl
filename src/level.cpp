@@ -1,5 +1,6 @@
 #include "level.hpp"
-#include "cuboid.hpp"           // for Cuboid
+#include "cuboid.hpp" // for Cuboid
+#include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "problem.hpp"
 
@@ -276,11 +277,11 @@ namespace mgcl
             {
                 /* Calculating neighbours */
                 ret = MPI_Cart_shift(mpiData->comm, 2, 1, &mpiData->left, &mpiData->right);
-                mgcl::mgclCheckMpiError(mpiData->comm, ret, "MPI_Cart_shift x-direction");
+                mpi_util::mgclCheckMpiError(mpiData->comm, ret, "MPI_Cart_shift x-direction");
                 ret = MPI_Cart_shift(mpiData->comm, 1, 1, &mpiData->down, &mpiData->up);
-                mgcl::mgclCheckMpiError(mpiData->comm, ret, "MPI_Cart_shift y-direction");
+                mpi_util::mgclCheckMpiError(mpiData->comm, ret, "MPI_Cart_shift y-direction");
                 ret = MPI_Cart_shift(mpiData->comm, 0, 1, &mpiData->front, &mpiData->back);
-                mgcl::mgclCheckMpiError(mpiData->comm, ret, "MPI_Cart_shift z-direction");
+                mpi_util::mgclCheckMpiError(mpiData->comm, ret, "MPI_Cart_shift z-direction");
             }
             else
             {

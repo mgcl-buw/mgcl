@@ -2,6 +2,7 @@
 #include "cuboid.hpp" // for Cuboid
 #include "level.hpp"  // for Level
 #include "mpi_data.hpp"
+#include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "util.hpp"
 
@@ -298,17 +299,17 @@ namespace mgcl
             int mpi_periods[3] = {isPeriodic(), isPeriodic(), isPeriodic()};
 
             int err = MPI_Topo_test(comm, &type);
-            mgclCheckMpiError(comm, err, "MPI_Topo_test");
+            mpi_util::mgclCheckMpiError(comm, err, "MPI_Topo_test");
             err = MPI_Comm_size(comm, &mpi_size);
-            mgcl::mgclCheckMpiError(comm, err, "MPI_Comm_size");
+            mpi_util::mgclCheckMpiError(comm, err, "MPI_Comm_size");
             if (mpi_size > 1 && type != MPI_CART)
             {
                 err = MPI_Comm_size(comm, &mpi_size);
-                mgcl::mgclCheckMpiError(comm, err, "MPI_Comm_size");
+                mpi_util::mgclCheckMpiError(comm, err, "MPI_Comm_size");
                 err = MPI_Dims_create(mpi_size, 3, mpi_dims);
-                mgcl::mgclCheckMpiError(comm, err, "MPI_Dims_create");
+                mpi_util::mgclCheckMpiError(comm, err, "MPI_Dims_create");
                 err = MPI_Cart_create(comm, 3, mpi_dims, mpi_periods, 1, &comm);
-                mgcl::mgclCheckMpiError(comm, err, "MPI_Cart_create");
+                mpi_util::mgclCheckMpiError(comm, err, "MPI_Cart_create");
             }
 
             calculateAndSetMpiLevelThreshold();
@@ -921,7 +922,7 @@ namespace mgcl
 
         int type;
         int err = MPI_Topo_test(_comm, &type);
-        mgclCheckMpiError(_comm, err, "MPI_Topo_test");
+        mpi_util::mgclCheckMpiError(_comm, err, "MPI_Topo_test");
 
         if (type != MPI_CART)
             throw "MPI Comm must have a cartesian topology attached!";
@@ -955,7 +956,7 @@ namespace mgcl
     {
         int mpi_size;
         int err = MPI_Comm_size(comm, &mpi_size);
-        mgcl::mgclCheckMpiError(comm, err, "MPI_Comm_size");
+        mpi_util::mgclCheckMpiError(comm, err, "MPI_Comm_size");
         return mpi_size > 1;
     }
 }
