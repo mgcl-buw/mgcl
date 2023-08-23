@@ -25,6 +25,8 @@ util.hpp
 util.cpp
 mpi_data.hpp
 mpi_data.cpp
+mpi_util.hpp
+mpi_util.cpp
 )
 
 add_library(mgcl ${SOURCES_LIB})

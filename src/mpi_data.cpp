@@ -1,5 +1,7 @@
 #include "mpi_data.hpp"
 
+#include <cstdio>
+
 /**
  * @brief Construct a new mgcl::MPIData object
  *

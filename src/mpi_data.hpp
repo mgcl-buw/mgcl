@@ -3,12 +3,11 @@
 
 #include <memory>
 
-#include "cuboid.hpp"
-
 #include "mpi.h"
 
 namespace mgcl
 {
+    // MPI relevant data for each level
     class MPIData
     {
     public:
@@ -24,11 +23,6 @@ namespace mgcl
         int down;
         int front;
         int back;
-
-        // Starting values for this process (end can be calculated using attached level).
-        int xstart;
-        int ystart;
-        int zstart;
 
         MPIData(MPI_Comm _comm);
         MPIData(const MPIData &) = delete;
