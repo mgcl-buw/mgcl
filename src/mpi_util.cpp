@@ -120,6 +120,100 @@ namespace mgcl::mpi_util
     }
 
     /**
+     * @brief Scatters from rank 0 to all other processes. Must be called from each process. On rank 0 src must have the
+     *   size of the global grid, all other processes give in nullptr. dest is the local grid that is to be filled.
+     *
+     * @param comm
+     * @param src Global grid for root process (rank 0), nullptr for other processes
+     * @param dest Local grid into which data is scattered
+     */
+    void scatter(MPI_Comm comm, Cuboid *src, Cuboid &dest)
+    {
+        int err;
+        int rank;
+        err = MPI_Comm_rank(comm, &rank);
+        mgclCheckMpiError(comm, err, "MPI_Comm_rank");
+
+        int mpi_size;
+        err = MPI_Comm_size(comm, &mpi_size);
+        mgclCheckMpiError(comm, err, "MPI_Comm_size");
+
+        if (mpi_size <= 1)
+            throw "Scatter is only supported for at least 2 processes.";
+
+        if (rank == 0 && src == nullptr)
+            throw "src must not be null for root process!";
+
+        int mloc = dest.getM();
+        int nloc = dest.getN();
+        int oloc = dest.getO();
+        int mglobgh = src ? src->getMgh() : 0;
+        int nglobgh = src ? src->getNgh() : 0;
+        int oglobgh = src ? src->getOgh() : 0;
+
+        // Create subarray type for the receive buffer
+        MPI_Datatype subarrayRecv;
+        int sizes[3] = {dest.getMgh(), dest.getNgh(), dest.getOgh()};
+        int subsizes[3] = {mloc, nloc, oloc};
+        int starts[3] = {dest.getGhostsM(), dest.getGhostsN(), dest.getGhostsM()};
+        err = MPI_Type_create_subarray(3, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &subarrayRecv);
+        mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
+        err = MPI_Type_commit(&subarrayRecv);
+        mgclCheckMpiError(comm, err, "MPI_Type_commit");
+
+        // Create subarray type for the send buffer
+        MPI_Datatype subarraySend;
+        MPI_Datatype subarraySendResized;
+        if (rank == 0)
+        {
+            int sizes[3] = {mglobgh, nglobgh, oglobgh};
+            int subsizes[3] = {mloc, nloc, oloc};
+            int starts[3] = {src->getGhostsM(), src->getGhostsN(), src->getGhostsO()};
+            // int starts[3] = {0, 0, 0};
+            err = MPI_Type_create_subarray(3, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &subarraySend);
+            mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
+            err = MPI_Type_commit(&subarraySend);
+            mgclCheckMpiError(comm, err, "MPI_Type_commit");
+
+            // Resize send data to avoid overlapping resulting from ghosts. Enabling explicitely stating start and extent
+            // later in MPI_Scatterv (counts and displ). One unit is the size of a local grid.
+            err = MPI_Type_create_resized(subarraySend, 0, 1 * sizeof(double), &subarraySendResized);
+            // err = MPI_Type_create_resized(subarrayRecv, 0, oglobgh * sizeof(double), &subarrayRecvResized);
+            mgclCheckMpiError(comm, err, "MPI_Type_create_resized");
+            err = MPI_Type_commit(&subarraySendResized);
+            mgclCheckMpiError(comm, err, "MPI_Type_commit");
+        }
+
+        int counts[mpi_size];
+        int displ[mpi_size];
+        if (rank == 0)
+            for (int i = 0; i < mpi_size; i++)
+            {
+                int coords[3] = {0, 0, 0};
+                err = MPI_Cart_coords(comm, i, 3, coords);
+                mgclCheckMpiError(comm, err, "MPI_Cart_coords");
+
+                counts[i] = 1;
+                displ[i] = coords[0] * mloc * nglobgh * oglobgh + coords[1] * nloc * oglobgh + coords[2] * oloc;
+            }
+
+        if (rank == 0)
+            MPI_Scatterv(src->field1d().data(), counts, displ, subarraySendResized,
+                         dest.field1d().data(), 1, subarrayRecv, 0, comm);
+        else
+            MPI_Scatterv(nullptr, nullptr, nullptr, MPI_DATATYPE_NULL,
+                         dest.field1d().data(), 1, subarrayRecv, 0, comm);
+        mgclCheckMpiError(comm, err, "MPI_Scatterv");
+
+        mgclCheckMpiError(comm, MPI_Type_free(&subarrayRecv), "MPI_Type_free");
+        if (rank == 0)
+        {
+            mgclCheckMpiError(comm, MPI_Type_free(&subarraySend), "MPI_Type_free");
+            mgclCheckMpiError(comm, MPI_Type_free(&subarraySendResized), "MPI_Type_free");
+        }
+    }
+
+    /**
      * @brief Checks the return code of a MPI call and prints it if not MPI_SUCCESS.
      */
     void mgcl_check_mpi_error(MPI_Comm comm, int err, const char *operation, const char *filename, int line)
