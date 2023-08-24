@@ -312,6 +312,9 @@ namespace mgcl
                 mpi_util::mgclCheckMpiError(comm, err, "MPI_Cart_create");
             }
 
+            err = MPI_Comm_rank(comm, &mpi_rank);
+            mpi_util::mgclCheckMpiError(comm, err, "MPI_Comm_rank");
+
             calculateAndSetMpiLevelThreshold();
         }
 
@@ -958,5 +961,10 @@ namespace mgcl
         int err = MPI_Comm_size(comm, &mpi_size);
         mpi_util::mgclCheckMpiError(comm, err, "MPI_Comm_size");
         return mpi_size > 1;
+    }
+
+    int Problem::mpiRank() const
+    {
+        return mpi_rank;
     }
 }

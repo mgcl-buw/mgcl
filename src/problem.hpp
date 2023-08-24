@@ -142,6 +142,9 @@ namespace mgcl
         /* Communicator for MPI. Can be set for using a custom topology. */
         MPI_Comm comm = MPI_COMM_WORLD;
 
+        /* Rank of this MPI process. Only used internally. */
+        int mpi_rank = -1;
+
         /* First coarse level for which MPI is not used anymore. Only for internal purposes. */
         int mpiLevelThreshold = -1;
 
@@ -304,5 +307,7 @@ namespace mgcl
         void setMpiMinGridPoints(int mpiMinGridPoints_);
 
         void calculateAndSetMpiLevelThreshold();
+
+        int mpiRank() const;
     };
 }
