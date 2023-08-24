@@ -1,7 +1,8 @@
 #include "multigrid_engine.hpp"
-#include "cuboid.hpp"        // for Cuboid
-#include "hypercube.hpp"     // for Hypercube6d
-#include "level.hpp"         // for Level
+#include "cuboid.hpp"    // for Cuboid
+#include "hypercube.hpp" // for Hypercube6d
+#include "level.hpp"     // for Level
+#include "mpi_util.hpp"
 #include "opencl_helper.hpp" // for mgclCheckError, OpenCLHelper
 #include "problem.hpp"       // for Problem
 
@@ -62,19 +63,68 @@ namespace mgcl
         // }
 
         // restrict residual as right hand side on coarser grid
+        // TODO do not update ghosts of coarse grid before gather (size too small)
         MultigridEngine::restrictSeq(level, levelAbove, level.getR(), levelAbove.getF());
 
-        // start next v-cycle iteration if not at highest level
-        if (level.getNum() < problem.maxlevel - 1)
-            MultigridEngine::vcycleSeq(problem, levelAbove);
-        else
+        // If MPI is in use but minGridPoints is reached, gather rhs data to process 0 and perform calculations
+        // locally only, until we're reaching the threshold level moving downwards again.
+        if (problem.useMpi() && level.getUseMpi() && !levelAbove.getUseMpi())
         {
-            MultigridEngine::jacobiSeq(levelAbove.getV(), levelAbove.getF(), levelAbove.getR(), problem.omega,
-                                       problem.nu1 + problem.nu2, problem.residual_norm, problem.stencilType,
-                                       level.stencilFactor, level.stencilValues.get(), false, problem.isPeriodic(),
-                                       1, level.getMpiDataPtr());
+            // TODO Gather on lv with loc = minGridPoints
+            // example: minGridPoints=4, do this on lv 1 with values of lv 2
+            //   rank 0 lv 1: glob=16, loc=4, lv 2: glob=loc=8
+            // gather into levelAbove.getF() (reuse on rank 0)
 
-            // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
+            mpi_util::gather(problem.comm, levelAbove.getF());
+
+            // do rest on proc 0
+        }
+
+        // Advance to coarser levels only on proc 0 after gather
+        if (problem.useMpi() && !levelAbove.getUseMpi() && problem.mpiRank() == 0)
+        {
+            // Update ghosts of gathered
+            // TODO check Dirichlet
+            // TODO only on rank 0
+            if (problem.isPeriodic())
+                MultigridEngine::updateGhostsSeq(levelAbove.getF(), levelAbove.getMpiDataPtr());
+
+            // start next v-cycle iteration if not at highest level
+            if (level.getNum() < problem.maxlevel - 1)
+                MultigridEngine::vcycleSeq(problem, levelAbove);
+            else
+            {
+                MultigridEngine::jacobiSeq(levelAbove.getV(), levelAbove.getF(), levelAbove.getR(), problem.omega,
+                                           problem.nu1 + problem.nu2, problem.residual_norm, problem.stencilType,
+                                           level.stencilFactor, level.stencilValues.get(), false, problem.isPeriodic(),
+                                           1, level.getMpiDataPtr());
+
+                // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
+            }
+        }
+
+        // If MPI is in use but minGridPoints is reached, scatter v data from process 0 to others and continue
+        // distributed calulcations.
+        std::shared_ptr<Cuboid> tmp;
+        if (problem.useMpi() && level.getUseMpi() && !levelAbove.getUseMpi())
+        {
+            // TODO Scatter on lv with loc = minGridPoints
+            // example: minGridPoints=4, do this on lv 1 with values of lv 2
+            //   rank 0 lv 1: glob=16, loc=4, lv 2: glob=loc=8
+            // scatter into levelAbove.getV() (size 8 -> 2), update ghosts of V, then prolongate into level.getR() (size 4)
+            // ghost update level.getR() needed before prolongate -> adjust size of level.getR()
+
+            if (problem.mpiRank() == 0)
+            {
+                // TODO check if tmp buffer is ok
+                // levelAbove has bigger size on rank 0, thus calculate using level which has local size as base
+                tmp = std::make_shared<Cuboid>(level.getM() / 2, level.getN() / 2, level.getO() / 2,
+                                               problem.getGhosts(), problem.getGhosts(), problem.getGhosts());
+                mpi_util::scatter(problem.comm, levelAbove.getVPtr().get(), *tmp);
+                levelAbove.setV(tmp);
+            }
+            else
+                mpi_util::scatter(problem.comm, nullptr, levelAbove.getV());
         }
 
         // prolongate from coarser to finer grid
