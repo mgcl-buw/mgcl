@@ -247,11 +247,11 @@ void mgcl_test::create4hOrderPeriodicProblem(mgcl::Cuboid &v, mgcl::Cuboid &f, m
                 double xsm1_4 = (xs - 1) * (xs - 1) * (xs - 1) * (xs - 1);
                 double ysm1_4 = (ys - 1) * (ys - 1) * (ys - 1) * (ys - 1);
                 double zsm1_4 = (zs - 1) * (zs - 1) * (zs - 1) * (zs - 1);
-                v[i][j][k] = 0;
-                solution[i][j][k] = 1000000 * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) *
-                                    (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) *
-                                    (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1));
-                f[i][j][k] =
+                v[i_v][j_v][k_v] = 0;
+                solution[i_s][j_s][k_s] = 1000000 * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) *
+                                          (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) *
+                                          (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1));
+                f[i_f][j_f][k_f] =
                     -1000000 *
                     (12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_2 + 12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_2 * zsm1_4 +
                      12 * xs4 * ys4 * zs4 * xsm1_2 * ysm1_4 * zsm1_4 + 32 * xs4 * ys4 * zs3 * xsm1_4 * ysm1_4 * zsm1_3 +
