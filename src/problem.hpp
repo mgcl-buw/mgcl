@@ -143,7 +143,7 @@ namespace mgcl
         MPI_Comm comm = MPI_COMM_WORLD;
 
         /* Rank of this MPI process. Only used internally. */
-        int mpi_rank = -1;
+        int mpi_rank = 0;
 
         /* First coarse level for which MPI is not used anymore. Only for internal purposes. */
         int mpiLevelThreshold = -1;
