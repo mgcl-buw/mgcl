@@ -33,6 +33,12 @@ add_library(mgcl ${SOURCES_LIB})
 target_link_libraries(mgcl PRIVATE OpenCL::OpenCL)
 target_link_libraries(mgcl PRIVATE MPI::MPI_CXX)
 
+# Use address sanitizer when build type is debug.
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+  target_compile_options(mgcl PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+  target_link_options(mgcl PUBLIC -fsanitize=address)
+endif()
+
 # Uncomment this to get Debug output in mgcl
 # target_compile_definitions(mgcl PRIVATE MGCL_DEBUG)
 
