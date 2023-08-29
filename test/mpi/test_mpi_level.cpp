@@ -11,7 +11,7 @@
 #include "mpi.h"
 
 // Checks if neighbours are initialized correctly for each level for 1 process.
-// Run with: mpiexec -n 1 tests_mpi [mpi1]
+// Run with: mpiexec -n 1 tests_mpi "Level::initMpiData (1 process)"
 TEST_CASE("Level::initMpiData (1 process)", "[mpi1]")
 {
     int N = 8;
@@ -57,6 +57,7 @@ TEST_CASE("Level::initMpiData (1 process)", "[mpi1]")
         auto &lv = p.getLevelAt(i);
         REQUIRE(lv.getMpiDataPtr() == nullptr);
         REQUIRE_THROWS(lv.getMpiData());
+        REQUIRE(!lv.getUseMpi());
     }
 }
 
@@ -64,8 +65,12 @@ TEST_CASE("Level::initMpiData (1 process)", "[mpi1]")
 // Run with: mpiexec -n 2 tests_mpi "Level::initMpiData (2 processes)"
 TEST_CASE("Level::initMpiData (2 processes)", "[mpi2]")
 {
-    int N = 8;      // local size of grid in one direction
-    int Ng = N * 2; // global size of grid in one direction
+    using std::min;
+
+    // global grid size
+    int m = 8;
+    int n = 8;
+    int o = 8;
     int periodic = 1;
 
     // check if mpi is initialized
@@ -93,13 +98,25 @@ TEST_CASE("Level::initMpiData (2 processes)", "[mpi2]")
     MPI_Comm_rank(mpi_comm, &mpi_rank);
     MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
 
+    /* Initialize start and end for local grid */
+    int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+    int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+    int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+    int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+    int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+    int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+    int ml = (m_end - m_start) + 1;
+    int nl = (n_end - n_start) + 1;
+    int ol = (o_end - o_start) + 1;
+
     // Init some random data
-    auto v = std::make_shared<mgcl::Cuboid>(N, N, N, 1, 1, 1);
-    auto f = std::make_shared<mgcl::Cuboid>(N, N, N, 1, 1, 1);
+    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol, 1, 1, 1);
+    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol, 1, 1, 1);
     v->fillRandom();
     f->fillRandom();
 
-    mgcl::Problem p(N, N, N, v, f, Ng, Ng, Ng);
+    mgcl::Problem p(ml, nl, ol, v, f, m, n, o);
     p.setMpiComm(mpi_comm);
     p.init();
 
@@ -112,6 +129,7 @@ TEST_CASE("Level::initMpiData (2 processes)", "[mpi2]")
         if (p.getMpiLevelThreshold() > i)
         {
             auto &mpiData = lv.getMpiData();
+            REQUIRE(lv.getUseMpi());
 
             REQUIRE(mpiData.rank == mpi_rank);
 
@@ -161,8 +179,8 @@ TEST_CASE("Level::initMpiData (2 processes)", "[mpi2]")
 }
 
 // Checks if neighbours are initialized correctly for each level for 8 processes.
-// Run with: mpiexec -n 8 tests_mpi [mpi8]
-TEST_CASE("Level::initMpiData (8 processes)", "[mpi8]")
+// Run with: mpiexec -n 8 tests_mpi "Level::initMpiData (8 processes)"
+TEST_CASE("Level::initMpiData (8 processes)")
 {
     int N = 4;      // local size of grid in one direction
     int Ng = N * 2; // global size of grid in one direction
@@ -253,6 +271,7 @@ TEST_CASE("Level::initMpiData (8 processes)", "[mpi8]")
         auto &lv0 = p.getLevelAt(i);
         auto &mpiData0 = lv0.getMpiData();
         REQUIRE(mpiData0.mpiSize() == 8);
+        REQUIRE(lv0.getUseMpi());
 
         // clang-format off
     std::vector<std::vector<int>> neighbours0 = {
@@ -282,8 +301,8 @@ TEST_CASE("Level::initMpiData (8 processes)", "[mpi8]")
 }
 
 // Checks if neighbours are initialized correctly for each level for 24 processes and a non-uniform domain.
-// Run with: mpiexec -n 24 tests_mpi [mpi24]
-TEST_CASE("Level::initMpiData (24 processes)", "[mpi24]")
+// Run with: mpiexec --oversubscribe -n 24 tests_mpi "Level::initMpiData (24 processes)"
+TEST_CASE("Level::initMpiData (24 processes)")
 {
     int m = 8; // local size of grid in one direction
     int n = 4;
@@ -345,8 +364,6 @@ TEST_CASE("Level::initMpiData (24 processes)", "[mpi24]")
     p.setMpiMinGridPoints(2);
     p.init();
 
-    int other_rank = mpi_rank == 0 ? 1 : 0;
-
     // Cartesian topology layout:
     //       z=0        z=1
     //    +---+---+  +---+---+
@@ -381,6 +398,7 @@ TEST_CASE("Level::initMpiData (24 processes)", "[mpi24]")
         auto &lv0 = p.getLevelAt(i);
         auto &mpiData0 = lv0.getMpiData();
         REQUIRE(mpiData0.mpiSize() == 24);
+        REQUIRE(lv0.getUseMpi());
 
         // print neighbours per rank
         // if (0 == mpi_rank)
