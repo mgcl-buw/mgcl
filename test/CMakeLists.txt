@@ -24,11 +24,11 @@ FetchContent_MakeAvailable(Catch2)
 
 # don't use iwyu for Catch2
 set_property(
-  TARGET Catch2
+  TARGET Catch2::Catch2
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
 set_property(
-  TARGET Catch2WithMain
+  TARGET Catch2::Catch2WithMain
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
 

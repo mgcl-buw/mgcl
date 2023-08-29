@@ -40,17 +40,17 @@ FetchContent_MakeAvailable(Catch2)
 
 # don't use iwyu for Catch2
 set_property(
-  TARGET Catch2
+  TARGET Catch2::Catch2
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
 set_property(
-  TARGET Catch2WithMain
+  TARGET Catch2::Catch2WithMain
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
 
 # don't use iwyu for nanobench
 set_property(
-  TARGET nanobench
+  TARGET nanobench::nanobench
   PROPERTY CXX_INCLUDE_WHAT_YOU_USE
 )
 
@@ -87,7 +87,7 @@ find_package(MPI REQUIRED)
 target_link_libraries(benchmarks PRIVATE MPI::MPI_CXX)
 
 # target_include_directories(benchmarks_nanobench PRIVATE include/)
-target_link_libraries(benchmarks PRIVATE nanobench)
+target_link_libraries(benchmarks PRIVATE nanobench::nanobench)
 target_link_libraries(benchmarks PRIVATE Catch2::Catch2)
 target_link_libraries(benchmarks PRIVATE mgcl)
 target_link_libraries(benchmarks PRIVATE pmg)
