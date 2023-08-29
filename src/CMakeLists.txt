@@ -33,15 +33,16 @@ add_library(mgcl ${SOURCES_LIB})
 target_link_libraries(mgcl PRIVATE OpenCL::OpenCL)
 target_link_libraries(mgcl PRIVATE MPI::MPI_CXX)
 
-# Use address sanitizer when build type is debug.
+# Use additional flags for debugging purposes if build type is Debug.
 if(CMAKE_BUILD_TYPE MATCHES Debug)
-  target_compile_options(mgcl PUBLIC -fsanitize=address -fno-omit-frame-pointer)
-  target_link_options(mgcl PUBLIC -fsanitize=address)
-
   if (MSVC)
     # warning level 4
     target_compile_options(mgcl PRIVATE /W4)
   else()
+    # Use address sanitizer (ASAN)
+    target_compile_options(mgcl PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+    target_link_options(mgcl PUBLIC -fsanitize=address)
+
     # additional warnings
     target_compile_options(mgcl PRIVATE -Wall -Wextra -Wpedantic)
   endif()
