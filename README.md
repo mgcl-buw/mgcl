@@ -114,3 +114,16 @@ There is a threshold that prevents coarse levels to be calculated using MPI. It 
 - [catch2](https://github.com/catchorg/Catch2) for Unit Tests
 - [nanobench](https://github.com/martinus/nanobench) for benchmarks
 
+## Build
+
+Optional useful CMake options:
+- `-DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/openmpi`
+- `-DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=include-what-you-use;-Xiwyu;--cxx17ns`
+- `-DCMAKE_TOOLCHAIN_FILE=<vcpkgInstallDir>/scripts/buildsystems/vcpkg.cmake`
+
+```
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release <options>
+cmake --build .
+```
