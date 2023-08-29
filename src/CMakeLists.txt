@@ -37,6 +37,14 @@ target_link_libraries(mgcl PRIVATE MPI::MPI_CXX)
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   target_compile_options(mgcl PUBLIC -fsanitize=address -fno-omit-frame-pointer)
   target_link_options(mgcl PUBLIC -fsanitize=address)
+
+  if (MSVC)
+    # warning level 4
+    target_compile_options(mgcl PRIVATE /W4)
+  else()
+    # additional warnings
+    target_compile_options(mgcl PRIVATE -Wall -Wextra -Wpedantic)
+  endif()
 endif()
 
 # Uncomment this to get Debug output in mgcl
