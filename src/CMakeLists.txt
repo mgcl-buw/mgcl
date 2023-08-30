@@ -1,6 +1,23 @@
 find_package(OpenCL REQUIRED)
 find_package(MPI REQUIRED)
 
+# Use static analyzers if variables are set.
+if(USE_STATIC_ANALYZER)
+  include(../cmake/tools.cmake)
+
+  if (CLANG_TIDY)
+      clang_tidy(${CLANG_TIDY_ARGS})
+    endif()
+
+    if (IWYU)
+      include_what_you_use(${IWYU_ARGS})
+    endif()
+
+    if (CPPCHECK)
+      cppcheck(${CPPCHECK_ARGS})
+    endif()
+endif()
+
 set(SOURCES_LIB 
 cuboid.hpp
 cuboid.cpp
@@ -39,12 +56,8 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
     # warning level 4
     target_compile_options(mgcl PRIVATE /W4)
   else()
-    # Use address sanitizer (ASAN)
-    target_compile_options(mgcl PUBLIC -fsanitize=address -fno-omit-frame-pointer)
-    target_link_options(mgcl PUBLIC -fsanitize=address)
-
     # additional warnings
-    target_compile_options(mgcl PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(mgcl PRIVATE -Wall -Wextra -Wpedantic -Wno-reorder -Wno-vla)
   endif()
 endif()
 

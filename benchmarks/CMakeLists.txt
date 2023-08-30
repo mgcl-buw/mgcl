@@ -1,58 +1,13 @@
-# ==========================
-Include(FetchContent)
+CPMAddPackage("gh:catchorg/Catch2#${MGCL_catch2_version}")
+CPMAddPackage("gh:martinus/nanobench#${MGCL_nanobench_version}")
 
-if(${CMAKE_VERSION} VERSION_LESS "3.24.0") 
-  # Nanobench configuration
-  FetchContent_Declare(
-      nanobench
-      GIT_REPOSITORY https://github.com/martinus/nanobench.git
-      GIT_TAG ${MGCL_nanobench_version}
-      GIT_SHALLOW TRUE
-  )
-
-  FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG        ${MGCL_catch2_version} # or a later release
-    GIT_SHALLOW TRUE
-  )
-else()
-  # Nanobench configuration
-  FetchContent_Declare(
-      nanobench
-      GIT_REPOSITORY https://github.com/martinus/nanobench.git
-      GIT_TAG ${MGCL_nanobench_version}
-      GIT_SHALLOW TRUE
-      FIND_PACKAGE_ARGS # try to find using find_package first
-  )
-
-  FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG        ${MGCL_catch2_version} # or a later release
-    GIT_SHALLOW TRUE
-    FIND_PACKAGE_ARGS # try to find using find_package first
-  )
+# Don't use static analyzers for benchmarks.
+if(USE_STATIC_ANALYZER)
+  include(../cmake/tools.cmake)
+  reset_clang_tidy()
+  reset_cppcheck()
+  reset_include_what_you_use()
 endif()
-
-FetchContent_MakeAvailable(nanobench)
-FetchContent_MakeAvailable(Catch2)
-
-# don't use iwyu for Catch2
-set_property(
-  TARGET Catch2::Catch2
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
-set_property(
-  TARGET Catch2::Catch2WithMain
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
-
-# don't use iwyu for nanobench
-set_property(
-  TARGET nanobench::nanobench
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
 
 set(SOURCES_BENCH
 ../test/test_utility.hpp
@@ -74,12 +29,6 @@ catch2_main_benchs.cpp
 )
 
 add_executable(benchmarks ${SOURCES_BENCH})
-
-# don't use iwyu for benchmarks
-set_property(
-  TARGET benchmarks
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
 
 find_package(MPI REQUIRED)
 # target_include_directories(benchmarks SYSTEM PRIVATE ${MPI_INCLUDE_PATH})

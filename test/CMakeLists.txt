@@ -1,36 +1,14 @@
 find_package(MPI REQUIRED)
 
-# ==========================
-Include(FetchContent)
-
-if(${CMAKE_VERSION} VERSION_LESS "3.24.0") 
-  FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG        ${MGCL_catch2_version} # or a later release
-    GIT_SHALLOW TRUE
-  )
-else()
-  FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG        ${MGCL_catch2_version} # or a later release
-    GIT_SHALLOW TRUE
-    FIND_PACKAGE_ARGS # try to find using find_package first
-  )
+# Don't use static analyzers for tests.
+if(USE_STATIC_ANALYZER)
+  include(../cmake/tools.cmake)
+  reset_clang_tidy()
+  reset_cppcheck()
+  reset_include_what_you_use()
 endif()
 
-FetchContent_MakeAvailable(Catch2)
-
-# don't use iwyu for Catch2
-set_property(
-  TARGET Catch2::Catch2
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
-set_property(
-  TARGET Catch2::Catch2WithMain
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
+CPMAddPackage("gh:catchorg/Catch2#${MGCL_catch2_version}")
 
 # Test binary for unit testing mgcl
 # These tests can use the Catch2-provided main
@@ -67,12 +45,6 @@ add_executable(tests ${SOURCES_TEST})
 target_link_libraries(tests PRIVATE Catch2::Catch2 MPI::MPI_CXX)
 target_link_libraries(tests PRIVATE mgcl)
 
-# don't use iwyu for tests
-set_property(
-  TARGET tests
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
-
 # ==========================
 
 # Test binary for solving problems
@@ -97,12 +69,6 @@ target_link_libraries(tests_solving PRIVATE MPI::MPI_CXX)
 target_link_libraries(tests_solving PRIVATE Catch2::Catch2)
 target_link_libraries(tests_solving PRIVATE mgcl)
 target_link_libraries(tests_solving PRIVATE pmg)
-
-# don't use iwyu for tests_solving
-set_property(
-  TARGET tests_solving
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
 
 # ==========================
 
@@ -139,9 +105,3 @@ add_custom_target(copy_script DEPENDS "${CMAKE_BINARY_DIR}/test/run-all.sh")
 
 # Whenever target 'tests_mpi' is requested, the custom target will be evaluated.
 add_dependencies(tests_mpi copy_script)
-
-# don't use iwyu for tests_solving
-set_property(
-  TARGET tests_mpi
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
