@@ -46,7 +46,7 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
     # target_link_options(mgcl PUBLIC -fsanitize=address)
 
     # additional warnings
-    target_compile_options(mgcl PRIVATE -Wall -Wextra -Wpedantic -Wno-reorder -Wno-vla)
+    target_compile_options(mgcl PRIVATE -Wall -Wextra -Wno-reorder)
 
     # enable cppcheck and and iwyu
     set(CMAKE_CXX_CPPCHECK "cppcheck")
