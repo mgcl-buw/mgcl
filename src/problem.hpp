@@ -14,6 +14,7 @@
 #include "stencil.hpp"       // for VaryingStencil3x3x3
 
 #include <memory> // for shared_ptr, unique_ptr
+#include <ostream>
 #include <string> // for string
 #include <vector> // for vector
 
@@ -309,5 +310,7 @@ namespace mgcl
         void calculateAndSetMpiLevelThreshold();
 
         int mpiRank() const;
+
+        friend std::ostream &operator<<(std::ostream &os, const Problem &lv);
     };
 }

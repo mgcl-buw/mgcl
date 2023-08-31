@@ -967,4 +967,30 @@ namespace mgcl
     {
         return mpi_rank;
     }
+
+    std::ostream &operator<<(std::ostream &os, const Problem &p)
+    {
+        os << "Problem: " << std::endl
+           << " m,n,o: " << p.m << "," << p.n << "," << p.o << std::endl
+           << " m_global,n_global,o_global: " << p.m_global << "," << p.n_global << "," << p.o_global << std::endl
+           << " ghosts: " << p.ghosts << std::endl
+           << " ghosts_in: " << p.ghosts_in << std::endl
+           << " maxlevel: " << p.maxlevel << std::endl
+           << " maxiter_vcycles: " << p.maxiter_vcycles << std::endl
+           << " nu1,nu2: " << p.nu1 << "," << p.nu2 << std::endl
+           << " omega: " << p.omega << std::endl
+           << " tol: " << p.tol << std::endl
+           << " ignoreTol: " << p.ignoreTol << std::endl
+           << " residual_norm: " << p.residual_norm << std::endl
+           << " stencilType: " << p.stencilType << std::endl
+           << " use_opencl: " << p.use_opencl << std::endl
+           << " reuse_opencl_buffers: " << p.reuse_opencl_buffers << std::endl
+           << " jacobi_iterations_per_kernel: " << p.jacobi_iterations_per_kernel << std::endl
+           << " silent: " << p.silent << std::endl
+           << " mpi_rank: " << p.mpi_rank << std::endl
+           << " mpiLevelThreshold: " << p.mpiLevelThreshold << std::endl
+           << " mpiMinGridPoints: " << p.mpiMinGridPoints << std::endl;
+
+        return os;
+    }
 }
