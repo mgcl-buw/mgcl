@@ -484,6 +484,19 @@ namespace mgcl
         return ret;
     }
 
+    std::ostream &operator<<(std::ostream &os, const Level &lv)
+    {
+        os << "Level: " << std::endl
+           << " num: " << lv.num << std::endl
+           << " m,n,o: " << lv.m << "," << lv.n << "," << lv.o << std::endl
+           << " mgh,ngh,ogh: " << lv.mgh << "," << lv.ngh << "," << lv.ogh << std::endl
+           << " useMpi: " << lv.useMpi << std::endl
+           << " h: " << lv.h << std::endl
+           << " stencilType: " << lv.stencilType << std::endl
+           << " stencilFactor: " << lv.stencilFactor << std::endl;
+        return os;
+    }
+
     void Level::setV(const std::shared_ptr<Cuboid> &v_)
     {
         v = v_;

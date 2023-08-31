@@ -102,9 +102,9 @@ TEST_CASE("MPI vcycle immediate gather/scatter")
     mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
 
     // Create local slices
-    std::shared_ptr<mgcl::Cuboid> vloc(std::move(v->slice(m_start, m_end, n_start, n_end, o_start, o_end)));
-    std::shared_ptr<mgcl::Cuboid> floc(std::move(f->slice(m_start, m_end, n_start, n_end, o_start, o_end)));
-    std::shared_ptr<mgcl::Cuboid> solutionloc(std::move(solution->slice(m_start, m_end, n_start, n_end, o_start, o_end)));
+    std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+    std::shared_ptr<mgcl::Cuboid> floc(f->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+    std::shared_ptr<mgcl::Cuboid> solutionloc(solution->slice(m_start, m_end, n_start, n_end, o_start, o_end));
 
     // Create local problem
     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);

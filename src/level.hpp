@@ -6,6 +6,7 @@
 #include "stencil.hpp" // for VaryingStencil3x3x3
 
 #include <memory> // for shared_ptr
+#include <ostream>
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -131,6 +132,8 @@ namespace mgcl
         void setStencilValuesGpu(std::shared_ptr<VaryingStencilGpu> sv);
 
         bool getUseMpi() const;
+
+        friend std::ostream &operator<<(std::ostream &os, const Level &lv);
     };
 }
 
