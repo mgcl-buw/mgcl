@@ -113,17 +113,29 @@ There is a threshold that prevents coarse levels to be calculated using MPI. It 
 - [cmake](https://cmake.org/) for the build system
 - [catch2](https://github.com/catchorg/Catch2) for Unit Tests
 - [nanobench](https://github.com/martinus/nanobench) for benchmarks
+- [Backward-cpp](https://github.com/bombela/backward-cpp) for prettier Stacktraces (only used for Tests)
 
 ## Build
 
 Optional useful CMake options:
-- `-DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/openmpi`
-- `-DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=include-what-you-use;-Xiwyu;--cxx17ns`
-- `-DCMAKE_TOOLCHAIN_FILE=<vcpkgInstallDir>/scripts/buildsystems/vcpkg.cmake`
+- `-DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/openmpi` (if mpi is not found by default)
+- `-DBACKWARD_HAS_DWARF=ON` (for tests targets)
+- `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` (needs to have ccache installed on your system)
 
+Not used anymore:
+- `-DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=include-what-you-use;-Xiwyu;--cxx17ns` (currently hard-coded only for src and for Debug type)
+- `-DCMAKE_TOOLCHAIN_FILE=<vcpkgInstallDir>/scripts/buildsystems/vcpkg.cmake` (currently vcpkg is not supported)
+
+For a simple build:
 ```
 mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release <options>
 cmake --build .
+```
+
+For a development build enabling switching between build types without recompiling all dependencies, creating separate build directories for Debug and Release is suggested. In VSCode you can e.g. add in the settings:
+
+```
+"cmake.buildDirectory": "${workspaceFolder}/build/${buildType}"
 ```
