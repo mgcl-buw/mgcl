@@ -1,14 +1,6 @@
 CPMAddPackage("gh:catchorg/Catch2#${MGCL_catch2_version}")
 CPMAddPackage("gh:martinus/nanobench#${MGCL_nanobench_version}")
 
-# Don't use static analyzers for benchmarks.
-if(USE_STATIC_ANALYZER)
-  include(../cmake/tools.cmake)
-  reset_clang_tidy()
-  reset_cppcheck()
-  reset_include_what_you_use()
-endif()
-
 set(SOURCES_BENCH
 ../test/test_utility.hpp
 ../test/test_utility.cpp

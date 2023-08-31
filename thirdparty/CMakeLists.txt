@@ -1,11 +1,3 @@
-# Don't use static analyzers for thirdparty packages.
-if(USE_STATIC_ANALYZER)
-  include(../cmake/tools.cmake)
-  reset_clang_tidy()
-  reset_cppcheck()
-  reset_include_what_you_use()
-endif()
-
 # ==========================
 # pmg configuration for comparison in benchmarks
 set (SOURCES_PMG

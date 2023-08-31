@@ -1,13 +1,5 @@
 find_package(MPI REQUIRED)
 
-# Don't use static analyzers for tests.
-if(USE_STATIC_ANALYZER)
-  include(../cmake/tools.cmake)
-  reset_clang_tidy()
-  reset_cppcheck()
-  reset_include_what_you_use()
-endif()
-
 CPMAddPackage("gh:catchorg/Catch2#${MGCL_catch2_version}")
 
 # Test binary for unit testing mgcl

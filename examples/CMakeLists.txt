@@ -1,13 +1,5 @@
 find_package(MPI REQUIRED)
 
-# Don't use static analyzers for examples.
-if(USE_STATIC_ANALYZER)
-  include(../cmake/tools.cmake)
-  reset_clang_tidy()
-  reset_cppcheck()
-  reset_include_what_you_use()
-endif()
-
 # ==========================
 # example main that can be profiled using e.g. gprof
 set(SOURCES_EXAMPLE_MAIN

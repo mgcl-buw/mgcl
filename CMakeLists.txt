@@ -32,7 +32,6 @@ endif()
 # Add CPM as dependency manager. Download it if not already present.
 # see https://github.com/cpm-cmake/CPM.cmake/wiki/Downloading-CPM.cmake-in-CMake
 include(cmake/CPM.cmake)
-include(cmake/tools.cmake)
 # ==============================
 
 add_subdirectory(src)
