@@ -31,7 +31,7 @@ namespace mgcl
     double MultigridEngine::jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
                                       double stencilFactor, VaryingStencil3x3x3 *stencilValues, bool returnResidualNorm,
-                                      bool periodic, int stepsPerIter, MPIData *mpiData)
+                                      bool periodic, bool updateGhostsLocally, int stepsPerIter, MPIData *mpiData)
     {
         double res = 0.0;
         double ***vraw = v.getData();
@@ -77,7 +77,7 @@ namespace mgcl
         {
             // update ghost cells for periodic boundary condition
             if (periodic)
-                MultigridEngine::updateGhostsSeq(v, mpiData);
+                MultigridEngine::updateGhostsSeq(v, mpiData, periodic, updateGhostsLocally);
             // TODO else update only neighboring processes if using mpi
 
             // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
@@ -98,7 +98,7 @@ namespace mgcl
 
                 // r = f - A*v
                 res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, false, periodic,
-                                  -off, -off, -off, mpiData);
+                                  updateGhostsLocally, -off, -off, -off, mpiData);
 
                 if (stencilType == MGCL_LAPLACE_7POINT || stencilType == MGCL_LAPLACE_19POINT || stencilType == MGCL_LAPLACE_27POINT)
                 {
@@ -146,11 +146,11 @@ namespace mgcl
         }
 
         if (periodic)
-            MultigridEngine::updateGhostsSeq(v, mpiData);
+            MultigridEngine::updateGhostsSeq(v, mpiData, periodic, updateGhostsLocally);
 
         if (returnResidualNorm)
             res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, returnResidualNorm, periodic,
-                              0, 0, 0, mpiData);
+                              updateGhostsLocally, 0, 0, 0, mpiData);
 
         return res;
     }
@@ -286,14 +286,14 @@ namespace mgcl
             {
                 err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh,
                                                     problem.ghosts, problem.ghosts, problem.ghosts,
-                                                    level.getMpiDataPtr());
+                                                    level.getMpiDataPtr(), !level.isBelowMpiLevelThreshold());
                 mgclCheckError(err, "Updating ghosts");
             }
             else
             {
                 err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
                                                     problem.ghosts, problem.ghosts, problem.ghosts,
-                                                    level.getMpiDataPtr());
+                                                    level.getMpiDataPtr(), !level.isBelowMpiLevelThreshold());
                 mgclCheckError(err, "Updating ghosts");
             }
 
@@ -338,7 +338,8 @@ namespace mgcl
         {
             // TODO check for mpi
             err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh,
-                                                problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr());
+                                                problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
+                                                !level.isBelowMpiLevelThreshold());
             mgclCheckError(err, "Updating ghosts of dR");
         }
 
@@ -353,7 +354,7 @@ namespace mgcl
         // Update ghosts of dVIn
         err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
                                             problem.ghosts, problem.ghosts, problem.ghosts,
-                                            level.getMpiDataPtr());
+                                            level.getMpiDataPtr(), !level.isBelowMpiLevelThreshold());
         mgclCheckError(err, "Updating ghosts");
 
         // calculate residual and its norm
@@ -495,7 +496,8 @@ namespace mgcl
             mgclCheckError(err, "Setting kernel arguments");
 
             err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
-                                                problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr());
+                                                problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
+                                                !level.isBelowMpiLevelThreshold());
             mgclCheckError(err, "Updating ghosts");
 
             err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
@@ -529,7 +531,8 @@ namespace mgcl
                 mgclCheckError(err, "Enqueueing kernel");
 
                 err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh,
-                                                    problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr());
+                                                    problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
+                                                    !level.isBelowMpiLevelThreshold());
                 mgclCheckError(err, "Updating ghosts");
 
                 // swap pointers so result is in dVIn
@@ -557,7 +560,8 @@ namespace mgcl
                 mgclCheckError(err, "Enqueueing kernel");
 
                 err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh,
-                                                    problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr());
+                                                    problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
+                                                    !level.isBelowMpiLevelThreshold());
                 mgclCheckError(err, "Updating ghosts");
 
                 // swap pointers so result is in dVIn
@@ -569,7 +573,8 @@ namespace mgcl
         // result is in dVIn now since pointers were swapped at the end of the loops above
 
         err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
-                                            problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr());
+                                            problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
+                                            !level.isBelowMpiLevelThreshold());
         mgclCheckError(err, "Updating ghosts of v_in");
 
         // calculate residual's 2-norm. Square elements on device and sum up on host
@@ -698,7 +703,8 @@ namespace mgcl
         if (problem.isPeriodic())
         {
             err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh,
-                                                problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr());
+                                                problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
+                                                !level.isBelowMpiLevelThreshold());
             mgclCheckError(err, "Updating ghosts of r");
         }
 
@@ -761,7 +767,7 @@ namespace mgcl
     double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
                                         MGCL_STENCIL stencilType, double stencilFactor,
                                         VaryingStencil3x3x3 *stencilValuesCuboid, bool returnResidualNorm,
-                                        bool periodic, int moff, int noff, int ooff, MPIData *mpiData)
+                                        bool periodic, bool updateGhostsLocally, int moff, int noff, int ooff, MPIData *mpiData)
     {
         double res = 0.0;
         double stencilsum = 0;
@@ -917,7 +923,7 @@ namespace mgcl
                 }
 
         if (periodic)
-            MultigridEngine::updateGhostsSeq(r, mpiData);
+            MultigridEngine::updateGhostsSeq(r, mpiData, periodic, updateGhostsLocally);
 
         return (returnResidualNorm && resnorm == MGCL_L2) ? sqrt(res) : res;
     }

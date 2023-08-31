@@ -44,23 +44,23 @@ namespace mgcl
         static void prolongateSeq(Level &fine, Level &coarse, Cuboid &fineVals, Cuboid &coarseVals);
         static void prolongate(Level &fine, Level &coarse, cl_mem d_fine_values, cl_mem d_coarse_values);
 
-        static void updateGhostsSeq(Cuboid &c, MPIData *mpiData = nullptr, bool periodic = true);
+        static void updateGhostsSeq(Cuboid &c, MPIData *mpiData, bool periodic, bool forceLocal);
         static int updateGhosts(Problem &problem, cl_mem dBuffer, int m, int n, int o,
-                                int ghostsM, int ghostsN, int ghostsO, MPIData *mpiData);
+                                int ghostsM, int ghostsN, int ghostsO, MPIData *mpiData, bool forceLocal);
         static void updateGhostsOclMpi(cl_command_queue commands, cl_mem d_buf, MPIData &mpiData,
                                        int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o,
-                                       bool periodic);
+                                       bool periodic, bool forceLocal);
 
         static double residual(Problem &problem, Level &level, bool returnResidual,
                                int moff = 0, int noff = 0, int ooff = 0);
         static double residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
                                   MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil3x3x3 *stencilValues,
-                                  bool returnResidualNorm, bool periodic, int moff = 0, int noff = 0, int ooff = 0,
-                                  MPIData *mpiData = nullptr);
+                                  bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
+                                  int moff = 0, int noff = 0, int ooff = 0, MPIData *mpiData = nullptr);
 
         static double jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
                                 int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType, double stencilFactor,
-                                VaryingStencil3x3x3 *stencilValuesCuboid, bool returnResidualNorm, bool periodic,
+                                VaryingStencil3x3x3 *stencilValuesCuboid, bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
                                 int stepsPerIter = 1, MPIData *mpiData = nullptr);
         static double jacobi(Problem &problem, Level &level, int maxiter, bool returnResidual, int stepsPerIter = 1);
         static double jacobiLocalMem(Problem &problem, Level &level, int maxiter, int returnResidual);

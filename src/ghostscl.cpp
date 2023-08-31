@@ -85,12 +85,14 @@ namespace mgcl
      * If periodic is true, every ghost cell will be updated. Otherwise the outermost ghost cells will be excluded. It
      *   also affects the update using MPI where nodes are wrapped around in the periodic case.
      * mpiData parameter is optional (i.e. nullable) and is only used when MPI is used. If mgcl is called with
-     *   only one MPI process, updateGhostsSeqLocally will be used instead. */
-    void MultigridEngine::updateGhostsSeq(Cuboid &c, MPIData *mpiData, bool periodic)
+     *   only one MPI process, updateGhostsSeqLocally will be used instead.
+     * forceLocal: If true, ghosts will be updated locally (maybe giving wrong results, if m_local < m_global).
+     *   This is used e.g. for levels above the mpiLevelThreshold. */
+    void MultigridEngine::updateGhostsSeq(Cuboid &c, MPIData *mpiData, bool periodic, bool forceLocal)
     {
         // TODO adjust for ghosts > 1
         // TODO test
-        if (mpiData == nullptr || mpiData->mpiSize() == 1)
+        if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
         {
             updateGhostsSeqLocally(c, periodic);
             return;
@@ -296,7 +298,7 @@ namespace mgcl
      * Only enqueues the kernel. Neither waits for kernel to finish nor reads back results */
     int MultigridEngine::updateGhosts(Problem &problem, cl_mem dBuffer,
                                       int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
-                                      MPIData *mpiData)
+                                      MPIData *mpiData, bool forceLocal)
     {
         // TODO actually request these as arguments
         int m = mgh - 2 * ghosts_m;
@@ -306,7 +308,7 @@ namespace mgcl
         if (problem.useMpi() && mpiData)
         {
             updateGhostsOclMpi(problem.getCommands(), dBuffer, *mpiData, m, n, o,
-                               ghosts_m, ghosts_n, ghosts_o, problem.isPeriodic());
+                               ghosts_m, ghosts_n, ghosts_o, problem.isPeriodic(), forceLocal);
             return CL_SUCCESS;
         }
 
@@ -376,10 +378,11 @@ namespace mgcl
      * @param ghosts_n
      * @param ghosts_o
      * @param periodic
+     * @param forceLocal
      */
     void MultigridEngine::updateGhostsOclMpi(cl_command_queue commands, cl_mem d_buf, MPIData &mpiData,
                                              int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o,
-                                             bool periodic)
+                                             bool periodic, bool forceLocal)
     {
         // Read back from GPU and update ghosts on host in order to update neighbouring nodes, too.
         mgclCheckError(clFinish(commands), "clFinish");
@@ -391,7 +394,7 @@ namespace mgcl
                                       tmp.field1d().data(), 0, NULL, NULL);
         mgclCheckError(err, "clEnqueueReadBuffer");
 
-        MultigridEngine::updateGhostsSeq(tmp, &mpiData, periodic);
+        MultigridEngine::updateGhostsSeq(tmp, &mpiData, periodic, forceLocal);
 
         err = clEnqueueWriteBuffer(commands, d_buf, CL_TRUE, 0,
                                    sizeof(double) * tmp.getMgh() * tmp.getNgh() * tmp.getOgh(),

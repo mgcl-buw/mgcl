@@ -38,7 +38,8 @@ TEST_CASE("residual")
     SECTION("residualSeq L2-norm 7point periodic")
     {
         double res = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r, mgcl::MGCL_L2,
-                                                        mgcl::MGCL_LAPLACE_7POINT, stencilFactor, nullptr, true, true);
+                                                        mgcl::MGCL_LAPLACE_7POINT, stencilFactor, nullptr, true, true,
+                                                        true);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_in_r->isEqual(*c_expected_out_r));
@@ -100,7 +101,8 @@ TEST_CASE("residual")
                 }
 
         double res = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r, mgcl::MGCL_L2,
-                                                        mgcl::MGCL_VARYING, stencilFactor, &vals, true, true);
+                                                        mgcl::MGCL_VARYING, stencilFactor, &vals, true, true,
+                                                        true);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_in_r->isEqual(*c_expected_out_r));
@@ -162,9 +164,10 @@ TEST_CASE("residual periodic Laplace seq vs ocl")
     mgcl_test::TestUtility tu(p_gpu);
 
     mgcl::MultigridEngine::updateGhosts(*p_gpu, level0_gpu.getDVIn(),
-                                        level0_gpu.getMgh(), level0_gpu.getNgh(), level0_gpu.getOgh(), 1, 1, 1, nullptr);
+                                        level0_gpu.getMgh(), level0_gpu.getNgh(), level0_gpu.getOgh(), 1, 1, 1, nullptr,
+                                        true);
     tu.finish();
-    mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0, nullptr, true, false);
 
     // make sure input is equal
     auto c_r_in = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
@@ -179,7 +182,8 @@ TEST_CASE("residual periodic Laplace seq vs ocl")
     tu.finish();
 
     double res_seq = mgcl::MultigridEngine::residualSeq(f_in_lv0, v_in_lv0, r_in_lv0, resnorm,
-                                                        stencilType, level0_seq.getStencilFactor(), nullptr, true, true);
+                                                        stencilType, level0_seq.getStencilFactor(), nullptr, true, true,
+                                                        true);
 
     auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
     auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
@@ -275,9 +279,10 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
     mgcl_test::TestUtility tu(p_gpu);
 
     mgcl::MultigridEngine::updateGhosts(*p_gpu, level0_gpu.getDVIn(),
-                                        level0_gpu.getMgh(), level0_gpu.getNgh(), level0_gpu.getOgh(), 1, 1, 1, nullptr);
+                                        level0_gpu.getMgh(), level0_gpu.getNgh(), level0_gpu.getOgh(), 1, 1, 1, nullptr,
+                                        true);
     tu.finish();
-    mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0, nullptr, true, false);
 
     // make sure input is equal
     auto c_r_in = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
@@ -294,7 +299,8 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
     double res_gpu = mgcl::MultigridEngine::residual(*p_gpu, level0_gpu, true);
     tu.finish();
     double res_seq = mgcl::MultigridEngine::residualSeq(f_in_lv0, v_in_lv0, r_in_lv0, resnorm,
-                                                        stencilType, level0_seq.getStencilFactor(), sv_in_lv0.get(), true, true);
+                                                        stencilType, level0_seq.getStencilFactor(), sv_in_lv0.get(),
+                                                        true, true, true);
 
     auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
     auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
@@ -356,22 +362,24 @@ TEST_CASE("residual seq gh > 1")
 
     v_in.fillRandom(-10, 10);
     f_in.fillRandom(-10, 10);
-    mgcl::MultigridEngine::updateGhostsSeq(v_in);
-    mgcl::MultigridEngine::updateGhostsSeq(f_in);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in, nullptr, true, false);
+    mgcl::MultigridEngine::updateGhostsSeq(f_in, nullptr, true, false);
 
     // copy real cells from v_in to v_in_gh
     v_in_gh.fillRealFrom(v_in);
     f_in_gh.fillRealFrom(f_in);
-    mgcl::MultigridEngine::updateGhostsSeq(v_in_gh);
-    mgcl::MultigridEngine::updateGhostsSeq(f_in_gh);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in_gh, nullptr, true, false);
+    mgcl::MultigridEngine::updateGhostsSeq(f_in_gh, nullptr, true, false);
 
     SECTION("Laplace 27p")
     {
         // First calculate exptected result with gh = 1
-        double res_exp = mgcl::MultigridEngine::residualSeq(f_in, v_in, r_in, resnorm, stencilType, stencilFactor, nullptr, true, true);
+        double res_exp = mgcl::MultigridEngine::residualSeq(f_in, v_in, r_in, resnorm, stencilType, stencilFactor,
+                                                            nullptr, true, true, true);
 
         // Now calculate with gh > 1
-        double res_act = mgcl::MultigridEngine::residualSeq(f_in_gh, v_in_gh, r_in_gh, resnorm, stencilType, stencilFactor, nullptr, true, true);
+        double res_act = mgcl::MultigridEngine::residualSeq(f_in_gh, v_in_gh, r_in_gh, resnorm, stencilType,
+                                                            stencilFactor, nullptr, true, true, true);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(v_in.isEqual(v_in_gh));
@@ -386,11 +394,11 @@ TEST_CASE("residual seq gh > 1")
 
         // First calculate exptected result with gh = 1
         double res_exp = mgcl::MultigridEngine::residualSeq(f_in, v_in, r_in, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, &sv, true, true);
+                                                            stencilFactor, &sv, true, true, true);
 
         // Now calculate with gh > 1
         double res_act = mgcl::MultigridEngine::residualSeq(f_in_gh, v_in_gh, r_in_gh, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, &sv, true, true);
+                                                            stencilFactor, &sv, true, true, true);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(v_in.isEqual(v_in_gh));
@@ -434,14 +442,14 @@ TEST_CASE("residual gpu gh > 1")
 
     v_in.fillRandom(-10, 10);
     f_in.fillRandom(-10, 10);
-    mgcl::MultigridEngine::updateGhostsSeq(v_in);
-    mgcl::MultigridEngine::updateGhostsSeq(f_in);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in, nullptr, true, true);
+    mgcl::MultigridEngine::updateGhostsSeq(f_in, nullptr, true, true);
 
     // copy real cells from v_in to v_in_gh
     v_in_gh.fillRealFrom(v_in);
     f_in_gh.fillRealFrom(f_in);
-    mgcl::MultigridEngine::updateGhostsSeq(v_in_gh);
-    mgcl::MultigridEngine::updateGhostsSeq(f_in_gh);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in_gh, nullptr, true, true);
+    mgcl::MultigridEngine::updateGhostsSeq(f_in_gh, nullptr, true, true);
 
     mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
 
@@ -718,8 +726,8 @@ TEST_CASE("residual seq moff, noff, koff < 0")
 
     v_act.fillRandomInt(-10, 10);
     f_act.fillRandomInt(-10, 10);
-    mgcl::MultigridEngine::updateGhostsSeq(v_act);
-    mgcl::MultigridEngine::updateGhostsSeq(f_act);
+    mgcl::MultigridEngine::updateGhostsSeq(v_act, nullptr, true, true);
+    mgcl::MultigridEngine::updateGhostsSeq(f_act, nullptr, true, true);
 
     // v and r with gh = 1, i.e. regular ghost update between iterations.
     // make this one bigger to include ghosts of the other one, so results should be equal
@@ -746,7 +754,7 @@ TEST_CASE("residual seq moff, noff, koff < 0")
     {
         // First calculate exptected result with gh = 1, off = 0
         double res_exp = mgcl::MultigridEngine::residualSeq(f_exp, v_exp, r_exp, resnorm, stencilType, stencilFactor,
-                                                            nullptr, true, true);
+                                                            nullptr, true, true, true);
 
         // Now calculate with gh > 1 and off < 0
         double res_act = mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
@@ -764,7 +772,7 @@ TEST_CASE("residual seq moff, noff, koff < 0")
 
         // First calculate exptected result with gh = 1
         double res_exp = mgcl::MultigridEngine::residualSeq(f_exp, v_exp, r_exp, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, &sv, true, true);
+                                                            stencilFactor, &sv, true, true, true);
 
         // Now calculate with gh > 1
         double res_act = mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, mgcl::MGCL_VARYING,
@@ -811,8 +819,8 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
 
     v_act.fillRandomInt(-10, 10);
     f_act.fillRandomInt(-10, 10);
-    mgcl::MultigridEngine::updateGhostsSeq(v_act);
-    mgcl::MultigridEngine::updateGhostsSeq(f_act);
+    mgcl::MultigridEngine::updateGhostsSeq(v_act, nullptr, true, true);
+    mgcl::MultigridEngine::updateGhostsSeq(f_act, nullptr, true, true);
 
     // v and r with gh = 1, i.e. regular ghost update between iterations.
     // make this one bigger to include ghosts of the other one, so results should be equal

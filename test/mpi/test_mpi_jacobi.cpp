@@ -137,10 +137,10 @@ TEST_CASE("MPI jacobiSeq (n processes)", "[mpiN]")
 
     // Update ghosts of expected result locally, i.e. not using MPI routines.
     mgcl::MultigridEngine::jacobiSeq(v_glob, f_glob, r_glob, omega, maxiter, resnorm, stencilType,
-                                     stencilFactor, nullptr, true, true, 1, nullptr);
+                                     stencilFactor, nullptr, true, true, false, 1, nullptr);
 
     mgcl::MultigridEngine::jacobiSeq(v_loc, f_loc, r_loc, omega, maxiter, resnorm, stencilType,
-                                     stencilFactor, nullptr, true, true, 1, mpiData);
+                                     stencilFactor, nullptr, true, true, false, 1, mpiData);
 
     for (int i = gh; i < ml + gh; i++)
         for (int j = gh; j < nl + gh; j++)
@@ -287,7 +287,7 @@ TEST_CASE("MPI jacobi ocl (n processes)", "[mpiN]")
 
     // Run Jacobi on global dataset for the expected result.
     mgcl::MultigridEngine::jacobiSeq(v_glob, f_glob, r_glob, omega, maxiter, resnorm, stencilType,
-                                     stencilFactor, nullptr, true, true, stepsPerIter, nullptr);
+                                     stencilFactor, nullptr, true, true, false, stepsPerIter, nullptr);
 
     mgcl::MultigridEngine::jacobi(p, lv, maxiter, true, stepsPerIter);
     tu.finish();

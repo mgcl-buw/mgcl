@@ -72,7 +72,7 @@ TEST_CASE("MPI updateGhostsSeq (1 process)", "[mpi1]")
         c.fillRandom(-10, 10, true);
 
         // Update ghosts of test data
-        mgcl::MultigridEngine::updateGhostsSeq(c, nullptr, true);
+        mgcl::MultigridEngine::updateGhostsSeq(c, nullptr, true, false);
 
         // Check result
         // check in z-direction
@@ -218,14 +218,14 @@ TEST_CASE("MPI updateGhostsSeq (n processes)", "[mpiN]")
                 }
 
         // Update ghosts of expected result locally, i.e. not using MPI routines.
-        mgcl::MultigridEngine::updateGhostsSeq(cg, nullptr, true);
+        mgcl::MultigridEngine::updateGhostsSeq(cg, nullptr, true, false);
 
         // Create local slice of global data
         auto clptr = cg.slice(m_start, m_end, n_start, n_end, o_start, o_end);
         auto &cl = *clptr;
 
         // Update ghosts of test data
-        mgcl::MultigridEngine::updateGhostsSeq(cl, mpiData, true);
+        mgcl::MultigridEngine::updateGhostsSeq(cl, mpiData, true, false);
 
         // cl.dumpToFile("cl" + std::to_string(mpi_rank) + ".txt");
 
@@ -398,7 +398,7 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
             }
 
     // Update ghosts of expected result locally, i.e. not using MPI routines.
-    mgcl::MultigridEngine::updateGhostsSeq(cg, nullptr, true);
+    mgcl::MultigridEngine::updateGhostsSeq(cg, nullptr, true, false);
 
     // Create local slice of global data
     auto clptr = cg.slice(m_start, m_end, n_start, n_end, o_start, o_end);
@@ -409,7 +409,7 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
     auto d_cl = tu.createOpenCLBuffer(cl);
 
     // Update ghosts of test data
-    mgcl::MultigridEngine::updateGhosts(p, d_cl, ml + 2 * gh, nl + 2 * gh, ol + 2 * gh, gh, gh, gh, mpiData);
+    mgcl::MultigridEngine::updateGhosts(p, d_cl, ml + 2 * gh, nl + 2 * gh, ol + 2 * gh, gh, gh, gh, mpiData, false);
     tu.finish();
 
     auto cl_res_ptr = tu.readOpenCLBuffer(d_cl, ml, nl, ol, gh, gh, gh);

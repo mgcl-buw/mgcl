@@ -8814,7 +8814,7 @@ namespace mgcl_test
                     c[i][j][k] = i * (n + 2) * (n + 2) + j * (n + 2) + k;
                 }
 
-        mgcl::MultigridEngine::updateGhostsSeq(c);
+        mgcl::MultigridEngine::updateGhostsSeq(c, nullptr, true, false);
         return cret;
     }
 
@@ -8837,7 +8837,7 @@ namespace mgcl_test
                     c[i][j][k] = i * (n + 2) * (n + 2) + j * (n + 2) + k;
                 }
 
-        mgcl::MultigridEngine::updateGhostsSeq(c);
+        mgcl::MultigridEngine::updateGhostsSeq(c, nullptr, true, false);
         return cret;
     }
 
@@ -27151,7 +27151,7 @@ namespace mgcl_test
                     c[i][j][k] = i + j + k;
                 }
 
-        mgcl::MultigridEngine::updateGhostsSeq(c);
+        mgcl::MultigridEngine::updateGhostsSeq(c, nullptr, true, false);
         return cret;
     }
 

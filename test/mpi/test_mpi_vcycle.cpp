@@ -22,7 +22,7 @@ double calculateErrorNorm(double h, mgcl::Cuboid &error);
 // Tests if vcycle is correct for multiple processes but everything is actually done on one process, i.e.
 // gathering and scattering happens on level 0.
 // With 1 process mgcl should detect that MPI is actually not used, thus this test should behave like the solve tests.
-TEST_CASE("MPI vcycle immediate gather/scatter")
+TEST_CASE("MPI_vcycle_immediate_gather_scatter")
 {
     using std::min;
 

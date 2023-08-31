@@ -28,10 +28,10 @@ namespace mgcl
     Level::Level(Problem *problem_, int num_)
         : problem(problem_),
           num(num_),
-          useMpi(problem_->useMpi() && problem_->getMpiLevelThreshold() > num),
-          m(((problem_->useMpi() && problem_->getMpiLevelThreshold() > num) ? problem_->getM() : problem_->m_global) >> num_),
-          n(((problem_->useMpi() && problem_->getMpiLevelThreshold() > num) ? problem_->getN() : problem_->n_global) >> num_),
-          o(((problem_->useMpi() && problem_->getMpiLevelThreshold() > num) ? problem_->getO() : problem_->o_global) >> num_),
+          belowMpiLevelThreshold(problem_->getMpiLevelThreshold() > num),
+          m(((problem_->getMpiLevelThreshold() > num) ? problem_->getM() : problem_->m_global) >> num_),
+          n(((problem_->getMpiLevelThreshold() > num) ? problem_->getN() : problem_->n_global) >> num_),
+          o(((problem_->getMpiLevelThreshold() > num) ? problem_->getO() : problem_->o_global) >> num_),
           mgh(m + 2 * problem->getGhosts()),
           ngh(n + 2 * problem->getGhosts()),
           ogh(o + 2 * problem->getGhosts()),
@@ -99,7 +99,7 @@ namespace mgcl
         // 1. mgcl is run without MPI at all, or
         // 2. mgcl is run with MPI and this level is below the level threshold (i.e. enough grid points), or
         // 3. mgcl is run with MPI, this level is above the level threshold but the rank is 0.
-        if (!problem->useMpi() || useMpi || mpiData->rank == 0)
+        if (!problem->useMpi() || belowMpiLevelThreshold || mpiData->rank == 0)
         {
             if (num == 0)
             {
@@ -124,8 +124,8 @@ namespace mgcl
                                     problem->getF()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
                             }
 
-                    if (problem->bc == BC::PERIODIC)
-                        MultigridEngine::updateGhostsSeq(getF(), mpiData.get());
+                    if (problem->isPeriodic())
+                        MultigridEngine::updateGhostsSeq(getF(), mpiData.get(), problem->isPeriodic(), !belowMpiLevelThreshold);
                 }
 
                 // r on host is only needed if opencl should not be used
@@ -240,7 +240,7 @@ namespace mgcl
         mgclCheckError(err, "initializing dR to 0");
 
         err = MultigridEngine::updateGhosts(*problem, dF, mgh, ngh, ogh, problem->ghosts, problem->ghosts,
-                                            problem->ghosts, mpiData.get());
+                                            problem->ghosts, mpiData.get(), !belowMpiLevelThreshold);
         mgclCheckError(err, "Updating ghosts of d_f");
 
         return CL_SUCCESS;
@@ -257,7 +257,7 @@ namespace mgcl
     {
         int ret = 0;
 
-        if (useMpi)
+        if (belowMpiLevelThreshold)
         {
             // MPI variables
             MPI_Comm mpi_comm = problem->getMpiComm();
@@ -491,7 +491,7 @@ namespace mgcl
            << " num: " << lv.num << std::endl
            << " m,n,o: " << lv.m << "," << lv.n << "," << lv.o << std::endl
            << " mgh,ngh,ogh: " << lv.mgh << "," << lv.ngh << "," << lv.ogh << std::endl
-           << " useMpi: " << lv.useMpi << std::endl
+           << " belowMpiLevelThreshold: " << lv.belowMpiLevelThreshold << std::endl
            << " h: " << lv.h << std::endl
            << " stencilType: " << lv.stencilType << std::endl
            << " stencilFactor: " << lv.stencilFactor << std::endl;
@@ -541,11 +541,6 @@ namespace mgcl
     double Level::getStencilFactor() const
     {
         return stencilFactor;
-    }
-
-    bool Level::getUseMpi() const
-    {
-        return useMpi;
     }
 
     int Level::getNum() const
@@ -677,5 +672,10 @@ namespace mgcl
             return *mpiData;
         else
             throw "mpiData is null.";
+    }
+
+    bool Level::isBelowMpiLevelThreshold() const
+    {
+        return belowMpiLevelThreshold;
     }
 }

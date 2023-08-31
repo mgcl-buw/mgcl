@@ -505,11 +505,13 @@ namespace mgcl
 
         // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
         if (isPeriodic())
-            MultigridEngine::updateGhostsSeq(levels[0]->getV(), levels[0]->getMpiDataPtr());
+            MultigridEngine::updateGhostsSeq(levels[0]->getV(), levels[0]->getMpiDataPtr(), isPeriodic(),
+                                             !levels[0]->isBelowMpiLevelThreshold());
 
         double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(),
                                                       residual_norm, stencilType, levels[0]->stencilFactor,
                                                       levels[0]->stencilValues.get(), !ignoreTol, isPeriodic(),
+                                                      !levels[0]->isBelowMpiLevelThreshold(),
                                                       0, 0, 0, getLevelAt(0).getMpiDataPtr());
         if (!silent && !ignoreTol)
             printf("Starting mgcl with initres = %e\n", initres);

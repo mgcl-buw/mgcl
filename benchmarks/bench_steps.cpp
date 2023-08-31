@@ -60,15 +60,16 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
         // jacobi
         b.run(std::string("seq jacobi, N = ").append(std::to_string(N)).c_str(), [&]
               { mgcl::MultigridEngine::jacobiSeq(v0, f0, r0, p.getOmega(), p.getNu1(), p.getResidualNorm(),
-                                                 p.getStencilType(), stencilFactor0, p.getStencilValues().get(), false, periodic); });
+                                                 p.getStencilType(), stencilFactor0, p.getStencilValues().get(),
+                                                 false, periodic, false); });
 
         // residual
         b.run(std::string("seq residual, N = ").append(std::to_string(N)).c_str(), [&]
-              { mgcl::MultigridEngine::residualSeq(f0, v0, r0, p.getResidualNorm(), p.getStencilType(), stencilFactor0, p.getStencilValues().get(), false, periodic); });
+              { mgcl::MultigridEngine::residualSeq(f0, v0, r0, p.getResidualNorm(), p.getStencilType(), stencilFactor0, p.getStencilValues().get(), false, periodic, false); });
 
         // updateGhosts
         b.run(std::string("seq updateGhosts, N = ").append(std::to_string(N)).c_str(), [&]
-              { mgcl::MultigridEngine::updateGhostsSeq(v0); });
+              { mgcl::MultigridEngine::updateGhostsSeq(v0, nullptr, true, false); });
 
         // restriction
         b.run(std::string("seq restrict, N = ").append(std::to_string(N)).c_str(), [&]
@@ -122,7 +123,8 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
               [&]
               {
                   mgcl::MultigridEngine::updateGhosts(p, v0d, v0.getMgh(), v0.getNgh(), v0.getOgh(),
-                                                      v0.getGhostsM(), v0.getGhostsN(), v0.getGhostsO(), nullptr);
+                                                      v0.getGhostsM(), v0.getGhostsN(), v0.getGhostsO(),
+                                                      nullptr, false);
                   clFinish(p.getCommands());
               });
 
@@ -194,7 +196,8 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
 
             b.run(std::string("seq jacobi, N = ").append(std::to_string(N)).c_str(), [&]
                   { mgcl::MultigridEngine::jacobiSeq(v0, f0, r0, p.getOmega(), p.getNu1(), p.getResidualNorm(),
-                                                     p.getStencilType(), stencilFactor0, p.getStencilValues().get(), false, periodic); });
+                                                     p.getStencilType(), stencilFactor0, p.getStencilValues().get(),
+                                                     false, periodic, false); });
         }
 
         {
@@ -245,7 +248,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
 
             b.run(std::string("seq residual, N = ").append(std::to_string(N)).c_str(), [&]
                   { mgcl::MultigridEngine::residualSeq(f0, v0, r0, p.getResidualNorm(), p.getStencilType(),
-                                                       stencilFactor0, p.getStencilValues().get(), false, periodic); });
+                                                       stencilFactor0, p.getStencilValues().get(), false, periodic, false); });
         }
 
         {
@@ -292,7 +295,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             auto &coarse = p.getLevelAt(1);
 
             b.run(std::string("seq updateGhosts, N = ").append(std::to_string(N)).c_str(), [&]
-                  { mgcl::MultigridEngine::updateGhostsSeq(v0); });
+                  { mgcl::MultigridEngine::updateGhostsSeq(v0, nullptr, true, false); });
         }
 
         {
@@ -314,7 +317,8 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
                   [&]
                   {
                       mgcl::MultigridEngine::updateGhosts(p, v0d, v0.getMgh(), v0.getNgh(), v0.getOgh(),
-                                                          v0.getGhostsM(), v0.getGhostsN(), v0.getGhostsO(), nullptr);
+                                                          v0.getGhostsM(), v0.getGhostsN(), v0.getGhostsO(),
+                                                          nullptr, false);
                       clFinish(p.getCommands());
                   });
         }

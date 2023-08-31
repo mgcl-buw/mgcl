@@ -57,7 +57,7 @@ TEST_CASE("Level::initMpiData (1 process)", "[mpi1]")
         auto &lv = p.getLevelAt(i);
         REQUIRE(lv.getMpiDataPtr() == nullptr);
         REQUIRE_THROWS(lv.getMpiData());
-        REQUIRE(!lv.getUseMpi());
+        REQUIRE(!lv.isBelowMpiLevelThreshold());
     }
 }
 
@@ -129,7 +129,7 @@ TEST_CASE("Level::initMpiData (2 processes)", "[mpi2]")
         if (p.getMpiLevelThreshold() > i)
         {
             auto &mpiData = lv.getMpiData();
-            REQUIRE(lv.getUseMpi());
+            REQUIRE(lv.isBelowMpiLevelThreshold());
 
             REQUIRE(mpiData.rank == mpi_rank);
 
@@ -170,7 +170,7 @@ TEST_CASE("Level::initMpiData (2 processes)", "[mpi2]")
         }
         else
         {
-            REQUIRE(!lv.getUseMpi());
+            REQUIRE(!lv.isBelowMpiLevelThreshold());
             REQUIRE(lv.getMpiDataPtr() != nullptr);
             // REQUIRE(lv.getMpiDataPtr() == nullptr);
             // REQUIRE_THROWS(lv.getMpiData());
@@ -271,7 +271,7 @@ TEST_CASE("Level::initMpiData (8 processes)")
         auto &lv0 = p.getLevelAt(i);
         auto &mpiData0 = lv0.getMpiData();
         REQUIRE(mpiData0.mpiSize() == 8);
-        REQUIRE(lv0.getUseMpi());
+        REQUIRE(lv0.isBelowMpiLevelThreshold());
 
         // clang-format off
     std::vector<std::vector<int>> neighbours0 = {
@@ -294,7 +294,7 @@ TEST_CASE("Level::initMpiData (8 processes)")
     for (int i = p.getMpiLevelThreshold(); i <= p.getMaxlevel(); i++)
     {
         auto &lv = p.getLevelAt(i);
-        REQUIRE(!lv.getUseMpi());
+        REQUIRE(!lv.isBelowMpiLevelThreshold());
         REQUIRE(lv.getMpiDataPtr() != nullptr);
         // REQUIRE_THROWS(lv.getMpiData());
     }
@@ -398,7 +398,7 @@ TEST_CASE("Level::initMpiData (24 processes)")
         auto &lv0 = p.getLevelAt(i);
         auto &mpiData0 = lv0.getMpiData();
         REQUIRE(mpiData0.mpiSize() == 24);
-        REQUIRE(lv0.getUseMpi());
+        REQUIRE(lv0.isBelowMpiLevelThreshold());
 
         // print neighbours per rank
         // if (0 == mpi_rank)
@@ -437,7 +437,7 @@ TEST_CASE("Level::initMpiData (24 processes)")
     for (int i = p.getMpiLevelThreshold(); i <= p.getMaxlevel(); i++)
     {
         auto &lv = p.getLevelAt(i);
-        REQUIRE(!lv.getUseMpi());
+        REQUIRE(!lv.isBelowMpiLevelThreshold());
         REQUIRE(lv.getMpiDataPtr() != nullptr);
         // REQUIRE_THROWS(lv.getMpiData());
 

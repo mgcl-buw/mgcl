@@ -23,7 +23,7 @@ TEST_CASE("updateGhosts gh < m")
 
     SECTION("seq")
     {
-        mgcl::MultigridEngine::updateGhostsSeq(c1);
+        mgcl::MultigridEngine::updateGhostsSeq(c1, nullptr, true, true);
 
         // check in z-direction
         for (int i = 0; i < ghosts_m; i++)
@@ -60,7 +60,7 @@ TEST_CASE("updateGhosts gh < m")
             mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
             cl_mem d_c1 = tu.createOpenCLBuffer(c1);
 
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr);
+            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
             tu.finish();
 
             auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
@@ -83,7 +83,7 @@ TEST_CASE("updateGhosts gh < m")
             mgcl_test::TestUtility tu(CL_DEVICE_TYPE_CPU);
             cl_mem d_c1 = tu.createOpenCLBuffer(c1);
 
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr);
+            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
             tu.finish();
 
             auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
@@ -117,7 +117,7 @@ TEST_CASE("updateGhosts gh > m")
 
     SECTION("seq")
     {
-        mgcl::MultigridEngine::updateGhostsSeq(c1);
+        mgcl::MultigridEngine::updateGhostsSeq(c1, nullptr, true, true);
 
         // check in z-direction
         for (int i = 0; i < ghosts_m; i++)
@@ -154,7 +154,7 @@ TEST_CASE("updateGhosts gh > m")
             mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
             cl_mem d_c1 = tu.createOpenCLBuffer(c1);
 
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr);
+            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
             tu.finish();
 
             auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
@@ -177,7 +177,7 @@ TEST_CASE("updateGhosts gh > m")
             mgcl_test::TestUtility tu(CL_DEVICE_TYPE_CPU);
             cl_mem d_c1 = tu.createOpenCLBuffer(c1);
 
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr);
+            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
             tu.finish();
 
             auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
