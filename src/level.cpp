@@ -4,7 +4,8 @@
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "problem.hpp"
 
-#include <cstddef>   // for NULL
+#include <cstddef> // for NULL
+#include <iostream>
 #include <stdexcept> // for invalid_argument
 #include <string>    // for to_string, allocator, basic_string
 
@@ -98,7 +99,7 @@ namespace mgcl
         // 1. mgcl is run without MPI at all, or
         // 2. mgcl is run with MPI and this level is below the level threshold (i.e. enough grid points), or
         // 3. mgcl is run with MPI, this level is above the level threshold but the rank is 0.
-        if (!problem->useMpi() || useMpi || (!useMpi && mpiData->rank == 0))
+        if (!problem->useMpi() || useMpi || mpiData->rank == 0)
         {
             if (num == 0)
             {
@@ -113,9 +114,9 @@ namespace mgcl
                     f = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
 
                     // copy initial input data from conf into mgcl data struct
-                    for (int i = 0; i < m; i++)
-                        for (int j = 0; j < n; j++)
-                            for (int k = 0; k < o; k++)
+                    for (int i = 0; i < problem->getV().getM(); i++)
+                        for (int j = 0; j < problem->getV().getN(); j++)
+                            for (int k = 0; k < problem->getV().getO(); k++)
                             {
                                 getV()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts] =
                                     problem->getV()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
