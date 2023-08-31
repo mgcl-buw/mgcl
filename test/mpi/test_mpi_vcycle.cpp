@@ -113,12 +113,12 @@ TEST_CASE("MPI vcycle immediate gather/scatter")
 
     p.solveSeq();
 
-    vloc->dumpToFile("vloc.txt");
-    floc->dumpToFile("floc.txt");
-    solutionloc->dumpToFile("solloc.txt");
-    v->dumpToFile("v.txt");
-    f->dumpToFile("f.txt");
-    solution->dumpToFile("sol.txt");
+    // vloc->dumpToFile("vloc.txt");
+    // floc->dumpToFile("floc.txt");
+    // solutionloc->dumpToFile("solloc.txt");
+    // v->dumpToFile("v.txt");
+    // f->dumpToFile("f.txt");
+    // solution->dumpToFile("sol.txt");
 
     // check if solution is good
     auto err = calculateError(*solutionloc, *vloc);
