@@ -8,6 +8,7 @@
 
 #include <cstdio>  // for printf, size_t, NULL, fprintf, fclose, fopen
 #include <cstdlib> // for malloc, exit, free, EXIT_FAILURE
+#include <iostream>
 
 namespace mgcl
 {
@@ -25,7 +26,7 @@ namespace mgcl
     int OpenCLHelper::init()
     {
         // TODO return actually useful information
-        int err, i;
+        int err;
         cl_uint numPlatforms;
         cl_device_id device_id_;
 
@@ -47,10 +48,10 @@ namespace mgcl
             err = clGetPlatformIDs(numPlatforms, Platform, nullptr);
             mgclCheckError(err, "Getting platforms");
 
-            cl_char device_name_available[1024] = {0}; // string to hold name of compute device
+            char device_name_available[1024] = {0}; // string to hold name of compute device
 
             // take first device that conforms given device_type and name
-            for (i = 0; i < numPlatforms; i++)
+            for (cl_uint i = 0; i < numPlatforms; i++)
             {
                 err = clGetDeviceIDs(Platform[i], deviceType, 1, &device_id_, nullptr);
                 if (err == CL_SUCCESS)
@@ -62,7 +63,7 @@ namespace mgcl
                         mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
 
                         // continue to next device if name doesn't fit
-                        if (std::string((char *)device_name_available).find(deviceName) == std::string::npos)
+                        if (std::string(device_name_available).find(deviceName) == std::string::npos)
                             continue;
                     }
 
@@ -123,7 +124,7 @@ namespace mgcl
             clGetProgramBuildInfo(program, deviceId, CL_PROGRAM_BUILD_LOG, 0, nullptr, &log_size);
 
             // Allocate memory for the log
-            char *log = (char *)malloc(log_size);
+            char *log = static_cast<char *>(malloc(log_size));
 
             // Get the log
             clGetProgramBuildInfo(program, deviceId, CL_PROGRAM_BUILD_LOG, log_size, log, nullptr);
@@ -240,13 +241,14 @@ namespace mgcl
             int ghosts = problem->getGhosts();
 
             size_t bufsize;
-            int sizeNeeded = sizeof(double) * (m + 2 * ghosts) * (n + 2 * ghosts) * (o + 2 * ghosts);
+            size_t sizeNeeded = sizeof(double) * (m + 2 * ghosts) * (n + 2 * ghosts) * (o + 2 * ghosts);
             int err = clGetMemObjectInfo(problem->getDV(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
             mgclCheckError(err, "Querying buffer size of d_v");
             if (bufsize != sizeNeeded)
             {
                 if (!problem->silent)
-                    printf("OpenCL buffer d_v has wrong size (%ld but need %d)\n", bufsize, sizeNeeded);
+                    std::cout << "OpenCL buffer d_v has wrong size (" << bufsize << " but need "
+                              << sizeNeeded << ")" << std::endl;
                 return false;
             }
 
@@ -255,7 +257,8 @@ namespace mgcl
             if (bufsize != sizeNeeded)
             {
                 if (!problem->silent)
-                    printf("OpenCL buffer d_f has wrong size (%ld but need %d)\n", bufsize, sizeNeeded);
+                    std::cout << "OpenCL buffer d_f has wrong size (" << bufsize << " but need "
+                              << sizeNeeded << ")" << std::endl;
                 return false;
             }
         }

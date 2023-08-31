@@ -258,8 +258,6 @@ namespace mgcl_test
 
         Matrix2d ret(m, n);
 
-        int minidx = m > n ? n : m;
-
         for (auto valAndOff : valuesAndOffsets)
         {
             double val = std::get<0>(valAndOff);

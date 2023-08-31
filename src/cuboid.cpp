@@ -275,7 +275,7 @@ namespace mgcl
 
         std::vector<std::tuple<int, int, int, double, double, double>> diffs;
         bool ret = true;
-        double diff = 0;
+        double diff;
 
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)
@@ -332,7 +332,7 @@ namespace mgcl
             throw std::invalid_argument("Cannot check equality for Cuboids. Dimensions differ.");
         }
 
-        double diff = 0;
+        double diff;
 
         for (int i = 0; i < mgh; i++)
             for (int j = 0; j < ngh; j++)

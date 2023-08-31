@@ -105,9 +105,6 @@ namespace mgcl
         int mgh = c.getMgh();
         int ngh = c.getNgh();
         int ogh = c.getOgh();
-        int err;
-
-        MPI_Comm comm = mpiData->comm;
 
         // // Create subarray type for the ghost slices for each direction
         // MPI_Datatype ghostsSliceX;

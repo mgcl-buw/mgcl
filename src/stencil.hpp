@@ -66,7 +66,6 @@ namespace mgcl
                 throw std::string("Ghosts of b be must be >= ").append(std::to_string(N >> 1));
 
             int N2 = N >> 1;
-            int NB2 = NB >> 1;
             int ghb = b.getGhostsDim1();
 
             // TODO ghosts of c?
@@ -233,8 +232,6 @@ namespace mgcl
             int m = dim1;
             int n = dim2;
             int o = dim3;
-            int N2 = N >> 1;
-            int NB2 = NB >> 1;
             int gha = getGhostsDim1();
 
             auto c = VaryingStencil<(N + NB - 1)>(dim1, dim2, dim3, ghc, ghc, ghc);
