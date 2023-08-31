@@ -47,8 +47,9 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
     target_compile_options(mgcl PRIVATE -Wall -Wextra -Wno-reorder)
 
     # enable cppcheck and and iwyu
-    set(CMAKE_CXX_CPPCHECK "cppcheck")
-    set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE "include-what-you-use;-Xiwyu;--cxx17ns")
+    include (../cmake/util.cmake)
+    target_add_cppcheck(mgcl)
+    target_add_iwyu(mgcl)
   endif()
 endif()
 
