@@ -215,3 +215,105 @@ TEST_CASE("MPI Problem::calculateAndSetMpiLevelThreshold throwing (1 process)", 
         REQUIRE_THROWS(p.calculateAndSetMpiLevelThreshold());
     }
 }
+
+// Input data shall be copied to level 0 on each processor, regardless of mpiLevelThreshold.
+// Can be run with any number of processes, e.g.
+// mpiexec -n 8 tests_mpi MPI-Problem::init
+TEST_CASE("MPI-Problem::init")
+{
+    using std::min;
+
+    // global grid size
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    int periodic = 1;
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    // REQUIRE(mpi_size == 2);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    /* Initialize start and end for local grid */
+    int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+    int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+    int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+    int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+    int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+    int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+    int ml = (m_end - m_start) + 1;
+    int nl = (n_end - n_start) + 1;
+    int ol = (o_end - o_start) + 1;
+
+    // Init some random data
+    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    v->fillRandom();
+    f->fillRandom();
+
+    mgcl::Problem p(ml, nl, ol, v, f, m, n, o);
+    p.setMpiComm(mpi_comm);
+    p.setMpiMinGridPoints(m); // Ensures mpiLevelThreshold to be 0.
+    p.init();
+
+    REQUIRE(p.getMpiLevelThreshold() == 0);
+
+    if (mpi_rank == 0)
+    {
+        // On rank 0, sizes are global sizes for mpiLevelThreshold = 0.
+        REQUIRE(p.getLevelAt(0).getV().getM() == p.getMGlobal());
+        REQUIRE(p.getLevelAt(0).getV().getN() == p.getNGlobal());
+        REQUIRE(p.getLevelAt(0).getV().getO() == p.getOGlobal());
+        REQUIRE(p.getLevelAt(0).getF().getM() == p.getMGlobal());
+        REQUIRE(p.getLevelAt(0).getF().getN() == p.getNGlobal());
+        REQUIRE(p.getLevelAt(0).getF().getO() == p.getOGlobal());
+        REQUIRE(p.getLevelAt(0).getR().getM() == p.getMGlobal());
+        REQUIRE(p.getLevelAt(0).getR().getN() == p.getNGlobal());
+        REQUIRE(p.getLevelAt(0).getR().getO() == p.getOGlobal());
+
+        // Compare only the local slices. Gathering happens in vcycle at first.
+        auto vloc = p.getLevelAt(0).getV().slice(m_start, m_end, n_start, n_end, o_start, o_end);
+        auto floc = p.getLevelAt(0).getF().slice(m_start, m_end, n_start, n_end, o_start, o_end);
+
+        REQUIRE(vloc->isEqual(p.getV()));
+        REQUIRE(floc->isEqual(p.getF()));
+    }
+    else
+    {
+        // On other processes, sizes are local sizes for regardless of mpiLevelThreshold.
+        REQUIRE(p.getLevelAt(0).getV().getM() == p.getM());
+        REQUIRE(p.getLevelAt(0).getV().getN() == p.getN());
+        REQUIRE(p.getLevelAt(0).getV().getO() == p.getO());
+        REQUIRE(p.getLevelAt(0).getF().getM() == p.getM());
+        REQUIRE(p.getLevelAt(0).getF().getN() == p.getN());
+        REQUIRE(p.getLevelAt(0).getF().getO() == p.getO());
+        REQUIRE(p.getLevelAt(0).getR().getM() == p.getM());
+        REQUIRE(p.getLevelAt(0).getR().getN() == p.getN());
+        REQUIRE(p.getLevelAt(0).getR().getO() == p.getO());
+
+        // For every other process, input data gets copied to level 0 1-to-1.
+        REQUIRE(p.getV().isEqual(p.getLevelAt(0).getV()));
+        REQUIRE(p.getF().isEqual(p.getLevelAt(0).getF()));
+    }
+}
