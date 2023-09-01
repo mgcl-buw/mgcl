@@ -23,9 +23,9 @@ namespace mgcl
 
     Problem::Problem(int m_, int n_, int o_, int m_global_, int n_global_, int o_global_)
         : m(m_), n(n_), o(o_),
-          m_global(m_global_ == -1 ? m_ : m_global_),
-          n_global(n_global_ == -1 ? n_ : n_global_),
-          o_global(o_global_ == -1 ? o_ : o_global_),
+          mGlobal(m_global_ == -1 ? m_ : m_global_),
+          nGlobal(n_global_ == -1 ? n_ : n_global_),
+          oGlobal(o_global_ == -1 ? o_ : o_global_),
           openCLHelper(this)
     {
         checkGlobalDimensions();
@@ -34,9 +34,9 @@ namespace mgcl
 
     Problem::Problem(int m_, int n_, int o_, Cuboid* f_, Cuboid* v_, int m_global_, int n_global_, int o_global_)
         : m(m_), n(n_), o(o_), f(f_), v(v_),
-          m_global(m_global_ == -1 ? m_ : m_global_),
-          n_global(n_global_ == -1 ? n_ : n_global_),
-          o_global(o_global_ == -1 ? o_ : o_global_),
+          mGlobal(m_global_ == -1 ? m_ : m_global_),
+          nGlobal(n_global_ == -1 ? n_ : n_global_),
+          oGlobal(o_global_ == -1 ? o_ : o_global_),
           openCLHelper(this)
     {
         checkGlobalDimensions();
@@ -46,9 +46,9 @@ namespace mgcl
     Problem::Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_,
                      int m_global_, int n_global_, int o_global_)
         : m(m_), n(n_), o(o_), f(f_), v(v_),
-          m_global(m_global_ == -1 ? m_ : m_global_),
-          n_global(n_global_ == -1 ? n_ : n_global_),
-          o_global(o_global_ == -1 ? o_ : o_global_),
+          mGlobal(m_global_ == -1 ? m_ : m_global_),
+          nGlobal(n_global_ == -1 ? n_ : n_global_),
+          oGlobal(o_global_ == -1 ? o_ : o_global_),
           openCLHelper(this)
     {
         checkGlobalDimensions();
@@ -58,9 +58,9 @@ namespace mgcl
     Problem::Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_,
                      int m_global_, int n_global_, int o_global_)
         : m(m_), n(n_), o(o_), dF(d_f_), dV(d_v_),
-          m_global(m_global_ == -1 ? m_ : m_global_),
-          n_global(n_global_ == -1 ? n_ : n_global_),
-          o_global(o_global_ == -1 ? o_ : o_global_),
+          mGlobal(m_global_ == -1 ? m_ : m_global_),
+          nGlobal(n_global_ == -1 ? n_ : n_global_),
+          oGlobal(o_global_ == -1 ? o_ : o_global_),
           openCLHelper(this)
     {
         checkGlobalDimensions();
@@ -70,14 +70,14 @@ namespace mgcl
     // throws an exception if global dimensions are not a multiple of local dims.
     void Problem::checkGlobalDimensions()
     {
-        if (m_global <= 0 || m_global % m != 0)
-            throw "m_global must be a multiple of m!";
+        if (mGlobal <= 0 || mGlobal % m != 0)
+            throw "mGlobal must be a multiple of m!";
 
-        if (n_global <= 0 || n_global % n != 0)
-            throw "n_global must be a multiple of n!";
+        if (nGlobal <= 0 || nGlobal % n != 0)
+            throw "nGlobal must be a multiple of n!";
 
-        if (o_global <= 0 || o_global % o != 0)
-            throw "o_global must be a multiple of o!";
+        if (oGlobal <= 0 || oGlobal % o != 0)
+            throw "oGlobal must be a multiple of o!";
     }
 
     /**
@@ -227,8 +227,8 @@ namespace mgcl
     int Problem::calculateAndSetMaxLevel()
     {
         // find max level or use user specified one
-        int minsize = m_global < n_global ? m_global : n_global;
-        minsize = minsize < o_global ? minsize : o_global;
+        int minsize = mGlobal < nGlobal ? mGlobal : nGlobal;
+        minsize = minsize < oGlobal ? minsize : oGlobal;
         int maxlv = log2(minsize);
 
         if (maxlevel >= 0) // user has specified a maxlevel
@@ -970,11 +970,26 @@ namespace mgcl
         return mpi_rank;
     }
 
+    int Problem::getMGlobal() const
+    {
+        return mGlobal;
+    }
+
+    int Problem::getNGlobal() const
+    {
+        return nGlobal;
+    }
+
+    int Problem::getOGlobal() const
+    {
+        return oGlobal;
+    }
+
     std::ostream& operator<<(std::ostream& os, const Problem& p)
     {
         os << "Problem: " << std::endl
            << " m,n,o: " << p.m << "," << p.n << "," << p.o << std::endl
-           << " m_global,n_global,o_global: " << p.m_global << "," << p.n_global << "," << p.o_global << std::endl
+           << " mGlobal,nGlobal,oGlobal: " << p.mGlobal << "," << p.nGlobal << "," << p.oGlobal << std::endl
            << " ghosts: " << p.ghosts << std::endl
            << " ghosts_in: " << p.ghosts_in << std::endl
            << " maxlevel: " << p.maxlevel << std::endl

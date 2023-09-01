@@ -29,13 +29,13 @@ namespace mgcl
         : problem(problem_),
           num(num_),
           belowMpiLevelThreshold(problem_->getMpiLevelThreshold() > num),
-          m(((problem_->getMpiLevelThreshold() > num) ? problem_->getM() : problem_->m_global) >> num_),
-          n(((problem_->getMpiLevelThreshold() > num) ? problem_->getN() : problem_->n_global) >> num_),
-          o(((problem_->getMpiLevelThreshold() > num) ? problem_->getO() : problem_->o_global) >> num_),
+          m(((problem_->getMpiLevelThreshold() <= num && problem_->mpiRank() == 0) ? problem_->getMGlobal() : problem_->getM()) >> num_),
+          n(((problem_->getMpiLevelThreshold() <= num && problem_->mpiRank() == 0) ? problem_->getNGlobal() : problem_->getN()) >> num_),
+          o(((problem_->getMpiLevelThreshold() <= num && problem_->mpiRank() == 0) ? problem_->getOGlobal() : problem_->getO()) >> num_),
           mgh(m + 2 * problem->getGhosts()),
           ngh(n + 2 * problem->getGhosts()),
           ogh(o + 2 * problem->getGhosts()),
-          h(1.0 / (double)problem->m_global), // TODO differentiate for non-cube-like domains
+          h(1.0 / (double)problem->getMGlobal()), // TODO differentiate for non-cube-like domains
           stencilType(problem_->stencilType)
     {
         if (stencilType == MGCL_LAPLACE_7POINT)

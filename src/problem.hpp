@@ -55,9 +55,9 @@ namespace mgcl
         int o;
 
         /* global grid dimensions (is equal to local grid dimensions if MPI is not used) */
-        int m_global;
-        int n_global;
-        int o_global;
+        int mGlobal;
+        int nGlobal;
+        int oGlobal;
 
         /* Holds level-dependent data for each level */
         std::vector<std::unique_ptr<Level>> levels;
@@ -310,6 +310,10 @@ namespace mgcl
         void calculateAndSetMpiLevelThreshold();
 
         int mpiRank() const;
+
+        int getMGlobal() const;
+        int getNGlobal() const;
+        int getOGlobal() const;
 
         friend std::ostream& operator<<(std::ostream& os, const Problem& lv);
     };
