@@ -119,6 +119,17 @@ namespace mgcl
                                 problem->getF()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
                         }
 
+                // If mgcl is run with multiple processes, but already level 0 shall be calculated on only one process
+                // (i.e. mpiMinGridPoints > min(m_local,n_local,o_local)), gather data on rank 0.
+                int mpi_size;
+                MPI_Comm_size(problem->comm, &mpi_size); // TODO refactor
+                if (problem->useMpi() && mpi_size > 1 && problem->getMpiLevelThreshold() <= 0)
+                {
+                    mpi_util::gather(problem->comm, getV());
+                    mpi_util::gather(problem->comm, getF());
+                    // TODO what to do when reuse_opencl_buffers?
+                }
+
                 if (problem->isPeriodic())
                     MultigridEngine::updateGhostsSeq(getF(), mpiData.get(), problem->isPeriodic(), !belowMpiLevelThreshold);
             }

@@ -256,9 +256,9 @@ namespace mgcl
 
     /**
      * @brief Sets the threshold for levels that will be calculated on multiple MPI processes.
-     * All levels below the threshold (exclusively) will be calculated on multiple MPI processes. All levels above the
-     *   threshold (inclusively) will be calculated locally on only one process. I.e. for threshold = 0, all levels
-     *   will be calculated on only one process.
+     * All levels below the threshold (exclusively) will be calculated on multiple MPI processes. All levels at or
+     *   above the threshold (inclusively) will be calculated locally on only one process. I.e. for threshold = 0,
+     *   all levels will be calculated on only one process.
      * Level indices are 0-based, i.e. the finest level has index 0, the coarsest one has index log2(min(mg,ng,og)),
      *   where mg,ng,og are the global sizes of the domain.
      * The threshold must not exceed the level on which min(ml,nl,ol) <= ghosts, e.g. for 8 processes, global size of
@@ -511,40 +511,66 @@ namespace mgcl
         if (!init())
             throw std::runtime_error("Failed to initialize mgcl data structures.");
 
-        // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
-        if (isPeriodic())
-            MultigridEngine::updateGhostsSeq(levels[0]->getV(), levels[0]->getMpiDataPtr(), isPeriodic(),
-                                             !levels[0]->isBelowMpiLevelThreshold());
-
-        double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(),
-                                                      residual_norm, stencilType, levels[0]->stencilFactor,
-                                                      levels[0]->stencilValues.get(), !ignoreTol, isPeriodic(),
-                                                      !levels[0]->isBelowMpiLevelThreshold(),
-                                                      0, 0, 0, getLevelAt(0).getMpiDataPtr());
-        if (!silent && !ignoreTol)
-            printf("Starting mgcl with initres = %e\n", initres);
-
-        // run vcycle maxiter_vcycles times
-        double res, relres;
-        for (int i = 0; i < maxiter_vcycles; i++)
+        // Edge case: Do nothing if mpi is used but level threshold is 0 (i.e. all work is done on proc 0).
+        if (!(useMpi() && getMpiLevelThreshold() <= 0 && mpiRank() > 0))
         {
-            auto tstart = std::chrono::steady_clock::now();
-            res = MultigridEngine::vcycleSeq(*this, *levels[0]);
-            auto tend = mgcl_since(tstart).count();
 
-            if (!ignoreTol)
-                relres = initres == 0 ? 0 : res / initres;
+            // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
+            if (isPeriodic())
+                MultigridEngine::updateGhostsSeq(levels[0]->getV(), levels[0]->getMpiDataPtr(), isPeriodic(),
+                                                 !levels[0]->isBelowMpiLevelThreshold());
 
-            if (!silent)
+            double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(),
+                                                          residual_norm, stencilType, levels[0]->stencilFactor,
+                                                          levels[0]->stencilValues.get(), !ignoreTol, isPeriodic(),
+                                                          !levels[0]->isBelowMpiLevelThreshold(),
+                                                          0, 0, 0, getLevelAt(0).getMpiDataPtr());
+            if (!silent && !ignoreTol)
+                printf("Starting mgcl with initres = %e\n", initres);
+
+            // run vcycle maxiter_vcycles times
+            double res, relres;
+            for (int i = 0; i < maxiter_vcycles; i++)
             {
-                if (ignoreTol)
-                    printf("iter = %d, elapsed time = %ld ms\n", i, tend);
-                else
-                    printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
-            }
+                auto tstart = std::chrono::steady_clock::now();
+                res = MultigridEngine::vcycleSeq(*this, *levels[0]);
+                auto tend = mgcl_since(tstart).count();
 
-            if (!ignoreTol && relres < tol)
-                break;
+                if (!ignoreTol)
+                    relres = initres == 0 ? 0 : res / initres;
+
+                if (!silent)
+                {
+                    if (ignoreTol)
+                        printf("iter = %d, elapsed time = %ld ms\n", i, tend);
+                    else
+                        printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
+                }
+
+                if (!ignoreTol && relres < tol)
+                    break;
+            }
+        }
+        else if (!silent)
+        {
+            std::cout << "mgcl: Rank " << mpiRank()
+                      << " does nothing (mpiLevelThreshold <= 0). Waiting for results from rank 0 ..." << std::endl;
+        }
+
+        // TODO scatter from proc 0 after solving if useMpi() && getMpiLevelThreshold() == 0
+        // TODO check mpiSize > 1 maybe
+        if (useMpi() && getMpiLevelThreshold() == 0)
+        {
+            if (mpiRank() == 0)
+            {
+                auto tmp = std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                mpi_util::scatter(comm, getLevelAt(0).getVPtr().get(), *tmp);
+                getLevelAt(0).setV(tmp);
+            }
+            else
+            {
+                mpi_util::scatter(comm, nullptr, getLevelAt(0).getV());
+            }
         }
 
         // write data to output
