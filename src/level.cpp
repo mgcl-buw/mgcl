@@ -92,56 +92,57 @@ namespace mgcl
      */
     bool Level::init()
     {
-        // First init MPI data, so dimensions of Cuboids is updated.
+        // First init MPI data to get information about neighbours and be able to update ghosts.
         initMpiData();
 
-        // Only allocate data if
-        // 1. mgcl is run without MPI at all, or
-        // 2. mgcl is run with MPI and this level is below the level threshold (i.e. enough grid points), or
-        // 3. mgcl is run with MPI, this level is above the level threshold but the rank is 0.
-        if (!problem->useMpi() || belowMpiLevelThreshold || mpiData->rank == 0)
+        // Always allocate data on level 0 so input data is copied and not left uninitialized.
+        if (num == 0)
         {
-            if (num == 0)
+            // move stencilsValues pointer from Problem to first Level
+            if (stencilType == MGCL_VARYING)
+                stencilValues = problem->stencilValues;
+
+            // create ghosted arrays for v and f on host if device buffer should not be reused
+            if (!problem->reuse_opencl_buffers && !problem->copy_buffer_data)
             {
-                // move stencilsValues pointer from Problem to first Level
-                if (stencilType == MGCL_VARYING)
-                    stencilValues = problem->stencilValues;
+                v = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+                f = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
 
-                // create ghosted arrays for v and f on host if device buffer should not be reused
-                if (!problem->reuse_opencl_buffers && !problem->copy_buffer_data)
-                {
-                    v = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
-                    f = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+                // copy initial input data from conf into mgcl data struct
+                for (int i = 0; i < problem->getV().getM(); i++)
+                    for (int j = 0; j < problem->getV().getN(); j++)
+                        for (int k = 0; k < problem->getV().getO(); k++)
+                        {
+                            getV()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts] =
+                                problem->getV()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
+                            getF()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts] =
+                                problem->getF()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
+                        }
 
-                    // copy initial input data from conf into mgcl data struct
-                    for (int i = 0; i < problem->getV().getM(); i++)
-                        for (int j = 0; j < problem->getV().getN(); j++)
-                            for (int k = 0; k < problem->getV().getO(); k++)
-                            {
-                                getV()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts] =
-                                    problem->getV()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
-                                getF()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts] =
-                                    problem->getF()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
-                            }
-
-                    if (problem->isPeriodic())
-                        MultigridEngine::updateGhostsSeq(getF(), mpiData.get(), problem->isPeriodic(), !belowMpiLevelThreshold);
-                }
-
-                // r on host is only needed if opencl should not be used
-                if (!problem->use_opencl)
-                {
-                    r = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
-                }
+                if (problem->isPeriodic())
+                    MultigridEngine::updateGhostsSeq(getF(), mpiData.get(), problem->isPeriodic(), !belowMpiLevelThreshold);
             }
-            else
+
+            // r on host is only needed if opencl should not be used
+            if (!problem->use_opencl)
             {
-                if (!problem->use_opencl)
-                {
-                    v = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
-                    f = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
-                    r = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
-                }
+                r = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+            }
+
+            if (initOpenCLBuffers() != CL_SUCCESS)
+                return false;
+        }
+        else if (!problem->useMpi() || belowMpiLevelThreshold || mpiData->rank == 0)
+        {
+            // Only allocate data on coarser levels, if
+            // 1. mgcl is run without MPI at all, or
+            // 2. mgcl is run with MPI and this level is below the level threshold (i.e. enough grid points), or
+            // 3. mgcl is run with MPI, this level is equal to or above the level threshold but the rank is 0.
+            if (!problem->use_opencl)
+            {
+                v = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+                f = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
+                r = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
             }
 
             if (initOpenCLBuffers() != CL_SUCCESS)
