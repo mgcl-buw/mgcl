@@ -86,6 +86,18 @@ TEST_CASE("Problem::checkParameters")
         REQUIRE_THROWS(pm.checkParameters());
     }
 
+    SECTION("ghosts_in != ghosts of v or f")
+    {
+        mgcl::Problem pm(8, 8, 8, v, f);
+        pm.setGhostsIn(1);
+        REQUIRE_THROWS(pm.checkParameters());
+
+        auto v2 = std::make_shared<mgcl::Cuboid>(8, 8, 8, 1, 1, 1);
+        mgcl::Problem pm2(8, 8, 8, v2, f);
+        pm2.setGhostsIn(0);
+        REQUIRE_THROWS(pm2.checkParameters());
+    }
+
     SECTION("all good")
     {
         mgcl::Problem pm(8, 8, 8, v, f);

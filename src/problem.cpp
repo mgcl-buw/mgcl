@@ -114,6 +114,14 @@ namespace mgcl
             throw "mgcl: ghosts_in must be > 0 if boundary conditions are not periodic. Aborting.\n";
         }
 
+        // clang-format off
+        if (v && f && (
+            ghosts_in != v->getGhostsM() || ghosts_in != v->getGhostsN() || ghosts_in != v->getGhostsO() ||
+            ghosts_in != f->getGhostsM() || ghosts_in != f->getGhostsN() || ghosts_in != f->getGhostsO()
+            ))
+            // clang-format on
+            throw "ghosts_in is different than ghosts of v and/or f!";
+
         return true;
     }
 
