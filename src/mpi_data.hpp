@@ -25,10 +25,10 @@ namespace mgcl
         int back;
 
         MPIData(MPI_Comm _comm);
-        MPIData(const MPIData &) = delete;
-        MPIData &operator=(const MPIData &) = delete;
-        MPIData(const MPIData &&) = delete;
-        MPIData &operator=(MPIData &&) = delete;
+        MPIData(const MPIData&) = delete;
+        MPIData& operator=(const MPIData&) = delete;
+        MPIData(const MPIData&&) = delete;
+        MPIData& operator=(MPIData&&) = delete;
         ~MPIData() {}
 
         // utility functions

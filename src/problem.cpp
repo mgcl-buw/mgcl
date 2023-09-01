@@ -32,7 +32,7 @@ namespace mgcl
         calculateAndSetMaxLevel();
     }
 
-    Problem::Problem(int m_, int n_, int o_, Cuboid *f_, Cuboid *v_, int m_global_, int n_global_, int o_global_)
+    Problem::Problem(int m_, int n_, int o_, Cuboid* f_, Cuboid* v_, int m_global_, int n_global_, int o_global_)
         : m(m_), n(n_), o(o_), f(f_), v(v_),
           m_global(m_global_ == -1 ? m_ : m_global_),
           n_global(n_global_ == -1 ? n_ : n_global_),
@@ -549,7 +549,7 @@ namespace mgcl
                 }
     }
 
-    Level &Problem::getLevelAt(int index) const
+    Level& Problem::getLevelAt(int index) const
     {
         return *levels[index];
     }
@@ -563,7 +563,7 @@ namespace mgcl
      * Getters and Setters
      ********************************/
 
-    Cuboid &Problem::getF() const
+    Cuboid& Problem::getF() const
     {
         return *f;
     }
@@ -673,12 +673,12 @@ namespace mgcl
         return dV;
     }
 
-    void Problem::setDV(const cl_mem &dV_)
+    void Problem::setDV(const cl_mem& dV_)
     {
         dV = dV_;
     }
 
-    void Problem::setDStencilValues(const cl_mem &dStencilValues_)
+    void Problem::setDStencilValues(const cl_mem& dStencilValues_)
     {
         dStencilValues = dStencilValues_;
     }
@@ -739,7 +739,7 @@ namespace mgcl
         return residual_norm;
     }
 
-    void Problem::setResidualNorm(const MGCL_RESIDUAL_NORM &residualNorm)
+    void Problem::setResidualNorm(const MGCL_RESIDUAL_NORM& residualNorm)
     {
         residual_norm = residualNorm;
     }
@@ -789,12 +789,12 @@ namespace mgcl
         return dF;
     }
 
-    void Problem::setDF(const cl_mem &dF_)
+    void Problem::setDF(const cl_mem& dF_)
     {
         dF = dF_;
     }
 
-    OpenCLHelper &Problem::getOpenCLHelper()
+    OpenCLHelper& Problem::getOpenCLHelper()
     {
         return openCLHelper;
     }
@@ -804,7 +804,7 @@ namespace mgcl
         return openCLHelper.deviceName;
     }
 
-    void Problem::setDeviceName(const std::string &deviceName_)
+    void Problem::setDeviceName(const std::string& deviceName_)
     {
         if (!openCLHelper.isInitialized())
             openCLHelper.deviceName = deviceName_;
@@ -825,7 +825,7 @@ namespace mgcl
         return openCLHelper.kernelDir;
     }
 
-    void Problem::setKernelDir(const std::string &kernelDir_)
+    void Problem::setKernelDir(const std::string& kernelDir_)
     {
         if (!openCLHelper.isInitialized())
             openCLHelper.kernelDir = kernelDir_;
@@ -836,7 +836,7 @@ namespace mgcl
         return openCLHelper.deviceType;
     }
 
-    void Problem::setDeviceType(const cl_device_type &deviceType_)
+    void Problem::setDeviceType(const cl_device_type& deviceType_)
     {
         if (!openCLHelper.isInitialized())
             openCLHelper.deviceType = deviceType_;
@@ -867,7 +867,7 @@ namespace mgcl
         return bc;
     }
 
-    void Problem::setBc(const BC &bc_)
+    void Problem::setBc(const BC& bc_)
     {
         bc = bc_;
     }
@@ -882,7 +882,7 @@ namespace mgcl
         return ignoreTol;
     }
 
-    void Problem::setStencilType(const MGCL_STENCIL &stencilType_)
+    void Problem::setStencilType(const MGCL_STENCIL& stencilType_)
     {
         stencilType = stencilType_;
         // TODO move to getStencilValues?
@@ -895,7 +895,7 @@ namespace mgcl
             stencilValues = nullptr;
     }
 
-    std::shared_ptr<VaryingStencil3x3x3> &Problem::getStencilValues()
+    std::shared_ptr<VaryingStencil3x3x3>& Problem::getStencilValues()
     {
         return stencilValues;
     }
@@ -905,7 +905,7 @@ namespace mgcl
         ignoreTol = ignoreTol_;
     }
 
-    Cuboid &Problem::getV() const
+    Cuboid& Problem::getV() const
     {
         return *v;
     }
@@ -970,7 +970,7 @@ namespace mgcl
         return mpi_rank;
     }
 
-    std::ostream &operator<<(std::ostream &os, const Problem &p)
+    std::ostream& operator<<(std::ostream& os, const Problem& p)
     {
         os << "Problem: " << std::endl
            << " m,n,o: " << p.m << "," << p.n << "," << p.o << std::endl

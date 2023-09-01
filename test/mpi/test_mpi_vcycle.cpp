@@ -15,9 +15,9 @@
 
 #include "mpi.h"
 
-std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid &solution, mgcl::Cuboid &approximation);
-double calculateMaxError(mgcl::Cuboid &error);
-double calculateErrorNorm(double h, mgcl::Cuboid &error);
+std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid& solution, mgcl::Cuboid& approximation);
+double calculateMaxError(mgcl::Cuboid& error);
+double calculateErrorNorm(double h, mgcl::Cuboid& error);
 
 // Tests if vcycle is correct for multiple processes but everything is actually done on one process, i.e.
 // gathering and scattering happens on level 0.
@@ -152,7 +152,7 @@ TEST_CASE("MPI_vcycle_immediate_gather_scatter")
  * @param approximation
  * @return std::shared_ptr<mgcl::Cuboid>
  */
-std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid &solution, mgcl::Cuboid &approximation)
+std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid& solution, mgcl::Cuboid& approximation)
 {
     if (solution.getM() != approximation.getM() ||
         solution.getN() != approximation.getN() ||
@@ -176,7 +176,7 @@ std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid &solution, mgcl::Cuboi
  * @param error
  * @return double
  */
-double calculateMaxError(mgcl::Cuboid &error)
+double calculateMaxError(mgcl::Cuboid& error)
 {
     double max = 0;
     for (int i = 0; i < error.getM(); i++)
@@ -196,7 +196,7 @@ double calculateMaxError(mgcl::Cuboid &error)
  * @param error precalculated error per cell
  * @return double Error norm of form ||e||_2 * h^3
  */
-double calculateErrorNorm(double h, mgcl::Cuboid &error)
+double calculateErrorNorm(double h, mgcl::Cuboid& error)
 {
     double sum = 0;
 

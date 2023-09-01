@@ -113,7 +113,7 @@ TEST_CASE("benchmark Jacobi OCL multiple iters", "[console][jacobiMulti][ocl]")
                 p->setUseOpencl(true);
                 p->setSilent(true);
                 p->init();
-                auto &level = p->getLevelAt(0);
+                auto& level = p->getLevelAt(0);
                 mgcl_test::TestUtility tu(p);
 
                 std::string name = std::string("ocl, N = ")
@@ -259,7 +259,7 @@ TEST_CASE("benchmark Jacobi MPI OCL multiple iters", "[console][jacobiMulti][mpi
                 p->setUseOpencl(true);
                 p->setSilent(true);
                 p->init();
-                auto &level = p->getLevelAt(0);
+                auto& level = p->getLevelAt(0);
                 mgcl_test::TestUtility tu(p);
 
                 std::string name = std::string("ocl, N = ")

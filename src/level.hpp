@@ -24,7 +24,7 @@ namespace mgcl
     {
     private:
         /* Problem that this Level belongs to */
-        Problem *problem;
+        Problem* problem;
 
         /* Number of level in given Problem. */
         int num;
@@ -70,11 +70,11 @@ namespace mgcl
         friend class Problem;
 
     public:
-        Level(Problem *problem_, int _num);
-        Level(const Level &) = delete;
-        Level &operator=(const Level &) = delete;
-        Level(const Level &&) = delete;
-        Level &operator=(Level &&) = delete;
+        Level(Problem* problem_, int _num);
+        Level(const Level&) = delete;
+        Level& operator=(const Level&) = delete;
+        Level(const Level&&) = delete;
+        Level& operator=(Level&&) = delete;
         ~Level();
 
         bool init();
@@ -83,15 +83,15 @@ namespace mgcl
 
         int getNum() const;
 
-        Cuboid &getV() const;
+        Cuboid& getV() const;
         std::shared_ptr<Cuboid> getVPtr() const;
-        void setV(const std::shared_ptr<Cuboid> &v_);
-        Cuboid &getF() const;
+        void setV(const std::shared_ptr<Cuboid>& v_);
+        Cuboid& getF() const;
         std::shared_ptr<Cuboid> getFPtr() const;
-        void setF(const std::shared_ptr<Cuboid> &f_);
-        Cuboid &getR() const;
+        void setF(const std::shared_ptr<Cuboid>& f_);
+        Cuboid& getR() const;
         std::shared_ptr<Cuboid> getRPtr() const;
-        void setR(const std::shared_ptr<Cuboid> &r_);
+        void setR(const std::shared_ptr<Cuboid>& r_);
 
         int getM() const;
         int getN() const;
@@ -100,8 +100,8 @@ namespace mgcl
         double getH() const;
         void setH(double h_);
 
-        MPIData *getMpiDataPtr();
-        MPIData &getMpiData();
+        MPIData* getMpiDataPtr();
+        MPIData& getMpiData();
 
         cl_mem getDVIn() const;
         void setDVIn(const cl_mem dVIn_);
@@ -123,16 +123,16 @@ namespace mgcl
 
         MGCL_STENCIL getStencilType() const;
 
-        std::shared_ptr<VaryingStencil3x3x3> &getStencilValues();
+        std::shared_ptr<VaryingStencil3x3x3>& getStencilValues();
 
         double getStencilFactor() const;
 
-        std::shared_ptr<VaryingStencilGpu> &getStencilValuesGpu();
+        std::shared_ptr<VaryingStencilGpu>& getStencilValuesGpu();
         void setStencilValuesGpu(std::shared_ptr<VaryingStencilGpu> sv);
 
         bool isBelowMpiLevelThreshold() const;
 
-        friend std::ostream &operator<<(std::ostream &os, const Level &lv);
+        friend std::ostream& operator<<(std::ostream& os, const Level& lv);
     };
 }
 

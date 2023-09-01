@@ -70,7 +70,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][all]")
             v->fillRandom(0, 10);
             f->fillRandom(0, 10);
 
-            std::function<mgcl::Problem *()> createProblem = [m, n, o, &f, &v, vcycleIters]()
+            std::function<mgcl::Problem*()> createProblem = [m, n, o, &f, &v, vcycleIters]()
             {
                 auto p = new mgcl::Problem(m, n, o, f, v);
                 p->setSilent(true);
@@ -112,13 +112,13 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][all]")
             v->fillRandom(0, 10);
             f->fillRandom(0, 10);
 
-            std::function<mgcl::Problem *()> createProblem = [m, n, o, &f, &v, vcycleIters, N]()
+            std::function<mgcl::Problem*()> createProblem = [m, n, o, &f, &v, vcycleIters, N]()
             {
                 auto p = new mgcl::Problem(m, n, o, f, v);
                 p->setSilent(true);
                 p->setMaxiterVcycles(vcycleIters);
                 p->setStencilType(mgcl::MGCL_VARYING);
-                auto &s = *p->getStencilValues();
+                auto& s = *p->getStencilValues();
 
                 // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
                 for (int i = 0; i < N; i++)
@@ -172,7 +172,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][all]")
             v->fillRandom(0, 10);
             f->fillRandom(0, 10);
 
-            std::function<mgcl::Problem *()> createProblem = [m, n, o, &f, &v, vcycleIters]()
+            std::function<mgcl::Problem*()> createProblem = [m, n, o, &f, &v, vcycleIters]()
             {
                 auto p = new mgcl::Problem(m, n, o, f, v);
                 p->setSilent(true);
@@ -224,14 +224,14 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][all]")
             v->fillRandom(0, 10);
             f->fillRandom(0, 10);
 
-            std::function<mgcl::Problem *()> createProblem = [m, n, o, &f, &v, vcycleIters, N]()
+            std::function<mgcl::Problem*()> createProblem = [m, n, o, &f, &v, vcycleIters, N]()
             {
                 auto p = new mgcl::Problem(m, n, o, f, v);
                 p->setSilent(true);
                 p->setUseOpencl(true);
                 p->setMaxiterVcycles(vcycleIters);
                 p->setStencilType(mgcl::MGCL_VARYING);
-                auto &s = *p->getStencilValues();
+                auto& s = *p->getStencilValues();
 
                 // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
                 for (int i = 0; i < N; i++)
@@ -406,7 +406,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
             v->fillRandom(0, 10);
             f->fillRandom(0, 10);
 
-            std::function<mgcl::Problem *()> createProblem = [m, n, o, &f, &v, vcycleIters]()
+            std::function<mgcl::Problem*()> createProblem = [m, n, o, &f, &v, vcycleIters]()
             {
                 auto p = new mgcl::Problem(m, n, o, f, v);
                 p->setSilent(true);
@@ -458,14 +458,14 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
             v->fillRandom(0, 10);
             f->fillRandom(0, 10);
 
-            std::function<mgcl::Problem *()> createProblem = [m, n, o, &f, &v, vcycleIters, N]()
+            std::function<mgcl::Problem*()> createProblem = [m, n, o, &f, &v, vcycleIters, N]()
             {
                 auto p = new mgcl::Problem(m, n, o, f, v);
                 p->setSilent(true);
                 p->setUseOpencl(true);
                 p->setMaxiterVcycles(vcycleIters);
                 p->setStencilType(mgcl::MGCL_VARYING);
-                auto &s = *p->getStencilValues();
+                auto& s = *p->getStencilValues();
 
                 // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
                 for (int i = 0; i < N; i++)

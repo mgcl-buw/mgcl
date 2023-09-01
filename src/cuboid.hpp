@@ -20,28 +20,28 @@ namespace mgcl
         int ghostsN = 0;
         int ghostsO = 0;
         std::vector<double> field_1d;
-        double ***field_3d;
+        double*** field_3d;
 
     public:
         Cuboid(int m_, int n_, int o_, double value = 0);
         Cuboid(int m_, int n_, int o_, int ghostsM_, int ghostsN_, int ghostsO_, double value = 0);
-        Cuboid(const Cuboid &) = delete;
-        Cuboid &operator=(const Cuboid &) = delete;
-        Cuboid(Cuboid &&);
-        Cuboid &operator=(Cuboid &&);
+        Cuboid(const Cuboid&) = delete;
+        Cuboid& operator=(const Cuboid&) = delete;
+        Cuboid(Cuboid&&);
+        Cuboid& operator=(Cuboid&&);
         ~Cuboid();
 
-        double ***getData() const;
-        inline double **operator[](int index) { return field_3d[index]; }
+        double*** getData() const;
+        inline double** operator[](int index) { return field_3d[index]; }
         void fillRandom(double low = 0, double high = 1, bool realCellsOnly = false);
         void fillRandomInt(int low = 1, int high = 10, bool realCellsOnly = false);
         void fill(double value, bool realCellsOnly = false);
-        std::vector<double> &field1d();
-        bool isEqual(Cuboid &c, double tol = 1e-7, bool printDiffs = false);
-        bool isEqualAllCells(Cuboid &c, double tol = 1e-7);
+        std::vector<double>& field1d();
+        bool isEqual(Cuboid& c, double tol = 1e-7, bool printDiffs = false);
+        bool isEqualAllCells(Cuboid& c, double tol = 1e-7);
         void dumpToFile(std::string path, bool realCellsOnly = false);
-        void fillRealFrom(Cuboid &c);
-        void fillAllFrom(Cuboid &c);
+        void fillRealFrom(Cuboid& c);
+        void fillAllFrom(Cuboid& c);
         std::unique_ptr<Cuboid> slice(int m_start, int m_end, int n_start, int n_end, int o_start, int o_end,
                                       int ghm = -1, int ghn = -1, int gho = -1);
         std::unique_ptr<Cuboid> sliceIncGhosts(int m_start, int m_end, int n_start, int n_end,
@@ -57,7 +57,7 @@ namespace mgcl
         int getNgh() const;
         int getMgh() const;
 
-        static Cuboid copyFrom(Cuboid &c);
+        static Cuboid copyFrom(Cuboid& c);
     };
 }
 #endif /* ifndef MGCL_CUBOID__HPP */

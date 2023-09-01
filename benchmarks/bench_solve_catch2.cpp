@@ -101,10 +101,10 @@ TEST_CASE("mgcl catch2 bench console: solve", "[!benchmark][solveWithCatch2]")
                 // init 7-point stencil for pmg's jacobi
                 int size = 7;
                 double h2 = 1.0 / (double)(N * N);
-                double *values = new double[size]();
-                int *xoff = new int[size]();
-                int *yoff = new int[size]();
-                int *zoff = new int[size]();
+                double* values = new double[size]();
+                int* xoff = new int[size]();
+                int* yoff = new int[size]();
+                int* zoff = new int[size]();
 
                 values[0] = 6.0 / h2;
                 for (int i = 1; i <= 6; i++)
@@ -143,7 +143,7 @@ TEST_CASE("mgcl catch2 bench console: solve", "[!benchmark][solveWithCatch2]")
 
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
 
-            mgcl_config *conf;
+            mgcl_config* conf;
             mgcl_generate_config(&conf);
 
             conf->v = v->getData();
@@ -171,7 +171,7 @@ TEST_CASE("mgcl catch2 bench console: solve", "[!benchmark][solveWithCatch2]")
 
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
 
-            mgcl_config *conf;
+            mgcl_config* conf;
             mgcl_generate_config(&conf);
 
             conf->v = v->getData();

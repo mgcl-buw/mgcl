@@ -19,7 +19,7 @@ std::vector<int> split_int(std::string s, std::string delimiter);
 // Valid arguments are:
 // --grids 8,16,32
 // --minEpochIterations N
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
 

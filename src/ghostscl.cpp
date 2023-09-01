@@ -20,7 +20,7 @@ namespace mgcl
     using std::size_t;
 
     // Private helper function for updating ghosts without MPI.
-    void updateGhostsSeqLocally(Cuboid &c, bool periodic)
+    void updateGhostsSeqLocally(Cuboid& c, bool periodic)
     {
         int m = c.getM();
         int n = c.getN();
@@ -88,7 +88,7 @@ namespace mgcl
      *   only one MPI process, updateGhostsSeqLocally will be used instead.
      * forceLocal: If true, ghosts will be updated locally (maybe giving wrong results, if m_local < m_global).
      *   This is used e.g. for levels above the mpiLevelThreshold. */
-    void MultigridEngine::updateGhostsSeq(Cuboid &c, MPIData *mpiData, bool periodic, bool forceLocal)
+    void MultigridEngine::updateGhostsSeq(Cuboid& c, MPIData* mpiData, bool periodic, bool forceLocal)
     {
         // TODO adjust for ghosts > 1
         // TODO test
@@ -199,8 +199,8 @@ namespace mgcl
         auto rbufyz_ptr = std::make_unique<Cuboid>(sbufyz_ptr->getM(), sbufyz_ptr->getN(), sbufyz_ptr->getO(), 0, 0, 0);
         auto rbufyz = rbufyz_ptr->getData();
 
-        MPI_Sendrecv((void *)sbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
-                     (void *)rbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
+        MPI_Sendrecv((void*)sbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
+                     (void*)rbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
                      mpiData->comm, MPI_STATUS_IGNORE);
 
         if (MPI_PROC_NULL != mpiData->back)
@@ -215,8 +215,8 @@ namespace mgcl
         rbufyz_ptr = std::make_unique<Cuboid>(sbufyz_ptr->getM(), sbufyz_ptr->getN(), sbufyz_ptr->getO(), 0, 0, 0);
         rbufyz = rbufyz_ptr->getData();
 
-        MPI_Sendrecv((void *)sbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
-                     (void *)rbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
+        MPI_Sendrecv((void*)sbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
+                     (void*)rbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
                      mpiData->comm, MPI_STATUS_IGNORE);
 
         if (MPI_PROC_NULL != mpiData->front)
@@ -231,8 +231,8 @@ namespace mgcl
         auto rbufxz_ptr = std::make_unique<Cuboid>(sbufxz_ptr->getM(), sbufxz_ptr->getN(), sbufxz_ptr->getO(), 0, 0, 0);
         auto rbufxz = rbufxz_ptr->getData();
 
-        MPI_Sendrecv((void *)sbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
-                     (void *)rbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
+        MPI_Sendrecv((void*)sbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
+                     (void*)rbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
                      mpiData->comm, MPI_STATUS_IGNORE);
 
         if (MPI_PROC_NULL != mpiData->up)
@@ -247,8 +247,8 @@ namespace mgcl
         rbufxz_ptr = std::make_unique<Cuboid>(sbufxz_ptr->getM(), sbufxz_ptr->getN(), sbufxz_ptr->getO(), 0, 0, 0);
         rbufxz = rbufxz_ptr->getData();
 
-        MPI_Sendrecv((void *)sbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
-                     (void *)rbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
+        MPI_Sendrecv((void*)sbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
+                     (void*)rbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
                      mpiData->comm, MPI_STATUS_IGNORE);
 
         if (MPI_PROC_NULL != mpiData->down)
@@ -267,8 +267,8 @@ namespace mgcl
         // MPI_Barrier(comm);
         // sbufxz_ptr->dumpToFile("sbufyz_ptr_left" + std::to_string(myid) + ".txt");
 
-        MPI_Sendrecv((void *)sbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
-                     (void *)rbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
+        MPI_Sendrecv((void*)sbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
+                     (void*)rbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
                      mpiData->comm, MPI_STATUS_IGNORE);
         if (MPI_PROC_NULL != mpiData->right)
             for (i = 0; i < mgh; i++)
@@ -282,8 +282,8 @@ namespace mgcl
         rbufxz_ptr = std::make_unique<Cuboid>(sbufxz_ptr->getM(), sbufxz_ptr->getN(), sbufxz_ptr->getO(), 0, 0, 0);
         rbufxz = rbufxz_ptr->getData();
 
-        MPI_Sendrecv((void *)sbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
-                     (void *)rbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
+        MPI_Sendrecv((void*)sbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
+                     (void*)rbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
                      mpiData->comm, MPI_STATUS_IGNORE);
 
         if (MPI_PROC_NULL != mpiData->left)
@@ -296,9 +296,9 @@ namespace mgcl
     /* updates ghost cells on opencl device.
      * m,n,o must be size of ghosted grid.
      * Only enqueues the kernel. Neither waits for kernel to finish nor reads back results */
-    int MultigridEngine::updateGhosts(Problem &problem, cl_mem dBuffer,
+    int MultigridEngine::updateGhosts(Problem& problem, cl_mem dBuffer,
                                       int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
-                                      MPIData *mpiData, bool forceLocal)
+                                      MPIData* mpiData, bool forceLocal)
     {
         // TODO actually request these as arguments
         int m = mgh - 2 * ghosts_m;
@@ -380,7 +380,7 @@ namespace mgcl
      * @param periodic
      * @param forceLocal
      */
-    void MultigridEngine::updateGhostsOclMpi(cl_command_queue commands, cl_mem d_buf, MPIData &mpiData,
+    void MultigridEngine::updateGhostsOclMpi(cl_command_queue commands, cl_mem d_buf, MPIData& mpiData,
                                              int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o,
                                              bool periodic, bool forceLocal)
     {

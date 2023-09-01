@@ -142,7 +142,7 @@ TEST_CASE("residual periodic Laplace seq vs ocl")
     p_seq->setBc(bc);
 
     p_seq->init();
-    auto &level0_seq = p_seq->getLevelAt(0);
+    auto& level0_seq = p_seq->getLevelAt(0);
 
     // init OpenCL problem
     auto p_gpu = std::make_shared<mgcl::Problem>(m, n, o);
@@ -155,11 +155,11 @@ TEST_CASE("residual periodic Laplace seq vs ocl")
     p_gpu->setBc(bc);
 
     p_gpu->init();
-    auto &level0_gpu = p_gpu->getLevelAt(0);
+    auto& level0_gpu = p_gpu->getLevelAt(0);
 
-    auto &v_in_lv0 = level0_seq.getV();
-    auto &f_in_lv0 = level0_seq.getF();
-    auto &r_in_lv0 = level0_seq.getR();
+    auto& v_in_lv0 = level0_seq.getV();
+    auto& f_in_lv0 = level0_seq.getF();
+    auto& r_in_lv0 = level0_seq.getR();
 
     mgcl_test::TestUtility tu(p_gpu);
 
@@ -243,11 +243,11 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
     p_seq->setBc(bc);
 
     p_seq->setStencilType(stencilType);
-    auto &sv = p_seq->getStencilValues();
+    auto& sv = p_seq->getStencilValues();
     sv->fillRandomInt();
 
     p_seq->init();
-    auto &level0_seq = p_seq->getLevelAt(0);
+    auto& level0_seq = p_seq->getLevelAt(0);
     REQUIRE(level0_seq.getStencilValues().get() == sv.get());
 
     // init OpenCL problem
@@ -260,7 +260,7 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
     p_gpu->setBc(bc);
 
     p_gpu->setStencilType(stencilType);
-    auto &sv_gpu = p_gpu->getStencilValues();
+    auto& sv_gpu = p_gpu->getStencilValues();
 
     // copy stencil values
     REQUIRE(sv->field1d().size() == sv_gpu->field1d().size());
@@ -268,13 +268,13 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
         sv_gpu->field1d()[i] = sv->field1d()[i];
 
     p_gpu->init();
-    auto &level0_gpu = p_gpu->getLevelAt(0);
+    auto& level0_gpu = p_gpu->getLevelAt(0);
     REQUIRE(level0_gpu.getStencilValuesGpu() != nullptr);
 
-    auto &v_in_lv0 = level0_seq.getV();
-    auto &f_in_lv0 = level0_seq.getF();
-    auto &r_in_lv0 = level0_seq.getR();
-    auto &sv_in_lv0 = level0_seq.getStencilValues();
+    auto& v_in_lv0 = level0_seq.getV();
+    auto& f_in_lv0 = level0_seq.getF();
+    auto& r_in_lv0 = level0_seq.getR();
+    auto& sv_in_lv0 = level0_seq.getStencilValues();
 
     mgcl_test::TestUtility tu(p_gpu);
 

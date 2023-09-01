@@ -19,7 +19,7 @@ namespace mgcl
 
     /* Prolongates from coarse to fine grid.
      * m, n and o must be dimensions of the fine grid without ghost cells. */
-    void MultigridEngine::prolongateSeq(Level &fine, Level &coarse, Cuboid &fineVals, Cuboid &coarseVals)
+    void MultigridEngine::prolongateSeq(Level& fine, Level& coarse, Cuboid& fineVals, Cuboid& coarseVals)
     {
         int ghosts = coarse.problem->getGhosts();
         int m = fine.m;
@@ -67,7 +67,7 @@ namespace mgcl
 
     /* Prolongates from coarse to fine grid.
      * Doesn't create buffers or copy memory from or to device. */
-    void MultigridEngine::prolongate(Level &fine, Level &coarse, cl_mem d_fine_values, cl_mem d_coarse_values)
+    void MultigridEngine::prolongate(Level& fine, Level& coarse, cl_mem d_fine_values, cl_mem d_coarse_values)
     {
         int err;
         auto problem = fine.problem;

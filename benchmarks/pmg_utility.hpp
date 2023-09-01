@@ -3,7 +3,7 @@
 
 #include "mpi.h"
 
-inline MPI_Comm *init_mpi_for_pmg()
+inline MPI_Comm* init_mpi_for_pmg()
 {
     // setup MPI
     int mpi_size;
@@ -11,7 +11,7 @@ inline MPI_Comm *init_mpi_for_pmg()
     int mpi_dims[3] = {1, 1, 1};
     int mpi_periods[3] = {1, 1, 1};
     int mpi_coords[3];
-    MPI_Comm *mpi_comm_cart = (MPI_Comm *)malloc(sizeof(MPI_Comm));
+    MPI_Comm* mpi_comm_cart = (MPI_Comm*)malloc(sizeof(MPI_Comm));
 
     // init only once
     int initialized;

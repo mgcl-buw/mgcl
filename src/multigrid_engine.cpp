@@ -19,9 +19,9 @@ namespace mgcl
 {
 
     /* Runs V-cycle recursively and sequentially */
-    double MultigridEngine::vcycleSeq(Problem &problem, Level &level)
+    double MultigridEngine::vcycleSeq(Problem& problem, Level& level)
     {
-        auto &levelAbove = problem.getLevelAt(level.num + 1);
+        auto& levelAbove = problem.getLevelAt(level.num + 1);
         // printf("level.getNum() = %d, m = %3.d\n", level.getNum(), level.m-2);
         // problem.maxlevel = 7;
         double res;
@@ -148,9 +148,9 @@ namespace mgcl
     }
 
     /* Runs V-cycle recursively using ocl */
-    double MultigridEngine::vcycle(Problem &problem, Level &level)
+    double MultigridEngine::vcycle(Problem& problem, Level& level)
     {
-        auto &levelAbove = problem.getLevelAt(level.num + 1);
+        auto& levelAbove = problem.getLevelAt(level.num + 1);
         // printf("level.getNum() = %d, m = %3.d\n", level.getNum(), level.m-2);
         // problem.maxlevel = 3;
         double res;
@@ -202,7 +202,7 @@ namespace mgcl
 
     /* Starts kernel to correct error, e.g. v = v + e
      * m,n,o is size of ghosted grid */
-    int MultigridEngine::correctError(Problem &problem, cl_mem d_v, cl_mem d_r, int mgh, int ngh, int ogh)
+    int MultigridEngine::correctError(Problem& problem, cl_mem d_v, cl_mem d_r, int mgh, int ngh, int ogh)
     {
         int err;
 
@@ -248,7 +248,7 @@ namespace mgcl
      * @param a_h The stencil of the finer grid.
      * @returns VaryingStencil3x3x3 The stencil to be applied on the coarser grid
      */
-    VaryingStencil3x3x3 MultigridEngine::galerkin(VaryingStencil3x3x3 &a_h)
+    VaryingStencil3x3x3 MultigridEngine::galerkin(VaryingStencil3x3x3& a_h)
     {
         // TODO respect problem::ghosts maybe
 
@@ -296,7 +296,7 @@ namespace mgcl
      * @param a_h The stencil of the finer grid.
      * @returns VaryingStencilGpu The stencil to be applied on the coarser grid
      */
-    VaryingStencilGpu MultigridEngine::galerkin(VaryingStencilGpu &a_h, cl_program program, cl_command_queue queue, cl_context context)
+    VaryingStencilGpu MultigridEngine::galerkin(VaryingStencilGpu& a_h, cl_program program, cl_command_queue queue, cl_context context)
     {
         // Make sure a_h has two ghosts at each border for periodic bc.
         if (a_h.getGh() != 2)

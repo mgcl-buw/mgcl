@@ -13,7 +13,7 @@ namespace mgcl::mpi_util
      * @param comm
      * @param c Global grid for root process (rank 0), local grids for all other processes.
      */
-    void gather(MPI_Comm comm, Cuboid &c)
+    void gather(MPI_Comm comm, Cuboid& c)
     {
         int err;
         int rank;
@@ -127,7 +127,7 @@ namespace mgcl::mpi_util
      * @param src Global grid for root process (rank 0), nullptr for other processes
      * @param dest Local grid into which data is scattered
      */
-    void scatter(MPI_Comm comm, Cuboid *src, Cuboid &dest)
+    void scatter(MPI_Comm comm, Cuboid* src, Cuboid& dest)
     {
         int err;
         int rank;
@@ -216,7 +216,7 @@ namespace mgcl::mpi_util
     /**
      * @brief Checks the return code of a MPI call and prints it if not MPI_SUCCESS.
      */
-    void mgcl_check_mpi_error(MPI_Comm comm, int err, const char *operation, const char *filename, int line)
+    void mgcl_check_mpi_error(MPI_Comm comm, int err, const char* operation, const char* filename, int line)
     {
         if (err != MPI_SUCCESS)
         {

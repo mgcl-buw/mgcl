@@ -28,13 +28,13 @@ namespace mgcl
      * m,n,o is size of real grid
      * stepsPerIter is the amount of iterations done without ghost update in-between. v and r must have adequate ghost
      * cells, i.e. v_gh >= stepsPerIter per border. Defaults to 1. */
-    double MultigridEngine::jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
+    double MultigridEngine::jacobiSeq(Cuboid& v, Cuboid& f, Cuboid& r, double omega,
                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
-                                      double stencilFactor, VaryingStencil3x3x3 *stencilValues, bool returnResidualNorm,
-                                      bool periodic, bool updateGhostsLocally, int stepsPerIter, MPIData *mpiData)
+                                      double stencilFactor, VaryingStencil3x3x3* stencilValues, bool returnResidualNorm,
+                                      bool periodic, bool updateGhostsLocally, int stepsPerIter, MPIData* mpiData)
     {
         double res = 0.0;
-        double ***vraw = v.getData();
+        double*** vraw = v.getData();
 
         // TODO adjust for mpi, need global m, not local m
         double h2 = 1.0 / ((double)(v.getM() * v.getM()));
@@ -164,7 +164,7 @@ namespace mgcl
      * really performant to do so because we have to wait for all kernels to complete and reading a buffer to host is slow.
      * stepsPerIter is amount iterations without ghost update in-between. Ghost cells must be adequate. Defaults to 1.
      */
-    double MultigridEngine::jacobi(Problem &problem, Level &level, int maxiter, bool return_residual, int stepsPerIter)
+    double MultigridEngine::jacobi(Problem& problem, Level& level, int maxiter, bool return_residual, int stepsPerIter)
     {
         int err;
         int mgh = level.mgh;
@@ -205,7 +205,7 @@ namespace mgcl
         // TODO refactor stencilFactor
 
         // Create the compute kernel from the program
-        const char *kernel_name;
+        const char* kernel_name;
         if (problem.stencilType == MGCL_LAPLACE_7POINT)
             kernel_name = "jacobi_iter_7point";
         else if (problem.stencilType == MGCL_LAPLACE_19POINT)
@@ -377,7 +377,7 @@ namespace mgcl
      * It's not really performant to do so because we have to wait for all kernels to complete and reading a buffer to host
      * is slow. Runs multiple iterations per kernel call using local memory if enough is available Only jacobi_wg_size_x is
      * used for now. If there is not enough local memory available the kernel will not be called and -2 is returned. */
-    double MultigridEngine::jacobiLocalMem(Problem &problem, Level &level, int maxiter, int return_residual)
+    double MultigridEngine::jacobiLocalMem(Problem& problem, Level& level, int maxiter, int return_residual)
     {
         int err;
         int mgh = level.mgh;
@@ -445,7 +445,7 @@ namespace mgcl
         double h2inv = level.stencilFactor; // divisor of the stencil, inverted to use * instead of / in kernel
 
         // Create the compute kernel from the program
-        const char *kernel_name;
+        const char* kernel_name;
         if (problem.stencilType == MGCL_LAPLACE_7POINT)
             kernel_name = "jacobi_stream_shmem_7point";
         else if (problem.stencilType == MGCL_LAPLACE_19POINT)
@@ -602,7 +602,7 @@ namespace mgcl
      *   considered, too. Analogously, with moff = 1 the outermost set of real cells is ignored. The calculation
      *   of the boundaries is e.g. istart = v.ghosts_m + moff.
      */
-    double MultigridEngine::residual(Problem &problem, Level &level, bool return_residual,
+    double MultigridEngine::residual(Problem& problem, Level& level, bool return_residual,
                                      int moff, int noff, int ooff)
     {
         int err;
@@ -625,7 +625,7 @@ namespace mgcl
             throw "2*moff, 2*noff and 2*ooff must not be >= m, n or o";
 
         // Create the compute kernel from the program
-        const char *kernel_name;
+        const char* kernel_name;
         if (problem.stencilType == MGCL_LAPLACE_7POINT)
             kernel_name = "residual_7point";
         else if (problem.stencilType == MGCL_LAPLACE_19POINT)
@@ -715,7 +715,7 @@ namespace mgcl
             {
                 // calculate 2-Norm
                 Cuboid rsq(mgh, ngh, ogh);
-                double ***rsquares = rsq.getData();
+                double*** rsquares = rsq.getData();
                 int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
                 cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
                                                   sizeof(double) * level.m * level.n * level.o, rsquares[0][0], &err);
@@ -764,15 +764,15 @@ namespace mgcl
      *   considered, too. Analogously, with moff = 1 the outermost set of real cells is ignored. The calculation
      *   of the boundaries is e.g. istart = v.ghosts_m + moff.
      */
-    double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
+    double MultigridEngine::residualSeq(Cuboid& f, Cuboid& v, Cuboid& r, MGCL_RESIDUAL_NORM resnorm,
                                         MGCL_STENCIL stencilType, double stencilFactor,
-                                        VaryingStencil3x3x3 *stencilValuesCuboid, bool returnResidualNorm,
-                                        bool periodic, bool updateGhostsLocally, int moff, int noff, int ooff, MPIData *mpiData)
+                                        VaryingStencil3x3x3* stencilValuesCuboid, bool returnResidualNorm,
+                                        bool periodic, bool updateGhostsLocally, int moff, int noff, int ooff, MPIData* mpiData)
     {
         double res = 0.0;
         double stencilsum = 0;
-        double ******stencilValues;
-        double ***vraw = v.getData();
+        double****** stencilValues;
+        double*** vraw = v.getData();
 
         int ghmsv = 0;
         int ghnsv = 0;
@@ -929,7 +929,7 @@ namespace mgcl
     }
 
     /* Prints components of 7-point laplacian stencil for debugging purposes */
-    void MultigridEngine::print7point(Cuboid &v, int i, int j, int k)
+    void MultigridEngine::print7point(Cuboid& v, int i, int j, int k)
     {
         printf("7point stencil at %d,%d,%d:\n", i, j, k);
         printf("v[self] = %e\n", v[i][j][k]);
@@ -941,7 +941,7 @@ namespace mgcl
         printf(" v[i+1] = %e\n", v[i + 1][j][k]);
     }
 
-    void MultigridEngine::print19point(Cuboid &v, int i, int j, int k)
+    void MultigridEngine::print19point(Cuboid& v, int i, int j, int k)
     {
         printf("19point stencil at %d,%d,%d:\n", i, j, k);
         printf("v[self] = %e\n", v[i][j][k]);
@@ -965,7 +965,7 @@ namespace mgcl
         printf(" v[i+1][j+1][ k ] = %e\n", v[i + 1][j + 1][k]);
     }
 
-    void MultigridEngine::print27point(Cuboid &v, int i, int j, int k)
+    void MultigridEngine::print27point(Cuboid& v, int i, int j, int k)
     {
         printf("27point stencil at %d,%d,%d:\n", i, j, k);
         printf("v[self] = %e\n", v[i][j][k]);
@@ -997,8 +997,8 @@ namespace mgcl
         printf(" v[i+1][j+1][k+1] = %e\n", v[i + 1][j + 1][k + 1]);
     }
 
-    void MultigridEngine::print27point_sv(Cuboid &v, int i, int j, int k,
-                                          VaryingStencil3x3x3 &sv, int i_sv, int j_sv, int k_sv)
+    void MultigridEngine::print27point_sv(Cuboid& v, int i, int j, int k,
+                                          VaryingStencil3x3x3& sv, int i_sv, int j_sv, int k_sv)
     {
         // clang-format off
         printf("27point stencil at %d,%d,%d; %d,%d,%d:\n", i_sv, j_sv, k_sv, i, j, k);

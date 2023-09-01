@@ -105,11 +105,11 @@ TEST_CASE("MPI jacobiSeq (n processes)", "[mpiN]")
 
     // Create local slices of global data
     std::shared_ptr<mgcl::Cuboid> vlptr = v_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
-    auto &v_loc = *vlptr;
+    auto& v_loc = *vlptr;
     std::shared_ptr<mgcl::Cuboid> flptr = f_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
-    auto &f_loc = *flptr;
+    auto& f_loc = *flptr;
     std::shared_ptr<mgcl::Cuboid> rlptr = r_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
-    auto &r_loc = *rlptr;
+    auto& r_loc = *rlptr;
 
     // Update ghosts of test data
     // mgcl::MultigridEngine::updateGhostsSeq(vl, mpiData, true);
@@ -122,7 +122,7 @@ TEST_CASE("MPI jacobiSeq (n processes)", "[mpiN]")
     p.init();
 
     // Check on level 0
-    auto &lv = p.getLevelAt(0);
+    auto& lv = p.getLevelAt(0);
     auto mpiData = lv.getMpiDataPtr();
 
     // print neighbours per rank
@@ -252,16 +252,16 @@ TEST_CASE("MPI jacobi ocl (n processes)", "[mpiN]")
 
     // Create local slices of global data
     std::shared_ptr<mgcl::Cuboid> vlptr = v_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
-    auto &v_loc = *vlptr;
+    auto& v_loc = *vlptr;
     std::shared_ptr<mgcl::Cuboid> flptr = f_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
-    auto &f_loc = *flptr;
+    auto& f_loc = *flptr;
 
     // Update ghosts of test data
     // mgcl::MultigridEngine::updateGhostsSeq(vl, mpiData, true);
 
     // Init Problem to create all needed structures
     auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, vlptr, flptr, m, n, o);
-    auto &p = *pptr;
+    auto& p = *pptr;
     p.setUseOpencl(true);
     p.setGhosts(gh);
     p.setMpiComm(mpi_comm);
@@ -272,7 +272,7 @@ TEST_CASE("MPI jacobi ocl (n processes)", "[mpiN]")
     mgcl_test::TestUtility tu(pptr);
 
     // Check on level 0
-    auto &lv = p.getLevelAt(0);
+    auto& lv = p.getLevelAt(0);
     auto mpiData = lv.getMpiDataPtr();
 
     // print neighbours per rank
@@ -293,7 +293,7 @@ TEST_CASE("MPI jacobi ocl (n processes)", "[mpiN]")
     tu.finish();
 
     auto v_loc_ret_ptr = tu.readOpenCLBuffer(lv.getDVIn(), lv.getM(), lv.getN(), lv.getO(), gh, gh, gh);
-    auto &v_loc_ret = *v_loc_ret_ptr;
+    auto& v_loc_ret = *v_loc_ret_ptr;
 
     for (int i = gh; i < ml + gh; i++)
         for (int j = gh; j < nl + gh; j++)

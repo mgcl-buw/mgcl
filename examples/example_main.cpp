@@ -26,7 +26,7 @@ enum IMPL
 // 1. arg: int, grid size. Default is 16
 // 2. arg: string, determines if seq, ocl or both shall be called. Valid values: seq, ocl, seq+ocl. Default is seq
 // 3. arg: string, determines if old or new mgcl shall be used. Valid values: new, old, new+old. Default is new+old.
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     int N = 16;
     RUNS runs = SEQ;
@@ -153,7 +153,7 @@ int main(int argc, char **argv)
         std::cout << "Running old mgcl seq..." << std::endl;
         auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
 
-        mgcl_config *conf;
+        mgcl_config* conf;
         mgcl_generate_config(&conf);
 
         conf->v = v->getData();
@@ -178,7 +178,7 @@ int main(int argc, char **argv)
         std::cout << "Running old mgcl OpenCL gpu..." << std::endl;
         auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
 
-        mgcl_config *conf;
+        mgcl_config* conf;
         mgcl_generate_config(&conf);
 
         conf->v = v->getData();

@@ -7,7 +7,7 @@ namespace mgcl_test
     std::unique_ptr<mgcl::VaryingStencil5x5x5> Matrix2d_fromVaryingStencil::varyingStencilLaplace4x4x4()
     {
         auto sptr = std::make_unique<mgcl::VaryingStencil5x5x5>(4, 4, 4, 0, 0, 0);
-        auto &s = *sptr;
+        auto& s = *sptr;
         s[0][0][0][0][0][0] = 0;
         s[0][0][0][0][0][1] = 0;
         s[0][0][0][0][0][2] = 0;
@@ -8084,7 +8084,7 @@ namespace mgcl_test
     std::unique_ptr<mgcl::VaryingStencil3x3x3> Matrix2d_fromVaryingStencil::varyingStencil2x3x4RandomPeriodic()
     {
         auto sptr = std::make_unique<mgcl::VaryingStencil3x3x3>(2, 3, 4, 0, 0, 0);
-        auto &s = *sptr;
+        auto& s = *sptr;
         s[0][0][0][0][0][0] = 6;
         s[0][0][0][0][0][1] = 9;
         s[0][0][0][0][0][2] = 6;
@@ -8805,7 +8805,7 @@ namespace mgcl_test
     {
         int n = 16;
         auto cret = std::make_unique<mgcl::Cuboid>(n, n, n, 1, 1, 1);
-        auto &c = *cret;
+        auto& c = *cret;
 
         for (int i = 0; i < n + 2; i++)
             for (int j = 0; j < n + 2; j++)
@@ -8828,7 +8828,7 @@ namespace mgcl_test
     {
         int n = 16;
         auto cret = std::make_unique<mgcl::Cuboid>(n, n, n, 1, 1, 1);
-        auto &c = *cret;
+        auto& c = *cret;
 
         for (int i = 0; i < n + 2; i++)
             for (int j = 0; j < n + 2; j++)
@@ -8849,7 +8849,7 @@ namespace mgcl_test
     std::unique_ptr<mgcl::Cuboid> test_residual::outputR16()
     {
         auto cret = std::make_unique<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
-        auto &c = *cret;
+        auto& c = *cret;
 
         c[0][0][0] = -1.399440e+06;
         c[0][0][1] = -1.391263e+06;
@@ -14696,7 +14696,7 @@ namespace mgcl_test
 
     {
         auto cret = std::make_unique<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
-        auto &c = *cret;
+        auto& c = *cret;
 
         c[0][0][0] = 4.000000e+00;
         c[0][0][1] = 4.000000e+00;
@@ -20552,7 +20552,7 @@ namespace mgcl_test
     std::unique_ptr<mgcl::Cuboid> test_restriction::outputFine16()
     {
         auto cret = std::make_unique<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
-        auto &c = *cret;
+        auto& c = *cret;
 
         c[0][0][0] = 8.000000e+00;
         c[0][0][1] = 4.000000e+00;
@@ -26398,7 +26398,7 @@ namespace mgcl_test
     std::unique_ptr<mgcl::Cuboid> test_restriction::outputCoarse8()
     {
         auto cret = std::make_unique<mgcl::Cuboid>(8, 8, 8, 1, 1, 1, 0);
-        auto &c = *cret;
+        auto& c = *cret;
 
         c[0][0][0] = 5.640625e+00;
         c[0][0][1] = 3.343750e+00;
@@ -27142,7 +27142,7 @@ namespace mgcl_test
     {
         int n = 16;
         auto cret = std::make_shared<mgcl::Cuboid>(n, n, n, 1, 1, 1);
-        auto &c = *cret;
+        auto& c = *cret;
 
         for (int i = 0; i < n + 2; i++)
             for (int j = 0; j < n + 2; j++)
@@ -27185,7 +27185,7 @@ namespace mgcl_test
     std::shared_ptr<mgcl::Cuboid> test_jacobi::outputV16()
     {
         auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
-        auto &c = *cret;
+        auto& c = *cret;
 
         c[0][0][0] = 3.26221748148148123e+01;
         c[0][0][1] = 2.78740582716049374e+01;
@@ -33031,7 +33031,7 @@ namespace mgcl_test
     std::shared_ptr<mgcl::Cuboid> test_jacobi::outputR16()
     {
         auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
-        auto &c = *cret;
+        auto& c = *cret;
 
         c[0][0][0] = -2.14593991111113064e+03;
         c[0][0][1] = -7.15313303703703241e+02;

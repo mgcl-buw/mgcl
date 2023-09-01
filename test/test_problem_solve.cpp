@@ -12,9 +12,9 @@
 #include "../thirdparty/pmg/mg.h"
 #include "test_utility.hpp"
 
-std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid &solution, mgcl::Cuboid &approximation);
-double calculateMaxError(mgcl::Cuboid &error);
-double calculateErrorNorm(double h, mgcl::Cuboid &error);
+std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid& solution, mgcl::Cuboid& approximation);
+double calculateMaxError(mgcl::Cuboid& error);
+double calculateErrorNorm(double h, mgcl::Cuboid& error);
 
 /**
  * @brief Tests if solving works correctly for u = x^4 * (x-1)^4.
@@ -122,7 +122,7 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
         SECTION("Galerkin (varying stencil)")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto &s = *p.getStencilValues();
+            auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
             // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
@@ -212,7 +212,7 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
         SECTION("Galerkin (varying stencil)")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto &s = *p.getStencilValues();
+            auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
             // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
@@ -268,10 +268,10 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
             // init 7-point stencil for pmg's jacobi
             int size = 7;
             double h2 = 1.0 / (double)(N * N);
-            double *values = new double[size]();
-            int *xoff = new int[size]();
-            int *yoff = new int[size]();
-            int *zoff = new int[size]();
+            double* values = new double[size]();
+            int* xoff = new int[size]();
+            int* yoff = new int[size]();
+            int* zoff = new int[size]();
 
             values[0] = 6.0 / h2;
             for (int i = 1; i <= 6; i++)
@@ -437,7 +437,7 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
         SECTION("Galerkin (varying stencil)")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto &s = *p.getStencilValues();
+            auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
             // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
@@ -518,7 +518,7 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
         SECTION("Galerkin (varying stencil)")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto &s = *p.getStencilValues();
+            auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
             // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
@@ -600,10 +600,10 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
             // init 7-point stencil for pmg's jacobi
             int size = 7;
             double h2 = 1.0 / (double)(Norig * Norig);
-            double *values = new double[size]();
-            int *xoff = new int[size]();
-            int *yoff = new int[size]();
-            int *zoff = new int[size]();
+            double* values = new double[size]();
+            int* xoff = new int[size]();
+            int* yoff = new int[size]();
+            int* zoff = new int[size]();
 
             values[0] = 6.0 / h2;
             for (int i = 1; i <= 6; i++)
@@ -660,7 +660,7 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
  * @param approximation
  * @return std::shared_ptr<mgcl::Cuboid>
  */
-std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid &solution, mgcl::Cuboid &approximation)
+std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid& solution, mgcl::Cuboid& approximation)
 {
     if (solution.getM() != approximation.getM() ||
         solution.getN() != approximation.getN() ||
@@ -684,7 +684,7 @@ std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid &solution, mgcl::Cuboi
  * @param error
  * @return double
  */
-double calculateMaxError(mgcl::Cuboid &error)
+double calculateMaxError(mgcl::Cuboid& error)
 {
     double max = 0;
     for (int i = 0; i < error.getM(); i++)
@@ -704,7 +704,7 @@ double calculateMaxError(mgcl::Cuboid &error)
  * @param error precalculated error per cell
  * @return double Error norm of form ||e||_2 * h^3
  */
-double calculateErrorNorm(double h, mgcl::Cuboid &error)
+double calculateErrorNorm(double h, mgcl::Cuboid& error)
 {
     double sum = 0;
 

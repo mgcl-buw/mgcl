@@ -391,7 +391,7 @@ TEST_CASE("Matrix2d::fromVaryingStencil")
     {
         auto a = mgcl_test::Matrix2d_fromVaryingStencil::matrix2d24x24RandomNotPeriodic();
         auto sptr = mgcl_test::Matrix2d_fromVaryingStencil::varyingStencil2x3x4RandomPeriodic();
-        auto &s = *sptr;
+        auto& s = *sptr;
 
         auto c = mgcl_test::Matrix2d::fromVaryingStencil(s, false);
 
@@ -402,7 +402,7 @@ TEST_CASE("Matrix2d::fromVaryingStencil")
     {
         auto a = mgcl_test::Matrix2d_fromVaryingStencil::matrix2d24x24RandomPeriodic();
         auto sptr = mgcl_test::Matrix2d_fromVaryingStencil::varyingStencil2x3x4RandomPeriodic();
-        auto &s = *sptr;
+        auto& s = *sptr;
 
         auto c = mgcl_test::Matrix2d::fromVaryingStencil(s, true);
 

@@ -161,14 +161,14 @@ namespace mgcl
 
     public:
         Problem(int m_, int n_, int o_, int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
-        Problem(int m_, int n_, int o_, Cuboid *f_, Cuboid *v_, int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
+        Problem(int m_, int n_, int o_, Cuboid* f_, Cuboid* v_, int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
         Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_,
                 int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
         Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_, int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
-        Problem(const Problem &) = delete;
-        Problem &operator=(const Problem &) = delete;
-        Problem(const Problem &&) = delete;
-        Problem &operator=(const Problem &&) = delete;
+        Problem(const Problem&) = delete;
+        Problem& operator=(const Problem&) = delete;
+        Problem(const Problem&&) = delete;
+        Problem& operator=(const Problem&&) = delete;
         ~Problem() = default;
 
         bool checkParameters();
@@ -183,7 +183,7 @@ namespace mgcl
         void solve();
         void solveSeq();
 
-        Level &getLevelAt(int index) const;
+        Level& getLevelAt(int index) const;
         int getLevelsSize() const;
 
         inline bool isPeriodic() const { return bc == BC::PERIODIC; }
@@ -192,11 +192,11 @@ namespace mgcl
          * Getters and Setters
          ********************************/
 
-        Cuboid &getV() const;
+        Cuboid& getV() const;
         std::shared_ptr<Cuboid> getVPtr() const;
         void setV(std::shared_ptr<Cuboid> v_);
 
-        Cuboid &getF() const;
+        Cuboid& getF() const;
         std::shared_ptr<Cuboid> getFPtr() const;
         void setF(std::shared_ptr<Cuboid> f_);
 
@@ -231,7 +231,7 @@ namespace mgcl
         void setTol(double tol_);
 
         MGCL_RESIDUAL_NORM getResidualNorm() const;
-        void setResidualNorm(const MGCL_RESIDUAL_NORM &residualNorm);
+        void setResidualNorm(const MGCL_RESIDUAL_NORM& residualNorm);
 
         bool getReuseOpenclBuffers() const;
         void setReuseOpenclBuffers(bool reuseOpenclBuffers);
@@ -258,24 +258,24 @@ namespace mgcl
         void setUseOpencl(bool useOpencl);
 
         cl_mem getDStencilValues() const;
-        void setDStencilValues(const cl_mem &dStencilValues);
+        void setDStencilValues(const cl_mem& dStencilValues);
 
         cl_mem getDV() const;
-        void setDV(const cl_mem &dV_);
+        void setDV(const cl_mem& dV_);
 
         cl_mem getDF() const;
-        void setDF(const cl_mem &dF_);
+        void setDF(const cl_mem& dF_);
 
-        OpenCLHelper &getOpenCLHelper();
+        OpenCLHelper& getOpenCLHelper();
 
         std::string getKernelDir() const;
-        void setKernelDir(const std::string &kernelDir_);
+        void setKernelDir(const std::string& kernelDir_);
 
         std::string getDeviceName() const;
-        void setDeviceName(const std::string &deviceName_);
+        void setDeviceName(const std::string& deviceName_);
 
         cl_device_type getDeviceType() const;
-        void setDeviceType(const cl_device_type &deviceType_);
+        void setDeviceType(const cl_device_type& deviceType_);
 
         cl_device_id getDeviceId() const;
 
@@ -292,12 +292,12 @@ namespace mgcl
         void setIgnoreTol(bool ignoreTol_);
 
         MGCL_STENCIL getStencilType() const;
-        void setStencilType(const MGCL_STENCIL &stencilType_);
+        void setStencilType(const MGCL_STENCIL& stencilType_);
 
-        std::shared_ptr<VaryingStencil3x3x3> &getStencilValues();
+        std::shared_ptr<VaryingStencil3x3x3>& getStencilValues();
 
         BC getBc() const;
-        void setBc(const BC &bc_);
+        void setBc(const BC& bc_);
 
         void setMpiComm(MPI_Comm _comm);
         MPI_Comm getMpiComm();
@@ -311,6 +311,6 @@ namespace mgcl
 
         int mpiRank() const;
 
-        friend std::ostream &operator<<(std::ostream &os, const Problem &lv);
+        friend std::ostream& operator<<(std::ostream& os, const Problem& lv);
     };
 }

@@ -26,23 +26,23 @@ namespace mgcl
         int ghostsDim3 = 0;
         int ghostsDim4 = 0;
         std::vector<double> field_1d;
-        double ****field_4d;
+        double**** field_4d;
 
     public:
         Hypercube4d(int dim1_, int dim2_, int dim3_, int dim4_, double value = 0);
         Hypercube4d(int dim1_, int dim2_, int dim3_, int dim4_, int ghostsDim1_, int ghostsDim2_, int ghostsDim3_, int ghostsDim4_, double value = 0);
-        Hypercube4d(const Hypercube4d &c) = delete;
-        Hypercube4d &operator=(const Hypercube4d &) = delete;
-        Hypercube4d(const Hypercube4d &&) = delete;
-        Hypercube4d &operator=(const Hypercube4d &&) = delete;
+        Hypercube4d(const Hypercube4d& c) = delete;
+        Hypercube4d& operator=(const Hypercube4d&) = delete;
+        Hypercube4d(const Hypercube4d&&) = delete;
+        Hypercube4d& operator=(const Hypercube4d&&) = delete;
         ~Hypercube4d();
 
-        double ****getData() const;
-        double ***operator[](int index);
+        double**** getData() const;
+        double*** operator[](int index);
         void fillRandom(double low = 0, double high = 1);
         void fill(double value, bool realCellsOnly = false);
-        std::vector<double> &field1d();
-        bool isEqual(Hypercube4d &c, double tol = 1e-7, bool printDiffs = true);
+        std::vector<double>& field1d();
+        bool isEqual(Hypercube4d& c, double tol = 1e-7, bool printDiffs = true);
         void dumpToFile(std::string path);
 
         int getDim1() const;
@@ -85,29 +85,29 @@ namespace mgcl
         int ghostsDim5 = 0;
         int ghostsDim6 = 0;
         std::vector<double> field_1d;
-        double ******field_6d;
+        double****** field_6d;
 
     public:
         Hypercube6d(int dim1_, int dim2_, int dim3_, int dim4_, int dim5_, int dim6_, double value = 0);
         Hypercube6d(int dim1_, int dim2_, int dim3_, int dim4_, int dim5_, int dim6_,
                     int ghostsDim1_, int ghostsDim2_, int ghostsDim3_, int ghostsDim4_,
                     int ghostsDim5_, int ghostsDim6_, double value = 0);
-        Hypercube6d(const Hypercube6d &c) = delete;
-        Hypercube6d &operator=(const Hypercube6d &) = delete;
-        Hypercube6d(Hypercube6d &&);
-        Hypercube6d &operator=(Hypercube6d &&);
+        Hypercube6d(const Hypercube6d& c) = delete;
+        Hypercube6d& operator=(const Hypercube6d&) = delete;
+        Hypercube6d(Hypercube6d&&);
+        Hypercube6d& operator=(Hypercube6d&&);
         ~Hypercube6d();
 
-        double ******getData() const;
-        double *****operator[](int index);
+        double****** getData() const;
+        double***** operator[](int index);
         void fillRandom(double low = 0, double high = 1);
         void fillRandomInt(int low = 1, int high = 10, bool realCellsOnly = false);
         void fill(double value, bool realCellsOnly = false);
-        std::vector<double> &field1d();
-        bool isEqual(Hypercube6d &c, double tol = 1e-7, bool printDiffs = true);
+        std::vector<double>& field1d();
+        bool isEqual(Hypercube6d& c, double tol = 1e-7, bool printDiffs = true);
         void dumpToFile(std::string path, bool realCellsOnly = false);
         void dumpToFileMatlab(std::string path, std::string varname, bool realCellsOnly = false);
-        void copyRealFrom(Hypercube6d &o);
+        void copyRealFrom(Hypercube6d& o);
 
         int getDim1() const;
         int getDim2() const;

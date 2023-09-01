@@ -54,7 +54,7 @@ TEST_CASE("Level::initMpiData (1 process)", "[mpi1]")
 
     for (int i = 0; i < p.getMaxlevel(); i++)
     {
-        auto &lv = p.getLevelAt(i);
+        auto& lv = p.getLevelAt(i);
         REQUIRE(lv.getMpiDataPtr() == nullptr);
         REQUIRE_THROWS(lv.getMpiData());
         REQUIRE(!lv.isBelowMpiLevelThreshold());
@@ -124,11 +124,11 @@ TEST_CASE("Level::initMpiData (2 processes)", "[mpi2]")
 
     for (int i = 0; i < p.getMaxlevel(); i++)
     {
-        auto &lv = p.getLevelAt(i);
+        auto& lv = p.getLevelAt(i);
 
         if (p.getMpiLevelThreshold() > i)
         {
-            auto &mpiData = lv.getMpiData();
+            auto& mpiData = lv.getMpiData();
             REQUIRE(lv.isBelowMpiLevelThreshold());
 
             REQUIRE(mpiData.rank == mpi_rank);
@@ -268,8 +268,8 @@ TEST_CASE("Level::initMpiData (8 processes)")
     // Check levels for which mpi is used
     for (int i = 0; i < p.getMpiLevelThreshold(); i++)
     {
-        auto &lv0 = p.getLevelAt(i);
-        auto &mpiData0 = lv0.getMpiData();
+        auto& lv0 = p.getLevelAt(i);
+        auto& mpiData0 = lv0.getMpiData();
         REQUIRE(mpiData0.mpiSize() == 8);
         REQUIRE(lv0.isBelowMpiLevelThreshold());
 
@@ -293,7 +293,7 @@ TEST_CASE("Level::initMpiData (8 processes)")
     // Check levels for which mpi is not used
     for (int i = p.getMpiLevelThreshold(); i <= p.getMaxlevel(); i++)
     {
-        auto &lv = p.getLevelAt(i);
+        auto& lv = p.getLevelAt(i);
         REQUIRE(!lv.isBelowMpiLevelThreshold());
         REQUIRE(lv.getMpiDataPtr() != nullptr);
         // REQUIRE_THROWS(lv.getMpiData());
@@ -395,8 +395,8 @@ TEST_CASE("Level::initMpiData (24 processes)")
     // Check levels for which mpi is used
     for (int i = 0; i < p.getMpiLevelThreshold(); i++)
     {
-        auto &lv0 = p.getLevelAt(i);
-        auto &mpiData0 = lv0.getMpiData();
+        auto& lv0 = p.getLevelAt(i);
+        auto& mpiData0 = lv0.getMpiData();
         REQUIRE(mpiData0.mpiSize() == 24);
         REQUIRE(lv0.isBelowMpiLevelThreshold());
 
@@ -436,7 +436,7 @@ TEST_CASE("Level::initMpiData (24 processes)")
     // Check levels for which mpi is not used
     for (int i = p.getMpiLevelThreshold(); i <= p.getMaxlevel(); i++)
     {
-        auto &lv = p.getLevelAt(i);
+        auto& lv = p.getLevelAt(i);
         REQUIRE(!lv.isBelowMpiLevelThreshold());
         REQUIRE(lv.getMpiDataPtr() != nullptr);
         // REQUIRE_THROWS(lv.getMpiData());
@@ -444,7 +444,7 @@ TEST_CASE("Level::initMpiData (24 processes)")
         // Size must be global size on process 0
         if (mpi_rank == 0)
         {
-            auto &v = lv.getV();
+            auto& v = lv.getV();
             REQUIRE(v.getM() == (mg >> i));
         }
         else

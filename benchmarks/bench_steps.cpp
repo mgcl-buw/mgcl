@@ -49,11 +49,11 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
         p.setSilent(true);
         p.init();
 
-        auto &v0 = p.getLevelAt(0).getV();
-        auto &f0 = p.getLevelAt(0).getF();
-        auto &r0 = p.getLevelAt(0).getR();
-        auto &fine = p.getLevelAt(0);
-        auto &coarse = p.getLevelAt(1);
+        auto& v0 = p.getLevelAt(0).getV();
+        auto& f0 = p.getLevelAt(0).getF();
+        auto& r0 = p.getLevelAt(0).getR();
+        auto& fine = p.getLevelAt(0);
+        auto& coarse = p.getLevelAt(1);
         double stencilFactor0 = fine.getStencilFactor();
         double stencilFactor1 = coarse.getStencilFactor();
 
@@ -97,10 +97,10 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
         p.setSilent(true);
         p.init();
 
-        auto &v0 = p.getLevelAt(0).getV();
+        auto& v0 = p.getLevelAt(0).getV();
         auto v0d = p.getLevelAt(0).getDVIn();
-        auto &fine = p.getLevelAt(0);
-        auto &coarse = p.getLevelAt(1);
+        auto& fine = p.getLevelAt(0);
+        auto& coarse = p.getLevelAt(1);
 
         // jacobi
         b.run(std::string("ocl gpu jacobi, N = ").append(std::to_string(N)).c_str(),
@@ -186,11 +186,11 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.setSilent(true);
             p.init();
 
-            auto &v0 = p.getLevelAt(0).getV();
-            auto &f0 = p.getLevelAt(0).getF();
-            auto &r0 = p.getLevelAt(0).getR();
-            auto &fine = p.getLevelAt(0);
-            auto &coarse = p.getLevelAt(1);
+            auto& v0 = p.getLevelAt(0).getV();
+            auto& f0 = p.getLevelAt(0).getF();
+            auto& r0 = p.getLevelAt(0).getR();
+            auto& fine = p.getLevelAt(0);
+            auto& coarse = p.getLevelAt(1);
             double stencilFactor0 = fine.getStencilFactor();
             double stencilFactor1 = coarse.getStencilFactor();
 
@@ -210,10 +210,10 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.setSilent(true);
             p.init();
 
-            auto &v0 = p.getLevelAt(0).getV();
+            auto& v0 = p.getLevelAt(0).getV();
             auto v0d = p.getLevelAt(0).getDVIn();
-            auto &fine = p.getLevelAt(0);
-            auto &coarse = p.getLevelAt(1);
+            auto& fine = p.getLevelAt(0);
+            auto& coarse = p.getLevelAt(1);
 
             // jacobi
             b.run(std::string("ocl gpu jacobi, N = ").append(std::to_string(N)).c_str(),
@@ -238,11 +238,11 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.setSilent(true);
             p.init();
 
-            auto &v0 = p.getLevelAt(0).getV();
-            auto &f0 = p.getLevelAt(0).getF();
-            auto &r0 = p.getLevelAt(0).getR();
-            auto &fine = p.getLevelAt(0);
-            auto &coarse = p.getLevelAt(1);
+            auto& v0 = p.getLevelAt(0).getV();
+            auto& f0 = p.getLevelAt(0).getF();
+            auto& r0 = p.getLevelAt(0).getR();
+            auto& fine = p.getLevelAt(0);
+            auto& coarse = p.getLevelAt(1);
             double stencilFactor0 = fine.getStencilFactor();
             double stencilFactor1 = coarse.getStencilFactor();
 
@@ -261,10 +261,10 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.setSilent(true);
             p.init();
 
-            auto &v0 = p.getLevelAt(0).getV();
+            auto& v0 = p.getLevelAt(0).getV();
             auto v0d = p.getLevelAt(0).getDVIn();
-            auto &fine = p.getLevelAt(0);
-            auto &coarse = p.getLevelAt(1);
+            auto& fine = p.getLevelAt(0);
+            auto& coarse = p.getLevelAt(1);
 
             b.run(std::string("ocl gpu residual, N = ").append(std::to_string(N)).c_str(),
                   [&]
@@ -288,11 +288,11 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.setSilent(true);
             p.init();
 
-            auto &v0 = p.getLevelAt(0).getV();
-            auto &f0 = p.getLevelAt(0).getF();
-            auto &r0 = p.getLevelAt(0).getR();
-            auto &fine = p.getLevelAt(0);
-            auto &coarse = p.getLevelAt(1);
+            auto& v0 = p.getLevelAt(0).getV();
+            auto& f0 = p.getLevelAt(0).getF();
+            auto& r0 = p.getLevelAt(0).getR();
+            auto& fine = p.getLevelAt(0);
+            auto& coarse = p.getLevelAt(1);
 
             b.run(std::string("seq updateGhosts, N = ").append(std::to_string(N)).c_str(), [&]
                   { mgcl::MultigridEngine::updateGhostsSeq(v0, nullptr, true, false); });
@@ -308,10 +308,10 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.setSilent(true);
             p.init();
 
-            auto &v0 = p.getLevelAt(0).getV();
+            auto& v0 = p.getLevelAt(0).getV();
             auto v0d = p.getLevelAt(0).getDVIn();
-            auto &fine = p.getLevelAt(0);
-            auto &coarse = p.getLevelAt(1);
+            auto& fine = p.getLevelAt(0);
+            auto& coarse = p.getLevelAt(1);
 
             b.run(std::string("ocl gpu updateGhosts, N = ").append(std::to_string(N)).c_str(),
                   [&]
@@ -337,11 +337,11 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.setSilent(true);
             p.init();
 
-            auto &v0 = p.getLevelAt(0).getV();
-            auto &f0 = p.getLevelAt(0).getF();
-            auto &r0 = p.getLevelAt(0).getR();
-            auto &fine = p.getLevelAt(0);
-            auto &coarse = p.getLevelAt(1);
+            auto& v0 = p.getLevelAt(0).getV();
+            auto& f0 = p.getLevelAt(0).getF();
+            auto& r0 = p.getLevelAt(0).getR();
+            auto& fine = p.getLevelAt(0);
+            auto& coarse = p.getLevelAt(1);
 
             b.run(std::string("seq restrict, N = ").append(std::to_string(N)).c_str(), [&]
                   { mgcl::MultigridEngine::restrictSeq(fine, coarse, fine.getR(), coarse.getF()); });
@@ -357,10 +357,10 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.setSilent(true);
             p.init();
 
-            auto &v0 = p.getLevelAt(0).getV();
+            auto& v0 = p.getLevelAt(0).getV();
             auto v0d = p.getLevelAt(0).getDVIn();
-            auto &fine = p.getLevelAt(0);
-            auto &coarse = p.getLevelAt(1);
+            auto& fine = p.getLevelAt(0);
+            auto& coarse = p.getLevelAt(1);
 
             b.run(std::string("ocl gpu restrict, N = ").append(std::to_string(N)).c_str(),
                   [&]
@@ -384,11 +384,11 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.setSilent(true);
             p.init();
 
-            auto &v0 = p.getLevelAt(0).getV();
-            auto &f0 = p.getLevelAt(0).getF();
-            auto &r0 = p.getLevelAt(0).getR();
-            auto &fine = p.getLevelAt(0);
-            auto &coarse = p.getLevelAt(1);
+            auto& v0 = p.getLevelAt(0).getV();
+            auto& f0 = p.getLevelAt(0).getF();
+            auto& r0 = p.getLevelAt(0).getR();
+            auto& fine = p.getLevelAt(0);
+            auto& coarse = p.getLevelAt(1);
 
             b.run(std::string("seq prolongate, N = ").append(std::to_string(N)).c_str(), [&]
                   { mgcl::MultigridEngine::prolongateSeq(fine, coarse, fine.getR(), coarse.getV()); });
@@ -404,10 +404,10 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.setSilent(true);
             p.init();
 
-            auto &v0 = p.getLevelAt(0).getV();
+            auto& v0 = p.getLevelAt(0).getV();
             auto v0d = p.getLevelAt(0).getDVIn();
-            auto &fine = p.getLevelAt(0);
-            auto &coarse = p.getLevelAt(1);
+            auto& fine = p.getLevelAt(0);
+            auto& coarse = p.getLevelAt(1);
 
             b.run(std::string("ocl gpu prolongate, N = ").append(std::to_string(N)).c_str(),
                   [&]

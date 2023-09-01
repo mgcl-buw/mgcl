@@ -56,7 +56,7 @@ namespace mgcl
          * @return std::unique_ptr<VaryingStencil<N + 2>> Resulting stencil (two cells wider).
          */
         template <int NB>
-        VaryingStencil<(N + NB - 1)> multiply(VaryingStencil<NB> &b, int ghc = 2) const
+        VaryingStencil<(N + NB - 1)> multiply(VaryingStencil<NB>& b, int ghc = 2) const
         {
             if (b.getGhostsDim1() != b.getGhostsDim2() ||
                 b.getGhostsDim1() != b.getGhostsDim3())
@@ -129,10 +129,10 @@ namespace mgcl
         {
             static_assert(N % 2 == 1 || N < 3, "VaryingStencil<N> is only defined for odd N >= 3!");
         }
-        VaryingStencil(VaryingStencil &) = delete;
-        VaryingStencil &operator=(const VaryingStencil &) = delete;
-        VaryingStencil(VaryingStencil &&o) : Hypercube6d(std::move(o)) {}
-        VaryingStencil &operator=(const VaryingStencil &&o)
+        VaryingStencil(VaryingStencil&) = delete;
+        VaryingStencil& operator=(const VaryingStencil&) = delete;
+        VaryingStencil(VaryingStencil&& o) : Hypercube6d(std::move(o)) {}
+        VaryingStencil& operator=(const VaryingStencil&& o)
         {
             Hypercube6d::operator=(std::move(o));
             return *this;
@@ -148,7 +148,7 @@ namespace mgcl
             int ghosts_n = ghostsDim2;
             int ghosts_o = ghostsDim3;
 
-            auto &c = *this;
+            auto& c = *this;
 
             int ghm_start_right = ghosts_m + m;
             int ghn_start_right = ghosts_n + n;
@@ -223,7 +223,7 @@ namespace mgcl
          * @return std::unique_ptr<VaryingStencil<N + 2>> Resulting stencil (two cells wider).
          */
         template <int NB>
-        VaryingStencil<(N + NB - 1)> multiply(FixedStencil<NB> &b, int ghc = 2) const
+        VaryingStencil<(N + NB - 1)> multiply(FixedStencil<NB>& b, int ghc = 2) const
         {
             if (getGhostsDim1() != getGhostsDim2() ||
                 getGhostsDim1() != getGhostsDim3())
@@ -282,7 +282,7 @@ namespace mgcl
          * @return std::unique_ptr<VaryingStencil<N + 2>> Resulting stencil (two cells wider).
          */
         template <int NB>
-        VaryingStencil<(N + NB - 1)> multiply(VaryingStencil<NB> &b, int ghc = 2) const
+        VaryingStencil<(N + NB - 1)> multiply(VaryingStencil<NB>& b, int ghc = 2) const
         {
             if (dim1 != b.getDim1() ||
                 dim2 != b.getDim2() ||
@@ -352,7 +352,7 @@ namespace mgcl
          * @param factor
          * @return VaryingStencil<N>&
          */
-        VaryingStencil<N> &operator*(double factor)
+        VaryingStencil<N>& operator*(double factor)
         {
             for (int i = 0; i < dim1; i++)
                 for (int j = 0; j < dim2; j++)
@@ -478,18 +478,18 @@ namespace mgcl
 
     public:
         VaryingStencilGpu(int m_, int n_, int o_, int width_, int gh_, cl_context context, cl_command_queue queue);
-        VaryingStencilGpu(VaryingStencilGpu &&);
-        VaryingStencilGpu &operator=(VaryingStencilGpu &&);
+        VaryingStencilGpu(VaryingStencilGpu&&);
+        VaryingStencilGpu& operator=(VaryingStencilGpu&&);
         ~VaryingStencilGpu();
 
-        VaryingStencilGpu(const VaryingStencilGpu &) = delete;
-        VaryingStencilGpu &operator=(const VaryingStencilGpu &) = delete;
+        VaryingStencilGpu(const VaryingStencilGpu&) = delete;
+        VaryingStencilGpu& operator=(const VaryingStencilGpu&) = delete;
 
         /**
          * Fills the gpu buffer with values from a VaryingStencil.
          */
         template <int N>
-        void fill(VaryingStencil<N> &f, cl_command_queue queue)
+        void fill(VaryingStencil<N>& f, cl_command_queue queue)
         {
             if (N != width)
                 throw "Widths are not equal!";
@@ -524,9 +524,9 @@ namespace mgcl
         }
 
         void updateGhosts(cl_program program, cl_command_queue queue);
-        VaryingStencilGpu multiply(VaryingStencilGpu &b, int ghc,
+        VaryingStencilGpu multiply(VaryingStencilGpu& b, int ghc,
                                    cl_program program, cl_command_queue queue, cl_context context);
-        VaryingStencilGpu multiply(FixedStencilGpu &b, int ghc,
+        VaryingStencilGpu multiply(FixedStencilGpu& b, int ghc,
                                    cl_program program, cl_command_queue queue, cl_context context);
 
         VaryingStencilGpu cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context);
@@ -552,15 +552,15 @@ namespace mgcl
 
     public:
         FixedStencilGpu(int width_, cl_context context, cl_command_queue queue);
-        FixedStencilGpu(FixedStencilGpu &&);
-        FixedStencilGpu &operator=(FixedStencilGpu &&);
+        FixedStencilGpu(FixedStencilGpu&&);
+        FixedStencilGpu& operator=(FixedStencilGpu&&);
         ~FixedStencilGpu();
 
-        FixedStencilGpu(const FixedStencilGpu &) = delete;
-        FixedStencilGpu &operator=(const FixedStencilGpu &) = delete;
+        FixedStencilGpu(const FixedStencilGpu&) = delete;
+        FixedStencilGpu& operator=(const FixedStencilGpu&) = delete;
 
         template <int N>
-        void fill(FixedStencil<N> &f, cl_command_queue queue)
+        void fill(FixedStencil<N>& f, cl_command_queue queue)
         {
             if (N != width)
                 throw "Widths are not equal!";
@@ -590,7 +590,7 @@ namespace mgcl
             return ret;
         }
 
-        VaryingStencilGpu multiply(VaryingStencilGpu &b, int ghc,
+        VaryingStencilGpu multiply(VaryingStencilGpu& b, int ghc,
                                    cl_program program, cl_command_queue queue, cl_context context);
 
         int getWidth() const;

@@ -21,37 +21,37 @@ namespace mgcl_test
         Matrix2d(int m_, int n_) : m(m_), n(n_)
         {
             values.resize(m);
-            for (auto &col : values)
+            for (auto& col : values)
             {
                 col.resize(n);
                 std::fill(col.begin(), col.end(), 0);
             }
         }
 
-        Matrix2d(std::vector<std::vector<double>> &&vec)
+        Matrix2d(std::vector<std::vector<double>>&& vec)
             : m(vec.size()), n(vec.at(0).size()), values(std::move(vec)) {}
 
-        Matrix2d kronecker(const Matrix2d &b);
+        Matrix2d kronecker(const Matrix2d& b);
         Matrix2d transposed();
 
-        bool isEqual(const Matrix2d &b, double tol) const;
+        bool isEqual(const Matrix2d& b, double tol) const;
 
-        Matrix2d operator+(const Matrix2d &b);
-        void operator+=(const Matrix2d &b);
-        bool operator==(const Matrix2d &b) const;
-        bool operator!=(const Matrix2d &b) const;
-        Matrix2d operator*(const Matrix2d &b) const;
-        Matrix2d &operator*(double b);
-        Matrix2d &operator*(int b) { return operator*(static_cast<double>(b)); }
-        friend Matrix2d &operator*(double b, Matrix2d &m) { return m * b; }
-        friend Matrix2d &operator*(double b, Matrix2d &&m) { return m * b; }
-        friend Matrix2d &operator*(int b, Matrix2d &m) { return m * b; }
-        friend Matrix2d &operator*(int b, Matrix2d &&m) { return m * b; }
+        Matrix2d operator+(const Matrix2d& b);
+        void operator+=(const Matrix2d& b);
+        bool operator==(const Matrix2d& b) const;
+        bool operator!=(const Matrix2d& b) const;
+        Matrix2d operator*(const Matrix2d& b) const;
+        Matrix2d& operator*(double b);
+        Matrix2d& operator*(int b) { return operator*(static_cast<double>(b)); }
+        friend Matrix2d& operator*(double b, Matrix2d& m) { return m * b; }
+        friend Matrix2d& operator*(double b, Matrix2d&& m) { return m * b; }
+        friend Matrix2d& operator*(int b, Matrix2d& m) { return m * b; }
+        friend Matrix2d& operator*(int b, Matrix2d&& m) { return m * b; }
 
-        std::vector<double> &operator[](int index);
-        const std::vector<double> &operator[](int index) const;
-        std::vector<double> &at(int index);
-        const std::vector<double> &at(int index) const;
+        std::vector<double>& operator[](int index);
+        const std::vector<double>& operator[](int index) const;
+        std::vector<double>& at(int index);
+        const std::vector<double>& at(int index) const;
 
         void dumpToFile(std::string path) const;
         void dumpToFileWithIndices(std::string path) const;
@@ -78,7 +78,7 @@ namespace mgcl_test
          * @return Matrix2d
          */
         template <int N>
-        static Matrix2d fromVaryingStencil(mgcl::VaryingStencil<N> &s, bool periodic)
+        static Matrix2d fromVaryingStencil(mgcl::VaryingStencil<N>& s, bool periodic)
         {
             int m = s.getDim1();
             int n = s.getDim2();
@@ -133,7 +133,7 @@ namespace mgcl_test
         }
     };
 
-    std::ostream &operator<<(std::ostream &os, Matrix2d const &value);
+    std::ostream& operator<<(std::ostream& os, Matrix2d const& value);
 
 }
 

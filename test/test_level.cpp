@@ -135,7 +135,7 @@ TEST_CASE("Level::initOpenCLBuffers")
 
         // Test for levels 0, 1 and 2
         int levelNum = GENERATE(0, 1, 2);
-        mgcl::Level *level0 = new mgcl::Level(p.get(), levelNum);
+        mgcl::Level* level0 = new mgcl::Level(p.get(), levelNum);
         REQUIRE(level0->init());
 
         // Check if buffers were created
@@ -208,13 +208,13 @@ TEST_CASE("Level::initOpenCLBuffers")
         p->setDeviceType(deviceType);
 
         p->setStencilType(mgcl::MGCL_VARYING);
-        auto &sv = p->getStencilValues();
+        auto& sv = p->getStencilValues();
         sv->fillRandomInt();
 
         REQUIRE(p->init());
 
         int levelNum = GENERATE(0, 1, 2);
-        auto &level0 = p->getLevelAt(levelNum);
+        auto& level0 = p->getLevelAt(levelNum);
 
         REQUIRE(level0.getStencilValuesGpu());
         if (levelNum > 0)

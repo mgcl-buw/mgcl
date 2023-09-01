@@ -25,7 +25,7 @@ namespace mgcl
      * @param stencilType_ Type of stencil that shall be used on this level
      * @throws invalid_argument When num_ is invalid, i.e. < 0 or > Problem.maxlevel
      */
-    Level::Level(Problem *problem_, int num_)
+    Level::Level(Problem* problem_, int num_)
         : problem(problem_),
           num(num_),
           belowMpiLevelThreshold(problem_->getMpiLevelThreshold() > num),
@@ -296,7 +296,7 @@ namespace mgcl
                 MPI_Request reqs[2];
                 MPI_Status stats[2];
 
-                Level &levelAbove = problem->getLevelAt(num - 1);
+                Level& levelAbove = problem->getLevelAt(num - 1);
 
                 /* Getting local rank */
                 MPI_Comm_rank(mpi_comm, &myid);
@@ -329,10 +329,10 @@ namespace mgcl
                     reqs[1] = MPI_REQUEST_NULL;
 
                     if ((myid != levelAbove.mpiData->left) && (MPI_PROC_NULL != levelAbove.mpiData->left))
-                        MPI_Isend((void *)&myid, 1, MPI_INT, levelAbove.mpiData->left, 0, mpi_comm, &reqs[0]);
+                        MPI_Isend((void*)&myid, 1, MPI_INT, levelAbove.mpiData->left, 0, mpi_comm, &reqs[0]);
 
                     if ((myid != levelAbove.mpiData->right) && (MPI_PROC_NULL != levelAbove.mpiData->right))
-                        MPI_Irecv((void *)&mpiData->right, 1, MPI_INT, levelAbove.mpiData->right, 0, mpi_comm, &reqs[1]);
+                        MPI_Irecv((void*)&mpiData->right, 1, MPI_INT, levelAbove.mpiData->right, 0, mpi_comm, &reqs[1]);
 
                     MPI_Waitall(2, reqs, stats);
 
@@ -340,10 +340,10 @@ namespace mgcl
                     reqs[0] = MPI_REQUEST_NULL;
                     reqs[1] = MPI_REQUEST_NULL;
                     if ((myid != levelAbove.mpiData->right) && (MPI_PROC_NULL != levelAbove.mpiData->right))
-                        MPI_Isend((void *)&myid, 1, MPI_INT, levelAbove.mpiData->right, 0, mpi_comm,
+                        MPI_Isend((void*)&myid, 1, MPI_INT, levelAbove.mpiData->right, 0, mpi_comm,
                                   &reqs[0]);
                     if ((myid != levelAbove.mpiData->left) && (MPI_PROC_NULL != levelAbove.mpiData->left))
-                        MPI_Irecv((void *)&mpiData->left, 1, MPI_INT, levelAbove.mpiData->left, 0,
+                        MPI_Irecv((void*)&mpiData->left, 1, MPI_INT, levelAbove.mpiData->left, 0,
                                   mpi_comm, &reqs[1]);
                     MPI_Waitall(2, reqs, stats);
                 }
@@ -353,10 +353,10 @@ namespace mgcl
                     reqs[0] = MPI_REQUEST_NULL;
                     reqs[1] = MPI_REQUEST_NULL;
                     if ((myid != levelAbove.mpiData->left) && (MPI_PROC_NULL != levelAbove.mpiData->left))
-                        MPI_Isend((void *)&levelAbove.mpiData->right, 1, MPI_INT, levelAbove.mpiData->left,
+                        MPI_Isend((void*)&levelAbove.mpiData->right, 1, MPI_INT, levelAbove.mpiData->left,
                                   0, mpi_comm, &reqs[0]);
                     if ((myid != levelAbove.mpiData->right) && (MPI_PROC_NULL != levelAbove.mpiData->right))
-                        MPI_Irecv((void *)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->right,
+                        MPI_Irecv((void*)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->right,
                                   0, mpi_comm, &reqs[1]);
                     MPI_Waitall(2, reqs, stats);
 
@@ -364,10 +364,10 @@ namespace mgcl
                     reqs[0] = MPI_REQUEST_NULL;
                     reqs[1] = MPI_REQUEST_NULL;
                     if ((myid != levelAbove.mpiData->right) && (MPI_PROC_NULL != levelAbove.mpiData->right))
-                        MPI_Isend((void *)&levelAbove.mpiData->left, 1, MPI_INT, levelAbove.mpiData->right,
+                        MPI_Isend((void*)&levelAbove.mpiData->left, 1, MPI_INT, levelAbove.mpiData->right,
                                   0, mpi_comm, &reqs[0]);
                     if ((myid != levelAbove.mpiData->left) && (MPI_PROC_NULL != levelAbove.mpiData->left))
-                        MPI_Irecv((void *)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->left, 0,
+                        MPI_Irecv((void*)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->left, 0,
                                   mpi_comm, &reqs[1]);
                     MPI_Waitall(2, reqs, stats);
                 }
@@ -378,10 +378,10 @@ namespace mgcl
                     reqs[0] = MPI_REQUEST_NULL;
                     reqs[1] = MPI_REQUEST_NULL;
                     if ((myid != levelAbove.mpiData->down) && (MPI_PROC_NULL != levelAbove.mpiData->down))
-                        MPI_Isend((void *)&myid, 1, MPI_INT, levelAbove.mpiData->down, 0, mpi_comm,
+                        MPI_Isend((void*)&myid, 1, MPI_INT, levelAbove.mpiData->down, 0, mpi_comm,
                                   &reqs[0]);
                     if ((myid != levelAbove.mpiData->up) && (MPI_PROC_NULL != levelAbove.mpiData->up))
-                        MPI_Irecv((void *)&mpiData->up, 1, MPI_INT, levelAbove.mpiData->up,
+                        MPI_Irecv((void*)&mpiData->up, 1, MPI_INT, levelAbove.mpiData->up,
                                   0, mpi_comm, &reqs[1]);
                     MPI_Waitall(2, reqs, stats);
 
@@ -389,10 +389,10 @@ namespace mgcl
                     reqs[0] = MPI_REQUEST_NULL;
                     reqs[1] = MPI_REQUEST_NULL;
                     if ((myid != levelAbove.mpiData->up) && (MPI_PROC_NULL != levelAbove.mpiData->up))
-                        MPI_Isend((void *)&myid, 1, MPI_INT, levelAbove.mpiData->up, 0, mpi_comm,
+                        MPI_Isend((void*)&myid, 1, MPI_INT, levelAbove.mpiData->up, 0, mpi_comm,
                                   &reqs[0]);
                     if ((myid != levelAbove.mpiData->down) && (MPI_PROC_NULL != levelAbove.mpiData->down))
-                        MPI_Irecv((void *)&mpiData->down, 1, MPI_INT, levelAbove.mpiData->down,
+                        MPI_Irecv((void*)&mpiData->down, 1, MPI_INT, levelAbove.mpiData->down,
                                   0, mpi_comm, &reqs[1]);
                     MPI_Waitall(2, reqs, stats);
                 }
@@ -402,10 +402,10 @@ namespace mgcl
                     reqs[0] = MPI_REQUEST_NULL;
                     reqs[1] = MPI_REQUEST_NULL;
                     if ((myid != levelAbove.mpiData->down) && (MPI_PROC_NULL != levelAbove.mpiData->down))
-                        MPI_Isend((void *)&levelAbove.mpiData->up, 1, MPI_INT,
+                        MPI_Isend((void*)&levelAbove.mpiData->up, 1, MPI_INT,
                                   levelAbove.mpiData->down, 0, mpi_comm, &reqs[0]);
                     if ((myid != levelAbove.mpiData->up) && (MPI_PROC_NULL != levelAbove.mpiData->up))
-                        MPI_Irecv((void *)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->up,
+                        MPI_Irecv((void*)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->up,
                                   0, mpi_comm, &reqs[1]);
                     MPI_Waitall(2, reqs, stats);
 
@@ -413,10 +413,10 @@ namespace mgcl
                     reqs[0] = MPI_REQUEST_NULL;
                     reqs[1] = MPI_REQUEST_NULL;
                     if ((myid != levelAbove.mpiData->up) && (MPI_PROC_NULL != levelAbove.mpiData->up))
-                        MPI_Isend((void *)&levelAbove.mpiData->down, 1, MPI_INT,
+                        MPI_Isend((void*)&levelAbove.mpiData->down, 1, MPI_INT,
                                   levelAbove.mpiData->up, 0, mpi_comm, &reqs[0]);
                     if ((myid != levelAbove.mpiData->down) && (MPI_PROC_NULL != levelAbove.mpiData->down))
-                        MPI_Irecv((void *)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->down,
+                        MPI_Irecv((void*)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->down,
                                   0, mpi_comm, &reqs[1]);
                     MPI_Waitall(2, reqs, stats);
                 }
@@ -427,10 +427,10 @@ namespace mgcl
                     reqs[0] = MPI_REQUEST_NULL;
                     reqs[1] = MPI_REQUEST_NULL;
                     if ((myid != levelAbove.mpiData->back) && (MPI_PROC_NULL != levelAbove.mpiData->back))
-                        MPI_Isend((void *)&myid, 1, MPI_INT, levelAbove.mpiData->back, 0, mpi_comm,
+                        MPI_Isend((void*)&myid, 1, MPI_INT, levelAbove.mpiData->back, 0, mpi_comm,
                                   &reqs[0]);
                     if ((myid != levelAbove.mpiData->front) && (MPI_PROC_NULL != levelAbove.mpiData->front))
-                        MPI_Irecv((void *)&mpiData->front, 1, MPI_INT, levelAbove.mpiData->front,
+                        MPI_Irecv((void*)&mpiData->front, 1, MPI_INT, levelAbove.mpiData->front,
                                   0, mpi_comm, &reqs[1]);
                     MPI_Waitall(2, reqs, stats);
 
@@ -438,10 +438,10 @@ namespace mgcl
                     reqs[0] = MPI_REQUEST_NULL;
                     reqs[1] = MPI_REQUEST_NULL;
                     if ((myid != levelAbove.mpiData->front) && (MPI_PROC_NULL != levelAbove.mpiData->front))
-                        MPI_Isend((void *)&myid, 1, MPI_INT, levelAbove.mpiData->front, 0, mpi_comm,
+                        MPI_Isend((void*)&myid, 1, MPI_INT, levelAbove.mpiData->front, 0, mpi_comm,
                                   &reqs[0]);
                     if ((myid != levelAbove.mpiData->back) && (MPI_PROC_NULL != levelAbove.mpiData->back))
-                        MPI_Irecv((void *)&mpiData->back, 1, MPI_INT, levelAbove.mpiData->back,
+                        MPI_Irecv((void*)&mpiData->back, 1, MPI_INT, levelAbove.mpiData->back,
                                   0, mpi_comm, &reqs[1]);
                     MPI_Waitall(2, reqs, stats);
                 }
@@ -451,10 +451,10 @@ namespace mgcl
                     reqs[0] = MPI_REQUEST_NULL;
                     reqs[1] = MPI_REQUEST_NULL;
                     if ((myid != levelAbove.mpiData->back) && (MPI_PROC_NULL != levelAbove.mpiData->back))
-                        MPI_Isend((void *)&levelAbove.mpiData->front, 1, MPI_INT,
+                        MPI_Isend((void*)&levelAbove.mpiData->front, 1, MPI_INT,
                                   levelAbove.mpiData->back, 0, mpi_comm, &reqs[0]);
                     if ((myid != levelAbove.mpiData->front) && (MPI_PROC_NULL != levelAbove.mpiData->front))
-                        MPI_Irecv((void *)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->front,
+                        MPI_Irecv((void*)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->front,
                                   0, mpi_comm, &reqs[1]);
                     MPI_Waitall(2, reqs, stats);
 
@@ -462,10 +462,10 @@ namespace mgcl
                     reqs[0] = MPI_REQUEST_NULL;
                     reqs[1] = MPI_REQUEST_NULL;
                     if ((myid != levelAbove.mpiData->front) && (MPI_PROC_NULL != levelAbove.mpiData->front))
-                        MPI_Isend((void *)&levelAbove.mpiData->back, 1, MPI_INT,
+                        MPI_Isend((void*)&levelAbove.mpiData->back, 1, MPI_INT,
                                   levelAbove.mpiData->front, 0, mpi_comm, &reqs[0]);
                     if ((myid != levelAbove.mpiData->back) && (MPI_PROC_NULL != levelAbove.mpiData->back))
-                        MPI_Irecv((void *)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->back,
+                        MPI_Irecv((void*)&tmpbuf, 1, MPI_INT, levelAbove.mpiData->back,
                                   0, mpi_comm, &reqs[1]);
                     MPI_Waitall(2, reqs, stats);
                 }
@@ -485,7 +485,7 @@ namespace mgcl
         return ret;
     }
 
-    std::ostream &operator<<(std::ostream &os, const Level &lv)
+    std::ostream& operator<<(std::ostream& os, const Level& lv)
     {
         os << "Level: " << std::endl
            << " num: " << lv.num << std::endl
@@ -498,7 +498,7 @@ namespace mgcl
         return os;
     }
 
-    void Level::setV(const std::shared_ptr<Cuboid> &v_)
+    void Level::setV(const std::shared_ptr<Cuboid>& v_)
     {
         v = v_;
     }
@@ -513,7 +513,7 @@ namespace mgcl
         return stencilType;
     }
 
-    std::shared_ptr<VaryingStencilGpu> &Level::getStencilValuesGpu()
+    std::shared_ptr<VaryingStencilGpu>& Level::getStencilValuesGpu()
     {
         return stencilValuesGpu;
     }
@@ -528,7 +528,7 @@ namespace mgcl
         return ngh;
     }
 
-    std::shared_ptr<VaryingStencil3x3x3> &Level::getStencilValues()
+    std::shared_ptr<VaryingStencil3x3x3>& Level::getStencilValues()
     {
         return stencilValues;
     }
@@ -548,7 +548,7 @@ namespace mgcl
         return num;
     }
 
-    Cuboid &Level::getV() const
+    Cuboid& Level::getV() const
     {
         return *v;
     }
@@ -558,12 +558,12 @@ namespace mgcl
         return v;
     }
 
-    void Level::setF(const std::shared_ptr<Cuboid> &f_)
+    void Level::setF(const std::shared_ptr<Cuboid>& f_)
     {
         f = f_;
     }
 
-    Cuboid &Level::getF() const
+    Cuboid& Level::getF() const
     {
         return *f;
     }
@@ -573,12 +573,12 @@ namespace mgcl
         return f;
     }
 
-    void Level::setR(const std::shared_ptr<Cuboid> &r_)
+    void Level::setR(const std::shared_ptr<Cuboid>& r_)
     {
         r = r_;
     }
 
-    Cuboid &Level::getR() const
+    Cuboid& Level::getR() const
     {
         return *r;
     }
@@ -661,12 +661,12 @@ namespace mgcl
             mgclCheckError(clRetainMemObject(dR_), "clRetainMemObject(dR)");
     }
 
-    MPIData *Level::getMpiDataPtr()
+    MPIData* Level::getMpiDataPtr()
     {
         return mpiData.get();
     }
 
-    MPIData &Level::getMpiData()
+    MPIData& Level::getMpiData()
     {
         if (mpiData != nullptr)
             return *mpiData;

@@ -62,7 +62,7 @@ mgcl_test::TestUtility::~TestUtility()
  * @param c
  * @return cl_mem
  */
-cl_mem mgcl_test::TestUtility::createOpenCLBuffer(mgcl::Cuboid &c)
+cl_mem mgcl_test::TestUtility::createOpenCLBuffer(mgcl::Cuboid& c)
 {
     int err;
     cl_mem buf = clCreateBuffer(problem->getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
@@ -100,7 +100,7 @@ std::unique_ptr<mgcl::Cuboid> mgcl_test::TestUtility::readOpenCLBuffer(cl_mem bu
 
     auto c = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
     int size = c->getMgh() * c->getNgh() * c->getOgh();
-    double *tmp = c->field1d().data();
+    double* tmp = c->field1d().data();
 
     int err;
     err = clEnqueueReadBuffer(problem->getCommands(), buf, CL_TRUE, 0,
@@ -171,7 +171,7 @@ bool mgcl_test::TestUtility::deviceAvailable(std::string deviceName, cl_device_t
             }
 
             // return true if a device was found
-            if (std::string((char *)device_name_available).find(deviceName) != std::string::npos)
+            if (std::string((char*)device_name_available).find(deviceName) != std::string::npos)
                 return true;
         }
     }
@@ -184,7 +184,7 @@ cl_context mgcl_test::TestUtility::getContext()
     return problem->getContext();
 }
 
-mgcl::Problem &mgcl_test::TestUtility::getProblem()
+mgcl::Problem& mgcl_test::TestUtility::getProblem()
 {
     return *problem;
 }
@@ -215,7 +215,7 @@ cl_device_id mgcl_test::TestUtility::getDeviceId()
  * @param f
  * @param solution
  */
-void mgcl_test::create4hOrderPeriodicProblem(mgcl::Cuboid &v, mgcl::Cuboid &f, mgcl::Cuboid &solution)
+void mgcl_test::create4hOrderPeriodicProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl::Cuboid& solution)
 {
     if (v.getM() != f.getM() || v.getN() != f.getN() || v.getO() != f.getO() ||
         v.getM() != solution.getM() || v.getN() != solution.getN() || v.getO() != solution.getO())

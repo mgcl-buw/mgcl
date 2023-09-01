@@ -27,7 +27,7 @@ namespace mgcl
     class OpenCLHelper
     {
     private:
-        Problem *problem;
+        Problem* problem;
 
         std::string kernelDir = "./";
         std::string deviceName = "";                        /* Use first found device if not set */
@@ -40,11 +40,11 @@ namespace mgcl
         friend class Problem;
 
     public:
-        OpenCLHelper(Problem *problem_) : problem(problem_) {}
-        OpenCLHelper(const OpenCLHelper &) = delete;
-        OpenCLHelper &operator=(const OpenCLHelper &) = delete;
-        OpenCLHelper(const OpenCLHelper &&) = delete;
-        OpenCLHelper &operator=(OpenCLHelper &&) = delete;
+        OpenCLHelper(Problem* problem_) : problem(problem_) {}
+        OpenCLHelper(const OpenCLHelper&) = delete;
+        OpenCLHelper& operator=(const OpenCLHelper&) = delete;
+        OpenCLHelper(const OpenCLHelper&&) = delete;
+        OpenCLHelper& operator=(OpenCLHelper&&) = delete;
         ~OpenCLHelper();
 
         int init();
@@ -62,30 +62,30 @@ namespace mgcl
         static int outputDeviceInfo(cl_device_id device_id);
 
         std::string getKernelDir() const;
-        void setKernelDir(const std::string &kernelDir_);
+        void setKernelDir(const std::string& kernelDir_);
 
         std::string getDeviceName() const;
-        void setDeviceName(const std::string &deviceName_);
+        void setDeviceName(const std::string& deviceName_);
 
         cl_device_type getDeviceType() const;
-        void setDeviceType(const cl_device_type &deviceType_);
+        void setDeviceType(const cl_device_type& deviceType_);
 
         cl_program getProgram() const;
-        void setProgram(const cl_program &program_);
+        void setProgram(const cl_program& program_);
 
         cl_command_queue getCommands() const;
-        void setCommands(const cl_command_queue &commands_);
+        void setCommands(const cl_command_queue& commands_);
 
         cl_context getContext() const;
-        void setContext(const cl_context &context_);
+        void setContext(const cl_context& context_);
 
-        static const char *mgcl_err_code(cl_int err_in);
-        static void mgcl_check_error(cl_int err, const char *operation, const char *filename, int line);
+        static const char* mgcl_err_code(cl_int err_in);
+        static void mgcl_check_error(cl_int err, const char* operation, const char* filename, int line);
 
         cl_device_id getDeviceId() const;
-        void setDeviceId(const cl_device_id &deviceId_);
+        void setDeviceId(const cl_device_id& deviceId_);
 
-        Problem *getProblem() const;
+        Problem* getProblem() const;
     };
 
 #define mgclCheckError(E, S) OpenCLHelper::mgcl_check_error(E, S, __FILE__, __LINE__)

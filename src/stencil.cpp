@@ -28,7 +28,7 @@ namespace mgcl
         mgclCheckError(err, "clEnqueueFillBuffer");
     }
 
-    VaryingStencilGpu::VaryingStencilGpu(VaryingStencilGpu &&s)
+    VaryingStencilGpu::VaryingStencilGpu(VaryingStencilGpu&& s)
         : m(std::exchange(s.m, 0)),
           n(std::exchange(s.n, 0)),
           o(std::exchange(s.o, 0)),
@@ -44,7 +44,7 @@ namespace mgcl
         }
     }
 
-    VaryingStencilGpu &VaryingStencilGpu::operator=(VaryingStencilGpu &&s)
+    VaryingStencilGpu& VaryingStencilGpu::operator=(VaryingStencilGpu&& s)
     {
         m = std::exchange(s.m, 0);
         n = std::exchange(s.n, 0);
@@ -127,7 +127,7 @@ namespace mgcl
      * @param context
      * @return VaryingStencilGpu
      */
-    VaryingStencilGpu VaryingStencilGpu::multiply(VaryingStencilGpu &b, int ghc,
+    VaryingStencilGpu VaryingStencilGpu::multiply(VaryingStencilGpu& b, int ghc,
                                                   cl_program program, cl_command_queue queue, cl_context context)
     {
         int err;
@@ -198,7 +198,7 @@ namespace mgcl
      * @param context
      * @return VaryingStencilGpu
      */
-    VaryingStencilGpu VaryingStencilGpu::multiply(FixedStencilGpu &b, int ghc,
+    VaryingStencilGpu VaryingStencilGpu::multiply(FixedStencilGpu& b, int ghc,
                                                   cl_program program, cl_command_queue queue, cl_context context)
     {
         int err;
@@ -303,7 +303,7 @@ namespace mgcl
         mgclCheckError(err, "clEnqueueFillBuffer");
     }
 
-    FixedStencilGpu::FixedStencilGpu(FixedStencilGpu &&s)
+    FixedStencilGpu::FixedStencilGpu(FixedStencilGpu&& s)
         : width(std::exchange(s.width, 0)),
           buf(s.buf) // don't set buf to nullptr since it gets released in dtor
     {
@@ -315,7 +315,7 @@ namespace mgcl
         }
     }
 
-    FixedStencilGpu &FixedStencilGpu::operator=(FixedStencilGpu &&s)
+    FixedStencilGpu& FixedStencilGpu::operator=(FixedStencilGpu&& s)
     {
         width = std::exchange(s.width, 0);
         buf = s.buf;
@@ -348,7 +348,7 @@ namespace mgcl
      * @param context
      * @return VaryingStencilGpu
      */
-    VaryingStencilGpu FixedStencilGpu::multiply(VaryingStencilGpu &b, int ghc,
+    VaryingStencilGpu FixedStencilGpu::multiply(VaryingStencilGpu& b, int ghc,
                                                 cl_program program, cl_command_queue queue, cl_context context)
     {
         int err;

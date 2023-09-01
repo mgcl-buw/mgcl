@@ -65,7 +65,7 @@ TEST_CASE("MPI updateGhostsSeq (1 process)", "[mpi1]")
         p.init();
 
         // Check on level 0
-        auto &lv = p.getLevelAt(0);
+        auto& lv = p.getLevelAt(0);
 
         // Create test data
         mgcl::Cuboid c(N, N, N, gh, gh, gh);
@@ -194,7 +194,7 @@ TEST_CASE("MPI updateGhostsSeq (n processes)", "[mpiN]")
         p.init();
 
         // Check on level 0
-        auto &lv = p.getLevelAt(0);
+        auto& lv = p.getLevelAt(0);
         auto mpiData = lv.getMpiDataPtr();
 
         // print neighbours per rank
@@ -222,7 +222,7 @@ TEST_CASE("MPI updateGhostsSeq (n processes)", "[mpiN]")
 
         // Create local slice of global data
         auto clptr = cg.slice(m_start, m_end, n_start, n_end, o_start, o_end);
-        auto &cl = *clptr;
+        auto& cl = *clptr;
 
         // Update ghosts of test data
         mgcl::MultigridEngine::updateGhostsSeq(cl, mpiData, true, false);
@@ -368,13 +368,13 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
 
     // Init Problem to create all needed structures
     auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, v, f, m, n, o);
-    auto &p = *pptr;
+    auto& p = *pptr;
     p.setGhosts(1);
     p.setMpiComm(mpi_comm);
     p.init();
 
     // Check on level 0
-    auto &lv = p.getLevelAt(0);
+    auto& lv = p.getLevelAt(0);
     auto mpiData = lv.getMpiDataPtr();
 
     // print neighbours per rank
@@ -402,7 +402,7 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
 
     // Create local slice of global data
     auto clptr = cg.slice(m_start, m_end, n_start, n_end, o_start, o_end);
-    auto &cl = *clptr;
+    auto& cl = *clptr;
 
     // Create ocl buffer
     mgcl_test::TestUtility tu(pptr);
@@ -413,7 +413,7 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
     tu.finish();
 
     auto cl_res_ptr = tu.readOpenCLBuffer(d_cl, ml, nl, ol, gh, gh, gh);
-    auto &cl_res = *cl_res_ptr;
+    auto& cl_res = *cl_res_ptr;
 
     // cl.dumpToFile("cl" + std::to_string(mpi_rank) + ".txt");
 

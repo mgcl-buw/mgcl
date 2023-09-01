@@ -655,7 +655,7 @@ TEST_CASE("Problem::init")
         // is done in an own galerkin test.
 
         p.setStencilType(mgcl::MGCL_VARYING);
-        auto &s = *p.getStencilValues();
+        auto& s = *p.getStencilValues();
 
         REQUIRE(s.getDim1() == m);
         REQUIRE(s.getDim2() == n);
@@ -687,10 +687,10 @@ TEST_CASE("Problem::init")
 
         for (int lv = 0; lv <= p.getMaxlevel(); lv++)
         {
-            auto &level = p.getLevelAt(lv);
+            auto& level = p.getLevelAt(lv);
 
             REQUIRE(level.getStencilValues());
-            auto &sv = *level.getStencilValues();
+            auto& sv = *level.getStencilValues();
 
             CHECK(sv.getDim1() == level.getM());
             CHECK(sv.getDim2() == level.getN());

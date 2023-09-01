@@ -88,7 +88,7 @@ std::shared_ptr<mgcl::Cuboid> prolongationTestInputFine()
 std::shared_ptr<mgcl::Cuboid> prolongationTestInputCoarse()
 {
     auto cret = std::make_shared<mgcl::Cuboid>(8, 8, 8, 1, 1, 1, 0);
-    auto &c = *cret;
+    auto& c = *cret;
 
     c[0][0][0] = 6.000000e+00;
     c[0][0][1] = 2.000000e+00;
@@ -831,7 +831,7 @@ std::shared_ptr<mgcl::Cuboid> prolongationTestInputCoarse()
 std::shared_ptr<mgcl::Cuboid> prolongationTestOutputFine()
 {
     auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
-    auto &c = *cret;
+    auto& c = *cret;
 
     c[0][0][0] = 0.000000e+00;
     c[0][0][1] = 0.000000e+00;
@@ -6677,7 +6677,7 @@ std::shared_ptr<mgcl::Cuboid> prolongationTestOutputFine()
 std::shared_ptr<mgcl::Cuboid> prolongationTestOutputCoarse()
 {
     auto cret = std::make_shared<mgcl::Cuboid>(8, 8, 8, 1, 1, 1);
-    auto &c = *cret;
+    auto& c = *cret;
 
     c[0][0][0] = 3.000000e+00;
     c[0][0][1] = 2.000000e+00;

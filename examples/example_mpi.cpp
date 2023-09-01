@@ -27,14 +27,14 @@ static std::vector<int> split_int(std::string s, std::string delimiter);
 class InputParser
 {
 public:
-    InputParser(int &argc, char **argv)
+    InputParser(int& argc, char** argv)
     {
         for (int i = 1; i < argc; ++i)
             this->tokens.push_back(std::string(argv[i]));
     }
 
     /// @author iain
-    const std::string &getCmdOption(const std::string &option) const
+    const std::string& getCmdOption(const std::string& option) const
     {
         std::vector<std::string>::const_iterator itr;
         itr = std::find(this->tokens.begin(), this->tokens.end(), option);
@@ -47,7 +47,7 @@ public:
     }
 
     /// @author iain
-    bool cmdOptionExists(const std::string &option) const
+    bool cmdOptionExists(const std::string& option) const
     {
         return std::find(this->tokens.begin(), this->tokens.end(), option) != this->tokens.end();
     }
@@ -65,7 +65,7 @@ using std::min;
  * -N <x>[,<y>,<z>], i.e. -N 32 for a grid of size 32^3 or -N 16,32,64 for a grid of size 16x32x64. Default is 16^3
  * -np, --non-periodic If set, the problem will not be periodic but Dirichlet bc's will be used.
  */
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     int m = 16;
     int n = 16;

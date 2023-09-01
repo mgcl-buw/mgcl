@@ -19,7 +19,7 @@ namespace mgcl
 
     /* Restricts residual to coarser grid using full-weighted restriction operator.
      * m, n and o must be the dimensions of the coarser grid without ghost cells. */
-    void MultigridEngine::restrictSeq(Level &fine, Level &coarse, Cuboid &fine_vals, Cuboid &coarse_vals)
+    void MultigridEngine::restrictSeq(Level& fine, Level& coarse, Cuboid& fine_vals, Cuboid& coarse_vals)
     {
         int ghosts = coarse.problem->getGhosts();
         int m = coarse.m;
@@ -76,7 +76,7 @@ namespace mgcl
                                              !coarse.isBelowMpiLevelThreshold());
     }
 
-    void MultigridEngine::restrict(Level &fine, Level &coarse, cl_mem d_fine_values, cl_mem d_coarse_values)
+    void MultigridEngine::restrict(Level& fine, Level& coarse, cl_mem d_fine_values, cl_mem d_coarse_values)
     {
         int err;
         int mreal = coarse.m;

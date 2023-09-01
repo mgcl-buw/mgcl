@@ -50,7 +50,7 @@ TEST_CASE("TestUtility deviceAvailable")
     err = clGetDeviceInfo(tu.getDeviceId(), CL_DEVICE_TYPE, sizeof(device_type), &device_type, NULL);
     mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_TYPE)");
 
-    REQUIRE(mgcl_test::TestUtility::deviceAvailable(std::string((char *)device_name), device_type));
+    REQUIRE(mgcl_test::TestUtility::deviceAvailable(std::string((char*)device_name), device_type));
     REQUIRE_FALSE(mgcl_test::TestUtility::deviceAvailable("akljshnfklfha", device_type));
 }
 

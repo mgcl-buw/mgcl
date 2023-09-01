@@ -140,7 +140,7 @@ TEST_CASE("mgcl benchmarks console: init", "[!benchmark][init][console]")
             mgcl::Problem p(m, n, o, f, v);
             p.setSilent(true);
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto &s = *p.getStencilValues();
+            auto& s = *p.getStencilValues();
 
             // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
             for (int i = 0; i < N; i++)
