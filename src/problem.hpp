@@ -188,6 +188,8 @@ namespace mgcl
 
         inline bool isPeriodic() const { return bc == BC::PERIODIC; }
 
+        int mpiSize();
+
         /********************************
          * Getters and Setters
          ********************************/

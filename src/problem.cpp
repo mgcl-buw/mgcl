@@ -991,17 +991,25 @@ namespace mgcl
      * @brief Returns true, if the program is run with more than one MPI processes. Only then the MPI routines
      * will be used internally.
      */
-    bool Problem::useMpi()
+    bool Problem::useMpi() // TODO maybe as attribute and setter/getter
     {
-        int mpi_size;
-        int err = MPI_Comm_size(comm, &mpi_size);
-        mpi_util::mgclCheckMpiError(comm, err, "MPI_Comm_size");
-        return mpi_size > 1;
+        return mpiSize() > 1;
     }
 
     int Problem::mpiRank() const
     {
         return mpi_rank;
+    }
+
+    /**
+     * @brief Returns the communicator size, i.e. number of processes attached to this communicator.
+     */
+    int Problem::mpiSize()
+    {
+        int mpi_size;
+        int err = MPI_Comm_size(comm, &mpi_size);
+        mpi_util::mgclCheckMpiError(comm, err, "MPI_Comm_size");
+        return mpi_size;
     }
 
     int Problem::getMGlobal() const
