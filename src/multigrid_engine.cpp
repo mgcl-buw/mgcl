@@ -77,12 +77,6 @@ namespace mgcl
 
             mpi_util::gather(problem.getMpiComm(), levelAbove.getF());
 
-            // do rest on proc 0
-        }
-
-        // Advance to coarser levels only on proc 0 after gather
-        if (problem.useMpi() && levelAbove.isCalculatedLocally() && problem.mpiRank() == 0)
-        {
             // Update ghosts of gathered
             // TODO check Dirichlet
             // TODO only on rank 0
@@ -90,6 +84,12 @@ namespace mgcl
                 MultigridEngine::updateGhostsSeq(levelAbove.getF(), levelAbove.getMpiDataPtr(), problem.isPeriodic(),
                                                  levelAbove.isCalculatedLocally());
 
+            // do rest on proc 0
+        }
+
+        // Advance to coarser levels only on proc 0 after gather
+        if (!problem.useMpi() || (problem.useMpi() && levelAbove.isCalculatedLocally() && problem.mpiRank() == 0))
+        {
             // start next v-cycle iteration if not at highest level
             if (level.getNum() < problem.maxlevel - 1)
                 MultigridEngine::vcycleSeq(problem, levelAbove);
