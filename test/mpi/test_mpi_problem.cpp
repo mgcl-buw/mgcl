@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "../../src/cuboid.hpp"
+#include "../../src/multigrid_engine.hpp"
 #include "../../src/problem.hpp"
 // #include "test_utility.hpp"
 
@@ -267,8 +268,8 @@ TEST_CASE("MPI-Problem::init")
     int ol = (o_end - o_start) + 1;
 
     // Init data (same for each process)
-    auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
-    auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
+    auto v = std::make_shared<mgcl::Cuboid>(m, n, o, 1, 1, 1);
+    auto f = std::make_shared<mgcl::Cuboid>(m, n, o, 1, 1, 1);
     v->fill1dIndex(true);
     f->fill1dIndex(true);
     auto vl = std::shared_ptr<mgcl::Cuboid>(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
@@ -277,6 +278,7 @@ TEST_CASE("MPI-Problem::init")
     mgcl::Problem p(ml, nl, ol, vl, fl, m, n, o);
     p.setMpiComm(mpi_comm);
     p.setMpiMinGridPoints(m); // Ensures mpiLevelThreshold to be 0.
+    p.setGhostsIn(1);
     p.init();
 
     REQUIRE(p.getMpiLevelThreshold() == 0);
@@ -303,6 +305,10 @@ TEST_CASE("MPI-Problem::init")
         // Compare global data, that level 0 should hold (gathering happens in Level::init).
         REQUIRE(p.getLevelAt(0).getV().isEqual(*v));
         REQUIRE(p.getLevelAt(0).getF().isEqual(*f));
+
+        // Ghosts of F should be up-to-date, too.
+        mgcl::MultigridEngine::updateGhostsSeq(*f, nullptr, true, true);
+        REQUIRE(p.getLevelAt(0).getF().isEqualAllCells(*f));
     }
     else
     {
