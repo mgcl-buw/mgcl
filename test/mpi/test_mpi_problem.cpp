@@ -266,13 +266,15 @@ TEST_CASE("MPI-Problem::init")
     int nl = (n_end - n_start) + 1;
     int ol = (o_end - o_start) + 1;
 
-    // Init some random data
-    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
-    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
-    v->fillRandom();
-    f->fillRandom();
+    // Init data (same for each process)
+    auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+    auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
+    v->fill1dIndex(true);
+    f->fill1dIndex(true);
+    auto vl = std::shared_ptr<mgcl::Cuboid>(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+    auto fl = std::shared_ptr<mgcl::Cuboid>(f->slice(m_start, m_end, n_start, n_end, o_start, o_end));
 
-    mgcl::Problem p(ml, nl, ol, v, f, m, n, o);
+    mgcl::Problem p(ml, nl, ol, vl, fl, m, n, o);
     p.setMpiComm(mpi_comm);
     p.setMpiMinGridPoints(m); // Ensures mpiLevelThreshold to be 0.
     p.init();
@@ -292,12 +294,15 @@ TEST_CASE("MPI-Problem::init")
         REQUIRE(p.getLevelAt(0).getR().getN() == p.getNGlobal());
         REQUIRE(p.getLevelAt(0).getR().getO() == p.getOGlobal());
 
-        // Compare only the local slices. Gathering happens in vcycle at first.
+        // Compare only the local slices for input data that Problem holds.
         auto vloc = p.getLevelAt(0).getV().slice(m_start, m_end, n_start, n_end, o_start, o_end);
         auto floc = p.getLevelAt(0).getF().slice(m_start, m_end, n_start, n_end, o_start, o_end);
-
         REQUIRE(vloc->isEqual(p.getV()));
         REQUIRE(floc->isEqual(p.getF()));
+
+        // Compare global data, that level 0 should hold (gathering happens in Level::init).
+        REQUIRE(p.getLevelAt(0).getV().isEqual(*v));
+        REQUIRE(p.getLevelAt(0).getF().isEqual(*f));
     }
     else
     {
