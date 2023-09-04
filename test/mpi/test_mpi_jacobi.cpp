@@ -117,6 +117,7 @@ TEST_CASE("MPI jacobiSeq (n processes)", "[mpiN]")
     // Init Problem to create all needed structures
     mgcl::Problem p(ml, nl, ol, vlptr, flptr, m, n, o);
     p.setGhosts(gh);
+    p.setGhostsIn(gh);
     p.setMpiComm(mpi_comm);
     p.setStencilType(stencilType);
     p.init();
@@ -264,6 +265,7 @@ TEST_CASE("MPI jacobi ocl (n processes)", "[mpiN]")
     auto& p = *pptr;
     p.setUseOpencl(true);
     p.setGhosts(gh);
+    p.setGhostsIn(gh);
     p.setMpiComm(mpi_comm);
     p.setStencilType(stencilType);
     p.setResidualNorm(resnorm);

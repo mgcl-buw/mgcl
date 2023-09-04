@@ -691,6 +691,6 @@ namespace mgcl
      */
     bool Level::isCalculatedLocally() const
     {
-        return problem->useMpi() && problem->mpiSize() > 1 && num >= problem->getMpiLevelThreshold();
+        return !problem->useMpi() || problem->mpiSize() == 1 || num >= problem->getMpiLevelThreshold();
     }
 }

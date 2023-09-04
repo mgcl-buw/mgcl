@@ -50,6 +50,7 @@ TEST_CASE("Level::initMpiData (1 process)")
 
     mgcl::Problem p(N, N, N, v, f);
     p.setMpiComm(mpi_comm);
+    p.setGhostsIn(1);
     p.init();
 
     for (int i = 0; i < p.getMaxlevel(); i++)
@@ -123,6 +124,7 @@ TEST_CASE("Level::initMpiData (2 processes)")
 
     mgcl::Problem p(ml, nl, ol, v, f, m, n, o);
     p.setMpiComm(mpi_comm);
+    p.setGhostsIn(1);
     p.init();
 
     int other_rank = mpi_rank == 0 ? 1 : 0;
@@ -134,7 +136,7 @@ TEST_CASE("Level::initMpiData (2 processes)")
         if (p.getMpiLevelThreshold() > i)
         {
             auto& mpiData = lv.getMpiData();
-            REQUIRE(lv.isCalculatedLocally());
+            REQUIRE(!lv.isCalculatedLocally());
 
             // Each level below the threshold must equal the local size of the problem divided by 2^num.
             REQUIRE((p.getM() >> i) == lv.getM());
@@ -265,6 +267,7 @@ TEST_CASE("Level::initMpiData-2procs-levelThreshold0")
 
     mgcl::Problem p(ml, nl, ol, v, f, m, n, o);
     p.setMpiComm(mpi_comm);
+    p.setGhostsIn(1);
     p.setMpiMinGridPoints(m); // Ensures mpiLevelThreshold to be 0.
     p.init();
 
@@ -401,6 +404,7 @@ TEST_CASE("Level::initMpiData (8 processes)")
 
     mgcl::Problem p(N, N, N, v, f, Ng, Ng, Ng);
     p.setMpiComm(mpi_comm);
+    p.setGhostsIn(1);
     p.setMpiMinGridPoints(2);
     p.init();
 
@@ -552,6 +556,7 @@ TEST_CASE("Level::initMpiData (24 processes)")
 
     mgcl::Problem p(m, n, o, v, f, mg, ng, og);
     p.setMpiComm(mpi_comm);
+    p.setGhostsIn(1);
     p.setMpiMinGridPoints(2);
     p.init();
 
