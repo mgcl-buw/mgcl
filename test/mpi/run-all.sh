@@ -20,6 +20,17 @@ run_test() {
   fi
 }
 
+print_help() {
+  echo "Available options:"
+  echo "-p,--problem: Run Problem specific tests"
+  echo "-l,--level: Run Level specific tests"
+  echo "-g,--ghosts: Run Ghost-Update specific tests"
+  echo "-j,--jacobi: Run Jacobi specific tests"
+  echo "-u,--util: Run Utility specific tests"
+  echo "-v,--vcycle: Run Vcycle specific tests"
+  echo "If no option is given, all tests will be run."
+}
+
 TEST_ALL=true
 TEST_PROBLEM=false
 TEST_LEVEL=false
@@ -30,6 +41,10 @@ TEST_VCYCLE=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
+    -h|--help)
+      print_help
+      exit 0
+      ;;
     -p|--problem)
       TEST_PROBLEM=true
       TEST_ALL=false
