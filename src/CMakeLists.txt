@@ -23,8 +23,8 @@ set(SOURCES_LIB
     hypercube.cpp
     util.hpp
     util.cpp
-    mpi_data.hpp
-    mpi_data.cpp
+    mpi_level_data.hpp
+    mpi_level_data.cpp
     mpi_util.hpp
     mpi_util.cpp)
 

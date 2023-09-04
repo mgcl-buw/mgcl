@@ -52,7 +52,7 @@ namespace mgcl
 
         // if (useMpi)
         if (problem->useMpi())
-            mpiData = std::make_unique<MPIData>(problem->getMpiComm());
+            mpiData = std::make_unique<MPILevelData>(problem->getMpiComm());
     }
 
     Level::~Level()
@@ -672,12 +672,12 @@ namespace mgcl
             mgclCheckError(clRetainMemObject(dR_), "clRetainMemObject(dR)");
     }
 
-    MPIData* Level::getMpiDataPtr()
+    MPILevelData* Level::getMpiDataPtr()
     {
         return mpiData.get();
     }
 
-    MPIData& Level::getMpiData()
+    MPILevelData& Level::getMpiData()
     {
         if (mpiData != nullptr)
             return *mpiData;

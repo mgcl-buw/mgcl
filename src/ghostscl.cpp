@@ -7,7 +7,7 @@
 #include <cstddef> // for size_t, NULL
 #include <iostream>
 
-#include "mpi_data.hpp"
+#include "mpi_level_data.hpp"
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -88,7 +88,7 @@ namespace mgcl
      *   only one MPI process, updateGhostsSeqLocally will be used instead.
      * forceLocal: If true, ghosts will be updated locally (maybe giving wrong results, if m_local < m_global).
      *   This is used e.g. for levels above the mpiLevelThreshold. */
-    void MultigridEngine::updateGhostsSeq(Cuboid& c, MPIData* mpiData, bool periodic, bool forceLocal)
+    void MultigridEngine::updateGhostsSeq(Cuboid& c, MPILevelData* mpiData, bool periodic, bool forceLocal)
     {
         // TODO adjust for ghosts > 1
         // TODO test
@@ -298,7 +298,7 @@ namespace mgcl
      * Only enqueues the kernel. Neither waits for kernel to finish nor reads back results */
     int MultigridEngine::updateGhosts(Problem& problem, cl_mem dBuffer,
                                       int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
-                                      MPIData* mpiData, bool forceLocal)
+                                      MPILevelData* mpiData, bool forceLocal)
     {
         // TODO actually request these as arguments
         int m = mgh - 2 * ghosts_m;
@@ -380,7 +380,7 @@ namespace mgcl
      * @param periodic
      * @param forceLocal
      */
-    void MultigridEngine::updateGhostsOclMpi(cl_command_queue commands, cl_mem d_buf, MPIData& mpiData,
+    void MultigridEngine::updateGhostsOclMpi(cl_command_queue commands, cl_mem d_buf, MPILevelData& mpiData,
                                              int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o,
                                              bool periodic, bool forceLocal)
     {

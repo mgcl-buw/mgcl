@@ -6,7 +6,7 @@
 #include <memory>
 
 #include "../../src/cuboid.hpp"
-#include "../../src/mpi_data.hpp"
+#include "../../src/mpi_level_data.hpp"
 #include "../../src/mpi_util.hpp"
 #include "../../src/problem.hpp"
 // #include "test_utility.hpp"

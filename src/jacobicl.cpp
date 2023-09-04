@@ -2,7 +2,7 @@
 #include "hypercube.hpp" // for Hypercube6d
 #include "level.hpp"     // for Level
 #include "mgcl.hpp"      // for mgcl_debug, MGCL_LAPLACE_19POINT
-#include "mpi_data.hpp"
+#include "mpi_level_data.hpp"
 #include "multigrid_engine.hpp" // for Problem, VaryingStencil3x3x3, Multig...
 #include "problem.hpp"          // for Problem
 #include "stencil.hpp"          // for mgclCheckError, VaryingStencil3x3x3
@@ -31,7 +31,7 @@ namespace mgcl
     double MultigridEngine::jacobiSeq(Cuboid& v, Cuboid& f, Cuboid& r, double omega,
                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
                                       double stencilFactor, VaryingStencil3x3x3* stencilValues, bool returnResidualNorm,
-                                      bool periodic, bool updateGhostsLocally, int stepsPerIter, MPIData* mpiData)
+                                      bool periodic, bool updateGhostsLocally, int stepsPerIter, MPILevelData* mpiData)
     {
         double res = 0.0;
         double*** vraw = v.getData();
@@ -767,7 +767,7 @@ namespace mgcl
     double MultigridEngine::residualSeq(Cuboid& f, Cuboid& v, Cuboid& r, MGCL_RESIDUAL_NORM resnorm,
                                         MGCL_STENCIL stencilType, double stencilFactor,
                                         VaryingStencil3x3x3* stencilValuesCuboid, bool returnResidualNorm,
-                                        bool periodic, bool updateGhostsLocally, int moff, int noff, int ooff, MPIData* mpiData)
+                                        bool periodic, bool updateGhostsLocally, int moff, int noff, int ooff, MPILevelData* mpiData)
     {
         double res = 0.0;
         double stencilsum = 0;

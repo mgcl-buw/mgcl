@@ -8,7 +8,7 @@
 namespace mgcl
 {
     // MPI relevant data for each level
-    class MPIData
+    class MPILevelData
     {
     public:
         MPI_Comm comm;
@@ -24,12 +24,12 @@ namespace mgcl
         int front;
         int back;
 
-        MPIData(MPI_Comm _comm);
-        MPIData(const MPIData&) = delete;
-        MPIData& operator=(const MPIData&) = delete;
-        MPIData(const MPIData&&) = delete;
-        MPIData& operator=(MPIData&&) = delete;
-        ~MPIData() {}
+        MPILevelData(MPI_Comm _comm);
+        MPILevelData(const MPILevelData&) = delete;
+        MPILevelData& operator=(const MPILevelData&) = delete;
+        MPILevelData(const MPILevelData&&) = delete;
+        MPILevelData& operator=(MPILevelData&&) = delete;
+        ~MPILevelData() {}
 
         // utility functions
         int mpiSize();
