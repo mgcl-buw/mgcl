@@ -291,3 +291,31 @@ TEST_CASE("Cuboid::sliceIncGhosts")
                 }
     }
 }
+
+// Test if Cuboid gets filled with 1d index.
+TEST_CASE("Cuboid::fill1dindex")
+{
+    int m = 1;
+    int n = 2;
+    int o = 3;
+    int ghm = 0;
+    int ghn = 1;
+    int gho = 2;
+
+    mgcl::Cuboid c_real(m, n, o, ghm, ghn, gho);
+    c_real.fill1dIndex(true);
+    mgcl::Cuboid c_gh(m, n, o, ghm, ghn, gho);
+    c_gh.fill1dIndex(false);
+
+    int cnt = 0;
+    for (int i = 0; i < c_real.getMgh(); i++)
+        for (int j = 0; j < c_real.getNgh(); j++)
+            for (int k = 0; k < c_real.getOgh(); k++)
+            {
+                if (i > ghm && i < m + ghm && j > ghn && j < n + ghn && k > gho && k < o + gho)
+                    REQUIRE(c_real[i][j][k] == cnt);
+
+                REQUIRE(c_gh[i][j][k] == cnt);
+                cnt++;
+            }
+}

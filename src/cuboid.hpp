@@ -36,6 +36,7 @@ namespace mgcl
         void fillRandom(double low = 0, double high = 1, bool realCellsOnly = false);
         void fillRandomInt(int low = 1, int high = 10, bool realCellsOnly = false);
         void fill(double value, bool realCellsOnly = false);
+        void fill1dIndex(bool realCellsOnly);
         std::vector<double>& field1d();
         bool isEqual(Cuboid& c, double tol = 1e-7, bool printDiffs = false);
         bool isEqualAllCells(Cuboid& c, double tol = 1e-7);

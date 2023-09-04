@@ -253,6 +253,29 @@ namespace mgcl
     }
 
     /**
+     * @brief Fills this Cuboid with the 1d index of the corresponding cell, including ghost cells.
+     *
+     * @param realCellsOnly If true, only real cells get filled.
+     */
+    void Cuboid::fill1dIndex(bool realCellsOnly)
+    {
+        if (realCellsOnly)
+            for (int i = ghostsM; i < m + ghostsM; i++)
+                for (int j = ghostsN; j < n + ghostsN; j++)
+                    for (int k = ghostsO; k < o + ghostsO; k++)
+                    {
+                        (*this)[i][j][k] = i * ngh * ogh + j * ogh + k;
+                    }
+        else
+            for (int i = 0; i < mgh; i++)
+                for (int j = 0; j < ngh; j++)
+                    for (int k = 0; k < ogh; k++)
+                    {
+                        (*this)[i][j][k] = i * ngh * ogh + j * ogh + k;
+                    }
+    }
+
+    /**
      * @brief Returns true if real cells contents of this Cuboid is equal to the one of another Cuboid c within a
      * given tolerance tol, respecting ghost cell amount. Dimensions of real cell amount of this Cuboid and c
      * must be equal (without ghost cells).
