@@ -25,6 +25,8 @@ set(SOURCES_LIB
     util.cpp
     mpi_level_data.hpp
     mpi_level_data.cpp
+    mpi_global_data.hpp
+    mpi_global_data.cpp
     mpi_util.hpp
     mpi_util.cpp)
 

@@ -301,28 +301,7 @@ namespace mgcl
         if (useMpi())
         {
             // Create cartesian process grid if none was set and more than one processes are used.
-            int type;
-            int mpi_size;
-            int mpi_dims[3] = {0, 0, 0};
-            int mpi_periods[3] = {isPeriodic(), isPeriodic(), isPeriodic()};
-
-            int err = MPI_Topo_test(comm, &type);
-            mpi_util::mgclCheckMpiError(comm, err, "MPI_Topo_test");
-            err = MPI_Comm_size(comm, &mpi_size);
-            mpi_util::mgclCheckMpiError(comm, err, "MPI_Comm_size");
-            if (mpi_size > 1 && type != MPI_CART)
-            {
-                err = MPI_Comm_size(comm, &mpi_size);
-                mpi_util::mgclCheckMpiError(comm, err, "MPI_Comm_size");
-                err = MPI_Dims_create(mpi_size, 3, mpi_dims);
-                mpi_util::mgclCheckMpiError(comm, err, "MPI_Dims_create");
-                err = MPI_Cart_create(comm, 3, mpi_dims, mpi_periods, 1, &comm);
-                mpi_util::mgclCheckMpiError(comm, err, "MPI_Cart_create");
-            }
-
-            err = MPI_Comm_rank(comm, &mpi_rank);
-            mpi_util::mgclCheckMpiError(comm, err, "MPI_Comm_rank");
-
+            mpiGlobalData->createCartGrid(isPeriodic());
             calculateAndSetMpiLevelThreshold();
         }
 
@@ -564,12 +543,12 @@ namespace mgcl
             if (mpiRank() == 0)
             {
                 auto tmp = std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                mpi_util::scatter(comm, getLevelAt(0).getVPtr().get(), *tmp);
+                mpi_util::scatter(mpiGlobalData->getComm(), getLevelAt(0).getVPtr().get(), *tmp);
                 getLevelAt(0).setV(tmp);
             }
             else
             {
-                mpi_util::scatter(comm, nullptr, getLevelAt(0).getV());
+                mpi_util::scatter(mpiGlobalData->getComm(), nullptr, getLevelAt(0).getV());
             }
         }
 
@@ -957,19 +936,12 @@ namespace mgcl
     // Sets MPI communicator and checks that cartesian topology is attached to it.
     void Problem::setMpiComm(MPI_Comm _comm)
     {
-        comm = _comm;
-
-        int type;
-        int err = MPI_Topo_test(_comm, &type);
-        mpi_util::mgclCheckMpiError(_comm, err, "MPI_Topo_test");
-
-        if (type != MPI_CART)
-            throw "MPI Comm must have a cartesian topology attached!";
+        mpiGlobalData->setComm(_comm);
     }
 
     MPI_Comm Problem::getMpiComm()
     {
-        return comm;
+        return mpiGlobalData->getComm();
     }
 
     int Problem::getMpiLevelThreshold()
@@ -998,18 +970,16 @@ namespace mgcl
 
     int Problem::mpiRank() const
     {
-        return mpi_rank;
+        return mpiGlobalData->mpiRank();
     }
 
     /**
      * @brief Returns the communicator size, i.e. number of processes attached to this communicator.
      */
+
     int Problem::mpiSize()
     {
-        int mpi_size;
-        int err = MPI_Comm_size(comm, &mpi_size);
-        mpi_util::mgclCheckMpiError(comm, err, "MPI_Comm_size");
-        return mpi_size;
+        return mpiGlobalData->mpiSize();
     }
 
     int Problem::getMGlobal() const
@@ -1046,7 +1016,7 @@ namespace mgcl
            << " reuse_opencl_buffers: " << p.reuse_opencl_buffers << std::endl
            << " jacobi_iterations_per_kernel: " << p.jacobi_iterations_per_kernel << std::endl
            << " silent: " << p.silent << std::endl
-           << " mpi_rank: " << p.mpi_rank << std::endl
+           << " mpi_rank: " << p.mpiGlobalData->mpiRank() << std::endl
            << " mpiLevelThreshold: " << p.mpiLevelThreshold << std::endl
            << " mpiMinGridPoints: " << p.mpiMinGridPoints << std::endl;
 

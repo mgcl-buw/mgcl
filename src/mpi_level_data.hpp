@@ -1,5 +1,5 @@
-#ifndef MGCL_MPIDATA_HPP
-#define MGCL_MPIDATA_HPP
+#ifndef MGCL_MPILEVELDATA_HPP
+#define MGCL_MPILEVELDATA_HPP
 
 #include <memory>
 
@@ -35,4 +35,4 @@ namespace mgcl
         int mpiSize();
     };
 }
-#endif // MGCL_MPIDATA_HPP
+#endif // MGCL_MPILEVELDATA_HPP

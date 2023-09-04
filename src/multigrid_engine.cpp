@@ -75,7 +75,7 @@ namespace mgcl
             //   rank 0 lv 1: glob=16, loc=4, lv 2: glob=loc=8
             // gather into levelAbove.getF() (reuse on rank 0)
 
-            mpi_util::gather(problem.comm, levelAbove.getF());
+            mpi_util::gather(problem.getMpiComm(), levelAbove.getF());
 
             // do rest on proc 0
         }
@@ -121,11 +121,11 @@ namespace mgcl
                 // levelAbove has bigger size on rank 0, thus calculate using level which has local size as base
                 tmp = std::make_shared<Cuboid>(level.getM() / 2, level.getN() / 2, level.getO() / 2,
                                                problem.getGhosts(), problem.getGhosts(), problem.getGhosts());
-                mpi_util::scatter(problem.comm, levelAbove.getVPtr().get(), *tmp);
+                mpi_util::scatter(problem.getMpiComm(), levelAbove.getVPtr().get(), *tmp);
                 levelAbove.setV(tmp);
             }
             else
-                mpi_util::scatter(problem.comm, nullptr, levelAbove.getV());
+                mpi_util::scatter(problem.getMpiComm(), nullptr, levelAbove.getV());
         }
 
         // prolongate from coarser to finer grid

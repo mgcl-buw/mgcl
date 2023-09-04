@@ -9,7 +9,8 @@
 #endif // CL_TARGET_OPENCL_VERSION
 
 #include "level.hpp"
-#include "mgcl.hpp"          // for MGCL_RESIDUAL_NORM, MGCL_STENCIL, MGCL_L2
+#include "mgcl.hpp" // for MGCL_RESIDUAL_NORM, MGCL_STENCIL, MGCL_L2
+#include "mpi_global_data.hpp"
 #include "opencl_helper.hpp" // for OpenCLHelper
 #include "stencil.hpp"       // for VaryingStencil3x3x3
 
@@ -140,11 +141,8 @@ namespace mgcl
         /* Manages OpenCL stuff */
         OpenCLHelper openCLHelper;
 
-        /* Communicator for MPI. Can be set for using a custom topology. */
-        MPI_Comm comm = MPI_COMM_WORLD;
-
-        /* Rank of this MPI process. Only used internally. */
-        int mpi_rank = 0;
+        /* MPI relevant data. */
+        std::unique_ptr<MPIGlobalData> mpiGlobalData = std::make_unique<MPIGlobalData>();
 
         /* First coarse level for which MPI is not used anymore. Only for internal purposes. */
         int mpiLevelThreshold = -1;
