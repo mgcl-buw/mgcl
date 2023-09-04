@@ -467,18 +467,22 @@ TEST_CASE("jacobi throwing")
         SECTION("throws when stepsPerIter > ghosts and periodic")
         {
             // ghosts of v too small
-            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v, f_gh, r_gh, omega, iters, resnorm, stencilType, stencilFactor, nullptr, false, true, stepsPerIter));
+            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v, f_gh, r_gh, omega, iters, resnorm, stencilType,
+                                                            stencilFactor, nullptr, false, true, true, stepsPerIter));
 
             // ghosts of f too small
-            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f, r_gh, omega, iters, resnorm, stencilType, stencilFactor, nullptr, false, true, stepsPerIter));
+            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f, r_gh, omega, iters, resnorm, stencilType,
+                                                            stencilFactor, nullptr, false, true, true, stepsPerIter));
 
             // ghosts of r too small
-            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f_gh, r, omega, iters, resnorm, stencilType, stencilFactor, nullptr, false, true, stepsPerIter));
+            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f_gh, r, omega, iters, resnorm, stencilType,
+                                                            stencilFactor, nullptr, false, true, true, stepsPerIter));
         }
 
         SECTION("throws when stencilValues null and stencilType varying")
         {
-            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f_gh, r_gh, omega, iters, resnorm, mgcl::MGCL_VARYING, stencilFactor, nullptr, false, true, stepsPerIter));
+            REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f_gh, r_gh, omega, iters, resnorm, mgcl::MGCL_VARYING,
+                                                            stencilFactor, nullptr, false, true, true, stepsPerIter));
         }
     }
 

@@ -638,17 +638,17 @@ TEST_CASE("residual throwing")
         SECTION("off too little or too large")
         {
             REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
-                                                              stencilFactor, nullptr, true, true, -50, noff, ooff));
+                                                              stencilFactor, nullptr, true, true, true, -50, noff, ooff));
             REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
-                                                              stencilFactor, nullptr, true, true, 50, noff, ooff));
+                                                              stencilFactor, nullptr, true, true, true, 50, noff, ooff));
             REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
-                                                              stencilFactor, nullptr, true, true, moff, -50, ooff));
+                                                              stencilFactor, nullptr, true, true, true, moff, -50, ooff));
             REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
-                                                              stencilFactor, nullptr, true, true, moff, 50, ooff));
+                                                              stencilFactor, nullptr, true, true, true, moff, 50, ooff));
             REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
-                                                              stencilFactor, nullptr, true, true, moff, -50, ooff));
+                                                              stencilFactor, nullptr, true, true, true, moff, -50, ooff));
             REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
-                                                              stencilFactor, nullptr, true, true, moff, 50, ooff));
+                                                              stencilFactor, nullptr, true, true, true, moff, 50, ooff));
         }
 
         SECTION("stencilValues null and stencilType varying")
@@ -719,6 +719,8 @@ TEST_CASE("residual seq moff, noff, koff < 0")
     int act_ghn = -noff + 1;
     int act_gho = -ooff + 1;
 
+    CAPTURE(moff, noff, ooff, exp_m, exp_n, exp_o, act_ghm, act_ghn, act_gho);
+
     // v, r and f with extended ghosts, i.e. no ghost update between iterations
     mgcl::Cuboid v_act(m, n, o, act_ghm, act_ghn, act_gho);
     mgcl::Cuboid r_act(m, n, o, act_ghm, act_ghn, act_gho);
@@ -758,7 +760,7 @@ TEST_CASE("residual seq moff, noff, koff < 0")
 
         // Now calculate with gh > 1 and off < 0
         double res_act = mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                            stencilFactor, nullptr, true, true, moff, noff, ooff);
+                                                            stencilFactor, nullptr, true, true, true, moff, noff, ooff);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(r_act.isEqualAllCells(r_exp));
@@ -776,7 +778,7 @@ TEST_CASE("residual seq moff, noff, koff < 0")
 
         // Now calculate with gh > 1
         double res_act = mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, &sv, true, true, moff, noff, ooff);
+                                                            stencilFactor, &sv, true, true, true, moff, noff, ooff);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(r_act.isEqualAllCells(r_exp));

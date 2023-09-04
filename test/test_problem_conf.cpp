@@ -428,12 +428,9 @@ TEST_CASE("Problem::init")
     {
         // run this section for ghosts_in = 0, 1 and 2
         auto ghosts_in = GENERATE(0, 1, 2);
-        int mgh = m + 2 * ghosts_in;
-        int ngh = n + 2 * ghosts_in;
-        int ogh = o + 2 * ghosts_in;
 
-        auto v2 = std::make_shared<mgcl::Cuboid>(mgh, ngh, ogh);
-        auto f2 = std::make_shared<mgcl::Cuboid>(mgh, ngh, ogh);
+        auto v2 = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_in, ghosts_in, ghosts_in);
+        auto f2 = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_in, ghosts_in, ghosts_in);
         mgcl::Problem p2(m, n, o, v2, f2);
 
         p2.setGhostsIn(ghosts_in);
