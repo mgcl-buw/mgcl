@@ -28,7 +28,7 @@ namespace mgcl
 
         if (fine.problem->isPeriodic())
             MultigridEngine::updateGhostsSeq(coarseVals, coarse.getMpiDataPtr(), fine.problem->isPeriodic(),
-                                             !coarse.isBelowMpiLevelThreshold());
+                                             coarse.isCalculatedLocally());
 
         int ioff = 1, joff = 1, koff = 1; // offset grows by 1 for each step
         int i2, j2, k2;
@@ -102,7 +102,7 @@ namespace mgcl
 
         err = MultigridEngine::updateGhosts(*problem, d_coarse_values, coarse.mgh, coarse.ngh, coarse.ogh,
                                             problem->ghosts, problem->ghosts, problem->ghosts, coarse.getMpiDataPtr(),
-                                            !coarse.isBelowMpiLevelThreshold());
+                                            coarse.isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts coarse");
         err = clEnqueueNDRangeKernel(problem->openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing kernel");

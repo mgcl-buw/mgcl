@@ -43,12 +43,12 @@ namespace mgcl
         res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
                                          problem.omega, problem.nu1, problem.residual_norm, problem.stencilType,
                                          level.stencilFactor, level.stencilValues.get(), false, problem.isPeriodic(),
-                                         !level.isBelowMpiLevelThreshold(), 1, level.getMpiDataPtr());
+                                         level.isCalculatedLocally(), 1, level.getMpiDataPtr());
 
         // update residual before restriction
         res = residualSeq(level.getF(), level.getV(), level.getR(), problem.residual_norm, problem.stencilType,
                           level.stencilFactor, level.stencilValues.get(), false, problem.isPeriodic(),
-                          !level.isBelowMpiLevelThreshold(), 0, 0, 0, level.getMpiDataPtr());
+                          level.isCalculatedLocally(), 0, 0, 0, level.getMpiDataPtr());
 
         // printf("res on level %d, upwards: %.17e\n", level.getNum(), res);
         // std::cout << "v[3][3][3] = " << std::scientific << std::setprecision(17) << level.getV()[3][3][3] << std::endl
@@ -68,7 +68,7 @@ namespace mgcl
 
         // If MPI is in use but minGridPoints is reached, gather rhs data to process 0 and perform calculations
         // locally only, until we're reaching the threshold level moving downwards again.
-        if (problem.useMpi() && level.isBelowMpiLevelThreshold() && !levelAbove.isBelowMpiLevelThreshold())
+        if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
         {
             // TODO Gather on lv with loc = minGridPoints
             // example: minGridPoints=4, do this on lv 1 with values of lv 2
@@ -81,14 +81,14 @@ namespace mgcl
         }
 
         // Advance to coarser levels only on proc 0 after gather
-        if (problem.useMpi() && !levelAbove.isBelowMpiLevelThreshold() && problem.mpiRank() == 0)
+        if (problem.useMpi() && levelAbove.isCalculatedLocally() && problem.mpiRank() == 0)
         {
             // Update ghosts of gathered
             // TODO check Dirichlet
             // TODO only on rank 0
             if (problem.isPeriodic())
                 MultigridEngine::updateGhostsSeq(levelAbove.getF(), levelAbove.getMpiDataPtr(), problem.isPeriodic(),
-                                                 !levelAbove.isBelowMpiLevelThreshold());
+                                                 levelAbove.isCalculatedLocally());
 
             // start next v-cycle iteration if not at highest level
             if (level.getNum() < problem.maxlevel - 1)
@@ -98,7 +98,7 @@ namespace mgcl
                 MultigridEngine::jacobiSeq(levelAbove.getV(), levelAbove.getF(), levelAbove.getR(), problem.omega,
                                            problem.nu1 + problem.nu2, problem.residual_norm, problem.stencilType,
                                            level.stencilFactor, level.stencilValues.get(), false, problem.isPeriodic(),
-                                           !levelAbove.isBelowMpiLevelThreshold(), 1, level.getMpiDataPtr());
+                                           levelAbove.isCalculatedLocally(), 1, level.getMpiDataPtr());
 
                 // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
             }
@@ -107,7 +107,7 @@ namespace mgcl
         // If MPI is in use but minGridPoints is reached, scatter v data from process 0 to others and continue
         // distributed calulcations.
         std::shared_ptr<Cuboid> tmp;
-        if (problem.useMpi() && level.isBelowMpiLevelThreshold() && !levelAbove.isBelowMpiLevelThreshold())
+        if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
         {
             // TODO Scatter on lv with loc = minGridPoints
             // example: minGridPoints=4, do this on lv 1 with values of lv 2
@@ -142,7 +142,7 @@ namespace mgcl
         res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
                                          problem.omega, problem.nu2, problem.residual_norm, problem.stencilType,
                                          level.stencilFactor, level.stencilValues.get(), !problem.ignoreTol,
-                                         problem.isPeriodic(), !level.isBelowMpiLevelThreshold(), 1, level.getMpiDataPtr());
+                                         problem.isPeriodic(), level.isCalculatedLocally(), 1, level.getMpiDataPtr());
         // printf("res on level %d, downwards: %.17e\n", level.getNum(), res);
         return res;
     }

@@ -28,7 +28,6 @@ namespace mgcl
     Level::Level(Problem* problem_, int num_)
         : problem(problem_),
           num(num_),
-          belowMpiLevelThreshold(problem_->getMpiLevelThreshold() > num),
           m(((problem_->getMpiLevelThreshold() <= num && problem_->mpiRank() == 0) ? problem_->getMGlobal() : problem_->getM()) >> num_),
           n(((problem_->getMpiLevelThreshold() <= num && problem_->mpiRank() == 0) ? problem_->getNGlobal() : problem_->getN()) >> num_),
           o(((problem_->getMpiLevelThreshold() <= num && problem_->mpiRank() == 0) ? problem_->getOGlobal() : problem_->getO()) >> num_),
@@ -131,7 +130,7 @@ namespace mgcl
                 }
 
                 if (problem->isPeriodic())
-                    MultigridEngine::updateGhostsSeq(getF(), mpiData.get(), problem->isPeriodic(), !belowMpiLevelThreshold);
+                    MultigridEngine::updateGhostsSeq(getF(), mpiData.get(), problem->isPeriodic(), isCalculatedLocally());
             }
 
             // r on host is only needed if opencl should not be used
@@ -143,7 +142,7 @@ namespace mgcl
             if (initOpenCLBuffers() != CL_SUCCESS)
                 return false;
         }
-        else if (!problem->useMpi() || belowMpiLevelThreshold || mpiData->rank == 0)
+        else if (!problem->useMpi() || !isCalculatedLocally() || mpiData->rank == 0)
         {
             // Only allocate data on coarser levels, if
             // 1. mgcl is run without MPI at all, or
@@ -252,7 +251,7 @@ namespace mgcl
         mgclCheckError(err, "initializing dR to 0");
 
         err = MultigridEngine::updateGhosts(*problem, dF, mgh, ngh, ogh, problem->ghosts, problem->ghosts,
-                                            problem->ghosts, mpiData.get(), !belowMpiLevelThreshold);
+                                            problem->ghosts, mpiData.get(), isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts of d_f");
 
         return CL_SUCCESS;
@@ -269,7 +268,7 @@ namespace mgcl
     {
         int ret = 0;
 
-        if (belowMpiLevelThreshold)
+        if (!isCalculatedLocally())
         {
             // MPI variables
             MPI_Comm mpi_comm = problem->getMpiComm();
@@ -503,10 +502,10 @@ namespace mgcl
            << " num: " << lv.num << std::endl
            << " m,n,o: " << lv.m << "," << lv.n << "," << lv.o << std::endl
            << " mgh,ngh,ogh: " << lv.mgh << "," << lv.ngh << "," << lv.ogh << std::endl
-           << " belowMpiLevelThreshold: " << lv.belowMpiLevelThreshold << std::endl
            << " h: " << lv.h << std::endl
            << " stencilType: " << lv.stencilType << std::endl
-           << " stencilFactor: " << lv.stencilFactor << std::endl;
+           << " stencilFactor: " << lv.stencilFactor << std::endl
+           << " isCalculatedLocally: " << lv.isCalculatedLocally() << std::endl;
         return os;
     }
 
@@ -686,8 +685,12 @@ namespace mgcl
             throw "mpiData is null.";
     }
 
-    bool Level::isBelowMpiLevelThreshold() const
+    /**
+     * @brief Returns true, if the calculations on this levels is done locally. If MPI is not used, this function
+     * always returns true. Otherwise it checks whether this level is equal to or above the mpiLevelThreshold.
+     */
+    bool Level::isCalculatedLocally() const
     {
-        return belowMpiLevelThreshold;
+        return problem->useMpi() && problem->mpiSize() > 1 && num >= problem->getMpiLevelThreshold();
     }
 }

@@ -57,7 +57,7 @@ TEST_CASE("Level::initMpiData (1 process)")
         auto& lv = p.getLevelAt(i);
         REQUIRE(lv.getMpiDataPtr() == nullptr);
         REQUIRE_THROWS(lv.getMpiData());
-        REQUIRE(!lv.isBelowMpiLevelThreshold());
+        REQUIRE(lv.isCalculatedLocally());
 
         // Each level must equal the local size of the problem divided by 2^num.
         REQUIRE((p.getM() >> i) == lv.getM());
@@ -134,7 +134,7 @@ TEST_CASE("Level::initMpiData (2 processes)")
         if (p.getMpiLevelThreshold() > i)
         {
             auto& mpiData = lv.getMpiData();
-            REQUIRE(lv.isBelowMpiLevelThreshold());
+            REQUIRE(lv.isCalculatedLocally());
 
             // Each level below the threshold must equal the local size of the problem divided by 2^num.
             REQUIRE((p.getM() >> i) == lv.getM());
@@ -180,7 +180,7 @@ TEST_CASE("Level::initMpiData (2 processes)")
         }
         else
         {
-            REQUIRE(!lv.isBelowMpiLevelThreshold());
+            REQUIRE(lv.isCalculatedLocally());
             REQUIRE(lv.getMpiDataPtr() != nullptr);
             // REQUIRE(lv.getMpiDataPtr() == nullptr);
             // REQUIRE_THROWS(lv.getMpiData());
@@ -274,7 +274,7 @@ TEST_CASE("Level::initMpiData-2procs-levelThreshold0")
     {
         auto& lv = p.getLevelAt(0);
 
-        REQUIRE(!lv.isBelowMpiLevelThreshold());
+        REQUIRE(lv.isCalculatedLocally());
         REQUIRE(lv.getMpiDataPtr() != nullptr);
         // REQUIRE(lv.getMpiDataPtr() == nullptr);
         // REQUIRE_THROWS(lv.getMpiData());
@@ -310,7 +310,7 @@ TEST_CASE("Level::initMpiData-2procs-levelThreshold0")
     {
         auto& lv = p.getLevelAt(i);
 
-        REQUIRE(!lv.isBelowMpiLevelThreshold());
+        REQUIRE(lv.isCalculatedLocally());
         REQUIRE(lv.getMpiDataPtr() != nullptr);
 
         // Each level on rank 0 at or above the threshold must equal the global size of the problem divided by 2^num.
@@ -438,7 +438,7 @@ TEST_CASE("Level::initMpiData (8 processes)")
         auto& lv = p.getLevelAt(i);
         auto& mpiData0 = lv.getMpiData();
         REQUIRE(mpiData0.mpiSize() == 8);
-        REQUIRE(lv.isBelowMpiLevelThreshold());
+        REQUIRE(!lv.isCalculatedLocally());
 
         // Each level below the threshold must equal the local size of the problem divided by 2^num.
         REQUIRE((p.getM() >> i) == lv.getM());
@@ -466,7 +466,7 @@ TEST_CASE("Level::initMpiData (8 processes)")
     for (int i = p.getMpiLevelThreshold(); i <= p.getMaxlevel(); i++)
     {
         auto& lv = p.getLevelAt(i);
-        REQUIRE(!lv.isBelowMpiLevelThreshold());
+        REQUIRE(lv.isCalculatedLocally());
         REQUIRE(lv.getMpiDataPtr() != nullptr);
         // REQUIRE_THROWS(lv.getMpiData());
 
@@ -589,7 +589,7 @@ TEST_CASE("Level::initMpiData (24 processes)")
         auto& lv = p.getLevelAt(i);
         auto& mpiData0 = lv.getMpiData();
         REQUIRE(mpiData0.mpiSize() == 24);
-        REQUIRE(lv.isBelowMpiLevelThreshold());
+        REQUIRE(!lv.isCalculatedLocally());
 
         // Each level below the threshold must equal the local size of the problem divided by 2^num.
         REQUIRE((p.getM() >> i) == lv.getM());
@@ -633,7 +633,7 @@ TEST_CASE("Level::initMpiData (24 processes)")
     for (int i = p.getMpiLevelThreshold(); i <= p.getMaxlevel(); i++)
     {
         auto& lv = p.getLevelAt(i);
-        REQUIRE(!lv.isBelowMpiLevelThreshold());
+        REQUIRE(lv.isCalculatedLocally());
         REQUIRE(lv.getMpiDataPtr() != nullptr);
         // REQUIRE_THROWS(lv.getMpiData());
 

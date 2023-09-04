@@ -62,9 +62,6 @@ namespace mgcl
         /* MPI relevant data, e.g. neighbour process ranks. Null if Problem::useMpi is false. */
         std::unique_ptr<MPIData> mpiData = nullptr;
 
-        /* True, this level is below Problem::mpiLevelThreshold. */
-        bool belowMpiLevelThreshold;
-
         friend class OpenCLHelper;
         friend class MultigridEngine;
         friend class Problem;
@@ -130,7 +127,7 @@ namespace mgcl
         std::shared_ptr<VaryingStencilGpu>& getStencilValuesGpu();
         void setStencilValuesGpu(std::shared_ptr<VaryingStencilGpu> sv);
 
-        bool isBelowMpiLevelThreshold() const;
+        bool isCalculatedLocally() const;
 
         friend std::ostream& operator<<(std::ostream& os, const Level& lv);
     };

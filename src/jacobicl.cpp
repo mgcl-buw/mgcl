@@ -286,14 +286,14 @@ namespace mgcl
             {
                 err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh,
                                                     problem.ghosts, problem.ghosts, problem.ghosts,
-                                                    level.getMpiDataPtr(), !level.isBelowMpiLevelThreshold());
+                                                    level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
             }
             else
             {
                 err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
                                                     problem.ghosts, problem.ghosts, problem.ghosts,
-                                                    level.getMpiDataPtr(), !level.isBelowMpiLevelThreshold());
+                                                    level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
             }
 
@@ -339,7 +339,7 @@ namespace mgcl
             // TODO check for mpi
             err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh,
                                                 problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
-                                                !level.isBelowMpiLevelThreshold());
+                                                level.isCalculatedLocally());
             mgclCheckError(err, "Updating ghosts of dR");
         }
 
@@ -354,7 +354,7 @@ namespace mgcl
         // Update ghosts of dVIn
         err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
                                             problem.ghosts, problem.ghosts, problem.ghosts,
-                                            level.getMpiDataPtr(), !level.isBelowMpiLevelThreshold());
+                                            level.getMpiDataPtr(), level.isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts");
 
         // calculate residual and its norm
@@ -497,7 +497,7 @@ namespace mgcl
 
             err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
                                                 problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
-                                                !level.isBelowMpiLevelThreshold());
+                                                level.isCalculatedLocally());
             mgclCheckError(err, "Updating ghosts");
 
             err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
@@ -532,7 +532,7 @@ namespace mgcl
 
                 err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh,
                                                     problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
-                                                    !level.isBelowMpiLevelThreshold());
+                                                    level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
 
                 // swap pointers so result is in dVIn
@@ -561,7 +561,7 @@ namespace mgcl
 
                 err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh,
                                                     problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
-                                                    !level.isBelowMpiLevelThreshold());
+                                                    level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
 
                 // swap pointers so result is in dVIn
@@ -574,7 +574,7 @@ namespace mgcl
 
         err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
                                             problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
-                                            !level.isBelowMpiLevelThreshold());
+                                            level.isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts of v_in");
 
         // calculate residual's 2-norm. Square elements on device and sum up on host
@@ -704,7 +704,7 @@ namespace mgcl
         {
             err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh,
                                                 problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
-                                                !level.isBelowMpiLevelThreshold());
+                                                level.isCalculatedLocally());
             mgclCheckError(err, "Updating ghosts of r");
         }
 
