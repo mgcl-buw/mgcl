@@ -1,6 +1,6 @@
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <memory>
 
@@ -32,7 +32,7 @@ TEST_CASE("StencilLaplace7p periodic")
     mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_7POINT, expectedFactor, nullptr, 0, true, true);
 
     double expected = expectedFactor * (6.0 * 8 - 4 - 16 - 4 - 2 - 1 - 2);
-    REQUIRE(-r[1][1][1] == Catch::Approx(expected));
+    REQUIRE_THAT(-r[1][1][1], Catch::Matchers::WithinRel(expected));
 }
 
 TEST_CASE("StencilLaplace19p periodic")
@@ -72,7 +72,7 @@ TEST_CASE("StencilLaplace19p periodic")
     mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_19POINT, expectedFactor, nullptr, 0, true, true);
 
     double expected = expectedFactor * (24.0 * 8 - 2.0 * (4 + 16 + 4 + 2 + 1 + 2) - 8 - 4 - 1 - 2 - 16 - 32 - 8 - 4 - 4 - 4 - 2 - 1);
-    REQUIRE(-r[1][1][1] == Catch::Approx(expected));
+    REQUIRE_THAT(-r[1][1][1], Catch::Matchers::WithinRel(expected));
 }
 
 TEST_CASE("StencilLaplace27p periodic")
@@ -123,7 +123,7 @@ TEST_CASE("StencilLaplace27p periodic")
     double expected = expectedFactor * (128.0 * 8 - 14.0 * (4 + 16 + 4 + 2 + 1 + 2) -
                                         3.0 * (8 + 4 + 1 + 2 + 16 + 32 + 8 + 4 + 4 + 4 + 2 + 1) -
                                         8 - 4 - 1 - 2 - 16 - 4 - 8 - 2);
-    REQUIRE(-r[1][1][1] == Catch::Approx(expected));
+    REQUIRE_THAT(-r[1][1][1], Catch::Matchers::WithinRel(expected));
 }
 
 TEST_CASE("StencilVarying7p periodic")
@@ -166,7 +166,7 @@ TEST_CASE("StencilVarying7p periodic")
     mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_VARYING, 1, &vals, 0, true, true);
 
     double expected = h2inv * (6.0 * 8 - 4 - 16 - 4 - 2 - 1 - 2);
-    REQUIRE(-r[1][1][1] == Catch::Approx(expected));
+    REQUIRE_THAT(-r[1][1][1], Catch::Matchers::WithinRel(expected));
 }
 
 TEST_CASE("StencilVarying19p periodic")
@@ -236,7 +236,7 @@ TEST_CASE("StencilVarying19p periodic")
     mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_VARYING, 1, &vals, 0, true, true);
 
     double expected = h2inv * (24.0 * 8 - 2.0 * (4 + 16 + 4 + 2 + 1 + 2) - 8 - 4 - 1 - 2 - 16 - 32 - 8 - 4 - 4 - 4 - 2 - 1);
-    REQUIRE(-r[1][1][1] == Catch::Approx(expected));
+    REQUIRE_THAT(-r[1][1][1], Catch::Matchers::WithinRel(expected));
 }
 
 TEST_CASE("StencilVarying27p periodic")
@@ -325,7 +325,7 @@ TEST_CASE("StencilVarying27p periodic")
     double expected = h2inv * (128.0 * 8 - 14.0 * (4 + 16 + 4 + 2 + 1 + 2) -
                                3.0 * (8 + 4 + 1 + 2 + 16 + 32 + 8 + 4 + 4 + 4 + 2 + 1) -
                                8 - 4 - 1 - 2 - 16 - 4 - 8 - 2);
-    REQUIRE(-r[1][1][1] == Catch::Approx(expected));
+    REQUIRE_THAT(-r[1][1][1], Catch::Matchers::WithinRel(expected));
 }
 
 TEST_CASE("VaryingStencil move ctor")
