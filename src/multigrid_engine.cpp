@@ -7,7 +7,8 @@
 #include "problem.hpp"       // for Problem
 
 #include <cstddef> // for size_t, NULL
-#include <memory>  // for __shared_ptr_access, shared_ptr
+// #include <iostream>
+#include <memory> // for __shared_ptr_access, shared_ptr
 
 #ifdef __APPLE__
 #include <OpenCL/cl_platform.h>
@@ -38,6 +39,8 @@ namespace mgcl
         //     level.getF().dumpToFile("out_f.txt");
         //     level.getR().dumpToFile("out_r.txt");
         // }
+
+        // std::cout << level << std::endl;
 
         // relax nu1 times
         res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
