@@ -34,7 +34,7 @@ namespace mgcl
           mgh(m + 2 * problem->getGhosts()),
           ngh(n + 2 * problem->getGhosts()),
           ogh(o + 2 * problem->getGhosts()),
-          h(1.0 / (double)problem->getMGlobal()), // TODO differentiate for non-cube-like domains
+          h(1.0 / static_cast<double>(problem->getMGlobal() >> num_)), // TODO differentiate for non-cube-like domains
           stencilType(problem_->stencilType)
     {
         if (stencilType == MGCL_LAPLACE_7POINT)
