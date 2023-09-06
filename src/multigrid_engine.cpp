@@ -28,7 +28,7 @@ namespace mgcl
         double res;
 
         // reset initial guess of coarser grid
-        if (level.getNum() < problem.maxlevel)
+        if (level.getNum() < problem.maxlevel && levelAbove.getVPtr() != nullptr)
         {
             levelAbove.getV().fill(0);
         }
