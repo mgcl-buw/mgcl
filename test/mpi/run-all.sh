@@ -133,9 +133,10 @@ if [ "$TEST_UTIL" = true ] ; then
     echo "Run Tests from test_mpi_util.cpp ..."
     echo "#######################"
 
-    run_test --oversubscribe -n 4 "$exe" "MPI_Gatherv src dest different"
-    run_test --oversubscribe -n 4 "$exe" "MPI_Gatherv src dest same"
-    run_test --oversubscribe -n 4 "$exe" "mpi_util::scatter src dest same"
+    run_test --oversubscribe -n 4 "$exe" "mpi_util::gather-src-dest-different"
+    run_test --oversubscribe -n 4 "$exe" "mpi_util::gather-src-dest-same"
+    run_test --oversubscribe -n 4 "$exe" "mpi_util::gather-src-dest-same-different-gh"
+    run_test --oversubscribe -n 4 "$exe" "mpi_util::scatter-src-dest-same"
 fi
 
 if [ "$TEST_VCYCLE" = true ] ; then
