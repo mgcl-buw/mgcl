@@ -120,9 +120,7 @@ namespace mgcl
 
                 // If mgcl is run with multiple processes, but already level 0 shall be calculated on only one process
                 // (i.e. mpiMinGridPoints > min(m_local,n_local,o_local)), gather data on rank 0.
-                int mpi_size;
-                MPI_Comm_size(problem->getMpiComm(), &mpi_size); // TODO refactor
-                if (problem->useMpi() && mpi_size > 1 && problem->getMpiLevelThreshold() <= 0)
+                if (problem->useMpi() && problem->mpiSize() > 1 && problem->getMpiLevelThreshold() <= 0)
                 {
                     mpi_util::gather(problem->getMpiComm(), getV());
                     mpi_util::gather(problem->getMpiComm(), getF());
