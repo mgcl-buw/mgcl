@@ -26,6 +26,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
     int m = N;
     int n = N;
     int o = N;
+    double h = 1.0 / static_cast<double>(N);
 
     mgcl::BC bc = mgcl::BC::PERIODIC;
     bool periodic = bc == mgcl::BC::PERIODIC;
@@ -59,7 +60,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
 
         // jacobi
         b.run(std::string("seq jacobi, N = ").append(std::to_string(N)).c_str(), [&]
-              { mgcl::MultigridEngine::jacobiSeq(v0, f0, r0, p.getOmega(), p.getNu1(), p.getResidualNorm(),
+              { mgcl::MultigridEngine::jacobiSeq(v0, f0, r0, p.getOmega(), h * h, p.getNu1(), p.getResidualNorm(),
                                                  p.getStencilType(), stencilFactor0, p.getStencilValues().get(),
                                                  false, periodic, false); });
 
@@ -161,6 +162,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
     int m = N;
     int n = N;
     int o = N;
+    double h = 1.0 / static_cast<double>(N);
 
     mgcl::BC bc = mgcl::BC::PERIODIC;
     bool periodic = bc == mgcl::BC::PERIODIC;
@@ -195,7 +197,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             double stencilFactor1 = coarse.getStencilFactor();
 
             b.run(std::string("seq jacobi, N = ").append(std::to_string(N)).c_str(), [&]
-                  { mgcl::MultigridEngine::jacobiSeq(v0, f0, r0, p.getOmega(), p.getNu1(), p.getResidualNorm(),
+                  { mgcl::MultigridEngine::jacobiSeq(v0, f0, r0, p.getOmega(), h * h, p.getNu1(), p.getResidualNorm(),
                                                      p.getStencilType(), stencilFactor0, p.getStencilValues().get(),
                                                      false, periodic, false); });
         }

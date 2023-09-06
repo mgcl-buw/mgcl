@@ -58,7 +58,7 @@ namespace mgcl
                                   bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
                                   int moff = 0, int noff = 0, int ooff = 0, MPILevelData* mpiData = nullptr);
 
-        static double jacobiSeq(Cuboid& v, Cuboid& f, Cuboid& r, double omega,
+        static double jacobiSeq(Cuboid& v, Cuboid& f, Cuboid& r, double omega, double h2,
                                 int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType, double stencilFactor,
                                 VaryingStencil3x3x3* stencilValuesCuboid, bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
                                 int stepsPerIter = 1, MPILevelData* mpiData = nullptr);

@@ -28,7 +28,7 @@ namespace mgcl
      * m,n,o is size of real grid
      * stepsPerIter is the amount of iterations done without ghost update in-between. v and r must have adequate ghost
      * cells, i.e. v_gh >= stepsPerIter per border. Defaults to 1. */
-    double MultigridEngine::jacobiSeq(Cuboid& v, Cuboid& f, Cuboid& r, double omega,
+    double MultigridEngine::jacobiSeq(Cuboid& v, Cuboid& f, Cuboid& r, double omega, double h2,
                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
                                       double stencilFactor, VaryingStencil3x3x3* stencilValues, bool returnResidualNorm,
                                       bool periodic, bool updateGhostsLocally, int stepsPerIter, MPILevelData* mpiData)
@@ -37,7 +37,7 @@ namespace mgcl
         double*** vraw = v.getData();
 
         // TODO adjust for mpi, need global m, not local m
-        double h2 = 1.0 / ((double)(v.getM() * v.getM()));
+        // double h2 = 1.0 / ((double)(v.getM() * v.getM()));
         double dinv = h2 / 6.0;
         if (stencilType == MGCL_LAPLACE_19POINT)
             dinv = (6.0 * h2) / 24.0;
