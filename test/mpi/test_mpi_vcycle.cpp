@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -96,9 +97,10 @@ TEST_CASE("MPI_vcycle_immediate_gather_scatter")
     REQUIRE(ol <= o);
 
     // Set up 4th order periodic problem
-    auto v = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
-    auto f = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
-    auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, 0, 0, 0);
+    int ghin = 0; // TODO check with ghin > 0
+    auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+    auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+    auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
     mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
 
     // Create local slices
@@ -109,40 +111,50 @@ TEST_CASE("MPI_vcycle_immediate_gather_scatter")
     // Create local problem
     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
     p.setGhosts(gh);
+    p.setGhostsIn(ghin);
     p.setMpiMinGridPoints(m);
+    p.setMpiComm(mpi_comm);
 
     p.solveSeq();
 
-    // vloc->dumpToFile("vloc.txt");
-    // floc->dumpToFile("floc.txt");
-    // solutionloc->dumpToFile("solloc.txt");
-    // v->dumpToFile("v.txt");
-    // f->dumpToFile("f.txt");
-    // solution->dumpToFile("sol.txt");
-
-    // check if solution is good
-    auto err = calculateError(*solutionloc, *vloc);
-    auto errNorm = calculateErrorNorm(1.0 / (double)m, *err);
-    auto errMax = calculateMaxError(*err);
-
-    for (int i = 0; i < mpi_size; i++)
+    // Gather local approximations on rank 0 for checking.
+    if (mpi_rank > 0)
+        mgcl::mpi_util::gather(p.getMpiComm(), *vloc);
+    else
     {
-        MPI_Barrier(mpi_comm);
-        if (i == mpi_rank)
-        {
-            if (i == 0)
-                std::cout << "seq MPI Laplace" << std::endl;
-            std::cout << "rank " << i << ": " << std::endl;
-            std::cout
-                << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
-                << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
-        }
+        // copy from vloc to v first
+        for (int i = vloc->getGhostsM(); i < vloc->getM() + vloc->getGhostsM(); i++)
+            for (int j = vloc->getGhostsN(); j < vloc->getN() + vloc->getGhostsN(); j++)
+                for (int k = vloc->getGhostsO(); k < vloc->getO() + vloc->getGhostsO(); k++)
+                {
+                    (*v)[i][j][k] = (*vloc)[i][j][k];
+                }
+
+        // Gather into v from other processes
+        if (mpi_size > 1)
+            mgcl::mpi_util::gather(p.getMpiComm(), *v); // TODO check with different ghost amounts
+
+        // check if solution is good
+        auto err = calculateError(*solution, *v);
+        auto errNorm = calculateErrorNorm(1.0 / (double)m, *err);
+        auto errMax = calculateMaxError(*err);
+
+        std::cout << "seq MPI Laplace" << std::endl;
+        std::cout << "rank 0: " << std::endl;
+        std::cout
+            << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+            << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+        // Running this with 1 proc yields
+        // ||e||_2 = 4.62293179000930129e-03
+        // e_max = 9.00816189282011015e-03
+        // which should be equal to the global result when run with multiple processors.
+
+        REQUIRE(errNorm < 1e-2);
+        REQUIRE(errMax < 1e-2);
+        REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(4.62293179000930129e-03));
+        REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(9.00816189282011015e-03));
     }
-
-    REQUIRE(errNorm < 1e-2);
-    REQUIRE(errMax < 1e-2);
-
-    // REQUIRE(vloc->isEqual(*solutionloc, 1e-7, true));
 }
 
 /**
@@ -160,9 +172,9 @@ std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid& solution, mgcl::Cuboi
         throw std::invalid_argument("Dimensions do not match.");
 
     auto ret = std::make_shared<mgcl::Cuboid>(solution.getM(), solution.getN(), solution.getO());
-    for (int i = 0, is = solution.getGhostsM(), ia = approximation.getGhostsM(); is < solution.getMgh(); i++, is++, ia++)
-        for (int j = 0, js = solution.getGhostsN(), ja = approximation.getGhostsN(); js < solution.getNgh(); j++, js++, ja++)
-            for (int k = 0, ks = solution.getGhostsO(), ka = approximation.getGhostsO(); ks < solution.getOgh(); k++, ks++, ka++)
+    for (int i = 0, is = solution.getGhostsM(), ia = approximation.getGhostsM(); is < solution.getMgh() - solution.getGhostsM(); i++, is++, ia++)
+        for (int j = 0, js = solution.getGhostsN(), ja = approximation.getGhostsN(); js < solution.getNgh() - solution.getGhostsN(); j++, js++, ja++)
+            for (int k = 0, ks = solution.getGhostsO(), ka = approximation.getGhostsO(); ks < solution.getOgh() - solution.getGhostsO(); k++, ks++, ka++)
             {
                 (*ret)[i][j][k] = fabs(solution[is][js][ks] - approximation[ia][ja][ka]);
             }
