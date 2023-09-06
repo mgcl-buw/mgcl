@@ -393,11 +393,11 @@ TEST_CASE("mpi_util::gather-src-dest-same-different-gh")
     MPI_Barrier(mpi_comm);
 }
 
-// Checks that scattering is correct while rank 0 has the same globally sized buffer for sending and receiving,
-// while all other processes only receive local grids.
+// Checks that scattering is correct while rank 0 has the a globally sized buffer for sending and locally sized buffer
+// for receiving, while all other processes only receive local grids.
 // Uses mpi_util::scatter.
-// Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::scatter src dest same"
-TEST_CASE("mpi_util::scatter-src-dest-same")
+// Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::scatter-src-dest-different"
+TEST_CASE("mpi_util::scatter-src-dest-different")
 {
     using std::min;
 
@@ -473,6 +473,105 @@ TEST_CASE("mpi_util::scatter-src-dest-same")
         mgcl::mpi_util::scatter(mpi_comm, &cglob, *cloc_act);
     else
         mgcl::mpi_util::scatter(mpi_comm, nullptr, *cloc_act);
+
+    // MPI_Barrier(mpi_comm);
+    // if (mpi_rank == 0)
+    // {
+    //     // CAPTURE(cglob_recv->getM(), cglob_recv->getN(), cglob_recv->getO());
+    //     // cglob_recv.dumpToFile("cglob_recv.txt");
+    //     // cglob.dumpToFile("cglob.txt");
+    // }
+
+    // Check result. On rank 0 the grid must be unchanged (at least the local portion of it).
+    // On other processes the local grid must be filled accordingly to global test data.
+    if (mpi_rank == 0)
+        REQUIRE(cglob.isEqual(cglob));
+    else
+        REQUIRE(cloc_act->isEqual(*cloc_exp));
+
+    MPI_Barrier(mpi_comm);
+}
+
+// Checks that scattering is correct while rank 0 has the same globally sized buffer for sending and receiving,
+// while all other processes only receive local grids.
+// Uses mpi_util::scatter_inplace.
+// Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::scatter-src-dest-same"
+TEST_CASE("mpi_util::scatter-src-dest-same")
+{
+    using std::min;
+
+    int mloc = 8;
+    int nloc = 8;
+    int oloc = 8;
+    int gh = 1;
+    int periodic = 1;
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    // Calculate global sizes
+    int mglob = mloc * mpi_dims[0];
+    int nglob = nloc * mpi_dims[1];
+    int oglob = oloc * mpi_dims[2];
+
+    /* Initialize start and end for local grid */
+    int m_start = mloc * mpi_coords[0] + min(mpi_coords[0], (mglob % mpi_dims[0]));
+    int m_end = mloc * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (mglob % mpi_dims[0])) - 1;
+    int n_start = nloc * mpi_coords[1] + min(mpi_coords[1], (nglob % mpi_dims[1]));
+    int n_end = nloc * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (nglob % mpi_dims[1])) - 1;
+    int o_start = oloc * mpi_coords[2] + min(mpi_coords[2], (oglob % mpi_dims[2]));
+    int o_end = oloc * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (oglob % mpi_dims[2])) - 1;
+
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (i == mpi_rank)
+    //     {
+    //         std::cout << "rank,ms,me,ns,ne,os,oe: "
+    //                   << mpi_rank << ","
+    //                   << m_start << "," << m_end << ","
+    //                   << n_start << "," << n_end << ","
+    //                   << o_start << "," << o_end << std::endl;
+    //         std::cout << "coords: " << mpi_coords[0] << "," << mpi_coords[1] << "," << mpi_coords[2] << std::endl;
+    //     }
+    // }
+
+    // Create test data (used on rank 0)
+    mgcl::Cuboid cglob(mglob, nglob, oglob, gh, gh, gh);
+    cglob.fill1dIndex(true);
+
+    // Local slice of data, holds expected result
+    auto cloc_exp = cglob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
+
+    // Local slice for actual result, reset with 0.
+    auto cloc_act = cglob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
+    cloc_act->fill(0);
+
+    if (mpi_rank == 0)
+        mgcl::mpi_util::scatter_inplace(mpi_comm, cglob);
+    else
+        mgcl::mpi_util::scatter_inplace(mpi_comm, *cloc_act);
 
     // MPI_Barrier(mpi_comm);
     // if (mpi_rank == 0)

@@ -137,6 +137,7 @@ if [ "$TEST_UTIL" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 4 "$exe" "mpi_util::gather-src-dest-same"
     run_test --oversubscribe -n 4 "$exe" "mpi_util::gather-src-dest-same-different-gh"
     run_test --oversubscribe -n 4 "$exe" "mpi_util::scatter-src-dest-same"
+    run_test --oversubscribe -n 4 "$exe" "mpi_util::scatter-src-dest-different"
 fi
 
 if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
