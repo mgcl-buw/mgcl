@@ -6,6 +6,7 @@
 #include "problem.hpp"
 
 #include <cstddef> // for size_t, NULL
+#include <iostream>
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -22,27 +23,28 @@ namespace mgcl
     void MultigridEngine::restrictSeq(Level& fine, Level& coarse, Cuboid& fine_vals, Cuboid& coarse_vals)
     {
         int ghosts = coarse.problem->getGhosts();
-        int m = coarse.m;
-        int n = coarse.n;
-        int o = coarse.o;
+        // Shift fine levels instead of using coarse level directly since coarse might have different sizes when
+        // using mpi and coarse.num == mpiLevelThreshold.
+        int m = fine.m >> 1;
+        int n = fine.n >> 1;
+        int o = fine.o >> 1;
 
         if (fine.problem->isPeriodic())
             MultigridEngine::updateGhostsSeq(fine_vals, fine.getMpiDataPtr(), fine.problem->isPeriodic(),
                                              fine.isCalculatedLocally());
 
-        int ioff = 1, joff = 1, koff = 1; // offset grows by 1 for each step
-        int i2, j2, k2;
+        int ioff = 1;
         for (int i = ghosts; i < m + ghosts; i++, ioff++)
         {
-            i2 = i + ioff; // == i*2+ghosts+1
-            joff = 1;
+            int i2 = i + ioff; // == i*2+ghosts+1
+            int joff = 1;
             for (int j = ghosts; j < n + ghosts; j++, joff++)
             {
-                j2 = j + joff;
-                koff = 1;
+                int j2 = j + joff;
+                int koff = 1;
                 for (int k = ghosts; k < o + ghosts; k++, koff++)
                 {
-                    k2 = k + koff;
+                    int k2 = k + koff;
                     coarse_vals[i][j][k] =
                         0.125 * fine_vals[i2][j2][k2] // self
                         // direct neighbours
@@ -79,9 +81,9 @@ namespace mgcl
     void MultigridEngine::restrict(Level& fine, Level& coarse, cl_mem d_fine_values, cl_mem d_coarse_values)
     {
         int err;
-        int mreal = coarse.m;
-        int nreal = coarse.n;
-        int oreal = coarse.o;
+        int mreal = fine.m >> 1;
+        int nreal = fine.n >> 1;
+        int oreal = fine.o >> 1;
         auto problem = fine.problem;
 
         // Create the compute kernel from the program
@@ -92,7 +94,7 @@ namespace mgcl
         int pos = 0;
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &d_fine_values);
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_coarse_values);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.mgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.mgh); // TODO check here when using MPI
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.ngh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.ogh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem->ghosts);
