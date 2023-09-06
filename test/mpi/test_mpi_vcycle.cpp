@@ -112,7 +112,144 @@ TEST_CASE("MPI_vcycle_immediate_gather_scatter")
     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
     p.setGhosts(gh);
     p.setGhostsIn(ghin);
-    p.setMpiMinGridPoints(m);
+    p.setMpiMinGridPoints(m); // ensuring mpiLevelThreshold is 0
+    p.setMpiComm(mpi_comm);
+
+    p.solveSeq();
+
+    // Gather local approximations on rank 0 for checking.
+    if (mpi_rank > 0)
+        mgcl::mpi_util::gather(p.getMpiComm(), *vloc);
+    else
+    {
+        // copy from vloc to v first
+        for (int i = vloc->getGhostsM(); i < vloc->getM() + vloc->getGhostsM(); i++)
+            for (int j = vloc->getGhostsN(); j < vloc->getN() + vloc->getGhostsN(); j++)
+                for (int k = vloc->getGhostsO(); k < vloc->getO() + vloc->getGhostsO(); k++)
+                {
+                    (*v)[i][j][k] = (*vloc)[i][j][k];
+                }
+
+        // Gather into v from other processes
+        if (mpi_size > 1)
+            mgcl::mpi_util::gather(p.getMpiComm(), *v); // TODO check with different ghost amounts
+
+        // check if solution is good
+        auto err = calculateError(*solution, *v);
+        auto errNorm = calculateErrorNorm(1.0 / (double)m, *err);
+        auto errMax = calculateMaxError(*err);
+
+        std::cout << "seq MPI Laplace" << std::endl;
+        std::cout << "rank 0: " << std::endl;
+        std::cout
+            << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+            << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+        // Running this with 1 proc yields
+        // ||e||_2 = 4.62293179000930129e-03
+        // e_max = 9.00816189282011015e-03
+        // which should be equal to the global result when run with multiple processors.
+
+        REQUIRE(errNorm < 1e-2);
+        REQUIRE(errMax < 1e-2);
+        REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(4.62293179000930129e-03));
+        REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(9.00816189282011015e-03));
+    }
+}
+
+// Tests if vcycle is correct for multiple processes with mpiLevelThreshold > 0, i.e. some fine levels are
+// calculated distributed and only the coarse levels are calculated on rank 0.
+// Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_threshold_gt_0
+TEST_CASE("MPI_vcycle_threshold_gt_0")
+{
+    using std::min;
+
+    // global grid sizes
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    int periodic = 1;
+    int gh = 1;
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    // REQUIRE(mpi_size == 8);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    /* Initialize start and end for local grid */
+    int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+    int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+    int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+    int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+    int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+    int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+    int ml = (m_end - m_start) + 1;
+    int nl = (n_end - n_start) + 1;
+    int ol = (o_end - o_start) + 1;
+
+    CAPTURE(ml, nl, ol);
+
+    // print coords and boundaries per rank
+    // if (mpi_rank == 0)
+    //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (mpi_rank == i)
+    //     {
+    //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+    //                   << m_start << ";" << m_end << ";"
+    //                   << n_start << ";" << n_end << ";"
+    //                   << o_start << ";" << o_end << std::endl;
+    //     }
+    // }
+
+    REQUIRE(ml > 0);
+    REQUIRE(ml <= m);
+    REQUIRE(nl > 0);
+    REQUIRE(nl <= n);
+    REQUIRE(ol > 0);
+    REQUIRE(ol <= o);
+
+    // Set up 4th order periodic problem
+    int ghin = 0; // TODO check with ghin > 0
+    auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+    auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+    auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+    mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+
+    // Create local slices
+    std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+    std::shared_ptr<mgcl::Cuboid> floc(f->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+    std::shared_ptr<mgcl::Cuboid> solutionloc(solution->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+
+    // Create local problem
+    mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
+    p.setGhosts(gh);
+    p.setGhostsIn(ghin);
+    p.setMpiMinGridPoints(m / 2); // ensuring mpiLevelThreshold is 1
     p.setMpiComm(mpi_comm);
 
     p.solveSeq();
