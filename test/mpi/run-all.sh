@@ -86,7 +86,7 @@ fi
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 exe="$SCRIPT_DIR/tests_mpi"
 
-if [ "$TEST_PROBLEM" = true ] ; then
+if [ "$TEST_PROBLEM" = true ] || [ "$TEST_ALL" = true ] ; then
     echo "#######################"
     echo "Run Tests from test_mpi_problem.cpp ..."
     echo "#######################"
@@ -98,7 +98,7 @@ if [ "$TEST_PROBLEM" = true ] ; then
     run_test -n 1 "$exe" "MPI Problem::calculateAndSetMpiLevelThreshold throwing (1 process)"
 fi
 
-if [ "$TEST_LEVEL" = true ] ; then
+if [ "$TEST_LEVEL" = true ] || [ "$TEST_ALL" = true ] ; then
     echo "#######################"
     echo "Run Tests from test_mpi_level.cpp ..."
     echo "#######################"
@@ -109,7 +109,7 @@ if [ "$TEST_LEVEL" = true ] ; then
     run_test --oversubscribe -n 24 "$exe" "Level::initMpiData (24 processes)"
 fi
 
-if [ "$TEST_GHOSTS" = true ] ; then
+if [ "$TEST_GHOSTS" = true ] || [ "$TEST_ALL" = true ] ; then
     echo "#######################"
     echo "Run Tests from test_mpi_ghosts.cpp ..."
     echo "#######################"
@@ -119,7 +119,7 @@ if [ "$TEST_GHOSTS" = true ] ; then
     run_test --oversubscribe -n 8 "$exe" "MPI updateGhosts ocl (n processes)"
 fi
 
-if [ "$TEST_JACOBI" = true ] ; then
+if [ "$TEST_JACOBI" = true ] || [ "$TEST_ALL" = true ] ; then
     echo "#######################"
     echo "Run Tests from test_mpi_jacobi.cpp ..."
     echo "#######################"
@@ -128,7 +128,7 @@ if [ "$TEST_JACOBI" = true ] ; then
     run_test --oversubscribe -n 8 "$exe" "MPI jacobi ocl (n processes)"
 fi
 
-if [ "$TEST_UTIL" = true ] ; then
+if [ "$TEST_UTIL" = true ] || [ "$TEST_ALL" = true ] ; then
     echo "#######################"
     echo "Run Tests from test_mpi_util.cpp ..."
     echo "#######################"
@@ -139,7 +139,7 @@ if [ "$TEST_UTIL" = true ] ; then
     run_test --oversubscribe -n 4 "$exe" "mpi_util::scatter-src-dest-same"
 fi
 
-if [ "$TEST_VCYCLE" = true ] ; then
+if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
     echo "#######################"
     echo "Run Tests from test_mpi_vcycle.cpp ..."
     echo "#######################"
