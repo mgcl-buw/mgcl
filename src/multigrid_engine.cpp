@@ -100,8 +100,8 @@ namespace mgcl
             {
                 MultigridEngine::jacobiSeq(levelAbove.getV(), levelAbove.getF(), levelAbove.getR(), problem.omega,
                                            problem.nu1 + problem.nu2, problem.residual_norm, problem.stencilType,
-                                           level.stencilFactor, level.stencilValues.get(), false, problem.isPeriodic(),
-                                           levelAbove.isCalculatedLocally(), 1, level.getMpiDataPtr());
+                                           levelAbove.stencilFactor, levelAbove.stencilValues.get(), false, problem.isPeriodic(),
+                                           levelAbove.isCalculatedLocally(), 1, levelAbove.getMpiDataPtr());
 
                 // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
             }
