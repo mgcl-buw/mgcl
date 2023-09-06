@@ -4,6 +4,7 @@
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "problem.hpp"
 
+#include <cassert>
 #include <cstddef> // for NULL
 #include <iostream>
 #include <stdexcept> // for invalid_argument
@@ -559,6 +560,7 @@ namespace mgcl
 
     Cuboid& Level::getV() const
     {
+        assert(v && "v is null");
         return *v;
     }
 
@@ -574,6 +576,7 @@ namespace mgcl
 
     Cuboid& Level::getF() const
     {
+        assert(f && "f is null");
         return *f;
     }
 
@@ -589,6 +592,7 @@ namespace mgcl
 
     Cuboid& Level::getR() const
     {
+        assert(r && "r is null");
         return *r;
     }
 
