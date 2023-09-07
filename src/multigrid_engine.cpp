@@ -43,15 +43,15 @@ namespace mgcl
         // std::cout << level << std::endl;
 
         // relax nu1 times
-        res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
-                                         problem.omega, level.h * level.h, problem.nu1, problem.residual_norm, problem.stencilType,
-                                         level.stencilFactor, level.stencilValues.get(), false, problem.isPeriodic(),
-                                         level.isCalculatedLocally(), 1, level.getMpiDataPtr());
+        MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
+                                   problem.omega, level.h * level.h, problem.nu1, problem.residual_norm, problem.stencilType,
+                                   level.stencilFactor, level.stencilValues.get(), false, problem.isPeriodic(),
+                                   level.isCalculatedLocally(), 1, level.getMpiDataPtr());
 
         // update residual before restriction
-        res = residualSeq(level.getF(), level.getV(), level.getR(), problem.residual_norm, problem.stencilType,
-                          level.stencilFactor, level.stencilValues.get(), false, problem.isPeriodic(),
-                          level.isCalculatedLocally(), 0, 0, 0, level.getMpiDataPtr());
+        residualSeq(level.getF(), level.getV(), level.getR(), problem.residual_norm, problem.stencilType,
+                    level.stencilFactor, level.stencilValues.get(), false, problem.isPeriodic(),
+                    level.isCalculatedLocally(), 0, 0, 0, level.getMpiDataPtr());
 
         // printf("res on level %d, upwards: %.17e\n", level.getNum(), res);
         // std::cout << "v[3][3][3] = " << std::scientific << std::setprecision(17) << level.getV()[3][3][3] << std::endl
@@ -82,8 +82,7 @@ namespace mgcl
 
             // Update ghosts of gathered
             // TODO check Dirichlet
-            // TODO only on rank 0
-            if (problem.isPeriodic())
+            if (problem.isPeriodic() && problem.mpiRank() == 0)
                 MultigridEngine::updateGhostsSeq(levelAbove.getF(), levelAbove.getMpiDataPtr(), problem.isPeriodic(),
                                                  levelAbove.isCalculatedLocally());
 
@@ -110,7 +109,6 @@ namespace mgcl
 
         // If MPI is in use but minGridPoints is reached, scatter v data from process 0 to others and continue
         // distributed calulcations.
-        std::shared_ptr<Cuboid> tmp;
         if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
         {
             // TODO Scatter on lv with loc = minGridPoints
@@ -120,16 +118,11 @@ namespace mgcl
             // ghost update level.getR() needed before prolongate -> adjust size of level.getR()
 
             if (problem.mpiRank() == 0)
-            {
-                // TODO check if tmp buffer is ok
-                // levelAbove has bigger size on rank 0, thus calculate using level which has local size as base
-                tmp = std::make_shared<Cuboid>(level.getM() / 2, level.getN() / 2, level.getO() / 2,
-                                               problem.getGhosts(), problem.getGhosts(), problem.getGhosts());
-                mpi_util::scatter(problem.getMpiComm(), levelAbove.getVPtr().get(), *tmp);
-                levelAbove.setV(tmp);
-            }
+                mpi_util::scatter_inplace_wgh(problem.getMpiComm(), levelAbove.getV());
             else
-                mpi_util::scatter(problem.getMpiComm(), nullptr, levelAbove.getV());
+            {
+                mpi_util::scatter_inplace_wgh(problem.getMpiComm(), levelAbove.getV());
+            }
         }
 
         // prolongate from coarser to finer grid
