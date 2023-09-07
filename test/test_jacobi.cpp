@@ -420,8 +420,8 @@ TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
                 (*c_in_r)[i + 1][j + 1][k + 1] = (*c_r_out)[i + ghosts][j + ghosts][k + ghosts];
             }
 
-    c_in_r->dumpToFile("c_in_r->txt");
-    c_expected_out_r->dumpToFile("c_expected_out_r.txt");
+    // c_in_r->dumpToFile("c_in_r->txt");
+    // c_expected_out_r->dumpToFile("c_expected_out_r.txt");
 
     REQUIRE_THAT(res, Catch::Matchers::WithinAbs(4.02895897954478714e+04, 1e-7));
     // CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
