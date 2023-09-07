@@ -141,7 +141,9 @@ namespace mgcl
             if (initOpenCLBuffers() != CL_SUCCESS)
                 return false;
         }
-        else if (!problem->useMpi() || !isCalculatedLocally() || mpiData->rank == 0)
+        // TODO revisit, maybe not worth the effort since coarse levels are small anyways
+        // else if (!problem->useMpi() || !isCalculatedLocally() || mpiData->rank == 0)
+        else
         {
             // Only allocate data on coarser levels, if
             // 1. mgcl is run without MPI at all, or
