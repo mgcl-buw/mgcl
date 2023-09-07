@@ -26,10 +26,6 @@ namespace mgcl
         int n = fine.n;
         int o = fine.o;
 
-        if (fine.problem->isPeriodic())
-            MultigridEngine::updateGhostsSeq(coarseVals, coarse.getMpiDataPtr(), fine.problem->isPeriodic(),
-                                             coarse.isCalculatedLocally());
-
         int ioff = 1, joff = 1, koff = 1; // offset grows by 1 for each step
         int i2, j2, k2;
         for (int i = ghosts; i < m / 2 + ghosts; i++, ioff++)

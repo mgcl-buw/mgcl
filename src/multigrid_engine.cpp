@@ -33,15 +33,6 @@ namespace mgcl
             levelAbove.getV().fill(0);
         }
 
-        // if (level.num == 1)
-        // {
-        //     level.getV().dumpToFile("out_v.txt");
-        //     level.getF().dumpToFile("out_f.txt");
-        //     level.getR().dumpToFile("out_r.txt");
-        // }
-
-        // std::cout << level << std::endl;
-
         // relax nu1 times
         MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
                                    problem.omega, level.h * level.h, problem.nu1, problem.residual_norm, problem.stencilType,
@@ -53,18 +44,6 @@ namespace mgcl
                     level.stencilFactor, level.stencilValues.get(), false, problem.isPeriodic(),
                     level.isCalculatedLocally(), 0, 0, 0, level.getMpiDataPtr());
 
-        // printf("res on level %d, upwards: %.17e\n", level.getNum(), res);
-        // std::cout << "v[3][3][3] = " << std::scientific << std::setprecision(17) << level.getV()[3][3][3] << std::endl
-        //           << "f[3][3][3] = " << std::scientific << std::setprecision(17) << level.getF()[3][3][3] << std::endl
-        //           << "r[3][3][3] = " << std::scientific << std::setprecision(17) << level.getR()[3][3][3] << std::endl;
-
-        // if (level.num == 0)
-        // {
-        //     level.getV().dumpToFile("out_v.txt");
-        //     level.getF().dumpToFile("out_f.txt");
-        //     level.getR().dumpToFile("out_r.txt");
-        // }
-
         // restrict residual as right hand side on coarser grid
         // TODO do not update ghosts of coarse grid before gather (size too small)
         MultigridEngine::restrictSeq(level, levelAbove, level.getR(), levelAbove.getF());
@@ -73,11 +52,6 @@ namespace mgcl
         // locally only, until we're reaching the threshold level moving downwards again.
         if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
         {
-            // TODO Gather on lv with loc = minGridPoints
-            // example: minGridPoints=4, do this on lv 1 with values of lv 2
-            //   rank 0 lv 1: glob=16, loc=4, lv 2: glob=loc=8
-            // gather into levelAbove.getF() (reuse on rank 0)
-
             mpi_util::gather(problem.getMpiComm(), levelAbove.getF());
 
             // Update ghosts of gathered
@@ -85,12 +59,13 @@ namespace mgcl
             if (problem.isPeriodic() && problem.mpiRank() == 0)
                 MultigridEngine::updateGhostsSeq(levelAbove.getF(), levelAbove.getMpiDataPtr(), problem.isPeriodic(),
                                                  levelAbove.isCalculatedLocally());
-
-            // do rest on proc 0
         }
 
-        // Advance to coarser levels only on proc 0 after gather
-        if (!problem.useMpi() || (problem.useMpi() && levelAbove.isCalculatedLocally() && problem.mpiRank() == 0))
+        // Advance to coarser levels only if
+        // 1. not using MPI at all (or on only one process), or
+        // 2. coarser level is still calculated distributively, or
+        // 3. rank is 0
+        if (!problem.useMpi() || !levelAbove.isCalculatedLocally() || problem.mpiRank() == 0)
         {
             // start next v-cycle iteration if not at highest level
             if (level.getNum() < problem.maxlevel - 1)
@@ -110,20 +85,7 @@ namespace mgcl
         // If MPI is in use but minGridPoints is reached, scatter v data from process 0 to others and continue
         // distributed calulcations.
         if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
-        {
-            // TODO Scatter on lv with loc = minGridPoints
-            // example: minGridPoints=4, do this on lv 1 with values of lv 2
-            //   rank 0 lv 1: glob=16, loc=4, lv 2: glob=loc=8
-            // scatter into levelAbove.getV() (size 8 -> 2), update ghosts of V, then prolongate into level.getR() (size 4)
-            // ghost update level.getR() needed before prolongate -> adjust size of level.getR()
-
-            if (problem.mpiRank() == 0)
-                mpi_util::scatter_inplace_wgh(problem.getMpiComm(), levelAbove.getV());
-            else
-            {
-                mpi_util::scatter_inplace_wgh(problem.getMpiComm(), levelAbove.getV());
-            }
-        }
+            mpi_util::scatter_inplace_wgh(problem.getMpiComm(), levelAbove.getV());
 
         // prolongate from coarser to finer grid
         // r of this level is reused here and should actually be called e
