@@ -110,6 +110,7 @@ TEST_CASE("MPI_vcycle_immediate_gather_scatter")
 
     // Create local problem
     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
+    // p.setMaxiterVcycles(5);
     p.setGhosts(gh);
     p.setGhostsIn(ghin);
     p.setMpiMinGridPoints(m); // ensuring mpiLevelThreshold is 0
@@ -247,6 +248,7 @@ TEST_CASE("MPI_vcycle_threshold_gt_0")
 
     // Create local problem
     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
+    // p.setMaxiterVcycles(5);
     p.setGhosts(gh);
     p.setGhostsIn(ghin);
     p.setMpiMinGridPoints(m / 2); // ensuring mpiLevelThreshold is 1
