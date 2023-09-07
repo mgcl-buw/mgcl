@@ -92,6 +92,9 @@ namespace mgcl
      */
     bool Level::init()
     {
+        if (m <= 0 || n <= 0 || o <= 0)
+            return true;
+
         // First init MPI data to get information about neighbours and be able to update ghosts.
         initMpiData();
 
