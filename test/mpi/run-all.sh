@@ -148,6 +148,7 @@ if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
 
     run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_immediate_gather_scatter"
     run_test --oversubscribe -n 2 "$exe" "MPI_vcycle_immediate_gather_scatter"
+    run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_threshold_gt_0"
 fi
 
 echo "Done. All good!"
