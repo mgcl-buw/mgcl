@@ -1167,6 +1167,26 @@ TEST_CASE("VaryingStencil::sliceIncGhosts")
     }
 }
 
+TEST_CASE("VaryingStecnil::copyEmpty")
+{
+    mgcl::VaryingStencil3x3x3 s1(2, 3, 4, 5, 6, 7);
+    s1.fillRandom();
+    auto s2 = s1.copyEmpty();
+
+    REQUIRE(s1.getDim1() == s2->getDim1());
+    REQUIRE(s1.getDim2() == s2->getDim2());
+    REQUIRE(s1.getDim3() == s2->getDim3());
+    REQUIRE(s1.getDim4() == s2->getDim4());
+    REQUIRE(s1.getDim5() == s2->getDim5());
+    REQUIRE(s1.getDim6() == s2->getDim6());
+    REQUIRE(s1.getGhostsDim1() == s2->getGhostsDim1());
+    REQUIRE(s1.getGhostsDim2() == s2->getGhostsDim2());
+    REQUIRE(s1.getGhostsDim3() == s2->getGhostsDim3());
+    REQUIRE(s1.getGhostsDim4() == s2->getGhostsDim4());
+    REQUIRE(s1.getGhostsDim5() == s2->getGhostsDim5());
+    REQUIRE(s1.getGhostsDim6() == s2->getGhostsDim6());
+}
+
 TEST_CASE("FixedStencil::multiply")
 {
     int m = GENERATE(2, 3, 4);

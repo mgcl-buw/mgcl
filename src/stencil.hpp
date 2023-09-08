@@ -399,6 +399,16 @@ namespace mgcl
 
             return ret;
         }
+
+        /**
+         * @brief Returns a copy of this VaryingStencil but without values, i.e. only with the same sizes.
+         *
+         * @return std::unique_ptr<VaryingStencil<N>>
+         */
+        std::unique_ptr<VaryingStencil<N>> copyEmpty()
+        {
+            return std::make_unique<VaryingStencil<N>>(dim1, dim2, dim3, ghostsDim1, ghostsDim2, ghostsDim3);
+        }
     };
 
     typedef VaryingStencil<3> VaryingStencil3x3x3;
