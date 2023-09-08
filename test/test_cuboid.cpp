@@ -263,13 +263,13 @@ TEST_CASE("Cuboid::sliceIncGhosts")
 
     SECTION("throwing")
     {
-        REQUIRE_THROWS(cb.slice(-1, 0, 0, 0, 0, 0));
-        REQUIRE_THROWS(cb.slice(0, 0, -1, 0, 0, 0));
-        REQUIRE_THROWS(cb.slice(0, 0, 0, 0, -1, 0));
+        REQUIRE_THROWS(cb.sliceIncGhosts(-1, 0, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, -1, 0, 0, 0));
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, 0, 0, -1, 0));
 
-        REQUIRE_THROWS(cb.slice(0, m + 1, 0, 0, 0, 0));
-        REQUIRE_THROWS(cb.slice(0, 0, 0, n + 1, 0, 0));
-        REQUIRE_THROWS(cb.slice(0, 0, 0, 0, 0, n + 1));
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, m + 3, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, 0, n + 3, 0, 0));
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, 0, 0, 0, n + 3));
     }
 
     SECTION("success")

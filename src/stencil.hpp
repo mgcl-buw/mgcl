@@ -366,6 +366,39 @@ namespace mgcl
 
             return *this;
         }
+
+        /**
+         * @brief Creates and returns a slice of this VaryingStencil<N> and returns it as a new VaryingStencil<N>.
+         * Boundaries must fit, else an exception is thrown. Ghost cells are included, i.e. m_end < this->mgh must hold.
+         * The returned VaryingStencil<N> has no ghosts cells.
+         * Boundaries are 0-based, i.e. both start and end will be included.
+         * This behaves just like Cuboid::sliceIncGhosts.
+         * The stencil can only be sliced for grid points, i.e. dim1, dim2 and dim3.
+         *
+         * @return std::unique_ptr<VaryingStencil<N>>
+         */
+        std::unique_ptr<VaryingStencil<N>> sliceIncGhosts(int m_start, int m_end, int n_start, int n_end,
+                                                          int o_start, int o_end)
+        {
+            if (m_start < 0 || n_start < 0 || o_start < 0 ||
+                m_end >= dim1gh || n_end >= dim2gh || o_end >= dim3gh)
+                throw "Boundaries out of range!";
+
+            auto ret = std::make_unique<VaryingStencil<N>>((m_end - m_start) + 1, (n_end - n_start) + 1,
+                                                           (o_end - o_start) + 1, 0, 0, 0);
+
+            for (int i = m_start, is = i - m_start; i <= m_end; i++, is++)
+                for (int j = n_start, js = j - n_start; j <= n_end; j++, js++)
+                    for (int k = o_start, ks = k - o_start; k <= o_end; k++, ks++)
+                        for (int ii = 0; ii < dim4; ii++)
+                            for (int jj = 0; jj < dim5; jj++)
+                                for (int kk = 0; kk < dim6; kk++)
+                                {
+                                    ret->getData()[is][js][ks][ii][jj][kk] = getData()[i][j][k][ii][jj][kk];
+                                }
+
+            return ret;
+        }
     };
 
     typedef VaryingStencil<3> VaryingStencil3x3x3;
