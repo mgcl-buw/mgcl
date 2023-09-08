@@ -1118,6 +1118,58 @@ TEST_CASE("VaryingStencil::multiply(FixedStencil)")
     // clang-format on
 }
 
+TEST_CASE("VaryingStencil::slice")
+{
+    int m = 4;
+    int n = 4;
+    int o = 4;
+
+    mgcl::VaryingStencil3x3x3 cb(m, n, o, 1, 1, 1);
+    // cb.fillRandom();
+    cb.fill1dIndex(true);
+
+    SECTION("throwing")
+    {
+        REQUIRE_THROWS(cb.slice(-1, 0, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, -1, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, 0, -1, 0));
+
+        REQUIRE_THROWS(cb.slice(0, m + 3, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, n + 3, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, 0, 0, n + 3));
+    }
+
+    SECTION("success")
+    {
+        auto cs = cb.slice(0, 1, 0, 2, 2, 3);
+
+        REQUIRE(cs->getDim1() == 2);
+        REQUIRE(cs->getDim2() == 3);
+        REQUIRE(cs->getDim3() == 2);
+        REQUIRE(cs->getDim4() == cb.getDim4());
+        REQUIRE(cs->getDim5() == cb.getDim5());
+        REQUIRE(cs->getDim6() == cb.getDim6());
+        REQUIRE(cs->getGhostsDim1() == cb.getGhostsDim1());
+        REQUIRE(cs->getGhostsDim2() == cb.getGhostsDim2());
+        REQUIRE(cs->getGhostsDim3() == cb.getGhostsDim3());
+        REQUIRE(cs->getGhostsDim4() == cb.getGhostsDim4());
+        REQUIRE(cs->getGhostsDim5() == cb.getGhostsDim5());
+        REQUIRE(cs->getGhostsDim6() == cb.getGhostsDim6());
+
+        for (int d1 = cs->getGhostsDim1(); d1 < cs->getDim1() + cs->getGhostsDim1(); d1++)
+            for (int d2 = cs->getGhostsDim2(); d2 < cs->getDim2() + cs->getGhostsDim2(); d2++)
+                for (int d3 = cs->getGhostsDim3(); d3 < cs->getDim3() + cs->getGhostsDim3(); d3++)
+                    for (int d4 = 0; d4 < cs->getDim4(); d4++)
+                        for (int d5 = 0; d5 < cs->getDim5(); d5++)
+                            for (int d6 = 0; d6 < cs->getDim6(); d6++)
+                            {
+                                CAPTURE(d1, d2, d3, d4, d5, d6);
+                                REQUIRE(
+                                    cs->getData()[d1][d2][d3][d4][d5][d6] == cb[d1][d2][d3 + 2][d4][d5][d6]);
+                            }
+    }
+}
+
 TEST_CASE("VaryingStencil::sliceIncGhosts")
 {
     int m = 4;
@@ -1167,11 +1219,11 @@ TEST_CASE("VaryingStencil::sliceIncGhosts")
     }
 }
 
-TEST_CASE("VaryingStecnil::copyEmpty")
+TEST_CASE("VaryingStecnil::copyShallow")
 {
     mgcl::VaryingStencil3x3x3 s1(2, 3, 4, 5, 6, 7);
     s1.fillRandom();
-    auto s2 = s1.copyEmpty();
+    auto s2 = s1.copyShallow();
 
     REQUIRE(s1.getDim1() == s2->getDim1());
     REQUIRE(s1.getDim2() == s2->getDim2());

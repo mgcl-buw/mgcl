@@ -369,6 +369,46 @@ namespace mgcl
 
         /**
          * @brief Creates and returns a slice of this VaryingStencil<N> and returns it as a new VaryingStencil<N>.
+         *   Boundaries must fit, else an exception is thrown. VaryingStencil<N> cells are not included,
+         *   i.e. m_end < this->m must hold.
+         * By default the new VaryingStencil<N> will have the same ghost cell amount as the original one.
+         * Boundaries are 0-based, i.e. both start and end will be included.
+         * Only real cells are copied, while e.g. m_start = 0 denotes the first real cell.
+         *
+         * @return std::unique_ptr<VaryingStencil<N>>
+         */
+        std::unique_ptr<VaryingStencil<N>> slice(int m_start, int m_end, int n_start, int n_end,
+                                                 int o_start, int o_end,
+                                                 int ghm = -1, int ghn = -1, int gho = -1)
+        {
+            if (m_start < 0 || n_start < 0 || o_start < 0 ||
+                m_end >= dim1 || n_end >= dim2 || o_end >= dim3)
+                throw "Boundaries out of range!";
+
+            if (ghm < 0)
+                ghm = ghostsDim1;
+            if (ghn < 0)
+                ghn = ghostsDim2;
+            if (gho < 0)
+                gho = ghostsDim3;
+
+            auto ret = std::make_unique<VaryingStencil<N>>((m_end - m_start) + 1, (n_end - n_start) + 1,
+                                                           (o_end - o_start) + 1, ghm, ghn, gho);
+            for (int i = m_start, is = ghm, ib = i + ghostsDim1; i <= m_end; i++, is++, ib++)
+                for (int j = n_start, js = ghn, jb = j + ghostsDim2; j <= n_end; j++, js++, jb++)
+                    for (int k = o_start, ks = gho, kb = k + ghostsDim3; k <= o_end; k++, ks++, kb++)
+                        for (int ii = 0; ii < dim4; ii++)
+                            for (int jj = 0; jj < dim5; jj++)
+                                for (int kk = 0; kk < dim6; kk++)
+                                {
+                                    ret->getData()[is][js][ks][ii][jj][kk] = getData()[ib][jb][kb][ii][jj][kk];
+                                }
+
+            return ret;
+        }
+
+        /**
+         * @brief Creates and returns a slice of this VaryingStencil<N> and returns it as a new VaryingStencil<N>.
          * Boundaries must fit, else an exception is thrown. Ghost cells are included, i.e. m_end < this->mgh must hold.
          * The returned VaryingStencil<N> has no ghosts cells.
          * Boundaries are 0-based, i.e. both start and end will be included.
@@ -405,7 +445,7 @@ namespace mgcl
          *
          * @return std::unique_ptr<VaryingStencil<N>>
          */
-        std::unique_ptr<VaryingStencil<N>> copyEmpty()
+        std::unique_ptr<VaryingStencil<N>> copyShallow()
         {
             return std::make_unique<VaryingStencil<N>>(dim1, dim2, dim3, ghostsDim1, ghostsDim2, ghostsDim3);
         }
