@@ -28,7 +28,8 @@ set(SOURCES_LIB
     mpi_global_data.hpp
     mpi_global_data.cpp
     mpi_util.hpp
-    mpi_util.cpp)
+    mpi_util.cpp
+    mpi_stencil.hpp)
 
 add_library(mgcl ${SOURCES_LIB})
 target_link_libraries(mgcl PRIVATE OpenCL::OpenCL MPI::MPI_CXX)

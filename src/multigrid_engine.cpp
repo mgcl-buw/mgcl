@@ -61,6 +61,8 @@ namespace mgcl
                                                  levelAbove.isCalculatedLocally());
         }
 
+        // TODO update ghosts of levelABove.F here when using gh > 1
+
         // Advance to coarser levels only if
         // 1. not using MPI at all (or on only one process), or
         // 2. coarser level is still calculated distributively, or

@@ -91,7 +91,6 @@ namespace mgcl
     void MultigridEngine::updateGhostsSeq(Cuboid& c, MPILevelData* mpiData, bool periodic, bool forceLocal)
     {
         // TODO adjust for ghosts > 1
-        // TODO test
         if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
         {
             updateGhostsSeqLocally(c, periodic);
