@@ -38,6 +38,7 @@ TEST_GHOSTS=false
 TEST_JACOBI=false
 TEST_UTIL=false
 TEST_VCYCLE=false
+TEST_STENCIL=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -72,6 +73,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     -v|--vcycle)
       TEST_VCYCLE=true
+      TEST_ALL=false
+      shift # past argument
+      ;;
+    -s|--stencil)
+      TEST_STENCIL=true
       TEST_ALL=false
       shift # past argument
       ;;
@@ -149,6 +155,16 @@ if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_immediate_gather_scatter"
     run_test --oversubscribe -n 2 "$exe" "MPI_vcycle_immediate_gather_scatter"
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_threshold_gt_0"
+fi
+
+if [ "$TEST_STENCIL" = true ] || [ "$TEST_ALL" = true ] ; then
+    echo "#######################"
+    echo "Run Tests from test_mpi_stencil.cpp ..."
+    echo "#######################"
+
+    run_test --oversubscribe -n 1 "$exe" "MPI-stencil-updateGhostsSeq-1proc"
+    run_test --oversubscribe -n 2 "$exe" "MPI-stencil-updateGhostsSeq-nprocs"
+    run_test --oversubscribe -n 4 "$exe" "MPI-stencil-updateGhostsSeq-nprocs"
 fi
 
 echo "Done. All good!"
