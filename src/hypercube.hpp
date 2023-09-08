@@ -103,6 +103,7 @@ namespace mgcl
         void fillRandom(double low = 0, double high = 1);
         void fillRandomInt(int low = 1, int high = 10, bool realCellsOnly = false);
         void fill(double value, bool realCellsOnly = false);
+        void fill1dIndex(bool realCellsOnly);
         std::vector<double>& field1d();
         bool isEqual(Hypercube6d& c, double tol = 1e-7, bool printDiffs = true);
         void dumpToFile(std::string path, bool realCellsOnly = false);

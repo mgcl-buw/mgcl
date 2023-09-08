@@ -598,6 +598,43 @@ namespace mgcl
         }
     }
 
+    /**
+     * @brief Fills this Hypercube6d with the 1d index of the corresponding cell, including ghost cells.
+     *
+     * @param realCellsOnly If true, only real cells get filled.
+     */
+    void Hypercube6d::fill1dIndex(bool realCellsOnly)
+    {
+        if (realCellsOnly)
+            for (int d1 = ghostsDim1; d1 < dim1 + ghostsDim1; d1++)
+                for (int d2 = ghostsDim2; d2 < dim2 + ghostsDim2; d2++)
+                    for (int d3 = ghostsDim3; d3 < dim3 + ghostsDim3; d3++)
+                        for (int d4 = ghostsDim4; d4 < dim4 + ghostsDim4; d4++)
+                            for (int d5 = ghostsDim5; d5 < dim5 + ghostsDim5; d5++)
+                                for (int d6 = ghostsDim6; d6 < dim6 + ghostsDim6; d6++)
+                                {
+                                    (*this)[d1][d2][d3][d4][d5][d6] =
+                                        d1 * dim2gh * dim3gh * dim4gh * dim5gh * dim6gh +
+                                        d2 * dim3gh * dim4gh * dim5gh * dim6gh +
+                                        d3 * dim4gh * dim5gh * dim6gh +
+                                        d4 * dim5gh * dim6gh + d5 * dim6gh + d6;
+                                }
+        else
+            for (int d1 = 0; d1 < dim1gh; d1++)
+                for (int d2 = 0; d2 < dim2gh; d2++)
+                    for (int d3 = 0; d3 < dim3gh; d3++)
+                        for (int d4 = 0; d4 < dim4gh; d4++)
+                            for (int d5 = 0; d5 < dim5gh; d5++)
+                                for (int d6 = 0; d6 < dim6gh; d6++)
+                                {
+                                    (*this)[d1][d2][d3][d4][d5][d6] =
+                                        d1 * dim2gh * dim3gh * dim4gh * dim5gh * dim6gh +
+                                        d2 * dim3gh * dim4gh * dim5gh * dim6gh +
+                                        d3 * dim4gh * dim5gh * dim6gh +
+                                        d4 * dim5gh * dim6gh + d5 * dim6gh + d6;
+                                }
+    }
+
     std::vector<double>& Hypercube6d::field1d()
     {
         return field_1d;
