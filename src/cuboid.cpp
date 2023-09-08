@@ -494,9 +494,9 @@ namespace mgcl
 
         auto ret = std::make_unique<Cuboid>((m_end - m_start) + 1, (n_end - n_start) + 1, (o_end - o_start) + 1,
                                             ghm, ghn, gho);
-        for (int i = m_start, is = (i - m_start) + ghm, ib = i + ghostsM; i <= m_end; i++, is++, ib++)
-            for (int j = n_start, js = (j - n_start) + ghn, jb = j + ghostsN; j <= n_end; j++, js++, jb++)
-                for (int k = o_start, ks = (k - o_start) + gho, kb = k + ghostsO; k <= o_end; k++, ks++, kb++)
+        for (int i = m_start, is = ghm, ib = i + ghostsM; i <= m_end; i++, is++, ib++)
+            for (int j = n_start, js = ghn, jb = j + ghostsN; j <= n_end; j++, js++, jb++)
+                for (int k = o_start, ks = gho, kb = k + ghostsO; k <= o_end; k++, ks++, kb++)
                 {
                     ret->getData()[is][js][ks] = getData()[ib][jb][kb];
                 }
