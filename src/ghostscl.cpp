@@ -198,8 +198,8 @@ namespace mgcl
         auto rbufyz_ptr = std::make_unique<Cuboid>(sbufyz_ptr->getM(), sbufyz_ptr->getN(), sbufyz_ptr->getO(), 0, 0, 0);
         auto rbufyz = rbufyz_ptr->getData();
 
-        MPI_Sendrecv((void*)sbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
-                     (void*)rbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
+        MPI_Sendrecv(static_cast<void*>(sbufyz[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
+                     static_cast<void*>(rbufyz[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
                      mpiData->comm, MPI_STATUS_IGNORE);
 
         if (MPI_PROC_NULL != mpiData->back)
@@ -214,8 +214,8 @@ namespace mgcl
         rbufyz_ptr = std::make_unique<Cuboid>(sbufyz_ptr->getM(), sbufyz_ptr->getN(), sbufyz_ptr->getO(), 0, 0, 0);
         rbufyz = rbufyz_ptr->getData();
 
-        MPI_Sendrecv((void*)sbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
-                     (void*)rbufyz[0][0], ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
+        MPI_Sendrecv(static_cast<void*>(sbufyz[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
+                     static_cast<void*>(rbufyz[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
                      mpiData->comm, MPI_STATUS_IGNORE);
 
         if (MPI_PROC_NULL != mpiData->front)
@@ -230,8 +230,8 @@ namespace mgcl
         auto rbufxz_ptr = std::make_unique<Cuboid>(sbufxz_ptr->getM(), sbufxz_ptr->getN(), sbufxz_ptr->getO(), 0, 0, 0);
         auto rbufxz = rbufxz_ptr->getData();
 
-        MPI_Sendrecv((void*)sbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
-                     (void*)rbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
+        MPI_Sendrecv(static_cast<void*>(sbufxz[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
+                     static_cast<void*>(rbufxz[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
                      mpiData->comm, MPI_STATUS_IGNORE);
 
         if (MPI_PROC_NULL != mpiData->up)
@@ -246,8 +246,8 @@ namespace mgcl
         rbufxz_ptr = std::make_unique<Cuboid>(sbufxz_ptr->getM(), sbufxz_ptr->getN(), sbufxz_ptr->getO(), 0, 0, 0);
         rbufxz = rbufxz_ptr->getData();
 
-        MPI_Sendrecv((void*)sbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
-                     (void*)rbufxz[0][0], mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
+        MPI_Sendrecv(static_cast<void*>(sbufxz[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
+                     static_cast<void*>(rbufxz[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
                      mpiData->comm, MPI_STATUS_IGNORE);
 
         if (MPI_PROC_NULL != mpiData->down)
@@ -266,8 +266,8 @@ namespace mgcl
         // MPI_Barrier(comm);
         // sbufxz_ptr->dumpToFile("sbufyz_ptr_left" + std::to_string(myid) + ".txt");
 
-        MPI_Sendrecv((void*)sbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
-                     (void*)rbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
+        MPI_Sendrecv(static_cast<void*>(sbufxz[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
+                     static_cast<void*>(rbufxz[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
                      mpiData->comm, MPI_STATUS_IGNORE);
         if (MPI_PROC_NULL != mpiData->right)
             for (i = 0; i < mgh; i++)
@@ -281,8 +281,8 @@ namespace mgcl
         rbufxz_ptr = std::make_unique<Cuboid>(sbufxz_ptr->getM(), sbufxz_ptr->getN(), sbufxz_ptr->getO(), 0, 0, 0);
         rbufxz = rbufxz_ptr->getData();
 
-        MPI_Sendrecv((void*)sbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
-                     (void*)rbufxz[0][0], mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
+        MPI_Sendrecv(static_cast<void*>(sbufxz[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
+                     static_cast<void*>(rbufxz[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
                      mpiData->comm, MPI_STATUS_IGNORE);
 
         if (MPI_PROC_NULL != mpiData->left)
