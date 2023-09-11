@@ -728,7 +728,7 @@ TEST_CASE("VaryingStencil::multiply")
                     b[i + 1][j + 1][k + 1][2][2][2] = factor4;
                 }
 
-        auto c = a.multiply(b);
+        auto c = a.multiply(b, 2, nullptr, false, true);
 
         // check result against explicitly calculated matrix product
         auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o, false) * mgcl_test::Matrix2d::fullWeightNonCut(m, n, o, false);
@@ -801,7 +801,7 @@ TEST_CASE("VaryingStencil::multiply")
                     b[i][j][k][2][2][2] = factor4;
                 }
 
-        auto c = a.multiply(b);
+        auto c = a.multiply(b, 2, nullptr, true, true);
 
         // check result against explicitly calculated matrix product
         auto c_expected = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * mgcl_test::Matrix2d::fullWeightNonCut(m, n, o);
@@ -860,8 +860,8 @@ TEST_CASE("VaryingStencil::multiply")
             auto ma3np = mgcl_test::Matrix2d::fromVaryingStencil(a3, false);
 
             {
-                auto c33p = a3.multiply(b3p);
-                auto c33np = a3.multiply(b3np);
+                auto c33p = a3.multiply(b3p, 2, nullptr, true, true);
+                auto c33np = a3.multiply(b3np, 2, nullptr, false, true);
                 auto c33_expected_p = ma3p * mb3p;
                 auto c33_expected_np = ma3np * mb3np;
                 auto mc33p = mgcl_test::Matrix2d::fromVaryingStencil(c33p, true);
@@ -871,8 +871,8 @@ TEST_CASE("VaryingStencil::multiply")
             }
 
             {
-                auto c35p = a3.multiply(b5p);
-                auto c35np = a3.multiply(b5np);
+                auto c35p = a3.multiply(b5p, 2, nullptr, true, true);
+                auto c35np = a3.multiply(b5np, 2, nullptr, false, true);
                 auto c35_expected_p = ma3p * mb5p;
                 auto c35_expected_np = ma3np * mb5np;
                 auto mc35p = mgcl_test::Matrix2d::fromVaryingStencil(c35p, true);
@@ -882,8 +882,8 @@ TEST_CASE("VaryingStencil::multiply")
             }
 
             {
-                auto c37p = a3.multiply(b7p);
-                auto c37np = a3.multiply(b7np);
+                auto c37p = a3.multiply(b7p, 2, nullptr, true, true);
+                auto c37np = a3.multiply(b7np, 2, nullptr, false, true);
                 auto c37_expected_p = ma3p * mb7p;
                 auto c37_expected_np = ma3np * mb7np;
                 auto mc37p = mgcl_test::Matrix2d::fromVaryingStencil(c37p, true);
@@ -931,8 +931,8 @@ TEST_CASE("VaryingStencil::multiply")
             auto ma5np = mgcl_test::Matrix2d::fromVaryingStencil(a5, false);
 
             {
-                auto c53p = a5.multiply(b3p);
-                auto c53np = a5.multiply(b3np);
+                auto c53p = a5.multiply(b3p, 2, nullptr, true, true);
+                auto c53np = a5.multiply(b3np, 2, nullptr, false, true);
                 auto c53_expected_p = ma5p * mb3p;
                 auto c53_expected_np = ma5np * mb3np;
                 auto mc53p = mgcl_test::Matrix2d::fromVaryingStencil(c53p, true);
@@ -942,8 +942,8 @@ TEST_CASE("VaryingStencil::multiply")
             }
 
             {
-                auto c55p = a5.multiply(b5p);
-                auto c55np = a5.multiply(b5np);
+                auto c55p = a5.multiply(b5p, 2, nullptr, true, true);
+                auto c55np = a5.multiply(b5np, 2, nullptr, false, true);
                 auto c55_expected_p = ma5p * mb5p;
                 auto c55_expected_np = ma5np * mb5np;
                 auto mc55p = mgcl_test::Matrix2d::fromVaryingStencil(c55p, true);
@@ -953,8 +953,8 @@ TEST_CASE("VaryingStencil::multiply")
             }
 
             {
-                auto c57p = a5.multiply(b7p);
-                auto c57np = a5.multiply(b7np);
+                auto c57p = a5.multiply(b7p, 2, nullptr, true, true);
+                auto c57np = a5.multiply(b7np, 2, nullptr, false, true);
                 auto c57_expected_p = ma5p * mb7p;
                 auto c57_expected_np = ma5np * mb7np;
                 auto mc57p = mgcl_test::Matrix2d::fromVaryingStencil(c57p, true);
@@ -1002,8 +1002,8 @@ TEST_CASE("VaryingStencil::multiply")
             auto ma7np = mgcl_test::Matrix2d::fromVaryingStencil(a7, false);
 
             {
-                auto c73p = a7.multiply(b3p);
-                auto c73np = a7.multiply(b3np);
+                auto c73p = a7.multiply(b3p, 2, nullptr, true, true);
+                auto c73np = a7.multiply(b3np, 2, nullptr, false, true);
                 auto c73_expected_p = ma7p * mb3p;
                 auto c73_expected_np = ma7np * mb3np;
                 auto mc73p = mgcl_test::Matrix2d::fromVaryingStencil(c73p, true);
@@ -1014,8 +1014,8 @@ TEST_CASE("VaryingStencil::multiply")
 
             if (m > 3 && n > 3 && o > 3)
             {
-                auto c75p = a7.multiply(b5p);
-                auto c75np = a7.multiply(b5np);
+                auto c75p = a7.multiply(b5p, 2, nullptr, true, true);
+                auto c75np = a7.multiply(b5np, 2, nullptr, false, true);
                 auto c75_expected_p = ma7p * mb5p;
                 auto c75_expected_np = ma7np * mb5np;
                 auto mc75p = mgcl_test::Matrix2d::fromVaryingStencil(c75p, true);
@@ -1025,8 +1025,8 @@ TEST_CASE("VaryingStencil::multiply")
             }
 
             {
-                auto c77p = a7.multiply(b7p);
-                auto c77np = a7.multiply(b7np);
+                auto c77p = a7.multiply(b7p, 2, nullptr, true, true);
+                auto c77np = a7.multiply(b7np, 2, nullptr, false, true);
                 auto c77_expected_p = ma7p * mb7p;
                 auto c77_expected_np = ma7np * mb7np;
                 auto mc77p = mgcl_test::Matrix2d::fromVaryingStencil(c77p, true);
@@ -1054,9 +1054,9 @@ TEST_CASE("VaryingStencil::multiply")
         bool ghostsNotEqual = b.getGhostsDim1() != b.getGhostsDim2() || b.getGhostsDim1() != b.getGhostsDim3();
 
         if (dimsNotEqual || ghostsNotEqual || ghostsNotBigEnough)
-            REQUIRE_THROWS(a.multiply(b));
+            REQUIRE_THROWS(a.multiply(b, 2, nullptr, true, true));
         else
-            REQUIRE_NOTHROW(a.multiply(b));
+            REQUIRE_NOTHROW(a.multiply(b, 2, nullptr, true, true));
     }
 }
 
@@ -1086,8 +1086,8 @@ TEST_CASE("VaryingStencil::multiply(FixedStencil)")
     // create random lhs varying stencil
     mgcl::VaryingStencil3x3x3 vr(m, n, o, 0, 0, 0);
 
-    auto fres = vr.multiply(f, 2);
-    auto vres = vr.multiply(vf);
+    auto fres = vr.multiply(f, 2, nullptr, true, true);
+    auto vres = vr.multiply(vf, 0, nullptr, true, true);
 
     // Check dimensions
     REQUIRE(fres.getDim1() == vres.getDim1());
@@ -1265,8 +1265,8 @@ TEST_CASE("FixedStencil::multiply")
     // create random rhs varying stencil
     mgcl::VaryingStencil3x3x3 vr(m, n, o, 1, 1, 1);
 
-    auto fres = f.multiply(vr, 2);
-    auto vres = vf.multiply(vr);
+    auto fres = f.multiply(vr, 2, nullptr, false, true);
+    auto vres = vf.multiply(vr, 2, nullptr, false, true);
 
     // Check dimensions
     REQUIRE(fres.getDim1() == vres.getDim1());

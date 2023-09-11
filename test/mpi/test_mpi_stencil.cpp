@@ -491,3 +491,107 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
                                 REQUIRE(cl[i][j][k + gh + ol][ii][jj][kk] == cg[i + m_start][j + n_start][k + gh][ii][jj][kk]);
                         }
 }
+
+// Checks if galerkin works for multiple processes but threshold 0, i.e. everything is done locally.
+// Run with: mpiexec -n 8 tests_mpi "MPI-galerkin-threshold0"
+TEST_CASE("MPI-galerkin-threshold0")
+{
+    using std::min;
+
+    // global grid sizes
+    int m = 16;
+    int n = 16;
+    int o = 16;
+    int periodic = 1;
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    // REQUIRE(mpi_size == 8);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    /* Initialize start and end for local grid */
+    int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+    int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+    int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+    int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+    int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+    int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+    int ml = (m_end - m_start) + 1;
+    int nl = (n_end - n_start) + 1;
+    int ol = (o_end - o_start) + 1;
+
+    // print coords and boundaries per rank
+    // if (mpi_rank == 0)
+    //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (mpi_rank == i)
+    //     {
+    //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+    //                   << m_start << ";" << m_end << ";"
+    //                   << n_start << ";" << n_end << ";"
+    //                   << o_start << ";" << o_end << std::endl;
+    //     }
+    // }
+
+    REQUIRE(ml > 0);
+    REQUIRE(ml <= m);
+    REQUIRE(nl > 0);
+    REQUIRE(nl <= n);
+    REQUIRE(ol > 0);
+    REQUIRE(ol <= o);
+
+    // Init some random data (will be unused)
+    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    v->fillRandom();
+    f->fillRandom();
+
+    int gh = 1;
+
+    // Init Problem to create all needed structures
+    auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, v, f, m, n, o);
+    auto& p = *pptr;
+    p.setGhosts(gh);
+    p.setMpiComm(mpi_comm);
+    p.setMpiMinGridPoints(m); // ensure threshold level is 0
+
+    p.setStencilType(mgcl::MGCL_VARYING);
+    auto& sv = p.getStencilValues();
+    sv->fillRandomInt();
+
+    p.init();
+
+    for (int i = 0; i <= p.getMaxlevel(); i++)
+    {
+        auto& lv = p.getLevelAt(i);
+        auto& sv = *lv.getStencilValues();
+
+        REQUIRE(sv.getDim1() == m >> i);
+        REQUIRE(sv.getDim2() == n >> i);
+        REQUIRE(sv.getDim3() == o >> i);
+    }
+}

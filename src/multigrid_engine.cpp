@@ -2,6 +2,7 @@
 #include "cuboid.hpp"    // for Cuboid
 #include "hypercube.hpp" // for Hypercube6d
 #include "level.hpp"     // for Level
+#include "mpi_stencil.hpp"
 #include "mpi_util.hpp"
 #include "opencl_helper.hpp" // for mgclCheckError, OpenCLHelper
 #include "problem.hpp"       // for Problem
@@ -207,9 +208,15 @@ namespace mgcl
      * operators.
      *
      * @param a_h The stencil of the finer grid.
+     * @param resm Size of resulting stencil's grid. Per default halve of a_h's size.
+     * @param resn Size of resulting stencil's grid. Per default halve of a_h's size.
+     * @param reso Size of resulting stencil's grid. Per default halve of a_h's size.
      * @returns VaryingStencil3x3x3 The stencil to be applied on the coarser grid
      */
-    VaryingStencil3x3x3 MultigridEngine::galerkin(VaryingStencil3x3x3& a_h)
+    VaryingStencil3x3x3 MultigridEngine::galerkin(VaryingStencil3x3x3& a_h,
+                                                  MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
+                                                  bool periodic, bool forceLocalFine, bool forceLocalCoarse,
+                                                  int resm, int resn, int reso)
     {
         // TODO respect problem::ghosts maybe
 
@@ -224,18 +231,26 @@ namespace mgcl
 
         // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
         // S * A_h * S and cut out later manually.
-        auto sas = sr.multiply(a_h, 2).multiply(sp, 0);
+        auto sas = sr.multiply(a_h, 2, mpiDataFine, periodic, forceLocalFine)
+                       .multiply(sp, 0, mpiDataFine, periodic, forceLocalFine);
 
         // std::cout << "a_h[1][1][1][1][1][1] = " << a_h[1][1][1][1][1][1] << std::endl;
         // std::cout << "s[1][1][1][1][1][1] = " << (*s)[1][1][1][1][1][1] << std::endl;
         // std::cout << "sas[1][1][1][1][1][1] = " << sas[1][1][1][1][1][1] << std::endl;
 
+        if (resm <= 0)
+            resm = a_h.getDim1() >> 1;
+        if (resn <= 0)
+            resn = a_h.getDim2() >> 1;
+        if (reso <= 0)
+            reso = a_h.getDim3() >> 1;
+
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
-        VaryingStencil3x3x3 a_2h(a_h.getDim1() >> 1, a_h.getDim2() >> 1, a_h.getDim3() >> 1, 2, 2, 2);
+        VaryingStencil3x3x3 a_2h(resm, resn, reso, 2, 2, 2);
         // clang-format off
-        for (int i = 2, i2 = 1; i < a_2h.getDim1() + 2; i++, i2 += 2)
-        for (int j = 2, j2 = 1; j < a_2h.getDim2() + 2; j++, j2 += 2)
-        for (int k = 2, k2 = 1; k < a_2h.getDim3() + 2; k++, k2 += 2)
+        for (int i = 2, i2 = 1; i < (a_h.getDim1() >> 1) + 2; i++, i2 += 2)
+        for (int j = 2, j2 = 1; j < (a_h.getDim2() >> 1) + 2; j++, j2 += 2)
+        for (int k = 2, k2 = 1; k < (a_h.getDim3() >> 1) + 2; k++, k2 += 2)
             for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
             for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
             for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
@@ -244,7 +259,7 @@ namespace mgcl
             }
         // clang-format on
 
-        a_2h.updateGhosts();
+        updateGhostsStencilMpi(a_2h, mpiDataCoarse, periodic, forceLocalCoarse);
 
         return a_2h;
     }

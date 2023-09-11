@@ -29,6 +29,10 @@ namespace mgcl
     template <int N>
     class VaryingStencil;
     class FixedStencilGpu;
+    class MPILevelData;
+
+    template <int N>
+    void updateGhostsStencilMpi(VaryingStencil<N>& s, MPILevelData* mpiData, bool periodic, bool forceLocal);
 
     using std::min;
 
@@ -51,12 +55,13 @@ namespace mgcl
          * @tparam NA Width of this stencil
          * @tparam NB Width of the other stencil
          * @param b Other stencil
-         * @param ghc Ghosts of resulting stencil at one border. Defaults to 2.
+         * @param ghc Ghosts of resulting stencil at one border.
          * @throws If dimensions do not match.
          * @return std::unique_ptr<VaryingStencil<N + 2>> Resulting stencil (two cells wider).
          */
         template <int NB>
-        VaryingStencil<(N + NB - 1)> multiply(VaryingStencil<NB>& b, int ghc = 2) const
+        VaryingStencil<(N + NB - 1)> multiply(VaryingStencil<NB>& b, int ghc,
+                                              MPILevelData* mpiData, bool periodic, bool forceLocal) const
         {
             if (b.getGhostsDim1() != b.getGhostsDim2() ||
                 b.getGhostsDim1() != b.getGhostsDim3())
@@ -105,7 +110,7 @@ namespace mgcl
             // clang-format on
 
             if (ghc > 0)
-                c.updateGhosts();
+                updateGhostsStencilMpi(c, mpiData, periodic, forceLocal);
 
             return c;
         }
@@ -218,12 +223,13 @@ namespace mgcl
          * @tparam NA Width of this stencil
          * @tparam NB Width of the other stencil
          * @param b Other stencil
-         * @param ghc Ghosts of resulting stencil at one border. Defaults to 2.
+         * @param ghc Ghosts of resulting stencil at one border.
          * @throws If dimensions do not match.
          * @return std::unique_ptr<VaryingStencil<N + 2>> Resulting stencil (two cells wider).
          */
         template <int NB>
-        VaryingStencil<(N + NB - 1)> multiply(FixedStencil<NB>& b, int ghc = 2) const
+        VaryingStencil<(N + NB - 1)> multiply(FixedStencil<NB>& b, int ghc,
+                                              MPILevelData* mpiData, bool periodic, bool forceLocal) const
         {
             if (getGhostsDim1() != getGhostsDim2() ||
                 getGhostsDim1() != getGhostsDim3())
@@ -266,7 +272,7 @@ namespace mgcl
             // clang-format on
 
             if (ghc > 0)
-                c.updateGhosts();
+                updateGhostsStencilMpi(c, mpiData, periodic, forceLocal);
 
             return c;
         }
@@ -282,7 +288,8 @@ namespace mgcl
          * @return std::unique_ptr<VaryingStencil<N + 2>> Resulting stencil (two cells wider).
          */
         template <int NB>
-        VaryingStencil<(N + NB - 1)> multiply(VaryingStencil<NB>& b, int ghc = 2) const
+        VaryingStencil<(N + NB - 1)> multiply(VaryingStencil<NB>& b, int ghc,
+                                              MPILevelData* mpiData, bool periodic, bool forceLocal) const
         {
             if (dim1 != b.getDim1() ||
                 dim2 != b.getDim2() ||
@@ -341,7 +348,7 @@ namespace mgcl
             // clang-format on
 
             if (ghc > 0)
-                c.updateGhosts();
+                updateGhostsStencilMpi(c, mpiData, periodic, forceLocal);
 
             return c;
         }

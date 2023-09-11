@@ -325,22 +325,32 @@ namespace mgcl
         // initialize levels
         for (int level = 0; level <= maxlevel; level++)
         {
-            auto lv = std::make_unique<Level>(this, level);
-            levels.push_back(std::move(lv));
-            levels.back()->init();
+            {
+                auto lv = std::make_unique<Level>(this, level);
+                levels.push_back(std::move(lv)); // lv is invalid after this line, thus restrict the visibility
+                levels.back()->init();
+            }
 
             // Apply Galerkin operator if stencil is varying and we're not on level 0.
             if (levels[0]->getStencilValues() && level >= 1)
             {
+                auto& lvFine = *levels[level - 1];
+                auto& lvCoarse = *levels[level];
                 if (!use_opencl)
                 {
-                    // Gather
-                    if (useMpi() && getMpiLevelThreshold() == levels[level - 1]->getNum())
-                    {
-                    }
+                    lvCoarse.stencilValues = std::make_shared<VaryingStencil3x3x3>(
+                        MultigridEngine::galerkin(*lvFine.getStencilValues(),
+                                                  lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
+                                                  isPeriodic(), lvFine.isCalculatedLocally(),
+                                                  lvCoarse.isCalculatedLocally(),
+                                                  lvCoarse.getM(), lvCoarse.getN(), lvCoarse.getO()));
 
-                    levels.back()->stencilValues = std::make_shared<VaryingStencil3x3x3>(
-                        MultigridEngine::galerkin(*levels[level - 1]->getStencilValues()));
+                    // Gather partial stencil values of this level
+                    // TODO revisit, maybe of previous level
+                    if (useMpi() && getMpiLevelThreshold() == levels.back()->getNum())
+                    {
+                        mpi_util::gather(getMpiComm(), *levels.back()->getStencilValues());
+                    }
                 }
                 else
                 {
@@ -945,6 +955,12 @@ namespace mgcl
         return mpiGlobalData->getComm();
     }
 
+    /**
+     * @brief
+     * All levels below the threshold (exclusively) will be calculated on multiple MPI processes. All levels at or
+     *   above the threshold (inclusively) will be calculated locally on only one process. I.e. for threshold = 0,
+     *   all levels will be calculated on only one process.
+     */
     int Problem::getMpiLevelThreshold()
     {
         return mpiLevelThreshold;

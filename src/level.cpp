@@ -141,6 +141,7 @@ namespace mgcl
                 r = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
             }
 
+            // TODO check this with mpi
             if (initOpenCLBuffers() != CL_SUCCESS)
                 return false;
         }

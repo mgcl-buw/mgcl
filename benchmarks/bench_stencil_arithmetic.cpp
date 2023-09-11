@@ -55,7 +55,7 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
                                    .append(std::to_string(N));
 
             b.run(std::string(name).c_str(), [&]
-                  { ankerl::nanobench::doNotOptimizeAway(v.multiply(f, 0)); });
+                  { ankerl::nanobench::doNotOptimizeAway(v.multiply(f, 0, nullptr, false, true)); });
         }
 
         {
@@ -68,7 +68,7 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
                                    .append(std::to_string(N));
 
             b.run(std::string(name).c_str(), [&]
-                  { ankerl::nanobench::doNotOptimizeAway(v.multiply(f, 0)); });
+                  { ankerl::nanobench::doNotOptimizeAway(v.multiply(f, 0, nullptr, false, true)); });
         }
 
         {
@@ -81,7 +81,7 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
                                    .append(std::to_string(N));
 
             b.run(std::string(name).c_str(), [&]
-                  { ankerl::nanobench::doNotOptimizeAway(f.multiply(v, 0)); });
+                  { ankerl::nanobench::doNotOptimizeAway(f.multiply(v, 0, nullptr, false, true)); });
         }
 
         if (gpuAvailable)
