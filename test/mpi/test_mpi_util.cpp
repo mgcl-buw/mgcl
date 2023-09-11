@@ -10,6 +10,7 @@
 #include "../../src/mpi_util.hpp"
 #include "../../src/multigrid_engine.hpp"
 #include "../../src/problem.hpp"
+#include "../../src/stencil.hpp"
 // #include "test_utility.hpp"
 
 #include "mpi.h"
@@ -709,5 +710,112 @@ TEST_CASE("mpi_util::scatter-src-dest-same-with-ghosts")
     else
         REQUIRE(cloc_act.isEqualAllCells(cloc_exp));
 
+    MPI_Barrier(mpi_comm);
+}
+
+// Checks that gathering is correct while rank 0 has the same globally sized buffer for sending and receiving,
+// while all other processes only send local grids.
+// Uses mpi_util::gather with a stencil as argument.
+// Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::gather-src-dest-same-stencil"
+TEST_CASE("mpi_util::gather-src-dest-same-stencil")
+{
+    using std::min;
+
+    int mloc = 8;
+    int nloc = 8;
+    int oloc = 8;
+    int gh = 1;
+    int periodic = 1;
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    // Calculate global sizes
+    int mglob = mloc * mpi_dims[0];
+    int nglob = nloc * mpi_dims[1];
+    int oglob = oloc * mpi_dims[2];
+
+    /* Initialize start and end for local grid */
+    int m_start = mloc * mpi_coords[0] + min(mpi_coords[0], (mglob % mpi_dims[0]));
+    int m_end = mloc * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (mglob % mpi_dims[0])) - 1;
+    int n_start = nloc * mpi_coords[1] + min(mpi_coords[1], (nglob % mpi_dims[1]));
+    int n_end = nloc * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (nglob % mpi_dims[1])) - 1;
+    int o_start = oloc * mpi_coords[2] + min(mpi_coords[2], (oglob % mpi_dims[2]));
+    int o_end = oloc * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (oglob % mpi_dims[2])) - 1;
+
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (i == mpi_rank)
+    //     {
+    //         std::cout << "rank,ms,me,ns,ne,os,oe: "
+    //                   << mpi_rank << ","
+    //                   << m_start << "," << m_end << ","
+    //                   << n_start << "," << n_end << ","
+    //                   << o_start << "," << o_end << std::endl;
+    //         std::cout << "coords: " << mpi_coords[0] << "," << mpi_coords[1] << "," << mpi_coords[2] << std::endl;
+    //     }
+    // }
+
+    // Create test data
+    mgcl::VaryingStencil3x3x3 cglob(mglob, nglob, oglob, gh, gh, gh);
+    cglob.fill1dIndex(true);
+
+    // Recv buffer, partially filled. Has global size on rank 0, local size else.
+    std::unique_ptr<mgcl::VaryingStencil3x3x3> cglob_recv;
+    if (mpi_rank == 0)
+    {
+        cglob_recv = std::make_unique<mgcl::VaryingStencil3x3x3>(mglob, nglob, oglob, gh, gh, gh);
+        // Copy local slice into test recv buffer
+        for (int i = gh; i < mloc + gh; i++)
+            for (int j = gh; j < nloc + gh; j++)
+                for (int k = gh; k < oloc + gh; k++)
+                    for (int ii = 0; ii < 3; ii++)
+                        for (int jj = 0; jj < 3; jj++)
+                            for (int kk = 0; kk < 3; kk++)
+                            {
+                                (*cglob_recv)[i][j][k][ii][jj][kk] = cglob[i][j][k][ii][jj][kk];
+                            }
+    }
+    else
+    {
+        // Local slice of data
+        auto cloc = cglob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
+        cglob_recv = std::move(cloc);
+    }
+
+    mgcl::mpi_util::gather(mpi_comm, *cglob_recv);
+
+    MPI_Barrier(mpi_comm);
+    if (mpi_rank == 0)
+    {
+        // CAPTURE(cglob_recv->getM(), cglob_recv->getN(), cglob_recv->getO());
+        // cglob_recv->dumpToFile("cglob_recv.txt");
+        // cglob.dumpToFile("cglob.txt");
+
+        // Check result
+        REQUIRE(cglob.isEqual(*cglob_recv));
+    }
     MPI_Barrier(mpi_comm);
 }
