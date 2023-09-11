@@ -37,7 +37,7 @@ namespace mgcl
         /* Stencil for this Level that will be applied on v */
         MGCL_STENCIL stencilType;
         double stencilFactor = 1;
-        std::shared_ptr<VaryingStencil3x3x3> stencilValues = nullptr;
+        std::shared_ptr<VaryingStencil> stencilValues = nullptr;
         std::shared_ptr<VaryingStencilGpu> stencilValuesGpu = nullptr;
 
         /* grid dimensions of local real grid */
@@ -120,7 +120,7 @@ namespace mgcl
 
         MGCL_STENCIL getStencilType() const;
 
-        std::shared_ptr<VaryingStencil3x3x3>& getStencilValues();
+        std::shared_ptr<VaryingStencil>& getStencilValues();
 
         double getStencilFactor() const;
 

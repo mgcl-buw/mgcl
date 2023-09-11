@@ -338,7 +338,7 @@ namespace mgcl
                 auto& lvCoarse = *levels[level];
                 if (!use_opencl)
                 {
-                    lvCoarse.stencilValues = std::make_shared<VaryingStencil3x3x3>(
+                    lvCoarse.stencilValues = std::make_shared<VaryingStencil>(
                         MultigridEngine::galerkin(*lvFine.getStencilValues(),
                                                   lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
                                                   isPeriodic(), lvFine.isCalculatedLocally(),
@@ -913,13 +913,13 @@ namespace mgcl
         if (stencilType == MGCL_VARYING)
         {
             int gh = std::max(2, jacobi_iterations_per_kernel);
-            stencilValues = std::make_shared<VaryingStencil3x3x3>(m, n, o, gh, gh, gh);
+            stencilValues = std::make_shared<VaryingStencil>(m, n, o, 3, gh, gh, gh);
         }
         else
             stencilValues = nullptr;
     }
 
-    std::shared_ptr<VaryingStencil3x3x3>& Problem::getStencilValues()
+    std::shared_ptr<VaryingStencil>& Problem::getStencilValues()
     {
         return stencilValues;
     }

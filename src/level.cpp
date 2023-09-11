@@ -544,7 +544,7 @@ namespace mgcl
         return ngh;
     }
 
-    std::shared_ptr<VaryingStencil3x3x3>& Level::getStencilValues()
+    std::shared_ptr<VaryingStencil>& Level::getStencilValues()
     {
         return stencilValues;
     }

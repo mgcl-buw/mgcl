@@ -11,7 +11,7 @@
 namespace mgcl::mpi_util
 {
     void gather(MPI_Comm comm, Cuboid& c);
-    void gather(MPI_Comm comm, VaryingStencil3x3x3& c);
+    void gather(MPI_Comm comm, VaryingStencil& c);
     void scatter(MPI_Comm comm, Cuboid* src, Cuboid& dest);
     void scatter_inplace(MPI_Comm comm, Cuboid& c);
     void scatter_inplace_wgh(MPI_Comm comm, Cuboid& c);

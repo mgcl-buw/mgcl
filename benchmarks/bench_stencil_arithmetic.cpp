@@ -46,8 +46,8 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
         int gh = 1;
 
         {
-            mgcl::VaryingStencil3x3x3 v(m, n, o, gh, gh, gh);
-            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            mgcl::VaryingStencil v(m, n, o, 3, gh, gh, gh);
+            mgcl::VaryingStencil f(m, n, o, 3, gh, gh, gh);
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 
@@ -59,8 +59,8 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
         }
 
         {
-            mgcl::FixedStencil3x3x3 v;
-            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            mgcl::FixedStencil v(3);
+            mgcl::VaryingStencil f(m, n, o, 3, gh, gh, gh);
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 
@@ -72,8 +72,8 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
         }
 
         {
-            mgcl::FixedStencil3x3x3 v;
-            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            mgcl::FixedStencil v(3);
+            mgcl::VaryingStencil f(m, n, o, 3, gh, gh, gh);
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 
@@ -86,8 +86,8 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
         if (gpuAvailable)
         {
-            mgcl::VaryingStencil3x3x3 v(m, n, o, gh, gh, gh);
-            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            mgcl::VaryingStencil v(m, n, o, 3, gh, gh, gh);
+            mgcl::VaryingStencil f(m, n, o, 3, gh, gh, gh);
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 
@@ -108,8 +108,8 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
         if (gpuAvailable)
         {
-            mgcl::FixedStencil3x3x3 v;
-            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            mgcl::FixedStencil v(3);
+            mgcl::VaryingStencil f(m, n, o, 3, gh, gh, gh);
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 
@@ -130,8 +130,8 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
         if (gpuAvailable)
         {
-            mgcl::FixedStencil3x3x3 v;
-            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            mgcl::FixedStencil v(3);
+            mgcl::VaryingStencil f(m, n, o, 3, gh, gh, gh);
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 

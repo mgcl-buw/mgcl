@@ -77,22 +77,21 @@ namespace mgcl_test
          * @param periodic
          * @return Matrix2d
          */
-        template <int N>
-        static Matrix2d fromVaryingStencil(mgcl::VaryingStencil<N>& s, bool periodic)
+        static Matrix2d fromVaryingStencil(mgcl::VaryingStencil& s, bool periodic)
         {
             int m = s.getDim1();
             int n = s.getDim2();
             int o = s.getDim3();
             Matrix2d c(m * n * o, m * n * o);
-            int N2 = N >> 1;
+            int N2 = s.getWidth() >> 1;
 
             // clang-format off
             for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)
             for (int k = 0; k < o; k++)
-                for (int ii = 0; ii < N; ii++)
-                for (int jj = 0; jj < N; jj++)
-                for (int kk = 0; kk < N; kk++)
+                for (int ii = 0; ii < s.getWidth(); ii++)
+                for (int jj = 0; jj < s.getWidth(); jj++)
+                for (int kk = 0; kk < s.getWidth(); kk++)
                 {
                     // Column index of the resulting matrix is equal to the grid point
                     // the current stencil entry maps to. Therefore wrap grid point

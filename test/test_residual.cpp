@@ -84,7 +84,7 @@ TEST_CASE("residual")
     SECTION("residualSeq L2-norm 7point varying stencil periodic")
     {
         int n = 16;
-        auto vals = mgcl::VaryingStencil3x3x3(n, n, n, 1, 1, 1);
+        auto vals = mgcl::VaryingStencil(n, n, n, 3, 1, 1, 1);
 
         double h2inv = static_cast<double>(n * n);
         for (int i = 0; i < vals.getDim1gh(); i++)
@@ -288,7 +288,7 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
     auto c_r_in = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
     auto c_v_in = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
     auto c_f_in = tu.readOpenCLBuffer(level0_gpu.getDF(), m, n, o, 1, 1, 1);
-    auto c_sv_in = level0_gpu.getStencilValuesGpu()->read<3>(tu.getCommands());
+    auto c_sv_in = level0_gpu.getStencilValuesGpu()->read(tu.getCommands());
     tu.finish();
 
     REQUIRE(c_r_in->isEqual(r_in_lv0));
@@ -388,7 +388,7 @@ TEST_CASE("residual seq gh > 1")
 
     SECTION("Varying 27p")
     {
-        mgcl::VaryingStencil3x3x3 sv(m, n, o, 2, 2, 2);
+        mgcl::VaryingStencil sv(m, n, o, 3, 2, 2, 2);
         sv.fillRandom();
         sv.updateGhosts();
 
@@ -451,7 +451,7 @@ TEST_CASE("residual gpu gh > 1")
     mgcl::MultigridEngine::updateGhostsSeq(v_in_gh, nullptr, true, true);
     mgcl::MultigridEngine::updateGhostsSeq(f_in_gh, nullptr, true, true);
 
-    mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
+    mgcl::VaryingStencil dummy(1, 1, 1, 3, 0, 0, 0);
 
     if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
     {
@@ -768,7 +768,7 @@ TEST_CASE("residual seq moff, noff, koff < 0")
 
     SECTION("Varying 27p")
     {
-        mgcl::VaryingStencil3x3x3 sv(exp_m, exp_n, exp_o, 2, 2, 2);
+        mgcl::VaryingStencil sv(exp_m, exp_n, exp_o, 3, 2, 2, 2);
         sv.fillRandom();
         sv.updateGhosts();
 
@@ -845,7 +845,7 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
     v_act.fillAllFrom(v_exp);
     f_act.fillAllFrom(f_exp);
 
-    mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
+    mgcl::VaryingStencil dummy(1, 1, 1, 3, 0, 0, 0);
 
     if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
     {

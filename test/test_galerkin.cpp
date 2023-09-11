@@ -18,7 +18,7 @@ TEST_CASE("galerkin Laplace vs Matrix")
     int o = GENERATE(2, 4, 8);
 
     // Fill varying stencil on fine grid with 7p Laplace
-    mgcl::VaryingStencil3x3x3 a_h(m, n, o, 2, 2, 2);
+    mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
     for (int i = 0; i < m + 4; i++)
         for (int j = 0; j < n + 4; j++)
             for (int k = 0; k < o + 4; k++)
@@ -55,7 +55,7 @@ TEST_CASE("galerkin random values periodic vs Matrix")
     double tol = 1e-12;
 
     // Fill varying stencil on fine grid with 27p random values
-    mgcl::VaryingStencil3x3x3 a_h(m, n, o, 2, 2, 2);
+    mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
     a_h.fillRandom(-10, 10);
     a_h.updateGhosts();
 
@@ -94,7 +94,7 @@ TEST_CASE("GPU galerkin random values periodic")
 
     // Fill varying stencil on fine grid with 27p random values
     mgcl::VaryingStencilGpu a_h_gpu(m, n, o, 3, gh, t.getContext(), t.getCommands());
-    mgcl::VaryingStencil3x3x3 a_h(m, n, o, gh, gh, gh);
+    mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
     a_h.fillRandom(-10, 10);
     a_h.updateGhosts();
     a_h_gpu.fill(a_h, t.getCommands());
@@ -104,7 +104,7 @@ TEST_CASE("GPU galerkin random values periodic")
     auto a_2h_gpu = mgcl::MultigridEngine::galerkin(a_h_gpu, t.getProgram(), t.getCommands(), t.getContext());
     t.finish();
 
-    auto ret = a_2h_gpu.read<3>(t.getCommands());
+    auto ret = a_2h_gpu.read(t.getCommands());
     t.finish();
 
     REQUIRE(a_2h.isEqual(ret, tol));
@@ -125,15 +125,15 @@ TEST_CASE("galerkin multiple levels random values periodic")
     std::cout << "Testing for m,n,o with maxlv: " << m << "," << n << "," << o << ", " << maxlv << std::endl;
 
     // Fill varying stencil on fine grid with 27p random values initially
-    auto a_h = std::make_unique<mgcl::VaryingStencil3x3x3>(m, n, o, 2, 2, 2);
+    auto a_h = std::make_unique<mgcl::VaryingStencil>(m, n, o, 3, 2, 2, 2);
     a_h->fillRandom(-10, 10);
     a_h->updateGhosts();
 
-    std::unique_ptr<mgcl::VaryingStencil3x3x3> a_2h = nullptr;
+    std::unique_ptr<mgcl::VaryingStencil> a_2h = nullptr;
 
     for (int lv = 0; lv < maxlv; lv++)
     {
-        a_2h = std::make_unique<mgcl::VaryingStencil3x3x3>(mgcl::MultigridEngine::galerkin(*a_h, nullptr, nullptr, true, true, true));
+        a_2h = std::make_unique<mgcl::VaryingStencil>(mgcl::MultigridEngine::galerkin(*a_h, nullptr, nullptr, true, true, true));
         auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(*a_2h, true);
 
         // calculate results with Matrices to check
@@ -158,7 +158,7 @@ TEST_CASE("galerkin symmetric")
     int o = GENERATE(2, 4, 8);
 
     // Fill varying stencil on fine grid with 7p Laplace
-    mgcl::VaryingStencil3x3x3 a_h(m, n, o, 2, 2, 2);
+    mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
     for (int i = 0; i < m + 4; i++)
         for (int j = 0; j < n + 4; j++)
             for (int k = 0; k < o + 4; k++)
@@ -193,7 +193,7 @@ TEST_CASE("galerkin Laplace SA == AS")
     double h2inv = static_cast<double>(m * m);
 
     // Fill varying stencil on fine grid with 7p Laplace
-    mgcl::VaryingStencil3x3x3 a(m, n, o, 2, 2, 2);
+    mgcl::VaryingStencil a(m, n, o, 3, 2, 2, 2);
     for (int i = 0; i < m + 4; i++)
         for (int j = 0; j < n + 4; j++)
             for (int k = 0; k < o + 4; k++)
@@ -239,7 +239,7 @@ TEST_CASE("galerkin Laplace rediscretized")
     double h2inv = static_cast<double>(m * m);
 
     // Fill varying stencil on fine grid with 7p Laplace
-    mgcl::VaryingStencil3x3x3 a_h(m, n, o, 2, 2, 2);
+    mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
     for (int i = 0; i < m + 4; i++)
         for (int j = 0; j < n + 4; j++)
             for (int k = 0; k < o + 4; k++)

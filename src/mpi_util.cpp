@@ -128,7 +128,7 @@ namespace mgcl::mpi_util
      * @param comm
      * @param c Global grid for root process (rank 0), local grids for all other processes.
      */
-    void gather(MPI_Comm comm, VaryingStencil3x3x3& c)
+    void gather(MPI_Comm comm, VaryingStencil& c)
     {
         int err;
         int rank;

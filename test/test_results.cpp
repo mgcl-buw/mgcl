@@ -4,9 +4,9 @@
 
 namespace mgcl_test
 {
-    std::unique_ptr<mgcl::VaryingStencil5x5x5> Matrix2d_fromVaryingStencil::varyingStencilLaplace4x4x4()
+    std::unique_ptr<mgcl::VaryingStencil> Matrix2d_fromVaryingStencil::varyingStencilLaplace4x4x4()
     {
-        auto sptr = std::make_unique<mgcl::VaryingStencil5x5x5>(4, 4, 4, 0, 0, 0);
+        auto sptr = std::make_unique<mgcl::VaryingStencil>(4, 4, 4, 5, 0, 0, 0);
         auto& s = *sptr;
         s[0][0][0][0][0][0] = 0;
         s[0][0][0][0][0][1] = 0;
@@ -8081,9 +8081,9 @@ namespace mgcl_test
     }
 
     // Varying stencil equivalent of matrix2d64x64RandomPeriodic
-    std::unique_ptr<mgcl::VaryingStencil3x3x3> Matrix2d_fromVaryingStencil::varyingStencil2x3x4RandomPeriodic()
+    std::unique_ptr<mgcl::VaryingStencil> Matrix2d_fromVaryingStencil::varyingStencil2x3x4RandomPeriodic()
     {
-        auto sptr = std::make_unique<mgcl::VaryingStencil3x3x3>(2, 3, 4, 0, 0, 0);
+        auto sptr = std::make_unique<mgcl::VaryingStencil>(2, 3, 4, 3, 0, 0, 0);
         auto& s = *sptr;
         s[0][0][0][0][0][0] = 6;
         s[0][0][0][0][0][1] = 9;

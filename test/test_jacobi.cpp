@@ -157,7 +157,7 @@ TEST_CASE("jacobi GPU varying stencil")
         int n = 8 + 2 * ghosts;
         int o = 8 + 2 * ghosts;
 
-        mgcl::VaryingStencil3x3x3 stencilValues(mreal, nreal, oreal, 2, 2, 2);
+        mgcl::VaryingStencil stencilValues(mreal, nreal, oreal, 3, 2, 2, 2);
         for (int i = 0; i < stencilValues.field1d().size(); i++)
             stencilValues.field1d()[i] = i;
 
@@ -296,7 +296,7 @@ TEST_CASE("jacobi GPU varying stencil")
         auto c_r_in = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
         auto c_v_in = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
         auto c_f_in = tu.readOpenCLBuffer(level0_gpu.getDF(), m, n, o, 1, 1, 1);
-        auto c_sv_in = level0_gpu.getStencilValuesGpu()->read<3>(tu.getCommands());
+        auto c_sv_in = level0_gpu.getStencilValuesGpu()->read(tu.getCommands());
         tu.finish();
         REQUIRE(c_r_in->isEqual(r_in_lv0));
         REQUIRE(c_v_in->isEqual(v_in_lv0));

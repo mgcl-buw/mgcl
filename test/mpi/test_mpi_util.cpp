@@ -779,14 +779,14 @@ TEST_CASE("mpi_util::gather-src-dest-same-stencil")
     // }
 
     // Create test data
-    mgcl::VaryingStencil3x3x3 cglob(mglob, nglob, oglob, gh, gh, gh);
+    mgcl::VaryingStencil cglob(mglob, nglob, oglob, 3, gh, gh, gh);
     cglob.fill1dIndex(true);
 
     // Recv buffer, partially filled. Has global size on rank 0, local size else.
-    std::unique_ptr<mgcl::VaryingStencil3x3x3> cglob_recv;
+    std::unique_ptr<mgcl::VaryingStencil> cglob_recv;
     if (mpi_rank == 0)
     {
-        cglob_recv = std::make_unique<mgcl::VaryingStencil3x3x3>(mglob, nglob, oglob, gh, gh, gh);
+        cglob_recv = std::make_unique<mgcl::VaryingStencil>(mglob, nglob, oglob, 3, gh, gh, gh);
         // Copy local slice into test recv buffer
         for (int i = gh; i < mloc + gh; i++)
             for (int j = gh; j < nloc + gh; j++)

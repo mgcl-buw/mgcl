@@ -54,28 +54,28 @@ namespace mgcl
         static double residual(Problem& problem, Level& level, bool returnResidual,
                                int moff = 0, int noff = 0, int ooff = 0);
         static double residualSeq(Cuboid& f, Cuboid& v, Cuboid& r, MGCL_RESIDUAL_NORM resnorm,
-                                  MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil3x3x3* stencilValues,
+                                  MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil* stencilValues,
                                   bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
                                   int moff = 0, int noff = 0, int ooff = 0, MPILevelData* mpiData = nullptr);
 
         static double jacobiSeq(Cuboid& v, Cuboid& f, Cuboid& r, double omega, double h2,
                                 int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType, double stencilFactor,
-                                VaryingStencil3x3x3* stencilValuesCuboid, bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
+                                VaryingStencil* stencilValuesCuboid, bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
                                 int stepsPerIter = 1, MPILevelData* mpiData = nullptr);
         static double jacobi(Problem& problem, Level& level, int maxiter, bool returnResidual, int stepsPerIter = 1);
         static double jacobiLocalMem(Problem& problem, Level& level, int maxiter, int returnResidual);
 
-        static VaryingStencil3x3x3 galerkin(VaryingStencil3x3x3& a_h,
-                                            MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
-                                            bool periodic, bool forceLocalFine, bool forceLocalCoarse,
-                                            int resm = 0, int resn = 0, int reso = 0);
+        static VaryingStencil galerkin(VaryingStencil& a_h,
+                                       MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
+                                       bool periodic, bool forceLocalFine, bool forceLocalCoarse,
+                                       int resm = 0, int resn = 0, int reso = 0);
         static VaryingStencilGpu galerkin(VaryingStencilGpu& a_h, cl_program program, cl_command_queue queue, cl_context context);
 
         static void print7point(Cuboid& v, int i, int j, int k);
         static void print19point(Cuboid& v, int i, int j, int k);
         static void print27point(Cuboid& v, int i, int j, int k);
         static void print27point_sv(Cuboid& v, int i, int j, int k,
-                                    VaryingStencil3x3x3& sv, int i_sv, int j_sv, int k_sv);
+                                    VaryingStencil& sv, int i_sv, int j_sv, int k_sv);
     };
 }
 

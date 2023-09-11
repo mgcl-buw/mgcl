@@ -30,7 +30,7 @@ namespace mgcl
      * cells, i.e. v_gh >= stepsPerIter per border. Defaults to 1. */
     double MultigridEngine::jacobiSeq(Cuboid& v, Cuboid& f, Cuboid& r, double omega, double h2,
                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
-                                      double stencilFactor, VaryingStencil3x3x3* stencilValues, bool returnResidualNorm,
+                                      double stencilFactor, VaryingStencil* stencilValues, bool returnResidualNorm,
                                       bool periodic, bool updateGhostsLocally, int stepsPerIter, MPILevelData* mpiData)
     {
         double res = 0.0;
@@ -766,7 +766,7 @@ namespace mgcl
      */
     double MultigridEngine::residualSeq(Cuboid& f, Cuboid& v, Cuboid& r, MGCL_RESIDUAL_NORM resnorm,
                                         MGCL_STENCIL stencilType, double stencilFactor,
-                                        VaryingStencil3x3x3* stencilValuesCuboid, bool returnResidualNorm,
+                                        VaryingStencil* stencilValuesCuboid, bool returnResidualNorm,
                                         bool periodic, bool updateGhostsLocally, int moff, int noff, int ooff, MPILevelData* mpiData)
     {
         double res = 0.0;
@@ -998,7 +998,7 @@ namespace mgcl
     }
 
     void MultigridEngine::print27point_sv(Cuboid& v, int i, int j, int k,
-                                          VaryingStencil3x3x3& sv, int i_sv, int j_sv, int k_sv)
+                                          VaryingStencil& sv, int i_sv, int j_sv, int k_sv)
     {
         // clang-format off
         printf("27point stencil at %d,%d,%d; %d,%d,%d:\n", i_sv, j_sv, k_sv, i, j, k);

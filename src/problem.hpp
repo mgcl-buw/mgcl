@@ -98,7 +98,7 @@ namespace mgcl
 
         /* Stencil that will be used in Jacobi's method */
         MGCL_STENCIL stencilType = MGCL_LAPLACE_7POINT;
-        std::shared_ptr<VaryingStencil3x3x3> stencilValues = nullptr;
+        std::shared_ptr<VaryingStencil> stencilValues = nullptr;
 
         /* Boundary condition that shall be used. Only affects whether ghosts are updated. Values need to be set
            in input v.
@@ -294,7 +294,7 @@ namespace mgcl
         MGCL_STENCIL getStencilType() const;
         void setStencilType(const MGCL_STENCIL& stencilType_);
 
-        std::shared_ptr<VaryingStencil3x3x3>& getStencilValues();
+        std::shared_ptr<VaryingStencil>& getStencilValues();
 
         BC getBc() const;
         void setBc(const BC& bc_);

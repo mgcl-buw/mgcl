@@ -74,7 +74,7 @@ TEST_CASE("MPI-stencil-updateGhostsSeq-1proc")
         auto& lv = p.getLevelAt(0);
 
         // Create test data
-        mgcl::VaryingStencil3x3x3 s3(N, N, N, gh, gh, gh);
+        mgcl::VaryingStencil s3(N, N, N, 3, gh, gh, gh);
         s3.fillRandomInt(-10, 10, true);
 
         // Update ghosts of test data
@@ -220,7 +220,7 @@ TEST_CASE("MPI-stencil-updateGhostsSeq-nprocs")
     // }
 
     // Create global test data. No random data so values will be the same for all processes. Fill with 1d index.
-    mgcl::VaryingStencil3x3x3 cg(m, n, o, gh, gh, gh);
+    mgcl::VaryingStencil cg(m, n, o, 3, gh, gh, gh);
     cg.fill1dIndex(true);
 
     // Update ghosts of expected result locally, i.e. not using MPI routines.
@@ -403,10 +403,10 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     mgcl_test::TestUtility tu(pptr);
 
     // Create global test data. No random data so values will be the same for all processes. Fill with 1d index.
-    mgcl::VaryingStencil3x3x3 sglob(m, n, o, gh, gh, gh);
+    mgcl::VaryingStencil sglob(m, n, o, 3, gh, gh, gh);
     sglob.fill1dIndex(true);
     mgcl::VaryingStencilGpu sgpu(m, n, o, 3, gh, tu.getContext(), tu.getCommands());
-    sgpu.fill<3>(sglob, tu.getCommands());
+    sgpu.fill(sglob, tu.getCommands());
     tu.finish();
 
     // Update ghosts of expected result locally, i.e. not using MPI routines.
@@ -416,15 +416,15 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     auto clptr = sglob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
     auto& sloc = *clptr;
     mgcl::VaryingStencilGpu sgpuLocal(sloc.getDim1(), sloc.getDim2(), sloc.getDim3(), 3, gh, tu.getContext(), tu.getCommands());
-    sgpuLocal.fill<3>(sloc, tu.getCommands());
+    sgpuLocal.fill(sloc, tu.getCommands());
     tu.finish();
 
     // Update ghosts of test data
     mgcl::updateGhostsStencilOclMpi(tu.getProgram(), tu.getCommands(), sgpuLocal, *mpiData, true, false);
 
     // Read results
-    auto cg = sgpu.read<3>(tu.getCommands());
-    auto cl = sgpuLocal.read<3>(tu.getCommands());
+    auto cg = sgpu.read(tu.getCommands());
+    auto cl = sgpuLocal.read(tu.getCommands());
     tu.finish();
 
     // cl.dumpToFile("cl" + std::to_string(mpi_rank) + ".txt");

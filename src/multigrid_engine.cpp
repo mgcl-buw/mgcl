@@ -6,6 +6,7 @@
 #include "mpi_util.hpp"
 #include "opencl_helper.hpp" // for mgclCheckError, OpenCLHelper
 #include "problem.hpp"       // for Problem
+#include "stencil.hpp"
 
 #include <cstddef> // for size_t, NULL
 // #include <iostream>
@@ -211,12 +212,12 @@ namespace mgcl
      * @param resm Size of resulting stencil's grid. Per default halve of a_h's size.
      * @param resn Size of resulting stencil's grid. Per default halve of a_h's size.
      * @param reso Size of resulting stencil's grid. Per default halve of a_h's size.
-     * @returns VaryingStencil3x3x3 The stencil to be applied on the coarser grid
+     * @returns VaryingStencil The stencil to be applied on the coarser grid
      */
-    VaryingStencil3x3x3 MultigridEngine::galerkin(VaryingStencil3x3x3& a_h,
-                                                  MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
-                                                  bool periodic, bool forceLocalFine, bool forceLocalCoarse,
-                                                  int resm, int resn, int reso)
+    VaryingStencil MultigridEngine::galerkin(VaryingStencil& a_h,
+                                             MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
+                                             bool periodic, bool forceLocalFine, bool forceLocalCoarse,
+                                             int resm, int resn, int reso)
     {
         // TODO respect problem::ghosts maybe
 
@@ -246,7 +247,7 @@ namespace mgcl
             reso = a_h.getDim3() >> 1;
 
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
-        VaryingStencil3x3x3 a_2h(resm, resn, reso, 2, 2, 2);
+        VaryingStencil a_2h(resm, resn, reso, 3, 2, 2, 2);
         // clang-format off
         for (int i = 2, i2 = 1; i < (a_h.getDim1() >> 1) + 2; i++, i2 += 2)
         for (int j = 2, j2 = 1; j < (a_h.getDim2() >> 1) + 2; j++, j2 += 2)
