@@ -334,11 +334,21 @@ namespace mgcl
             {
                 if (!use_opencl)
                 {
+                    // Gather
+                    if (useMpi() && getMpiLevelThreshold() == levels[level - 1]->getNum())
+                    {
+                    }
+
                     levels.back()->stencilValues = std::make_shared<VaryingStencil3x3x3>(
                         MultigridEngine::galerkin(*levels[level - 1]->getStencilValues()));
                 }
                 else
                 {
+                    // Gather
+                    if (useMpi() && getMpiLevelThreshold() == levels[level - 1]->getNum())
+                    {
+                    }
+
                     levels.back()->stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
                         MultigridEngine::galerkin(
                             *levels[level - 1]->getStencilValuesGpu(),
@@ -540,16 +550,7 @@ namespace mgcl
         // TODO check mpiSize > 1 maybe
         if (useMpi() && getMpiLevelThreshold() == 0)
         {
-            if (mpiRank() == 0)
-            {
-                auto tmp = std::make_shared<Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                mpi_util::scatter(mpiGlobalData->getComm(), getLevelAt(0).getVPtr().get(), *tmp);
-                getLevelAt(0).setV(tmp);
-            }
-            else
-            {
-                mpi_util::scatter(mpiGlobalData->getComm(), nullptr, getLevelAt(0).getV());
-            }
+            mpi_util::scatter_inplace(mpiGlobalData->getComm(), getLevelAt(0).getV());
         }
 
         // write data to output
