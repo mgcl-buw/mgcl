@@ -105,7 +105,7 @@ namespace mgcl
         void fill(double value, bool realCellsOnly = false);
         void fill1dIndex(bool realCellsOnly);
         std::vector<double>& field1d();
-        bool isEqual(Hypercube6d& c, double tol = 1e-7, bool printDiffs = true);
+        bool isEqual(Hypercube6d& c, double tol = 1e-7, bool printDiffs = false);
         void dumpToFile(std::string path, bool realCellsOnly = false);
         void dumpToFileMatlab(std::string path, std::string varname, bool realCellsOnly = false);
         void copyRealFrom(Hypercube6d& o);
