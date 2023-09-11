@@ -165,6 +165,8 @@ if [ "$TEST_STENCIL" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 1 "$exe" "MPI-stencil-updateGhostsSeq-1proc"
     run_test --oversubscribe -n 2 "$exe" "MPI-stencil-updateGhostsSeq-nprocs"
     run_test --oversubscribe -n 4 "$exe" "MPI-stencil-updateGhostsSeq-nprocs"
+    run_test --oversubscribe -n 2 "$exe" "MPI-updateGhostsStencilOclMpi-nprocs"
+    run_test --oversubscribe -n 4 "$exe" "MPI-updateGhostsStencilOclMpi-nprocs"
 fi
 
 echo "Done. All good!"

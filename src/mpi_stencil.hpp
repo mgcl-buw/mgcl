@@ -2,7 +2,14 @@
 #define MGCL_MPI_STENCIL_HPP
 
 #include "mpi_level_data.hpp"
+#include "opencl_helper.hpp"
 #include "stencil.hpp"
+
+#ifdef __APPLE__
+#include <OpenCL/cl_platform.h>
+#else
+#include <CL/cl_platform.h>
+#endif
 
 namespace mgcl
 {
@@ -162,6 +169,39 @@ namespace mgcl
                             for (int jj = 0; jj < s.getDim5(); jj++)
                                 for (int kk = 0; kk < s.getDim6(); kk++)
                                     s[i][j][k][ii][jj][kk] = rbuf[i][j][k][ii][jj][kk];
+    }
+
+    /**
+     * @brief Updates ghosts of an VaryingStencilGpu respecting MPI usage. That is, the buffer is sent to host, ghosts
+     * are updated using MPI routines, and the updated buffer is sent back to the device.
+     * Waits for previous commands to finish before reading the buffer.
+     * Currently only stencil widths of 3 and 5 are supported.
+     *
+     * @param commands
+     * @param periodic
+     * @param forceLocal
+     */
+    void updateGhostsStencilOclMpi(cl_program program, cl_command_queue commands, VaryingStencilGpu& s,
+                                   MPILevelData& mpiData, bool periodic, bool forceLocal)
+    {
+        if (s.getWidth() == 3)
+        {
+            auto tmp = s.read<3>(commands);
+            mgclCheckError(clFinish(commands), "clFinish");
+            updateGhostsStencilMpi<3>(tmp, &mpiData, periodic, forceLocal);
+            s.fill<3>(tmp, commands);
+            mgclCheckError(clFinish(commands), "clFinish");
+        }
+        else if (s.getWidth() == 5)
+        {
+            auto tmp = s.read<5>(commands);
+            mgclCheckError(clFinish(commands), "clFinish");
+            updateGhostsStencilMpi<5>(tmp, &mpiData, periodic, forceLocal);
+            s.fill<5>(tmp, commands);
+            mgclCheckError(clFinish(commands), "clFinish");
+        }
+        else
+            throw "updateGhostsStencilOclMpi is only supported for stencils widths 3 and 5!";
     }
 }
 
