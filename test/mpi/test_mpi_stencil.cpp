@@ -420,7 +420,7 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     tu.finish();
 
     // Update ghosts of test data
-    mgcl::updateGhostsStencilOclMpi(tu.getProgram(), tu.getCommands(), sgpuLocal, *mpiData, true, false);
+    mgcl::updateGhostsStencilOclMpi(tu.getCommands(), sgpuLocal, *mpiData, true, false);
 
     // Read results
     auto cg = sgpu.read(tu.getCommands());

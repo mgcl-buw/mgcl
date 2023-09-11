@@ -32,7 +32,7 @@ namespace mgcl
      * @param periodic
      * @param forceLocal
      */
-    void updateGhostsStencilOclMpi(cl_program program, cl_command_queue commands, VaryingStencilGpu& s,
+    void updateGhostsStencilOclMpi(cl_command_queue commands, VaryingStencilGpu& s,
                                    MPILevelData& mpiData, bool periodic, bool forceLocal);
 }
 
