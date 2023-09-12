@@ -331,6 +331,9 @@ namespace mgcl
         }
 
         // initialize levels
+        // ghatered flag needed for enforcing local ghost update after stencil values were gathered. If threshold is 0,
+        // no gathering happens at all.
+        bool gathered = getMpiLevelThreshold() == 0;
         for (int level = 0; level <= maxlevel; level++)
         {
             {
@@ -347,19 +350,25 @@ namespace mgcl
                 auto& lvCoarse = *levels[level];
                 if (!use_opencl)
                 {
-                    lvCoarse.stencilValues = std::make_shared<VaryingStencil>(
-                        MultigridEngine::galerkin(*lvFine.getStencilValues(),
-                                                  lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
-                                                  isPeriodic(), lvFine.isCalculatedLocally(),
-                                                  lvCoarse.isCalculatedLocally(),
-                                                  lvCoarse.getM(), lvCoarse.getN(), lvCoarse.getO()));
-
-                    // Gather partial stencil values of this level
-                    // TODO revisit, maybe of previous level
-                    if (useMpi() && getMpiLevelThreshold() == levels.back()->getNum())
+                    // Gather partial stencil values of the previous level
+                    if (useMpi() && getMpiLevelThreshold() == lvCoarse.getNum())
                     {
-                        mpi_util::gather(getMpiComm(), *levels.back()->getStencilValues());
+                        mpi_util::gather(getMpiComm(), *lvFine.getStencilValues());
+                        gathered = true;
                     }
+
+                    // Only calculate galerkin if
+                    // 1. MPI is not used at all, or
+                    // 2. this level is calculated distributively, or
+                    // 3. this level is calculated locally and rank is 0.
+                    // Otherwise we would run into neighbour issues when trying to update ghosts.
+                    if (!useMpi() || !lvCoarse.isCalculatedLocally() || mpiRank() == 0)
+                        lvCoarse.stencilValues = std::make_shared<VaryingStencil>(
+                            MultigridEngine::galerkin(*lvFine.getStencilValues(),
+                                                      lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
+                                                      isPeriodic(), gathered,
+                                                      lvCoarse.isCalculatedLocally(),
+                                                      lvCoarse.getM(), lvCoarse.getN(), lvCoarse.getO()));
                 }
                 else
                 {
