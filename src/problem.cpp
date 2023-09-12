@@ -122,6 +122,14 @@ namespace mgcl
             // clang-format on
             throw "ghosts_in is different than ghosts of v and/or f!";
 
+        if (getMpiLevelThreshold() == 0 && stencilValues &&
+            (stencilValues->getDim1() < mGlobal || stencilValues->getDim2() < nGlobal || stencilValues->getDim3() < oGlobal))
+            throw "Mpi threshold level is 0 but stencilValues has local size. Please use setMpiMinGridPoints before setStencilType!";
+
+        if (getMpiLevelThreshold() > 0 && stencilValues &&
+            (stencilValues->getDim1() > m || stencilValues->getDim2() > n || stencilValues->getDim3() > o))
+            throw "Mpi threshold level is not 0 but stencilValues has global size. Please use setMpiMinGridPoints before setStencilType!";
+
         return true;
     }
 
