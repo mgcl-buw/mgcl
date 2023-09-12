@@ -28,6 +28,7 @@ print_help() {
   echo "-j,--jacobi: Run Jacobi specific tests"
   echo "-u,--util: Run Utility specific tests"
   echo "-v,--vcycle: Run Vcycle specific tests"
+  echo "-s,--stencil: Run Stencil specific tests"
   echo "If no option is given, all tests will be run."
 }
 
