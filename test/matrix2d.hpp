@@ -28,7 +28,7 @@ namespace mgcl_test
             }
         }
 
-        Matrix2d(std::vector<std::vector<double>>&& vec)
+        explicit Matrix2d(std::vector<std::vector<double>>&& vec)
             : m(vec.size()), n(vec.at(0).size()), values(std::move(vec)) {}
 
         Matrix2d kronecker(const Matrix2d& b);
@@ -43,10 +43,12 @@ namespace mgcl_test
         Matrix2d operator*(const Matrix2d& b) const;
         Matrix2d& operator*(double b);
         Matrix2d& operator*(int b) { return operator*(static_cast<double>(b)); }
-        friend Matrix2d& operator*(double b, Matrix2d& m) { return m * b; }
-        friend Matrix2d& operator*(double b, Matrix2d&& m) { return m * b; }
-        friend Matrix2d& operator*(int b, Matrix2d& m) { return m * b; }
-        friend Matrix2d& operator*(int b, Matrix2d&& m) { return m * b; }
+        // clang-format off
+        friend Matrix2d& operator*(double b, Matrix2d& m) { m * b; return m; }
+        friend Matrix2d& operator*(double b, Matrix2d&& m) { m * b; return m; }
+        friend Matrix2d& operator*(int b, Matrix2d& m) { m * b; return m; }
+        friend Matrix2d& operator*(int b, Matrix2d&& m) { m * b; return m; }
+        // clang-format on
 
         std::vector<double>& operator[](int index);
         const std::vector<double>& operator[](int index) const;
@@ -77,7 +79,7 @@ namespace mgcl_test
          * @param periodic
          * @return Matrix2d
          */
-        static Matrix2d fromVaryingStencil(mgcl::VaryingStencil& s, bool periodic)
+        static Matrix2d fromVaryingStencil(const mgcl::VaryingStencil& s, bool periodic)
         {
             int m = s.getDim1();
             int n = s.getDim2();

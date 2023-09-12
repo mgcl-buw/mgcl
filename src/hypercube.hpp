@@ -99,7 +99,7 @@ namespace mgcl
         ~Hypercube6d();
 
         double****** getData() const;
-        double***** operator[](int index);
+        double***** operator[](int index) const;
         void fillRandom(double low = 0, double high = 1);
         void fillRandomInt(int low = 1, int high = 10, bool realCellsOnly = false);
         void fill(double value, bool realCellsOnly = false);

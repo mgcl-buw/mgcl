@@ -200,7 +200,7 @@ namespace mgcl
 
         std::vector<std::tuple<int, int, int, int, double, double, double>> diffs;
         bool ret = true;
-        double diff = 0;
+        double diff;
 
         for (int i = 0; i < dim1; i++)
             for (int j = 0; j < dim2; j++)
@@ -528,7 +528,7 @@ namespace mgcl
         return field_6d;
     }
 
-    double***** Hypercube6d::operator[](int index)
+    double***** Hypercube6d::operator[](int index) const
     {
         return field_6d[index];
     }
@@ -666,7 +666,7 @@ namespace mgcl
 
         std::vector<std::tuple<int, int, int, int, int, int, double, double, double>> diffs;
         bool ret = true;
-        double diff = 0;
+        double diff;
 
         for (int d1 = 0; d1 < dim1; d1++)
             for (int d2 = 0; d2 < dim2; d2++)
