@@ -136,11 +136,9 @@ namespace mgcl
     /**
      * @brief Checks if there is enough space available on the OpenCL device s.t. every buffer that is needed
      * can be created. Sets maxlevel and initialized OpenCL environment if not done yet.
-     *
-     * @return true Enough space available.
-     * @return false Otherwise.
+     * @throws string If not enough space is available.
      */
-    bool Problem::checkGpuSizes()
+    void Problem::checkGpuSizes()
     {
         // Set maxlevel if not done yet.
         if (maxlevel == -1)
@@ -230,8 +228,6 @@ namespace mgcl
 
             throw msg;
         }
-
-        return true;
     }
 
     /**
@@ -316,11 +312,8 @@ namespace mgcl
         // create opencl environment with default parameters if not done yet
         if (use_opencl)
         {
-            if (initOpenCL() != CL_SUCCESS)
-                return false;
-
-            if (!checkGpuSizes())
-                return false;
+            initOpenCL();
+            checkGpuSizes();
         }
 
         // check opencl components if device buffers should be reused
@@ -396,20 +389,16 @@ namespace mgcl
      * @param commandQueue OpenCL command_queue to be reused.
      * @param deviceId OpenCL device_id to be reused.
      */
-    int Problem::reuseOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
+    void Problem::reuseOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
     {
-        int err;
-        err = openCLHelper.release();
-        mgclCheckError(err, "openCLHelper.release");
+        openCLHelper.release();
 
         openCLHelper.setContext(context);
         openCLHelper.setCommands(commandQueue);
         openCLHelper.setDeviceId(deviceId);
         setUseOpencl(true);
 
-        err = openCLHelper.init();
-        mgclCheckError(err, "openCLHelper.init");
-        return err;
+        openCLHelper.init();
     }
 
     /**
@@ -417,15 +406,10 @@ namespace mgcl
      *
      * @return int OpenCL error code
      */
-    int Problem::initOpenCL()
+    void Problem::initOpenCL()
     {
-        int err = CL_SUCCESS;
         if (!openCLHelper.isInitialized())
-        {
-            err = openCLHelper.init();
-            mgclCheckError(err, "openCLHelper.init");
-        }
-        return err;
+            openCLHelper.init();
     }
 
     /* Waits for all running OpenCL kernels to finish and reads back results from device. Creates arrays on host if none

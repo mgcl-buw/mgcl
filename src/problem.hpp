@@ -170,12 +170,12 @@ namespace mgcl
         ~Problem() = default;
 
         bool checkParameters();
-        bool checkGpuSizes();
+        void checkGpuSizes();
         int calculateAndSetMaxLevel();
         bool init();
 
-        int reuseOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
-        int initOpenCL();
+        void reuseOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
+        void initOpenCL();
         int readResults();
 
         void solve();

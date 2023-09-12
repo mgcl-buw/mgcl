@@ -128,7 +128,7 @@ TEST_CASE("Problem::checkGpuSizes")
         p.setUseOpencl(true);
         p.setDeviceType(deviceType);
 
-        REQUIRE(p.checkGpuSizes());
+        REQUIRE_NOTHROW(p.checkGpuSizes());
     }
 
     SECTION("not enough space available")
@@ -524,7 +524,7 @@ TEST_CASE("Problem::init")
         REQUIRE(p2.getDV() == d_v);
         REQUIRE(p2.getOpenCLHelper().getProblem() == &p2);
 
-        REQUIRE(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()) == CL_SUCCESS);
+        REQUIRE_NOTHROW(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()));
         REQUIRE(p2.init());
         REQUIRE(p2.getDeviceType() == deviceType);
         REQUIRE(p2.getLevelsSize() == p2.getMaxlevel() + 1);
@@ -601,7 +601,7 @@ TEST_CASE("Problem::init")
         REQUIRE(p2.getDV() == d_v);
         REQUIRE(p2.getOpenCLHelper().getProblem() == &p2);
 
-        REQUIRE(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()) == CL_SUCCESS);
+        REQUIRE_NOTHROW(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()));
         REQUIRE(p2.init());
         REQUIRE(p2.getDeviceType() == deviceType);
         REQUIRE(p2.getLevelsSize() == p2.getMaxlevel() + 1);

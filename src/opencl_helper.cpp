@@ -3,6 +3,7 @@
 #include "level.hpp"   // for Level
 #include "problem.hpp" // for Problem
 
+#include <cassert>
 #include <fstream>
 #include <sstream>
 
@@ -20,12 +21,10 @@ namespace mgcl
     /**
      * @brief Initializes or retains OpenCL Environment. If a new environment shall be created subsequently, release
      * must be called first.
-     *
-     * @return int OpenCL error code.
+     * @throws string If no platform was found.
      */
-    int OpenCLHelper::init()
+    void OpenCLHelper::init()
     {
-        // TODO return actually useful information
         int err;
         cl_uint numPlatforms;
         cl_device_id device_id_;
@@ -40,7 +39,7 @@ namespace mgcl
             {
                 if (!problem->silent)
                     printf("Found 0 platforms!\n");
-                return false;
+                throw "Found 0 platforms!";
             }
 
             // Get all platforms
@@ -134,10 +133,9 @@ namespace mgcl
                 printf("%s\n", log);
 
             free(log);
-            return false;
-        }
 
-        return err;
+            assert(err == CL_SUCCESS && "Building the kernel failed.");
+        }
     }
 
     /**
@@ -145,9 +143,9 @@ namespace mgcl
      *
      * @return int OpenCL error code.
      */
-    int OpenCLHelper::release()
+    void OpenCLHelper::release()
     {
-        int err = CL_SUCCESS;
+        int err;
 
         if (program)
         {
@@ -176,8 +174,6 @@ namespace mgcl
             mgclCheckError(err, "clReleaseDevice");
             deviceId = nullptr;
         }
-
-        return err;
     }
 
     /**

@@ -40,15 +40,15 @@ namespace mgcl
         friend class Problem;
 
     public:
-        OpenCLHelper(Problem* problem_) : problem(problem_) {}
+        explicit OpenCLHelper(Problem* problem_) : problem(problem_) {}
         OpenCLHelper(const OpenCLHelper&) = delete;
         OpenCLHelper& operator=(const OpenCLHelper&) = delete;
         OpenCLHelper(const OpenCLHelper&&) = delete;
         OpenCLHelper& operator=(OpenCLHelper&&) = delete;
         ~OpenCLHelper();
 
-        int init();
-        int release();
+        void init();
+        void release();
         bool isInitialized();
         bool checkParameters();
         int copyInputBuffers();

@@ -80,7 +80,7 @@ TEST_CASE("mgcl benchmarks console: init", "[!benchmark][init][console]")
             p.setSilent(true);
 
             // this is equal to Problem::reuseOpenCL for our matter
-            REQUIRE(p.initOpenCL() == CL_SUCCESS);
+            REQUIRE_NOTHROW(p.initOpenCL());
 
             bool ret;
             b.run(std::string("opencl GPU reusing platform 7p Laplace, N = ").append(std::to_string(N)).c_str(), [&]
@@ -119,7 +119,7 @@ TEST_CASE("mgcl benchmarks console: init", "[!benchmark][init][console]")
             p.setSilent(true);
 
             // this is equal to Problem::reuseOpenCL for our matter
-            REQUIRE(p.initOpenCL() == CL_SUCCESS);
+            REQUIRE_NOTHROW(p.initOpenCL());
 
             bool ret;
             b.run(std::string("opencl CPU reusing platform 7p Laplace, N = ").append(std::to_string(N)).c_str(), [&]
