@@ -282,7 +282,7 @@ TEST_CASE("StencilVarying27p periodic")
     REQUIRE(vals.getDim2() == v.getN());
     REQUIRE(vals.getDim3() == v.getO());
 
-    // fill varying stencil with 19p Laplace stencil
+    // fill varying stencil with 27p Laplace stencil
     double h2inv = (4.0 * 4.0) / 30.0;
     for (int i = 0; i < vals.getDim1gh(); i++)
         for (int j = 0; j < vals.getDim2gh(); j++)
