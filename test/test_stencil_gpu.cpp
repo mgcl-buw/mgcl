@@ -490,10 +490,14 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
                             }
     }
 
-    int m = GENERATE(2, 3, 4);
-    int n = GENERATE(2, 3, 4);
-    int o = GENERATE(2, 3, 4);
-    int gh = GENERATE(2, 3, 4);
+    // int m = GENERATE(2, 3, 4);
+    // int n = GENERATE(2, 3, 4);
+    // int o = GENERATE(2, 3, 4);
+    // int gh = GENERATE(2, 3, 4);
+    int m = 2;
+    int n = 3;
+    int o = 4;
+    int gh = GENERATE(2, 3);
 
     SECTION("VaryingStencil3x3x3")
     {

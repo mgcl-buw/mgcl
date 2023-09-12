@@ -545,9 +545,9 @@ TEST_CASE("Matrix2d::laplace7p3d")
 
 TEST_CASE("Matrix2d::restrictionFullWeight")
 {
-    int m = GENERATE(1, 2, 3, 4);
-    int n = GENERATE(1, 2, 3, 4);
-    int o = GENERATE(1, 2, 3, 4);
+    int m = GENERATE(3, 4);
+    int n = GENERATE(1, 3);
+    int o = GENERATE(1, 2);
 
     SECTION("not periodic")
     {

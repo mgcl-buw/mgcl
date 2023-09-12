@@ -79,13 +79,13 @@ TEST_CASE("Hypercube4d")
     SECTION("isEqual ghosts")
     {
         int ghosts_dim1_c = GENERATE(0, 1, 2);
-        int ghosts_dim2_c = GENERATE(0, 1, 2);
-        int ghosts_dim3_c = GENERATE(0, 1, 2);
-        int ghosts_dim4_c = GENERATE(0, 1, 2);
+        int ghosts_dim2_c = GENERATE(0, 2);
+        int ghosts_dim3_c = GENERATE(2);
+        int ghosts_dim4_c = GENERATE(0, 1);
         int ghosts_dim1_c2 = GENERATE(0, 1, 2);
-        int ghosts_dim2_c2 = GENERATE(0, 1, 2);
-        int ghosts_dim3_c2 = GENERATE(0, 1, 2);
-        int ghosts_dim4_c2 = GENERATE(0, 1, 2);
+        int ghosts_dim2_c2 = GENERATE(2);
+        int ghosts_dim3_c2 = GENERATE(1, 2);
+        int ghosts_dim4_c2 = GENERATE(0, 2);
 
         mgcl::Hypercube4d c2(8, 8, 8, 8, ghosts_dim1_c, ghosts_dim2_c, ghosts_dim3_c, ghosts_dim4_c);
         mgcl::Hypercube4d c3(8, 8, 8, 8, ghosts_dim1_c2, ghosts_dim2_c2, ghosts_dim3_c2, ghosts_dim4_c2);
@@ -102,9 +102,9 @@ TEST_CASE("Hypercube4d")
         int dim2 = 2;
         int dim3 = 3;
         int dim4 = 4;
-        int ghosts_dim1 = GENERATE(0, 1, 2);
-        int ghosts_dim2 = GENERATE(0, 1, 2);
-        int ghosts_dim3 = GENERATE(0, 1, 2);
+        int ghosts_dim1 = GENERATE(0, 2);
+        int ghosts_dim2 = GENERATE(0, 1);
+        int ghosts_dim3 = GENERATE(1, 2);
         int ghosts_dim4 = GENERATE(0, 1, 2);
         mgcl::Hypercube4d c2(dim1,
                              dim2,

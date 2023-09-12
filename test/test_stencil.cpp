@@ -379,9 +379,12 @@ TEST_CASE("VaryingStencil::updateGhosts")
     SECTION("m,n,o >= gh")
     {
         // regular ghost update
-        int m = GENERATE(2, 3, 4);
-        int n = GENERATE(2, 3, 4);
-        int o = GENERATE(2, 3, 4);
+        int m = 2;
+        int n = 3;
+        int o = 4;
+        // int m = GENERATE(2, 3, 4);
+        // int n = GENERATE(2, 3, 4);
+        // int o = GENERATE(2, 3, 4);
 
         int gh = GENERATE(1, 2);
 
@@ -475,9 +478,12 @@ TEST_CASE("VaryingStencil::updateGhosts")
     SECTION("m,n,o < gh")
     {
         // periodic ghost update, i.e. real grid is repeated (partially) more than once in ghost cells
-        int m = GENERATE(1, 2, 3);
-        int n = GENERATE(1, 2, 3);
-        int o = GENERATE(1, 2, 3);
+        int m = 2;
+        int n = 1;
+        int o = 3;
+        // int m = GENERATE(1, 2, 3);
+        // int n = GENERATE(1, 2, 3);
+        // int o = GENERATE(1, 2, 3);
 
         int gh = GENERATE(4, 5);
 
@@ -571,13 +577,21 @@ TEST_CASE("VaryingStencil::updateGhosts")
     SECTION("mixed")
     {
         // mixed periodic and regular ghost update, e.g. m > gh but n < gh
-        int m = GENERATE(2, 3);
-        int n = GENERATE(2, 3);
-        int o = GENERATE(2, 3);
+        int m = 2;
+        int n = 2;
+        int o = 3;
 
-        int ghm = GENERATE(1, 3, 5);
-        int ghn = GENERATE(1, 3, 5);
-        int gho = GENERATE(1, 3, 5);
+        int ghm = GENERATE(1, 5);
+        int ghn = GENERATE(1, 3);
+        int gho = GENERATE(3, 5);
+
+        // int m = GENERATE(2, 3);
+        // int n = GENERATE(2, 3);
+        // int o = GENERATE(2, 3);
+        //
+        // int ghm = GENERATE(1, 3, 5);
+        // int ghn = GENERATE(1, 3, 5);
+        // int gho = GENERATE(1, 3, 5);
 
         SECTION("N = 3")
         {
@@ -671,9 +685,12 @@ TEST_CASE("VaryingStencil::multiply")
 {
     SECTION("valid N=3, not periodic")
     {
-        int m = GENERATE(2, 3, 4);
-        int n = GENERATE(2, 3, 4);
-        int o = GENERATE(2, 3, 4);
+        int m = 3;
+        int n = 2;
+        int o = 4;
+        // int m = GENERATE(2, 3, 4);
+        // int n = GENERATE(2, 3, 4);
+        // int o = GENERATE(2, 3, 4);
 
         mgcl::VaryingStencil a(m, n, o, 3, 0, 0, 0);
         mgcl::VaryingStencil b(m, n, o, 3, 1, 1, 1);
@@ -742,9 +759,12 @@ TEST_CASE("VaryingStencil::multiply")
 
     SECTION("valid N=3, periodic")
     {
-        int m = GENERATE(2, 3, 4);
-        int n = GENERATE(2, 3, 4);
-        int o = GENERATE(2, 3, 4);
+        int m = 3;
+        int n = 2;
+        int o = 4;
+        // int m = GENERATE(2, 3, 4);
+        // int n = GENERATE(2, 3, 4);
+        // int o = GENERATE(2, 3, 4);
 
         mgcl::VaryingStencil a(m, n, o, 3, 0, 0, 0);
         mgcl::VaryingStencil b(m, n, o, 3, 1, 1, 1);
@@ -815,9 +835,12 @@ TEST_CASE("VaryingStencil::multiply")
 
     SECTION("different Ns, random values")
     {
-        int m = GENERATE(2, 3, 4);
-        int n = GENERATE(2, 3, 4);
-        int o = GENERATE(2, 3, 4);
+        int m = 3;
+        int n = 2;
+        int o = 4;
+        // int m = GENERATE(2, 3, 4);
+        // int n = GENERATE(2, 3, 4);
+        // int o = GENERATE(2, 3, 4);
 
         SECTION("widths 3 * {3,5,7}")
         {

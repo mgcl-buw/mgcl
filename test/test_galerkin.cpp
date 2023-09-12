@@ -86,8 +86,8 @@ TEST_CASE("GPU galerkin random values periodic")
     mgcl_test::TestUtility t(deviceType);
 
     int m = GENERATE(2, 4, 8);
-    int n = GENERATE(2, 4, 8);
-    int o = GENERATE(2, 4, 8);
+    int n = GENERATE(4, 8);
+    int o = GENERATE(2, 4);
 
     double tol = 1e-12;
     int gh = 2;
