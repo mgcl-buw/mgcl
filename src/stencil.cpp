@@ -825,7 +825,7 @@ namespace mgcl
 
     int VaryingStencilGpu::getWidth() const
     {
-        return getWidth();
+        return width;
     }
 
     /**
@@ -1045,7 +1045,7 @@ namespace mgcl
 
     int FixedStencilGpu::getWidth() const
     {
-        return getWidth();
+        return width;
     }
 
     cl_mem FixedStencilGpu::getBuf() const

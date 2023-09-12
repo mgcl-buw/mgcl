@@ -30,6 +30,8 @@ TEST_CASE("prolongation")
     auto c_expected_fine = prolongationTestOutputFine();
     auto c_expected_coarse = prolongationTestOutputCoarse();
 
+    mgcl::MultigridEngine::updateGhostsSeq(*c_coarse, nullptr, true, true);
+
     auto p = std::make_shared<mgcl::Problem>(m, n, o);
     mgcl::Level lv_fine(p.get(), 0);
     mgcl::Level lv_coarse(p.get(), 1);
@@ -37,6 +39,7 @@ TEST_CASE("prolongation")
     SECTION("prolongateSeq")
     {
         mgcl::MultigridEngine::prolongateSeq(lv_fine, lv_coarse, *c_fine, *c_coarse);
+        // mgcl::MultigridEngine::updateGhostsSeq(*c_fine, nullptr, true, true);
 
         REQUIRE(c_fine->isEqual(*c_expected_fine));
         REQUIRE(c_coarse->isEqual(*c_expected_coarse));

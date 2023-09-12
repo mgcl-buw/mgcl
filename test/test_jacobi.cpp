@@ -809,7 +809,7 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             tu_exp.finish();
 
             auto sv_exp = p_exp->getStencilValues();
-            sv_exp->fillRandom();
+            sv_exp->fill1dIndex(true);
             sv_exp->updateGhosts();
 
             // copy stencil values
