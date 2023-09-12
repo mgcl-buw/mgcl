@@ -585,13 +585,16 @@ TEST_CASE("MPI-galerkin-threshold0")
 
     p.init();
 
-    for (int i = 0; i <= p.getMaxlevel(); i++)
-    {
-        auto& lv = p.getLevelAt(i);
-        auto& sv = *lv.getStencilValues();
+    if (mpi_rank == 0)
+        for (int i = 0; i <= p.getMaxlevel(); i++)
+        {
+            auto& lv = p.getLevelAt(i);
+            auto& sv = *lv.getStencilValues();
 
-        REQUIRE(sv.getDim1() == m >> i);
-        REQUIRE(sv.getDim2() == n >> i);
-        REQUIRE(sv.getDim3() == o >> i);
-    }
+            CAPTURE(i);
+
+            REQUIRE(sv.getDim1() == m >> i);
+            REQUIRE(sv.getDim2() == n >> i);
+            REQUIRE(sv.getDim3() == o >> i);
+        }
 }

@@ -332,7 +332,8 @@ namespace mgcl
             }
 
             // Apply Galerkin operator if stencil is varying and we're not on level 0.
-            if (levels[0]->getStencilValues() && level >= 1)
+            if (levels[0]->getStencilValues() && level >= 1 &&
+                levels.back()->getM() > 0 && levels.back()->getN() > 0 && levels.back()->getO() > 0)
             {
                 auto& lvFine = *levels[level - 1];
                 auto& lvCoarse = *levels[level];
@@ -913,7 +914,10 @@ namespace mgcl
         if (stencilType == MGCL_VARYING)
         {
             int gh = std::max(2, jacobi_iterations_per_kernel);
-            stencilValues = std::make_shared<VaryingStencil>(m, n, o, 3, gh, gh, gh);
+            if (getMpiLevelThreshold() <= 0 && mpiRank() == 0)
+                stencilValues = std::make_shared<VaryingStencil>(mGlobal, nGlobal, oGlobal, 3, gh, gh, gh);
+            else
+                stencilValues = std::make_shared<VaryingStencil>(m, n, o, 3, gh, gh, gh);
         }
         else
             stencilValues = nullptr;
