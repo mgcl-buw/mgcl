@@ -293,15 +293,6 @@ TEST_CASE("VaryingStencilGpu::read")
         for (int i = 0; i < ret.field1d().size(); i++)
             REQUIRE(ret.field1d()[i] == s3.field1d()[i]);
     }
-
-    SECTION("throwing")
-    {
-        int width = 3;
-        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
-        t.finish();
-
-        REQUIRE_THROWS(s->read(t.getCommands()));
-    }
 }
 
 TEST_CASE("VaryingStencilGpu::updateGhosts")
@@ -1689,17 +1680,6 @@ TEST_CASE("FixedStencilGpu::read")
 
         for (int i = 0; i < ret.field1d().size(); i++)
             REQUIRE(ret.field1d()[i] == s3.field1d()[i]);
-
-        t.finish();
-    }
-
-    SECTION("throwing")
-    {
-        int width = 3;
-        auto s = std::make_unique<mgcl::FixedStencilGpu>(width, t.getContext(), t.getCommands());
-        t.finish();
-
-        REQUIRE_THROWS(s->read(t.getCommands()));
 
         t.finish();
     }

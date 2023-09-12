@@ -1,6 +1,8 @@
 #include "stencil.hpp"
+#include "mpi_stencil.hpp"
 #include "opencl_helper.hpp"
 
+#include <algorithm>
 #include <utility> // for exchange
 
 #ifdef __APPLE__
@@ -11,11 +13,16 @@
 
 namespace mgcl
 {
+    // forward declarations
+    // void updateGhostsStencilMpi(VaryingStencil& s, MPILevelData* mpiData, bool periodic, bool forceLocal);
+
+    using std::min;
+
     /*****************************************************
      * FixedStencil
      *****************************************************/
 
-    FixedStencil::FixedStencil(int _width) : Cuboid(_width, _width, _width, 0, 0, 0), width(_width)
+    FixedStencil::FixedStencil(int _width) : Cuboid(_width, _width, _width, 0, 0, 0)
     {
         if (_width % 2 == 0 || _width < 3)
             throw "FixedStencil is only defined for odd width >= 3!";
@@ -39,7 +46,7 @@ namespace mgcl
             b.getGhostsDim1() != b.getGhostsDim3())
             throw "Ghosts of b must be equal in each dimension!";
 
-        int N = width;
+        int N = getWidth();
 
         if (b.getGhostsDim1() < N >> 1)
             throw std::string("Ghosts of b be must be >= ").append(std::to_string(N >> 1));
@@ -95,7 +102,7 @@ namespace mgcl
      *****************************************************/
 
     VaryingStencil::VaryingStencil(int m, int n, int o, int _width, int ghosts_m, int ghosts_n, int ghosts_o)
-        : Hypercube6d(m, n, o, _width, _width, _width, ghosts_m, ghosts_n, ghosts_o, 0, 0, 0), width(_width)
+        : Hypercube6d(m, n, o, _width, _width, _width, ghosts_m, ghosts_n, ghosts_o, 0, 0, 0)
     {
         if (_width % 2 == 0 || _width < 3)
             throw "VaryingStencil is only defined for odd width >= 3!";
@@ -126,9 +133,9 @@ namespace mgcl
 
                 for (int j = 0; j < n + 2 * ghosts_n; j++)
                 for (int k = 0; k < o + 2 * ghosts_o; k++)
-                    for (int ii = 0; ii < width; ii++)
-                    for (int jj = 0; jj < width; jj++)
-                    for (int kk = 0; kk < width; kk++)
+                    for (int ii = 0; ii < getWidth(); ii++)
+                    for (int jj = 0; jj < getWidth(); jj++)
+                    for (int kk = 0; kk < getWidth(); kk++)
                     {
                         
                         c[i][j][k][ii][jj][kk] = c[i + factor_left * m][j][k][ii][jj][kk]; // left ghost cell = right real cell
@@ -144,9 +151,9 @@ namespace mgcl
 
                 for (int j = 0; j < m + 2 * ghosts_m; j++)
                 for (int k = 0; k < o + 2 * ghosts_o; k++)
-                    for (int ii = 0; ii < width; ii++)
-                    for (int jj = 0; jj < width; jj++)
-                    for (int kk = 0; kk < width; kk++)
+                    for (int ii = 0; ii < getWidth(); ii++)
+                    for (int jj = 0; jj < getWidth(); jj++)
+                    for (int kk = 0; kk < getWidth(); kk++)
                     {
                         
                         c[j][i][k][ii][jj][kk] = c[j][i + factor_left * n][k][ii][jj][kk]; // left ghost cell = right real cell
@@ -162,9 +169,9 @@ namespace mgcl
 
                 for (int j = 0; j < m + 2 * ghosts_m; j++)
                 for (int k = 0; k < n + 2 * ghosts_n; k++)
-                    for (int ii = 0; ii < width; ii++)
-                    for (int jj = 0; jj < width; jj++)
-                    for (int kk = 0; kk < width; kk++)
+                    for (int ii = 0; ii < getWidth(); ii++)
+                    for (int jj = 0; jj < getWidth(); jj++)
+                    for (int kk = 0; kk < getWidth(); kk++)
                     {
                         
                         c[j][k][i][ii][jj][kk] = c[j][k][i + factor_left * o][ii][jj][kk]; // left ghost cell = right real cell
@@ -197,7 +204,7 @@ namespace mgcl
         int o = dim3;
         int gha = getGhostsDim1();
 
-        int N = width;
+        int N = getWidth();
         int NB = b.getWidth();
 
         int wc = N + NB - 1;
@@ -263,7 +270,7 @@ namespace mgcl
             getGhostsDim1() != getGhostsDim3())
             throw "Ghosts of a must be equal in each dimension!";
 
-        int N = width;
+        int N = getWidth();
 
         if (b.getGhostsDim1() < N >> 1)
             throw std::string("Ghosts of b be must be >= ").append(std::to_string(N >> 1));
@@ -674,7 +681,7 @@ namespace mgcl
         mgclCheckError(err, "clCreateKernel");
 
         // create output buffer c
-        VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
+        VaryingStencilGpu c(m, n, o, getWidth() + b.getWidth() - 1, ghc, context, queue);
 
         auto bbuf = b.getBuf();
         auto cbuf = c.getBuf();
@@ -745,7 +752,7 @@ namespace mgcl
         mgclCheckError(err, "clCreateKernel");
 
         // create output buffer c
-        VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
+        VaryingStencilGpu c(m, n, o, getWidth() + b.getWidth() - 1, ghc, context, queue);
 
         auto bbuf = b.getBuf();
         auto cbuf = c.getBuf();
@@ -818,7 +825,7 @@ namespace mgcl
 
     int VaryingStencilGpu::getWidth() const
     {
-        return width;
+        return getWidth();
     }
 
     /**
@@ -925,7 +932,7 @@ namespace mgcl
         int o = b.getO();
 
         // create output buffer c
-        VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
+        VaryingStencilGpu c(m, n, o, getWidth() + b.getWidth() - 1, ghc, context, queue);
 
         auto bbuf = b.getBuf();
         auto cbuf = c.getBuf();
@@ -1038,7 +1045,7 @@ namespace mgcl
 
     int FixedStencilGpu::getWidth() const
     {
-        return width;
+        return getWidth();
     }
 
     cl_mem FixedStencilGpu::getBuf() const

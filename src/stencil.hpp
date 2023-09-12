@@ -30,22 +30,14 @@ namespace mgcl
     class FixedStencilGpu;
     class MPILevelData;
 
-    // template <int N>
-    void updateGhostsStencilMpi(VaryingStencil& s, MPILevelData* mpiData, bool periodic, bool forceLocal);
-
-    using std::min;
-
     /**
      * @brief Fixed 3x3x3 stencil (same stencil entries for each grid point).
      */
     class FixedStencil : public Cuboid
     {
-    private:
-        int width;
-
     public:
         explicit FixedStencil(int _width);
-        inline int getWidth() const { return width; }
+        inline int getWidth() const { return m; }
         VaryingStencil multiply(VaryingStencil& b, int ghc,
                                 MPILevelData* mpiData, bool periodic, bool forceLocal) const;
     };
@@ -59,9 +51,6 @@ namespace mgcl
      */
     class VaryingStencil : public Hypercube6d
     {
-    private:
-        int width;
-
     public:
         VaryingStencil(int m, int n, int o, int _width, int ghosts_m, int ghosts_n, int ghosts_o);
         VaryingStencil(VaryingStencil&) = delete;
@@ -72,7 +61,7 @@ namespace mgcl
             Hypercube6d::operator=(std::move(o));
             return *this;
         }
-        inline int getWidth() const { return width; }
+        inline int getWidth() const { return dim4; }
         void updateGhosts();
         VaryingStencil multiply(FixedStencil& b, int ghc,
                                 MPILevelData* mpiData, bool periodic, bool forceLocal) const;

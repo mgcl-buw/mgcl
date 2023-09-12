@@ -1087,7 +1087,7 @@ TEST_CASE("VaryingStencil::multiply(FixedStencil)")
     mgcl::VaryingStencil vr(m, n, o, 3, 0, 0, 0);
 
     auto fres = vr.multiply(f, 2, nullptr, true, true);
-    auto vres = vr.multiply(vf, 0, nullptr, true, true);
+    auto vres = vr.multiply(vf, 2, nullptr, true, true);
 
     // Check dimensions
     REQUIRE(fres.getDim1() == vres.getDim1());
