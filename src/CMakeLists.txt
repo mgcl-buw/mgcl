@@ -4,6 +4,8 @@ find_package(MPI REQUIRED)
 set(SOURCES_LIB
     cuboid.hpp
     cuboid.cpp
+    cuboid_gpu.hpp
+    cuboid_gpu.cpp
     ghostscl.cpp
     jacobicl.cpp
     mgcl.hpp

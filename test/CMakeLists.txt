@@ -6,6 +6,7 @@ cpmaddpackage("gh:bombela/backward-cpp#${MGCL_backwardcpp_version}")
 # Test binary for unit testing mgcl These tests can use the Catch2-provided main
 set(SOURCES_TEST
     test_cuboid.cpp
+    test_cuboid_gpu.cpp
     test_problem_conf.cpp
     test_opencl_helper.cpp
     test_utility.hpp
