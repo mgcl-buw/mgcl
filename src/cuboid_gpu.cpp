@@ -54,6 +54,39 @@ namespace mgcl
         mgclCheckError(err, "clCreateBuffer");
     }
 
+    /**
+     * @brief Construct a new CuboidGpu object with given sizes, retaining an existing OpenCL buffer.
+     *   A CuboidGpu object is only valid in its context.
+     * Currently only GPU devices are supported, i.e. the flag for creating the buffer is always CL_MEM_COPY_HOST_PTR.
+     *   However, one may add e.g. CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.
+     *
+     * @param context OpenCL context this buffer is valid in
+     * @param m extend
+     * @param n extend
+     * @param o extend
+     * @param ghosts_m amount of ghost cells at one border
+     * @param ghosts_n amount of ghost cells at one border
+     * @param ghosts_o amount of ghost cells at one border
+     * @param host_ptr Cuboid that gets copied from initially.
+     */
+    CuboidGpu::CuboidGpu(cl_context context,
+                         int m, int n, int o,
+                         int ghosts_m, int ghosts_n, int ghosts_o,
+                         const cl_mem buf)
+        : context(context), buffer(buf), m(m), n(n), o(o),
+          ghosts_m(ghosts_m), ghosts_n(ghosts_n), ghosts_o(ghosts_o),
+          mgh(m + 2 * ghosts_m), ngh(n + 2 * ghosts_n), ogh(o + 2 * ghosts_o),
+          size(mgh * ngh * ogh)
+    {
+        if (m <= 0 || n <= 0 || o <= 0)
+            throw "m, n and o must be > 0.";
+
+        if (ghosts_m < 0 || ghosts_n < 0 || ghosts_o < 0)
+            throw "ghosts must be >= 0.";
+
+        retain();
+    }
+
     CuboidGpu::~CuboidGpu()
     {
         if (buffer != nullptr)
@@ -126,6 +159,14 @@ namespace mgcl
         mgcl::mgclCheckError(err, "clEnqueueFillBuffer");
         if (blocking)
             mgcl::mgclCheckError(clFinish(commands), "clFinish");
+    }
+
+    /**
+     * @brief Retains the buffer using clRetainMemObject.
+     */
+    void CuboidGpu::retain()
+    {
+        mgclCheckError(clRetainMemObject(buffer), "clRetainMemObject(buffer)");
     }
 
     int CuboidGpu::getM() const

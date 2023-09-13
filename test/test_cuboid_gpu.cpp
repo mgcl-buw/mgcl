@@ -51,6 +51,33 @@ TEST_CASE("CuboidGpu ctor host_ptr not null")
     REQUIRE(res->isEqualAllCells(ch));
 }
 
+// Check if CuboidGpu gets initialized correctly retaining an existing buffer.
+TEST_CASE("CuboidGpu ctor retaining buffer")
+{
+    int refCount;
+    int err;
+
+    mgcl_test::TestUtility tu;
+    mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
+    cl_mem buf = tu.createOpenCLBuffer(ch);
+
+    err = clGetMemObjectInfo(buf, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+    mgcl::mgclCheckError(err, "clGetMemObjectInfo(d_v, CL_MEM_REFERENCE_COUNT)");
+    REQUIRE(refCount == 1);
+
+    mgcl::CuboidGpu* c = new mgcl::CuboidGpu(tu.getContext(), 1, 2, 3, 2, 3, 4, buf);
+
+    err = clGetMemObjectInfo(buf, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+    mgcl::mgclCheckError(err, "clGetMemObjectInfo(d_v, CL_MEM_REFERENCE_COUNT)");
+    REQUIRE(refCount == 2);
+
+    delete c;
+
+    err = clGetMemObjectInfo(buf, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+    mgcl::mgclCheckError(err, "clGetMemObjectInfo(d_v, CL_MEM_REFERENCE_COUNT)");
+    REQUIRE(refCount == 1);
+}
+
 // Check if CuboidGpu's constructor throws an exception if the dimensions do not match.
 TEST_CASE("CuboidGpu ctor throwing")
 {

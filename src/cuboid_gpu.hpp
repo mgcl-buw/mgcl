@@ -38,6 +38,10 @@ namespace mgcl
                   int m, int n, int o,
                   int ghosts_m, int ghosts_n, int ghosts_o,
                   const Cuboid* const host_ptr = nullptr);
+        CuboidGpu(cl_context context,
+                  int m, int n, int o,
+                  int ghosts_m, int ghosts_n, int ghosts_o,
+                  const cl_mem buf);
         CuboidGpu(const CuboidGpu&) = delete;
         CuboidGpu(CuboidGpu&&) = delete;
         CuboidGpu& operator=(const CuboidGpu&) = delete;
@@ -47,6 +51,8 @@ namespace mgcl
         std::unique_ptr<Cuboid> read(cl_command_queue commands, Cuboid* const host_ptr, bool blocking) const;
         void write(cl_command_queue commands, const Cuboid& host_data, bool blocking);
         void fill(cl_command_queue commands, double data, bool blocking);
+
+        void retain();
 
         cl_mem getBuffer() const;
         int getM() const;
