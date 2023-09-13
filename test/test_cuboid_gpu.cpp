@@ -34,7 +34,7 @@ TEST_CASE("CuboidGpu ctor host_ptr not null")
     ch.fillRandom();
 
     mgcl_test::TestUtility tu;
-    mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4, &ch);
+    mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 1, 2, 3, 2, 3, 4, &ch);
 
     REQUIRE(c.getM() == 1);
     REQUIRE(c.getN() == 2);
@@ -107,10 +107,36 @@ TEST_CASE("CuboidGpu ctor throwing")
 
     SECTION("invalid flags")
     {
+        mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
         mgcl_test::TestUtility tu;
+
+        // flags must contain one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_COPY_HOST_PTR, 1, 2, 3, 2, 3, 4, nullptr));
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_USE_HOST_PTR, 1, 2, 3, 2, 3, 4, nullptr));
-        REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 1, 2, 3, 2, 3, 4, nullptr));
+        REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_ALLOC_HOST_PTR, 1, 2, 3, 2, 3, 4, nullptr));
+
+        // flags must contain one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR
+        // if host_ptr is given.
+        REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_WRITE_ONLY, 1, 2, 3, 2, 3, 4, &ch));
+        REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_ONLY, 1, 2, 3, 2, 3, 4, &ch));
+        REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4, &ch));
+
+        // flags must not not contain CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR
+        // if host_ptr is not given.
+        REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4, nullptr));
+        REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4, nullptr));
+        REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4, nullptr));
+
+        // flags must not contain multiple of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_WRITE_ONLY
+        REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_WRITE_ONLY, 1, 2, 3, 2, 3, 4, nullptr));
+        REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_READ_ONLY, 1, 2, 3, 2, 3, 4, nullptr));
+        REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_WRITE_ONLY | CL_MEM_READ_ONLY, 1, 2, 3, 2, 3, 4, nullptr));
+
+        // flags must not contain multiple of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR if
+        // host_ptr is given.
+        REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR, 1, 2, 3, 2, 3, 4, &ch));
+        REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_ALLOC_HOST_PTR, 1, 2, 3, 2, 3, 4, &ch));
+        REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_USE_HOST_PTR | CL_MEM_ALLOC_HOST_PTR, 1, 2, 3, 2, 3, 4, &ch));
     }
 }
 
@@ -120,7 +146,7 @@ TEST_CASE("CuboidGpu::read into new")
     ch.fillRandom();
 
     mgcl_test::TestUtility tu;
-    mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4, &ch);
+    mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 1, 2, 3, 2, 3, 4, &ch);
     auto ret = c.read(tu.getCommands(), nullptr, true);
 
     REQUIRE(ret->isEqualAllCells(ch));
@@ -132,7 +158,7 @@ TEST_CASE("CuboidGpu::read into existing")
     ch.fillRandom();
 
     mgcl_test::TestUtility tu;
-    mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4, &ch);
+    mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 1, 2, 3, 2, 3, 4, &ch);
 
     mgcl::Cuboid ch_act(1, 2, 3, 2, 3, 4);
     c.read(tu.getCommands(), &ch_act, true);

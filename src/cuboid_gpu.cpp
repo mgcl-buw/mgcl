@@ -6,12 +6,12 @@ namespace mgcl
 {
     /**
      * @brief Construct a new CuboidGpu object with given sizes. Copies data from a Cuboid, if host_ptr
-     *   is given. A CuboidGpu object is only valid in its context.
-     * Currently only GPU devices are supported, i.e. the flag for creating the buffer is always CL_MEM_COPY_HOST_PTR.
-     *   However, one may add e.g. CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.
+     *   is given. A CuboidGpu object is only valid in its context. flags must be valid, see parameter specification.
      *
      * @param context OpenCL context this buffer is valid in
-     * @param flags OpenCL flags
+     * @param flags Must contain one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY. Furthermore if
+     *   host_ptr is given, it must contain one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR.
+     *   Example using a gpu with given host_ptr: CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR
      * @param m extend
      * @param n extend
      * @param o extend
@@ -35,8 +35,34 @@ namespace mgcl
         if (ghosts_m < 0 || ghosts_n < 0 || ghosts_o < 0)
             throw "ghosts must be >= 0.";
 
-        if (flags != CL_MEM_READ_WRITE && flags != CL_MEM_WRITE_ONLY && flags != CL_MEM_READ_ONLY)
-            throw "flags must be CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_WRITE_ONLY";
+        bool containsReadWrite = (flags & CL_MEM_READ_WRITE) == CL_MEM_READ_WRITE;
+        bool containsWriteOnly = (flags & CL_MEM_WRITE_ONLY) == CL_MEM_WRITE_ONLY;
+        bool containsReadOnly = (flags & CL_MEM_READ_ONLY) == CL_MEM_READ_ONLY;
+
+        // Check that flags contains one and only one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY
+        if (!containsReadWrite && !containsWriteOnly && !containsReadOnly)
+            throw "flags must contain one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.";
+
+        if (containsReadWrite && containsReadOnly || containsReadWrite && containsWriteOnly || containsReadOnly || containsWriteOnly)
+            throw "flags must contain one and only one of CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY or CL_MEM_READ_WRITE.";
+
+        bool containsCopyHostPtr = (flags & CL_MEM_COPY_HOST_PTR) == CL_MEM_COPY_HOST_PTR;
+        bool containsUseHostPtr = (flags & CL_MEM_USE_HOST_PTR) == CL_MEM_USE_HOST_PTR;
+        bool containsAllocHostPtr = (flags & CL_MEM_ALLOC_HOST_PTR) == CL_MEM_ALLOC_HOST_PTR;
+
+        // Check that flags contains one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR if
+        // host_ptr is given.
+        if ((host_ptr && !(containsAllocHostPtr || containsCopyHostPtr || containsUseHostPtr)))
+            throw "host_ptr not null, but flags does not contain CL_MEM_ALLOC_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_COPY_HOST_PTR.";
+
+        // Check that flags does not contain one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR
+        // if  host_ptr is not given.
+        if ((!host_ptr && (containsAllocHostPtr || containsUseHostPtr || containsCopyHostPtr)))
+            throw "host_ptr is null, but flags contains CL_MEM_ALLOC_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_COPY_HOST_PTR.";
+
+        // Check that flags contains one and only one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR.
+        if (containsCopyHostPtr && containsAllocHostPtr || containsCopyHostPtr && containsUseHostPtr || containsUseHostPtr && containsAllocHostPtr)
+            throw "flags must contain one and only one of CL_MEM_COPY_HOST_PTR, CL_MEM_ALLOC_HOST_PTR, or CL_MEM_USE_HOST_PTR";
 
         cl_int err;
         if (host_ptr)
@@ -45,8 +71,7 @@ namespace mgcl
                 host_ptr->getMgh() != mgh || host_ptr->getNgh() != ngh || host_ptr->getOgh() != ogh)
                 throw "Dimension of host_ptr and CuboidGpu must match.";
 
-            // TODO adjust flags for CPU
-            buffer = clCreateBuffer(context, flags | CL_MEM_COPY_HOST_PTR, sizeof(double) * size,
+            buffer = clCreateBuffer(context, flags, sizeof(double) * size,
                                     host_ptr->getData()[0][0], &err);
         }
         else
