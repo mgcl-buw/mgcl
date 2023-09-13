@@ -295,7 +295,7 @@ namespace mgcl
     /* updates ghost cells on opencl device.
      * m,n,o must be size of ghosted grid.
      * Only enqueues the kernel. Neither waits for kernel to finish nor reads back results */
-    int MultigridEngine::updateGhosts(Problem& problem, cl_mem dBuffer,
+    int MultigridEngine::updateGhosts(Problem& problem, CuboidGpu& dBuffer,
                                       int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
                                       MPILevelData* mpiData, bool forceLocal)
     {
@@ -379,24 +379,13 @@ namespace mgcl
      * @param periodic
      * @param forceLocal
      */
-    void MultigridEngine::updateGhostsOclMpi(cl_command_queue commands, cl_mem d_buf, MPILevelData& mpiData,
+    void MultigridEngine::updateGhostsOclMpi(cl_command_queue commands, CuboidGpu& d_buf, MPILevelData& mpiData,
                                              int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o,
                                              bool periodic, bool forceLocal)
     {
         // Read back from GPU and update ghosts on host in order to update neighbouring nodes, too.
-        mgclCheckError(clFinish(commands), "clFinish");
-
-        Cuboid tmp(m, n, o, ghosts_m, ghosts_n, ghosts_o);
-
-        int err = clEnqueueReadBuffer(commands, d_buf, CL_TRUE, 0,
-                                      sizeof(double) * tmp.getMgh() * tmp.getNgh() * tmp.getOgh(),
-                                      tmp.field1d().data(), 0, NULL, NULL);
-        mgclCheckError(err, "clEnqueueReadBuffer");
-
-        MultigridEngine::updateGhostsSeq(tmp, &mpiData, periodic, forceLocal);
-
-        err = clEnqueueWriteBuffer(commands, d_buf, CL_TRUE, 0,
-                                   sizeof(double) * tmp.getMgh() * tmp.getNgh() * tmp.getOgh(),
-                                   tmp.field1d().data(), 0, NULL, NULL);
+        auto tmp = d_buf.read(commands, nullptr, true);
+        MultigridEngine::updateGhostsSeq(*tmp, &mpiData, periodic, forceLocal);
+        d_buf.write(commands, *tmp, true);
     }
 }

@@ -123,10 +123,7 @@ namespace mgcl
         if (level.getNum() < problem.maxlevel) // if not at highest level
         {
             // reset v to zero for coarser grids (for another possible v-cycle)
-            err = clEnqueueFillBuffer(problem.openCLHelper.getCommands(), levelAbove.dVIn, &zero, sizeof(cl_double), 0,
-                                      sizeof(double) * levelAbove.mgh * levelAbove.ngh * levelAbove.ogh, 0, NULL,
-                                      NULL);
-            mgclCheckError(err, "resetting dVIn to 0");
+            levelAbove.getDVIn().fill(problem.getCommands(), 0.0, false);
         }
 
         // relax nu1 times
@@ -149,10 +146,10 @@ namespace mgcl
 
         // prolongate from coarser to finer grid
         // r of this level.getNum() is reused here and should actually be called e
-        prolongate(level, levelAbove, level.dR, levelAbove.dVIn);
+        prolongate(level, levelAbove, level.getDR(), levelAbove.getDVIn());
 
         // correct error
-        correctError(problem, level.dVIn, level.dR, level.mgh, level.ngh, level.ogh);
+        correctError(problem, level.getDVIn(), level.getDR(), level.mgh, level.ngh, level.ogh);
 
         // relax nu2 times
         res = jacobi(problem, level, problem.nu2, !problem.ignoreTol);
@@ -165,7 +162,7 @@ namespace mgcl
 
     /* Starts kernel to correct error, e.g. v = v + e
      * m,n,o is size of ghosted grid */
-    int MultigridEngine::correctError(Problem& problem, cl_mem d_v, cl_mem d_r, int mgh, int ngh, int ogh)
+    int MultigridEngine::correctError(Problem& problem, CuboidGpu& d_v, CuboidGpu& d_r, int mgh, int ngh, int ogh)
     {
         int err;
 
@@ -173,10 +170,13 @@ namespace mgcl
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), "correct_error", &err);
         mgclCheckError(err, "Creating kernel");
 
+        cl_mem dvraw = d_v.getBuffer();
+        cl_mem drraw = d_r.getBuffer();
+
         // assign kernel arguments
         int pos = 0;
-        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &d_v);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_r);
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dvraw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &drraw);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);

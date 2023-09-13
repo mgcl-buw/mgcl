@@ -78,7 +78,7 @@ namespace mgcl
                                              coarse.isCalculatedLocally());
     }
 
-    void MultigridEngine::restrict(Level& fine, Level& coarse, cl_mem d_fine_values, cl_mem d_coarse_values)
+    void MultigridEngine::restrict(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values)
     {
         int err;
         int mreal = fine.m >> 1;
@@ -90,10 +90,13 @@ namespace mgcl
         cl_kernel kernel = clCreateKernel(problem->openCLHelper.getProgram(), "restrict_to_coarse", &err);
         mgclCheckError(err, "Creating kernel");
 
+        cl_mem buf_fine = d_fine_values.getBuffer();
+        cl_mem buf_coarse = d_coarse_values.getBuffer();
+
         // assign kernel arguments
         int pos = 0;
-        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &d_fine_values);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_coarse_values);
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buf_fine);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &buf_coarse);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.mgh); // TODO check here when using MPI
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.ngh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.ogh);

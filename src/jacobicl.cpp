@@ -226,6 +226,11 @@ namespace mgcl
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
         mgclCheckError(err, "Creating kernel");
 
+        cl_mem dVIn = level.getDVIn().getBuffer();
+        cl_mem dVOut = level.getDVOut().getBuffer();
+        cl_mem dF = level.getDF().getBuffer();
+        cl_mem dR = level.getDR().getBuffer();
+
         // assign kernel arguments
         int pos = 0;
 
@@ -233,10 +238,10 @@ namespace mgcl
         {
             auto svbuf = level.stencilValuesGpu->getBuf();
             int svgh = level.stencilValuesGpu->getGh();
-            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &level.dVIn);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dVOut);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dF);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dR);
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
             err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &svbuf);
             err |= clSetKernelArg(kernel, ++pos, sizeof(double), &problem.omega);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
@@ -249,10 +254,10 @@ namespace mgcl
         }
         else
         {
-            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &level.dVIn);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dVOut);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dF);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dR);
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
             err |= clSetKernelArg(kernel, ++pos, sizeof(double), &h2inv);
             err |= clSetKernelArg(kernel, ++pos, sizeof(double), &dinv);
             err |= clSetKernelArg(kernel, ++pos, sizeof(double), &problem.omega);
@@ -284,14 +289,14 @@ namespace mgcl
             // Update ghosts of current input v
             if (globalIter % 2 == 1)
             {
-                err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh,
+                err = MultigridEngine::updateGhosts(problem, level.getDVOut(), mgh, ngh, ogh,
                                                     problem.ghosts, problem.ghosts, problem.ghosts,
                                                     level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
             }
             else
             {
-                err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
+                err = MultigridEngine::updateGhosts(problem, level.getDVIn(), mgh, ngh, ogh,
                                                     problem.ghosts, problem.ghosts, problem.ghosts,
                                                     level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
@@ -305,14 +310,14 @@ namespace mgcl
                 // switch arguments dVIn -> dVOut to use latest values in next iteration
                 if (globalIter % 2 == 1)
                 {
-                    err = clSetKernelArg(kernel, 1, sizeof(cl_mem), &level.dVIn);
-                    err |= clSetKernelArg(kernel, 0, sizeof(cl_mem), &level.dVOut);
+                    err = clSetKernelArg(kernel, 1, sizeof(cl_mem), &dVIn);
+                    err |= clSetKernelArg(kernel, 0, sizeof(cl_mem), &dVOut);
                     mgclCheckError(err, "Setting kernel arguments");
                 }
                 else
                 {
-                    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &level.dVIn);
-                    err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &level.dVOut);
+                    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &dVIn);
+                    err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &dVOut);
                     mgclCheckError(err, "Setting kernel arguments");
                 }
 
@@ -337,7 +342,7 @@ namespace mgcl
         if (store_res)
         {
             // TODO check for mpi
-            err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh,
+            err = MultigridEngine::updateGhosts(problem, level.getDR(), mgh, ngh, ogh,
                                                 problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
                                                 level.isCalculatedLocally());
             mgclCheckError(err, "Updating ghosts of dR");
@@ -345,14 +350,10 @@ namespace mgcl
 
         // copy result into dVIn if needed
         if (maxiter % 2 == 1)
-        {
-            err = clEnqueueCopyBuffer(problem.getOpenCLHelper().getCommands(), level.dVOut, level.dVIn, 0, 0,
-                                      sizeof(double) * mgh * ngh * ogh, 0, NULL, NULL);
-            mgclCheckError(err, "Update v");
-        }
+            level.getDVOut().copyTo(problem.getOpenCLHelper().getCommands(), level.getDVIn());
 
         // Update ghosts of dVIn
-        err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
+        err = MultigridEngine::updateGhosts(problem, level.getDVIn(), mgh, ngh, ogh,
                                             problem.ghosts, problem.ghosts, problem.ghosts,
                                             level.getMpiDataPtr(), level.isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts");
@@ -461,12 +462,17 @@ namespace mgcl
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
         mgclCheckError(err, "Creating kernel");
 
+        cl_mem dVIn = level.getDVIn().getBuffer();
+        cl_mem dVOut = level.getDVOut().getBuffer();
+        cl_mem dF = level.getDF().getBuffer();
+        cl_mem dR = level.getDR().getBuffer();
+
         // assign kernel arguments
         int pos = 0;
-        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &level.dVIn);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dVOut);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dF);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dR);
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
         err |= clSetKernelArg(kernel, ++pos, locmem_size_wg, NULL);
         err |= clSetKernelArg(kernel, ++pos, sizeof(double), &h2inv);
         err |= clSetKernelArg(kernel, ++pos, sizeof(double), &dinv);
@@ -495,7 +501,7 @@ namespace mgcl
             err = clSetKernelArg(kernel, pos, sizeof(int), &store_res);
             mgclCheckError(err, "Setting kernel arguments");
 
-            err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
+            err = MultigridEngine::updateGhosts(problem, level.getDVIn(), mgh, ngh, ogh,
                                                 problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
                                                 level.isCalculatedLocally());
             mgclCheckError(err, "Updating ghosts");
@@ -504,9 +510,9 @@ namespace mgcl
             mgclCheckError(err, "Enqueueing kernel");
 
             // swap pointers so result is in dVIn
-            tmp = level.dVIn;
-            level.dVIn = level.dVOut;
-            level.dVOut = tmp;
+            CuboidGpu::swap(level.getDVIn(), level.getDVOut());
+            dVIn = level.getDVIn().getBuffer();
+            dVOut = level.getDVOut().getBuffer();
         }
         else
         {
@@ -530,18 +536,18 @@ namespace mgcl
                 err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing kernel");
 
-                err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh,
+                err = MultigridEngine::updateGhosts(problem, level.getDVOut(), mgh, ngh, ogh,
                                                     problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
                                                     level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
 
                 // swap pointers so result is in dVIn
-                tmp = level.dVIn;
-                level.dVIn = level.dVOut;
-                level.dVOut = tmp;
+                CuboidGpu::swap(level.getDVIn(), level.getDVOut());
+                dVIn = level.getDVIn().getBuffer();
+                dVOut = level.getDVOut().getBuffer();
 
-                err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &level.dVIn);
-                err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &level.dVOut);
+                err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &dVIn);
+                err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &dVOut);
             }
 
             // call once for remaining iterations
@@ -559,20 +565,20 @@ namespace mgcl
                 err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing kernel");
 
-                err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh,
+                err = MultigridEngine::updateGhosts(problem, level.getDVOut(), mgh, ngh, ogh,
                                                     problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
                                                     level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
 
                 // swap pointers so result is in dVIn
-                tmp = level.dVIn;
-                level.dVIn = level.dVOut;
-                level.dVOut = tmp;
+                CuboidGpu::swap(level.getDVIn(), level.getDVOut());
+                dVIn = level.getDVIn().getBuffer();
+                dVOut = level.getDVOut().getBuffer();
             }
         }
         // result is in dVIn now since pointers were swapped at the end of the loops above
 
-        err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh,
+        err = MultigridEngine::updateGhosts(problem, level.getDVIn(), mgh, ngh, ogh,
                                             problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
                                             level.isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts of v_in");
@@ -647,16 +653,19 @@ namespace mgcl
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
         mgclCheckError(err, "Creating kernel");
 
+        cl_mem dVIn = level.getDVIn().getBuffer();
+        cl_mem dF = level.getDF().getBuffer();
+        cl_mem dR = level.getDR().getBuffer();
+
         // assign kernel arguments
         int pos = 0;
-
         if (problem.stencilType == MGCL_VARYING)
         {
             auto svbuf = level.stencilValuesGpu->getBuf();
             int svgh = level.stencilValuesGpu->getGh();
-            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &level.dVIn);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dF);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dR);
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
             err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &svbuf);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
@@ -669,9 +678,9 @@ namespace mgcl
         }
         else
         {
-            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &level.dVIn);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dF);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dR);
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
             err |= clSetKernelArg(kernel, ++pos, sizeof(double), &h2inv);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
@@ -702,7 +711,7 @@ namespace mgcl
 
         if (problem.isPeriodic())
         {
-            err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh,
+            err = MultigridEngine::updateGhosts(problem, level.getDR(), mgh, ngh, ogh,
                                                 problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
                                                 level.isCalculatedLocally());
             mgclCheckError(err, "Updating ghosts of r");
@@ -715,18 +724,15 @@ namespace mgcl
             {
                 // calculate 2-Norm
                 Cuboid rsq(mgh, ngh, ogh);
-                double*** rsquares = rsq.getData();
                 int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
-                cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
-                                                  sizeof(double) * level.m * level.n * level.o, rsquares[0][0], &err);
-                mgclCheckError(err, "Creating rsquares buffer");
+                CuboidGpu dRsquares(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag, rsq);
 
                 // Create the compute kernel from the program
                 cl_kernel kernel_square = clCreateKernel(problem.openCLHelper.getProgram(), "residual_squared", &err);
                 mgclCheckError(err, "Creating residual squared kernel");
 
                 pos = 0;
-                err = clSetKernelArg(kernel_square, pos, sizeof(cl_mem), &level.dR);
+                err = clSetKernelArg(kernel_square, pos, sizeof(cl_mem), &dR);
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(cl_mem), &dRsquares);
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &level.m);
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &level.n);
@@ -738,17 +744,14 @@ namespace mgcl
                 mgclCheckError(err, "Enqueueing residual squared kernel");
 
                 // sum up residual squares
-                res = sqrt(util::sum(dRsquares, level.m * level.n * level.o,
-                                     problem.getContext(), problem.getProgram(), problem.getCommands(), true));
+                res = sqrt(util::sum(dRsquares, problem.getProgram(), problem.getCommands(), true));
 
-                clReleaseMemObject(dRsquares);
                 clReleaseKernel(kernel_square);
             }
             else
             {
                 // calculate Infinity-Norm
-                res = util::max_abs(level.dR, mgh * ngh * ogh,
-                                    problem.getContext(), problem.getProgram(), problem.getCommands(), true);
+                res = util::max_abs(level.getDR(), problem.getProgram(), problem.getCommands(), true);
             }
         }
 

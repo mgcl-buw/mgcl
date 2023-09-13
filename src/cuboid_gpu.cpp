@@ -49,7 +49,7 @@ namespace mgcl
             if (!containsReadWrite && !containsWriteOnly && !containsReadOnly)
                 throw "flags must contain one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.";
 
-            if (containsReadWrite && containsReadOnly || containsReadWrite && containsWriteOnly || containsReadOnly || containsWriteOnly)
+            if ((containsReadWrite && containsReadOnly) || (containsReadWrite && containsWriteOnly) || (containsReadOnly && containsWriteOnly))
                 throw "flags must contain one and only one of CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY or CL_MEM_READ_WRITE.";
 
             bool containsCopyHostPtr = (flags & CL_MEM_COPY_HOST_PTR) == CL_MEM_COPY_HOST_PTR;
@@ -93,7 +93,7 @@ namespace mgcl
         if (!containsReadWrite && !containsWriteOnly && !containsReadOnly)
             throw "flags must contain one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.";
 
-        if (containsReadWrite && containsReadOnly || containsReadWrite && containsWriteOnly || containsReadOnly || containsWriteOnly)
+        if ((containsReadWrite && containsReadOnly) || (containsReadWrite && containsWriteOnly) || (containsReadOnly && containsWriteOnly))
             throw "flags must contain one and only one of CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY or CL_MEM_READ_WRITE.";
 
         bool containsCopyHostPtr = (flags & CL_MEM_COPY_HOST_PTR) == CL_MEM_COPY_HOST_PTR;
@@ -106,7 +106,7 @@ namespace mgcl
             throw "host_ptr not null, but flags does not contain CL_MEM_ALLOC_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_COPY_HOST_PTR.";
 
         // Check that flags contains one and only one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR.
-        if (containsCopyHostPtr && containsAllocHostPtr || containsCopyHostPtr && containsUseHostPtr || containsUseHostPtr && containsAllocHostPtr)
+        if ((containsCopyHostPtr && containsAllocHostPtr) || (containsCopyHostPtr && containsUseHostPtr) || (containsUseHostPtr && containsAllocHostPtr))
             throw "flags must contain one and only one of CL_MEM_COPY_HOST_PTR, CL_MEM_ALLOC_HOST_PTR, or CL_MEM_USE_HOST_PTR";
 
         cl_int err;

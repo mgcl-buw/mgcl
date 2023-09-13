@@ -56,34 +56,6 @@ namespace mgcl
             mpiData = std::make_unique<MPILevelData>(problem->getMpiComm());
     }
 
-    Level::~Level()
-    {
-        int err;
-        if (dVIn)
-        {
-            err = clReleaseMemObject(dVIn);
-            mgclCheckError(err, "clReleaseMemObject(dVIn)");
-        }
-
-        if (dF)
-        {
-            err = clReleaseMemObject(dF);
-            mgclCheckError(err, "clReleaseMemObject(dF)");
-        }
-
-        if (dVOut)
-        {
-            err = clReleaseMemObject(dVOut);
-            mgclCheckError(err, "clReleaseMemObject(dVOut)");
-        }
-
-        if (dR)
-        {
-            err = clReleaseMemObject(dR);
-            mgclCheckError(err, "clReleaseMemObject(dR)");
-        }
-    }
-
     /**
      * @brief Initializes data for this level.
      *
@@ -198,64 +170,52 @@ namespace mgcl
         {
             if (problem->getReuseOpenclBuffers())
             {
-                dVIn = problem->getDV();
-                dF = problem->getDF();
+                dVIn = problem->getDVPtr();
+                dF = problem->getDFPtr();
 
-                // retain buffers (i.e. increase internal reference count so they won't be released by accident)
-                err = clRetainMemObject(dVIn);
-                mgclCheckError(err, "clRetainMemObject(dVIn)");
-                err = clRetainMemObject(dF);
-                mgclCheckError(err, "clRetainMemObject(dF)");
+                // TODO check with CuboidGpu
+                // // retain buffers (i.e. increase internal reference count so they won't be released by accident)
+                // err = clRetainMemObject(dVIn);
+                // mgclCheckError(err, "clRetainMemObject(dVIn)");
+                // err = clRetainMemObject(dF);
+                // mgclCheckError(err, "clRetainMemObject(dF)");
             }
             else if (problem->getCopyBufferData())
             {
-                dVIn = clCreateBuffer(context, CL_MEM_READ_WRITE,
-                                      sizeof(double) * mgh * ngh * ogh, NULL, &err);
-                mgclCheckError(err, "clCreateBuffer");
-                dF = clCreateBuffer(context, CL_MEM_READ_WRITE,
-                                    sizeof(double) * mgh * ngh * ogh, NULL, &err);
-                mgclCheckError(err, "clCreateBuffer");
+                dVIn = std::make_shared<CuboidGpu>(context, CL_MEM_READ_WRITE, m, n, o,
+                                                   problem->getGhosts(), problem->getGhosts(), problem->getGhosts());
+                dF = std::make_shared<CuboidGpu>(context, CL_MEM_READ_WRITE, m, n, o,
+                                                 problem->getGhosts(), problem->getGhosts(), problem->getGhosts());
                 problem->getOpenCLHelper().copyInputBuffers();
             }
             else
             {
                 int pointer_flag = deviceType == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
-                dVIn = clCreateBuffer(context, CL_MEM_READ_WRITE | pointer_flag,
-                                      sizeof(double) * mgh * ngh * ogh, (*v)[0][0], &err);
-                mgclCheckError(err, "clCreateBuffer");
-                dF = clCreateBuffer(context, CL_MEM_READ_WRITE | pointer_flag,
-                                    sizeof(double) * mgh * ngh * ogh, (*f)[0][0], &err);
-                mgclCheckError(err, "clCreateBuffer");
+                dVIn = std::make_shared<CuboidGpu>(context, pointer_flag, m, n, o,
+                                                   problem->getGhosts(), problem->getGhosts(), problem->getGhosts(),
+                                                   (*v)[0][0]);
+                dF = std::make_shared<CuboidGpu>(context, pointer_flag, m, n, o,
+                                                 problem->getGhosts(), problem->getGhosts(), problem->getGhosts(),
+                                                 (*f)[0][0]);
             }
         }
         else
         {
-            dVIn = clCreateBuffer(context, CL_MEM_READ_WRITE,
-                                  sizeof(double) * mgh * ngh * ogh, NULL, &err);
-            mgclCheckError(err, "clCreateBuffer");
-            dF = clCreateBuffer(context, CL_MEM_READ_WRITE,
-                                sizeof(double) * mgh * ngh * ogh, NULL, &err);
-            mgclCheckError(err, "clCreateBuffer");
+            dVIn = std::make_shared<CuboidGpu>(context, CL_MEM_READ_WRITE, m, n, o,
+                                               problem->getGhosts(), problem->getGhosts(), problem->getGhosts());
+            dF = std::make_shared<CuboidGpu>(context, CL_MEM_READ_WRITE, m, n, o,
+                                             problem->getGhosts(), problem->getGhosts(), problem->getGhosts());
         }
 
-        dVOut = clCreateBuffer(context, CL_MEM_READ_WRITE,
-                               sizeof(double) * mgh * ngh * ogh, NULL, &err);
-        mgclCheckError(err, "clCreateBuffer");
-        dR = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(double) * mgh * ngh * ogh,
-                            NULL, &err);
-        mgclCheckError(err, "clCreateBuffer");
+        dVOut = std::make_shared<CuboidGpu>(context, CL_MEM_READ_WRITE, m, n, o,
+                                            problem->getGhosts(), problem->getGhosts(), problem->getGhosts());
+        dR = std::make_shared<CuboidGpu>(context, CL_MEM_READ_WRITE, m, n, o,
+                                         problem->getGhosts(), problem->getGhosts(), problem->getGhosts());
 
-        // Init dVOut and dR to zero.
-        double zero = 0.0;
-        err = clEnqueueFillBuffer(problem->getCommands(), dVOut, &zero, sizeof(cl_double), 0,
-                                  sizeof(double) * mgh * ngh * ogh, 0, NULL, NULL);
-        mgclCheckError(err, "initializing dVOut to 0");
+        dVOut->fill(problem->getCommands(), 0.0, true);
+        dR->fill(problem->getCommands(), 0.0, true);
 
-        err = clEnqueueFillBuffer(problem->getCommands(), dR, &zero, sizeof(cl_double), 0,
-                                  sizeof(double) * mgh * ngh * ogh, 0, NULL, NULL);
-        mgclCheckError(err, "initializing dR to 0");
-
-        err = MultigridEngine::updateGhosts(*problem, dF, mgh, ngh, ogh, problem->ghosts, problem->ghosts,
+        err = MultigridEngine::updateGhosts(*problem, *dF, mgh, ngh, ogh, problem->ghosts, problem->ghosts,
                                             problem->ghosts, mpiData.get(), isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts of d_f");
 
@@ -617,28 +577,42 @@ namespace mgcl
         return o;
     }
 
-    cl_mem Level::getDVIn() const
+    CuboidGpu& Level::getDVIn() const
     {
-        return dVIn;
+        if (!dVIn)
+            throw "dVIn is null.";
+        return *dVIn;
     }
 
-    void Level::setDVIn(const cl_mem dVIn_)
+    CuboidGpu* Level::getDVInPtr() const
+    {
+        return dVIn.get();
+    }
+
+    void Level::setDVIn(std::shared_ptr<CuboidGpu> dVIn_)
     {
         dVIn = dVIn_;
-        if (dVIn_)
-            mgclCheckError(clRetainMemObject(dVIn_), "clRetainMemObject(dVIn)");
+        // if (dVIn)
+        //     dVIn->retain();
     }
 
-    cl_mem Level::getDF() const
+    CuboidGpu& Level::getDF() const
     {
-        return dF;
+        if (!dF)
+            throw "dF is null.";
+        return *dF;
     }
 
-    void Level::setDF(const cl_mem dF_)
+    CuboidGpu* Level::getDFPtr() const
+    {
+        return dF.get();
+    }
+
+    void Level::setDF(std::shared_ptr<CuboidGpu> dF_)
     {
         dF = dF_;
-        if (dF_)
-            mgclCheckError(clRetainMemObject(dF_), "clRetainMemObject(dF)");
+        // if (dF)
+        //     dF->retain();
     }
 
     int Level::getM() const
@@ -656,28 +630,42 @@ namespace mgcl
         h = h_;
     }
 
-    cl_mem Level::getDVOut() const
+    CuboidGpu& Level::getDVOut() const
     {
-        return dVOut;
+        if (!dVOut)
+            throw "dVOut is null.";
+        return *dVOut;
     }
 
-    void Level::setDVOut(const cl_mem dVOut_)
+    CuboidGpu* Level::getDVOutPtr() const
+    {
+        return dVOut.get();
+    }
+
+    void Level::setDVOut(std::shared_ptr<CuboidGpu> dVOut_)
     {
         dVOut = dVOut_;
-        if (dVOut_)
-            mgclCheckError(clRetainMemObject(dVOut_), "clRetainMemObject(dVOut)");
+        // if (dVOut)
+        //     dVOut->retain();
     }
 
-    cl_mem Level::getDR() const
+    CuboidGpu& Level::getDR() const
     {
-        return dR;
+        if (!dR)
+            throw "dR is null.";
+        return *dR;
     }
 
-    void Level::setDR(const cl_mem dR_)
+    CuboidGpu* Level::getDRPtr() const
+    {
+        return dR.get();
+    }
+
+    void Level::setDR(std::shared_ptr<CuboidGpu> dR_)
     {
         dR = dR_;
-        if (dR_)
-            mgclCheckError(clRetainMemObject(dR_), "clRetainMemObject(dR)");
+        // if (dR)
+        //     dR->retain();
     }
 
     MPILevelData* Level::getMpiDataPtr()

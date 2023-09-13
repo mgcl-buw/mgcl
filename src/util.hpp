@@ -12,6 +12,8 @@
 
 #include <stddef.h> // for size_t
 
+#include "cuboid_gpu.hpp"
+
 #ifdef __APPLE__
 #include <OpenCL/cl.h> // for clSetKernelArg, _cl_mem, cl_mem, clE...
 #else
@@ -20,11 +22,11 @@
 
 namespace mgcl::util
 {
-    double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
+    double sum(CuboidGpu& buf, cl_program program, cl_command_queue commands,
                bool return_sum, size_t localSize = 512);
-    double max(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
+    double max(CuboidGpu& buf, cl_program program, cl_command_queue commands,
                bool return_sum, size_t localSize = 512);
-    double max_abs(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
+    double max_abs(CuboidGpu& buf, cl_program program, cl_command_queue commands,
                    bool return_sum, size_t localSize = 512);
 
     namespace seq

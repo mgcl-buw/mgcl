@@ -15,6 +15,7 @@
 #include <CL/cl.h>
 #endif
 
+#include "cuboid_gpu.hpp"
 #include "mgcl.hpp"
 #include "problem.hpp"
 #include "stencil.hpp"
@@ -36,18 +37,18 @@ namespace mgcl
     public:
         static double vcycleSeq(Problem& problem, Level& level);
         static double vcycle(Problem& problem, Level& level);
-        static int correctError(Problem& problem, cl_mem d_v, cl_mem d_r, int m, int n, int o);
+        static int correctError(Problem& problem, CuboidGpu& d_v, CuboidGpu& d_r, int m, int n, int o);
 
         static void restrictSeq(Level& fine, Level& coarse, Cuboid& fineVals, Cuboid& coarseVals);
-        static void restrict(Level& fine, Level& coarse, cl_mem d_fine_values, cl_mem d_coarse_values);
+        static void restrict(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values);
 
         static void prolongateSeq(Level& fine, Level& coarse, Cuboid& fineVals, Cuboid& coarseVals);
-        static void prolongate(Level& fine, Level& coarse, cl_mem d_fine_values, cl_mem d_coarse_values);
+        static void prolongate(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values);
 
         static void updateGhostsSeq(Cuboid& c, MPILevelData* mpiData, bool periodic, bool forceLocal);
-        static int updateGhosts(Problem& problem, cl_mem dBuffer, int m, int n, int o,
+        static int updateGhosts(Problem& problem, CuboidGpu& dBuffer, int m, int n, int o,
                                 int ghostsM, int ghostsN, int ghostsO, MPILevelData* mpiData, bool forceLocal);
-        static void updateGhostsOclMpi(cl_command_queue commands, cl_mem d_buf, MPILevelData& mpiData,
+        static void updateGhostsOclMpi(cl_command_queue commands, CuboidGpu& d_buf, MPILevelData& mpiData,
                                        int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o,
                                        bool periodic, bool forceLocal);
 

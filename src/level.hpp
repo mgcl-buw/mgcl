@@ -1,6 +1,7 @@
 #ifndef MGCL_LEVEL_HPP
 #define MGCL_LEVEL_HPP
 
+#include "cuboid_gpu.hpp"
 #include "mgcl.hpp" // for MGCL_STENCIL
 #include "mpi_level_data.hpp"
 #include "stencil.hpp" // for VaryingStencil3x3x3
@@ -54,10 +55,10 @@ namespace mgcl
         double h;
 
         /* opencl buffers */
-        cl_mem dVIn = nullptr;
-        cl_mem dVOut = nullptr;
-        cl_mem dF = nullptr;
-        cl_mem dR = nullptr;
+        std::shared_ptr<CuboidGpu> dVIn = nullptr;
+        std::shared_ptr<CuboidGpu> dVOut = nullptr;
+        std::shared_ptr<CuboidGpu> dF = nullptr;
+        std::shared_ptr<CuboidGpu> dR = nullptr;
 
         /* MPI relevant data, e.g. neighbour process ranks. Null if Problem::useMpi is false. */
         std::unique_ptr<MPILevelData> mpiData = nullptr;
@@ -72,7 +73,7 @@ namespace mgcl
         Level& operator=(const Level&) = delete;
         Level(const Level&&) = delete;
         Level& operator=(Level&&) = delete;
-        ~Level();
+        ~Level(){};
 
         bool init();
         int initOpenCLBuffers();
@@ -100,17 +101,21 @@ namespace mgcl
         MPILevelData* getMpiDataPtr();
         MPILevelData& getMpiData();
 
-        cl_mem getDVIn() const;
-        void setDVIn(const cl_mem dVIn_);
+        CuboidGpu* getDVInPtr() const;
+        CuboidGpu& getDVIn() const;
+        void setDVIn(const std::shared_ptr<CuboidGpu> dVIn_);
 
-        cl_mem getDVOut() const;
-        void setDVOut(const cl_mem dVOut_);
+        CuboidGpu* getDVOutPtr() const;
+        CuboidGpu& getDVOut() const;
+        void setDVOut(const std::shared_ptr<CuboidGpu> dVOut_);
 
-        cl_mem getDF() const;
-        void setDF(const cl_mem dF_);
+        CuboidGpu* getDFPtr() const;
+        CuboidGpu& getDF() const;
+        void setDF(const std::shared_ptr<CuboidGpu> dF_);
 
-        cl_mem getDR() const;
-        void setDR(const cl_mem dR_);
+        CuboidGpu* getDRPtr() const;
+        CuboidGpu& getDR() const;
+        void setDR(const std::shared_ptr<CuboidGpu> dR_);
 
         int getMgh() const;
 

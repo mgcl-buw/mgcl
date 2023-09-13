@@ -46,9 +46,9 @@ namespace mgcl
         std::shared_ptr<Cuboid> f = nullptr; /* can be ommited if device buffers are supplied */
 
         /* Buffers for v and f. Only need to be set if buffers already exist on device and should be reused */
-        cl_mem dV = nullptr;
-        cl_mem dF = nullptr;
-        cl_mem dStencilValues = nullptr;
+        std::shared_ptr<CuboidGpu> dV = nullptr;
+        std::shared_ptr<CuboidGpu> dF = nullptr;
+        std::shared_ptr<CuboidGpu> dStencilValues = nullptr;
 
         /* local grid dimensions (on one MPI process if MPI is used) */
         int m;
@@ -162,7 +162,8 @@ namespace mgcl
         Problem(int m_, int n_, int o_, Cuboid* f_, Cuboid* v_, int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
         Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_,
                 int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
-        Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_, int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
+        Problem(int m_, int n_, int o_, std::shared_ptr<CuboidGpu> d_f_, std::shared_ptr<CuboidGpu> d_v_,
+                int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
         Problem(const Problem&) = delete;
         Problem& operator=(const Problem&) = delete;
         Problem(const Problem&&) = delete;
@@ -257,14 +258,17 @@ namespace mgcl
         bool getUseOpencl() const;
         void setUseOpencl(bool useOpencl);
 
-        cl_mem getDStencilValues() const;
-        void setDStencilValues(const cl_mem& dStencilValues);
+        CuboidGpu& getDStencilValues() const;
+        std::shared_ptr<CuboidGpu> getDStencilValuesPtr() const;
+        void setDStencilValues(std::shared_ptr<CuboidGpu> dStencilValues);
 
-        cl_mem getDV() const;
-        void setDV(const cl_mem& dV_);
+        CuboidGpu& getDV() const;
+        std::shared_ptr<CuboidGpu> getDVPtr() const;
+        void setDV(std::shared_ptr<CuboidGpu> dV_);
 
-        cl_mem getDF() const;
-        void setDF(const cl_mem& dF_);
+        CuboidGpu& getDF() const;
+        std::shared_ptr<CuboidGpu> getDFPtr() const;
+        void setDF(std::shared_ptr<CuboidGpu> dF_);
 
         OpenCLHelper& getOpenCLHelper();
 

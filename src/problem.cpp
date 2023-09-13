@@ -55,7 +55,7 @@ namespace mgcl
         calculateAndSetMaxLevel();
     }
 
-    Problem::Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_,
+    Problem::Problem(int m_, int n_, int o_, std::shared_ptr<CuboidGpu> d_f_, std::shared_ptr<CuboidGpu> d_v_,
                      int m_global_, int n_global_, int o_global_)
         : m(m_), n(n_), o(o_), dF(d_f_), dV(d_v_),
           mGlobal(m_global_ == -1 ? m_ : m_global_),
@@ -427,7 +427,7 @@ namespace mgcl
         }
 
         // read back results TODO: only for testing purposes, maybe define TESTING?
-        err = clEnqueueReadBuffer(openCLHelper.getCommands(), levels[0]->dVIn, CL_TRUE, 0,
+        err = clEnqueueReadBuffer(openCLHelper.getCommands(), levels[0]->getDVIn().getBuffer(), CL_TRUE, 0,
                                   sizeof(double) * levels[0]->mgh * levels[0]->ngh * levels[0]->ogh, levels[0]->getV()[0][0], 0, NULL, NULL);
         mgclCheckError(err, "Error: Failed to read output arrays from device!");
 
@@ -689,24 +689,55 @@ namespace mgcl
         jacobi_iterations_per_kernel = jacobiIterationsPerKernel;
     }
 
-    cl_mem Problem::getDStencilValues() const
+    CuboidGpu& Problem::getDStencilValues() const
+    {
+        if (!dStencilValues)
+            throw "dStencilValues is null!";
+        return *dStencilValues;
+    }
+
+    std::shared_ptr<CuboidGpu> Problem::getDStencilValuesPtr() const
     {
         return dStencilValues;
     }
 
-    cl_mem Problem::getDV() const
+    void Problem::setDStencilValues(std::shared_ptr<CuboidGpu> dStencilValues_)
+    {
+        dStencilValues = dStencilValues_;
+    }
+
+    CuboidGpu& Problem::getDV() const
+    {
+        if (!dV)
+            throw "dStencilValues is null!";
+        return *dV;
+    }
+
+    std::shared_ptr<CuboidGpu> Problem::getDVPtr() const
     {
         return dV;
     }
 
-    void Problem::setDV(const cl_mem& dV_)
+    void Problem::setDV(std::shared_ptr<CuboidGpu> dV_)
     {
         dV = dV_;
     }
 
-    void Problem::setDStencilValues(const cl_mem& dStencilValues_)
+    CuboidGpu& Problem::getDF() const
     {
-        dStencilValues = dStencilValues_;
+        if (!dF)
+            throw "dF is null!";
+        return *dF;
+    }
+
+    std::shared_ptr<CuboidGpu> Problem::getDFPtr() const
+    {
+        return dF;
+    }
+
+    void Problem::setDF(std::shared_ptr<CuboidGpu> dF_)
+    {
+        dF = dF_;
     }
 
     int Problem::getN() const
@@ -808,16 +839,6 @@ namespace mgcl
     void Problem::setUseOpencl(bool useOpencl)
     {
         use_opencl = useOpencl;
-    }
-
-    cl_mem Problem::getDF() const
-    {
-        return dF;
-    }
-
-    void Problem::setDF(const cl_mem& dF_)
-    {
-        dF = dF_;
     }
 
     OpenCLHelper& Problem::getOpenCLHelper()

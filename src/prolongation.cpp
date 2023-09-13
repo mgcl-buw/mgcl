@@ -63,7 +63,7 @@ namespace mgcl
 
     /* Prolongates from coarse to fine grid.
      * Doesn't create buffers or copy memory from or to device. */
-    void MultigridEngine::prolongate(Level& fine, Level& coarse, cl_mem d_fine_values, cl_mem d_coarse_values)
+    void MultigridEngine::prolongate(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values)
     {
         int err;
         auto problem = fine.problem;
@@ -72,10 +72,13 @@ namespace mgcl
         cl_kernel kernel = clCreateKernel(problem->openCLHelper.getProgram(), "prolongate_to_fine", &err);
         mgclCheckError(err, "Creating kernel");
 
+        cl_mem buf_fine = d_fine_values.getBuffer();
+        cl_mem buf_coarse = d_coarse_values.getBuffer();
+
         // assign kernel arguments
         int pos = 0;
-        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &d_fine_values);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_coarse_values);
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buf_fine);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &buf_coarse);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &fine.mgh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &fine.ngh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &fine.ogh);

@@ -195,7 +195,7 @@ namespace mgcl
     {
         if (problem->getReuseOpenclBuffers() || problem->getCopyBufferData())
         {
-            if (problem->getDV() == nullptr || problem->getDF() == nullptr)
+            if (problem->getDVPtr() == nullptr || problem->getDFPtr() == nullptr)
             {
                 if (!problem->silent)
                     printf("OpenCL buffers d_v and d_f not set but reuse_opencl_buffers or copy_buffer_data specified. "
@@ -236,24 +236,19 @@ namespace mgcl
             int o = problem->getO();
             int ghosts = problem->getGhosts();
 
-            size_t bufsize;
             size_t sizeNeeded = sizeof(double) * (m + 2 * ghosts) * (n + 2 * ghosts) * (o + 2 * ghosts);
-            int err = clGetMemObjectInfo(problem->getDV(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgclCheckError(err, "Querying buffer size of d_v");
-            if (bufsize != sizeNeeded)
+            if (problem->getDV().getSize() != sizeNeeded)
             {
                 if (!problem->silent)
-                    std::cout << "OpenCL buffer d_v has wrong size (" << bufsize << " but need "
+                    std::cout << "OpenCL buffer d_v has wrong size (" << problem->getDV().getSize() << " but need "
                               << sizeNeeded << ")" << std::endl;
                 return false;
             }
 
-            err = clGetMemObjectInfo(problem->getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgclCheckError(err, "Querying buffer size of d_f");
-            if (bufsize != sizeNeeded)
+            if (problem->getDF().getSize() != sizeNeeded)
             {
                 if (!problem->silent)
-                    std::cout << "OpenCL buffer d_f has wrong size (" << bufsize << " but need "
+                    std::cout << "OpenCL buffer d_f has wrong size (" << problem->getDF().getSize() << " but need "
                               << sizeNeeded << ")" << std::endl;
                 return false;
             }
