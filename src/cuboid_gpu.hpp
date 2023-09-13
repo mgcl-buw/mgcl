@@ -35,13 +35,10 @@ namespace mgcl
 
     public:
         CuboidGpu(cl_context context, cl_mem_flags flags,
-                  int m, int n, int o,
-                  int ghosts_m, int ghosts_n, int ghosts_o,
-                  const Cuboid* const host_ptr = nullptr);
-        CuboidGpu(cl_context context,
-                  int m, int n, int o,
-                  int ghosts_m, int ghosts_n, int ghosts_o,
-                  const cl_mem buf);
+                  int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o,
+                  const cl_mem buf = nullptr);
+        CuboidGpu(cl_context context, cl_mem_flags flags, const Cuboid& host_data);
+
         CuboidGpu(const CuboidGpu&) = delete;
         CuboidGpu(CuboidGpu&&) = delete;
         CuboidGpu& operator=(const CuboidGpu&) = delete;
@@ -66,6 +63,7 @@ namespace mgcl
         int getNgh() const;
         int getOgh() const;
         int getSize() const;
+        cl_context getContext() const;
 
         static void swap(CuboidGpu& a, CuboidGpu& b);
     };

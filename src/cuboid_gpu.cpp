@@ -5,8 +5,8 @@
 namespace mgcl
 {
     /**
-     * @brief Construct a new CuboidGpu object with given sizes. Copies data from a Cuboid, if host_ptr
-     *   is given. A CuboidGpu object is only valid in its context. flags must be valid, see parameter specification.
+     * @brief Construct a new CuboidGpu object with given sizes. A CuboidGpu object is only valid in its context.
+     *   flags must be valid, see parameter specification.
      *
      * @param context OpenCL context this buffer is valid in
      * @param flags Must contain one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY. Furthermore if
@@ -18,13 +18,15 @@ namespace mgcl
      * @param ghosts_m amount of ghost cells at one border
      * @param ghosts_n amount of ghost cells at one border
      * @param ghosts_o amount of ghost cells at one border
-     * @param host_ptr Cuboid that gets copied from initially.
+     * @param buf buffer that shall be retained. If given, flags will be ignored.
+     * @throws string if dimensions are not strictly positive or ghosts are not positive or 0
+     * @throws string if flags are not valid
      */
     CuboidGpu::CuboidGpu(cl_context context, cl_mem_flags flags,
                          int m, int n, int o,
                          int ghosts_m, int ghosts_n, int ghosts_o,
-                         const Cuboid* const host_ptr)
-        : context(context), buffer(nullptr), m(m), n(n), o(o),
+                         const cl_mem buf)
+        : context(context), buffer(buf), m(m), n(n), o(o),
           ghosts_m(ghosts_m), ghosts_n(ghosts_n), ghosts_o(ghosts_o),
           mgh(m + 2 * ghosts_m), ngh(n + 2 * ghosts_n), ogh(o + 2 * ghosts_o),
           size(mgh * ngh * ogh)
@@ -35,6 +37,54 @@ namespace mgcl
         if (ghosts_m < 0 || ghosts_n < 0 || ghosts_o < 0)
             throw "ghosts must be >= 0.";
 
+        if (buf)
+            retain();
+        else
+        {
+            bool containsReadWrite = (flags & CL_MEM_READ_WRITE) == CL_MEM_READ_WRITE;
+            bool containsWriteOnly = (flags & CL_MEM_WRITE_ONLY) == CL_MEM_WRITE_ONLY;
+            bool containsReadOnly = (flags & CL_MEM_READ_ONLY) == CL_MEM_READ_ONLY;
+
+            // Check that flags contains one and only one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY
+            if (!containsReadWrite && !containsWriteOnly && !containsReadOnly)
+                throw "flags must contain one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.";
+
+            if (containsReadWrite && containsReadOnly || containsReadWrite && containsWriteOnly || containsReadOnly || containsWriteOnly)
+                throw "flags must contain one and only one of CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY or CL_MEM_READ_WRITE.";
+
+            bool containsCopyHostPtr = (flags & CL_MEM_COPY_HOST_PTR) == CL_MEM_COPY_HOST_PTR;
+            bool containsUseHostPtr = (flags & CL_MEM_USE_HOST_PTR) == CL_MEM_USE_HOST_PTR;
+            bool containsAllocHostPtr = (flags & CL_MEM_ALLOC_HOST_PTR) == CL_MEM_ALLOC_HOST_PTR;
+
+            // Check that flags does not contain one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR
+            if ((containsAllocHostPtr || containsUseHostPtr || containsCopyHostPtr))
+                throw "host_ptr is null, but flags contains CL_MEM_ALLOC_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_COPY_HOST_PTR.";
+
+            cl_int err;
+            buffer = clCreateBuffer(context, flags, sizeof(double) * size, nullptr, &err);
+            mgclCheckError(err, "clCreateBuffer");
+        }
+    }
+
+    /**
+     * @brief Construct a new CuboidGpu object with the same size and content as of the given Cuboid.
+     *   A CuboidGpu object is only valid in its context. flags must be valid, see parameter specification.
+     *
+     * @param context OpenCL context this buffer is valid in
+     * @param flags Must contain one and only one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY as well as
+     *   one and only one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR.
+     *   Example using a gpu with given host_ptr: CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR
+     * @param host_data Cuboid that gets copied from initially.
+     * @throws string if flags are not valid
+     */
+    CuboidGpu::CuboidGpu(cl_context context, cl_mem_flags flags,
+                         const Cuboid& host_data)
+        : context(context), buffer(nullptr), m(host_data.getM()),
+          n(host_data.getN()), o(host_data.getO()),
+          ghosts_m(host_data.getGhostsM()), ghosts_n(host_data.getGhostsN()), ghosts_o(host_data.getGhostsO()),
+          mgh(m + 2 * ghosts_m), ngh(n + 2 * ghosts_n), ogh(o + 2 * ghosts_o),
+          size(mgh * ngh * ogh)
+    {
         bool containsReadWrite = (flags & CL_MEM_READ_WRITE) == CL_MEM_READ_WRITE;
         bool containsWriteOnly = (flags & CL_MEM_WRITE_ONLY) == CL_MEM_WRITE_ONLY;
         bool containsReadOnly = (flags & CL_MEM_READ_ONLY) == CL_MEM_READ_ONLY;
@@ -52,64 +102,16 @@ namespace mgcl
 
         // Check that flags contains one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR if
         // host_ptr is given.
-        if ((host_ptr && !(containsAllocHostPtr || containsCopyHostPtr || containsUseHostPtr)))
+        if (!(containsAllocHostPtr || containsCopyHostPtr || containsUseHostPtr))
             throw "host_ptr not null, but flags does not contain CL_MEM_ALLOC_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_COPY_HOST_PTR.";
-
-        // Check that flags does not contain one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR
-        // if  host_ptr is not given.
-        if ((!host_ptr && (containsAllocHostPtr || containsUseHostPtr || containsCopyHostPtr)))
-            throw "host_ptr is null, but flags contains CL_MEM_ALLOC_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_COPY_HOST_PTR.";
 
         // Check that flags contains one and only one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR.
         if (containsCopyHostPtr && containsAllocHostPtr || containsCopyHostPtr && containsUseHostPtr || containsUseHostPtr && containsAllocHostPtr)
             throw "flags must contain one and only one of CL_MEM_COPY_HOST_PTR, CL_MEM_ALLOC_HOST_PTR, or CL_MEM_USE_HOST_PTR";
 
         cl_int err;
-        if (host_ptr)
-        {
-            if (host_ptr->getM() != m || host_ptr->getN() != n || host_ptr->getO() != o ||
-                host_ptr->getMgh() != mgh || host_ptr->getNgh() != ngh || host_ptr->getOgh() != ogh)
-                throw "Dimension of host_ptr and CuboidGpu must match.";
-
-            buffer = clCreateBuffer(context, flags, sizeof(double) * size,
-                                    host_ptr->getData()[0][0], &err);
-        }
-        else
-            buffer = clCreateBuffer(context, flags, sizeof(double) * size, nullptr, &err);
+        buffer = clCreateBuffer(context, flags, sizeof(double) * size, host_data.getData()[0][0], &err);
         mgclCheckError(err, "clCreateBuffer");
-    }
-
-    /**
-     * @brief Construct a new CuboidGpu object with given sizes, retaining an existing OpenCL buffer.
-     *   A CuboidGpu object is only valid in its context.
-     * Currently only GPU devices are supported, i.e. the flag for creating the buffer is always CL_MEM_COPY_HOST_PTR.
-     *   However, one may add e.g. CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.
-     *
-     * @param context OpenCL context this buffer is valid in
-     * @param m extend
-     * @param n extend
-     * @param o extend
-     * @param ghosts_m amount of ghost cells at one border
-     * @param ghosts_n amount of ghost cells at one border
-     * @param ghosts_o amount of ghost cells at one border
-     * @param host_ptr Cuboid that gets copied from initially.
-     */
-    CuboidGpu::CuboidGpu(cl_context context,
-                         int m, int n, int o,
-                         int ghosts_m, int ghosts_n, int ghosts_o,
-                         const cl_mem buf)
-        : context(context), buffer(buf), m(m), n(n), o(o),
-          ghosts_m(ghosts_m), ghosts_n(ghosts_n), ghosts_o(ghosts_o),
-          mgh(m + 2 * ghosts_m), ngh(n + 2 * ghosts_n), ogh(o + 2 * ghosts_o),
-          size(mgh * ngh * ogh)
-    {
-        if (m <= 0 || n <= 0 || o <= 0)
-            throw "m, n and o must be > 0.";
-
-        if (ghosts_m < 0 || ghosts_n < 0 || ghosts_o < 0)
-            throw "ghosts must be >= 0.";
-
-        retain();
     }
 
     CuboidGpu::~CuboidGpu()
@@ -264,6 +266,11 @@ namespace mgcl
     int CuboidGpu::getOgh() const
     {
         return ogh;
+    }
+
+    cl_context CuboidGpu::getContext() const
+    {
+        return context;
     }
 
     /**
