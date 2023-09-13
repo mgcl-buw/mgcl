@@ -194,6 +194,23 @@ namespace mgcl
         mgclCheckError(clRetainMemObject(buffer), "clRetainMemObject(buffer)");
     }
 
+    /**
+     * @brief Asynchronously copies values from this buffer to the other buffer. Dimensions must match.
+     *
+     * @param commands command queue
+     * @param target buffer to copy to
+     * @throws string If Dimensions do not match.
+     */
+    void CuboidGpu::copyTo(cl_command_queue commands, CuboidGpu& target)
+    {
+        if (mgh != target.getMgh() || ngh != target.getNgh() || ogh != target.getOgh())
+            throw "Dimensions do not match!";
+
+        int err = clEnqueueCopyBuffer(commands, buffer, target.getBuffer(), 0, 0,
+                                      sizeof(double) * mgh * ngh * ogh, 0, NULL, NULL);
+        mgclCheckError(err, "clEnqueueCopyBuffer");
+    }
+
     int CuboidGpu::getM() const
     {
         return m;
@@ -247,6 +264,22 @@ namespace mgcl
     int CuboidGpu::getOgh() const
     {
         return ogh;
+    }
+
+    /**
+     * @brief Swaps internal buffers of a and b.
+     *
+     * @param a
+     * @param b
+     * @throws string If Dimensions do not match.
+     */
+    void CuboidGpu::swap(CuboidGpu& a, CuboidGpu& b)
+    {
+        if (a.getM() != b.getM() || a.getN() != b.getN() || a.getO() != b.getO() ||
+            a.getGhostsM() != b.getGhostsM() || a.getGhostsN() != b.getGhostsN() || a.getGhostsO() != b.getGhostsO())
+            throw "Dimensions do not match!";
+
+        std::swap(a.buffer, b.buffer);
     }
 
 } // namespace mgcl

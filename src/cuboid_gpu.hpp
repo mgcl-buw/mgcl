@@ -53,6 +53,7 @@ namespace mgcl
         void fill(cl_command_queue commands, double data, bool blocking);
 
         void retain();
+        void copyTo(cl_command_queue commands, CuboidGpu& target);
 
         cl_mem getBuffer() const;
         int getM() const;
@@ -65,6 +66,8 @@ namespace mgcl
         int getNgh() const;
         int getOgh() const;
         int getSize() const;
+
+        static void swap(CuboidGpu& a, CuboidGpu& b);
     };
 }
 

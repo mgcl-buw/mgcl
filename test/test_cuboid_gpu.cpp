@@ -179,3 +179,75 @@ TEST_CASE("CuboidGpu::write")
 
     REQUIRE(ret->isEqualAllCells(ch));
 }
+
+// Tests if CuboidGpu::copyTo works correctly.
+TEST_CASE("CuboidGpu::copyTo")
+{
+    mgcl_test::TestUtility tu;
+
+    SECTION("success")
+    {
+        mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
+        ch.fillRandom();
+
+        mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4);
+        c.write(tu.getCommands(), ch, true);
+
+        mgcl::CuboidGpu c2(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4);
+        c.copyTo(tu.getCommands(), c2);
+
+        auto ch2_act = c2.read(tu.getCommands(), nullptr, true);
+
+        REQUIRE(ch2_act->isEqualAllCells(ch));
+    }
+
+    SECTION("throwing")
+    {
+        mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
+        ch.fillRandom();
+
+        mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4);
+        c.write(tu.getCommands(), ch, true);
+
+        mgcl::CuboidGpu c2(tu.getContext(), CL_MEM_READ_WRITE, 3, 2, 3, 2, 3, 4);
+        REQUIRE_THROWS(c.copyTo(tu.getCommands(), c2));
+    }
+}
+
+// Tests if CuboidGpu::swap works correctly.
+TEST_CASE("CuboidGpu::swap")
+{
+    mgcl_test::TestUtility tu;
+
+    SECTION("success")
+    {
+        mgcl::Cuboid ch1(1, 1, 1, 0, 0, 0);
+        mgcl::Cuboid ch2(1, 1, 1, 0, 0, 0);
+        ch1[0][0][0] = 1.0;
+        ch2[0][0][0] = 2.0;
+
+        mgcl::CuboidGpu c1(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 1, 1, 1, 0, 0, 0, &ch1);
+        mgcl::CuboidGpu c2(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 1, 1, 1, 0, 0, 0, &ch2);
+
+        auto c_act1 = c1.read(tu.getCommands(), nullptr, false);
+        auto c_act2 = c2.read(tu.getCommands(), nullptr, true);
+
+        REQUIRE(c_act1->isEqual(ch1));
+        REQUIRE(c_act2->isEqual(ch2));
+
+        mgcl::CuboidGpu::swap(c1, c2);
+
+        c_act1 = c1.read(tu.getCommands(), nullptr, false);
+        c_act2 = c2.read(tu.getCommands(), nullptr, true);
+
+        REQUIRE(c_act1->isEqual(ch2));
+        REQUIRE(c_act2->isEqual(ch1));
+    }
+
+    SECTION("throwing")
+    {
+        mgcl::CuboidGpu c1(tu.getContext(), CL_MEM_READ_WRITE, 3, 1, 1, 0, 0, 0, nullptr);
+        mgcl::CuboidGpu c2(tu.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 0, 0, 0, nullptr);
+        REQUIRE_THROWS(mgcl::CuboidGpu::swap(c1, c2));
+    }
+}
