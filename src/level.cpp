@@ -191,12 +191,8 @@ namespace mgcl
             else
             {
                 int pointer_flag = deviceType == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
-                dVIn = std::make_shared<CuboidGpu>(context, pointer_flag, m, n, o,
-                                                   problem->getGhosts(), problem->getGhosts(), problem->getGhosts(),
-                                                   (*v)[0][0]);
-                dF = std::make_shared<CuboidGpu>(context, pointer_flag, m, n, o,
-                                                 problem->getGhosts(), problem->getGhosts(), problem->getGhosts(),
-                                                 (*f)[0][0]);
+                dVIn = std::make_shared<CuboidGpu>(context, pointer_flag, *v);
+                dF = std::make_shared<CuboidGpu>(context, pointer_flag, *f);
             }
         }
         else

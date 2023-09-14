@@ -63,9 +63,9 @@ TEST_CASE("residual")
         p->setDeviceType(deviceType);
 
         mgcl_test::TestUtility tu(p);
-        auto d_in_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_f);
-        auto d_in_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_v);
-        auto d_in_r = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_r);
+        auto d_in_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_f);
+        auto d_in_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_v);
+        auto d_in_r = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_r);
 
         mgcl::Level level(p.get(), 0);
         level.setDF(d_in_f);

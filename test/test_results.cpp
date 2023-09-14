@@ -4,9 +4,9 @@
 
 namespace mgcl_test
 {
-    std::unique_ptr<mgcl::VaryingStencil> Matrix2d_fromVaryingStencil::varyingStencilLaplace4x4x4()
+    std::shared_ptr<mgcl::VaryingStencil> Matrix2d_fromVaryingStencil::varyingStencilLaplace4x4x4()
     {
-        auto sptr = std::make_unique<mgcl::VaryingStencil>(4, 4, 4, 5, 0, 0, 0);
+        auto sptr = std::make_shared<mgcl::VaryingStencil>(4, 4, 4, 5, 0, 0, 0);
         auto& s = *sptr;
         s[0][0][0][0][0][0] = 0;
         s[0][0][0][0][0][1] = 0;
@@ -8081,9 +8081,9 @@ namespace mgcl_test
     }
 
     // Varying stencil equivalent of matrix2d64x64RandomPeriodic
-    std::unique_ptr<mgcl::VaryingStencil> Matrix2d_fromVaryingStencil::varyingStencil2x3x4RandomPeriodic()
+    std::shared_ptr<mgcl::VaryingStencil> Matrix2d_fromVaryingStencil::varyingStencil2x3x4RandomPeriodic()
     {
-        auto sptr = std::make_unique<mgcl::VaryingStencil>(2, 3, 4, 3, 0, 0, 0);
+        auto sptr = std::make_shared<mgcl::VaryingStencil>(2, 3, 4, 3, 0, 0, 0);
         auto& s = *sptr;
         s[0][0][0][0][0][0] = 6;
         s[0][0][0][0][0][1] = 9;
@@ -8801,10 +8801,10 @@ namespace mgcl_test
      *
      * @return mgcl::Cuboid Cuboid filled with test input.
      */
-    std::unique_ptr<mgcl::Cuboid> test_residual::inputF16()
+    std::shared_ptr<mgcl::Cuboid> test_residual::inputF16()
     {
         int n = 16;
-        auto cret = std::make_unique<mgcl::Cuboid>(n, n, n, 1, 1, 1);
+        auto cret = std::make_shared<mgcl::Cuboid>(n, n, n, 1, 1, 1);
         auto& c = *cret;
 
         for (int i = 0; i < n + 2; i++)
@@ -8824,10 +8824,10 @@ namespace mgcl_test
      *
      * @return mgcl::Cuboid Cuboid filled with test input.
      */
-    std::unique_ptr<mgcl::Cuboid> test_residual::inputV16()
+    std::shared_ptr<mgcl::Cuboid> test_residual::inputV16()
     {
         int n = 16;
-        auto cret = std::make_unique<mgcl::Cuboid>(n, n, n, 1, 1, 1);
+        auto cret = std::make_shared<mgcl::Cuboid>(n, n, n, 1, 1, 1);
         auto& c = *cret;
 
         for (int i = 0; i < n + 2; i++)
@@ -8846,9 +8846,9 @@ namespace mgcl_test
      *
      * @return mgcl::Cuboid Cuboid filled with test output of r.
      */
-    std::unique_ptr<mgcl::Cuboid> test_residual::outputR16()
+    std::shared_ptr<mgcl::Cuboid> test_residual::outputR16()
     {
-        auto cret = std::make_unique<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
+        auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
         auto& c = *cret;
 
         c[0][0][0] = -1.399440e+06;
@@ -14692,10 +14692,10 @@ namespace mgcl_test
      *
      * @return mgcl::Cuboid Cuboid filled with test input from fine grid.
      */
-    std::unique_ptr<mgcl::Cuboid> test_restriction::inputFine16()
+    std::shared_ptr<mgcl::Cuboid> test_restriction::inputFine16()
 
     {
-        auto cret = std::make_unique<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
+        auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
         auto& c = *cret;
 
         c[0][0][0] = 4.000000e+00;
@@ -20539,9 +20539,9 @@ namespace mgcl_test
      *
      * @return mgcl::Cuboid Cuboid filled with test input from coarse grid (zeros).
      */
-    std::unique_ptr<mgcl::Cuboid> test_restriction::inputCoarse8()
+    std::shared_ptr<mgcl::Cuboid> test_restriction::inputCoarse8()
     {
-        return std::make_unique<mgcl::Cuboid>(8, 8, 8, 1, 1, 1, 0);
+        return std::make_shared<mgcl::Cuboid>(8, 8, 8, 1, 1, 1, 0);
     }
 
     /**
@@ -20549,9 +20549,9 @@ namespace mgcl_test
      *
      * @return mgcl::Cuboid Cuboid filled with test output from fine grid.
      */
-    std::unique_ptr<mgcl::Cuboid> test_restriction::outputFine16()
+    std::shared_ptr<mgcl::Cuboid> test_restriction::outputFine16()
     {
-        auto cret = std::make_unique<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
+        auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
         auto& c = *cret;
 
         c[0][0][0] = 8.000000e+00;
@@ -26395,9 +26395,9 @@ namespace mgcl_test
      *
      * @return mgcl::Cuboid Cuboid filled with test output from coarse grid.
      */
-    std::unique_ptr<mgcl::Cuboid> test_restriction::outputCoarse8()
+    std::shared_ptr<mgcl::Cuboid> test_restriction::outputCoarse8()
     {
-        auto cret = std::make_unique<mgcl::Cuboid>(8, 8, 8, 1, 1, 1, 0);
+        auto cret = std::make_shared<mgcl::Cuboid>(8, 8, 8, 1, 1, 1, 0);
         auto& c = *cret;
 
         c[0][0][0] = 5.640625e+00;

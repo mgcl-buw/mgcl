@@ -99,7 +99,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
         p.init();
 
         auto& v0 = p.getLevelAt(0).getV();
-        auto v0d = p.getLevelAt(0).getDVIn();
+        auto& v0d = p.getLevelAt(0).getDVIn();
         auto& fine = p.getLevelAt(0);
         auto& coarse = p.getLevelAt(1);
 
@@ -213,7 +213,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.init();
 
             auto& v0 = p.getLevelAt(0).getV();
-            auto v0d = p.getLevelAt(0).getDVIn();
+            auto& v0d = p.getLevelAt(0).getDVIn();
             auto& fine = p.getLevelAt(0);
             auto& coarse = p.getLevelAt(1);
 
@@ -264,7 +264,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.init();
 
             auto& v0 = p.getLevelAt(0).getV();
-            auto v0d = p.getLevelAt(0).getDVIn();
+            auto& v0d = p.getLevelAt(0).getDVIn();
             auto& fine = p.getLevelAt(0);
             auto& coarse = p.getLevelAt(1);
 
@@ -311,7 +311,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.init();
 
             auto& v0 = p.getLevelAt(0).getV();
-            auto v0d = p.getLevelAt(0).getDVIn();
+            auto& v0d = p.getLevelAt(0).getDVIn();
             auto& fine = p.getLevelAt(0);
             auto& coarse = p.getLevelAt(1);
 
@@ -360,7 +360,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.init();
 
             auto& v0 = p.getLevelAt(0).getV();
-            auto v0d = p.getLevelAt(0).getDVIn();
+            auto& v0d = p.getLevelAt(0).getDVIn();
             auto& fine = p.getLevelAt(0);
             auto& coarse = p.getLevelAt(1);
 
@@ -407,7 +407,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             p.init();
 
             auto& v0 = p.getLevelAt(0).getV();
-            auto v0d = p.getLevelAt(0).getDVIn();
+            auto& v0d = p.getLevelAt(0).getDVIn();
             auto& fine = p.getLevelAt(0);
             auto& coarse = p.getLevelAt(1);
 
