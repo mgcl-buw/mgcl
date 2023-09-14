@@ -143,10 +143,13 @@ if [ "$TEST_UTIL" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 17 "$exe" "mpi_util::gather-src-dest-different"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::gather-src-dest-same"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::gather-src-dest-same-different-gh"
+    run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-GPU-src-dest-same-different-gh"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::scatter-src-dest-same"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::scatter-src-dest-different"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::scatter-src-dest-same-with-ghosts"
+    run_test --oversubscribe -n 17 "$exe" "mpi_util::scatter-GPU-src-dest-same-with-ghosts"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::gather-src-dest-same-stencil"
+    run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-GPU-src-dest-same-stencil"
 fi
 
 if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then

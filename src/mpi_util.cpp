@@ -251,6 +251,21 @@ namespace mgcl::mpi_util
     }
 
     /**
+     * @brief Gathers all local grid stencils into one big grid stencil. Must be called from each process.
+     * On rank 0 c must have the size of the global grid, all other processes just need to send their local grid.
+     *
+     * @param comm MPI communicator.
+     * @param commands OpenCL command queue.
+     * @param c Global grid for root process (rank 0), local grids for all other processes.
+     */
+    void gather(MPI_Comm comm, cl_command_queue commands, VaryingStencilGpu& c)
+    {
+        auto tmp = c.read(commands, true);
+        gather(comm, tmp);
+        c.fill(tmp, commands, true);
+    }
+
+    /**
      * @brief Scatters from rank 0 to all other processes. Must be called from each process. On rank 0 src must have the
      *   size of the global grid, all other processes give in nullptr. dest is the local grid that is to be filled.
      *
