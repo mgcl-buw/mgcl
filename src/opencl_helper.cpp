@@ -236,7 +236,7 @@ namespace mgcl
             int o = problem->getO();
             int ghosts = problem->getGhosts();
 
-            size_t sizeNeeded = sizeof(double) * (m + 2 * ghosts) * (n + 2 * ghosts) * (o + 2 * ghosts);
+            int sizeNeeded = (m + 2 * ghosts) * (n + 2 * ghosts) * (o + 2 * ghosts);
             if (problem->getDV().getSize() != sizeNeeded)
             {
                 if (!problem->silent)
@@ -276,12 +276,17 @@ namespace mgcl
         cl_kernel kernel = clCreateKernel(program, "copy_input_data", &err);
         mgclCheckError(err, "Creating copy input data kernel");
 
+        cl_mem d_pv = problem->getDV().getBuffer();
+        cl_mem d_lv0v = level0.getDVIn().getBuffer();
+        cl_mem d_pf = problem->getDF().getBuffer();
+        cl_mem d_lv0f = level0.getDF().getBuffer();
+
         // assign kernel arguments
         int pos = 0;
-        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &problem->dV);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level0.dVIn);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &problem->dF);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level0.dF);
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &d_pv);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_lv0v);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_pf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_lv0f);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);

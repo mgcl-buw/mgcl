@@ -553,7 +553,7 @@ TEST_CASE("Problem::init")
             REQUIRE(p2.getLevelAt(lv).getDRPtr());
 
             // check sizes of buffers
-            int sizeNeeded = sizeof(double) * p2.getLevelAt(lv).getMgh() * p2.getLevelAt(lv).getNgh() * p2.getLevelAt(lv).getOgh();
+            int sizeNeeded = p2.getLevelAt(lv).getMgh() * p2.getLevelAt(lv).getNgh() * p2.getLevelAt(lv).getOgh();
             REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDVIn().getSize());
             REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDVOut().getSize());
             REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDF().getSize());
@@ -573,8 +573,8 @@ TEST_CASE("Problem::init")
         }
 
         int ghosts = 1;
-        mgcl::Cuboid vgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
-        mgcl::Cuboid fgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
+        mgcl::Cuboid vgh(m, n, o, ghosts, ghosts, ghosts);
+        mgcl::Cuboid fgh(m, n, o, ghosts, ghosts, ghosts);
 
         mgcl_test::TestUtility tu(deviceType);
         auto d_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, vgh);
@@ -615,7 +615,7 @@ TEST_CASE("Problem::init")
             REQUIRE(p2.getLevelAt(lv).getDRPtr());
 
             // check sizes of buffers
-            int sizeNeeded = sizeof(double) * p2.getLevelAt(lv).getMgh() * p2.getLevelAt(lv).getNgh() * p2.getLevelAt(lv).getOgh();
+            int sizeNeeded = p2.getLevelAt(lv).getMgh() * p2.getLevelAt(lv).getNgh() * p2.getLevelAt(lv).getOgh();
             REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDVIn().getSize());
             REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDVOut().getSize());
             REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDF().getSize());
