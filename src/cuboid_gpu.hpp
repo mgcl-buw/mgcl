@@ -50,6 +50,7 @@ namespace mgcl
         void fill(cl_command_queue commands, double data, bool blocking);
 
         void retain();
+        int refCount();
         void copyTo(cl_command_queue commands, CuboidGpu& target);
 
         cl_mem getBuffer() const;

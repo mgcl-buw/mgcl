@@ -63,9 +63,9 @@ TEST_CASE("residual")
         p->setDeviceType(deviceType);
 
         mgcl_test::TestUtility tu(p);
-        cl_mem d_in_f = tu.createOpenCLBuffer(*c_in_f);
-        cl_mem d_in_v = tu.createOpenCLBuffer(*c_in_v);
-        cl_mem d_in_r = tu.createOpenCLBuffer(*c_in_r);
+        auto d_in_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_f);
+        auto d_in_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_v);
+        auto d_in_r = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_r);
 
         mgcl::Level level(p.get(), 0);
         level.setDF(d_in_f);
@@ -75,7 +75,7 @@ TEST_CASE("residual")
         double res = mgcl::MultigridEngine::residual(*p, level, true);
         tu.finish();
 
-        auto c_r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        auto c_r_out = d_in_r->read(tu.getCommands(), nullptr, true);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_r_out->isEqual(*c_expected_out_r));
@@ -170,9 +170,9 @@ TEST_CASE("residual periodic Laplace seq vs ocl")
     mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0, nullptr, true, false);
 
     // make sure input is equal
-    auto c_r_in = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
-    auto c_v_in = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
-    auto c_f_in = tu.readOpenCLBuffer(level0_gpu.getDF(), m, n, o, 1, 1, 1);
+    auto c_r_in = level0_gpu.getDR().read(tu.getCommands(), nullptr, true);
+    auto c_v_in = level0_gpu.getDVIn().read(tu.getCommands(), nullptr, true);
+    auto c_f_in = level0_gpu.getDF().read(tu.getCommands(), nullptr, true);
     tu.finish();
     REQUIRE(c_r_in->isEqual(r_in_lv0));
     REQUIRE(c_v_in->isEqual(v_in_lv0));
@@ -185,9 +185,9 @@ TEST_CASE("residual periodic Laplace seq vs ocl")
                                                         stencilType, level0_seq.getStencilFactor(), nullptr, true, true,
                                                         true);
 
-    auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
-    auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
-    auto c_f_out = tu.readOpenCLBuffer(level0_gpu.getDF(), m, n, o, 1, 1, 1);
+    auto c_r_out = level0_gpu.getDR().read(tu.getCommands(), nullptr, true);
+    auto c_v_out = level0_gpu.getDVIn().read(tu.getCommands(), nullptr, true);
+    auto c_f_out = level0_gpu.getDF().read(tu.getCommands(), nullptr, true);
 
     REQUIRE(c_r_out->getM() == r_in_lv0.getM());
     REQUIRE(c_r_out->getN() == r_in_lv0.getN());
@@ -285,9 +285,9 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
     mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0, nullptr, true, false);
 
     // make sure input is equal
-    auto c_r_in = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
-    auto c_v_in = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
-    auto c_f_in = tu.readOpenCLBuffer(level0_gpu.getDF(), m, n, o, 1, 1, 1);
+    auto c_r_in = level0_gpu.getDR().read(tu.getCommands(), nullptr, true);
+    auto c_v_in = level0_gpu.getDVIn().read(tu.getCommands(), nullptr, true);
+    auto c_f_in = level0_gpu.getDF().read(tu.getCommands(), nullptr, true);
     auto c_sv_in = level0_gpu.getStencilValuesGpu()->read(tu.getCommands());
     tu.finish();
 
@@ -302,9 +302,9 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
                                                         stencilType, level0_seq.getStencilFactor(), sv_in_lv0.get(),
                                                         true, true, true);
 
-    auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
-    auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
-    auto c_f_out = tu.readOpenCLBuffer(level0_gpu.getDF(), m, n, o, 1, 1, 1);
+    auto c_r_out = level0_gpu.getDR().read(tu.getCommands(), nullptr, true);
+    auto c_v_out = level0_gpu.getDVIn().read(tu.getCommands(), nullptr, true);
+    auto c_f_out = level0_gpu.getDF().read(tu.getCommands(), nullptr, true);
     tu.finish();
 
     REQUIRE(c_r_out->getM() == r_in_lv0.getM());
@@ -462,9 +462,9 @@ TEST_CASE("residual gpu gh > 1")
         p->setDeviceType(CL_DEVICE_TYPE_GPU);
 
         mgcl_test::TestUtility tu(p);
-        cl_mem d_in_f = tu.createOpenCLBuffer(f_in);
-        cl_mem d_in_v = tu.createOpenCLBuffer(v_in);
-        cl_mem d_in_r = tu.createOpenCLBuffer(r_in);
+        auto d_in_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_in);
+        auto d_in_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_in);
+        auto d_in_r = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_in);
 
         mgcl::Level level(p.get(), 0);
         level.setDF(d_in_f);
@@ -478,9 +478,9 @@ TEST_CASE("residual gpu gh > 1")
         pgh->setDeviceType(CL_DEVICE_TYPE_GPU);
 
         mgcl_test::TestUtility tu_gh(pgh);
-        cl_mem d_in_f_gh = tu_gh.createOpenCLBuffer(f_in_gh);
-        cl_mem d_in_v_gh = tu_gh.createOpenCLBuffer(v_in_gh);
-        cl_mem d_in_r_gh = tu_gh.createOpenCLBuffer(r_in_gh);
+        auto d_in_f_gh = std::make_shared<mgcl::CuboidGpu>(tu_gh.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_in_gh);
+        auto d_in_v_gh = std::make_shared<mgcl::CuboidGpu>(tu_gh.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_in_gh);
+        auto d_in_r_gh = std::make_shared<mgcl::CuboidGpu>(tu_gh.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_in_gh);
 
         mgcl::Level level_gh(pgh.get(), 0);
         level_gh.setDF(d_in_f_gh);
@@ -505,8 +505,8 @@ TEST_CASE("residual gpu gh > 1")
             double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, true);
             tu_gh.finish();
 
-            auto r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, p->getGhosts(), p->getGhosts(), p->getGhosts());
-            auto r_out_gh = tu_gh.readOpenCLBuffer(d_in_r_gh, m, n, o, pgh->getGhosts(), pgh->getGhosts(), pgh->getGhosts());
+            auto r_out = d_in_r->read(tu.getCommands(), nullptr, true);
+            auto r_out_gh = d_in_r_gh->read(tu_gh.getCommands(), nullptr, true);
 
             // r_out->dumpToFile("/home/simon/tmp/r_out.txt", true);
             // r_out_gh->dumpToFile("/home/simon/tmp/r_out_gh.txt", true);
@@ -528,8 +528,8 @@ TEST_CASE("residual gpu gh > 1")
             double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, true);
             tu_gh.finish();
 
-            auto r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, p->getGhosts(), p->getGhosts(), p->getGhosts());
-            auto r_out_gh = tu_gh.readOpenCLBuffer(d_in_r_gh, m, n, o, pgh->getGhosts(), pgh->getGhosts(), pgh->getGhosts());
+            auto r_out = d_in_r->read(tu.getCommands(), nullptr, true);
+            auto r_out_gh = d_in_r_gh->read(tu_gh.getCommands(), nullptr, true);
 
             // r_out->dumpToFile("/home/simon/tmp/r_out.txt", true);
             // r_out_gh->dumpToFile("/home/simon/tmp/r_out_gh.txt", true);
@@ -551,8 +551,8 @@ TEST_CASE("residual gpu gh > 1")
             double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, true);
             tu_gh.finish();
 
-            auto r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, p->getGhosts(), p->getGhosts(), p->getGhosts());
-            auto r_out_gh = tu_gh.readOpenCLBuffer(d_in_r_gh, m, n, o, pgh->getGhosts(), pgh->getGhosts(), pgh->getGhosts());
+            auto r_out = d_in_r->read(tu.getCommands(), nullptr, true);
+            auto r_out_gh = d_in_r_gh->read(tu_gh.getCommands(), nullptr, true);
 
             // r_out->dumpToFile("/home/simon/tmp/r_out.txt", true);
             // r_out_gh->dumpToFile("/home/simon/tmp/r_out_gh.txt", true);
@@ -589,8 +589,8 @@ TEST_CASE("residual gpu gh > 1")
             double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, true);
             tu_gh.finish();
 
-            auto r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, p->getGhosts(), p->getGhosts(), p->getGhosts());
-            auto r_out_gh = tu_gh.readOpenCLBuffer(d_in_r_gh, m, n, o, pgh->getGhosts(), pgh->getGhosts(), pgh->getGhosts());
+            auto r_out = d_in_r->read(tu.getCommands(), nullptr, true);
+            auto r_out_gh = d_in_r_gh->read(tu_gh.getCommands(), nullptr, true);
 
             // r_out->dumpToFile("/home/simon/tmp/r_out.txt", true);
             // r_out_gh->dumpToFile("/home/simon/tmp/r_out_gh.txt", true);
@@ -668,10 +668,10 @@ TEST_CASE("residual throwing")
             p_exp->setDeviceType(CL_DEVICE_TYPE_GPU);
 
             mgcl_test::TestUtility tu_exp(p_exp);
-            cl_mem d_f_exp = tu_exp.createOpenCLBuffer(f);
-            cl_mem d_v_exp = tu_exp.createOpenCLBuffer(v);
-            cl_mem d_v_out_exp = tu_exp.createOpenCLBuffer(v);
-            cl_mem d_r_exp = tu_exp.createOpenCLBuffer(r);
+            auto d_f_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f);
+            auto d_v_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v);
+            auto d_v_out_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v);
+            auto d_r_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r);
 
             mgcl::Level level_exp(p_exp.get(), 0);
             level_exp.setDF(d_f_exp);
@@ -856,9 +856,9 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
         p_exp->setDeviceType(CL_DEVICE_TYPE_GPU);
 
         mgcl_test::TestUtility tu_exp(p_exp);
-        cl_mem d_f_exp = tu_exp.createOpenCLBuffer(f_exp);
-        cl_mem d_v_exp = tu_exp.createOpenCLBuffer(v_exp);
-        cl_mem d_r_exp = tu_exp.createOpenCLBuffer(r_exp);
+        auto d_f_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_exp);
+        auto d_v_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_exp);
+        auto d_r_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_exp);
 
         mgcl::Level level_exp(p_exp.get(), 0);
         level_exp.setDF(d_f_exp);
@@ -872,9 +872,9 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
         p_act->setDeviceType(CL_DEVICE_TYPE_GPU);
 
         mgcl_test::TestUtility tu_act(p_act);
-        cl_mem d_f_act = tu_act.createOpenCLBuffer(f_act);
-        cl_mem d_v_act = tu_act.createOpenCLBuffer(v_act);
-        cl_mem d_r_act = tu_act.createOpenCLBuffer(r_act);
+        auto d_f_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_act);
+        auto d_v_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_act);
+        auto d_r_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_act);
 
         mgcl::Level level_act(p_act.get(), 0);
         level_act.setDF(d_f_act);
@@ -899,8 +899,8 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
             double res_act = mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, noff, ooff);
             tu_act.finish();
 
-            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, exp_m, exp_n, exp_o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto r_out_exp = d_r_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto r_out_act = d_r_act->read(tu_act.getCommands(), nullptr, true);
 
             REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
             REQUIRE(r_out_act->isEqualAllCells(*r_out_exp));
@@ -919,8 +919,8 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
             double res_act = mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, noff, ooff);
             tu_act.finish();
 
-            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, exp_m, exp_n, exp_o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto r_out_exp = d_r_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto r_out_act = d_r_act->read(tu_act.getCommands(), nullptr, true);
 
             REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
             REQUIRE(r_out_act->isEqualAllCells(*r_out_exp));
@@ -939,8 +939,8 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
             double res_act = mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, noff, ooff);
             tu_act.finish();
 
-            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, exp_m, exp_n, exp_o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto r_out_exp = d_r_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto r_out_act = d_r_act->read(tu_act.getCommands(), nullptr, true);
 
             REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
             REQUIRE(r_out_act->isEqualAllCells(*r_out_exp));
@@ -981,8 +981,8 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
             double res_act = mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, noff, ooff);
             tu_act.finish();
 
-            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, exp_m, exp_n, exp_o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto r_out_exp = d_r_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto r_out_act = d_r_act->read(tu_act.getCommands(), nullptr, true);
 
             REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
             REQUIRE(r_out_act->isEqualAllCells(*r_out_exp));

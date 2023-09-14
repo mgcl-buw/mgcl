@@ -294,7 +294,7 @@ TEST_CASE("MPI jacobi ocl (n processes)", "[mpiN]")
     mgcl::MultigridEngine::jacobi(p, lv, maxiter, true, stepsPerIter);
     tu.finish();
 
-    auto v_loc_ret_ptr = tu.readOpenCLBuffer(lv.getDVIn(), lv.getM(), lv.getN(), lv.getO(), gh, gh, gh);
+    auto v_loc_ret_ptr = lv.getDVIn().read(tu.getCommands(), nullptr, true);
     auto& v_loc_ret = *v_loc_ret_ptr;
 
     for (int i = gh; i < ml + gh; i++)

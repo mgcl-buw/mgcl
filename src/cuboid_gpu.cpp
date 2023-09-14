@@ -197,6 +197,19 @@ namespace mgcl
     }
 
     /**
+     * @brief Returns the reference count of the buffer.
+     *
+     * @return int reference count
+     */
+    int CuboidGpu::refCount()
+    {
+        cl_uint refCount;
+        int err = clGetMemObjectInfo(buffer, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &refCount, nullptr);
+        mgcl::mgclCheckError(err, "clGetMemObjectInfo(CL_MEM_REFERENCE_COUNT)");
+        return refCount;
+    }
+
+    /**
      * @brief Asynchronously copies values from this buffer to the other buffer. Dimensions must match.
      *
      * @param commands command queue

@@ -58,15 +58,14 @@ TEST_CASE("restriction")
         p->setDeviceType(deviceType);
 
         mgcl_test::TestUtility tu(p);
-        cl_mem d_c_fine = tu.createOpenCLBuffer(*c_fine);
-        cl_mem d_c_coarse = tu.createOpenCLBuffer(*c_coarse);
+        mgcl::CuboidGpu d_c_fine(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_fine);
+        mgcl::CuboidGpu d_c_coarse(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_coarse);
 
         mgcl::MultigridEngine::restrict(lv_fine, lv_coarse, d_c_fine, d_c_coarse);
         tu.finish();
 
-        auto c_fine_out = tu.readOpenCLBuffer(d_c_fine, m, n, o, ghosts_m, ghosts_n, ghosts_o);
-        auto c_coarse_out = tu.readOpenCLBuffer(d_c_coarse, c_expected_coarse->getM(), c_expected_coarse->getN(),
-                                                c_expected_coarse->getO(), ghosts_m, ghosts_n, ghosts_o);
+        auto c_fine_out = d_c_fine.read(tu.getCommands(), nullptr, true);
+        auto c_coarse_out = d_c_coarse.read(tu.getCommands(), nullptr, true);
 
         REQUIRE(c_fine_out->isEqual(*c_expected_fine));
         REQUIRE(c_coarse_out->isEqual(*c_expected_coarse));

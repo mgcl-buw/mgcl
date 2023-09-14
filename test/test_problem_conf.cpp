@@ -42,8 +42,8 @@ TEST_CASE("Problem conf")
         REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
         REQUIRE(p.getKernelDir() == "./");
         REQUIRE(p.getDeviceName() == "");
-        REQUIRE(p.getDV() == nullptr);
-        REQUIRE(p.getDF() == nullptr);
+        REQUIRE(p.getDVPtr() == nullptr);
+        REQUIRE(p.getDFPtr() == nullptr);
         REQUIRE(p.getUseOpencl() == false);
         REQUIRE(p.getReuseOpenclBuffers() == false);
         REQUIRE(p.getCopyBufferData() == false);
@@ -513,15 +513,15 @@ TEST_CASE("Problem::init")
         mgcl::Cuboid fgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
 
         mgcl_test::TestUtility tu(deviceType);
-        cl_mem d_v = tu.createOpenCLBuffer(vgh);
-        cl_mem d_f = tu.createOpenCLBuffer(fgh);
+        auto d_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, vgh);
+        auto d_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, fgh);
 
         mgcl::Problem p2(m, n, o, d_f, d_v);
         p2.setGhostsIn(ghosts);
         p2.setReuseOpenclBuffers(true);
         p2.getOpenCLHelper().setKernelDir("./");
-        REQUIRE(p2.getDF() == d_f);
-        REQUIRE(p2.getDV() == d_v);
+        REQUIRE(p2.getDFPtr() == d_f);
+        REQUIRE(p2.getDVPtr() == d_v);
         REQUIRE(p2.getOpenCLHelper().getProblem() == &p2);
 
         REQUIRE_NOTHROW(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()));
@@ -540,38 +540,24 @@ TEST_CASE("Problem::init")
         }
 
         // buffers are created
-        REQUIRE(p2.getDV() == d_v);
-        REQUIRE(p2.getDF() == d_f);
-        REQUIRE(p2.getLevelAt(0).getDVIn() == d_v);
-        REQUIRE(p2.getLevelAt(0).getDF() == d_f);
+        REQUIRE(p2.getDVPtr() == d_v);
+        REQUIRE(p2.getDFPtr() == d_f);
+        REQUIRE(p2.getLevelAt(0).getDVInPtr() == d_v.get());
+        REQUIRE(p2.getLevelAt(0).getDFPtr() == d_f.get());
         for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
         {
             // check if buffers are not nullptr
-            REQUIRE(p2.getLevelAt(lv).getDVIn());
-            REQUIRE(p2.getLevelAt(lv).getDVOut());
-            REQUIRE(p2.getLevelAt(lv).getDF());
-            REQUIRE(p2.getLevelAt(lv).getDR());
+            REQUIRE(p2.getLevelAt(lv).getDVInPtr());
+            REQUIRE(p2.getLevelAt(lv).getDVOutPtr());
+            REQUIRE(p2.getLevelAt(lv).getDFPtr());
+            REQUIRE(p2.getLevelAt(lv).getDRPtr());
 
             // check sizes of buffers
-            int err;
-            size_t bufsize;
             int sizeNeeded = sizeof(double) * p2.getLevelAt(lv).getMgh() * p2.getLevelAt(lv).getNgh() * p2.getLevelAt(lv).getOgh();
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDVIn(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDVOut(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDR(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDVIn().getSize());
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDVOut().getSize());
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDF().getSize());
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDR().getSize());
         }
     }
 
@@ -591,14 +577,14 @@ TEST_CASE("Problem::init")
         mgcl::Cuboid fgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
 
         mgcl_test::TestUtility tu(deviceType);
-        cl_mem d_v = tu.createOpenCLBuffer(vgh);
-        cl_mem d_f = tu.createOpenCLBuffer(fgh);
+        auto d_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, vgh);
+        auto d_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, fgh);
 
         mgcl::Problem p2(m, n, o, d_f, d_v);
         p2.setGhostsIn(ghosts);
         p2.setCopyBufferData(true);
-        REQUIRE(p2.getDF() == d_f);
-        REQUIRE(p2.getDV() == d_v);
+        REQUIRE(p2.getDFPtr() == d_f);
+        REQUIRE(p2.getDVPtr() == d_v);
         REQUIRE(p2.getOpenCLHelper().getProblem() == &p2);
 
         REQUIRE_NOTHROW(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()));
@@ -617,42 +603,28 @@ TEST_CASE("Problem::init")
         }
 
         // buffers are created
-        REQUIRE(p2.getDV() == d_v);
-        REQUIRE(p2.getDF() == d_f);
-        REQUIRE(p2.getLevelAt(0).getDVIn() != d_v);
-        REQUIRE(p2.getLevelAt(0).getDF() != d_f);
+        REQUIRE(p2.getDVPtr() == d_v);
+        REQUIRE(p2.getDFPtr() == d_f);
+        REQUIRE(p2.getLevelAt(0).getDVInPtr() != d_v.get());
+        REQUIRE(p2.getLevelAt(0).getDFPtr() != d_f.get());
         for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
         {
-            REQUIRE(p2.getLevelAt(lv).getDVIn());
-            REQUIRE(p2.getLevelAt(lv).getDVOut());
-            REQUIRE(p2.getLevelAt(lv).getDF());
-            REQUIRE(p2.getLevelAt(lv).getDR());
+            REQUIRE(p2.getLevelAt(lv).getDVInPtr());
+            REQUIRE(p2.getLevelAt(lv).getDVOutPtr());
+            REQUIRE(p2.getLevelAt(lv).getDFPtr());
+            REQUIRE(p2.getLevelAt(lv).getDRPtr());
 
             // check sizes of buffers
-            int err;
-            size_t bufsize;
             int sizeNeeded = sizeof(double) * p2.getLevelAt(lv).getMgh() * p2.getLevelAt(lv).getNgh() * p2.getLevelAt(lv).getOgh();
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDVIn(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDVOut(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDR(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDVIn().getSize());
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDVOut().getSize());
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDF().getSize());
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDR().getSize());
         }
 
         // contents of copied buffer and input buffers are equal
-        auto lv0d = tu.readOpenCLBuffer(p2.getLevelAt(0).getDVIn(), p2.getLevelAt(0).getMgh(), p2.getLevelAt(0).getNgh(), p2.getLevelAt(0).getOgh());
-        auto lv0f = tu.readOpenCLBuffer(p2.getLevelAt(0).getDF(), p2.getLevelAt(0).getMgh(), p2.getLevelAt(0).getNgh(), p2.getLevelAt(0).getOgh());
+        auto lv0d = p2.getLevelAt(0).getDVIn().read(tu.getCommands(), nullptr, true);
+        auto lv0f = p2.getLevelAt(0).getDF().read(tu.getCommands(), nullptr, true);
 
         REQUIRE(vgh.isEqual(*lv0d));
         REQUIRE(fgh.isEqual(*lv0f));
@@ -738,13 +710,7 @@ TEST_CASE("Problem::readResults")
         REQUIRE(p.getVPtr() == v);
 
         // alter values of dVIn on lowest level
-        cl_double one = 1.0;
-        int err = clEnqueueFillBuffer(p.getOpenCLHelper().getCommands(), p.getLevelAt(0).getDVIn(), &one,
-                                      sizeof(cl_double), 0,
-                                      sizeof(double) * p.getLevelAt(0).getMgh() * p.getLevelAt(0).getNgh() * p.getLevelAt(0).getOgh(),
-                                      0, NULL, NULL);
-        mgcl::mgclCheckError(err, "clEnqueueFillBuffer");
-        REQUIRE(err == CL_SUCCESS);
+        p.getLevelAt(0).getDVIn().fill(p.getCommands(), 1.0, true);
 
         // read back and check if values were copied successfully
         REQUIRE(p.readResults() == CL_SUCCESS);

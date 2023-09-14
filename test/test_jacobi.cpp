@@ -73,10 +73,10 @@ TEST_CASE("jacobi")
         p->setDeviceType(deviceType);
 
         mgcl_test::TestUtility tu(p);
-        cl_mem d_in_f = tu.createOpenCLBuffer(*c_in_f);
-        cl_mem d_in_v = tu.createOpenCLBuffer(*c_in_v);
-        cl_mem d_in_v_out = tu.createOpenCLBuffer(*c_in_v);
-        cl_mem d_in_r = tu.createOpenCLBuffer(*c_in_r);
+        auto d_in_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_f);
+        auto d_in_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_v);
+        auto d_in_v_out = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_v);
+        auto d_in_r = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_r);
 
         mgcl::Level level(p.get(), 0);
         level.setDF(d_in_f);
@@ -87,8 +87,8 @@ TEST_CASE("jacobi")
         double res = mgcl::MultigridEngine::jacobi(*p, level, maxiter, 1);
         tu.finish();
 
-        auto c_r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
-        auto c_v_out = tu.readOpenCLBuffer(d_in_v, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        auto c_r_out = d_in_r->read(p->getCommands(), nullptr, true);
+        auto c_v_out = d_in_v->read(p->getCommands(), nullptr, true);
 
         // REQUIRE_THAT(res, Catch::Matchers::WithinAbs(4.02895897954478714e+04, 1e-7));
         // CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
@@ -115,10 +115,10 @@ TEST_CASE("jacobi")
         p->setDeviceType(deviceType);
 
         mgcl_test::TestUtility tu(p);
-        cl_mem d_in_f = tu.createOpenCLBuffer(*c_in_f);
-        cl_mem d_in_v = tu.createOpenCLBuffer(*c_in_v);
-        cl_mem d_in_v_out = tu.createOpenCLBuffer(*c_in_v);
-        cl_mem d_in_r = tu.createOpenCLBuffer(*c_in_r);
+        auto d_in_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_f);
+        auto d_in_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_v);
+        auto d_in_v_out = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_v);
+        auto d_in_r = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_r);
 
         mgcl::Level level(p.get(), 0);
         level.setDF(d_in_f);
@@ -129,8 +129,8 @@ TEST_CASE("jacobi")
         double res_ocl = mgcl::MultigridEngine::jacobi(*p, level, maxiter, 1);
         tu.finish();
 
-        auto c_r_out_ocl = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
-        auto c_v_out_ocl = tu.readOpenCLBuffer(d_in_v, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        auto c_r_out_ocl = d_in_r->read(p->getCommands(), nullptr, true);
+        auto c_v_out_ocl = d_in_v->read(p->getCommands(), nullptr, true);
 
         double res_seq = mgcl::MultigridEngine::jacobiSeq(*c_in_v, *c_in_f, *c_in_r, omega, h * h, maxiter,
                                                           mgcl::MGCL_INF, mgcl::MGCL_LAPLACE_7POINT,
@@ -293,9 +293,9 @@ TEST_CASE("jacobi GPU varying stencil")
         mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0, nullptr, true, true);
 
         // make sure input is equal
-        auto c_r_in = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
-        auto c_v_in = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
-        auto c_f_in = tu.readOpenCLBuffer(level0_gpu.getDF(), m, n, o, 1, 1, 1);
+        auto c_r_in = level0_gpu.getDR().read(tu.getCommands(), nullptr, true);
+        auto c_v_in = level0_gpu.getDVIn().read(tu.getCommands(), nullptr, true);
+        auto c_f_in = level0_gpu.getDF().read(tu.getCommands(), nullptr, true);
         auto c_sv_in = level0_gpu.getStencilValuesGpu()->read(tu.getCommands());
         tu.finish();
         REQUIRE(c_r_in->isEqual(r_in_lv0));
@@ -313,8 +313,8 @@ TEST_CASE("jacobi GPU varying stencil")
         // res_seq = mgcl::MultigridEngine::residualSeq(f_in_lv0, v_in_lv0, r_in_lv0, mgcl::MGCL_L2,
         //                                              mgcl::MGCL_VARYING, 1, *sv_in_lv0, true, true);
 
-        auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
-        auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
+        auto c_r_out = level0_gpu.getDR().read(tu.getCommands(), nullptr, true);
+        auto c_v_out = level0_gpu.getDVIn().read(tu.getCommands(), nullptr, true);
         tu.finish();
 
         REQUIRE(c_r_out->getM() == r_in_lv0.getM());
@@ -395,10 +395,10 @@ TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
     mgcl::MultigridEngine::updateGhostsSeq(c_in_r_gh3, nullptr, true, true);
 
     mgcl_test::TestUtility tu(p);
-    cl_mem d_in_f = tu.createOpenCLBuffer(c_in_f_gh3);
-    cl_mem d_in_v = tu.createOpenCLBuffer(c_in_v_gh3);
-    cl_mem d_in_v_out = tu.createOpenCLBuffer(c_in_v_gh3);
-    cl_mem d_in_r = tu.createOpenCLBuffer(c_in_r_gh3);
+    auto d_in_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_f_gh3);
+    auto d_in_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_v_gh3);
+    auto d_in_v_out = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_v_gh3);
+    auto d_in_r = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_r_gh3);
 
     mgcl::Level level(p.get(), 0);
     level.setDF(d_in_f);
@@ -410,8 +410,8 @@ TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
     tu.finish();
 
     // read back from device and copy to Cuboid with ghosts = 1
-    auto c_r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts, ghosts, ghosts);
-    auto c_v_out = tu.readOpenCLBuffer(d_in_v, m, n, o, ghosts, ghosts, ghosts);
+    auto c_r_out = d_in_r->read(p->getCommands(), nullptr, true);
+    auto c_v_out = d_in_v->read(p->getCommands(), nullptr, true);
     for (int i = 0; i < c_in_f->getM(); i++)
         for (int j = 0; j < c_in_f->getN(); j++)
             for (int k = 0; k < c_in_f->getO(); k++)
@@ -497,10 +497,10 @@ TEST_CASE("jacobi throwing")
             p_exp->setDeviceType(CL_DEVICE_TYPE_GPU);
 
             mgcl_test::TestUtility tu_exp(p_exp);
-            cl_mem d_f_exp = tu_exp.createOpenCLBuffer(f);
-            cl_mem d_v_exp = tu_exp.createOpenCLBuffer(v);
-            cl_mem d_v_out_exp = tu_exp.createOpenCLBuffer(v);
-            cl_mem d_r_exp = tu_exp.createOpenCLBuffer(r);
+            auto d_f_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f);
+            auto d_v_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v);
+            auto d_v_out_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v);
+            auto d_r_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r);
 
             mgcl::Level level_exp(p_exp.get(), 0);
             level_exp.setDF(d_f_exp);
@@ -655,10 +655,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
         p_exp->setJacobiIterationsPerKernel(1);
 
         mgcl_test::TestUtility tu_exp(p_exp);
-        cl_mem d_f_exp = tu_exp.createOpenCLBuffer(f_exp);
-        cl_mem d_v_exp = tu_exp.createOpenCLBuffer(v_exp);
-        cl_mem d_v_out_exp = tu_exp.createOpenCLBuffer(v_exp);
-        cl_mem d_r_exp = tu_exp.createOpenCLBuffer(r_exp);
+        auto d_f_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_exp);
+        auto d_v_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_exp);
+        auto d_v_out_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_exp);
+        auto d_r_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_exp);
 
         mgcl::Level level_exp(p_exp.get(), 0);
         level_exp.setDF(d_f_exp);
@@ -674,10 +674,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
         p_act->setJacobiIterationsPerKernel(stepsPerIter);
 
         mgcl_test::TestUtility tu_act(p_act);
-        cl_mem d_f_act = tu_act.createOpenCLBuffer(f_act);
-        cl_mem d_v_act = tu_act.createOpenCLBuffer(v_act);
-        cl_mem d_v_out_act = tu_act.createOpenCLBuffer(v_act);
-        cl_mem d_r_act = tu_act.createOpenCLBuffer(r_act);
+        auto d_f_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_act);
+        auto d_v_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_act);
+        auto d_v_out_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_act);
+        auto d_r_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_act);
 
         mgcl::Level level_act(p_act.get(), 0);
         level_act.setDF(d_f_act);
@@ -695,10 +695,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             p_exp->setStencilType(mgcl::MGCL_LAPLACE_7POINT);
             p_act->setStencilType(mgcl::MGCL_LAPLACE_7POINT);
 
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, *d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, *d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_act, *d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_act, *d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
             tu_act.finish();
             tu_exp.finish();
 
@@ -710,10 +710,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             double res_act = mgcl::MultigridEngine::jacobi(*p_act, level_act, iters, true, stepsPerIter);
             tu_act.finish();
 
-            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
-            auto v_out_exp = tu_exp.readOpenCLBuffer(d_v_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto v_out_act = tu_act.readOpenCLBuffer(d_v_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto r_out_exp = d_r_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto r_out_act = d_r_act->read(tu_act.getCommands(), nullptr, true);
+            auto v_out_exp = d_v_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto v_out_act = d_v_act->read(tu_act.getCommands(), nullptr, true);
 
             // v_out_exp->dumpToFile("v_out_exp.txt", true);
             // v_out_act->dumpToFile("v_out_act.txt", true);
@@ -728,10 +728,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             p_exp->setStencilType(mgcl::MGCL_LAPLACE_19POINT);
             p_act->setStencilType(mgcl::MGCL_LAPLACE_19POINT);
 
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, *d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, *d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_act, *d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_act, *d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
             tu_act.finish();
             tu_exp.finish();
 
@@ -743,10 +743,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             double res_act = mgcl::MultigridEngine::jacobi(*p_act, level_act, iters, true, stepsPerIter);
             tu_act.finish();
 
-            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
-            auto v_out_exp = tu_exp.readOpenCLBuffer(d_v_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto v_out_act = tu_act.readOpenCLBuffer(d_v_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto r_out_exp = d_r_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto r_out_act = d_r_act->read(tu_act.getCommands(), nullptr, true);
+            auto v_out_exp = d_v_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto v_out_act = d_v_act->read(tu_act.getCommands(), nullptr, true);
 
             REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
             REQUIRE(r_out_act->isEqual(*r_out_exp));
@@ -758,10 +758,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             p_exp->setStencilType(mgcl::MGCL_LAPLACE_27POINT);
             p_act->setStencilType(mgcl::MGCL_LAPLACE_27POINT);
 
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, *d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, *d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_act, *d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_act, *d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
             tu_act.finish();
             tu_exp.finish();
 
@@ -773,10 +773,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             double res_act = mgcl::MultigridEngine::jacobi(*p_act, level_act, iters, true, stepsPerIter);
             tu_act.finish();
 
-            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
-            auto v_out_exp = tu_exp.readOpenCLBuffer(d_v_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto v_out_act = tu_act.readOpenCLBuffer(d_v_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto r_out_exp = d_r_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto r_out_act = d_r_act->read(tu_act.getCommands(), nullptr, true);
+            auto v_out_exp = d_v_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto v_out_act = d_v_act->read(tu_act.getCommands(), nullptr, true);
 
             REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
             REQUIRE(r_out_act->isEqual(*r_out_exp));
@@ -801,10 +801,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             p_exp->setStencilType(mgcl::MGCL_VARYING);
             p_act->setStencilType(mgcl::MGCL_VARYING);
 
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
-            mgcl::MultigridEngine::updateGhosts(*p_exp, d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
-            mgcl::MultigridEngine::updateGhosts(*p_act, d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, *d_v_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_exp, *d_f_exp, m + 2, n + 2, o + 2, 1, 1, 1, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_act, *d_v_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(*p_act, *d_f_act, m + 2 * gh, n + 2 * gh, o + 2 * gh, gh, gh, gh, nullptr, true);
             tu_act.finish();
             tu_exp.finish();
 
@@ -845,10 +845,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             double res_act = mgcl::MultigridEngine::jacobi(*p_act, level_act, iters, true, stepsPerIter);
             tu_act.finish();
 
-            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
-            auto v_out_exp = tu_exp.readOpenCLBuffer(d_v_exp, m, n, o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto v_out_act = tu_act.readOpenCLBuffer(d_v_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto r_out_exp = d_r_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto r_out_act = d_r_act->read(tu_act.getCommands(), nullptr, true);
+            auto v_out_exp = d_v_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto v_out_act = d_v_act->read(tu_act.getCommands(), nullptr, true);
 
             REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
             REQUIRE(r_out_act->isEqual(*r_out_exp));

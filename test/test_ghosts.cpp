@@ -58,12 +58,12 @@ TEST_CASE("updateGhosts gh < m")
         SECTION("openclgpu")
         {
             mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
-            cl_mem d_c1 = tu.createOpenCLBuffer(c1);
+            auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
 
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
             tu.finish();
 
-            auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
+            auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
 
             double tol = 1e-7;
             for (int i = 0; i < ghosts_m; i++)
@@ -81,12 +81,12 @@ TEST_CASE("updateGhosts gh < m")
         SECTION("openclcpu")
         {
             mgcl_test::TestUtility tu(CL_DEVICE_TYPE_CPU);
-            cl_mem d_c1 = tu.createOpenCLBuffer(c1);
+            auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
 
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
             tu.finish();
 
-            auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
+            auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
 
             double tol = 1e-7;
             for (int i = 0; i < ghosts_m; i++)
@@ -152,12 +152,12 @@ TEST_CASE("updateGhosts gh > m")
         SECTION("openclgpu")
         {
             mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
-            cl_mem d_c1 = tu.createOpenCLBuffer(c1);
+            auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
 
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
             tu.finish();
 
-            auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
+            auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
 
             double tol = 1e-7;
             for (int i = 0; i < ghosts_m; i++)
@@ -175,12 +175,12 @@ TEST_CASE("updateGhosts gh > m")
         SECTION("openclcpu")
         {
             mgcl_test::TestUtility tu(CL_DEVICE_TYPE_CPU);
-            cl_mem d_c1 = tu.createOpenCLBuffer(c1);
+            auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, c1);
 
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
             tu.finish();
 
-            auto c2 = tu.readOpenCLBuffer(d_c1, mgh, ngh, ogh);
+            auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
 
             double tol = 1e-7;
             for (int i = 0; i < ghosts_m; i++)

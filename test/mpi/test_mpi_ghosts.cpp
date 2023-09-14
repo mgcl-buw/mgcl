@@ -406,13 +406,13 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
 
     // Create ocl buffer
     mgcl_test::TestUtility tu(pptr);
-    auto d_cl = tu.createOpenCLBuffer(cl);
+    auto d_cl = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, cl);
 
     // Update ghosts of test data
-    mgcl::MultigridEngine::updateGhosts(p, d_cl, ml + 2 * gh, nl + 2 * gh, ol + 2 * gh, gh, gh, gh, mpiData, false);
+    mgcl::MultigridEngine::updateGhosts(p, *d_cl, ml + 2 * gh, nl + 2 * gh, ol + 2 * gh, gh, gh, gh, mpiData, false);
     tu.finish();
 
-    auto cl_res_ptr = tu.readOpenCLBuffer(d_cl, ml, nl, ol, gh, gh, gh);
+    auto cl_res_ptr = d_cl->read(tu.getCommands(), nullptr, true);
     auto& cl_res = *cl_res_ptr;
 
     // cl.dumpToFile("cl" + std::to_string(mpi_rank) + ".txt");
