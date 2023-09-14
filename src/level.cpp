@@ -191,8 +191,8 @@ namespace mgcl
             else
             {
                 int pointer_flag = deviceType == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
-                dVIn = std::make_shared<CuboidGpu>(context, pointer_flag, *v);
-                dF = std::make_shared<CuboidGpu>(context, pointer_flag, *f);
+                dVIn = std::make_shared<CuboidGpu>(context, pointer_flag | CL_MEM_READ_WRITE, *v);
+                dF = std::make_shared<CuboidGpu>(context, pointer_flag | CL_MEM_READ_WRITE, *f);
             }
         }
         else
