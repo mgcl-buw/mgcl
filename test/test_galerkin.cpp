@@ -97,15 +97,13 @@ TEST_CASE("GPU galerkin random values periodic")
     mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
     a_h.fillRandom(-10, 10);
     a_h.updateGhosts();
-    a_h_gpu.fill(a_h, t.getCommands());
-    t.finish();
+    a_h_gpu.fill(a_h, t.getCommands(), true);
 
     auto a_2h = mgcl::MultigridEngine::galerkin(a_h, nullptr, nullptr, true, true, true);
     auto a_2h_gpu = mgcl::MultigridEngine::galerkin(a_h_gpu, t.getProgram(), t.getCommands(), t.getContext());
     t.finish();
 
-    auto ret = a_2h_gpu.read(t.getCommands());
-    t.finish();
+    auto ret = a_2h_gpu.read(t.getCommands(), true);
 
     REQUIRE(a_2h.isEqual(ret, tol));
 }

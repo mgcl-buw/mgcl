@@ -584,7 +584,7 @@ namespace mgcl
     /**
      * Fills the gpu buffer with values from a VaryingStencil.
      */
-    void VaryingStencilGpu::fill(VaryingStencil& f, cl_command_queue queue)
+    void VaryingStencilGpu::fill(VaryingStencil& f, cl_command_queue queue, bool blocking)
     {
         if (f.getWidth() != width)
             throw "Widths are not equal!";
@@ -593,7 +593,7 @@ namespace mgcl
             gh != f.getGhostsDim1() || gh != f.getGhostsDim2() || gh != f.getGhostsDim3())
             throw "Dimensions are not equal!";
 
-        int err = clEnqueueWriteBuffer(queue, buf, CL_FALSE, 0,
+        int err = clEnqueueWriteBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0,
                                        sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width,
                                        f[0][0][0][0][0], 0, NULL, NULL);
         mgclCheckError(err, "clEnqueueWriteBuffer");
@@ -603,10 +603,10 @@ namespace mgcl
      * Reads the gpu buffer into a new VaryingStencil. The template parameter N must match the width of the gpu
      * stencil.
      */
-    VaryingStencil VaryingStencilGpu::read(cl_command_queue queue)
+    VaryingStencil VaryingStencilGpu::read(cl_command_queue queue, bool blocking)
     {
         VaryingStencil ret(m, n, o, width, gh, gh, gh);
-        int err = clEnqueueReadBuffer(queue, buf, CL_FALSE, 0,
+        int err = clEnqueueReadBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0,
                                       sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width,
                                       ret.field1d().data(), 0, NULL, NULL);
         mgclCheckError(err, "clEnqueueReadBuffer");
@@ -881,12 +881,12 @@ namespace mgcl
         buf = nullptr;
     }
 
-    void FixedStencilGpu::fill(FixedStencil& f, cl_command_queue queue)
+    void FixedStencilGpu::fill(FixedStencil& f, cl_command_queue queue, bool blocking)
     {
         if (f.getWidth() != width)
             throw "Widths are not equal!";
 
-        int err = clEnqueueWriteBuffer(queue, buf, CL_FALSE, 0,
+        int err = clEnqueueWriteBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0,
                                        sizeof(double) * width * width * width,
                                        f[0][0], 0, NULL, NULL);
         mgclCheckError(err, "clEnqueueFillBuffer");
@@ -896,10 +896,10 @@ namespace mgcl
      * Reads the gpu buffer into a new FixedStencil. The template parameter N must match the width of the gpu
      * stencil.
      */
-    FixedStencil FixedStencilGpu::read(cl_command_queue queue)
+    FixedStencil FixedStencilGpu::read(cl_command_queue queue, bool blocking)
     {
         FixedStencil ret(width);
-        int err = clEnqueueReadBuffer(queue, buf, CL_FALSE, 0,
+        int err = clEnqueueReadBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0,
                                       sizeof(double) * width * width * width,
                                       ret.field1d().data(), 0, NULL, NULL);
         mgclCheckError(err, "clEnqueueReadBuffer");
@@ -1058,7 +1058,7 @@ namespace mgcl
         FixedStencilGpu ret(3, context, queue);
 
         auto s = create3dFullWeightRestrictionStencil();
-        ret.fill(s, queue);
+        ret.fill(s, queue, true);
 
         return ret;
     }
@@ -1068,7 +1068,7 @@ namespace mgcl
         FixedStencilGpu ret(3, context, queue);
 
         auto s = create3dBilinearProlongationStencil();
-        ret.fill(s, queue);
+        ret.fill(s, queue, true);
 
         return ret;
     }

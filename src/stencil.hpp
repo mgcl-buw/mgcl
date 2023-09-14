@@ -104,8 +104,8 @@ namespace mgcl
         VaryingStencilGpu(const VaryingStencilGpu&) = delete;
         VaryingStencilGpu& operator=(const VaryingStencilGpu&) = delete;
 
-        void fill(VaryingStencil& f, cl_command_queue queue);
-        VaryingStencil read(cl_command_queue queue);
+        void fill(VaryingStencil& f, cl_command_queue queue, bool blocking);
+        VaryingStencil read(cl_command_queue queue, bool blocking);
 
         void updateGhosts(cl_program program, cl_command_queue queue);
         VaryingStencilGpu multiply(VaryingStencilGpu& b, int ghc,
@@ -143,8 +143,8 @@ namespace mgcl
         FixedStencilGpu(const FixedStencilGpu&) = delete;
         FixedStencilGpu& operator=(const FixedStencilGpu&) = delete;
 
-        void fill(FixedStencil& f, cl_command_queue queue);
-        FixedStencil read(cl_command_queue queue);
+        void fill(FixedStencil& f, cl_command_queue queue, bool blocking);
+        FixedStencil read(cl_command_queue queue, bool blockin);
 
         VaryingStencilGpu multiply(VaryingStencilGpu& b, int ghc,
                                    cl_program program, cl_command_queue queue, cl_context context);

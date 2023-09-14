@@ -184,11 +184,9 @@ namespace mgcl
     void updateGhostsStencilOclMpi(cl_command_queue commands, VaryingStencilGpu& s,
                                    MPILevelData& mpiData, bool periodic, bool forceLocal)
     {
-        auto tmp = s.read(commands);
-        mgclCheckError(clFinish(commands), "clFinish");
+        auto tmp = s.read(commands, true);
         updateGhostsStencilMpi(tmp, &mpiData, periodic, forceLocal);
-        s.fill(tmp, commands);
-        mgclCheckError(clFinish(commands), "clFinish");
+        s.fill(tmp, commands, true);
     }
 }
 

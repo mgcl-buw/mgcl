@@ -162,7 +162,7 @@ namespace mgcl
 
             if (num == 0)
                 // Fill stencil values on gpu on level 0 from input stencil
-                stencilValuesGpu->fill(*stencilValues, problem->getCommands());
+                stencilValuesGpu->fill(*stencilValues, problem->getCommands(), true);
         }
 
         // create d_v_in and d_f buffers on level zero and copy data to it only if buffers should not be reused

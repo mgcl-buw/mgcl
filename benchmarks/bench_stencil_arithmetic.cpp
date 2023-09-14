@@ -93,8 +93,8 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
             mgcl::VaryingStencilGpu vd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
             mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
-            vd.fill(v, tu->getCommands());
-            fd.fill(f, tu->getCommands());
+            vd.fill(v, tu->getCommands(), true);
+            fd.fill(f, tu->getCommands(), true);
             tu->finish();
 
             std::string name = std::string("gpu var*var, N = ")
@@ -115,8 +115,8 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
             mgcl::FixedStencilGpu vd(3, tu->getContext(), tu->getCommands());
             mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
-            vd.fill(v, tu->getCommands());
-            fd.fill(f, tu->getCommands());
+            vd.fill(v, tu->getCommands(), true);
+            fd.fill(f, tu->getCommands(), true);
             tu->finish();
 
             std::string name = std::string("gpu fix*var, N = ")
@@ -137,8 +137,8 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
             mgcl::FixedStencilGpu vd(3, tu->getContext(), tu->getCommands());
             mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
-            vd.fill(v, tu->getCommands());
-            fd.fill(f, tu->getCommands());
+            vd.fill(v, tu->getCommands(), true);
+            fd.fill(f, tu->getCommands(), true);
             tu->finish();
 
             std::string name = std::string("gpu var*fix, N = ")

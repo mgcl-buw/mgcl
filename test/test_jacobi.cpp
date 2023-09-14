@@ -296,7 +296,7 @@ TEST_CASE("jacobi GPU varying stencil")
         auto c_r_in = level0_gpu.getDR().read(tu.getCommands(), nullptr, true);
         auto c_v_in = level0_gpu.getDVIn().read(tu.getCommands(), nullptr, true);
         auto c_f_in = level0_gpu.getDF().read(tu.getCommands(), nullptr, true);
-        auto c_sv_in = level0_gpu.getStencilValuesGpu()->read(tu.getCommands());
+        auto c_sv_in = level0_gpu.getStencilValuesGpu()->read(tu.getCommands(), true);
         tu.finish();
         REQUIRE(c_r_in->isEqual(r_in_lv0));
         REQUIRE(c_v_in->isEqual(v_in_lv0));
@@ -831,8 +831,8 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
                                                                       sv_act->getGhostsDim1(),
                                                                       tu_act.getContext(), tu_act.getCommands());
 
-            d_sv_exp->fill(*sv_exp, tu_exp.getCommands());
-            d_sv_act->fill(*sv_act, tu_act.getCommands());
+            d_sv_exp->fill(*sv_exp, tu_exp.getCommands(), true);
+            d_sv_act->fill(*sv_act, tu_act.getCommands(), true);
 
             level_exp.setStencilValuesGpu(d_sv_exp);
             level_act.setStencilValuesGpu(d_sv_act);

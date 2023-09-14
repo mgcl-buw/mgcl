@@ -86,7 +86,7 @@ TEST_CASE("VaryingStencilGpu move ctor")
     mgcl::VaryingStencil h(m, n, o, 3, 0, 0, 0);
     h.fillRandom();
     auto hgpu = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, 0, t.getContext(), t.getCommands());
-    hgpu->fill(h, t.getCommands());
+    hgpu->fill(h, t.getCommands(), true);
 
     // copy manually for checking results
     mgcl::VaryingStencil h_check(m, n, o, 3, 0, 0, 0);
@@ -109,7 +109,7 @@ TEST_CASE("VaryingStencilGpu move ctor")
     REQUIRE(hgpu->getO() == 0);
     REQUIRE(hgpu->getGh() == 0);
     REQUIRE(hgpu->getWidth() == 0);
-    auto h2 = h2gpu->read(t.getCommands());
+    auto h2 = h2gpu->read(t.getCommands(), true);
     t.finish();
     REQUIRE(h2.isEqual(h_check));
 
@@ -137,7 +137,7 @@ TEST_CASE("VaryingStencilGpu move ctor")
     REQUIRE(h2gpu->getO() == 0);
     REQUIRE(h2gpu->getGh() == 0);
     REQUIRE(h2gpu->getWidth() == 0);
-    auto h3 = h3gpu.read(t.getCommands());
+    auto h3 = h3gpu.read(t.getCommands(), true);
     t.finish();
     REQUIRE(h3.isEqual(h_check));
 
@@ -185,7 +185,7 @@ TEST_CASE("VaryingStencilGpu::fill")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil s3(m, n, o, 3, gh, gh, gh);
         s3.fillRandomInt();
-        s->fill(s3, t.getCommands());
+        s->fill(s3, t.getCommands(), true);
 
         // check results
         double tmp[sizeNeeded];
@@ -208,7 +208,7 @@ TEST_CASE("VaryingStencilGpu::fill")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil s3(m, n, o, 5, gh, gh, gh);
         s3.fillRandomInt();
-        s->fill(s3, t.getCommands());
+        s->fill(s3, t.getCommands(), true);
 
         // check results
         double tmp[sizeNeeded];
@@ -228,11 +228,11 @@ TEST_CASE("VaryingStencilGpu::fill")
 
         // widths do not match
         mgcl::VaryingStencil s3(m, n, o, 5, gh, gh, gh);
-        REQUIRE_THROWS(s->fill(s3, t.getCommands()));
+        REQUIRE_THROWS(s->fill(s3, t.getCommands(), true));
 
         // grid sizes do not match
         mgcl::VaryingStencil s35(m * 2, n * 3, o * 4, 5, gh, gh, gh);
-        REQUIRE_THROWS(s->fill(s35, t.getCommands()));
+        REQUIRE_THROWS(s->fill(s35, t.getCommands(), true));
     }
 }
 
@@ -263,10 +263,10 @@ TEST_CASE("VaryingStencilGpu::read")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil s3(m, n, o, 3, gh, gh, gh);
         s3.fillRandomInt();
-        s->fill(s3, t.getCommands());
+        s->fill(s3, t.getCommands(), true);
 
         // read buffer
-        auto ret = s->read(t.getCommands());
+        auto ret = s->read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -283,10 +283,10 @@ TEST_CASE("VaryingStencilGpu::read")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil s3(m, n, o, 5, gh, gh, gh);
         s3.fillRandomInt();
-        s->fill(s3, t.getCommands());
+        s->fill(s3, t.getCommands(), true);
 
         // read buffer
-        auto ret = s->read(t.getCommands());
+        auto ret = s->read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -508,7 +508,7 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil s3(m, n, o, 3, gh, gh, gh);
         s3.fillRandomInt();
-        s->fill(s3, t.getCommands());
+        s->fill(s3, t.getCommands(), true);
 
         // update ghosts of both, host and device stencils
         s3.updateGhosts();
@@ -516,7 +516,7 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
         t.finish();
 
         // read buffer
-        auto ret = s->read(t.getCommands());
+        auto ret = s->read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -533,7 +533,7 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil s3(m, n, o, 5, gh, gh, gh);
         s3.fillRandomInt();
-        s->fill(s3, t.getCommands());
+        s->fill(s3, t.getCommands(), true);
 
         // update ghosts of both, host and device stencils
         s3.updateGhosts();
@@ -541,7 +541,7 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
         t.finish();
 
         // read buffer
-        auto ret = s->read(t.getCommands());
+        auto ret = s->read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -654,11 +654,11 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
         a_h.fillRandomInt();
-        a->fill(a_h, t.getCommands());
+        a->fill(a_h, t.getCommands(), true);
 
         mgcl::VaryingStencil b_h(m, n, o, 3, gh, gh, gh);
         b_h.fillRandomInt();
-        b->fill(b_h, t.getCommands());
+        b->fill(b_h, t.getCommands(), true);
         t.finish();
         b_h.updateGhosts();
         b->updateGhosts(t.getProgram(), t.getCommands());
@@ -667,7 +667,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
         t.finish();
 
-        auto ret = c.read(t.getCommands());
+        auto ret = c.read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -703,11 +703,11 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
         a_h.fillRandomInt();
-        a->fill(a_h, t.getCommands());
+        a->fill(a_h, t.getCommands(), true);
 
         mgcl::VaryingStencil b_h(m, n, o, 5, gh, gh, gh);
         b_h.fillRandomInt();
-        b->fill(b_h, t.getCommands());
+        b->fill(b_h, t.getCommands(), true);
         t.finish();
         b_h.updateGhosts();
         b->updateGhosts(t.getProgram(), t.getCommands());
@@ -716,7 +716,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
         t.finish();
 
-        auto ret = c.read(t.getCommands());
+        auto ret = c.read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -752,11 +752,11 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil a_h(m, n, o, 5, gh, gh, gh);
         a_h.fillRandomInt();
-        a->fill(a_h, t.getCommands());
+        a->fill(a_h, t.getCommands(), true);
 
         mgcl::VaryingStencil b_h(m, n, o, 3, gh, gh, gh);
         b_h.fillRandomInt();
-        b->fill(b_h, t.getCommands());
+        b->fill(b_h, t.getCommands(), true);
         t.finish();
         b_h.updateGhosts();
         b->updateGhosts(t.getProgram(), t.getCommands());
@@ -765,7 +765,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
         t.finish();
 
-        auto ret = c.read(t.getCommands());
+        auto ret = c.read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -801,11 +801,11 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil a_h(m, n, o, 5, gh, gh, gh);
         a_h.fillRandomInt();
-        a->fill(a_h, t.getCommands());
+        a->fill(a_h, t.getCommands(), true);
 
         mgcl::VaryingStencil b_h(m, n, o, 5, gh, gh, gh);
         b_h.fillRandomInt();
-        b->fill(b_h, t.getCommands());
+        b->fill(b_h, t.getCommands(), true);
         t.finish();
         b_h.updateGhosts();
         b->updateGhosts(t.getProgram(), t.getCommands());
@@ -814,7 +814,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
         t.finish();
 
-        auto ret = c.read(t.getCommands());
+        auto ret = c.read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -869,18 +869,18 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
         a_h.fillRandomInt();
-        a->fill(a_h, t.getCommands());
+        a->fill(a_h, t.getCommands(), true);
 
         mgcl::FixedStencil b_h(3);
         b_h.fillRandomInt();
-        b->fill(b_h, t.getCommands());
+        b->fill(b_h, t.getCommands(), true);
         t.finish();
 
         auto c_h = a_h.multiply(b_h, 2, nullptr, true, true);
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
         t.finish();
 
-        auto ret = c.read(t.getCommands());
+        auto ret = c.read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -916,18 +916,18 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
         a_h.fillRandomInt();
-        a->fill(a_h, t.getCommands());
+        a->fill(a_h, t.getCommands(), true);
 
         mgcl::FixedStencil b_h(5);
         b_h.fillRandomInt();
-        b->fill(b_h, t.getCommands());
+        b->fill(b_h, t.getCommands(), true);
         t.finish();
 
         auto c_h = a_h.multiply(b_h, 2, nullptr, true, true);
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
         t.finish();
 
-        auto ret = c.read(t.getCommands());
+        auto ret = c.read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -963,18 +963,18 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil a_h(m, n, o, 5, gh, gh, gh);
         a_h.fillRandomInt();
-        a->fill(a_h, t.getCommands());
+        a->fill(a_h, t.getCommands(), true);
 
         mgcl::FixedStencil b_h(3);
         b_h.fillRandomInt();
-        b->fill(b_h, t.getCommands());
+        b->fill(b_h, t.getCommands(), true);
         t.finish();
 
         auto c_h = a_h.multiply(b_h, 2, nullptr, true, true);
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
         t.finish();
 
-        auto ret = c.read(t.getCommands());
+        auto ret = c.read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -1010,18 +1010,18 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil a_h(m, n, o, 5, gh, gh, gh);
         a_h.fillRandomInt();
-        a->fill(a_h, t.getCommands());
+        a->fill(a_h, t.getCommands(), true);
 
         mgcl::FixedStencil b_h(5);
         b_h.fillRandomInt();
-        b->fill(b_h, t.getCommands());
+        b->fill(b_h, t.getCommands(), true);
         t.finish();
 
         auto c_h = a_h.multiply(b_h, 2, nullptr, true, true);
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
         t.finish();
 
-        auto ret = c.read(t.getCommands());
+        auto ret = c.read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -1253,7 +1253,7 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil a_h(m, n, o, 7, gh, gh, gh);
         a_h.fillRandomInt();
-        a_gpu.fill(a_h, t.getCommands());
+        a_gpu.fill(a_h, t.getCommands(), true);
         t.finish();
 
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
@@ -1272,7 +1272,7 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
 
         // cut on gpu and read back result
         auto a_2h_gpu = a_gpu.cutFromW7ToW3(t.getProgram(), t.getCommands(), t.getContext());
-        auto ret = a_2h_gpu.read(t.getCommands());
+        auto ret = a_2h_gpu.read(t.getCommands(), true);
         t.finish();
 
         REQUIRE(ret.getDim1() == a_2h.getDim1());
@@ -1366,11 +1366,11 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::FixedStencil a_h(3);
         a_h.fillRandomInt();
-        a->fill(a_h, t.getCommands());
+        a->fill(a_h, t.getCommands(), true);
 
         mgcl::VaryingStencil b_h(m, n, o, 3, gh, gh, gh);
         b_h.fillRandomInt();
-        b->fill(b_h, t.getCommands());
+        b->fill(b_h, t.getCommands(), true);
         t.finish();
         b_h.updateGhosts();
         b->updateGhosts(t.getProgram(), t.getCommands());
@@ -1379,7 +1379,7 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
         t.finish();
 
-        auto ret = c.read(t.getCommands());
+        auto ret = c.read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -1415,11 +1415,11 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::FixedStencil a_h(3);
         a_h.fillRandomInt();
-        a->fill(a_h, t.getCommands());
+        a->fill(a_h, t.getCommands(), true);
 
         mgcl::VaryingStencil b_h(m, n, o, 5, gh, gh, gh);
         b_h.fillRandomInt();
-        b->fill(b_h, t.getCommands());
+        b->fill(b_h, t.getCommands(), true);
         t.finish();
         b_h.updateGhosts();
         b->updateGhosts(t.getProgram(), t.getCommands());
@@ -1428,7 +1428,7 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
         t.finish();
 
-        auto ret = c.read(t.getCommands());
+        auto ret = c.read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -1464,11 +1464,11 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::FixedStencil a_h(5);
         a_h.fillRandomInt();
-        a->fill(a_h, t.getCommands());
+        a->fill(a_h, t.getCommands(), true);
 
         mgcl::VaryingStencil b_h(m, n, o, 3, gh, gh, gh);
         b_h.fillRandomInt();
-        b->fill(b_h, t.getCommands());
+        b->fill(b_h, t.getCommands(), true);
         t.finish();
         b_h.updateGhosts();
         b->updateGhosts(t.getProgram(), t.getCommands());
@@ -1477,7 +1477,7 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
         t.finish();
 
-        auto ret = c.read(t.getCommands());
+        auto ret = c.read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -1513,11 +1513,11 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::FixedStencil a_h(5);
         a_h.fillRandomInt();
-        a->fill(a_h, t.getCommands());
+        a->fill(a_h, t.getCommands(), true);
 
         mgcl::VaryingStencil b_h(m, n, o, 5, gh, gh, gh);
         b_h.fillRandomInt();
-        b->fill(b_h, t.getCommands());
+        b->fill(b_h, t.getCommands(), true);
         t.finish();
         b_h.updateGhosts();
         b->updateGhosts(t.getProgram(), t.getCommands());
@@ -1526,7 +1526,7 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         auto c = a->multiply(*b, 2, t.getProgram(), t.getCommands(), t.getContext());
         t.finish();
 
-        auto ret = c.read(t.getCommands());
+        auto ret = c.read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -1578,7 +1578,7 @@ TEST_CASE("FixedStencilGpu::fill")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::FixedStencil s3(3);
         s3.fillRandom();
-        s->fill(s3, t.getCommands());
+        s->fill(s3, t.getCommands(), true);
 
         // check results
         double tmp[sizeNeeded];
@@ -1601,7 +1601,7 @@ TEST_CASE("FixedStencilGpu::fill")
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::FixedStencil s3(5);
         s3.fillRandom();
-        s->fill(s3, t.getCommands());
+        s->fill(s3, t.getCommands(), true);
 
         // check results
         double tmp[sizeNeeded];
@@ -1621,7 +1621,7 @@ TEST_CASE("FixedStencilGpu::fill")
 
         // widths do not match
         mgcl::FixedStencil s3(5);
-        REQUIRE_THROWS(s->fill(s3, t.getCommands()));
+        REQUIRE_THROWS(s->fill(s3, t.getCommands(), true));
     }
 }
 
@@ -1647,11 +1647,11 @@ TEST_CASE("FixedStencilGpu::read")
         // create FixedStencil, fill with random values and copy to gpu buffer
         mgcl::FixedStencil s3(3);
         s3.fillRandom();
-        s->fill(s3, t.getCommands());
+        s->fill(s3, t.getCommands(), true);
         t.finish();
 
         // read buffer
-        auto ret = s->read(t.getCommands());
+        auto ret = s->read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -1672,11 +1672,11 @@ TEST_CASE("FixedStencilGpu::read")
         // create FixedStencil, fill with random values and copy to gpu buffer
         mgcl::FixedStencil s3(5);
         s3.fillRandom();
-        s.fill(s3, t.getCommands());
+        s.fill(s3, t.getCommands(), true);
         t.finish();
 
         // read buffer
-        auto ret = s.read(t.getCommands());
+        auto ret = s.read(t.getCommands(), true);
         t.finish();
 
         // check results
@@ -1703,7 +1703,7 @@ TEST_CASE("FixedStencilGpu::create3dFullWeightRestrictionGpu")
     mgcl_test::TestUtility t(deviceType);
 
     auto rgpu = mgcl::create3dFullWeightRestrictionStencilGpu(t.getContext(), t.getCommands());
-    auto r = rgpu.read(t.getCommands());
+    auto r = rgpu.read(t.getCommands(), true);
     t.finish();
 
     double factor = 1.0 / 64.0;
@@ -1752,7 +1752,7 @@ TEST_CASE("FixedStencilGpu::create3dBilinearProlongationStencilGpu")
     mgcl_test::TestUtility t(deviceType);
 
     auto rgpu = mgcl::create3dBilinearProlongationStencilGpu(t.getContext(), t.getCommands());
-    auto r = rgpu.read(t.getCommands());
+    auto r = rgpu.read(t.getCommands(), true);
     t.finish();
 
     double factor = 1.0 / 8.0;

@@ -406,7 +406,7 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     mgcl::VaryingStencil sglob(m, n, o, 3, gh, gh, gh);
     sglob.fill1dIndex(true);
     mgcl::VaryingStencilGpu sgpu(m, n, o, 3, gh, tu.getContext(), tu.getCommands());
-    sgpu.fill(sglob, tu.getCommands());
+    sgpu.fill(sglob, tu.getCommands(), true);
     tu.finish();
 
     // Update ghosts of expected result locally, i.e. not using MPI routines.
@@ -416,15 +416,15 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     auto clptr = sglob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
     auto& sloc = *clptr;
     mgcl::VaryingStencilGpu sgpuLocal(sloc.getDim1(), sloc.getDim2(), sloc.getDim3(), 3, gh, tu.getContext(), tu.getCommands());
-    sgpuLocal.fill(sloc, tu.getCommands());
+    sgpuLocal.fill(sloc, tu.getCommands(), true);
     tu.finish();
 
     // Update ghosts of test data
     mgcl::updateGhostsStencilOclMpi(tu.getCommands(), sgpuLocal, *mpiData, true, false);
 
     // Read results
-    auto cg = sgpu.read(tu.getCommands());
-    auto cl = sgpuLocal.read(tu.getCommands());
+    auto cg = sgpu.read(tu.getCommands(), true);
+    auto cl = sgpuLocal.read(tu.getCommands(), true);
     tu.finish();
 
     // cl.dumpToFile("cl" + std::to_string(mpi_rank) + ".txt");

@@ -288,7 +288,7 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
     auto c_r_in = level0_gpu.getDR().read(tu.getCommands(), nullptr, true);
     auto c_v_in = level0_gpu.getDVIn().read(tu.getCommands(), nullptr, true);
     auto c_f_in = level0_gpu.getDF().read(tu.getCommands(), nullptr, true);
-    auto c_sv_in = level0_gpu.getStencilValuesGpu()->read(tu.getCommands());
+    auto c_sv_in = level0_gpu.getStencilValuesGpu()->read(tu.getCommands(), true);
     tu.finish();
 
     REQUIRE(c_r_in->isEqual(r_in_lv0));
@@ -575,8 +575,8 @@ TEST_CASE("residual gpu gh > 1")
             auto d_in_sv_gh = std::make_shared<mgcl::VaryingStencilGpu>(sv->getDim1(), sv->getDim2(), sv->getDim3(), 3, sv->getGhostsDim1(),
                                                                         tu_gh.getContext(), tu_gh.getCommands());
 
-            d_in_sv->fill(*sv, tu.getCommands());
-            d_in_sv_gh->fill(*sv, tu_gh.getCommands());
+            d_in_sv->fill(*sv, tu.getCommands(), true);
+            d_in_sv_gh->fill(*sv, tu_gh.getCommands(), true);
 
             level.setStencilValuesGpu(d_in_sv);
             level_gh.setStencilValuesGpu(d_in_sv_gh);
@@ -967,8 +967,8 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
                                                                       sv_act->getGhostsDim1(),
                                                                       tu_act.getContext(), tu_act.getCommands());
 
-            d_sv_exp->fill(*sv_exp, tu_exp.getCommands());
-            d_sv_act->fill(*sv_act, tu_act.getCommands());
+            d_sv_exp->fill(*sv_exp, tu_exp.getCommands(), true);
+            d_sv_act->fill(*sv_act, tu_act.getCommands(), true);
 
             level_exp.setStencilValuesGpu(d_sv_exp);
             level_act.setStencilValuesGpu(d_sv_act);
