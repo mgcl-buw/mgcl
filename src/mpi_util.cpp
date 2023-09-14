@@ -236,6 +236,21 @@ namespace mgcl::mpi_util
     }
 
     /**
+     * @brief Gathers all local grids into one big grid. Must be called from each process. On rank 0 c must have the
+     *   size of the global grid, all other processes just need to send their local grid.
+     *
+     * @param comm MPI communicator.
+     * @param commands OpenCL command queue.
+     * @param c Global grid for root process (rank 0), local grids for all other processes.
+     */
+    void gather(MPI_Comm comm, cl_command_queue commands, CuboidGpu& c)
+    {
+        auto tmp = c.read(commands, nullptr, true);
+        gather(comm, *tmp);
+        c.write(commands, *tmp, true);
+    }
+
+    /**
      * @brief Scatters from rank 0 to all other processes. Must be called from each process. On rank 0 src must have the
      *   size of the global grid, all other processes give in nullptr. dest is the local grid that is to be filled.
      *
@@ -555,6 +570,22 @@ namespace mgcl::mpi_util
             mgclCheckMpiError(comm, MPI_Type_free(&subarraySend), "MPI_Type_free");
             mgclCheckMpiError(comm, MPI_Type_free(&subarraySendResized), "MPI_Type_free");
         }
+    }
+
+    /**
+     * @brief Scatters from rank 0 to all other processes. Must be called from each process. On rank 0 c must have the
+     *   size of the global grid, local grid size on all other processes. Rank 0 scatters in-place, i.e. should not
+     *   be altered at all. Includes ghost cells.
+     *
+     * @param comm MPI communicator.
+     * @param commands OpenCL command queue.
+     * @param c Global grid for root process (rank 0), local grid for other processes
+     */
+    void scatter_inplace_wgh(MPI_Comm comm, cl_command_queue commands, CuboidGpu& c)
+    {
+        auto tmp = c.read(commands, nullptr, true);
+        scatter_inplace_wgh(comm, *tmp);
+        c.write(commands, *tmp, true);
     }
 
     /**
