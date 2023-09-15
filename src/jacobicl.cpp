@@ -288,15 +288,13 @@ namespace mgcl
             // Update ghosts of current input v
             if (globalIter % 2 == 1)
             {
-                err = MultigridEngine::updateGhosts(problem, level.getDVOut(), mgh, ngh, ogh,
-                                                    problem.ghosts, problem.ghosts, problem.ghosts,
+                err = MultigridEngine::updateGhosts(problem, level.getDVOut(),
                                                     level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
             }
             else
             {
-                err = MultigridEngine::updateGhosts(problem, level.getDVIn(), mgh, ngh, ogh,
-                                                    problem.ghosts, problem.ghosts, problem.ghosts,
+                err = MultigridEngine::updateGhosts(problem, level.getDVIn(),
                                                     level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
             }
@@ -341,8 +339,7 @@ namespace mgcl
         if (store_res)
         {
             // TODO check for mpi
-            err = MultigridEngine::updateGhosts(problem, level.getDR(), mgh, ngh, ogh,
-                                                problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
+            err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
                                                 level.isCalculatedLocally());
             mgclCheckError(err, "Updating ghosts of dR");
         }
@@ -352,8 +349,7 @@ namespace mgcl
             level.getDVOut().copyTo(problem.getOpenCLHelper().getCommands(), level.getDVIn());
 
         // Update ghosts of dVIn
-        err = MultigridEngine::updateGhosts(problem, level.getDVIn(), mgh, ngh, ogh,
-                                            problem.ghosts, problem.ghosts, problem.ghosts,
+        err = MultigridEngine::updateGhosts(problem, level.getDVIn(),
                                             level.getMpiDataPtr(), level.isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts");
 
@@ -500,8 +496,7 @@ namespace mgcl
             err = clSetKernelArg(kernel, pos, sizeof(int), &store_res);
             mgclCheckError(err, "Setting kernel arguments");
 
-            err = MultigridEngine::updateGhosts(problem, level.getDVIn(), mgh, ngh, ogh,
-                                                problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
+            err = MultigridEngine::updateGhosts(problem, level.getDVIn(), level.getMpiDataPtr(),
                                                 level.isCalculatedLocally());
             mgclCheckError(err, "Updating ghosts");
 
@@ -535,8 +530,7 @@ namespace mgcl
                 err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing kernel");
 
-                err = MultigridEngine::updateGhosts(problem, level.getDVOut(), mgh, ngh, ogh,
-                                                    problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
+                err = MultigridEngine::updateGhosts(problem, level.getDVOut(), level.getMpiDataPtr(),
                                                     level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
 
@@ -564,8 +558,7 @@ namespace mgcl
                 err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing kernel");
 
-                err = MultigridEngine::updateGhosts(problem, level.getDVOut(), mgh, ngh, ogh,
-                                                    problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
+                err = MultigridEngine::updateGhosts(problem, level.getDVOut(), level.getMpiDataPtr(),
                                                     level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
 
@@ -577,8 +570,7 @@ namespace mgcl
         }
         // result is in dVIn now since pointers were swapped at the end of the loops above
 
-        err = MultigridEngine::updateGhosts(problem, level.getDVIn(), mgh, ngh, ogh,
-                                            problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
+        err = MultigridEngine::updateGhosts(problem, level.getDVIn(), level.getMpiDataPtr(),
                                             level.isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts of v_in");
 
@@ -709,8 +701,7 @@ namespace mgcl
 
         if (problem.isPeriodic())
         {
-            err = MultigridEngine::updateGhosts(problem, level.getDR(), mgh, ngh, ogh,
-                                                problem.ghosts, problem.ghosts, problem.ghosts, level.getMpiDataPtr(),
+            err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
                                                 level.isCalculatedLocally());
             mgclCheckError(err, "Updating ghosts of r");
         }

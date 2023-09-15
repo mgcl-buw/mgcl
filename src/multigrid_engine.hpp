@@ -46,10 +46,8 @@ namespace mgcl
         static void prolongate(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values);
 
         static void updateGhostsSeq(Cuboid& c, MPILevelData* mpiData, bool periodic, bool forceLocal);
-        static int updateGhosts(Problem& problem, CuboidGpu& dBuffer, int m, int n, int o,
-                                int ghostsM, int ghostsN, int ghostsO, MPILevelData* mpiData, bool forceLocal);
+        static int updateGhosts(Problem& problem, CuboidGpu& dBuffer, MPILevelData* mpiData, bool forceLocal);
         static void updateGhostsOclMpi(cl_command_queue commands, CuboidGpu& d_buf, MPILevelData& mpiData,
-                                       int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o,
                                        bool periodic, bool forceLocal);
 
         static double residual(Problem& problem, Level& level, bool returnResidual,

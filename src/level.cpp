@@ -211,8 +211,7 @@ namespace mgcl
         dVOut->fill(problem->getCommands(), 0.0, true);
         dR->fill(problem->getCommands(), 0.0, true);
 
-        err = MultigridEngine::updateGhosts(*problem, *dF, mgh, ngh, ogh, problem->ghosts, problem->ghosts,
-                                            problem->ghosts, mpiData.get(), isCalculatedLocally());
+        err = MultigridEngine::updateGhosts(*problem, *dF, mpiData.get(), isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts of d_f");
 
         return CL_SUCCESS;

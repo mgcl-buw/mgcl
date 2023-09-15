@@ -296,18 +296,22 @@ namespace mgcl
      * m,n,o must be size of ghosted grid.
      * Only enqueues the kernel. Neither waits for kernel to finish nor reads back results */
     int MultigridEngine::updateGhosts(Problem& problem, CuboidGpu& dBuffer,
-                                      int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
                                       MPILevelData* mpiData, bool forceLocal)
     {
         // TODO actually request these as arguments
-        int m = mgh - 2 * ghosts_m;
-        int n = ngh - 2 * ghosts_n;
-        int o = ogh - 2 * ghosts_o;
+        int m = dBuffer.getM();
+        int n = dBuffer.getN();
+        int o = dBuffer.getO();
+        int mgh = dBuffer.getMgh();
+        int ngh = dBuffer.getNgh();
+        int ogh = dBuffer.getOgh();
+        int ghosts_m = dBuffer.getGhostsM();
+        int ghosts_n = dBuffer.getGhostsN();
+        int ghosts_o = dBuffer.getGhostsO();
 
-        if (problem.useMpi() && mpiData)
+        if (!forceLocal && problem.useMpi() && mpiData)
         {
-            updateGhostsOclMpi(problem.getCommands(), dBuffer, *mpiData, m, n, o,
-                               ghosts_m, ghosts_n, ghosts_o, problem.isPeriodic(), forceLocal);
+            updateGhostsOclMpi(problem.getCommands(), dBuffer, *mpiData, problem.isPeriodic(), forceLocal);
             return CL_SUCCESS;
         }
 
@@ -380,7 +384,6 @@ namespace mgcl
      * @param forceLocal
      */
     void MultigridEngine::updateGhostsOclMpi(cl_command_queue commands, CuboidGpu& d_buf, MPILevelData& mpiData,
-                                             int m, int n, int o, int ghosts_m, int ghosts_n, int ghosts_o,
                                              bool periodic, bool forceLocal)
     {
         // Read back from GPU and update ghosts on host in order to update neighbouring nodes, too.

@@ -163,9 +163,7 @@ TEST_CASE("residual periodic Laplace seq vs ocl")
 
     mgcl_test::TestUtility tu(p_gpu);
 
-    mgcl::MultigridEngine::updateGhosts(*p_gpu, level0_gpu.getDVIn(),
-                                        level0_gpu.getMgh(), level0_gpu.getNgh(), level0_gpu.getOgh(), 1, 1, 1, nullptr,
-                                        true);
+    mgcl::MultigridEngine::updateGhosts(*p_gpu, level0_gpu.getDVIn(), nullptr, true);
     tu.finish();
     mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0, nullptr, true, false);
 
@@ -278,9 +276,7 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
 
     mgcl_test::TestUtility tu(p_gpu);
 
-    mgcl::MultigridEngine::updateGhosts(*p_gpu, level0_gpu.getDVIn(),
-                                        level0_gpu.getMgh(), level0_gpu.getNgh(), level0_gpu.getOgh(), 1, 1, 1, nullptr,
-                                        true);
+    mgcl::MultigridEngine::updateGhosts(*p_gpu, level0_gpu.getDVIn(), nullptr, true);
     tu.finish();
     mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0, nullptr, true, false);
 

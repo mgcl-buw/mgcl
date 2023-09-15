@@ -60,7 +60,7 @@ TEST_CASE("updateGhosts gh < m")
             mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
             auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
 
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, nullptr, true);
             tu.finish();
 
             auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
@@ -83,7 +83,7 @@ TEST_CASE("updateGhosts gh < m")
             mgcl_test::TestUtility tu(CL_DEVICE_TYPE_CPU);
             auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
 
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, nullptr, true);
             tu.finish();
 
             auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
@@ -154,7 +154,7 @@ TEST_CASE("updateGhosts gh > m")
             mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
             auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
 
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, nullptr, true);
             tu.finish();
 
             auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
@@ -177,7 +177,7 @@ TEST_CASE("updateGhosts gh > m")
             mgcl_test::TestUtility tu(CL_DEVICE_TYPE_CPU);
             auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, c1);
 
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, nullptr, true);
             tu.finish();
 
             auto c2 = d_c1->read(tu.getCommands(), nullptr, true);

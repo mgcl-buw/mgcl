@@ -144,8 +144,6 @@ namespace mgcl
             // TODO check Dirichlet
             if (problem.isPeriodic() && problem.mpiRank() == 0)
                 MultigridEngine::updateGhosts(problem, levelAbove.getDF(),
-                                              levelAbove.getDF().getM(), levelAbove.getDF().getN(), levelAbove.getDF().getO(),
-                                              levelAbove.getDF().getGhostsM(), levelAbove.getDF().getGhostsN(), levelAbove.getDF().getGhostsO(),
                                               levelAbove.getMpiDataPtr(), levelAbove.isCalculatedLocally());
         }
 
