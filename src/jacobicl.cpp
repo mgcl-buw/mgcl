@@ -616,9 +616,8 @@ namespace mgcl
         int ogh = level.ogh;
         double res = 0.0;
 
-        double h2 = (1.0 / (double)level.m) *
-                    (1.0 / (double)level.m); // TODO minimum of m,n,o when not cube?
-        double h2inv = 1.0 / h2;             // divisor of the stencil, inverted to use * instead of / in kernel
+        double h2 = 1.0 / static_cast<double>((problem.getMGlobal() >> level.num) * (problem.getMGlobal() >> level.num));
+        double h2inv = 1.0 / h2; // divisor of the stencil, inverted to use * instead of / in kernel
 
         // check if off is too small (i.e. start < 0)
         // TODO refactor to use GPUCuboid and check against v.getGhosts
