@@ -2,6 +2,9 @@
 
 #include "opencl_helper.hpp"
 
+#include <fstream>
+#include <iomanip>
+
 namespace mgcl
 {
     /**
@@ -224,6 +227,42 @@ namespace mgcl
         int err = clEnqueueCopyBuffer(commands, buffer, target.getBuffer(), 0, 0,
                                       sizeof(double) * mgh * ngh * ogh, 0, NULL, NULL);
         mgclCheckError(err, "clEnqueueCopyBuffer");
+    }
+
+    void CuboidGpu::dumpToFile(cl_command_queue commands, const std::string& path, bool realCellsOnly) const
+    {
+        auto tmp = read(commands, nullptr, true);
+        std::ofstream myfile;
+        myfile.open(path, std::ios::out | std::ios::trunc);
+
+        if (myfile.is_open())
+        {
+            if (realCellsOnly)
+            {
+                for (int i = ghosts_m; i < mgh - ghosts_m; i++)
+                    for (int j = ghosts_n; j < ngh - ghosts_n; j++)
+                        for (int k = ghosts_o; k < ogh - ghosts_o; k++)
+                        {
+                            myfile << i - ghosts_m << "\t" << j - ghosts_n << "\t" << k - ghosts_o << "\t"
+                                   << std::scientific << std::setprecision(17) << tmp->getData()[i][j][k] << std::endl;
+                        }
+            }
+            else
+            {
+                for (int i = 0; i < mgh; i++)
+                    for (int j = 0; j < ngh; j++)
+                        for (int k = 0; k < ogh; k++)
+                        {
+                            myfile << i << "\t" << j << "\t" << k << "\t"
+                                   << std::scientific << std::setprecision(17) << tmp->getData()[i][j][k] << std::endl;
+                        }
+            }
+            myfile.close();
+        }
+        else
+        {
+            throw "Couldn't open file for writing given by: " + path;
+        }
     }
 
     int CuboidGpu::getM() const

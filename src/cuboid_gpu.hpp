@@ -53,6 +53,8 @@ namespace mgcl
         int refCount();
         void copyTo(cl_command_queue commands, CuboidGpu& target);
 
+        void dumpToFile(cl_command_queue commands, const std::string& path, bool realCellsOnly = false) const;
+
         cl_mem getBuffer() const;
         int getM() const;
         int getN() const;
