@@ -464,32 +464,49 @@ namespace mgcl
         if (!init())
             throw std::runtime_error("Failed to initialize mgcl data structures.");
 
-        // calculate initial residual
-        double initres = MultigridEngine::residual(*this, *levels[0], !ignoreTol);
-        if (!silent && !ignoreTol)
-            printf("Starting mgcl with initres = %e\n", initres);
-
-        // run vcycle maxiter_vcycles times
-        double res, relres;
-        for (int i = 0; i < maxiter_vcycles; i++)
+        // Edge case: Do nothing if mpi is used but level threshold is 0 (i.e. all work is done on proc 0).
+        if (!(useMpi() && getMpiLevelThreshold() <= 0 && mpiRank() > 0))
         {
-            auto tstart = std::chrono::steady_clock::now();
-            res = MultigridEngine::vcycle(*this, *levels[0]);
-            auto tend = mgcl_since(tstart).count();
 
-            if (!ignoreTol)
-                relres = initres == 0 ? 0 : res / initres;
+            // calculate initial residual
+            double initres = MultigridEngine::residual(*this, *levels[0], !ignoreTol);
+            if (!silent && !ignoreTol)
+                printf("Starting mgcl with initres = %e\n", initres);
 
-            if (!silent)
+            // run vcycle maxiter_vcycles times
+            double res, relres;
+            for (int i = 0; i < maxiter_vcycles; i++)
             {
-                if (ignoreTol)
-                    printf("iter = %d, elapsed time = %ld ms\n", i, tend);
-                else
-                    printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
-            }
+                auto tstart = std::chrono::steady_clock::now();
+                res = MultigridEngine::vcycle(*this, *levels[0]);
+                auto tend = mgcl_since(tstart).count();
 
-            if (!ignoreTol && relres < tol)
-                break;
+                if (!ignoreTol)
+                    relres = initres == 0 ? 0 : res / initres;
+
+                if (!silent)
+                {
+                    if (ignoreTol)
+                        printf("iter = %d, elapsed time = %ld ms\n", i, tend);
+                    else
+                        printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
+                }
+
+                if (!ignoreTol && relres < tol)
+                    break;
+            }
+        }
+        else if (!silent)
+        {
+            std::cout << "mgcl: Rank " << mpiRank()
+                      << " does nothing (mpiLevelThreshold <= 0). Waiting for results from rank 0 ..." << std::endl;
+        }
+
+        // TODO scatter from proc 0 after solving if useMpi() && getMpiLevelThreshold() == 0
+        // TODO check mpiSize > 1 maybe
+        if (useMpi() && getMpiLevelThreshold() == 0)
+        {
+            mpi_util::scatter_inplace_wgh(mpiGlobalData->getComm(), getCommands(), getLevelAt(0).getDVIn());
         }
 
         // copy resulting v to d_v on device

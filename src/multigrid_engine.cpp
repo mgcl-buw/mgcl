@@ -117,8 +117,6 @@ namespace mgcl
         // printf("level.getNum() = %d, m = %3.d\n", level.getNum(), level.m-2);
         // problem.maxlevel = 3;
         double res;
-        int err;
-        cl_double zero = 0;
 
         if (level.getNum() < problem.maxlevel) // if not at highest level
         {
@@ -136,6 +134,21 @@ namespace mgcl
         // restrict to coarser grid
         restrict(level, levelAbove, level.getDR(), levelAbove.getDF());
 
+        // If MPI is in use but minGridPoints is reached, gather rhs data to process 0 and perform calculations
+        // locally only, until we're reaching the threshold level moving downwards again.
+        if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
+        {
+            mpi_util::gather(problem.getMpiComm(), problem.getCommands(), levelAbove.getDF());
+
+            // Update ghosts of gathered
+            // TODO check Dirichlet
+            if (problem.isPeriodic() && problem.mpiRank() == 0)
+                MultigridEngine::updateGhosts(problem, levelAbove.getDF(),
+                                              levelAbove.getDF().getM(), levelAbove.getDF().getN(), levelAbove.getDF().getO(),
+                                              levelAbove.getDF().getGhostsM(), levelAbove.getDF().getGhostsN(), levelAbove.getDF().getGhostsO(),
+                                              levelAbove.getMpiDataPtr(), levelAbove.isCalculatedLocally());
+        }
+
         // start next v-cycle iteration if not at highest level
         if (level.getNum() < problem.maxlevel - 1)
             vcycle(problem, levelAbove);
@@ -143,6 +156,11 @@ namespace mgcl
         {
             jacobi(problem, levelAbove, problem.nu1 + problem.nu2, 0);
         }
+
+        // If MPI is in use but minGridPoints is reached, scatter v data from process 0 to others and continue
+        // distributed calulcations.
+        if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
+            mpi_util::scatter_inplace_wgh(problem.getMpiComm(), problem.getCommands(), levelAbove.getDVIn());
 
         // prolongate from coarser to finer grid
         // r of this level.getNum() is reused here and should actually be called e
