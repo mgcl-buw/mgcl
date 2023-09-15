@@ -9,7 +9,7 @@
 #include "stencil.hpp"
 
 #include <cstddef> // for size_t, NULL
-// #include <iostream>
+#include <iostream>
 #include <memory> // for __shared_ptr_access, shared_ptr
 
 #ifdef __APPLE__
@@ -125,10 +125,10 @@ namespace mgcl
         }
 
         // relax nu1 times
-        res = jacobi(problem, level, problem.nu1, false);
+        jacobi(problem, level, problem.nu1, false);
 
         // update residual before restriction
-        res = residual(problem, level, false);
+        residual(problem, level, false);
         // printf("res on level.getNum() %d, upwards: %e\n", level.getNum(), res);
 
         // restrict to coarser grid
@@ -149,12 +149,19 @@ namespace mgcl
                                               levelAbove.getMpiDataPtr(), levelAbove.isCalculatedLocally());
         }
 
-        // start next v-cycle iteration if not at highest level
-        if (level.getNum() < problem.maxlevel - 1)
-            vcycle(problem, levelAbove);
-        else
+        // Advance to coarser levels only if
+        // 1. not using MPI at all (or on only one process), or
+        // 2. coarser level is still calculated distributively, or
+        // 3. rank is 0
+        if (!problem.useMpi() || !levelAbove.isCalculatedLocally() || problem.mpiRank() == 0)
         {
-            jacobi(problem, levelAbove, problem.nu1 + problem.nu2, 0);
+            // start next v-cycle iteration if not at highest level
+            if (level.getNum() < problem.maxlevel - 1)
+                vcycle(problem, levelAbove);
+            else
+            {
+                jacobi(problem, levelAbove, problem.nu1 + problem.nu2, false);
+            }
         }
 
         // If MPI is in use but minGridPoints is reached, scatter v data from process 0 to others and continue

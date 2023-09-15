@@ -198,8 +198,7 @@ namespace mgcl
             throw "#ghosts must be >= stepsPerIter!";
         }
 
-        double h2 = (1.0 / (double)level.m) *
-                    (1.0 / (double)level.m); // TODO minimum of m,n,o when not cube?
+        double h2 = 1.0 / static_cast<double>((problem.getMGlobal() >> level.num) * (problem.getMGlobal() >> level.num));
         double dinv = h2 / 6.0;
         double h2inv = level.stencilFactor; // divisor of the stencil, inverted to use * instead of / in kernel
         // TODO refactor stencilFactor

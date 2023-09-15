@@ -93,13 +93,19 @@ namespace mgcl
         cl_mem buf_fine = d_fine_values.getBuffer();
         cl_mem buf_coarse = d_coarse_values.getBuffer();
 
+        // Shift fine levels instead of using coarse level directly since coarse might have different sizes when
+        // using mpi and coarse.num == mpiLevelThreshold.
+        int mcgh = mreal + 2 * problem->getGhosts();
+        int ncgh = nreal + 2 * problem->getGhosts();
+        int ocgh = oreal + 2 * problem->getGhosts();
+
         // assign kernel arguments
         int pos = 0;
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buf_fine);
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &buf_coarse);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.mgh); // TODO check here when using MPI
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.ngh);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.ogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mcgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ncgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ocgh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem->ghosts);
         mgclCheckError(err, "Setting kernel arguments");
 
