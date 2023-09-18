@@ -164,6 +164,10 @@ if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_immediate_gather_scatter_Varying27p"
     run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_threshold_gt_0_Varying27p"
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_threshold_gt_0_Varying27p"
+    run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p"
+    run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p"
+    run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_gt_0_Laplace7p"
+    run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_gt_0_Laplace7p"
 fi
 
 if [ "$TEST_STENCIL" = true ] || [ "$TEST_ALL" = true ] ; then
