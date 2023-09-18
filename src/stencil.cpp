@@ -591,7 +591,10 @@ namespace mgcl
 
         if (m != f.getDim1() || n != f.getDim2() || o != f.getDim3() ||
             gh != f.getGhostsDim1() || gh != f.getGhostsDim2() || gh != f.getGhostsDim3())
-            throw "Dimensions are not equal!";
+            throw "VaryingStencilGpu::fill: Dimensions are not equal. this.m,n,o = " +
+                std::to_string(m) + "," + std::to_string(n) + "," + std::to_string(o) +
+                ", f.m,n,o = " + std::to_string(f.getDim1()) + "," + std::to_string(f.getDim2()) +
+                "," + std::to_string(f.getDim3());
 
         int err = clEnqueueWriteBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0,
                                        sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width,
@@ -672,7 +675,8 @@ namespace mgcl
      * @return VaryingStencilGpu
      */
     VaryingStencilGpu VaryingStencilGpu::multiply(VaryingStencilGpu& b, int ghc,
-                                                  cl_program program, cl_command_queue queue, cl_context context)
+                                                  cl_program program, cl_command_queue queue, cl_context context,
+                                                  MPILevelData* mpiData, bool periodic, bool forceLocal)
     {
         int err;
 
@@ -725,7 +729,7 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            c.updateGhosts(program, queue);
+            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal);
 
         clReleaseKernel(kernel);
         return c;
@@ -743,7 +747,8 @@ namespace mgcl
      * @return VaryingStencilGpu
      */
     VaryingStencilGpu VaryingStencilGpu::multiply(FixedStencilGpu& b, int ghc,
-                                                  cl_program program, cl_command_queue queue, cl_context context)
+                                                  cl_program program, cl_command_queue queue, cl_context context,
+                                                  MPILevelData* mpiData, bool periodic, bool forceLocal)
     {
         int err;
 
@@ -792,7 +797,7 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            c.updateGhosts(program, queue);
+            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal);
 
         clReleaseKernel(kernel);
         return c;
@@ -919,7 +924,8 @@ namespace mgcl
      * @return VaryingStencilGpu
      */
     VaryingStencilGpu FixedStencilGpu::multiply(VaryingStencilGpu& b, int ghc,
-                                                cl_program program, cl_command_queue queue, cl_context context)
+                                                cl_program program, cl_command_queue queue, cl_context context,
+                                                MPILevelData* mpiData, bool periodic, bool forceLocal)
     {
         int err;
 
@@ -976,7 +982,7 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            c.updateGhosts(program, queue);
+            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal);
 
         clReleaseKernel(kernel);
         return c;
@@ -985,23 +991,31 @@ namespace mgcl
     /**
      * @brief Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
      * Ghosts of returning stencil is hard-coded to be 2!
+     * @param program OpenCL program
+     * @param queue OpenCL command queue
+     * @param context OpenCL context
+     * @param resm Size of resulting stencil's grid. Per default halve of this's size.
+     * @param resn Size of resulting stencil's grid. Per default halve of this's size.
+     * @param reso Size of resulting stencil's grid. Per default halve of this's size.
+     * @return VaryingStencilGpu
      */
 
-    VaryingStencilGpu VaryingStencilGpu::cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context)
+    VaryingStencilGpu VaryingStencilGpu::cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context,
+                                                       int resm, int resn, int reso)
     {
         int err;
 
         if (width != 7)
             throw "Width is not 7!";
 
-        int m2 = m >> 1;
-        int n2 = n >> 1;
-        int o2 = o >> 1;
+        int m2 = resm == 0 ? (m >> 1) : resm;
+        int n2 = resn == 0 ? (n >> 1) : resn;
+        int o2 = reso == 0 ? (o >> 1) : reso;
 
         if (m2 == 0 || n2 == 0 || o2 == 0)
             throw "Cannot cut down stencil of grid size 1!";
 
-        VaryingStencilGpu a_2h(m >> 1, n >> 1, o >> 1, 3, 2, context, queue);
+        VaryingStencilGpu a_2h(m2, n2, o2, 3, 2, context, queue);
 
         // Create the compute kernel from the program
         cl_kernel kernel = clCreateKernel(program, "cut_stencils_w7_to_w3", &err);

@@ -296,7 +296,11 @@ namespace mgcl
      * @param a_h The stencil of the finer grid.
      * @returns VaryingStencilGpu The stencil to be applied on the coarser grid
      */
-    VaryingStencilGpu MultigridEngine::galerkin(VaryingStencilGpu& a_h, cl_program program, cl_command_queue queue, cl_context context)
+    VaryingStencilGpu MultigridEngine::galerkin(VaryingStencilGpu& a_h,
+                                                cl_program program, cl_command_queue queue, cl_context context,
+                                                MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
+                                                bool periodic, bool forceLocalFine, bool forceLocalCoarse,
+                                                int resm, int resn, int reso)
     {
         // Make sure a_h has two ghosts at each border for periodic bc.
         if (a_h.getGh() != 2)
@@ -309,11 +313,12 @@ namespace mgcl
 
         // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
         // S * A_h * S and cut out later manually.
-        auto sas = sr.multiply(a_h, 2, program, queue, context).multiply(sp, 0, program, queue, context);
+        auto sas = sr.multiply(a_h, 2, program, queue, context, mpiDataFine, periodic, forceLocalFine)
+                       .multiply(sp, 0, program, queue, context, mpiDataFine, periodic, forceLocalFine);
 
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
-        auto a_2h = sas.cutFromW7ToW3(program, queue, context);
-        a_2h.updateGhosts(program, queue);
+        auto a_2h = sas.cutFromW7ToW3(program, queue, context, resm, resn, reso);
+        updateGhostsStencilOclMpi(queue, program, a_2h, mpiDataCoarse, periodic, forceLocalCoarse);
 
         return a_2h;
     }

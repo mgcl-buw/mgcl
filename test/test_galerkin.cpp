@@ -100,7 +100,8 @@ TEST_CASE("GPU galerkin random values periodic")
     a_h_gpu.fill(a_h, t.getCommands(), true);
 
     auto a_2h = mgcl::MultigridEngine::galerkin(a_h, nullptr, nullptr, true, true, true);
-    auto a_2h_gpu = mgcl::MultigridEngine::galerkin(a_h_gpu, t.getProgram(), t.getCommands(), t.getContext());
+    auto a_2h_gpu = mgcl::MultigridEngine::galerkin(a_h_gpu, t.getProgram(), t.getCommands(), t.getContext(),
+                                                    nullptr, nullptr, true, true, true);
     t.finish();
 
     auto ret = a_2h_gpu.read(t.getCommands(), true);

@@ -181,11 +181,18 @@ namespace mgcl
      * @param periodic
      * @param forceLocal
      */
-    void updateGhostsStencilOclMpi(cl_command_queue commands, VaryingStencilGpu& s,
-                                   MPILevelData& mpiData, bool periodic, bool forceLocal)
+    void updateGhostsStencilOclMpi(cl_command_queue commands, cl_program program,
+                                   VaryingStencilGpu& s,
+                                   MPILevelData* mpiData, bool periodic, bool forceLocal)
     {
+        if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
+        {
+            s.updateGhosts(program, commands);
+            return;
+        }
+
         auto tmp = s.read(commands, true);
-        updateGhostsStencilMpi(tmp, &mpiData, periodic, forceLocal);
+        updateGhostsStencilMpi(tmp, mpiData, periodic, forceLocal);
         s.fill(tmp, commands, true);
     }
 }

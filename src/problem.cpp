@@ -365,15 +365,27 @@ namespace mgcl
                 }
                 else
                 {
-                    // Gather
-                    if (useMpi() && getMpiLevelThreshold() == levels[level - 1]->getNum())
+                    // Gather partial stencil values of the previous level
+                    if (useMpi() && getMpiLevelThreshold() == lvCoarse.getNum())
                     {
+                        mpi_util::gather(getMpiComm(), *lvFine.getStencilValues());
+                        gathered = true;
                     }
 
-                    levels.back()->stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
-                        MultigridEngine::galerkin(
-                            *levels[level - 1]->getStencilValuesGpu(),
-                            getProgram(), getCommands(), getContext()));
+                    // Only calculate galerkin if
+                    // 1. MPI is not used at all, or
+                    // 2. this level is calculated distributively, or
+                    // 3. this level is calculated locally and rank is 0.
+                    // Otherwise we would run into neighbour issues when trying to update ghosts.
+                    if (!useMpi() || !lvCoarse.isCalculatedLocally() || mpiRank() == 0)
+                        levels.back()->stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
+                            MultigridEngine::galerkin(
+                                *levels[level - 1]->getStencilValuesGpu(),
+                                getProgram(), getCommands(), getContext(),
+                                lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
+                                isPeriodic(), gathered,
+                                lvCoarse.isCalculatedLocally(),
+                                lvCoarse.getM(), lvCoarse.getN(), lvCoarse.getO()));
                 }
             }
         }
@@ -952,6 +964,7 @@ namespace mgcl
         // TODO move to getStencilValues?
         if (stencilType == MGCL_VARYING)
         {
+            calculateAndSetMpiLevelThreshold();
             int gh = std::max(2, jacobi_iterations_per_kernel);
             if (getMpiLevelThreshold() <= 0 && mpiRank() == 0)
                 stencilValues = std::make_shared<VaryingStencil>(mGlobal, nGlobal, oGlobal, 3, gh, gh, gh);
@@ -1017,6 +1030,7 @@ namespace mgcl
     void Problem::setMpiMinGridPoints(int mpiMinGridPoints_)
     {
         mpiMinGridPoints = mpiMinGridPoints_;
+        calculateAndSetMpiLevelThreshold();
     }
 
     /**

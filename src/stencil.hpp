@@ -109,11 +109,14 @@ namespace mgcl
 
         void updateGhosts(cl_program program, cl_command_queue queue);
         VaryingStencilGpu multiply(VaryingStencilGpu& b, int ghc,
-                                   cl_program program, cl_command_queue queue, cl_context context);
+                                   cl_program program, cl_command_queue queue, cl_context context,
+                                   MPILevelData* mpiData, bool periodic, bool forceLocal);
         VaryingStencilGpu multiply(FixedStencilGpu& b, int ghc,
-                                   cl_program program, cl_command_queue queue, cl_context context);
+                                   cl_program program, cl_command_queue queue, cl_context context,
+                                   MPILevelData* mpiData, bool periodic, bool forceLocal);
 
-        VaryingStencilGpu cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context);
+        VaryingStencilGpu cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context,
+                                        int resm = 0, int resn = 0, int reso = 0);
 
         int getM() const;
         int getN() const;
@@ -147,7 +150,8 @@ namespace mgcl
         FixedStencil read(cl_command_queue queue, bool blockin);
 
         VaryingStencilGpu multiply(VaryingStencilGpu& b, int ghc,
-                                   cl_program program, cl_command_queue queue, cl_context context);
+                                   cl_program program, cl_command_queue queue, cl_context context,
+                                   MPILevelData* mpiData, bool periodic, bool forceLocal);
 
         int getWidth() const;
         cl_mem getBuf() const;
