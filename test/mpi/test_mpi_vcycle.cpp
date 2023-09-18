@@ -707,7 +707,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_gt_0_Laplace7p")
 
     // Create local problem
     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
-    p.setMaxiterVcycles(1);
+    // p.setMaxiterVcycles(1);
     p.setUseOpencl(true);
     p.setReadResults(true);
     p.setGhosts(gh);

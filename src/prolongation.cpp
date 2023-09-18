@@ -75,6 +75,9 @@ namespace mgcl
         cl_mem buf_fine = d_fine_values.getBuffer();
         cl_mem buf_coarse = d_coarse_values.getBuffer();
 
+        int ngh_vals_coarse = d_coarse_values.getNgh();
+        int ogh_vals_coarse = d_coarse_values.getOgh();
+
         // assign kernel arguments
         int pos = 0;
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buf_fine);
@@ -83,6 +86,8 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &fine.ngh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &fine.ogh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem->ghosts);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh_vals_coarse);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh_vals_coarse);
         mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes

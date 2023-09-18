@@ -98,6 +98,8 @@ namespace mgcl
         int mcgh = mreal + 2 * problem->getGhosts();
         int ncgh = nreal + 2 * problem->getGhosts();
         int ocgh = oreal + 2 * problem->getGhosts();
+        int ngh_vals_coarse = d_coarse_values.getNgh();
+        int ogh_vals_coarse = d_coarse_values.getOgh();
 
         // assign kernel arguments
         int pos = 0;
@@ -107,6 +109,8 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ncgh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ocgh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem->ghosts);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh_vals_coarse);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh_vals_coarse);
         mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes

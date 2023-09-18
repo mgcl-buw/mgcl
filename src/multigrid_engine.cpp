@@ -245,7 +245,7 @@ namespace mgcl
         // TODO respect problem::ghosts maybe
 
         // Make sure a_h has two ghosts at each border for periodic bc.
-        if (a_h.getGhostsDim1() != 2 || a_h.getGhostsDim3() != 2 || a_h.getGhostsDim3() != 2)
+        if (a_h.getGhostsDim1() != 2 || a_h.getGhostsDim2() != 2 || a_h.getGhostsDim3() != 2)
             throw "galerkin: a_h needs to have 2 ghosts at each border for periodic bc!";
 
         // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
