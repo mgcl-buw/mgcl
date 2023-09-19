@@ -345,6 +345,13 @@ namespace mgcl
             {
                 auto& lvFine = *levels[level - 1];
                 auto& lvCoarse = *levels[level];
+
+                // stencilValues of this level must be of global size on rank 0, if this level is just above
+                // the threshold, since it is getting gathered into.
+                int svm = (mpiRank() == 0 && level == getMpiLevelThreshold() - 1 ? (mGlobal >> level) : lvCoarse.getM());
+                int svn = (mpiRank() == 0 && level == getMpiLevelThreshold() - 1 ? (nGlobal >> level) : lvCoarse.getN());
+                int svo = (mpiRank() == 0 && level == getMpiLevelThreshold() - 1 ? (oGlobal >> level) : lvCoarse.getO());
+
                 if (!use_opencl)
                 {
                     // Gather partial stencil values of the previous level
@@ -365,7 +372,7 @@ namespace mgcl
                                                       lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
                                                       isPeriodic(), gathered,
                                                       lvCoarse.isCalculatedLocally(),
-                                                      lvCoarse.getM(), lvCoarse.getN(), lvCoarse.getO()));
+                                                      svm, svn, svo));
                 }
                 else
                 {
@@ -389,7 +396,7 @@ namespace mgcl
                                 lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
                                 isPeriodic(), gathered,
                                 lvCoarse.isCalculatedLocally(),
-                                lvCoarse.getM(), lvCoarse.getN(), lvCoarse.getO()));
+                                svm, svn, svo));
                 }
             }
         }

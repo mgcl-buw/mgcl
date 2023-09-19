@@ -492,9 +492,9 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
                         }
 }
 
-// Checks if galerkin works for multiple processes but threshold 0, i.e. everything is done locally.
-// Run with: mpiexec -n 8 tests_mpi "MPI-galerkin-threshold0"
-TEST_CASE("MPI-galerkin-threshold0")
+// Test that Galerkin yields the same results for different threshold levels.
+// run with e.g. mpiexec -n 8 tests_mpi MPI_galerkin_different_thresholds
+TEST_CASE("MPI_galerkin_different_thresholds")
 {
     using std::min;
 
@@ -570,31 +570,57 @@ TEST_CASE("MPI-galerkin-threshold0")
     v->fillRandom();
     f->fillRandom();
 
-    int gh = 1;
+    // Init Problem with threshold level 0
+    auto pptr_th0 = std::make_shared<mgcl::Problem>(ml, nl, ol, v, f, m, n, o);
+    auto& p_th0 = *pptr_th0;
+    p_th0.setMpiComm(mpi_comm);
+    p_th0.setMpiLevelThreshold(0);
 
-    // Init Problem to create all needed structures
-    auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, v, f, m, n, o);
-    auto& p = *pptr;
-    p.setGhosts(gh);
-    p.setMpiComm(mpi_comm);
-    p.setMpiMinGridPoints(m); // ensure threshold level is 0
+    p_th0.setStencilType(mgcl::MGCL_VARYING);
+    auto& sv0 = p_th0.getStencilValues();
+    sv0->fill1dIndex(false);
 
-    p.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = p.getStencilValues();
-    sv->fillRandomInt();
+    p_th0.init();
 
-    p.init();
+    // Init Problem with threshold level 1
+    auto pptr_th1 = std::make_shared<mgcl::Problem>(ml, nl, ol, v, f, m, n, o);
+    auto& p_th1 = *pptr_th1;
+    p_th1.setMpiComm(mpi_comm);
+    p_th1.setMpiLevelThreshold(0);
+
+    p_th1.setStencilType(mgcl::MGCL_VARYING);
+    auto& sv = p_th1.getStencilValues();
+    sv->fill1dIndex(false);
+
+    p_th1.init();
+
+    // Init Problem with threshold level 2
+    auto pptr_th2 = std::make_shared<mgcl::Problem>(ml, nl, ol, v, f, m, n, o);
+    auto& p_th2 = *pptr_th2;
+    p_th2.setMpiComm(mpi_comm);
+    p_th2.setMpiLevelThreshold(0);
+
+    p_th2.setStencilType(mgcl::MGCL_VARYING);
+    sv = p_th2.getStencilValues();
+    // copy data manually since for threshold 2 stencil values has local size.
+    for (int i = 0; i < sv->getDim1gh(); i++)
+        for (int j = 0; j < sv->getDim2gh(); j++)
+            for (int k = 0; k < sv->getDim3gh(); k++)
+                for (int ii = 0; ii < sv->getDim4gh(); ii++)
+                    for (int jj = 0; jj < sv->getDim5gh(); jj++)
+                        for (int kk = 0; kk < sv->getDim6gh(); kk++)
+                            sv->getData()[i][j][k][ii][jj][kk] = sv0->getData()[i][j][k][ii][jj][kk];
+
+    p_th2.init();
 
     if (mpi_rank == 0)
-        for (int i = 0; i <= p.getMaxlevel(); i++)
-        {
-            auto& lv = p.getLevelAt(i);
-            auto& sv = *lv.getStencilValues();
+    {
+        // Stencil values for problems with thresholds 0 and 1 should be the same for each level.
+        for (int lv = 0; lv < p_th0.getMaxlevel(); lv++)
+            REQUIRE(p_th0.getLevelAt(lv).getStencilValues()->isEqual(*p_th1.getLevelAt(lv).getStencilValues()));
 
-            CAPTURE(i);
-
-            REQUIRE(sv.getDim1() == m >> i);
-            REQUIRE(sv.getDim2() == n >> i);
-            REQUIRE(sv.getDim3() == o >> i);
-        }
+        // Stencil values for problems with thresholds 0 and 2 should be the same for each level starting with 1.
+        for (int lv = 1; lv < p_th0.getMaxlevel(); lv++)
+            REQUIRE(p_th0.getLevelAt(lv).getStencilValues()->isEqual(*p_th2.getLevelAt(lv).getStencilValues()));
+    }
 }
