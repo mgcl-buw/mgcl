@@ -153,28 +153,27 @@ namespace mgcl
         auto context = problem->getOpenCLHelper().getContext();
         auto deviceType = problem->getOpenCLHelper().getDeviceType();
 
-        // create gpu buffer for varying stencil if needed
-        if (stencilType == MGCL_VARYING)
-        {
-            // If level threshold is 0 or 1, stencilValues must have global sizes.
-            if (problem->getMpiLevelThreshold() <= 1 && problem->mpiRank() == 0)
-                stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
-                    problem->mGlobal, problem->nGlobal, problem->oGlobal, 3,
-                    std::max(2, problem->getJacobiIterationsPerKernel()),
-                    problem->getContext(), problem->getCommands());
-            else
-                stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
-                    m, n, o, 3, std::max(2, problem->getJacobiIterationsPerKernel()),
-                    problem->getContext(), problem->getCommands());
-
-            if (num == 0)
-                // Fill stencil values on gpu on level 0 from input stencil
-                stencilValuesGpu->fill(*stencilValues, problem->getCommands(), true);
-        }
-
         // create d_v_in and d_f buffers on level zero and copy data to it only if buffers should not be reused
         if (num == 0)
         {
+            // create gpu buffer for varying stencil if needed
+            if (stencilType == MGCL_VARYING)
+            {
+                // If level threshold is 0 or 1, stencilValues must have global sizes.
+                if (problem->getMpiLevelThreshold() <= 1 && problem->mpiRank() == 0)
+                    stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
+                        problem->mGlobal, problem->nGlobal, problem->oGlobal, 3,
+                        std::max(2, problem->getJacobiIterationsPerKernel()),
+                        problem->getContext(), problem->getCommands());
+                else
+                    stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
+                        m, n, o, 3, std::max(2, problem->getJacobiIterationsPerKernel()),
+                        problem->getContext(), problem->getCommands());
+
+                // Fill stencil values on gpu on level 0 from input stencil
+                stencilValuesGpu->fill(*stencilValues, problem->getCommands(), true);
+            }
+
             if (problem->getReuseOpenclBuffers())
             {
                 dVIn = problem->getDVPtr();
