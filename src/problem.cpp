@@ -126,7 +126,7 @@ namespace mgcl
             (stencilValues->getDim1() < mGlobal || stencilValues->getDim2() < nGlobal || stencilValues->getDim3() < oGlobal))
             throw "Mpi threshold level is 0 but stencilValues has local size. Please use setMpiMinGridPoints before setStencilType!";
 
-        if (getMpiLevelThreshold() > 0 && stencilValues &&
+        if (getMpiLevelThreshold() > 1 && stencilValues &&
             (stencilValues->getDim1() > m || stencilValues->getDim2() > n || stencilValues->getDim3() > o))
             throw "Mpi threshold level is not 0 but stencilValues has global size. Please use setMpiMinGridPoints before setStencilType!";
 
@@ -368,7 +368,7 @@ namespace mgcl
                     // Gather partial stencil values of the previous level
                     if (useMpi() && getMpiLevelThreshold() == lvCoarse.getNum())
                     {
-                        mpi_util::gather(getMpiComm(), *lvFine.getStencilValues());
+                        mpi_util::gather(getMpiComm(), getCommands(), *lvFine.getStencilValuesGpu());
                         gathered = true;
                     }
 
@@ -380,7 +380,7 @@ namespace mgcl
                     if (!useMpi() || !lvCoarse.isCalculatedLocally() || mpiRank() == 0)
                         levels.back()->stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
                             MultigridEngine::galerkin(
-                                *levels[level - 1]->getStencilValuesGpu(),
+                                *lvFine.getStencilValuesGpu(),
                                 getProgram(), getCommands(), getContext(),
                                 lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
                                 isPeriodic(), gathered,
@@ -966,7 +966,7 @@ namespace mgcl
         {
             calculateAndSetMpiLevelThreshold();
             int gh = std::max(2, jacobi_iterations_per_kernel);
-            if (getMpiLevelThreshold() <= 0 && mpiRank() == 0)
+            if (getMpiLevelThreshold() <= 1 && mpiRank() == 0)
                 stencilValues = std::make_shared<VaryingStencil>(mGlobal, nGlobal, oGlobal, 3, gh, gh, gh);
             else
                 stencilValues = std::make_shared<VaryingStencil>(m, n, o, 3, gh, gh, gh);

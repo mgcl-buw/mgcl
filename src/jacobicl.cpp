@@ -412,7 +412,7 @@ namespace mgcl
         mgcl_debug("Available local memory on device: %ld Bytes\n", available_local_mem);
 
         // size of shared memory size for one work-group
-        int locmem_size_wg = 3 * ipk * (wg_size + 2 * ipk) * (wg_size + 2 * ipk) * sizeof(double);
+        size_t locmem_size_wg = 3 * ipk * (wg_size + 2 * ipk) * (wg_size + 2 * ipk) * sizeof(double);
 
         // halve wg size until local memory fits
         while (available_local_mem < locmem_size_wg)
@@ -488,7 +488,6 @@ namespace mgcl
         mgcl_debug("Running Jacobi kernel with %ld,%ld work-items and %ld,%ld work group size\n", global[0], global[1],
                    local[0], local[1]);
 
-        cl_mem tmp;
         if (ipk == maxiter)
         {
             // set flag to store residual of last iteration

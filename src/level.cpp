@@ -156,9 +156,16 @@ namespace mgcl
         // create gpu buffer for varying stencil if needed
         if (stencilType == MGCL_VARYING)
         {
-            stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
-                m, n, o, 3, std::max(2, problem->getJacobiIterationsPerKernel()),
-                problem->getContext(), problem->getCommands());
+            // If level threshold is 0 or 1, stencilValues must have global sizes.
+            if (problem->getMpiLevelThreshold() <= 1 && problem->mpiRank() == 0)
+                stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
+                    problem->mGlobal, problem->nGlobal, problem->oGlobal, 3,
+                    std::max(2, problem->getJacobiIterationsPerKernel()),
+                    problem->getContext(), problem->getCommands());
+            else
+                stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
+                    m, n, o, 3, std::max(2, problem->getJacobiIterationsPerKernel()),
+                    problem->getContext(), problem->getCommands());
 
             if (num == 0)
                 // Fill stencil values on gpu on level 0 from input stencil

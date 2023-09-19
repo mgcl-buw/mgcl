@@ -45,9 +45,9 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
   else()
     # Use address sanitizer (ASAN) ASAN is not compatible with OpenCL, see
     # https://stackoverflow.com/a/68027496/4108363 A workaround is to set
-    # ASAN_OPTIONS=protect_shadow_gap=0. target_compile_options(mgcl PUBLIC
-    # -fsanitize=address -fno-omit-frame-pointer) target_link_options(mgcl
-    # PUBLIC -fsanitize=address)
+    # ASAN_OPTIONS=protect_shadow_gap=0. 
+    # target_compile_options(mgcl PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+    # target_link_options(mgcl PUBLIC -fsanitize=address)
 
     # additional warnings
     target_compile_options(mgcl PRIVATE -Wall -Wextra -Wno-reorder)

@@ -869,10 +869,20 @@ TEST_CASE("MPI_vcycle_threshold_gt_0_Varying27p")
 
     if (mpi_rank == 0)
     {
+        // For threshold level 0 or 1, stencilValues must have global sizes.
         REQUIRE(p.getMpiLevelThreshold() > 0);
-        REQUIRE(sv.getDim1() == ml);
-        REQUIRE(sv.getDim2() == nl);
-        REQUIRE(sv.getDim3() == ol);
+        if (p.getMpiLevelThreshold() == 1)
+        {
+            REQUIRE(sv.getDim1() == m);
+            REQUIRE(sv.getDim2() == n);
+            REQUIRE(sv.getDim3() == o);
+        }
+        else
+        {
+            REQUIRE(sv.getDim1() == ml);
+            REQUIRE(sv.getDim2() == nl);
+            REQUIRE(sv.getDim3() == ol);
+        }
     }
 
     // Fill with 7-point Laplace
@@ -1047,10 +1057,20 @@ TEST_CASE("MPI_vcycle_GPU_threshold_gt_0_Varying27p")
 
     if (mpi_rank == 0)
     {
+        // For threshold level 0 or 1, stencilValues must have global sizes.
         REQUIRE(p.getMpiLevelThreshold() > 0);
-        REQUIRE(sv.getDim1() == ml);
-        REQUIRE(sv.getDim2() == nl);
-        REQUIRE(sv.getDim3() == ol);
+        if (p.getMpiLevelThreshold() == 1)
+        {
+            REQUIRE(sv.getDim1() == m);
+            REQUIRE(sv.getDim2() == n);
+            REQUIRE(sv.getDim3() == o);
+        }
+        else
+        {
+            REQUIRE(sv.getDim1() == ml);
+            REQUIRE(sv.getDim2() == nl);
+            REQUIRE(sv.getDim3() == ol);
+        }
     }
 
     // Fill with 7-point Laplace
