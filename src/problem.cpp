@@ -122,11 +122,11 @@ namespace mgcl
             // clang-format on
             throw "ghosts_in is different than ghosts of v and/or f!";
 
-        if (getMpiLevelThreshold() == 0 && stencilValues &&
+        if (mpiRank() == 0 && getMpiLevelThreshold() == 0 && stencilValues &&
             (stencilValues->getDim1() < mGlobal || stencilValues->getDim2() < nGlobal || stencilValues->getDim3() < oGlobal))
             throw "Mpi threshold level is 0 but stencilValues has local size. Please use setMpiMinGridPoints before setStencilType!";
 
-        if (getMpiLevelThreshold() > 1 && stencilValues &&
+        if (mpiRank() == 0 && getMpiLevelThreshold() > 1 && stencilValues &&
             (stencilValues->getDim1() > m || stencilValues->getDim2() > n || stencilValues->getDim3() > o))
             throw "Mpi threshold level is not 0 but stencilValues has global size. Please use setMpiMinGridPoints before setStencilType!";
 
@@ -276,6 +276,10 @@ namespace mgcl
     {
         if (mpiMinGridPoints <= 1)
             throw "mpiMinGridPoints must be at least 2!";
+
+        // Threshold was already set (automatically or by user).
+        if (mpiLevelThreshold >= 0)
+            return;
 
         mpiLevelThreshold = static_cast<int>(log2(util::seq::min3(m, n, o))) -
                             (static_cast<int>(log2(mpiMinGridPoints)) - 1);
@@ -1020,6 +1024,24 @@ namespace mgcl
     int Problem::getMpiLevelThreshold()
     {
         return mpiLevelThreshold;
+    }
+
+    /**
+     * @brief Must be between 0 and maxlevel, which is log2(min(mGlobal, nGlobal, oGlobal)) or the maxlevel set by user.
+     * Also updates mpiMinGridPoints.
+     *
+     * @param mpiLevelThreshold_ Number of level between 0 and maxlevel
+     */
+    void Problem::setMpiLevelThreshold(int mpiLevelThreshold_)
+    {
+        if (mpiLevelThreshold_ < 0)
+            throw "MpiLevelThreshold cannot be negative";
+        if (mpiLevelThreshold_ > maxlevel)
+            throw "MpiLevelThreshold cannot be larger than maxlevel (" + std::to_string(maxlevel) + ")";
+        mpiLevelThreshold = mpiLevelThreshold_;
+
+        // update mpiMinGridPoints
+        mpiMinGridPoints = std::pow(2, maxlevel - mpiLevelThreshold);
     }
 
     int Problem::getMpiMinGridPoints() const

@@ -769,3 +769,37 @@ TEST_CASE("Problem::setStencilType")
     CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 4);
     CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 4);
 }
+
+/**
+ * @brief Test that Problem::setMpiLevelThreshold:
+ * - throws correctly for invalid values,
+ * - updates mpiMinGridPoints correctly for valid input.
+ *
+ */
+TEST_CASE("Problem::setMpiLevelThreshold")
+{
+    mgcl::Problem p(16, 32, 64);
+    REQUIRE(p.getMpiLevelThreshold() == -1);
+    REQUIRE(p.getMpiMinGridPoints() == 4);
+
+    SECTION("invalid values")
+    {
+        REQUIRE_THROWS(p.setMpiLevelThreshold(-1));
+        REQUIRE_THROWS(p.setMpiLevelThreshold(5));
+    }
+
+    SECTION("valid values")
+    {
+        p.setMpiLevelThreshold(0);
+        REQUIRE(p.getMpiLevelThreshold() == 0);
+        REQUIRE(p.getMpiMinGridPoints() == 16);
+
+        p.setMpiLevelThreshold(1);
+        REQUIRE(p.getMpiLevelThreshold() == 1);
+        REQUIRE(p.getMpiMinGridPoints() == 8);
+
+        p.setMpiLevelThreshold(2);
+        REQUIRE(p.getMpiLevelThreshold() == 2);
+        REQUIRE(p.getMpiMinGridPoints() == 4);
+    }
+}

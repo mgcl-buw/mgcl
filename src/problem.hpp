@@ -307,6 +307,7 @@ namespace mgcl
         MPI_Comm getMpiComm();
 
         int getMpiLevelThreshold();
+        void setMpiLevelThreshold(int mpiLevelThreshold_);
 
         int getMpiMinGridPoints() const;
         void setMpiMinGridPoints(int mpiMinGridPoints_);
