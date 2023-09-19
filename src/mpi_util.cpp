@@ -167,13 +167,14 @@ namespace mgcl::mpi_util
         int mglobgh = c.getDim1gh();
         int nglobgh = c.getDim2gh();
         int oglobgh = c.getDim3gh();
+        int width = c.getWidth();
 
         // Create subarray type for the send buffer
         MPI_Datatype subarraySend;
         if (rank != 0)
         {
-            int sizes[6] = {mlocgh, nlocgh, olocgh, 3, 3, 3};
-            int subsizes[6] = {mloc, nloc, oloc, 3, 3, 3};
+            int sizes[6] = {mlocgh, nlocgh, olocgh, width, width, width};
+            int subsizes[6] = {mloc, nloc, oloc, width, width, width};
             int starts[6] = {locsizes[3], locsizes[4], locsizes[5], 0, 0, 0};
             err = MPI_Type_create_subarray(6, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &subarraySend);
             mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
@@ -186,8 +187,8 @@ namespace mgcl::mpi_util
         MPI_Datatype subarrayRecvResized;
         if (rank == 0)
         {
-            int sizes[6] = {mglobgh, nglobgh, oglobgh, 3, 3, 3};
-            int subsizes[6] = {mloc, nloc, oloc, 3, 3, 3};
+            int sizes[6] = {mglobgh, nglobgh, oglobgh, width, width, width};
+            int subsizes[6] = {mloc, nloc, oloc, width, width, width};
             int starts[6] = {c.getGhostsDim1(), c.getGhostsDim2(), c.getGhostsDim3(), 0, 0, 0};
             // int starts[3] = {0, 0, 0};
             err = MPI_Type_create_subarray(6, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &subarrayRecv);
@@ -206,6 +207,7 @@ namespace mgcl::mpi_util
 
         int counts[mpi_size];
         int displ[mpi_size];
+        int width3 = width * width * width; // size of one stencil
         if (rank == 0)
             for (int i = 0; i < mpi_size; i++)
             {
@@ -214,8 +216,9 @@ namespace mgcl::mpi_util
                 mgclCheckMpiError(comm, err, "MPI_Cart_coords");
 
                 counts[i] = 1;
-                // stencil size for 3x3x3 is 27
-                displ[i] = coords[0] * mloc * nglobgh * oglobgh * 27 + coords[1] * nloc * oglobgh * 27 + coords[2] * oloc * 27;
+                displ[i] = coords[0] * mloc * nglobgh * oglobgh * width3 +
+                           coords[1] * nloc * oglobgh * width3 +
+                           coords[2] * oloc * width3;
             }
 
         if (rank == 0)
