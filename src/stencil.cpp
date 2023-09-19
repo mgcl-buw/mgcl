@@ -576,9 +576,11 @@ namespace mgcl
 
     VaryingStencilGpu::~VaryingStencilGpu()
     {
-        int err = clReleaseMemObject(buf);
-        mgclCheckError(err, "clReleaseMemObject");
-        buf = nullptr;
+        if (buf)
+        {
+            int err = clReleaseMemObject(buf);
+            mgclCheckError(err, "clReleaseMemObject");
+        }
     }
 
     /**
@@ -881,9 +883,11 @@ namespace mgcl
 
     FixedStencilGpu::~FixedStencilGpu()
     {
-        int err = clReleaseMemObject(buf);
-        mgclCheckError(err, "clReleaseMemObject");
-        buf = nullptr;
+        if (buf)
+        {
+            int err = clReleaseMemObject(buf);
+            mgclCheckError(err, "clReleaseMemObject");
+        }
     }
 
     void FixedStencilGpu::fill(FixedStencil& f, cl_command_queue queue, bool blocking)
