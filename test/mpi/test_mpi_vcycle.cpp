@@ -487,9 +487,9 @@ TEST_CASE("MPI_vcycle_threshold_gt_0_Laplace7p")
     using std::min;
 
     // global grid sizes
-    int m = 8;
-    int n = 8;
-    int o = 8;
+    int m = 16;
+    int n = 16;
+    int o = 16;
     int periodic = 1;
     int gh = 1;
 
@@ -555,6 +555,13 @@ TEST_CASE("MPI_vcycle_threshold_gt_0_Laplace7p")
     REQUIRE(ol > 0);
     REQUIRE(ol <= o);
 
+    int threshold = GENERATE(1, 2, 3);
+    CAPTURE(threshold);
+
+    if (mpi_rank == 0)
+        std::cerr << std::endl
+                  << "Testing with threshold: " << threshold << std::endl;
+
     // Set up 4th order periodic problem
     int ghin = 0; // TODO check with ghin > 0
     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
@@ -572,7 +579,7 @@ TEST_CASE("MPI_vcycle_threshold_gt_0_Laplace7p")
     // p.setMaxiterVcycles(5);
     p.setGhosts(gh);
     p.setGhostsIn(ghin);
-    p.setMpiLevelThreshold(1);
+    p.setMpiLevelThreshold(threshold);
     p.setMpiComm(mpi_comm);
 
     p.solveSeq();
@@ -606,14 +613,14 @@ TEST_CASE("MPI_vcycle_threshold_gt_0_Laplace7p")
             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
         // Running this with 1 proc yields
-        // ||e||_2 = 4.62293179000930129e-03
-        // e_max = 9.00816189282011015e-03
+        // ||e||_2 = 3.45809323000492415e-03
+        // e_max = 3.56864935637552037e-03
         // which should be equal to the global result when run with multiple processors.
 
         REQUIRE(errNorm < 1e-2);
         REQUIRE(errMax < 1e-2);
-        REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(4.62293179000930129e-03));
-        REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(9.00816189282011015e-03));
+        REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(3.45809323000492415e-03));
+        REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(3.56864935637552037e-03));
     }
 }
 
@@ -625,9 +632,9 @@ TEST_CASE("MPI_vcycle_GPU_threshold_gt_0_Laplace7p")
     using std::min;
 
     // global grid sizes
-    int m = 8;
-    int n = 8;
-    int o = 8;
+    int m = 16;
+    int n = 16;
+    int o = 16;
     int periodic = 1;
     int gh = 1;
 
@@ -693,6 +700,13 @@ TEST_CASE("MPI_vcycle_GPU_threshold_gt_0_Laplace7p")
     REQUIRE(ol > 0);
     REQUIRE(ol <= o);
 
+    int threshold = GENERATE(1, 2, 3);
+    CAPTURE(threshold);
+
+    if (mpi_rank == 0)
+        std::cerr << std::endl
+                  << "Testing with threshold: " << threshold << std::endl;
+
     // Set up 4th order periodic problem
     int ghin = 0; // TODO check with ghin > 0
     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
@@ -712,7 +726,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_gt_0_Laplace7p")
     p.setReadResults(true);
     p.setGhosts(gh);
     p.setGhostsIn(ghin);
-    p.setMpiLevelThreshold(1);
+    p.setMpiLevelThreshold(threshold);
     p.setMpiComm(mpi_comm);
 
     p.solve();
@@ -746,14 +760,14 @@ TEST_CASE("MPI_vcycle_GPU_threshold_gt_0_Laplace7p")
             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
         // Running this with 1 proc yields
-        // ||e||_2 = 4.62293179000930129e-03
-        // e_max = 9.00816189282011015e-03
+        // ||e||_2 = 3.45809323000492415e-03
+        // e_max = 3.56864935637552037e-03
         // which should be equal to the global result when run with multiple processors.
 
         REQUIRE(errNorm < 1e-2);
         REQUIRE(errMax < 1e-2);
-        REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(4.62293179000930129e-03));
-        REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(9.00816189282011015e-03));
+        REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(3.45809323000492415e-03));
+        REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(3.56864935637552037e-03));
     }
 }
 
