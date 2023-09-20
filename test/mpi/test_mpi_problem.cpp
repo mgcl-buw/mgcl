@@ -173,7 +173,8 @@ TEST_CASE("MPI Problem::calculateAndSetMpiLevelThreshold valid (1 process)", "[m
 
 // calculateAndSetMpiLevelThreshold should be throw if mpiLevelThreshold is set too high by user.
 // This test is done on one process only.
-TEST_CASE("MPI Problem::calculateAndSetMpiLevelThreshold throwing (1 process)", "[mpi1]")
+// run with e.g. tests_mpi MPI_Problem::calculateAndSetMpiLevelThreshold_throwing_1proc
+TEST_CASE("MPI_Problem::calculateAndSetMpiLevelThreshold_throwing_1proc")
 {
     int N = 8;
     int periodic = 1;
@@ -206,14 +207,12 @@ TEST_CASE("MPI Problem::calculateAndSetMpiLevelThreshold throwing (1 process)", 
     {
         mgcl::Problem p(N, N, N);
         REQUIRE_NOTHROW(p.setMpiComm(mpi_comm));
-        p.setMpiMinGridPoints(1);
-        REQUIRE_THROWS(p.calculateAndSetMpiLevelThreshold());
+        REQUIRE_THROWS(p.setMpiMinGridPoints(1)); // calls calculateAndSetMpiLevelThreshold
     }
 
     {
         mgcl::Problem p(8, 8, 8, 16, 16, 16);
-        p.setMpiMinGridPoints(32);
-        REQUIRE_THROWS(p.calculateAndSetMpiLevelThreshold());
+        REQUIRE_THROWS(p.setMpiMinGridPoints(32)); // calls calculateAndSetMpiLevelThreshold
     }
 }
 
