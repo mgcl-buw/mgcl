@@ -1945,11 +1945,21 @@ __kernel void mult_stencils_fix_var(
 /**
  * Copies values from in which is of width 7 on a grid 2m x 2n x 2o to stencil out of width
  * 3 on grid m x n x o.
+ * a_2h might have bigger sizes than the grid it represents, thus mout, nout and oout are needed.
+ * Parameters:
+ * in: 7x7x7 stencil on fine grid 2m x 2n x 2o
+ * out: 3x3x3 stencil on coarse grid m x n x o
+ * m, n, o: Extends of the coarse grid.
+ * ghin: Ghosts of the stencil on the fine grid.
+ * ghout: Ghosts of the stencil on the coarse grid.
+ * mout, nout, oout: Extends of the stencil on the coarse grid.
  */
 __kernel void cut_stencils_w7_to_w3(
     __global double* restrict in,
     __global double* restrict out,
-    int m, int n, int o, int ghin, int ghout)
+    const int m, const int n, const int o,
+    const int ghin, const int ghout,
+    const int mout, const int nout, const int oout)
 {
     int i = get_global_id(0) + ghout;
     int j = get_global_id(1) + ghout;
@@ -1963,7 +1973,7 @@ __kernel void cut_stencils_w7_to_w3(
     int cell_h = i2 * (2 * n + 2 * ghin) * (2 * o + 2 * ghin) * 343 + j2 * (2 * o + 2 * ghin) * 343 + k2 * 343;
 
     // 3^3 = 27
-    int cell_h2 = i * (n + 2 * ghout) * (o + 2 * ghout) * 27 + j * (o + 2 * ghout) * 27 + k * 27;
+    int cell_h2 = i * (nout + 2 * ghout) * (oout + 2 * ghout) * 27 + j * (oout + 2 * ghout) * 27 + k * 27;
 
     if (i < m + 2 && j < n + 2 && k < o + 2)
     {

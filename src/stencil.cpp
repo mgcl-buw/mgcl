@@ -805,6 +805,81 @@ namespace mgcl
         return c;
     }
 
+    /**
+     * @brief Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
+     * Ghosts of returning stencil is hard-coded to be 2!
+     * @param program OpenCL program
+     * @param queue OpenCL command queue
+     * @param context OpenCL context
+     * @param resm Size of resulting stencil's grid. Per default halve of this's size.
+     * @param resn Size of resulting stencil's grid. Per default halve of this's size.
+     * @param reso Size of resulting stencil's grid. Per default halve of this's size.
+     * @return VaryingStencilGpu
+     */
+
+    VaryingStencilGpu VaryingStencilGpu::cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context,
+                                                       int resm, int resn, int reso)
+    {
+        int err;
+
+        if (width != 7)
+            throw "Width is not 7!";
+
+        int m2 = m >> 1;
+        int n2 = n >> 1;
+        int o2 = o >> 1;
+        resm = resm == 0 ? m2 : resm;
+        resn = resn == 0 ? n2 : resn;
+        reso = reso == 0 ? o2 : reso;
+
+        if (m2 == 0 || n2 == 0 || o2 == 0)
+            throw "Cannot cut down stencil of grid size 1!";
+
+        VaryingStencilGpu a_2h(resm, resn, reso, 3, 2, context, queue);
+
+        // Create the compute kernel from the program
+        cl_kernel kernel = clCreateKernel(program, "cut_stencils_w7_to_w3", &err);
+        mgclCheckError(err, "clCreateKernel");
+
+        auto outbuf = a_2h.getBuf();
+        int ghout = a_2h.getGh();
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &outbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m2);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n2);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o2);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghout);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &resm);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &resn);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &reso);
+        mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
+        size_t global[3] = {static_cast<size_t>(m2), static_cast<size_t>(n2), static_cast<size_t>(o2)};
+        const size_t local[3] = {static_cast<size_t>(m2 > 4 ? 4 : m2), static_cast<size_t>(n2 > 4 ? 4 : n2),
+                                 static_cast<size_t>(o2 > 4 ? 4 : o2)};
+
+        for (int i = 0; i < 3; i++)
+            if (global[i] % local[i] != 0)
+            {
+                // printf("padding global size %d from %ld to ", i, global[i]);
+                global[i] += local[i] - (global[i] % local[i]);
+                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
+            }
+
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, NULL);
+        mgclCheckError(err, "Enqueueing stencil cut kernel");
+
+        clReleaseKernel(kernel);
+
+        return a_2h;
+    }
+
     int VaryingStencilGpu::getO() const
     {
         return o;
@@ -1000,75 +1075,6 @@ namespace mgcl
 
         clReleaseKernel(kernel);
         return c;
-    }
-
-    /**
-     * @brief Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
-     * Ghosts of returning stencil is hard-coded to be 2!
-     * @param program OpenCL program
-     * @param queue OpenCL command queue
-     * @param context OpenCL context
-     * @param resm Size of resulting stencil's grid. Per default halve of this's size.
-     * @param resn Size of resulting stencil's grid. Per default halve of this's size.
-     * @param reso Size of resulting stencil's grid. Per default halve of this's size.
-     * @return VaryingStencilGpu
-     */
-
-    VaryingStencilGpu VaryingStencilGpu::cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context,
-                                                       int resm, int resn, int reso)
-    {
-        int err;
-
-        if (width != 7)
-            throw "Width is not 7!";
-
-        int m2 = resm == 0 ? (m >> 1) : resm;
-        int n2 = resn == 0 ? (n >> 1) : resn;
-        int o2 = reso == 0 ? (o >> 1) : reso;
-
-        if (m2 == 0 || n2 == 0 || o2 == 0)
-            throw "Cannot cut down stencil of grid size 1!";
-
-        VaryingStencilGpu a_2h(m2, n2, o2, 3, 2, context, queue);
-
-        // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(program, "cut_stencils_w7_to_w3", &err);
-        mgclCheckError(err, "clCreateKernel");
-
-        auto outbuf = a_2h.getBuf();
-        int ghout = a_2h.getGh();
-
-        // assign kernel arguments
-        int pos = 0;
-        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buf);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &outbuf);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m2);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n2);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o2);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghout);
-        mgclCheckError(err, "Setting kernel arguments");
-
-        // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
-        size_t global[3] = {static_cast<size_t>(m2), static_cast<size_t>(n2), static_cast<size_t>(o2)};
-        const size_t local[3] = {static_cast<size_t>(m2 > 4 ? 4 : m2), static_cast<size_t>(n2 > 4 ? 4 : n2),
-                                 static_cast<size_t>(o2 > 4 ? 4 : o2)};
-
-        for (int i = 0; i < 3; i++)
-            if (global[i] % local[i] != 0)
-            {
-                // printf("padding global size %d from %ld to ", i, global[i]);
-                global[i] += local[i] - (global[i] % local[i]);
-                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
-            }
-
-        // enqueue kernel
-        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, NULL);
-        mgclCheckError(err, "Enqueueing stencil cut kernel");
-
-        clReleaseKernel(kernel);
-
-        return a_2h;
     }
 
     int FixedStencilGpu::getWidth() const
