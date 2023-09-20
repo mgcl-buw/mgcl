@@ -2,6 +2,7 @@
 #include "cuboid.hpp" // for Cuboid
 #include "level.hpp"  // for Level
 #include "mpi_level_data.hpp"
+#include "mpi_stencil.hpp"
 #include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "util.hpp"
@@ -359,6 +360,7 @@ namespace mgcl
                     {
                         mpi_util::gather(getMpiComm(), *lvFine.getStencilValues());
                         gathered = true;
+                        updateGhostsStencilMpi(*lvFine.getStencilValues(), lvFine.getMpiDataPtr(), isPeriodic(), true);
                     }
 
                     // Only calculate galerkin if
@@ -381,6 +383,8 @@ namespace mgcl
                     {
                         mpi_util::gather(getMpiComm(), getCommands(), *lvFine.getStencilValuesGpu());
                         gathered = true;
+                        updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvFine.getStencilValuesGpu(),
+                                                  lvFine.getMpiDataPtr(), isPeriodic(), true);
                     }
 
                     // Only calculate galerkin if
