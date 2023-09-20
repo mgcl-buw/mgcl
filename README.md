@@ -114,6 +114,7 @@ There is a threshold that prevents coarse levels to be calculated using MPI. It 
 - [catch2](https://github.com/catchorg/Catch2) for Unit Tests
 - [nanobench](https://github.com/martinus/nanobench) for benchmarks
 - [Backward-cpp](https://github.com/bombela/backward-cpp) for prettier Stacktraces (only used for Tests)
+- [Cpptrace](https://github.com/jeremy-rifkin/cpptrace) for easier Stacktrace printing
 
 ## Build
 

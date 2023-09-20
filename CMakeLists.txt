@@ -37,6 +37,7 @@ include(cmake/CPM.cmake)
 set(MGCL_catch2_version "v3.4.0")
 set(MGCL_nanobench_version "v4.3.11")
 set(MGCL_backwardcpp_version "v1.6")
+set(MGCL_cpptrace_version "v0.2.0-alpha")
 
 add_subdirectory(src)
 

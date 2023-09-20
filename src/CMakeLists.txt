@@ -1,6 +1,22 @@
 find_package(OpenCL REQUIRED)
 find_package(MPI REQUIRED)
 
+# ============================================
+
+# Add cpptrace for debug builds for easier stacktrace printing.
+cpmaddpackage("gh:jeremy-rifkin/cpptrace#${MGCL_cpptrace_version}")
+
+# On windows copy cpptrace.dll to the same directory as the executable for mgcl
+if(WIN32)
+add_custom_command(
+  TARGET mgcl POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+  $<TARGET_FILE:cpptrace> $<TARGET_FILE_DIR:mgcl>
+)
+endif()
+
+# ============================================
+
 set(SOURCES_LIB
     cuboid.hpp
     cuboid.cpp
@@ -35,7 +51,7 @@ set(SOURCES_LIB
     mpi_stencil.cpp)
 
 add_library(mgcl ${SOURCES_LIB})
-target_link_libraries(mgcl PRIVATE OpenCL::OpenCL MPI::MPI_CXX)
+target_link_libraries(mgcl PRIVATE OpenCL::OpenCL MPI::MPI_CXX cpptrace)
 
 # Use additional flags for debugging purposes if build type is Debug.
 if(CMAKE_BUILD_TYPE MATCHES Debug)

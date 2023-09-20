@@ -11,6 +11,8 @@
 #include <cstdlib> // for malloc, exit, free, EXIT_FAILURE
 #include <iostream>
 
+#include <cpptrace/cpptrace.hpp>
+
 namespace mgcl
 {
     OpenCLHelper::~OpenCLHelper()
@@ -591,6 +593,7 @@ namespace mgcl
             fprintf(stderr, "Error during operation '%s', ", operation);
             fprintf(stderr, "in '%s' on line %d\n", filename, line);
             fprintf(stderr, "Error code was \"%s\" (%d)\n", mgcl_err_code(err), err);
+            cpptrace::generate_trace().print();
             exit(EXIT_FAILURE);
         }
     }
