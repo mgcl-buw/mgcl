@@ -12,7 +12,7 @@
 #include "mpi.h"
 
 // Checks that an exception is thrown if the communicator has no cartesian topology attached.
-TEST_CASE("MPI Problem::setMpiComm")
+TEST_CASE("MPI_Problem::setMpiComm")
 {
     int N = 8;
     int periodic = 1;
@@ -56,8 +56,8 @@ TEST_CASE("MPI Problem::setMpiComm")
 
 // Max level should be calculated using global size, not local size of grid.
 // For one process, m local equals m global.
-// Run with: mpiexec -n 1 tests_mpi [mpi1]
-TEST_CASE("MPI Problem::calculateAndSetMaxLevel (1 process)", "[mpi1]")
+// Run with: mpiexec -n 1 tests_mpi MPI_Problem::calculateAndSetMaxLevel_1proc
+TEST_CASE("MPI_Problem::calculateAndSetMaxLevel_1proc")
 {
     int N = 8;
     int periodic = 1;
@@ -83,8 +83,8 @@ TEST_CASE("MPI Problem::calculateAndSetMaxLevel (1 process)", "[mpi1]")
 
 // Max level should be calculated using global size, not local size of grid.
 // For 4 processes, m local = 1/4 * m global.
-// Run with: mpiexec -n 4 tests_mpi [mpi4]
-TEST_CASE("MPI Problem::calculateAndSetMaxLevel (4 processes)", "[mpi4]")
+// Run with: mpiexec -n 4 tests_mpi MPI_Problem::calculateAndSetMaxLevel_4procs
+TEST_CASE("MPI_Problem::calculateAndSetMaxLevel_4procs")
 {
     int N = 4;
     int Ng = N * 4;
@@ -108,7 +108,7 @@ TEST_CASE("MPI Problem::calculateAndSetMaxLevel (4 processes)", "[mpi4]")
 
 // mpiLevelThreshold should be calculated s.t. there are at least 8 grid points per process per direction.
 // This test is done on one process only.
-TEST_CASE("MPI Problem::calculateAndSetMpiLevelThreshold valid (1 process)", "[mpi1]")
+TEST_CASE("MPI_Problem::calculateAndSetMpiLevelThreshold_valid_1proc")
 {
     int periodic = 1;
 
@@ -218,8 +218,8 @@ TEST_CASE("MPI_Problem::calculateAndSetMpiLevelThreshold_throwing_1proc")
 
 // Input data shall be copied to level 0 on each processor, regardless of mpiLevelThreshold.
 // Can be run with any number of processes, e.g.
-// mpiexec -n 8 tests_mpi MPI-Problem::init
-TEST_CASE("MPI-Problem::init")
+// mpiexec -n 8 tests_mpi MPI_Problem::init
+TEST_CASE("MPI_Problem::init")
 {
     using std::min;
 
@@ -276,7 +276,7 @@ TEST_CASE("MPI-Problem::init")
 
     mgcl::Problem p(ml, nl, ol, vl, fl, m, n, o);
     p.setMpiComm(mpi_comm);
-    p.setMpiMinGridPoints(m); // Ensures mpiLevelThreshold to be 0.
+    p.setMpiLevelThreshold(0);
     p.setGhostsIn(1);
     p.init();
 

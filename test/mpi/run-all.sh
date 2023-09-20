@@ -98,11 +98,13 @@ if [ "$TEST_PROBLEM" = true ] || [ "$TEST_ALL" = true ] ; then
     echo "Run Tests from test_mpi_problem.cpp ..."
     echo "#######################"
 
-    run_test -n 1 "$exe" "MPI Problem::setMpiComm"
-    run_test -n 1 "$exe" "MPI Problem::calculateAndSetMaxLevel (1 process)"
-    run_test --oversubscribe -n 4 "$exe" "MPI Problem::calculateAndSetMaxLevel (4 processes)"
-    run_test -n 1 "$exe" "MPI Problem::calculateAndSetMpiLevelThreshold valid (1 process)"
+    run_test -n 1 "$exe" "MPI_Problem::setMpiComm"
+    run_test -n 1 "$exe" "MPI_Problem::calculateAndSetMaxLevel_1proc"
+    run_test --oversubscribe -n 4 "$exe" "MPI_Problem::calculateAndSetMaxLevel_4procs"
+    run_test -n 1 "$exe" "MPI_Problem::calculateAndSetMpiLevelThreshold_valid_1proc"
     run_test -n 1 "$exe" "MPI_Problem::calculateAndSetMpiLevelThreshold_throwing_1proc"
+    run_test -n 1 "$exe" "MPI_Problem::init"
+    run_test -n 4 "$exe" "MPI_Problem::init"
 fi
 
 if [ "$TEST_LEVEL" = true ] || [ "$TEST_ALL" = true ] ; then
