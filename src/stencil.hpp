@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <ostream>
 #include <string>
 
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -124,6 +125,8 @@ namespace mgcl
         int getWidth() const;
         int getGh() const;
         cl_mem getBuf() const;
+
+        friend std::ostream& operator<<(std::ostream& os, const VaryingStencilGpu& v);
     };
 
     /**

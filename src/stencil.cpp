@@ -835,6 +835,16 @@ namespace mgcl
         return width;
     }
 
+    std::ostream& operator<<(std::ostream& os, const VaryingStencilGpu& v)
+    {
+        os << "VaryingStencilGpu: " << std::endl
+           << " m,n,o: " << v.m << "," << v.n << "," << v.o << std::endl
+           << " width: " << v.width << std::endl
+           << " gh: " << v.gh << std::endl
+           << " buf: " << v.buf << std::endl;
+        return os;
+    }
+
     /**
      * *********************************************
      * FixedStencilGpu below
