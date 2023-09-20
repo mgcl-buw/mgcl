@@ -240,6 +240,7 @@ namespace mgcl
     VaryingStencil MultigridEngine::galerkin(VaryingStencil& a_h,
                                              MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
                                              bool periodic, bool forceLocalFine, bool forceLocalCoarse,
+                                             bool skipUpdateGhostsCoarse,
                                              int resm, int resn, int reso)
     {
         // TODO respect problem::ghosts maybe
@@ -283,7 +284,8 @@ namespace mgcl
             }
         // clang-format on
 
-        updateGhostsStencilMpi(a_2h, mpiDataCoarse, periodic, forceLocalCoarse);
+        if (!skipUpdateGhostsCoarse)
+            updateGhostsStencilMpi(a_2h, mpiDataCoarse, periodic, forceLocalCoarse);
 
         return a_2h;
     }
@@ -300,6 +302,7 @@ namespace mgcl
                                                 cl_program program, cl_command_queue queue, cl_context context,
                                                 MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
                                                 bool periodic, bool forceLocalFine, bool forceLocalCoarse,
+                                                bool skipUpdateGhostsCoarse,
                                                 int resm, int resn, int reso)
     {
         // Make sure a_h has two ghosts at each border for periodic bc.
@@ -318,7 +321,9 @@ namespace mgcl
 
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
         auto a_2h = sas.cutFromW7ToW3(program, queue, context, resm, resn, reso);
-        updateGhostsStencilOclMpi(queue, program, a_2h, mpiDataCoarse, periodic, forceLocalCoarse);
+
+        if (!skipUpdateGhostsCoarse)
+            updateGhostsStencilOclMpi(queue, program, a_2h, mpiDataCoarse, periodic, forceLocalCoarse);
 
         return a_2h;
     }

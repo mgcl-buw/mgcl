@@ -20,7 +20,8 @@ namespace mgcl
      * mpiData parameter is optional (i.e. nullable) and is only used when MPI is used. If mgcl is called with
      *   only one MPI process, updateGhostsSeqLocally will be used instead.
      * forceLocal: If true, ghosts will be updated locally (maybe giving wrong results, if m_local < m_global).
-     *   This is used e.g. for levels above the mpiLevelThreshold. */
+     *   This is used e.g. for levels above the mpiLevelThreshold.
+     * The VaryingStencil must have the same sizes for each process. However this is not checked here. */
     void updateGhostsStencilMpi(VaryingStencil& s, MPILevelData* mpiData, bool periodic, bool forceLocal)
     {
         // TODO adjust for ghosts > 1

@@ -346,18 +346,21 @@ namespace mgcl
             {
                 auto& lvFine = *levels[level - 1];
                 auto& lvCoarse = *levels[level];
+                bool isJustAboveThreshold = level == getMpiLevelThreshold() - 1;
+                bool updateGhostsCoarse = !useMpi() || mpiSize() == 1 || !isJustAboveThreshold;
 
                 // stencilValues of this level must be of global size on rank 0, if this level is just above
                 // the threshold, since it is getting gathered into.
-                int svm = (mpiRank() == 0 && level == getMpiLevelThreshold() - 1 ? (mGlobal >> level) : lvCoarse.getM());
-                int svn = (mpiRank() == 0 && level == getMpiLevelThreshold() - 1 ? (nGlobal >> level) : lvCoarse.getN());
-                int svo = (mpiRank() == 0 && level == getMpiLevelThreshold() - 1 ? (oGlobal >> level) : lvCoarse.getO());
+                int svm = (mpiRank() == 0 && isJustAboveThreshold ? (mGlobal >> level) : lvCoarse.getM());
+                int svn = (mpiRank() == 0 && isJustAboveThreshold ? (nGlobal >> level) : lvCoarse.getN());
+                int svo = (mpiRank() == 0 && isJustAboveThreshold ? (oGlobal >> level) : lvCoarse.getO());
 
                 if (!use_opencl)
                 {
                     // Gather partial stencil values of the previous level
                     if (useMpi() && getMpiLevelThreshold() == lvCoarse.getNum())
                     {
+
                         mpi_util::gather(getMpiComm(), *lvFine.getStencilValues());
                         gathered = true;
                         updateGhostsStencilMpi(*lvFine.getStencilValues(), lvFine.getMpiDataPtr(), isPeriodic(), true);
@@ -373,7 +376,7 @@ namespace mgcl
                             MultigridEngine::galerkin(*lvFine.getStencilValues(),
                                                       lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
                                                       isPeriodic(), gathered,
-                                                      lvCoarse.isCalculatedLocally(),
+                                                      lvCoarse.isCalculatedLocally(), !updateGhostsCoarse,
                                                       svm, svn, svo));
                 }
                 else
@@ -399,8 +402,7 @@ namespace mgcl
                                 getProgram(), getCommands(), getContext(),
                                 lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
                                 isPeriodic(), gathered,
-                                lvCoarse.isCalculatedLocally(),
-                                svm, svn, svo));
+                                lvCoarse.isCalculatedLocally(), !updateGhostsCoarse, svm, svn, svo));
                 }
             }
         }

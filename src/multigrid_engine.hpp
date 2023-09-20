@@ -67,11 +67,13 @@ namespace mgcl
         static VaryingStencil galerkin(VaryingStencil& a_h,
                                        MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
                                        bool periodic, bool forceLocalFine, bool forceLocalCoarse,
+                                       bool skipUpdateGhostsCoarse,
                                        int resm = 0, int resn = 0, int reso = 0);
         static VaryingStencilGpu galerkin(VaryingStencilGpu& a_h,
                                           cl_program program, cl_command_queue queue, cl_context context,
                                           MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
                                           bool periodic, bool forceLocalFine, bool forceLocalCoarse,
+                                          bool skipUpdateGhostsCoarse,
                                           int resm = 0, int resn = 0, int reso = 0);
 
         static void print7point(Cuboid& v, int i, int j, int k);
