@@ -521,9 +521,10 @@ TEST_CASE("jacobi seq gh > 1 multiple iters")
     int iters = GENERATE(1, 2, 5);
     int stepsPerIter = GENERATE(1, 2, 3);
 
-    int m = 16;
-    int n = 16;
-    int o = 16;
+    int N = GENERATE(1, 16);
+    int m = N;
+    int n = N;
+    int o = N;
     int ghm_v = GENERATE(3, 4);
     int ghn_v = GENERATE(3, 4);
     int gho_v = stepsPerIter;
@@ -538,7 +539,7 @@ TEST_CASE("jacobi seq gh > 1 multiple iters")
     double omega = 0.8;
 
     double h = 1.0 / ((double)m);
-    mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
+
     double stencilFactor = 1.0 / (30.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
 
@@ -560,6 +561,8 @@ TEST_CASE("jacobi seq gh > 1 multiple iters")
 
     SECTION("periodic 27p-Laplace")
     {
+        mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
+
         mgcl::MultigridEngine::updateGhostsSeq(v_in, nullptr, true, true);
         mgcl::MultigridEngine::updateGhostsSeq(v_in_gh, nullptr, true, true);
         mgcl::MultigridEngine::updateGhostsSeq(f_in_gh, nullptr, true, true);
@@ -577,6 +580,8 @@ TEST_CASE("jacobi seq gh > 1 multiple iters")
 
     SECTION("Dirichlet 27p-Laplace")
     {
+        mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
+
         // First calculate exptected result with regular ghost updates between iterations
         double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, h * h, iters, resnorm, stencilType, stencilFactor, nullptr, true, false, 1);
 
@@ -588,7 +593,33 @@ TEST_CASE("jacobi seq gh > 1 multiple iters")
         REQUIRE(r_in.isEqual(r_in_gh));
     }
 
-    // TODO test varying stencil
+    SECTION("periodic varying stencil")
+    {
+        mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
+        mgcl::VaryingStencil stencilValuesExp(m, n, o, 3, v_in.getGhostsM(), v_in.getGhostsN(), v_in.getGhostsO());
+        mgcl::VaryingStencil stencilValuesAct(m, n, o, 3, v_in_gh.getGhostsM(), v_in_gh.getGhostsN(), v_in_gh.getGhostsO());
+        stencilValuesExp.fillRandom(-10, 10);
+        stencilValuesAct.copyRealFrom(stencilValuesExp);
+        stencilValuesExp.updateGhosts();
+        stencilValuesAct.updateGhosts();
+
+        mgcl::MultigridEngine::updateGhostsSeq(v_in, nullptr, true, true);
+        mgcl::MultigridEngine::updateGhostsSeq(v_in_gh, nullptr, true, true);
+        mgcl::MultigridEngine::updateGhostsSeq(f_in_gh, nullptr, true, true);
+
+        // First calculate exptected result with regular ghost updates between iterations
+        double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, h * h, iters, resnorm,
+                                                          stencilType, stencilFactor, &stencilValuesExp, true, true, 1);
+
+        // Now calculate with gh > 1
+        double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, h * h, iters, resnorm,
+                                                          stencilType, stencilFactor, &stencilValuesAct,
+                                                          true, true, stepsPerIter);
+
+        REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
+        REQUIRE(v_in.isEqual(v_in_gh));
+        REQUIRE(r_in.isEqual(r_in_gh));
+    }
 }
 
 // tests if jacobi on gpu works if v_gh > 1, i.e. multiple iterations can be done without ghost update in between
@@ -600,9 +631,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
     // int iters = 1;
     // int stepsPerIter = 1;
 
-    int m = 16;
-    int n = 16;
-    int o = 16;
+    int N = GENERATE(1, 16);
+    int m = N;
+    int n = N;
+    int o = N;
 
     // gpu implementation currently only supports one ghost cell amount for all fields and directions
     int gh = std::max(4, stepsPerIter);
