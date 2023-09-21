@@ -275,6 +275,9 @@ namespace mgcl
      */
     void Problem::calculateAndSetMpiLevelThreshold()
     {
+        if (!useMpi())
+            return;
+
         if (mpiMinGridPoints <= 1)
             throw "mpiMinGridPoints must be at least 2!";
 
