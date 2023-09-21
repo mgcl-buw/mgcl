@@ -1,5 +1,6 @@
 #include "level.hpp"
 #include "cuboid.hpp" // for Cuboid
+#include "mpi_stencil.hpp"
 #include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "problem.hpp"
@@ -73,9 +74,12 @@ namespace mgcl
         // Always allocate data on level 0 so input data is copied and not left uninitialized.
         if (num == 0)
         {
-            // move stencilsValues pointer from Problem to first Level
+            // copy stencilsValues pointer from Problem to first Level and update ghosts
             if (stencilType == MGCL_VARYING)
+            {
                 stencilValues = problem->stencilValues;
+                updateGhostsStencilMpi(*stencilValues, mpiData.get(), problem->isPeriodic(), false);
+            }
 
             // create ghosted arrays for v and f on host if device buffer should not be reused
             if (!problem->reuse_opencl_buffers && !problem->copy_buffer_data)
