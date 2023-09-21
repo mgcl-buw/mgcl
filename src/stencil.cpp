@@ -843,6 +843,8 @@ namespace mgcl
         mgclCheckError(err, "clCreateKernel");
 
         auto outbuf = a_2h.getBuf();
+        int nghout = resn + 2 * ghout;
+        int oghout = reso + 2 * ghout;
 
         // assign kernel arguments
         int pos = 0;
@@ -853,9 +855,8 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o2);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghout);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &resm);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &resn);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &reso);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &nghout);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &oghout);
         mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes

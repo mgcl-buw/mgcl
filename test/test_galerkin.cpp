@@ -330,29 +330,54 @@ TEST_CASE("galerkin_different_jacobi_iters_per_kernel")
     sv2->copyRealFrom(*sv1);
     sv3->copyRealFrom(*sv1);
 
-    p1.init();
-    p2.init();
-    p3.init();
-
-    p1.getLevelAt(1).getStencilValues()->dumpToFile("sv1.txt", true);
-    p2.getLevelAt(1).getStencilValues()->dumpToFile("sv2.txt", true);
-    p3.getLevelAt(1).getStencilValues()->dumpToFile("sv3.txt", true);
-
-    // check stencil values for each level
-    for (int i = 0; i < p1.getMaxlevel(); i++)
+    SECTION("Sequential")
     {
-        CAPTURE(i);
-        REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim1() == 2);
-        REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim2() == 2);
-        REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim3() == 2);
-        REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim1() == 2);
-        REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim2() == 2);
-        REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim3() == 2);
-        REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim1() == 3);
-        REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim2() == 3);
-        REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim3() == 3);
+        p1.init();
+        p2.init();
+        p3.init();
 
-        REQUIRE(p1.getLevelAt(i).getStencilValues()->isEqual(*p2.getLevelAt(i).getStencilValues()));
-        REQUIRE(p1.getLevelAt(i).getStencilValues()->isEqual(*p3.getLevelAt(i).getStencilValues()));
+        // check stencil values for each level
+        for (int i = 0; i < p1.getMaxlevel(); i++)
+        {
+            CAPTURE(i);
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim1() == 2);
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim2() == 2);
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim3() == 2);
+            REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim1() == 2);
+            REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim2() == 2);
+            REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim3() == 2);
+            REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim1() == 3);
+            REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim2() == 3);
+            REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim3() == 3);
+
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->isEqual(*p2.getLevelAt(i).getStencilValues()));
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->isEqual(*p3.getLevelAt(i).getStencilValues()));
+        }
+    }
+
+    SECTION("OpenCL")
+    {
+        p1.setUseOpencl(true);
+        p2.setUseOpencl(true);
+        p3.setUseOpencl(true);
+        p1.init();
+        p2.init();
+        p3.init();
+
+        // check stencil values for each level
+        for (int i = 0; i < p1.getMaxlevel(); i++)
+        {
+            CAPTURE(i);
+            REQUIRE(p1.getLevelAt(i).getStencilValuesGpu()->getGh() == 2);
+            REQUIRE(p2.getLevelAt(i).getStencilValuesGpu()->getGh() == 2);
+            REQUIRE(p3.getLevelAt(i).getStencilValuesGpu()->getGh() == 3);
+
+            auto sv1 = p1.getLevelAt(i).getStencilValuesGpu()->read(p1.getCommands(), true);
+            auto sv2 = p2.getLevelAt(i).getStencilValuesGpu()->read(p2.getCommands(), true);
+            auto sv3 = p3.getLevelAt(i).getStencilValuesGpu()->read(p3.getCommands(), true);
+
+            REQUIRE(sv1.isEqual(sv2));
+            REQUIRE(sv1.isEqual(sv3));
+        }
     }
 }

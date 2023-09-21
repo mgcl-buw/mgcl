@@ -1949,17 +1949,17 @@ __kernel void mult_stencils_fix_var(
  * Parameters:
  * in: 7x7x7 stencil on fine grid 2m x 2n x 2o
  * out: 3x3x3 stencil on coarse grid m x n x o
- * m, n, o: Extends of the coarse grid.
+ * m, n, o: Extends of the coarse grid without ghosts.
  * ghin: Ghosts of the stencil on the fine grid.
  * ghout: Ghosts of the stencil on the coarse grid.
- * mout, nout, oout: Extends of the stencil on the coarse grid.
+ * nghout, oghout: Extends of the stencil on the coarse grid including ghosts.
  */
 __kernel void cut_stencils_w7_to_w3(
     __global double* restrict in,
     __global double* restrict out,
     const int m, const int n, const int o,
     const int ghin, const int ghout,
-    const int mout, const int nout, const int oout)
+    const int nghout, const int oghout)
 {
     int i = get_global_id(0) + ghout;
     int j = get_global_id(1) + ghout;
@@ -1973,9 +1973,9 @@ __kernel void cut_stencils_w7_to_w3(
     int cell_h = i2 * (2 * n + 2 * ghin) * (2 * o + 2 * ghin) * 343 + j2 * (2 * o + 2 * ghin) * 343 + k2 * 343;
 
     // 3^3 = 27
-    int cell_h2 = i * (nout + 2 * ghout) * (oout + 2 * ghout) * 27 + j * (oout + 2 * ghout) * 27 + k * 27;
+    int cell_h2 = i * nghout * oghout * 27 + j * oghout * 27 + k * 27;
 
-    if (i < m + 2 && j < n + 2 && k < o + 2)
+    if (i < m + ghout && j < n + ghout && k < o + ghout)
     {
         // clang-format off
         for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
