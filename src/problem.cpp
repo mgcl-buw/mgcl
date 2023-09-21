@@ -332,9 +332,10 @@ namespace mgcl
         }
 
         // initialize levels
-        // ghatered flag needed for enforcing local ghost update after stencil values were gathered. If threshold is 0,
+        // gathered flag needed for enforcing local ghost update after stencil values were gathered. If threshold is 0,
         // no gathering happens at all.
         bool gathered = getMpiLevelThreshold() == 0;
+        int gh_sv = stencilValues ? stencilValues->getGhostsDim1() : 0;
         for (int level = 0; level <= maxlevel; level++)
         {
             {
@@ -376,7 +377,7 @@ namespace mgcl
                     // Otherwise we would run into neighbour issues when trying to update ghosts.
                     if (!useMpi() || !lvCoarse.isCalculatedLocally() || mpiRank() == 0)
                         lvCoarse.stencilValues = std::make_shared<VaryingStencil>(
-                            MultigridEngine::galerkin(*lvFine.getStencilValues(),
+                            MultigridEngine::galerkin(*lvFine.getStencilValues(), gh_sv,
                                                       lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
                                                       isPeriodic(), gathered,
                                                       lvCoarse.isCalculatedLocally(), !updateGhostsCoarse,
@@ -401,7 +402,7 @@ namespace mgcl
                     if (!useMpi() || !lvCoarse.isCalculatedLocally() || mpiRank() == 0)
                         levels.back()->stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
                             MultigridEngine::galerkin(
-                                *lvFine.getStencilValuesGpu(),
+                                *lvFine.getStencilValuesGpu(), gh_sv,
                                 getProgram(), getCommands(), getContext(),
                                 lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
                                 isPeriodic(), gathered,

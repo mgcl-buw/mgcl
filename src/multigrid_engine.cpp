@@ -39,7 +39,7 @@ namespace mgcl
         MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
                                    problem.omega, level.h * level.h, problem.nu1, problem.residual_norm, problem.stencilType,
                                    level.stencilFactor, level.stencilValues.get(), false, problem.isPeriodic(),
-                                   level.isCalculatedLocally(), 1, level.getMpiDataPtr());
+                                   level.isCalculatedLocally(), problem.getJacobiIterationsPerKernel(), level.getMpiDataPtr());
 
         // update residual before restriction
         residualSeq(level.getF(), level.getV(), level.getR(), problem.residual_norm, problem.stencilType,
@@ -80,7 +80,8 @@ namespace mgcl
                                            levelAbove.h * levelAbove.h, problem.nu1 + problem.nu2, problem.residual_norm,
                                            problem.stencilType, levelAbove.stencilFactor,
                                            levelAbove.stencilValues.get(), false, problem.isPeriodic(),
-                                           levelAbove.isCalculatedLocally(), 1, levelAbove.getMpiDataPtr());
+                                           levelAbove.isCalculatedLocally(), problem.getJacobiIterationsPerKernel(),
+                                           levelAbove.getMpiDataPtr());
 
                 // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getV()[1][1][1], data[level.getNum()+1].getF()[1][1][1]);
             }
@@ -105,7 +106,8 @@ namespace mgcl
         res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
                                          problem.omega, level.h * level.h, problem.nu2, problem.residual_norm, problem.stencilType,
                                          level.stencilFactor, level.stencilValues.get(), !problem.ignoreTol,
-                                         problem.isPeriodic(), level.isCalculatedLocally(), 1, level.getMpiDataPtr());
+                                         problem.isPeriodic(), level.isCalculatedLocally(),
+                                         problem.getJacobiIterationsPerKernel(), level.getMpiDataPtr());
         // printf("res on level %d, downwards: %.17e\n", level.getNum(), res);
         return res;
     }
@@ -125,7 +127,7 @@ namespace mgcl
         }
 
         // relax nu1 times
-        jacobi(problem, level, problem.nu1, false);
+        jacobi(problem, level, problem.nu1, false, problem.getJacobiIterationsPerKernel());
 
         // update residual before restriction
         residual(problem, level, false);
@@ -158,7 +160,7 @@ namespace mgcl
                 vcycle(problem, levelAbove);
             else
             {
-                jacobi(problem, levelAbove, problem.nu1 + problem.nu2, false);
+                jacobi(problem, levelAbove, problem.nu1 + problem.nu2, false, problem.getJacobiIterationsPerKernel());
             }
         }
 
@@ -175,7 +177,7 @@ namespace mgcl
         correctError(problem, level.getDVIn(), level.getDR(), level.mgh, level.ngh, level.ogh);
 
         // relax nu2 times
-        res = jacobi(problem, level, problem.nu2, !problem.ignoreTol);
+        res = jacobi(problem, level, problem.nu2, !problem.ignoreTol, problem.getJacobiIterationsPerKernel());
 
         // calculate residual again for the norm TODO in jacobi
         // res = residual(problem, level, 1);
@@ -232,12 +234,13 @@ namespace mgcl
      * operators.
      *
      * @param a_h The stencil of the finer grid.
+     * @param gh_a2h Amount of ghost cells to apply to the output stencil a_2h. Must be max(2, jacobiItersPerKernel).
      * @param resm Size of resulting stencil's grid. Per default halve of a_h's size.
      * @param resn Size of resulting stencil's grid. Per default halve of a_h's size.
      * @param reso Size of resulting stencil's grid. Per default halve of a_h's size.
      * @returns VaryingStencil The stencil to be applied on the coarser grid
      */
-    VaryingStencil MultigridEngine::galerkin(VaryingStencil& a_h,
+    VaryingStencil MultigridEngine::galerkin(VaryingStencil& a_h, int gh_a2h,
                                              MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
                                              bool periodic, bool forceLocalFine, bool forceLocalCoarse,
                                              bool skipUpdateGhostsCoarse,
@@ -246,8 +249,11 @@ namespace mgcl
         // TODO respect problem::ghosts maybe
 
         // Make sure a_h has two ghosts at each border for periodic bc.
-        if (a_h.getGhostsDim1() != 2 || a_h.getGhostsDim2() != 2 || a_h.getGhostsDim3() != 2)
-            throw "galerkin: a_h needs to have 2 ghosts at each border for periodic bc!";
+        if (a_h.getGhostsDim1() < 2 || a_h.getGhostsDim2() < 2 || a_h.getGhostsDim3() < 2)
+            throw "galerkin: a_h needs to have at least 2 ghosts at each border for periodic bc!";
+
+        if (gh_a2h < 2)
+            throw "galerkin: gh_a2h must be at least 2.";
 
         // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
         // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
@@ -271,11 +277,11 @@ namespace mgcl
             reso = a_h.getDim3() >> 1;
 
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
-        VaryingStencil a_2h(resm, resn, reso, 3, 2, 2, 2);
+        VaryingStencil a_2h(resm, resn, reso, 3, gh_a2h, gh_a2h, gh_a2h);
         // clang-format off
-        for (int i = 2, i2 = 1; i < (a_h.getDim1() >> 1) + 2; i++, i2 += 2)
-        for (int j = 2, j2 = 1; j < (a_h.getDim2() >> 1) + 2; j++, j2 += 2)
-        for (int k = 2, k2 = 1; k < (a_h.getDim3() >> 1) + 2; k++, k2 += 2)
+        for (int i = gh_a2h, i2 = 1; i < (a_h.getDim1() >> 1) + 2; i++, i2 += 2)
+        for (int j = gh_a2h, j2 = 1; j < (a_h.getDim2() >> 1) + 2; j++, j2 += 2)
+        for (int k = gh_a2h, k2 = 1; k < (a_h.getDim3() >> 1) + 2; k++, k2 += 2)
             for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
             for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
             for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
@@ -298,7 +304,7 @@ namespace mgcl
      * @param a_h The stencil of the finer grid.
      * @returns VaryingStencilGpu The stencil to be applied on the coarser grid
      */
-    VaryingStencilGpu MultigridEngine::galerkin(VaryingStencilGpu& a_h,
+    VaryingStencilGpu MultigridEngine::galerkin(VaryingStencilGpu& a_h, int gh_a2h,
                                                 cl_program program, cl_command_queue queue, cl_context context,
                                                 MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
                                                 bool periodic, bool forceLocalFine, bool forceLocalCoarse,
@@ -306,8 +312,11 @@ namespace mgcl
                                                 int resm, int resn, int reso)
     {
         // Make sure a_h has two ghosts at each border for periodic bc.
-        if (a_h.getGh() != 2)
+        if (a_h.getGh() < 2)
             throw "galerkin: a_h needs to have 2 ghosts at each border for periodic bc!";
+
+        if (gh_a2h < 2)
+            throw "galerkin: gh_a2h must be at least 2.";
 
         // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
         // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
@@ -320,7 +329,7 @@ namespace mgcl
                        .multiply(sp, 0, program, queue, context, mpiDataFine, periodic, forceLocalFine);
 
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
-        auto a_2h = sas.cutFromW7ToW3(program, queue, context, resm, resn, reso);
+        auto a_2h = sas.cutFromW7ToW3(program, queue, context, gh_a2h, resm, resn, reso);
 
         if (!skipUpdateGhostsCoarse)
             updateGhostsStencilOclMpi(queue, program, a_2h, mpiDataCoarse, periodic, forceLocalCoarse);

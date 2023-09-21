@@ -95,6 +95,9 @@ namespace mgcl
                 int istart_r = r.getGhostsM() - off;
                 int jstart_r = r.getGhostsN() - off;
                 int kstart_r = r.getGhostsO() - off;
+                int istart_sv = stencilValues ? stencilValues->getGhostsDim1() - off : 0;
+                int jstart_sv = stencilValues ? stencilValues->getGhostsDim2() - off : 0;
+                int kstart_sv = stencilValues ? stencilValues->getGhostsDim3() - off : 0;
 
                 // r = f - A*v
                 res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, false, periodic,
@@ -119,12 +122,9 @@ namespace mgcl
                     // print27point(v, 1, 2, 5);
                     // print27point_sv(v, 1, 2, 5, stencilValues, 2, 3, 6);
 
-                    int ghmsv = stencilValues->getGhostsDim1();
-                    int ghnsv = stencilValues->getGhostsDim2();
-                    int ghosv = stencilValues->getGhostsDim3();
-                    for (int iv = istart_v, ir = istart_r, isv = ghmsv; iv < iend_v; iv++, ir++, isv++)
-                        for (int jv = jstart_v, jr = jstart_r, jsv = ghnsv; jv < jend_v; jv++, jr++, jsv++)
-                            for (int kv = kstart_v, kr = kstart_r, ksv = ghosv; kv < kend_v; kv++, kr++, ksv++)
+                    for (int iv = istart_v, ir = istart_r, isv = istart_sv; iv < iend_v; iv++, ir++, isv++)
+                        for (int jv = jstart_v, jr = jstart_r, jsv = jstart_sv; jv < jend_v; jv++, jr++, jsv++)
+                            for (int kv = kstart_v, kr = kstart_r, ksv = kstart_sv; kv < kend_v; kv++, kr++, ksv++)
                             {
                                 // if (i == 1 && j == 1 && k == 1)
                                 //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, vraw[i][j][k],
@@ -805,10 +805,13 @@ namespace mgcl
         int istart_f = f.getGhostsM() + moff;
         int jstart_f = f.getGhostsN() + noff;
         int kstart_f = f.getGhostsO() + ooff;
+        int istart_sv = stencilValuesCuboid ? stencilValuesCuboid->getGhostsDim1() + moff : 0;
+        int jstart_sv = stencilValuesCuboid ? stencilValuesCuboid->getGhostsDim2() + noff : 0;
+        int kstart_sv = stencilValuesCuboid ? stencilValuesCuboid->getGhostsDim3() + ooff : 0;
 
-        for (int iv = istart_v, ir = istart_r, fi = istart_f, isv = ghmsv; iv < iend_v; iv++, ir++, fi++, isv++)
-            for (int jv = jstart_v, jr = jstart_r, fj = jstart_f, jsv = ghnsv; jv < jend_v; jv++, jr++, fj++, jsv++)
-                for (int kv = kstart_v, kr = kstart_r, fk = kstart_f, ksv = ghosv; kv < kend_v; kv++, kr++, fk++, ksv++)
+        for (int iv = istart_v, ir = istart_r, fi = istart_f, isv = istart_sv; iv < iend_v; iv++, ir++, fi++, isv++)
+            for (int jv = jstart_v, jr = jstart_r, fj = jstart_f, jsv = jstart_sv; jv < jend_v; jv++, jr++, fj++, jsv++)
+                for (int kv = kstart_v, kr = kstart_r, fk = kstart_f, ksv = kstart_sv; kv < kend_v; kv++, kr++, fk++, ksv++)
                 {
                     // A*v
                     if (stencilType == MGCL_LAPLACE_7POINT)

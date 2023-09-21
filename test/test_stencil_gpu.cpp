@@ -1271,7 +1271,7 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
         // clang-format on
 
         // cut on gpu and read back result
-        auto a_2h_gpu = a_gpu.cutFromW7ToW3(t.getProgram(), t.getCommands(), t.getContext());
+        auto a_2h_gpu = a_gpu.cutFromW7ToW3(t.getProgram(), t.getCommands(), t.getContext(), 2);
         auto ret = a_2h_gpu.read(t.getCommands(), true);
         t.finish();
 

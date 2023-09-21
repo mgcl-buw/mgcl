@@ -811,6 +811,7 @@ namespace mgcl
      * @param program OpenCL program
      * @param queue OpenCL command queue
      * @param context OpenCL context
+     * @param ghout Number of ghost cells of the output stencil.
      * @param resm Size of resulting stencil's grid. Per default halve of this's size.
      * @param resn Size of resulting stencil's grid. Per default halve of this's size.
      * @param reso Size of resulting stencil's grid. Per default halve of this's size.
@@ -818,7 +819,7 @@ namespace mgcl
      */
 
     VaryingStencilGpu VaryingStencilGpu::cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context,
-                                                       int resm, int resn, int reso)
+                                                       int ghout, int resm, int resn, int reso)
     {
         int err;
 
@@ -835,14 +836,13 @@ namespace mgcl
         if (m2 == 0 || n2 == 0 || o2 == 0)
             throw "Cannot cut down stencil of grid size 1!";
 
-        VaryingStencilGpu a_2h(resm, resn, reso, 3, 2, context, queue);
+        VaryingStencilGpu a_2h(resm, resn, reso, 3, ghout, context, queue);
 
         // Create the compute kernel from the program
         cl_kernel kernel = clCreateKernel(program, "cut_stencils_w7_to_w3", &err);
         mgclCheckError(err, "clCreateKernel");
 
         auto outbuf = a_2h.getBuf();
-        int ghout = a_2h.getGh();
 
         // assign kernel arguments
         int pos = 0;

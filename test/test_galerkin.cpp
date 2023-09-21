@@ -33,7 +33,7 @@ TEST_CASE("galerkin Laplace vs Matrix")
                 a_h[i][j][k][2][1][1] = 1;
             }
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, nullptr, nullptr, true, true, true, false);
+    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
 
     // calculate results with Matrices to check
@@ -59,7 +59,7 @@ TEST_CASE("galerkin random values periodic vs Matrix")
     a_h.fillRandom(-10, 10);
     a_h.updateGhosts();
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, nullptr, nullptr, true, true, true, false);
+    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
 
     // calculate results with Matrices to check
@@ -99,8 +99,8 @@ TEST_CASE("GPU galerkin random values periodic")
     a_h.updateGhosts();
     a_h_gpu.fill(a_h, t.getCommands(), true);
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, nullptr, nullptr, true, true, true, false);
-    auto a_2h_gpu = mgcl::MultigridEngine::galerkin(a_h_gpu, t.getProgram(), t.getCommands(), t.getContext(),
+    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
+    auto a_2h_gpu = mgcl::MultigridEngine::galerkin(a_h_gpu, 2, t.getProgram(), t.getCommands(), t.getContext(),
                                                     nullptr, nullptr, true, true, true, false);
     t.finish();
 
@@ -132,7 +132,7 @@ TEST_CASE("galerkin multiple levels random values periodic")
 
     for (int lv = 0; lv < maxlv; lv++)
     {
-        a_2h = std::make_unique<mgcl::VaryingStencil>(mgcl::MultigridEngine::galerkin(*a_h, nullptr, nullptr, true, true, true, false));
+        a_2h = std::make_unique<mgcl::VaryingStencil>(mgcl::MultigridEngine::galerkin(*a_h, 2, nullptr, nullptr, true, true, true, false));
         auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(*a_2h, true);
 
         // calculate results with Matrices to check
@@ -172,7 +172,7 @@ TEST_CASE("galerkin symmetric")
                 a_h[i][j][k][2][1][1] = 1;
             }
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, nullptr, nullptr, true, true, true, false);
+    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
 
     for (int i = 0; i < a2hm.getM(); i++)
@@ -253,7 +253,7 @@ TEST_CASE("galerkin Laplace rediscretized")
                 a_h[i][j][k][2][1][1] = h2inv * 1.0;
             }
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, nullptr, nullptr, true, true, true, false);
+    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
 
     // Test with fine h (result from Matlab's Symbolic Toolbox)
     double factor1 = h2inv * (3.0 / 256.0);  // corners

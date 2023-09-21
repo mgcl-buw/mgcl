@@ -117,7 +117,7 @@ namespace mgcl
                                    MPILevelData* mpiData, bool periodic, bool forceLocal);
 
         VaryingStencilGpu cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context,
-                                        int resm = 0, int resn = 0, int reso = 0);
+                                        int ghout, int resm = 0, int resn = 0, int reso = 0);
 
         int getM() const;
         int getN() const;
