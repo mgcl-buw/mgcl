@@ -668,6 +668,7 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
     int nu1 = 2;
     int nu2 = 2;
     double omega = 0.8;
+    // int maxIterVCycles = 1;
     int maxIterVCycles = 20;
     int maxlevel = 10;
 
@@ -854,7 +855,7 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
             }
         }
 
-        SECTION("Galerkin (varying stencil)")
+        SECTION("Galerkin")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
