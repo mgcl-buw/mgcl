@@ -279,9 +279,9 @@ namespace mgcl
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
         VaryingStencil a_2h(resm, resn, reso, 3, gh_a2h, gh_a2h, gh_a2h);
         // clang-format off
-        for (int i = gh_a2h, i2 = 1; i < (a_h.getDim1() >> 1) + 2; i++, i2 += 2)
-        for (int j = gh_a2h, j2 = 1; j < (a_h.getDim2() >> 1) + 2; j++, j2 += 2)
-        for (int k = gh_a2h, k2 = 1; k < (a_h.getDim3() >> 1) + 2; k++, k2 += 2)
+        for (int i = gh_a2h, i2 = 1; i < (a_h.getDim1() >> 1) + gh_a2h; i++, i2 += 2)
+        for (int j = gh_a2h, j2 = 1; j < (a_h.getDim2() >> 1) + gh_a2h; j++, j2 += 2)
+        for (int k = gh_a2h, k2 = 1; k < (a_h.getDim3() >> 1) + gh_a2h; k++, k2 += 2)
             for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
             for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
             for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
