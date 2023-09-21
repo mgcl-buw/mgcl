@@ -131,6 +131,11 @@ namespace mgcl
             (stencilValues->getDim1() > m || stencilValues->getDim2() > n || stencilValues->getDim3() > o))
             throw "Mpi threshold level is not 0 but stencilValues has global size. Please use setMpiMinGridPoints before setStencilType!";
 
+        if (stencilValues && (stencilValues->getGhostsDim1() < ghosts ||
+                              stencilValues->getGhostsDim2() < ghosts ||
+                              stencilValues->getGhostsDim3() < ghosts))
+            throw "Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!";
+
         return true;
     }
 
@@ -736,6 +741,11 @@ namespace mgcl
 
     void Problem::setJacobiIterationsPerKernel(int jacobiIterationsPerKernel)
     {
+        if (stencilValues && (stencilValues->getGhostsDim1() < jacobiIterationsPerKernel ||
+                              stencilValues->getGhostsDim2() < jacobiIterationsPerKernel ||
+                              stencilValues->getGhostsDim3() < jacobiIterationsPerKernel))
+            throw "Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!";
+
         jacobi_iterations_per_kernel = jacobiIterationsPerKernel;
     }
 
@@ -807,6 +817,11 @@ namespace mgcl
 
     void Problem::setGhosts(int ghosts_)
     {
+        if (stencilValues && (stencilValues->getGhostsDim1() < ghosts_ ||
+                              stencilValues->getGhostsDim2() < ghosts_ ||
+                              stencilValues->getGhostsDim3() < ghosts_))
+            throw "Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!";
+
         ghosts = ghosts_;
     }
 
