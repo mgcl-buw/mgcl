@@ -294,3 +294,65 @@ TEST_CASE("galerkin Laplace rediscretized")
                 REQUIRE(a_2h[i][j][k][2][2][2] == factor1);
             }
 }
+
+// Test that Galerkin yields the same result when using different amount of jacobiIterationsPerKernel
+TEST_CASE("galerkin_different_jacobi_iters_per_kernel")
+{
+    int N = 16;
+
+    auto v = std::make_shared<mgcl::Cuboid>(N, N, N);
+    auto f = std::make_shared<mgcl::Cuboid>(N, N, N);
+    v->fillRandom();
+    f->fillRandom();
+
+    mgcl::Problem p1(N, N, N, f, v);
+    p1.setGhosts(1);
+    p1.setJacobiIterationsPerKernel(1);
+    p1.setStencilType(mgcl::MGCL_VARYING);
+
+    mgcl::Problem p2(N, N, N, f, v);
+    p2.setGhosts(2);
+    p2.setJacobiIterationsPerKernel(2);
+    p2.setStencilType(mgcl::MGCL_VARYING);
+
+    mgcl::Problem p3(N, N, N, f, v);
+    p3.setGhosts(3);
+    p3.setJacobiIterationsPerKernel(3);
+    p3.setStencilType(mgcl::MGCL_VARYING);
+
+    REQUIRE(p1.getMaxlevel() == p2.getMaxlevel());
+    REQUIRE(p1.getMaxlevel() == p3.getMaxlevel());
+
+    auto sv1 = p1.getStencilValues();
+    auto sv2 = p2.getStencilValues();
+    auto sv3 = p3.getStencilValues();
+    sv1->fill1dIndex(false);
+    sv2->copyRealFrom(*sv1);
+    sv3->copyRealFrom(*sv1);
+
+    p1.init();
+    p2.init();
+    p3.init();
+
+    p1.getLevelAt(1).getStencilValues()->dumpToFile("sv1.txt", true);
+    p2.getLevelAt(1).getStencilValues()->dumpToFile("sv2.txt", true);
+    p3.getLevelAt(1).getStencilValues()->dumpToFile("sv3.txt", true);
+
+    // check stencil values for each level
+    for (int i = 0; i < p1.getMaxlevel(); i++)
+    {
+        CAPTURE(i);
+        REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim1() == 2);
+        REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim2() == 2);
+        REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim3() == 2);
+        REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim1() == 2);
+        REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim2() == 2);
+        REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim3() == 2);
+        REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim1() == 3);
+        REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim2() == 3);
+        REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim3() == 3);
+
+        REQUIRE(p1.getLevelAt(i).getStencilValues()->isEqual(*p2.getLevelAt(i).getStencilValues()));
+        REQUIRE(p1.getLevelAt(i).getStencilValues()->isEqual(*p3.getLevelAt(i).getStencilValues()));
+    }
+}
