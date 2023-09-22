@@ -20,8 +20,8 @@ using namespace std::chrono_literals;
 #include "bench_render_templates.hpp"
 #include "cli_args.hpp"
 
-// Benchmarks solving the 4th order model problem using the vcycle, opencl and mpi
-// Timings will be collected per node and printed by rank at the end.
+// Benchmarks the vcycle using MPI seq vs opencl.
+// Only rank 0 will print the timings.
 // Run with e.g.: mpiexec -n 4 benchmarks benchmark_vcycle_MPI_Seq_vs_OCL_galerkin
 TEST_CASE("benchmark_vcycle_MPI_Seq_vs_OCL_galerkin")
 {
@@ -239,4 +239,115 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_vs_OCL_galerkin")
     //                   << "  spi: 3: " << avgs[2] << " ns" << std::endl;
     // }
     // MPI_Barrier(mpi_comm);
+}
+
+// Benchmarks different threshold levels for the vcycle using MPI seq vs opencl.
+// Only rank 0 will print the timings.
+// Run with e.g.: mpiexec -n 4 benchmarks benchmark_vcycle_MPI_OCL_galerkin_thresholds
+TEST_CASE("benchmark_vcycle_MPI_OCL_galerkin_thresholds")
+{
+    using std::min;
+
+    if (CLI_ARGS::grids.size() == 0)
+        throw "Need to specify at least one local grid size, e.g. using --grids 4,8,16";
+
+    // Check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // Check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    // REQUIRE(mpi_size == 1);
+
+    int periodic = 1;
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    double omega = 0.8;
+    int nu1 = 3;
+    int nu2 = 3;
+    mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+    mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
+
+    if (mpi_rank == 0)
+        std::cout << "Problem parameters:" << std::endl
+                  << "  Omega: " << omega << std::endl
+                  << "  Nu1: " << nu1 << std::endl
+                  << "  Nu2: " << nu2 << std::endl
+                  << "  VCycle iterations: " << CLI_ARGS::vCycleIterations << std::endl;
+
+    std::vector<int> minGridPoints{2, 4, 8, 16};
+    for (auto N : CLI_ARGS::grids)
+    {
+        int mglob = N * mpi_dims[0];
+        int nglob = N * mpi_dims[1];
+        int oglob = N * mpi_dims[2];
+        double h = 1.0 / (double)mglob;
+
+        ankerl::nanobench::Bench bench;
+        bench.timeUnit(1ns, "ns")
+            .epochs(11)
+            .epochIterations(1)
+            // .minEpochTime(100ms)
+            .relative(true);
+
+        // disable output for non-root processes
+        if (mpi_rank > 0)
+            bench.output(nullptr);
+
+        for (auto mgp : minGridPoints)
+        {
+            if (mgp > N)
+                continue;
+
+            int ghin = 0;
+            auto v = std::make_shared<mgcl::Cuboid>(N, N, N, ghin, ghin, ghin);
+            auto f = std::make_shared<mgcl::Cuboid>(N, N, N, ghin, ghin, ghin);
+            v->fillRandom();
+            f->fillRandom();
+
+            mgcl::Problem pocl(N, N, N, v, f, mglob, nglob, oglob);
+            pocl.setSilent(true);
+            pocl.setMpiMinGridPoints(mgp);
+            pocl.setOmega(omega);
+            pocl.setNu1(nu1);
+            pocl.setNu2(nu2);
+            pocl.setGhostsIn(ghin);
+            pocl.setStencilType(stencilType);
+            pocl.setResidualNorm(resnorm);
+            pocl.setMpiComm(mpi_comm);
+            pocl.setUseOpencl(true);
+            pocl.setDeviceType(CL_DEVICE_TYPE_GPU);
+            pocl.setReadResults(true);
+
+            auto& sv = pocl.getStencilValues();
+            sv->fill1dIndex(true);
+
+            std::string name = std::string("oclN")
+                                   .append(std::to_string(N))
+                                   .append("mgp")
+                                   .append(std::to_string(mgp));
+
+            bench.run(std::string(name).c_str(), [&] { //
+                pocl.solve();
+                // tu.finish(); //
+                MPI_Barrier(mpi_comm);
+            });
+        }
+    }
 }
