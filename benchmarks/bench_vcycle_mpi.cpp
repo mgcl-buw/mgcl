@@ -96,6 +96,7 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_vs_OCL_galerkin")
         pseq.setOmega(omega);
         pseq.setNu1(nu1);
         pseq.setNu2(nu2);
+        pseq.setMaxiterVcycles(CLI_ARGS::vCycleIterations);
         pseq.setGhostsIn(ghin);
         pseq.setStencilType(stencilType);
         pseq.setResidualNorm(resnorm);
@@ -327,6 +328,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_galerkin_thresholds")
             pocl.setOmega(omega);
             pocl.setNu1(nu1);
             pocl.setNu2(nu2);
+            pocl.setMaxiterVcycles(CLI_ARGS::vCycleIterations);
             pocl.setGhostsIn(ghin);
             pocl.setStencilType(stencilType);
             pocl.setResidualNorm(resnorm);
