@@ -135,7 +135,7 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_vs_OCL_galerkin")
         pocl.setResidualNorm(resnorm);
         pocl.setMpiComm(mpi_comm);
         pocl.setUseOpencl(true);
-        pocl.setDeviceName("Quadro");
+        pocl.setDeviceType(CL_DEVICE_TYPE_GPU);
 
         sv = pocl.getStencilValues();
         sv->fill1dIndex(true);
