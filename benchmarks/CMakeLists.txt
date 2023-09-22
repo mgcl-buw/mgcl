@@ -16,6 +16,7 @@ set(SOURCES_BENCH
     bench_stencil_arithmetic_kernels.cpp
     bench_sum.cpp
     bench_jacobi_multiple_iters.cpp
+    bench_vcycle_mpi.cpp
     cli_args.hpp
     catch2_main_benchs.cpp)
 
