@@ -101,8 +101,8 @@ if [ "$TEST_PROBLEM" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test -n 1 "$exe" "MPI_Problem::setMpiComm"
     run_test -n 1 "$exe" "MPI_Problem::calculateAndSetMaxLevel_1proc"
     run_test --oversubscribe -n 4 "$exe" "MPI_Problem::calculateAndSetMaxLevel_4procs"
-    run_test -n 1 "$exe" "MPI_Problem::calculateAndSetMpiLevelThreshold_valid_1proc"
-    run_test -n 1 "$exe" "MPI_Problem::calculateAndSetMpiLevelThreshold_throwing_1proc"
+    run_test -n 2 "$exe" "MPI_Problem::calculateAndSetMpiLevelThreshold_valid_2procs"
+    run_test -n 2 "$exe" "MPI_Problem::calculateAndSetMpiLevelThreshold_throwing_2procs"
     run_test -n 1 "$exe" "MPI_Problem::init"
     run_test -n 4 "$exe" "MPI_Problem::init"
 fi

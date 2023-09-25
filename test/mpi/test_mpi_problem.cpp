@@ -107,8 +107,9 @@ TEST_CASE("MPI_Problem::calculateAndSetMaxLevel_4procs")
 }
 
 // mpiLevelThreshold should be calculated s.t. there are at least 8 grid points per process per direction.
-// This test is done on one process only.
-TEST_CASE("MPI_Problem::calculateAndSetMpiLevelThreshold_valid_1proc")
+// This test must be run on multiple processes.
+// Run with e.g. mpiexec -n 2 tests_mpi MPI_Problem::calculateAndSetMpiLevelThreshold_valid_2procs
+TEST_CASE("MPI_Problem::calculateAndSetMpiLevelThreshold_valid_2procs")
 {
     int periodic = 1;
 
@@ -122,7 +123,7 @@ TEST_CASE("MPI_Problem::calculateAndSetMpiLevelThreshold_valid_1proc")
     // check number of processes
     int mpi_size = -1;
     MPI_Comm_size(mpi_comm, &mpi_size);
-    REQUIRE(mpi_size == 1);
+    REQUIRE(mpi_size > 1);
 
     // Set MPI cartesion topology dimenions and appropriate local sizes.
     // clang-format off
@@ -172,9 +173,9 @@ TEST_CASE("MPI_Problem::calculateAndSetMpiLevelThreshold_valid_1proc")
 }
 
 // calculateAndSetMpiLevelThreshold should be throw if mpiLevelThreshold is set too high by user.
-// This test is done on one process only.
-// run with e.g. tests_mpi MPI_Problem::calculateAndSetMpiLevelThreshold_throwing_1proc
-TEST_CASE("MPI_Problem::calculateAndSetMpiLevelThreshold_throwing_1proc")
+// This test must be run on multiple processes.
+// run with e.g. tests_mpi MPI_Problem::calculateAndSetMpiLevelThreshold_throwing_2procs
+TEST_CASE("MPI_Problem::calculateAndSetMpiLevelThreshold_throwing_2procs")
 {
     int N = 8;
     int periodic = 1;
@@ -189,7 +190,7 @@ TEST_CASE("MPI_Problem::calculateAndSetMpiLevelThreshold_throwing_1proc")
     // check number of processes
     int mpi_size = -1;
     MPI_Comm_size(mpi_comm, &mpi_size);
-    REQUIRE(mpi_size == 1);
+    REQUIRE(mpi_size > 1);
 
     /* MPI variables */
     int mpi_rank;
