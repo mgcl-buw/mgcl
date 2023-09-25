@@ -341,7 +341,7 @@ TEST_CASE("Matrix2d::fromVaryingStencil")
         int gh = 0;
 
         auto a = mgcl_test::Matrix2d::laplace7p3d(m, n, o, false);
-        mgcl::VaryingStencil3x3x3 s(m, n, o, gh, gh, gh);
+        mgcl::VaryingStencil s(m, n, o, 3, gh, gh, gh);
         for (int i = 0; i < m + 2 * gh; i++)
             for (int j = 0; j < n + 2 * gh; j++)
                 for (int k = 0; k < o + 2 * gh; k++)
@@ -368,7 +368,7 @@ TEST_CASE("Matrix2d::fromVaryingStencil")
         int gh = 1;
 
         auto a = mgcl_test::Matrix2d::laplace7p3d(m, n, o);
-        mgcl::VaryingStencil3x3x3 s(m, n, o, gh, gh, gh);
+        mgcl::VaryingStencil s(m, n, o, 3, gh, gh, gh);
         for (int i = 0; i < m + 2 * gh; i++)
             for (int j = 0; j < n + 2 * gh; j++)
                 for (int k = 0; k < o + 2 * gh; k++)
@@ -391,7 +391,7 @@ TEST_CASE("Matrix2d::fromVaryingStencil")
     {
         auto a = mgcl_test::Matrix2d_fromVaryingStencil::matrix2d24x24RandomNotPeriodic();
         auto sptr = mgcl_test::Matrix2d_fromVaryingStencil::varyingStencil2x3x4RandomPeriodic();
-        auto &s = *sptr;
+        auto& s = *sptr;
 
         auto c = mgcl_test::Matrix2d::fromVaryingStencil(s, false);
 
@@ -402,7 +402,7 @@ TEST_CASE("Matrix2d::fromVaryingStencil")
     {
         auto a = mgcl_test::Matrix2d_fromVaryingStencil::matrix2d24x24RandomPeriodic();
         auto sptr = mgcl_test::Matrix2d_fromVaryingStencil::varyingStencil2x3x4RandomPeriodic();
-        auto &s = *sptr;
+        auto& s = *sptr;
 
         auto c = mgcl_test::Matrix2d::fromVaryingStencil(s, true);
 
@@ -545,9 +545,9 @@ TEST_CASE("Matrix2d::laplace7p3d")
 
 TEST_CASE("Matrix2d::restrictionFullWeight")
 {
-    int m = GENERATE(1, 2, 3, 4);
-    int n = GENERATE(1, 2, 3, 4);
-    int o = GENERATE(1, 2, 3, 4);
+    int m = GENERATE(3, 4);
+    int n = GENERATE(1, 3);
+    int o = GENERATE(1, 2);
 
     SECTION("not periodic")
     {

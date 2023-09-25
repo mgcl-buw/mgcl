@@ -6,7 +6,7 @@
 namespace mgcl_test
 {
 
-    Matrix2d Matrix2d::kronecker(const Matrix2d &b)
+    Matrix2d Matrix2d::kronecker(const Matrix2d& b)
     {
         Matrix2d c(m * b.getM(), n * b.getN());
 
@@ -42,7 +42,7 @@ namespace mgcl_test
     /**
      * @brief Returns true if matrices are equal within the given tolerance.
      */
-    bool Matrix2d::isEqual(const Matrix2d &b, double tol) const
+    bool Matrix2d::isEqual(const Matrix2d& b, double tol) const
     {
         if (m != b.getM() || n != b.getN())
             return false;
@@ -61,7 +61,7 @@ namespace mgcl_test
         return true;
     }
 
-    Matrix2d Matrix2d::operator+(const Matrix2d &b)
+    Matrix2d Matrix2d::operator+(const Matrix2d& b)
     {
         if (m != b.getM() || n != b.getN())
             throw "Matrix dimensions do not match!";
@@ -77,7 +77,7 @@ namespace mgcl_test
         return c;
     }
 
-    void Matrix2d::operator+=(const Matrix2d &b)
+    void Matrix2d::operator+=(const Matrix2d& b)
     {
         if (m != b.getM() || n != b.getN())
             throw "Matrix dimensions do not match!";
@@ -89,7 +89,7 @@ namespace mgcl_test
             }
     }
 
-    bool Matrix2d::operator==(const Matrix2d &b) const
+    bool Matrix2d::operator==(const Matrix2d& b) const
     {
         if (m != b.getM() || n != b.getN())
             return false;
@@ -104,18 +104,18 @@ namespace mgcl_test
         return true;
     }
 
-    bool Matrix2d::operator!=(const Matrix2d &b) const
+    bool Matrix2d::operator!=(const Matrix2d& b) const
     {
         return !operator==(b);
     }
 
-    Matrix2d Matrix2d::operator*(const Matrix2d &b) const
+    Matrix2d Matrix2d::operator*(const Matrix2d& b) const
     {
         if (n != b.getM())
             throw "Dimensions do not fit!";
 
         Matrix2d c(m, b.getN());
-        auto &a = *this;
+        auto& a = *this;
 
         for (int ci = 0; ci < c.getM(); ci++)
             for (int cj = 0; cj < c.getN(); cj++)
@@ -130,7 +130,7 @@ namespace mgcl_test
         return c;
     }
 
-    Matrix2d &Matrix2d::operator*(double b)
+    Matrix2d& Matrix2d::operator*(double b)
     {
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)
@@ -140,22 +140,22 @@ namespace mgcl_test
         return *this;
     }
 
-    std::vector<double> &Matrix2d::operator[](int index)
+    std::vector<double>& Matrix2d::operator[](int index)
     {
         return values[index];
     }
 
-    const std::vector<double> &Matrix2d::operator[](int index) const
+    const std::vector<double>& Matrix2d::operator[](int index) const
     {
         return values[index];
     }
 
-    std::vector<double> &Matrix2d::at(int index)
+    std::vector<double>& Matrix2d::at(int index)
     {
         return values.at(index);
     }
 
-    const std::vector<double> &Matrix2d::at(int index) const
+    const std::vector<double>& Matrix2d::at(int index) const
     {
         return values.at(index);
     }
@@ -257,8 +257,6 @@ namespace mgcl_test
             throw "m and n must be greater than zero!";
 
         Matrix2d ret(m, n);
-
-        int minidx = m > n ? n : m;
 
         for (auto valAndOff : valuesAndOffsets)
         {
@@ -406,7 +404,7 @@ namespace mgcl_test
         return x.kronecker(y.kronecker(z));
     }
 
-    std::ostream &operator<<(std::ostream &os, Matrix2d const &value)
+    std::ostream& operator<<(std::ostream& os, Matrix2d const& value)
     {
         {
             os << std::scientific;

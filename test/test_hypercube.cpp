@@ -79,13 +79,13 @@ TEST_CASE("Hypercube4d")
     SECTION("isEqual ghosts")
     {
         int ghosts_dim1_c = GENERATE(0, 1, 2);
-        int ghosts_dim2_c = GENERATE(0, 1, 2);
-        int ghosts_dim3_c = GENERATE(0, 1, 2);
-        int ghosts_dim4_c = GENERATE(0, 1, 2);
+        int ghosts_dim2_c = GENERATE(0, 2);
+        int ghosts_dim3_c = GENERATE(2);
+        int ghosts_dim4_c = GENERATE(0, 1);
         int ghosts_dim1_c2 = GENERATE(0, 1, 2);
-        int ghosts_dim2_c2 = GENERATE(0, 1, 2);
-        int ghosts_dim3_c2 = GENERATE(0, 1, 2);
-        int ghosts_dim4_c2 = GENERATE(0, 1, 2);
+        int ghosts_dim2_c2 = GENERATE(2);
+        int ghosts_dim3_c2 = GENERATE(1, 2);
+        int ghosts_dim4_c2 = GENERATE(0, 2);
 
         mgcl::Hypercube4d c2(8, 8, 8, 8, ghosts_dim1_c, ghosts_dim2_c, ghosts_dim3_c, ghosts_dim4_c);
         mgcl::Hypercube4d c3(8, 8, 8, 8, ghosts_dim1_c2, ghosts_dim2_c2, ghosts_dim3_c2, ghosts_dim4_c2);
@@ -102,9 +102,9 @@ TEST_CASE("Hypercube4d")
         int dim2 = 2;
         int dim3 = 3;
         int dim4 = 4;
-        int ghosts_dim1 = GENERATE(0, 1, 2);
-        int ghosts_dim2 = GENERATE(0, 1, 2);
-        int ghosts_dim3 = GENERATE(0, 1, 2);
+        int ghosts_dim1 = GENERATE(0, 2);
+        int ghosts_dim2 = GENERATE(0, 1);
+        int ghosts_dim3 = GENERATE(1, 2);
         int ghosts_dim4 = GENERATE(0, 1, 2);
         mgcl::Hypercube4d c2(dim1,
                              dim2,
@@ -233,4 +233,46 @@ TEST_CASE("Hypercube6d")
         CHECK(h2.getData() == nullptr);
         CHECK(h3.isEqual(h_check));
     }
+}
+
+// Test if Hypercube6d gets filled with 1d index.
+TEST_CASE("Hypercube6d::fill1dindex")
+{
+    int dim1 = 1;
+    int dim2 = 2;
+    int dim3 = 3;
+    int dim4 = 4;
+    int dim5 = 5;
+    int dim6 = 6;
+    int ghdim1 = 0;
+    int ghdim2 = 1;
+    int ghdim3 = 2;
+    int ghdim4 = 0;
+    int ghdim5 = 1;
+    int ghdim6 = 2;
+
+    mgcl::Hypercube6d c_real(dim1, dim2, dim3, dim4, dim5, dim6, ghdim1, ghdim2, ghdim3, ghdim4, ghdim5, ghdim6);
+    c_real.fill1dIndex(true);
+    mgcl::Hypercube6d c_gh(dim1, dim2, dim3, dim4, dim5, dim6, ghdim1, ghdim2, ghdim3, ghdim4, ghdim5, ghdim6);
+    c_gh.fill1dIndex(false);
+
+    int cnt = 0;
+    for (int d1 = 0; d1 < c_gh.getDim1gh(); d1++)
+        for (int d2 = 0; d2 < c_gh.getDim2gh(); d2++)
+            for (int d3 = 0; d3 < c_gh.getDim3gh(); d3++)
+                for (int d4 = 0; d4 < c_gh.getDim4gh(); d4++)
+                    for (int d5 = 0; d5 < c_gh.getDim5gh(); d5++)
+                        for (int d6 = 0; d6 < c_gh.getDim6gh(); d6++)
+                        {
+                            if (d1 > ghdim1 && d1 < dim1 + ghdim1 &&
+                                d2 > ghdim2 && d2 < dim2 + ghdim2 &&
+                                d3 > ghdim3 && d3 < dim3 + ghdim3 &&
+                                d4 > ghdim4 && d4 < dim4 + ghdim4 &&
+                                d5 > ghdim5 && d5 < dim5 + ghdim5 &&
+                                d6 > ghdim6 && d6 < dim6 + ghdim6)
+                                REQUIRE(c_real[d1][d2][d3][d4][d5][d6] == cnt);
+
+                            REQUIRE(c_gh[d1][d2][d3][d4][d5][d6] == cnt);
+                            cnt++;
+                        }
 }

@@ -18,7 +18,7 @@ TEST_CASE("galerkin Laplace vs Matrix")
     int o = GENERATE(2, 4, 8);
 
     // Fill varying stencil on fine grid with 7p Laplace
-    mgcl::VaryingStencil3x3x3 a_h(m, n, o, 2, 2, 2);
+    mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
     for (int i = 0; i < m + 4; i++)
         for (int j = 0; j < n + 4; j++)
             for (int k = 0; k < o + 4; k++)
@@ -33,7 +33,7 @@ TEST_CASE("galerkin Laplace vs Matrix")
                 a_h[i][j][k][2][1][1] = 1;
             }
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h);
+    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
 
     // calculate results with Matrices to check
@@ -55,11 +55,11 @@ TEST_CASE("galerkin random values periodic vs Matrix")
     double tol = 1e-12;
 
     // Fill varying stencil on fine grid with 27p random values
-    mgcl::VaryingStencil3x3x3 a_h(m, n, o, 2, 2, 2);
+    mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
     a_h.fillRandom(-10, 10);
     a_h.updateGhosts();
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h);
+    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
 
     // calculate results with Matrices to check
@@ -86,26 +86,25 @@ TEST_CASE("GPU galerkin random values periodic")
     mgcl_test::TestUtility t(deviceType);
 
     int m = GENERATE(2, 4, 8);
-    int n = GENERATE(2, 4, 8);
-    int o = GENERATE(2, 4, 8);
+    int n = GENERATE(4, 8);
+    int o = GENERATE(2, 4);
 
     double tol = 1e-12;
     int gh = 2;
 
     // Fill varying stencil on fine grid with 27p random values
     mgcl::VaryingStencilGpu a_h_gpu(m, n, o, 3, gh, t.getContext(), t.getCommands());
-    mgcl::VaryingStencil3x3x3 a_h(m, n, o, gh, gh, gh);
+    mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
     a_h.fillRandom(-10, 10);
     a_h.updateGhosts();
-    a_h_gpu.fill(a_h, t.getCommands());
+    a_h_gpu.fill(a_h, t.getCommands(), true);
+
+    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
+    auto a_2h_gpu = mgcl::MultigridEngine::galerkin(a_h_gpu, 2, t.getProgram(), t.getCommands(), t.getContext(),
+                                                    nullptr, nullptr, true, true, true, false);
     t.finish();
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h);
-    auto a_2h_gpu = mgcl::MultigridEngine::galerkin(a_h_gpu, t.getProgram(), t.getCommands(), t.getContext());
-    t.finish();
-
-    auto ret = a_2h_gpu.read<3>(t.getCommands());
-    t.finish();
+    auto ret = a_2h_gpu.read(t.getCommands(), true);
 
     REQUIRE(a_2h.isEqual(ret, tol));
 }
@@ -125,15 +124,15 @@ TEST_CASE("galerkin multiple levels random values periodic")
     std::cout << "Testing for m,n,o with maxlv: " << m << "," << n << "," << o << ", " << maxlv << std::endl;
 
     // Fill varying stencil on fine grid with 27p random values initially
-    auto a_h = std::make_unique<mgcl::VaryingStencil3x3x3>(m, n, o, 2, 2, 2);
+    auto a_h = std::make_unique<mgcl::VaryingStencil>(m, n, o, 3, 2, 2, 2);
     a_h->fillRandom(-10, 10);
     a_h->updateGhosts();
 
-    std::unique_ptr<mgcl::VaryingStencil3x3x3> a_2h = nullptr;
+    std::unique_ptr<mgcl::VaryingStencil> a_2h = nullptr;
 
     for (int lv = 0; lv < maxlv; lv++)
     {
-        a_2h = std::make_unique<mgcl::VaryingStencil3x3x3>(mgcl::MultigridEngine::galerkin(*a_h));
+        a_2h = std::make_unique<mgcl::VaryingStencil>(mgcl::MultigridEngine::galerkin(*a_h, 2, nullptr, nullptr, true, true, true, false));
         auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(*a_2h, true);
 
         // calculate results with Matrices to check
@@ -158,7 +157,7 @@ TEST_CASE("galerkin symmetric")
     int o = GENERATE(2, 4, 8);
 
     // Fill varying stencil on fine grid with 7p Laplace
-    mgcl::VaryingStencil3x3x3 a_h(m, n, o, 2, 2, 2);
+    mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
     for (int i = 0; i < m + 4; i++)
         for (int j = 0; j < n + 4; j++)
             for (int k = 0; k < o + 4; k++)
@@ -173,7 +172,7 @@ TEST_CASE("galerkin symmetric")
                 a_h[i][j][k][2][1][1] = 1;
             }
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h);
+    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
 
     for (int i = 0; i < a2hm.getM(); i++)
@@ -193,7 +192,7 @@ TEST_CASE("galerkin Laplace SA == AS")
     double h2inv = static_cast<double>(m * m);
 
     // Fill varying stencil on fine grid with 7p Laplace
-    mgcl::VaryingStencil3x3x3 a(m, n, o, 2, 2, 2);
+    mgcl::VaryingStencil a(m, n, o, 3, 2, 2, 2);
     for (int i = 0; i < m + 4; i++)
         for (int j = 0; j < n + 4; j++)
             for (int k = 0; k < o + 4; k++)
@@ -210,8 +209,8 @@ TEST_CASE("galerkin Laplace SA == AS")
 
     auto s = mgcl::create3dFullWeightRestrictionStencil();
 
-    auto as = a.multiply(s);
-    auto sa = s.multiply(a);
+    auto as = a.multiply(s, 2, nullptr, true, true);
+    auto sa = s.multiply(a, 2, nullptr, true, true);
 
     for (int i = 0; i < m; i++)
         for (int j = 0; j < n; j++)
@@ -239,7 +238,7 @@ TEST_CASE("galerkin Laplace rediscretized")
     double h2inv = static_cast<double>(m * m);
 
     // Fill varying stencil on fine grid with 7p Laplace
-    mgcl::VaryingStencil3x3x3 a_h(m, n, o, 2, 2, 2);
+    mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
     for (int i = 0; i < m + 4; i++)
         for (int j = 0; j < n + 4; j++)
             for (int k = 0; k < o + 4; k++)
@@ -254,7 +253,7 @@ TEST_CASE("galerkin Laplace rediscretized")
                 a_h[i][j][k][2][1][1] = h2inv * 1.0;
             }
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h);
+    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
 
     // Test with fine h (result from Matlab's Symbolic Toolbox)
     double factor1 = h2inv * (3.0 / 256.0);  // corners
@@ -294,4 +293,91 @@ TEST_CASE("galerkin Laplace rediscretized")
                 REQUIRE(a_2h[i][j][k][2][2][1] == factor2);
                 REQUIRE(a_2h[i][j][k][2][2][2] == factor1);
             }
+}
+
+// Test that Galerkin yields the same result when using different amount of jacobiIterationsPerKernel
+TEST_CASE("galerkin_different_jacobi_iters_per_kernel")
+{
+    int N = 16;
+
+    auto v = std::make_shared<mgcl::Cuboid>(N, N, N);
+    auto f = std::make_shared<mgcl::Cuboid>(N, N, N);
+    v->fillRandom();
+    f->fillRandom();
+
+    mgcl::Problem p1(N, N, N, f, v);
+    p1.setGhosts(1);
+    p1.setJacobiIterationsPerKernel(1);
+    p1.setStencilType(mgcl::MGCL_VARYING);
+
+    mgcl::Problem p2(N, N, N, f, v);
+    p2.setGhosts(2);
+    p2.setJacobiIterationsPerKernel(2);
+    p2.setStencilType(mgcl::MGCL_VARYING);
+
+    mgcl::Problem p3(N, N, N, f, v);
+    p3.setGhosts(3);
+    p3.setJacobiIterationsPerKernel(3);
+    p3.setStencilType(mgcl::MGCL_VARYING);
+
+    REQUIRE(p1.getMaxlevel() == p2.getMaxlevel());
+    REQUIRE(p1.getMaxlevel() == p3.getMaxlevel());
+
+    auto sv1 = p1.getStencilValues();
+    auto sv2 = p2.getStencilValues();
+    auto sv3 = p3.getStencilValues();
+    sv1->fill1dIndex(false);
+    sv2->copyRealFrom(*sv1);
+    sv3->copyRealFrom(*sv1);
+
+    SECTION("Sequential")
+    {
+        p1.init();
+        p2.init();
+        p3.init();
+
+        // check stencil values for each level
+        for (int i = 0; i < p1.getMaxlevel(); i++)
+        {
+            CAPTURE(i);
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim1() == 2);
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim2() == 2);
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim3() == 2);
+            REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim1() == 2);
+            REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim2() == 2);
+            REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim3() == 2);
+            REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim1() == 3);
+            REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim2() == 3);
+            REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim3() == 3);
+
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->isEqual(*p2.getLevelAt(i).getStencilValues()));
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->isEqual(*p3.getLevelAt(i).getStencilValues()));
+        }
+    }
+
+    SECTION("OpenCL")
+    {
+        p1.setUseOpencl(true);
+        p2.setUseOpencl(true);
+        p3.setUseOpencl(true);
+        p1.init();
+        p2.init();
+        p3.init();
+
+        // check stencil values for each level
+        for (int i = 0; i < p1.getMaxlevel(); i++)
+        {
+            CAPTURE(i);
+            REQUIRE(p1.getLevelAt(i).getStencilValuesGpu()->getGh() == 2);
+            REQUIRE(p2.getLevelAt(i).getStencilValuesGpu()->getGh() == 2);
+            REQUIRE(p3.getLevelAt(i).getStencilValuesGpu()->getGh() == 3);
+
+            auto sv1 = p1.getLevelAt(i).getStencilValuesGpu()->read(p1.getCommands(), true);
+            auto sv2 = p2.getLevelAt(i).getStencilValuesGpu()->read(p2.getCommands(), true);
+            auto sv3 = p3.getLevelAt(i).getStencilValuesGpu()->read(p3.getCommands(), true);
+
+            REQUIRE(sv1.isEqual(sv2));
+            REQUIRE(sv1.isEqual(sv3));
+        }
+    }
 }

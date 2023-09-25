@@ -3,19 +3,19 @@
 #endif
 
 /* Prints components of 7-point laplacian stencil for debugging purposes */
-void print_7point(__global double *A, int index, int ioff, int joff, int koff)
+void print_7point(__global double* A, int index, int ioff, int joff, int koff)
 {
     printf("7point stencil at %d:\n", index);
-    printf("v[self] = %e\n", A[index]);
-    printf(" v[k-1] = %e\n", A[index - koff]);
-    printf(" v[k+1] = %e\n", A[index + koff]);
-    printf(" v[j-1] = %e\n", A[index - joff]);
-    printf(" v[j+1] = %e\n", A[index + joff]);
-    printf(" v[i-1] = %e\n", A[index - ioff]);
-    printf(" v[i+1] = %e\n", A[index + ioff]);
+    printf("v[self] = %.17e\n", A[index]);
+    printf(" v[k-1] = %.17e\n", A[index - koff]);
+    printf(" v[k+1] = %.17e\n", A[index + koff]);
+    printf(" v[j-1] = %.17e\n", A[index - joff]);
+    printf(" v[j+1] = %.17e\n", A[index + joff]);
+    printf(" v[i-1] = %.17e\n", A[index - ioff]);
+    printf(" v[i+1] = %.17e\n", A[index + ioff]);
 }
 
-void print_7point_local(__local double *A, __local double *rm, __local double *rp, int index, int ioff, int joff,
+void print_7point_local(__local double* A, __local double* rm, __local double* rp, int index, int ioff, int joff,
                         int koff)
 {
     printf("7point stencil at %d:\n", index);
@@ -28,7 +28,7 @@ void print_7point_local(__local double *A, __local double *rm, __local double *r
     printf(" v[i+1] = %e\n", rp == NULL ? A[index + ioff] : rp[index]);
 }
 
-void print_19point_local(__local double *A, __local double *rm, __local double *rp, int index, int ioff, int joff,
+void print_19point_local(__local double* A, __local double* rm, __local double* rp, int index, int ioff, int joff,
                          int koff)
 {
     printf("19point stencil at %d:\n", index);
@@ -53,7 +53,7 @@ void print_19point_local(__local double *A, __local double *rm, __local double *
     printf(" v[i+1][j+1][ k ] = %e\n", rp == NULL ? A[index + ioff + joff] : rp[index + joff]);
 }
 
-void print27point(__global double *v, int index, int ioff, int joff, int koff)
+void print27point(__global double* v, int index, int ioff, int joff, int koff)
 {
     printf("27point stencil at %d:\n", index);
     printf("v[self] = %e\n", v[index]);
@@ -85,8 +85,8 @@ void print27point(__global double *v, int index, int ioff, int joff, int koff)
     printf(" v[i+1][j+1][k+1] = %e\n", v[index + ioff + joff + koff]);
 }
 
-void print27point_sv(__global double *v, int index, int ioff, int joff, int koff,
-                     __global double *sv, int index_sv)
+void print27point_sv(__global double* v, int index, int ioff, int joff, int koff,
+                     __global double* sv, int index_sv)
 {
     printf("27point stencil at %d,%d:\n", index_sv, index);
     printf(" sv * v[    self     ] = %e * %e\n", sv[index_sv + 9 + 3 + 1], v[index]);
@@ -126,7 +126,7 @@ void print27point_sv(__global double *v, int index, int ioff, int joff, int koff
  * ghm, ghn, gho are amount of ghosts at one border.
  */
 __kernel void update_ghosts_periodic(
-    __global double *restrict c,
+    __global double* restrict c,
     int m, int n, int o,
     int ghm, int ghn, int gho)
 {
@@ -158,8 +158,8 @@ __kernel void update_ghosts_periodic(
 /* Copies data from v_input to v_in and from f_input to f, respecting nearfield ghost cell count.
  * m, n and o are dimensions of mgcl's ghosted grid, thus sizes of v_in and f.
  * ghosts_in is ghost cell count in one direction of nearfield. */
-__kernel void copy_input_data(__global double *v_input, __global double *v_in, __global double *f_input,
-                              __global double *f, const int m, const int n, const int o, const int ghosts_in)
+__kernel void copy_input_data(__global double* v_input, __global double* v_in, __global double* f_input,
+                              __global double* f, const int m, const int n, const int o, const int ghosts_in)
 {
     // index of ghosted mgcl grid
     int i = get_global_id(0);
@@ -181,7 +181,7 @@ __kernel void copy_input_data(__global double *v_input, __global double *v_in, _
 /* Copies data from v_in to v_output, respecting nearfield ghost cell count.
  * m, n and o are dimensions of mgcl's ghosted grid, thus size of v_in.
  * ghosts_in is ghost cell count in one direction of nearfield. */
-__kernel void copy_output_data(__global double *v_output, __global double *v_in, const int m, const int n, const int o,
+__kernel void copy_output_data(__global double* v_output, __global double* v_in, const int m, const int n, const int o,
                                const int ghosts_in)
 {
     // index of ghosted mgcl grid
@@ -201,7 +201,7 @@ __kernel void copy_output_data(__global double *v_output, __global double *v_in,
 }
 
 /* Corrects error by adding e to v */
-__kernel void correct_error(__global double *restrict v, __global double *restrict e, const int m, const int n,
+__kernel void correct_error(__global double* restrict v, __global double* restrict e, const int m, const int n,
                             const int o, const int ghosts)
 {
     int i = get_global_id(0);
@@ -218,9 +218,9 @@ __kernel void correct_error(__global double *restrict v, __global double *restri
 
 /* Calculates residual without dinv */
 __kernel void residual_7point(
-    __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict f,
-    __global double *restrict r,
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict f,
+    __global double* restrict r,
     const double h2inv, const int m, const int n, const int o,
     const int ghosts, const int moff, const int noff, const int ooff)
 {
@@ -259,9 +259,9 @@ __kernel void residual_7point(
 
 /* Calculates residual without dinv */
 __kernel void residual_19point(
-    __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict f,
-    __global double *restrict r,
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict f,
+    __global double* restrict r,
     const double h2inv, const int m, const int n, const int o,
     const int ghosts, const int moff, const int noff, const int ooff)
 {
@@ -306,9 +306,9 @@ __kernel void residual_19point(
 
 /* Calculates residual without dinv */
 __kernel void residual_27point(
-    __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict f,
-    __global double *restrict r,
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict f,
+    __global double* restrict r,
     const double h2inv, const int m, const int n, const int o,
     const int ghosts, const int moff, const int noff, const int ooff)
 {
@@ -365,10 +365,10 @@ __kernel void residual_27point(
 
 /* Calculates residual without dinv */
 __kernel void residual_27point_varying_stencil(
-    __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict f,
-    __global double *restrict r,
-    __global double *restrict stencilValues,
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict f,
+    __global double* restrict r,
+    __global double* restrict stencilValues,
     const int m, const int n, const int o,
     const int ghosts, const int ghosts_sv,
     const int moff, const int noff, const int ooff)
@@ -450,8 +450,8 @@ __kernel void residual_27point_varying_stencil(
  * Kernel must be called with m x n x o work-items.
  */
 __kernel void residual_squared(
-    __global double *restrict r,
-    __global double *restrict rsquares,
+    __global double* restrict r,
+    __global double* restrict rsquares,
     const int m, const int n, const int o, const int ghosts)
 {
     int i = get_global_id(0);
@@ -480,10 +480,10 @@ __kernel void residual_squared(
  *   stepsPerIter = 1: idx_start = ghosts.
  */
 __kernel void jacobi_iter_7point(
-    __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict v_out,
-    __global double *restrict f,
-    __global double *restrict r,
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out,
+    __global double* restrict f,
+    __global double* restrict r,
     const double h2inv,
     const double dinv, const double omega,
     const int mgh, const int ngh, const int ogh, const int ghosts,
@@ -498,7 +498,7 @@ __kernel void jacobi_iter_7point(
         int ioff = ngh * ogh;
         int joff = ogh;
         int koff = 1;
-        int index = ghosts * ioff + j * ogh + k;
+        int index = idx_start * ioff + j * ogh + k;
 
         for (int i = idx_start; i < mgh - idx_start; i++)
         {
@@ -516,9 +516,9 @@ __kernel void jacobi_iter_7point(
             // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
             v_out[index] = v_in_index + omega * dinv * res;
 
-            // if (get_global_id(0) == ghosts && get_global_id(1) == ghosts && i >= ghosts && i <= ghosts+2)
+            // if (j == ghosts && k == ghosts && i >= ghosts && i <= ghosts)
             // {
-            //     printf("x = %d, res = %e, v_out = %e\n", i, res, v_out[index]);
+            //     printf("x,y,z = %d,%d,%d, f = %.17e, stencilsum = %.17e, res = %.17e, v_out = %.17e\n", i, j, k, f[index], stencilsum, res, v_out[index]);
             //     print_7point(v_in, index, ioff, joff, koff);
             // }
 
@@ -541,10 +541,10 @@ __kernel void jacobi_iter_7point(
  *   stepsPerIter = 1: idx_start = ghosts.
  */
 __kernel void jacobi_iter_19point(
-    __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict v_out,
-    __global double *restrict f,
-    __global double *restrict r,
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out,
+    __global double* restrict f,
+    __global double* restrict r,
     const double h2inv,
     const double dinv, const double omega,
     const int mgh, const int ngh, const int ogh, const int ghosts,
@@ -559,7 +559,7 @@ __kernel void jacobi_iter_19point(
         int ioff = ngh * ogh;
         int joff = ogh;
         int koff = 1;
-        int index = ghosts * ioff + j * ogh + k;
+        int index = idx_start * ioff + j * ogh + k;
 
         for (int i = idx_start; i < mgh - idx_start; i++)
         {
@@ -601,10 +601,10 @@ __kernel void jacobi_iter_19point(
  *   stepsPerIter = 1: idx_start = ghosts.
  */
 __kernel void jacobi_iter_27point(
-    __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict v_out,
-    __global double *restrict f,
-    __global double *restrict r,
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out,
+    __global double* restrict f,
+    __global double* restrict r,
     const double h2inv, const double dinv, const double omega,
     const int mgh, const int ngh, const int ogh, const int ghosts,
     const int idx_start, const int store_residual)
@@ -618,7 +618,7 @@ __kernel void jacobi_iter_27point(
         int ioff = ngh * ogh;
         int joff = ogh;
         int koff = 1;
-        int index = ghosts * ioff + j * ogh + k;
+        int index = idx_start * ioff + j * ogh + k;
 
         for (int i = idx_start; i < mgh - idx_start; i++)
         {
@@ -670,11 +670,11 @@ __kernel void jacobi_iter_27point(
  *   stepsPerIter = 1: idx_start = ghosts.
  */
 __kernel void jacobi_iter_27point_varying_stencil(
-    __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict v_out,
-    __global double *restrict f,
-    __global double *restrict r,
-    __global double *restrict stencilValues,
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out,
+    __global double* restrict f,
+    __global double* restrict r,
+    __global double* restrict stencilValues,
     const double omega,
     const int mgh, const int ngh, const int ogh,
     const int ghosts, const int ghosts_sv,
@@ -689,12 +689,12 @@ __kernel void jacobi_iter_27point_varying_stencil(
         int ioff = ngh * ogh;
         int joff = ogh;
         int koff = 1;
-        int index = ghosts * ioff + j * ogh + k;
+        int index = idx_start * ioff + j * ogh + k;
 
         int koff_sv = 27;
         int joff_sv = ((ogh - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
         int ioff_sv = ((ngh - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
-        int index_sv = ghosts_sv * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
+        int index_sv = (idx_start - ghosts + ghosts_sv) * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
 
         for (int i = idx_start; i < mgh - idx_start; i++)
         {
@@ -836,9 +836,14 @@ __kernel void jacobi_iter_27point_varying_stencil(
 /* Restricts from fine to coarse grid.
  * Needs to get called with m*n*o work-items.
  * m,n,o is size of ghosted coarse grid.
- * fine and coarse must be of sizes of ghosted grids */
-__kernel void restrict_to_coarse(__global double *restrict fine, __global double *restrict coarse, const int m,
-                                 const int n, const int o, const int ghosts)
+ * fine and coarse must be of sizes of ghosted grids.
+ * gh_vals_coarse must be sizes of coarse grid's cuboids. Most of the time its equal to m,n,o but for
+ * the threshold-level when using MPI, the cuboid is bigger than the actual level would be. */
+__kernel void restrict_to_coarse(
+    __global double* restrict fine,
+    __global double* restrict coarse,
+    const int m, const int n, const int o, const int ghosts,
+    const int ngh_vals_coarse, const int ogh_vals_coarse)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
@@ -847,12 +852,12 @@ __kernel void restrict_to_coarse(__global double *restrict fine, __global double
 
     if (i < m && j < n && k < o)
     {
-        const int index = (i + ghosts) * n * o + (j + ghosts) * o + (k + ghosts);
+        const int index = (i + ghosts) * ngh_vals_coarse * ogh_vals_coarse + (j + ghosts) * ogh_vals_coarse + (k + ghosts);
         const int nf = (n - g2) * 2 + g2, of = (o - g2) * 2 + g2;
         const int i2 = i * 2 + ghosts + 1, j2 = j * 2 + ghosts + 1, k2 = k * 2 + ghosts + 1;
         coarse[index] =
             0.125 * fine[i2 * nf * of + j2 * of + k2] // self
-                                                      // direct neighbours
+            // direct neighbours
             + 0.0625 * fine[(i2 - 1) * nf * of + j2 * of + k2] + 0.0625 * fine[(i2 + 1) * nf * of + j2 * of + k2] +
             0.0625 * fine[i2 * nf * of + (j2 - 1) * of + k2] + 0.0625 * fine[i2 * nf * of + (j2 + 1) * of + k2] +
             0.0625 * fine[i2 * nf * of + j2 * of + k2 - 1] +
@@ -887,9 +892,14 @@ __kernel void restrict_to_coarse(__global double *restrict fine, __global double
 /* Prolongates from coarse to fine grid.
  * Needs to get called with #work-items = #nodes of coarse grid.
  * m,n,o is size of ghosted fine grid.
- * fine and coarse must be of sizes of ghosted grids */
-__kernel void prolongate_to_fine(__global double *restrict fine, __global double *restrict coarse, const int m,
-                                 const int n, const int o, const int ghosts)
+ * fine and coarse must be of sizes of ghosted grids.
+ * gh_vals_coarse must be sizes of coarse grid's cuboids. Most of the time its equal to m/2,n/2,o/2 but for
+ * the threshold-level when using MPI, the cuboid is bigger than the actual level would be. */
+__kernel void prolongate_to_fine(
+    __global double* restrict fine,
+    __global double* restrict coarse,
+    const int m, const int n, const int o, const int ghosts,
+    const int ngh_vals_coarse, const int ogh_vals_coarse)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
@@ -900,37 +910,37 @@ __kernel void prolongate_to_fine(__global double *restrict fine, __global double
 
     if (i > ghosts - 1 && i < mc - ghosts && j > ghosts - 1 && j < nc - ghosts && k > ghosts - 1 && k < oc - ghosts)
     {
-        const int index_coarse = i * nc * oc + j * oc + k;
+        const int index_coarse = i * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k;
         const int i2 = i * 2 - (ghosts - 1), j2 = j * 2 - (ghosts - 1), k2 = k * 2 - (ghosts - 1);
 
         fine[i2 * n * o + j2 * o + k2] = coarse[index_coarse];
 
         fine[i2 * n * o + j2 * o + k2 - 1] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - 1]);
-        fine[i2 * n * o + (j2 - 1) * o + k2] = 0.5 * (coarse[index_coarse] + coarse[i * nc * oc + (j - 1) * oc + k]);
-        fine[(i2 - 1) * n * o + j2 * o + k2] = 0.5 * (coarse[index_coarse] + coarse[(i - 1) * nc * oc + j * oc + k]);
+        fine[i2 * n * o + (j2 - 1) * o + k2] = 0.5 * (coarse[index_coarse] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k]);
+        fine[(i2 - 1) * n * o + j2 * o + k2] = 0.5 * (coarse[index_coarse] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k]);
 
         fine[i2 * n * o + (j2 - 1) * o + k2 - 1] =
-            0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[i * nc * oc + (j - 1) * oc + k] +
-                    coarse[i * nc * oc + (j - 1) * oc + k - 1]);
+            0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
+                    coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k - 1]);
         fine[(i2 - 1) * n * o + j2 * o + k2 - 1] =
-            0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[(i - 1) * nc * oc + j * oc + k] +
-                    coarse[(i - 1) * nc * oc + j * oc + k - 1]);
+            0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k] +
+                    coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k - 1]);
         fine[(i2 - 1) * n * o + (j2 - 1) * o + k2] =
-            0.25 * (coarse[index_coarse] + coarse[i * nc * oc + (j - 1) * oc + k] +
-                    coarse[(i - 1) * nc * oc + j * oc + k] + coarse[(i - 1) * nc * oc + (j - 1) * oc + k]);
+            0.25 * (coarse[index_coarse] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
+                    coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k]);
 
         fine[(i2 - 1) * n * o + (j2 - 1) * o + k2 - 1] =
-            0.125 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[i * nc * oc + (j - 1) * oc + k] +
-                     coarse[i * nc * oc + (j - 1) * oc + k - 1] + coarse[(i - 1) * nc * oc + j * oc + k] +
-                     coarse[(i - 1) * nc * oc + j * oc + k - 1] + coarse[(i - 1) * nc * oc + (j - 1) * oc + k] +
-                     coarse[(i - 1) * nc * oc + (j - 1) * oc + k - 1]);
+            0.125 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
+                     coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k - 1] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k] +
+                     coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k - 1] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
+                     coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k - 1]);
     }
 }
 
 /* Loads a plane from global buffer src into target buffer dest.
  * Also loads outmost ghosted border.
  * joff is the offset in j direction, e.g. plane's x-size */
-void load_plane(__global double *restrict src, __local double *restrict dest, int index_src, int index_dest, int joff,
+void load_plane(__global double* restrict src, __local double* restrict dest, int index_src, int index_dest, int joff,
                 int joff_global)
 {
     // if (blockIdx.x == 0 && blockIdx.y == 0 && get_local_id(0) == 0 && get_local_id(1) == 0)
@@ -957,7 +967,7 @@ void load_plane(__global double *restrict src, __local double *restrict dest, in
 /* Loads a plane from global buffer src into target buffer dest.
  * Also loads outmost ghosted border including diagonal corners.
  * joff is the offset in j direction, e.g. plane's x-size */
-void load_plane_diag(__global double *restrict src, __local double *restrict dest, int index_src, int index_dest,
+void load_plane_diag(__global double* restrict src, __local double* restrict dest, int index_src, int index_dest,
                      int joff, int joff_global)
 {
     // if (blockIdx.x == 0 && blockIdx.y == 0 && get_local_id(0) == 0 && get_local_id(1) == 0)
@@ -1003,8 +1013,8 @@ void load_plane_diag(__global double *restrict src, __local double *restrict des
  * debug_out has the same dimensions as v_in.
  * ghosts is the amount of ghost cells of v_in in one direction */
 __kernel void jacobi_stream_shmem_7point(
-    __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict v_out, __global double *restrict f, __global double *restrict r, __local double *vlocal,
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out, __global double* restrict f, __global double* restrict r, __local double* vlocal,
     const double h2inv, const double dinv, const double omega, const int m, const int n, const int o, const int ghosts,
     const int iterations, const int store_residual)
 {
@@ -1040,11 +1050,11 @@ __kernel void jacobi_stream_shmem_7point(
 
         // store values of x-1, current x and x+1-planes in local memory, e.g. for t = 3, wg size = 12
         // size = (time steps + 1) * (block (wg) size + 2) = 4*14*14
-        __local double *A = vlocal;
-        __local double *rp = vlocal + blockSizeEx * iterations;
-        __local double *rm =
+        __local double* A = vlocal;
+        __local double* rp = vlocal + blockSizeEx * iterations;
+        __local double* rm =
             vlocal + blockSizeEx * 2 * iterations; // (time steps + 1) * (block (wg) size + 2) = 4*14*14
-        __local double *tmp;
+        __local double* tmp;
 
         // initialize local storage + registers
         load_plane(v_in, rm, index, index_loc, joff, o);
@@ -1225,8 +1235,8 @@ __kernel void jacobi_stream_shmem_7point(
  * debug_out has the same dimensions as v_in.
  * ghosts is the amount of ghost cells of v_in in one direction */
 __kernel void jacobi_stream_shmem_19point(
-    __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict v_out, __global double *restrict f, __global double *restrict r, __local double *vlocal,
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out, __global double* restrict f, __global double* restrict r, __local double* vlocal,
     const double h2inv, const double dinv, const double omega, const int m, const int n, const int o, const int ghosts,
     const int iterations, const int store_residual)
 {
@@ -1262,11 +1272,11 @@ __kernel void jacobi_stream_shmem_19point(
 
         // store values of x-1, current x and x+1-planes in local memory, e.g. for t = 3, wg size = 12
         // size = (time steps + 1) * (block (wg) size + 2) = 4*14*14
-        __local double *A = vlocal;
-        __local double *rp = vlocal + blockSizeEx * iterations;
-        __local double *rm =
+        __local double* A = vlocal;
+        __local double* rp = vlocal + blockSizeEx * iterations;
+        __local double* rm =
             vlocal + blockSizeEx * 2 * iterations; // (time steps + 1) * (block (wg) size + 2) = 4*14*14
-        __local double *tmp;
+        __local double* tmp;
 
         // initialize local storage + registers
         load_plane_diag(v_in, rm, index, index_loc, joff, o);
@@ -1450,8 +1460,8 @@ __kernel void jacobi_stream_shmem_19point(
  * debug_out has the same dimensions as v_in.
  * ghosts is the amount of ghost cells of v_in in one direction */
 __kernel void jacobi_stream_shmem_27point(
-    __global double *restrict v_in, // needed s.t. every work-item can read surrounding cell values
-    __global double *restrict v_out, __global double *restrict f, __global double *restrict r, __local double *vlocal,
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out, __global double* restrict f, __global double* restrict r, __local double* vlocal,
     const double h2inv, const double dinv, const double omega, const int m, const int n, const int o, const int ghosts,
     const int iterations, const int store_residual)
 {
@@ -1487,11 +1497,11 @@ __kernel void jacobi_stream_shmem_27point(
 
         // store values of x-1, current x and x+1-planes in local memory, e.g. for t = 3, wg size = 12
         // size = (time steps + 1) * (block (wg) size + 2) = 4*14*14
-        __local double *A = vlocal;
-        __local double *rp = vlocal + blockSizeEx * iterations;
-        __local double *rm =
+        __local double* A = vlocal;
+        __local double* rp = vlocal + blockSizeEx * iterations;
+        __local double* rm =
             vlocal + blockSizeEx * 2 * iterations; // (time steps + 1) * (block (wg) size + 2) = 4*14*14
-        __local double *tmp;
+        __local double* tmp;
 
         // initialize local storage + registers
         load_plane_diag(v_in, rm, index, index_loc, joff, o);
@@ -1694,7 +1704,7 @@ __kernel void jacobi_stream_shmem_27point(
  * Work-items that map to a real cell simply do nothing (optimization potential here!).
  */
 __kernel void update_ghosts_varying_stencil(
-    __global double *restrict c,
+    __global double* restrict c,
     int m, int n, int o,
     int width, int gh)
 {
@@ -1741,9 +1751,9 @@ __kernel void update_ghosts_varying_stencil(
  * Remember to update ghosts of c if ghc > 0 afterwards.
  */
 __kernel void mult_stencils_var_var(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int gha, int ghb, int ghc)
@@ -1812,9 +1822,9 @@ __kernel void mult_stencils_var_var(
  * Remember to update ghosts of c if ghc > 0 afterwards.
  */
 __kernel void mult_stencils_var_fix(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int gha, int ghc)
@@ -1875,9 +1885,9 @@ __kernel void mult_stencils_var_fix(
  * Remember to update ghosts of c if ghc > 0 afterwards.
  */
 __kernel void mult_stencils_fix_var(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int ghb, int ghc)
@@ -1935,11 +1945,21 @@ __kernel void mult_stencils_fix_var(
 /**
  * Copies values from in which is of width 7 on a grid 2m x 2n x 2o to stencil out of width
  * 3 on grid m x n x o.
+ * a_2h might have bigger sizes than the grid it represents, thus mout, nout and oout are needed.
+ * Parameters:
+ * in: 7x7x7 stencil on fine grid 2m x 2n x 2o
+ * out: 3x3x3 stencil on coarse grid m x n x o
+ * m, n, o: Extends of the coarse grid without ghosts.
+ * ghin: Ghosts of the stencil on the fine grid.
+ * ghout: Ghosts of the stencil on the coarse grid.
+ * nghout, oghout: Extends of the stencil on the coarse grid including ghosts.
  */
 __kernel void cut_stencils_w7_to_w3(
-    __global double *restrict in,
-    __global double *restrict out,
-    int m, int n, int o, int ghin, int ghout)
+    __global double* restrict in,
+    __global double* restrict out,
+    const int m, const int n, const int o,
+    const int ghin, const int ghout,
+    const int nghout, const int oghout)
 {
     int i = get_global_id(0) + ghout;
     int j = get_global_id(1) + ghout;
@@ -1953,9 +1973,9 @@ __kernel void cut_stencils_w7_to_w3(
     int cell_h = i2 * (2 * n + 2 * ghin) * (2 * o + 2 * ghin) * 343 + j2 * (2 * o + 2 * ghin) * 343 + k2 * 343;
 
     // 3^3 = 27
-    int cell_h2 = i * (n + 2 * ghout) * (o + 2 * ghout) * 27 + j * (o + 2 * ghout) * 27 + k * 27;
+    int cell_h2 = i * nghout * oghout * 27 + j * oghout * 27 + k * 27;
 
-    if (i < m + 2 && j < n + 2 && k < o + 2)
+    if (i < m + ghout && j < n + ghout && k < o + ghout)
     {
         // clang-format off
         for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
@@ -1993,9 +2013,9 @@ __kernel void cut_stencils_w7_to_w3(
 // buf_local's size must be equal to work-group size.
 // fractions determines the size of mapping of work-items to num_elements, i.e. 4 means #wi = 1/4 * #elements
 __kernel void sum_partial_global_eq_x_num_elements(
-    __global double *restrict buf,
-    __global double *restrict partial_sums,
-    __local double *buf_local,
+    __global double* restrict buf,
+    __global double* restrict partial_sums,
+    __local double* buf_local,
     int num_elements,
     int fractions)
 {
@@ -2037,8 +2057,8 @@ __kernel void sum_partial_global_eq_x_num_elements(
 // Sums buf_partial_sums and writes result into buf_sum. buf_partial_sums needs to be filled using sum_partial before using this kernel.
 // Must be called with only one work-item which iterates over the partial sums.
 __kernel void sum_finish(
-    __global double *restrict buf_partial_sums,
-    __global double *restrict buf_sum,
+    __global double* restrict buf_partial_sums,
+    __global double* restrict buf_sum,
     int partial_sums_count)
 {
     double sum = 0;
@@ -2059,9 +2079,9 @@ __kernel void sum_finish(
 // fractions determines the size of mapping of work-items to num_elements, i.e. 4 means #wi = 1/4 * #elements.
 // Work-group size must be even or the reduction will not work, i.e. miss the last element of each wg.
 __kernel void max_partial_global_eq_x_num_elements(
-    __global double *restrict buf,
-    __global double *restrict partial_max,
-    __local double *buf_local,
+    __global double* restrict buf,
+    __global double* restrict partial_max,
+    __local double* buf_local,
     int num_elements,
     int fractions)
 {
@@ -2109,8 +2129,8 @@ __kernel void max_partial_global_eq_x_num_elements(
 // Finds maximum in buf_partial_max and writes result into buf_max. buf_partial_max needs to be filled using max_partial before using this kernel.
 // Must be called with only one work-item which iterates over the partial maxima.
 __kernel void max_finish(
-    __global double *restrict buf_partial_max,
-    __global double *restrict buf_max,
+    __global double* restrict buf_partial_max,
+    __global double* restrict buf_max,
     int partial_max_count)
 {
     double max = buf_partial_max[0];
@@ -2135,9 +2155,9 @@ __kernel void max_finish(
 // fractions determines the size of mapping of work-items to num_elements, i.e. 4 means #wi = 1/4 * #elements.
 // Work-group size must be even or the reduction will not work, i.e. miss the last element of each wg.
 __kernel void max_abs_partial_global_eq_x_num_elements(
-    __global double *restrict buf,
-    __global double *restrict partial_max,
-    __local double *buf_local,
+    __global double* restrict buf,
+    __global double* restrict partial_max,
+    __local double* buf_local,
     int num_elements,
     int fractions)
 {

@@ -30,6 +30,8 @@ TEST_CASE("prolongation")
     auto c_expected_fine = prolongationTestOutputFine();
     auto c_expected_coarse = prolongationTestOutputCoarse();
 
+    mgcl::MultigridEngine::updateGhostsSeq(*c_coarse, nullptr, true, true);
+
     auto p = std::make_shared<mgcl::Problem>(m, n, o);
     mgcl::Level lv_fine(p.get(), 0);
     mgcl::Level lv_coarse(p.get(), 1);
@@ -37,6 +39,7 @@ TEST_CASE("prolongation")
     SECTION("prolongateSeq")
     {
         mgcl::MultigridEngine::prolongateSeq(lv_fine, lv_coarse, *c_fine, *c_coarse);
+        // mgcl::MultigridEngine::updateGhostsSeq(*c_fine, nullptr, true, true);
 
         REQUIRE(c_fine->isEqual(*c_expected_fine));
         REQUIRE(c_coarse->isEqual(*c_expected_coarse));
@@ -55,15 +58,14 @@ TEST_CASE("prolongation")
 
         p->setDeviceType(deviceType);
         mgcl_test::TestUtility tu(p);
-        cl_mem d_c_fine = tu.createOpenCLBuffer(*c_fine);
-        cl_mem d_c_coarse = tu.createOpenCLBuffer(*c_coarse);
+        auto d_c_fine = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_fine);
+        auto d_c_coarse = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_coarse);
 
-        mgcl::MultigridEngine::prolongate(lv_fine, lv_coarse, d_c_fine, d_c_coarse);
+        mgcl::MultigridEngine::prolongate(lv_fine, lv_coarse, *d_c_fine, *d_c_coarse);
         tu.finish();
 
-        auto c_fine_out = tu.readOpenCLBuffer(d_c_fine, m, n, o, ghosts_m, ghosts_n, ghosts_o);
-        auto c_coarse_out = tu.readOpenCLBuffer(d_c_coarse, c_expected_coarse->getM(), c_expected_coarse->getN(),
-                                                c_expected_coarse->getO(), ghosts_m, ghosts_n, ghosts_o);
+        auto c_fine_out = d_c_fine->read(tu.getCommands(), nullptr, true);
+        auto c_coarse_out = d_c_coarse->read(tu.getCommands(), nullptr, true);
 
         REQUIRE(c_fine_out->isEqual(*c_expected_fine));
         REQUIRE(c_coarse_out->isEqual(*c_expected_coarse));
@@ -88,7 +90,7 @@ std::shared_ptr<mgcl::Cuboid> prolongationTestInputFine()
 std::shared_ptr<mgcl::Cuboid> prolongationTestInputCoarse()
 {
     auto cret = std::make_shared<mgcl::Cuboid>(8, 8, 8, 1, 1, 1, 0);
-    auto &c = *cret;
+    auto& c = *cret;
 
     c[0][0][0] = 6.000000e+00;
     c[0][0][1] = 2.000000e+00;
@@ -831,7 +833,7 @@ std::shared_ptr<mgcl::Cuboid> prolongationTestInputCoarse()
 std::shared_ptr<mgcl::Cuboid> prolongationTestOutputFine()
 {
     auto cret = std::make_shared<mgcl::Cuboid>(16, 16, 16, 1, 1, 1);
-    auto &c = *cret;
+    auto& c = *cret;
 
     c[0][0][0] = 0.000000e+00;
     c[0][0][1] = 0.000000e+00;
@@ -6677,7 +6679,7 @@ std::shared_ptr<mgcl::Cuboid> prolongationTestOutputFine()
 std::shared_ptr<mgcl::Cuboid> prolongationTestOutputCoarse()
 {
     auto cret = std::make_shared<mgcl::Cuboid>(8, 8, 8, 1, 1, 1);
-    auto &c = *cret;
+    auto& c = *cret;
 
     c[0][0][0] = 3.000000e+00;
     c[0][0][1] = 2.000000e+00;

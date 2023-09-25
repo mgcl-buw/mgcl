@@ -17,7 +17,7 @@ enum RUNS
 // arguments:
 // 1. arg: int, grid size. Default is 16
 // 2. arg: string, determines if seq, ocl or both shall be called. Valid values: seq, ocl, seq+ocl. Default is seq
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     int N = 16;
     RUNS runs = SEQ;
@@ -102,7 +102,7 @@ int main(int argc, char **argv)
         p.setOmega(omega);
 
         p.setStencilType(mgcl::MGCL_VARYING);
-        auto &s = *p.getStencilValues();
+        auto& s = *p.getStencilValues();
 
         // fill with 7-point Laplace
         for (int i = 0; i < s.getDim1gh(); i++)

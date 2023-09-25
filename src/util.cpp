@@ -17,10 +17,12 @@ namespace mgcl::util
      * @param program
      * @param commands
      */
-    double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
+    double sum(CuboidGpu& buf, cl_program program, cl_command_queue commands,
                bool return_sum, size_t localSize)
     {
         int err;
+        size_t num_elements = buf.getSize();
+        cl_context context = buf.getContext();
 
         // Determine number of work-items worked out in benchmarks manually.
         int fractions = 4;
@@ -56,8 +58,9 @@ namespace mgcl::util
         cl_kernel kernel_sum_partial = clCreateKernel(program, "sum_partial_global_eq_x_num_elements", &err);
         mgclCheckError(err, "Creating kernel sum_partial_global_eq_x_num_elements");
 
+        cl_mem rawbuf = buf.getBuffer();
         int pos = 0;
-        err = clSetKernelArg(kernel_sum_partial, pos, sizeof(cl_mem), &buf);
+        err = clSetKernelArg(kernel_sum_partial, pos, sizeof(cl_mem), &rawbuf);
         err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(cl_mem), &dPartialSums);
         err |= clSetKernelArg(kernel_sum_partial, ++pos, localSize * sizeof(double), nullptr);
         err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(int), &num_elements);
@@ -116,10 +119,12 @@ namespace mgcl::util
      * @param program
      * @param commands
      */
-    double max(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
+    double max(CuboidGpu& buf, cl_program program, cl_command_queue commands,
                bool return_max, size_t localSize)
     {
         int err;
+        size_t num_elements = buf.getSize();
+        cl_context context = buf.getContext();
 
         // Determine number of work-items worked out in benchmarks manually.
         int fractions = 4;
@@ -155,8 +160,9 @@ namespace mgcl::util
         cl_kernel kernel_max_partial = clCreateKernel(program, "max_partial_global_eq_x_num_elements", &err);
         mgclCheckError(err, "Creating kernel max_partial_global_eq_x_num_elements");
 
+        cl_mem rawbuf = buf.getBuffer();
         int pos = 0;
-        err = clSetKernelArg(kernel_max_partial, pos, sizeof(cl_mem), &buf);
+        err = clSetKernelArg(kernel_max_partial, pos, sizeof(cl_mem), &rawbuf);
         err |= clSetKernelArg(kernel_max_partial, ++pos, sizeof(cl_mem), &dPartialMax);
         err |= clSetKernelArg(kernel_max_partial, ++pos, localSize * sizeof(double), nullptr);
         err |= clSetKernelArg(kernel_max_partial, ++pos, sizeof(int), &num_elements);
@@ -215,10 +221,12 @@ namespace mgcl::util
      * @param program
      * @param commands
      */
-    double max_abs(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
+    double max_abs(CuboidGpu& buf, cl_program program, cl_command_queue commands,
                    bool return_max, size_t localSize)
     {
         int err;
+        size_t num_elements = buf.getSize();
+        cl_context context = buf.getContext();
 
         // Determine number of work-items worked out in benchmarks manually.
         int fractions = 4;
@@ -254,8 +262,9 @@ namespace mgcl::util
         cl_kernel kernel_max_partial = clCreateKernel(program, "max_abs_partial_global_eq_x_num_elements", &err);
         mgclCheckError(err, "Creating kernel max_abs_partial_global_eq_x_num_elements");
 
+        cl_mem rawbuf = buf.getBuffer();
         int pos = 0;
-        err = clSetKernelArg(kernel_max_partial, pos, sizeof(cl_mem), &buf);
+        err = clSetKernelArg(kernel_max_partial, pos, sizeof(cl_mem), &rawbuf);
         err |= clSetKernelArg(kernel_max_partial, ++pos, sizeof(cl_mem), &dPartialMax);
         err |= clSetKernelArg(kernel_max_partial, ++pos, localSize * sizeof(double), nullptr);
         err |= clSetKernelArg(kernel_max_partial, ++pos, sizeof(int), &num_elements);
@@ -307,9 +316,9 @@ namespace mgcl::util
     // Returns minimum of a, b and c
     int seq::min3(int a, int b, int c)
     {
-        if (a < b && a < c)
+        if (a <= b && a <= c)
             return a;
-        else if (b < a && b < c)
+        else if (b <= a && b <= c)
             return b;
         return c;
     }
@@ -317,9 +326,9 @@ namespace mgcl::util
     // Returns minimum of a, b and c
     double seq::min3(double a, double b, double c)
     {
-        if (a < b && a < c)
+        if (a <= b && a <= c)
             return a;
-        else if (b < a && b < c)
+        else if (b <= a && b <= c)
             return b;
         return c;
     }

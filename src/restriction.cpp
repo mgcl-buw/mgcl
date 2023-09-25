@@ -6,6 +6,7 @@
 #include "problem.hpp"
 
 #include <cstddef> // for size_t, NULL
+#include <iostream>
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -19,29 +20,31 @@ namespace mgcl
 
     /* Restricts residual to coarser grid using full-weighted restriction operator.
      * m, n and o must be the dimensions of the coarser grid without ghost cells. */
-    void MultigridEngine::restrictSeq(Level &fine, Level &coarse, Cuboid &fine_vals, Cuboid &coarse_vals)
+    void MultigridEngine::restrictSeq(Level& fine, Level& coarse, Cuboid& fine_vals, Cuboid& coarse_vals)
     {
         int ghosts = coarse.problem->getGhosts();
-        int m = coarse.m;
-        int n = coarse.n;
-        int o = coarse.o;
+        // Shift fine levels instead of using coarse level directly since coarse might have different sizes when
+        // using mpi and coarse.num == mpiLevelThreshold.
+        int m = fine.m >> 1;
+        int n = fine.n >> 1;
+        int o = fine.o >> 1;
 
-        if (fine.problem->bc == BC::PERIODIC)
-            MultigridEngine::updateGhostsSeq(fine_vals);
+        if (fine.problem->isPeriodic())
+            MultigridEngine::updateGhostsSeq(fine_vals, fine.getMpiDataPtr(), fine.problem->isPeriodic(),
+                                             fine.isCalculatedLocally());
 
-        int ioff = 1, joff = 1, koff = 1; // offset grows by 1 for each step
-        int i2, j2, k2;
+        int ioff = 1;
         for (int i = ghosts; i < m + ghosts; i++, ioff++)
         {
-            i2 = i + ioff; // == i*2+ghosts+1
-            joff = 1;
+            int i2 = i + ioff; // == i*2+ghosts+1
+            int joff = 1;
             for (int j = ghosts; j < n + ghosts; j++, joff++)
             {
-                j2 = j + joff;
-                koff = 1;
+                int j2 = j + joff;
+                int koff = 1;
                 for (int k = ghosts; k < o + ghosts; k++, koff++)
                 {
-                    k2 = k + koff;
+                    int k2 = k + koff;
                     coarse_vals[i][j][k] =
                         0.125 * fine_vals[i2][j2][k2] // self
                         // direct neighbours
@@ -70,30 +73,44 @@ namespace mgcl
             }
         }
 
-        if (fine.problem->bc == BC::PERIODIC)
-            MultigridEngine::updateGhostsSeq(coarse_vals);
+        if (coarse.problem->isPeriodic())
+            MultigridEngine::updateGhostsSeq(coarse_vals, coarse.getMpiDataPtr(), coarse.problem->isPeriodic(),
+                                             coarse.isCalculatedLocally());
     }
 
-    void MultigridEngine::restrict(Level &fine, Level &coarse, cl_mem d_fine_values, cl_mem d_coarse_values)
+    void MultigridEngine::restrict(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values)
     {
         int err;
-        int mreal = coarse.m;
-        int nreal = coarse.n;
-        int oreal = coarse.o;
+        int mreal = fine.m >> 1;
+        int nreal = fine.n >> 1;
+        int oreal = fine.o >> 1;
         auto problem = fine.problem;
 
         // Create the compute kernel from the program
         cl_kernel kernel = clCreateKernel(problem->openCLHelper.getProgram(), "restrict_to_coarse", &err);
         mgclCheckError(err, "Creating kernel");
 
+        cl_mem buf_fine = d_fine_values.getBuffer();
+        cl_mem buf_coarse = d_coarse_values.getBuffer();
+
+        // Shift fine levels instead of using coarse level directly since coarse might have different sizes when
+        // using mpi and coarse.num == mpiLevelThreshold.
+        int mcgh = mreal + 2 * problem->getGhosts();
+        int ncgh = nreal + 2 * problem->getGhosts();
+        int ocgh = oreal + 2 * problem->getGhosts();
+        int ngh_vals_coarse = d_coarse_values.getNgh();
+        int ogh_vals_coarse = d_coarse_values.getOgh();
+
         // assign kernel arguments
         int pos = 0;
-        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &d_fine_values);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_coarse_values);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.mgh);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.ngh);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse.ogh);
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buf_fine);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &buf_coarse);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mcgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ncgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ocgh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem->ghosts);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh_vals_coarse);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh_vals_coarse);
         mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
@@ -109,12 +126,13 @@ namespace mgcl
                 // printf("%ld (multiple of %ld)\n", global[i], local[i]);
             }
 
-        err = MultigridEngine::updateGhosts(*problem, d_fine_values, fine.mgh, fine.ngh, fine.ogh, problem->ghosts, problem->ghosts, problem->ghosts);
+        err = MultigridEngine::updateGhosts(*problem, d_fine_values, fine.getMpiDataPtr(),
+                                            fine.isCalculatedLocally());
         mgclCheckError(err, "Updating fine ghosts");
         err = clEnqueueNDRangeKernel(problem->openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing restriction kernel");
-        err = MultigridEngine::updateGhosts(*problem, d_coarse_values, coarse.mgh, coarse.ngh, coarse.ogh, problem->ghosts, problem->ghosts,
-                                            problem->ghosts);
+        err = MultigridEngine::updateGhosts(*problem, d_coarse_values, coarse.getMpiDataPtr(),
+                                            coarse.isCalculatedLocally());
         mgclCheckError(err, "Updating coarse ghosts");
 
         clReleaseKernel(kernel);

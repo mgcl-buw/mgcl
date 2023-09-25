@@ -54,10 +54,10 @@ namespace mgcl
         for (i = 0; i < field_1d.size(); i++)
             field_1d[i] = value;
 
-        field_3d = new double **[mgh];
+        field_3d = new double**[mgh];
         for (i = 0; i < mgh; i++)
         {
-            field_3d[i] = new double *[ngh];
+            field_3d[i] = new double*[ngh];
             for (j = 0; j < ngh; j++)
             {
                 field_3d[i][j] = &field_1d[i * ngh * ogh + j * ogh];
@@ -65,7 +65,7 @@ namespace mgcl
         }
     }
 
-    Cuboid::Cuboid(Cuboid &&c)
+    Cuboid::Cuboid(Cuboid&& c)
         : m(c.m),
           n(c.n),
           o(c.o),
@@ -90,7 +90,7 @@ namespace mgcl
         c.field_3d = nullptr;
     }
 
-    Cuboid &Cuboid::operator=(Cuboid &&c)
+    Cuboid& Cuboid::operator=(Cuboid&& c)
     {
         m = c.m;
         n = c.n;
@@ -137,7 +137,7 @@ namespace mgcl
         return n;
     }
 
-    double ***Cuboid::getData() const
+    double*** Cuboid::getData() const
     {
         return field_3d;
     }
@@ -224,7 +224,7 @@ namespace mgcl
         }
     }
 
-    std::vector<double> &Cuboid::field1d()
+    std::vector<double>& Cuboid::field1d()
     {
         return field_1d;
     }
@@ -253,6 +253,29 @@ namespace mgcl
     }
 
     /**
+     * @brief Fills this Cuboid with the 1d index of the corresponding cell, including ghost cells.
+     *
+     * @param realCellsOnly If true, only real cells get filled.
+     */
+    void Cuboid::fill1dIndex(bool realCellsOnly)
+    {
+        if (realCellsOnly)
+            for (int i = ghostsM; i < m + ghostsM; i++)
+                for (int j = ghostsN; j < n + ghostsN; j++)
+                    for (int k = ghostsO; k < o + ghostsO; k++)
+                    {
+                        (*this)[i][j][k] = i * ngh * ogh + j * ogh + k;
+                    }
+        else
+            for (int i = 0; i < mgh; i++)
+                for (int j = 0; j < ngh; j++)
+                    for (int k = 0; k < ogh; k++)
+                    {
+                        (*this)[i][j][k] = i * ngh * ogh + j * ogh + k;
+                    }
+    }
+
+    /**
      * @brief Returns true if real cells contents of this Cuboid is equal to the one of another Cuboid c within a
      * given tolerance tol, respecting ghost cell amount. Dimensions of real cell amount of this Cuboid and c
      * must be equal (without ghost cells).
@@ -264,7 +287,7 @@ namespace mgcl
      * @return false Cuboids not equal.
      * @throws invalid_argument When dimensions of Cuboids don't match.
      */
-    bool Cuboid::isEqual(Cuboid &c, double tol, bool printDiffs)
+    bool Cuboid::isEqual(Cuboid& c, double tol, bool printDiffs)
     {
         if (m != c.getM() ||
             n != c.getN() ||
@@ -275,7 +298,7 @@ namespace mgcl
 
         std::vector<std::tuple<int, int, int, double, double, double>> diffs;
         bool ret = true;
-        double diff = 0;
+        double diff;
 
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)
@@ -323,7 +346,7 @@ namespace mgcl
      * @return false Cuboids not equal.
      * @throws invalid_argument When dimensions of Cuboids don't match.
      */
-    bool Cuboid::isEqualAllCells(Cuboid &c, double tol)
+    bool Cuboid::isEqualAllCells(Cuboid& c, double tol)
     {
         if (mgh != c.getMgh() ||
             ngh != c.getNgh() ||
@@ -332,7 +355,7 @@ namespace mgcl
             throw std::invalid_argument("Cannot check equality for Cuboids. Dimensions differ.");
         }
 
-        double diff = 0;
+        double diff;
 
         for (int i = 0; i < mgh; i++)
             for (int j = 0; j < ngh; j++)
@@ -349,9 +372,10 @@ namespace mgcl
     }
 
     /**
-     * @brief Dumps content to file fiven by path overwriting existing files
+     * @brief Dumps content to file fiven by path overwriting existing files.
      *
      * @param path Path to file, overwrites existing one.
+     * @param realCellsOnly If true, only real cells will be written. Defaults to false.
      * @throws runtime_error When file could not be opened.
      */
     void Cuboid::dumpToFile(std::string path, bool realCellsOnly)
@@ -395,7 +419,7 @@ namespace mgcl
      * @param c
      * @return Cuboid
      */
-    Cuboid Cuboid::copyFrom(Cuboid &c)
+    Cuboid Cuboid::copyFrom(Cuboid& c)
     {
         Cuboid ret(c.getM(), c.getN(), c.getO(), c.getGhostsM(), c.getGhostsN(), c.getGhostsO(), 0);
 
@@ -414,7 +438,7 @@ namespace mgcl
      *
      * @param c
      */
-    void Cuboid::fillRealFrom(Cuboid &c)
+    void Cuboid::fillRealFrom(Cuboid& c)
     {
         if (m != c.getM() || n != c.getN() || o != c.getO())
             throw "Dimensions do not match!";
@@ -433,7 +457,7 @@ namespace mgcl
      *
      * @param c
      */
-    void Cuboid::fillAllFrom(Cuboid &c)
+    void Cuboid::fillAllFrom(Cuboid& c)
     {
         if (mgh != c.getMgh() || ngh != c.getNgh() || ogh != c.getOgh())
             throw "Dimensions do not match!";
@@ -444,5 +468,67 @@ namespace mgcl
                 {
                     field_3d[i][j][k] = c[i][j][k];
                 }
+    }
+
+    /**
+     * @brief Creates and returns a slice of this Cuboid and returns it as a new Cuboid. Boundaries must fit, else an
+     * exception is thrown. Ghost cells are not included, i.e. m_end < this->m must hold.
+     * By default the new Cuboid will have the same ghost cell amount as the original one.
+     * Boundaries are 0-based, i.e. both start and end will be included.
+     *
+     * @return std::unique_ptr<Cuboid>
+     */
+    std::unique_ptr<Cuboid> Cuboid::slice(int m_start, int m_end, int n_start, int n_end, int o_start, int o_end,
+                                          int ghm, int ghn, int gho)
+    {
+        if (m_start < 0 || n_start < 0 || o_start < 0 ||
+            m_end >= m || n_end >= n || o_end >= o)
+            throw "Boundaries out of range!";
+
+        if (ghm < 0)
+            ghm = ghostsM;
+        if (ghn < 0)
+            ghn = ghostsN;
+        if (gho < 0)
+            gho = ghostsO;
+
+        auto ret = std::make_unique<Cuboid>((m_end - m_start) + 1, (n_end - n_start) + 1, (o_end - o_start) + 1,
+                                            ghm, ghn, gho);
+        for (int i = m_start, is = ghm, ib = i + ghostsM; i <= m_end; i++, is++, ib++)
+            for (int j = n_start, js = ghn, jb = j + ghostsN; j <= n_end; j++, js++, jb++)
+                for (int k = o_start, ks = gho, kb = k + ghostsO; k <= o_end; k++, ks++, kb++)
+                {
+                    ret->getData()[is][js][ks] = getData()[ib][jb][kb];
+                }
+
+        return ret;
+    }
+
+    /**
+     * @brief Creates and returns a slice of this Cuboid and returns it as a new Cuboid. Boundaries must fit, else an
+     * exception is thrown. Ghost cells are included, i.e. m_end < this->mgh must hold.
+     * The returned Cuboid has no ghosts cells.
+     * Boundaries are 0-based, i.e. both start and end will be included.
+     *
+     * @return std::unique_ptr<Cuboid>
+     */
+    std::unique_ptr<Cuboid> Cuboid::sliceIncGhosts(int m_start, int m_end, int n_start, int n_end,
+                                                   int o_start, int o_end)
+    {
+        if (m_start < 0 || n_start < 0 || o_start < 0 ||
+            m_end >= mgh || n_end >= ngh || o_end >= ogh)
+            throw "Boundaries out of range!";
+
+        auto ret = std::make_unique<Cuboid>((m_end - m_start) + 1, (n_end - n_start) + 1, (o_end - o_start) + 1,
+                                            0, 0, 0);
+
+        for (int i = m_start, is = i - m_start; i <= m_end; i++, is++)
+            for (int j = n_start, js = j - n_start; j <= n_end; j++, js++)
+                for (int k = o_start, ks = k - o_start; k <= o_end; k++, ks++)
+                {
+                    ret->getData()[is][js][ks] = getData()[i][j][k];
+                }
+
+        return ret;
     }
 }

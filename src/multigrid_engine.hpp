@@ -15,6 +15,7 @@
 #include <CL/cl.h>
 #endif
 
+#include "cuboid_gpu.hpp"
 #include "mgcl.hpp"
 #include "problem.hpp"
 #include "stencil.hpp"
@@ -25,6 +26,7 @@ namespace mgcl
     class Problem;
     class Level;
     class Cuboid;
+    class MPILevelData;
 
     /**
      * @brief Encapsulates all relevant methods that execute the logic of the multigrid method.
@@ -33,40 +35,52 @@ namespace mgcl
     class MultigridEngine
     {
     public:
-        static double vcycleSeq(Problem &problem, Level &level);
-        static double vcycle(Problem &problem, Level &level);
-        static int correctError(Problem &problem, cl_mem d_v, cl_mem d_r, int m, int n, int o);
+        static double vcycleSeq(Problem& problem, Level& level);
+        static double vcycle(Problem& problem, Level& level);
+        static int correctError(Problem& problem, CuboidGpu& d_v, CuboidGpu& d_r, int m, int n, int o);
 
-        static void restrictSeq(Level &fine, Level &coarse, Cuboid &fineVals, Cuboid &coarseVals);
-        static void restrict(Level &fine, Level &coarse, cl_mem d_fine_values, cl_mem d_coarse_values);
+        static void restrictSeq(Level& fine, Level& coarse, Cuboid& fineVals, Cuboid& coarseVals);
+        static void restrict(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values);
 
-        static void prolongateSeq(Level &fine, Level &coarse, Cuboid &fineVals, Cuboid &coarseVals);
-        static void prolongate(Level &fine, Level &coarse, cl_mem d_fine_values, cl_mem d_coarse_values);
+        static void prolongateSeq(Level& fine, Level& coarse, Cuboid& fineVals, Cuboid& coarseVals);
+        static void prolongate(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values);
 
-        static void updateGhostsSeq(Cuboid &c, /* MPIData *mpiData = nullptr, */ bool periodic = true);
-        static int updateGhosts(Problem &problem, cl_mem dBuffer, int m, int n, int o, int ghostsM, int ghostsN, int ghostsO);
+        static void updateGhostsSeq(Cuboid& c, MPILevelData* mpiData, bool periodic, bool forceLocal);
+        static int updateGhosts(Problem& problem, CuboidGpu& dBuffer, MPILevelData* mpiData, bool forceLocal);
+        static void updateGhostsOclMpi(cl_command_queue commands, CuboidGpu& d_buf, MPILevelData& mpiData,
+                                       bool periodic, bool forceLocal);
 
-        static double residual(Problem &problem, Level &level, bool returnResidual,
+        static double residual(Problem& problem, Level& level, bool returnResidual,
                                int moff = 0, int noff = 0, int ooff = 0);
-        static double residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
-                                  MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil3x3x3 *stencilValues,
-                                  bool returnResidualNorm, bool periodic, int moff = 0, int noff = 0, int ooff = 0);
+        static double residualSeq(Cuboid& f, Cuboid& v, Cuboid& r, MGCL_RESIDUAL_NORM resnorm,
+                                  MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil* stencilValues,
+                                  bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
+                                  int moff = 0, int noff = 0, int ooff = 0, MPILevelData* mpiData = nullptr);
 
-        static double jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
+        static double jacobiSeq(Cuboid& v, Cuboid& f, Cuboid& r, double omega, double h2,
                                 int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType, double stencilFactor,
-                                VaryingStencil3x3x3 *stencilValuesCuboid, bool returnResidualNorm, bool periodic,
-                                int stepsPerIter = 1);
-        static double jacobi(Problem &problem, Level &level, int maxiter, bool returnResidual, int stepsPerIter = 1);
-        static double jacobiLocalMem(Problem &problem, Level &level, int maxiter, int returnResidual);
+                                VaryingStencil* stencilValuesCuboid, bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
+                                int stepsPerIter = 1, MPILevelData* mpiData = nullptr);
+        static double jacobi(Problem& problem, Level& level, int maxiter, bool returnResidual, int stepsPerIter = 1);
+        static double jacobiLocalMem(Problem& problem, Level& level, int maxiter, int returnResidual);
 
-        static VaryingStencil3x3x3 galerkin(VaryingStencil3x3x3 &a_h);
-        static VaryingStencilGpu galerkin(VaryingStencilGpu &a_h, cl_program program, cl_command_queue queue, cl_context context);
+        static VaryingStencil galerkin(VaryingStencil& a_h, int gh_a2h,
+                                       MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
+                                       bool periodic, bool forceLocalFine, bool forceLocalCoarse,
+                                       bool skipUpdateGhostsCoarse,
+                                       int resm = 0, int resn = 0, int reso = 0);
+        static VaryingStencilGpu galerkin(VaryingStencilGpu& a_h, int gh_a2h,
+                                          cl_program program, cl_command_queue queue, cl_context context,
+                                          MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
+                                          bool periodic, bool forceLocalFine, bool forceLocalCoarse,
+                                          bool skipUpdateGhostsCoarse,
+                                          int resm = 0, int resn = 0, int reso = 0);
 
-        static void print7point(Cuboid &v, int i, int j, int k);
-        static void print19point(Cuboid &v, int i, int j, int k);
-        static void print27point(Cuboid &v, int i, int j, int k);
-        static void print27point_sv(Cuboid &v, int i, int j, int k,
-                                    VaryingStencil3x3x3 &sv, int i_sv, int j_sv, int k_sv);
+        static void print7point(Cuboid& v, int i, int j, int k);
+        static void print19point(Cuboid& v, int i, int j, int k);
+        static void print27point(Cuboid& v, int i, int j, int k);
+        static void print27point_sv(Cuboid& v, int i, int j, int k,
+                                    VaryingStencil& sv, int i_sv, int j_sv, int k_sv);
     };
 }
 

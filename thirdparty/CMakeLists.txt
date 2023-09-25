@@ -25,12 +25,6 @@ pmg/stencil.h
 
 add_library(pmg ${SOURCES_PMG})
 
-# don't use iwyu for pmg
-set_property(
-  TARGET pmg
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
-
 # maybe need to run cmake with
 # cmake -DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/openmpi
 # in order to find MPI libraries
@@ -65,12 +59,6 @@ find_package(MPI REQUIRED)
 add_definitions(-DOMPI_SKIP_MPICXX)
 target_link_libraries(mgcl_c PRIVATE MPI::MPI_C)
 target_link_libraries (mgcl_c PRIVATE OpenCL::OpenCL)
-
-# don't use iwyu for mgcl_c
-set_property(
-  TARGET mgcl_c
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
 
 # copy kernel file to build directory
 add_custom_command(

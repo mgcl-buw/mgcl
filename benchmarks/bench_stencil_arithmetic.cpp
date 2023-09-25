@@ -46,8 +46,8 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
         int gh = 1;
 
         {
-            mgcl::VaryingStencil3x3x3 v(m, n, o, gh, gh, gh);
-            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            mgcl::VaryingStencil v(m, n, o, 3, gh, gh, gh);
+            mgcl::VaryingStencil f(m, n, o, 3, gh, gh, gh);
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 
@@ -55,12 +55,12 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
                                    .append(std::to_string(N));
 
             b.run(std::string(name).c_str(), [&]
-                  { ankerl::nanobench::doNotOptimizeAway(v.multiply(f, 0)); });
+                  { ankerl::nanobench::doNotOptimizeAway(v.multiply(f, 0, nullptr, false, true)); });
         }
 
         {
-            mgcl::FixedStencil3x3x3 v;
-            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            mgcl::FixedStencil v(3);
+            mgcl::VaryingStencil f(m, n, o, 3, gh, gh, gh);
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 
@@ -68,12 +68,12 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
                                    .append(std::to_string(N));
 
             b.run(std::string(name).c_str(), [&]
-                  { ankerl::nanobench::doNotOptimizeAway(v.multiply(f, 0)); });
+                  { ankerl::nanobench::doNotOptimizeAway(v.multiply(f, 0, nullptr, false, true)); });
         }
 
         {
-            mgcl::FixedStencil3x3x3 v;
-            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            mgcl::FixedStencil v(3);
+            mgcl::VaryingStencil f(m, n, o, 3, gh, gh, gh);
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 
@@ -81,20 +81,20 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
                                    .append(std::to_string(N));
 
             b.run(std::string(name).c_str(), [&]
-                  { ankerl::nanobench::doNotOptimizeAway(f.multiply(v, 0)); });
+                  { ankerl::nanobench::doNotOptimizeAway(f.multiply(v, 0, nullptr, false, true)); });
         }
 
         if (gpuAvailable)
         {
-            mgcl::VaryingStencil3x3x3 v(m, n, o, gh, gh, gh);
-            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            mgcl::VaryingStencil v(m, n, o, 3, gh, gh, gh);
+            mgcl::VaryingStencil f(m, n, o, 3, gh, gh, gh);
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 
             mgcl::VaryingStencilGpu vd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
             mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
-            vd.fill(v, tu->getCommands());
-            fd.fill(f, tu->getCommands());
+            vd.fill(v, tu->getCommands(), true);
+            fd.fill(f, tu->getCommands(), true);
             tu->finish();
 
             std::string name = std::string("gpu var*var, N = ")
@@ -102,21 +102,21 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0, tu->getProgram(), tu->getCommands(), tu->getContext())); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true)); 
                     tu->finish(); });
         }
 
         if (gpuAvailable)
         {
-            mgcl::FixedStencil3x3x3 v;
-            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            mgcl::FixedStencil v(3);
+            mgcl::VaryingStencil f(m, n, o, 3, gh, gh, gh);
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 
             mgcl::FixedStencilGpu vd(3, tu->getContext(), tu->getCommands());
             mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
-            vd.fill(v, tu->getCommands());
-            fd.fill(f, tu->getCommands());
+            vd.fill(v, tu->getCommands(), true);
+            fd.fill(f, tu->getCommands(), true);
             tu->finish();
 
             std::string name = std::string("gpu fix*var, N = ")
@@ -124,21 +124,21 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0, tu->getProgram(), tu->getCommands(), tu->getContext())); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true)); 
                     tu->finish(); });
         }
 
         if (gpuAvailable)
         {
-            mgcl::FixedStencil3x3x3 v;
-            mgcl::VaryingStencil3x3x3 f(m, n, o, gh, gh, gh);
+            mgcl::FixedStencil v(3);
+            mgcl::VaryingStencil f(m, n, o, 3, gh, gh, gh);
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 
             mgcl::FixedStencilGpu vd(3, tu->getContext(), tu->getCommands());
             mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
-            vd.fill(v, tu->getCommands());
-            fd.fill(f, tu->getCommands());
+            vd.fill(v, tu->getCommands(), true);
+            fd.fill(f, tu->getCommands(), true);
             tu->finish();
 
             std::string name = std::string("gpu var*fix, N = ")
@@ -146,7 +146,7 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(fd.multiply(vd, 0, tu->getProgram(), tu->getCommands(), tu->getContext())); 
+                    ankerl::nanobench::doNotOptimizeAway(fd.multiply(vd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true)); 
                     tu->finish(); });
         }
     }

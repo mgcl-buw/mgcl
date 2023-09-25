@@ -1,14 +1,13 @@
 #ifndef MGCL_LEVEL_HPP
 #define MGCL_LEVEL_HPP
 
-#include "mgcl.hpp"    // for MGCL_STENCIL
+#include "cuboid_gpu.hpp"
+#include "mgcl.hpp" // for MGCL_STENCIL
+#include "mpi_level_data.hpp"
 #include "stencil.hpp" // for VaryingStencil3x3x3
 
-#ifdef MGCL_USE_MPI
-#include "mpi_data.hpp"
-#endif // MGCL_USE_MPI
-
 #include <memory> // for shared_ptr
+#include <ostream>
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -26,7 +25,7 @@ namespace mgcl
     {
     private:
         /* Problem that this Level belongs to */
-        Problem *problem;
+        Problem* problem;
 
         /* Number of level in given Problem. */
         int num;
@@ -39,15 +38,15 @@ namespace mgcl
         /* Stencil for this Level that will be applied on v */
         MGCL_STENCIL stencilType;
         double stencilFactor = 1;
-        std::shared_ptr<VaryingStencil3x3x3> stencilValues = nullptr;
+        std::shared_ptr<VaryingStencil> stencilValues = nullptr;
         std::shared_ptr<VaryingStencilGpu> stencilValuesGpu = nullptr;
 
-        /* grid dimensions of real grid */
+        /* grid dimensions of local real grid */
         int m;
         int n;
         int o;
 
-        /* grid dimensions of ghosted grid */
+        /* grid dimensions of local ghosted grid */
         int mgh;
         int ngh;
         int ogh;
@@ -56,41 +55,41 @@ namespace mgcl
         double h;
 
         /* opencl buffers */
-        cl_mem dVIn = nullptr;
-        cl_mem dVOut = nullptr;
-        cl_mem dF = nullptr;
-        cl_mem dR = nullptr;
+        std::shared_ptr<CuboidGpu> dVIn = nullptr;
+        std::shared_ptr<CuboidGpu> dVOut = nullptr;
+        std::shared_ptr<CuboidGpu> dF = nullptr;
+        std::shared_ptr<CuboidGpu> dR = nullptr;
 
-#ifdef MGCL_USE_MPI
-        std::unique_ptr<MPIData> mpiData = nullptr;
-#endif // MGCL_USE_MPI
+        /* MPI relevant data, e.g. neighbour process ranks. Null if Problem::useMpi is false. */
+        std::unique_ptr<MPILevelData> mpiData = nullptr;
 
         friend class OpenCLHelper;
         friend class MultigridEngine;
         friend class Problem;
 
     public:
-        Level(Problem *problem_, int _num);
-        Level(const Level &) = delete;
-        Level &operator=(const Level &) = delete;
-        Level(const Level &&) = delete;
-        Level &operator=(Level &&) = delete;
-        ~Level();
+        Level(Problem* problem_, int _num);
+        Level(const Level&) = delete;
+        Level& operator=(const Level&) = delete;
+        Level(const Level&&) = delete;
+        Level& operator=(Level&&) = delete;
+        ~Level(){};
 
         bool init();
         int initOpenCLBuffers();
+        int initMpiData();
 
         int getNum() const;
 
-        Cuboid &getV() const;
+        Cuboid& getV() const;
         std::shared_ptr<Cuboid> getVPtr() const;
-        void setV(const std::shared_ptr<Cuboid> &v_);
-        Cuboid &getF() const;
+        void setV(const std::shared_ptr<Cuboid>& v_);
+        Cuboid& getF() const;
         std::shared_ptr<Cuboid> getFPtr() const;
-        void setF(const std::shared_ptr<Cuboid> &f_);
-        Cuboid &getR() const;
+        void setF(const std::shared_ptr<Cuboid>& f_);
+        Cuboid& getR() const;
         std::shared_ptr<Cuboid> getRPtr() const;
-        void setR(const std::shared_ptr<Cuboid> &r_);
+        void setR(const std::shared_ptr<Cuboid>& r_);
 
         int getM() const;
         int getN() const;
@@ -99,29 +98,24 @@ namespace mgcl
         double getH() const;
         void setH(double h_);
 
-#ifdef MGCL_USE_MPI
-        inline MPIData *getMpiDataPtr()
-        {
-            return mpiData.get();
-        }
+        MPILevelData* getMpiDataPtr();
+        MPILevelData& getMpiData();
 
-        inline MPIData &getMpiData()
-        {
-            return *mpiData;
-        }
-#endif // MGCL_USE_MPI
+        CuboidGpu* getDVInPtr() const;
+        CuboidGpu& getDVIn() const;
+        void setDVIn(const std::shared_ptr<CuboidGpu> dVIn_);
 
-        cl_mem getDVIn() const;
-        void setDVIn(const cl_mem dVIn_);
+        CuboidGpu* getDVOutPtr() const;
+        CuboidGpu& getDVOut() const;
+        void setDVOut(const std::shared_ptr<CuboidGpu> dVOut_);
 
-        cl_mem getDVOut() const;
-        void setDVOut(const cl_mem dVOut_);
+        CuboidGpu* getDFPtr() const;
+        CuboidGpu& getDF() const;
+        void setDF(const std::shared_ptr<CuboidGpu> dF_);
 
-        cl_mem getDF() const;
-        void setDF(const cl_mem dF_);
-
-        cl_mem getDR() const;
-        void setDR(const cl_mem dR_);
+        CuboidGpu* getDRPtr() const;
+        CuboidGpu& getDR() const;
+        void setDR(const std::shared_ptr<CuboidGpu> dR_);
 
         int getMgh() const;
 
@@ -131,12 +125,16 @@ namespace mgcl
 
         MGCL_STENCIL getStencilType() const;
 
-        std::shared_ptr<VaryingStencil3x3x3> &getStencilValues();
+        std::shared_ptr<VaryingStencil>& getStencilValues();
 
         double getStencilFactor() const;
 
-        std::shared_ptr<VaryingStencilGpu> &getStencilValuesGpu();
+        std::shared_ptr<VaryingStencilGpu>& getStencilValuesGpu();
         void setStencilValuesGpu(std::shared_ptr<VaryingStencilGpu> sv);
+
+        bool isCalculatedLocally() const;
+
+        friend std::ostream& operator<<(std::ostream& os, const Level& lv);
     };
 }
 

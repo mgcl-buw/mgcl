@@ -104,10 +104,10 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console][Laplac
                 // init 7-point stencil for pmg's jacobi
                 int size = 7;
                 double h2 = 1.0 / (double)(N * N);
-                double *values = new double[size]();
-                int *xoff = new int[size]();
-                int *yoff = new int[size]();
-                int *zoff = new int[size]();
+                double* values = new double[size]();
+                int* xoff = new int[size]();
+                int* yoff = new int[size]();
+                int* zoff = new int[size]();
 
                 values[0] = 6.0 / h2;
                 for (int i = 1; i <= 6; i++)
@@ -144,7 +144,7 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console][Laplac
 
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
 
-            mgcl_config *conf;
+            mgcl_config* conf;
             mgcl_generate_config(&conf);
 
             conf->v = v->getData();
@@ -170,7 +170,7 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solve][console][Laplac
 
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
 
-            mgcl_config *conf;
+            mgcl_config* conf;
             mgcl_generate_config(&conf);
 
             conf->v = v->getData();
@@ -453,7 +453,7 @@ TEST_CASE("mgcl old vs new: solve equality", "[!benchmark][solve][console][equal
         // old mgcl c implementation seq
         auto vold = std::make_shared<mgcl::Cuboid>(m, n, o);
 
-        mgcl_config *conf;
+        mgcl_config* conf;
         mgcl_generate_config(&conf);
 
         conf->v = vold->getData();
@@ -474,7 +474,7 @@ TEST_CASE("mgcl old vs new: solve equality", "[!benchmark][solve][console][equal
         // old mgcl c implementation ocl
         auto voldocl = std::make_shared<mgcl::Cuboid>(m, n, o);
 
-        mgcl_config *conf_ocl;
+        mgcl_config* conf_ocl;
         mgcl_generate_config(&conf_ocl);
 
         conf_ocl->v = voldocl->getData();
@@ -586,10 +586,10 @@ TEST_CASE("mgcl benchmarks console: solve", "[!benchmark][solveWithoutInit][cons
                 // init 7-point stencil for pmg's jacobi
                 int size = 7;
                 double h2 = 1.0 / (double)(N * N);
-                double *values = new double[size]();
-                int *xoff = new int[size]();
-                int *yoff = new int[size]();
-                int *zoff = new int[size]();
+                double* values = new double[size]();
+                int* xoff = new int[size]();
+                int* yoff = new int[size]();
+                int* zoff = new int[size]();
 
                 values[0] = 6.0 / h2;
                 for (int i = 1; i <= 6; i++)

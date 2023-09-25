@@ -56,13 +56,13 @@ namespace mgcl
         for (int i = 0; i < field_1d.size(); i++)
             field_1d[i] = value;
 
-        field_4d = new double ***[dim1gh];
+        field_4d = new double***[dim1gh];
         for (int i = 0; i < dim1gh; i++)
         {
-            field_4d[i] = new double **[dim2gh];
+            field_4d[i] = new double**[dim2gh];
             for (int j = 0; j < dim2gh; j++)
             {
-                field_4d[i][j] = new double *[dim3gh];
+                field_4d[i][j] = new double*[dim3gh];
                 for (int k = 0; k < dim3gh; k++)
                 {
                     field_4d[i][j][k] = &field_1d[i * dim2gh * dim3gh * dim4gh + j * dim3gh * dim4gh + k * dim4gh];
@@ -123,12 +123,12 @@ namespace mgcl
         field_4d = nullptr;
     }
 
-    double ****Hypercube4d::getData() const
+    double**** Hypercube4d::getData() const
     {
         return field_4d;
     }
 
-    double ***Hypercube4d::operator[](int index)
+    double*** Hypercube4d::operator[](int index)
     {
         return field_4d[index];
     }
@@ -171,7 +171,7 @@ namespace mgcl
         }
     }
 
-    std::vector<double> &Hypercube4d::field1d()
+    std::vector<double>& Hypercube4d::field1d()
     {
         return field_1d;
     }
@@ -188,7 +188,7 @@ namespace mgcl
      * @return false Cuboids not equal.
      * @throws invalid_argument When dimensions of Cuboids don't match.
      */
-    bool Hypercube4d::isEqual(Hypercube4d &c, double tol, bool printDiffs)
+    bool Hypercube4d::isEqual(Hypercube4d& c, double tol, bool printDiffs)
     {
         if (dim1 != c.getDim1() ||
             dim2 != c.getDim2() ||
@@ -200,7 +200,7 @@ namespace mgcl
 
         std::vector<std::tuple<int, int, int, int, double, double, double>> diffs;
         bool ret = true;
-        double diff = 0;
+        double diff;
 
         for (int i = 0; i < dim1; i++)
             for (int j = 0; j < dim2; j++)
@@ -379,7 +379,7 @@ namespace mgcl
         for (int i = 0; i < field_1d.size(); i++)
             field_1d[i] = value;
 
-        field_6d = new double *****[dim1gh];
+        field_6d = new double*****[dim1gh];
         int size5gh = dim6gh;
         int size4gh = size5gh * dim5gh;
         int size3gh = size4gh * dim4gh;
@@ -387,16 +387,16 @@ namespace mgcl
         int size1gh = size2gh * dim2gh;
         for (int d1 = 0; d1 < dim1gh; d1++)
         {
-            field_6d[d1] = new double ****[dim2gh];
+            field_6d[d1] = new double****[dim2gh];
             for (int d2 = 0; d2 < dim2gh; d2++)
             {
-                field_6d[d1][d2] = new double ***[dim3gh];
+                field_6d[d1][d2] = new double***[dim3gh];
                 for (int d3 = 0; d3 < dim3gh; d3++)
                 {
-                    field_6d[d1][d2][d3] = new double **[dim4gh];
+                    field_6d[d1][d2][d3] = new double**[dim4gh];
                     for (int d4 = 0; d4 < dim4gh; d4++)
                     {
-                        field_6d[d1][d2][d3][d4] = new double *[dim5gh];
+                        field_6d[d1][d2][d3][d4] = new double*[dim5gh];
                         for (int d5 = 0; d5 < dim5gh; d5++)
                         {
                             field_6d[d1][d2][d3][d4][d5] = &field_1d[d1 * size1gh + d2 * size2gh + d3 * size3gh + d4 * size4gh + d5 * size5gh];
@@ -407,7 +407,7 @@ namespace mgcl
         }
     }
 
-    Hypercube6d::Hypercube6d(Hypercube6d &&o)
+    Hypercube6d::Hypercube6d(Hypercube6d&& o)
         : dim1(o.dim1),
           dim2(o.dim2),
           dim3(o.dim3),
@@ -450,7 +450,7 @@ namespace mgcl
         o.field_6d = nullptr;
     }
 
-    Hypercube6d &Hypercube6d::operator=(Hypercube6d &&o)
+    Hypercube6d& Hypercube6d::operator=(Hypercube6d&& o)
     {
         dim1 = o.dim1;
         dim2 = o.dim2;
@@ -523,12 +523,12 @@ namespace mgcl
         }
     }
 
-    double ******Hypercube6d::getData() const
+    double****** Hypercube6d::getData() const
     {
         return field_6d;
     }
 
-    double *****Hypercube6d::operator[](int index)
+    double***** Hypercube6d::operator[](int index) const
     {
         return field_6d[index];
     }
@@ -598,7 +598,44 @@ namespace mgcl
         }
     }
 
-    std::vector<double> &Hypercube6d::field1d()
+    /**
+     * @brief Fills this Hypercube6d with the 1d index of the corresponding cell, including ghost cells.
+     *
+     * @param realCellsOnly If true, only real cells get filled.
+     */
+    void Hypercube6d::fill1dIndex(bool realCellsOnly)
+    {
+        if (realCellsOnly)
+            for (int d1 = ghostsDim1; d1 < dim1 + ghostsDim1; d1++)
+                for (int d2 = ghostsDim2; d2 < dim2 + ghostsDim2; d2++)
+                    for (int d3 = ghostsDim3; d3 < dim3 + ghostsDim3; d3++)
+                        for (int d4 = ghostsDim4; d4 < dim4 + ghostsDim4; d4++)
+                            for (int d5 = ghostsDim5; d5 < dim5 + ghostsDim5; d5++)
+                                for (int d6 = ghostsDim6; d6 < dim6 + ghostsDim6; d6++)
+                                {
+                                    (*this)[d1][d2][d3][d4][d5][d6] =
+                                        d1 * dim2gh * dim3gh * dim4gh * dim5gh * dim6gh +
+                                        d2 * dim3gh * dim4gh * dim5gh * dim6gh +
+                                        d3 * dim4gh * dim5gh * dim6gh +
+                                        d4 * dim5gh * dim6gh + d5 * dim6gh + d6;
+                                }
+        else
+            for (int d1 = 0; d1 < dim1gh; d1++)
+                for (int d2 = 0; d2 < dim2gh; d2++)
+                    for (int d3 = 0; d3 < dim3gh; d3++)
+                        for (int d4 = 0; d4 < dim4gh; d4++)
+                            for (int d5 = 0; d5 < dim5gh; d5++)
+                                for (int d6 = 0; d6 < dim6gh; d6++)
+                                {
+                                    (*this)[d1][d2][d3][d4][d5][d6] =
+                                        d1 * dim2gh * dim3gh * dim4gh * dim5gh * dim6gh +
+                                        d2 * dim3gh * dim4gh * dim5gh * dim6gh +
+                                        d3 * dim4gh * dim5gh * dim6gh +
+                                        d4 * dim5gh * dim6gh + d5 * dim6gh + d6;
+                                }
+    }
+
+    std::vector<double>& Hypercube6d::field1d()
     {
         return field_1d;
     }
@@ -615,7 +652,7 @@ namespace mgcl
      * @return false Cuboids not equal.
      * @throws invalid_argument When dimensions of Cuboids don't match.
      */
-    bool Hypercube6d::isEqual(Hypercube6d &c, double tol, bool printDiffs)
+    bool Hypercube6d::isEqual(Hypercube6d& c, double tol, bool printDiffs)
     {
         if (dim1 != c.getDim1() ||
             dim2 != c.getDim2() ||
@@ -629,7 +666,7 @@ namespace mgcl
 
         std::vector<std::tuple<int, int, int, int, int, int, double, double, double>> diffs;
         bool ret = true;
-        double diff = 0;
+        double diff;
 
         for (int d1 = 0; d1 < dim1; d1++)
             for (int d2 = 0; d2 < dim2; d2++)
@@ -770,6 +807,31 @@ namespace mgcl
         {
             throw std::runtime_error("Couldn't open file for writing given by: " + path);
         }
+    }
+
+    /**
+     * @brief Copies contents of real cells of another Hypercube6d o to real cells of this one.
+     *
+     * @param o
+     */
+    void Hypercube6d::copyRealFrom(Hypercube6d& o)
+    {
+        // TODO check ranges
+        if (dim1 != o.dim1 || dim2 != o.dim2 || dim3 != o.dim3 ||
+            dim4 != o.dim4 || dim5 != o.dim5 || dim6 != o.dim6)
+            throw "Dimensions must match!";
+
+        // clang-format off
+        for (int i = ghostsDim1, id = o.ghostsDim1; i < dim1 + ghostsDim1; i++, id++)
+        for (int j = ghostsDim2, jd = o.ghostsDim2; j < dim2 + ghostsDim2; j++, jd++)
+        for (int k = ghostsDim3, kd = o.ghostsDim3; k < dim3 + ghostsDim3; k++, kd++)
+            for (int ii = ghostsDim4, iid = o.ghostsDim4; ii < dim4 + ghostsDim4; ii++, iid++)
+            for (int jj = ghostsDim5, jjd = o.ghostsDim5; jj < dim5 + ghostsDim5; jj++, jjd++)
+            for (int kk = ghostsDim6, kkd = o.ghostsDim6; kk < dim6 + ghostsDim6; kk++, kkd++)
+            {
+                (*this)[i][j][k][ii][jj][kk] = o[id][jd][kd][iid][jjd][kkd];
+            }
+        // clang-format on
     }
 
     int Hypercube6d::getDim1() const

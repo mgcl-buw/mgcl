@@ -38,7 +38,8 @@ TEST_CASE("residual")
     SECTION("residualSeq L2-norm 7point periodic")
     {
         double res = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r, mgcl::MGCL_L2,
-                                                        mgcl::MGCL_LAPLACE_7POINT, stencilFactor, nullptr, true, true);
+                                                        mgcl::MGCL_LAPLACE_7POINT, stencilFactor, nullptr, true, true,
+                                                        true);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_in_r->isEqual(*c_expected_out_r));
@@ -62,9 +63,9 @@ TEST_CASE("residual")
         p->setDeviceType(deviceType);
 
         mgcl_test::TestUtility tu(p);
-        cl_mem d_in_f = tu.createOpenCLBuffer(*c_in_f);
-        cl_mem d_in_v = tu.createOpenCLBuffer(*c_in_v);
-        cl_mem d_in_r = tu.createOpenCLBuffer(*c_in_r);
+        auto d_in_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_f);
+        auto d_in_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_v);
+        auto d_in_r = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_r);
 
         mgcl::Level level(p.get(), 0);
         level.setDF(d_in_f);
@@ -74,7 +75,7 @@ TEST_CASE("residual")
         double res = mgcl::MultigridEngine::residual(*p, level, true);
         tu.finish();
 
-        auto c_r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        auto c_r_out = d_in_r->read(tu.getCommands(), nullptr, true);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_r_out->isEqual(*c_expected_out_r));
@@ -83,7 +84,7 @@ TEST_CASE("residual")
     SECTION("residualSeq L2-norm 7point varying stencil periodic")
     {
         int n = 16;
-        auto vals = mgcl::VaryingStencil3x3x3(n, n, n, 1, 1, 1);
+        auto vals = mgcl::VaryingStencil(n, n, n, 3, 1, 1, 1);
 
         double h2inv = static_cast<double>(n * n);
         for (int i = 0; i < vals.getDim1gh(); i++)
@@ -100,7 +101,8 @@ TEST_CASE("residual")
                 }
 
         double res = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r, mgcl::MGCL_L2,
-                                                        mgcl::MGCL_VARYING, stencilFactor, &vals, true, true);
+                                                        mgcl::MGCL_VARYING, stencilFactor, &vals, true, true,
+                                                        true);
 
         CHECK(fabs(res - 3.00209960095333271e+07) < 1e-7);
         REQUIRE(c_in_r->isEqual(*c_expected_out_r));
@@ -140,7 +142,7 @@ TEST_CASE("residual periodic Laplace seq vs ocl")
     p_seq->setBc(bc);
 
     p_seq->init();
-    auto &level0_seq = p_seq->getLevelAt(0);
+    auto& level0_seq = p_seq->getLevelAt(0);
 
     // init OpenCL problem
     auto p_gpu = std::make_shared<mgcl::Problem>(m, n, o);
@@ -153,23 +155,22 @@ TEST_CASE("residual periodic Laplace seq vs ocl")
     p_gpu->setBc(bc);
 
     p_gpu->init();
-    auto &level0_gpu = p_gpu->getLevelAt(0);
+    auto& level0_gpu = p_gpu->getLevelAt(0);
 
-    auto &v_in_lv0 = level0_seq.getV();
-    auto &f_in_lv0 = level0_seq.getF();
-    auto &r_in_lv0 = level0_seq.getR();
+    auto& v_in_lv0 = level0_seq.getV();
+    auto& f_in_lv0 = level0_seq.getF();
+    auto& r_in_lv0 = level0_seq.getR();
 
     mgcl_test::TestUtility tu(p_gpu);
 
-    mgcl::MultigridEngine::updateGhosts(*p_gpu, level0_gpu.getDVIn(),
-                                        level0_gpu.getMgh(), level0_gpu.getNgh(), level0_gpu.getOgh(), 1, 1, 1);
+    mgcl::MultigridEngine::updateGhosts(*p_gpu, level0_gpu.getDVIn(), nullptr, true);
     tu.finish();
-    mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0, nullptr, true, false);
 
     // make sure input is equal
-    auto c_r_in = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
-    auto c_v_in = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
-    auto c_f_in = tu.readOpenCLBuffer(level0_gpu.getDF(), m, n, o, 1, 1, 1);
+    auto c_r_in = level0_gpu.getDR().read(tu.getCommands(), nullptr, true);
+    auto c_v_in = level0_gpu.getDVIn().read(tu.getCommands(), nullptr, true);
+    auto c_f_in = level0_gpu.getDF().read(tu.getCommands(), nullptr, true);
     tu.finish();
     REQUIRE(c_r_in->isEqual(r_in_lv0));
     REQUIRE(c_v_in->isEqual(v_in_lv0));
@@ -179,11 +180,12 @@ TEST_CASE("residual periodic Laplace seq vs ocl")
     tu.finish();
 
     double res_seq = mgcl::MultigridEngine::residualSeq(f_in_lv0, v_in_lv0, r_in_lv0, resnorm,
-                                                        stencilType, level0_seq.getStencilFactor(), nullptr, true, true);
+                                                        stencilType, level0_seq.getStencilFactor(), nullptr, true, true,
+                                                        true);
 
-    auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
-    auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
-    auto c_f_out = tu.readOpenCLBuffer(level0_gpu.getDF(), m, n, o, 1, 1, 1);
+    auto c_r_out = level0_gpu.getDR().read(tu.getCommands(), nullptr, true);
+    auto c_v_out = level0_gpu.getDVIn().read(tu.getCommands(), nullptr, true);
+    auto c_f_out = level0_gpu.getDF().read(tu.getCommands(), nullptr, true);
 
     REQUIRE(c_r_out->getM() == r_in_lv0.getM());
     REQUIRE(c_r_out->getN() == r_in_lv0.getN());
@@ -239,11 +241,11 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
     p_seq->setBc(bc);
 
     p_seq->setStencilType(stencilType);
-    auto &sv = p_seq->getStencilValues();
+    auto& sv = p_seq->getStencilValues();
     sv->fillRandomInt();
 
     p_seq->init();
-    auto &level0_seq = p_seq->getLevelAt(0);
+    auto& level0_seq = p_seq->getLevelAt(0);
     REQUIRE(level0_seq.getStencilValues().get() == sv.get());
 
     // init OpenCL problem
@@ -256,7 +258,7 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
     p_gpu->setBc(bc);
 
     p_gpu->setStencilType(stencilType);
-    auto &sv_gpu = p_gpu->getStencilValues();
+    auto& sv_gpu = p_gpu->getStencilValues();
 
     // copy stencil values
     REQUIRE(sv->field1d().size() == sv_gpu->field1d().size());
@@ -264,26 +266,25 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
         sv_gpu->field1d()[i] = sv->field1d()[i];
 
     p_gpu->init();
-    auto &level0_gpu = p_gpu->getLevelAt(0);
+    auto& level0_gpu = p_gpu->getLevelAt(0);
     REQUIRE(level0_gpu.getStencilValuesGpu() != nullptr);
 
-    auto &v_in_lv0 = level0_seq.getV();
-    auto &f_in_lv0 = level0_seq.getF();
-    auto &r_in_lv0 = level0_seq.getR();
-    auto &sv_in_lv0 = level0_seq.getStencilValues();
+    auto& v_in_lv0 = level0_seq.getV();
+    auto& f_in_lv0 = level0_seq.getF();
+    auto& r_in_lv0 = level0_seq.getR();
+    auto& sv_in_lv0 = level0_seq.getStencilValues();
 
     mgcl_test::TestUtility tu(p_gpu);
 
-    mgcl::MultigridEngine::updateGhosts(*p_gpu, level0_gpu.getDVIn(),
-                                        level0_gpu.getMgh(), level0_gpu.getNgh(), level0_gpu.getOgh(), 1, 1, 1);
+    mgcl::MultigridEngine::updateGhosts(*p_gpu, level0_gpu.getDVIn(), nullptr, true);
     tu.finish();
-    mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in_lv0, nullptr, true, false);
 
     // make sure input is equal
-    auto c_r_in = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
-    auto c_v_in = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
-    auto c_f_in = tu.readOpenCLBuffer(level0_gpu.getDF(), m, n, o, 1, 1, 1);
-    auto c_sv_in = level0_gpu.getStencilValuesGpu()->read<3>(tu.getCommands());
+    auto c_r_in = level0_gpu.getDR().read(tu.getCommands(), nullptr, true);
+    auto c_v_in = level0_gpu.getDVIn().read(tu.getCommands(), nullptr, true);
+    auto c_f_in = level0_gpu.getDF().read(tu.getCommands(), nullptr, true);
+    auto c_sv_in = level0_gpu.getStencilValuesGpu()->read(tu.getCommands(), true);
     tu.finish();
 
     REQUIRE(c_r_in->isEqual(r_in_lv0));
@@ -294,11 +295,12 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
     double res_gpu = mgcl::MultigridEngine::residual(*p_gpu, level0_gpu, true);
     tu.finish();
     double res_seq = mgcl::MultigridEngine::residualSeq(f_in_lv0, v_in_lv0, r_in_lv0, resnorm,
-                                                        stencilType, level0_seq.getStencilFactor(), sv_in_lv0.get(), true, true);
+                                                        stencilType, level0_seq.getStencilFactor(), sv_in_lv0.get(),
+                                                        true, true, true);
 
-    auto c_r_out = tu.readOpenCLBuffer(level0_gpu.getDR(), m, n, o, 1, 1, 1);
-    auto c_v_out = tu.readOpenCLBuffer(level0_gpu.getDVIn(), m, n, o, 1, 1, 1);
-    auto c_f_out = tu.readOpenCLBuffer(level0_gpu.getDF(), m, n, o, 1, 1, 1);
+    auto c_r_out = level0_gpu.getDR().read(tu.getCommands(), nullptr, true);
+    auto c_v_out = level0_gpu.getDVIn().read(tu.getCommands(), nullptr, true);
+    auto c_f_out = level0_gpu.getDF().read(tu.getCommands(), nullptr, true);
     tu.finish();
 
     REQUIRE(c_r_out->getM() == r_in_lv0.getM());
@@ -356,22 +358,24 @@ TEST_CASE("residual seq gh > 1")
 
     v_in.fillRandom(-10, 10);
     f_in.fillRandom(-10, 10);
-    mgcl::MultigridEngine::updateGhostsSeq(v_in);
-    mgcl::MultigridEngine::updateGhostsSeq(f_in);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in, nullptr, true, false);
+    mgcl::MultigridEngine::updateGhostsSeq(f_in, nullptr, true, false);
 
     // copy real cells from v_in to v_in_gh
     v_in_gh.fillRealFrom(v_in);
     f_in_gh.fillRealFrom(f_in);
-    mgcl::MultigridEngine::updateGhostsSeq(v_in_gh);
-    mgcl::MultigridEngine::updateGhostsSeq(f_in_gh);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in_gh, nullptr, true, false);
+    mgcl::MultigridEngine::updateGhostsSeq(f_in_gh, nullptr, true, false);
 
     SECTION("Laplace 27p")
     {
         // First calculate exptected result with gh = 1
-        double res_exp = mgcl::MultigridEngine::residualSeq(f_in, v_in, r_in, resnorm, stencilType, stencilFactor, nullptr, true, true);
+        double res_exp = mgcl::MultigridEngine::residualSeq(f_in, v_in, r_in, resnorm, stencilType, stencilFactor,
+                                                            nullptr, true, true, true);
 
         // Now calculate with gh > 1
-        double res_act = mgcl::MultigridEngine::residualSeq(f_in_gh, v_in_gh, r_in_gh, resnorm, stencilType, stencilFactor, nullptr, true, true);
+        double res_act = mgcl::MultigridEngine::residualSeq(f_in_gh, v_in_gh, r_in_gh, resnorm, stencilType,
+                                                            stencilFactor, nullptr, true, true, true);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(v_in.isEqual(v_in_gh));
@@ -380,17 +384,17 @@ TEST_CASE("residual seq gh > 1")
 
     SECTION("Varying 27p")
     {
-        mgcl::VaryingStencil3x3x3 sv(m, n, o, 2, 2, 2);
+        mgcl::VaryingStencil sv(m, n, o, 3, 2, 2, 2);
         sv.fillRandom();
         sv.updateGhosts();
 
         // First calculate exptected result with gh = 1
         double res_exp = mgcl::MultigridEngine::residualSeq(f_in, v_in, r_in, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, &sv, true, true);
+                                                            stencilFactor, &sv, true, true, true);
 
         // Now calculate with gh > 1
         double res_act = mgcl::MultigridEngine::residualSeq(f_in_gh, v_in_gh, r_in_gh, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, &sv, true, true);
+                                                            stencilFactor, &sv, true, true, true);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(v_in.isEqual(v_in_gh));
@@ -434,16 +438,16 @@ TEST_CASE("residual gpu gh > 1")
 
     v_in.fillRandom(-10, 10);
     f_in.fillRandom(-10, 10);
-    mgcl::MultigridEngine::updateGhostsSeq(v_in);
-    mgcl::MultigridEngine::updateGhostsSeq(f_in);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in, nullptr, true, true);
+    mgcl::MultigridEngine::updateGhostsSeq(f_in, nullptr, true, true);
 
     // copy real cells from v_in to v_in_gh
     v_in_gh.fillRealFrom(v_in);
     f_in_gh.fillRealFrom(f_in);
-    mgcl::MultigridEngine::updateGhostsSeq(v_in_gh);
-    mgcl::MultigridEngine::updateGhostsSeq(f_in_gh);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in_gh, nullptr, true, true);
+    mgcl::MultigridEngine::updateGhostsSeq(f_in_gh, nullptr, true, true);
 
-    mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
+    mgcl::VaryingStencil dummy(1, 1, 1, 3, 0, 0, 0);
 
     if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
     {
@@ -454,9 +458,9 @@ TEST_CASE("residual gpu gh > 1")
         p->setDeviceType(CL_DEVICE_TYPE_GPU);
 
         mgcl_test::TestUtility tu(p);
-        cl_mem d_in_f = tu.createOpenCLBuffer(f_in);
-        cl_mem d_in_v = tu.createOpenCLBuffer(v_in);
-        cl_mem d_in_r = tu.createOpenCLBuffer(r_in);
+        auto d_in_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_in);
+        auto d_in_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_in);
+        auto d_in_r = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_in);
 
         mgcl::Level level(p.get(), 0);
         level.setDF(d_in_f);
@@ -470,9 +474,9 @@ TEST_CASE("residual gpu gh > 1")
         pgh->setDeviceType(CL_DEVICE_TYPE_GPU);
 
         mgcl_test::TestUtility tu_gh(pgh);
-        cl_mem d_in_f_gh = tu_gh.createOpenCLBuffer(f_in_gh);
-        cl_mem d_in_v_gh = tu_gh.createOpenCLBuffer(v_in_gh);
-        cl_mem d_in_r_gh = tu_gh.createOpenCLBuffer(r_in_gh);
+        auto d_in_f_gh = std::make_shared<mgcl::CuboidGpu>(tu_gh.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_in_gh);
+        auto d_in_v_gh = std::make_shared<mgcl::CuboidGpu>(tu_gh.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_in_gh);
+        auto d_in_r_gh = std::make_shared<mgcl::CuboidGpu>(tu_gh.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_in_gh);
 
         mgcl::Level level_gh(pgh.get(), 0);
         level_gh.setDF(d_in_f_gh);
@@ -497,8 +501,8 @@ TEST_CASE("residual gpu gh > 1")
             double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, true);
             tu_gh.finish();
 
-            auto r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, p->getGhosts(), p->getGhosts(), p->getGhosts());
-            auto r_out_gh = tu_gh.readOpenCLBuffer(d_in_r_gh, m, n, o, pgh->getGhosts(), pgh->getGhosts(), pgh->getGhosts());
+            auto r_out = d_in_r->read(tu.getCommands(), nullptr, true);
+            auto r_out_gh = d_in_r_gh->read(tu_gh.getCommands(), nullptr, true);
 
             // r_out->dumpToFile("/home/simon/tmp/r_out.txt", true);
             // r_out_gh->dumpToFile("/home/simon/tmp/r_out_gh.txt", true);
@@ -520,8 +524,8 @@ TEST_CASE("residual gpu gh > 1")
             double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, true);
             tu_gh.finish();
 
-            auto r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, p->getGhosts(), p->getGhosts(), p->getGhosts());
-            auto r_out_gh = tu_gh.readOpenCLBuffer(d_in_r_gh, m, n, o, pgh->getGhosts(), pgh->getGhosts(), pgh->getGhosts());
+            auto r_out = d_in_r->read(tu.getCommands(), nullptr, true);
+            auto r_out_gh = d_in_r_gh->read(tu_gh.getCommands(), nullptr, true);
 
             // r_out->dumpToFile("/home/simon/tmp/r_out.txt", true);
             // r_out_gh->dumpToFile("/home/simon/tmp/r_out_gh.txt", true);
@@ -543,8 +547,8 @@ TEST_CASE("residual gpu gh > 1")
             double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, true);
             tu_gh.finish();
 
-            auto r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, p->getGhosts(), p->getGhosts(), p->getGhosts());
-            auto r_out_gh = tu_gh.readOpenCLBuffer(d_in_r_gh, m, n, o, pgh->getGhosts(), pgh->getGhosts(), pgh->getGhosts());
+            auto r_out = d_in_r->read(tu.getCommands(), nullptr, true);
+            auto r_out_gh = d_in_r_gh->read(tu_gh.getCommands(), nullptr, true);
 
             // r_out->dumpToFile("/home/simon/tmp/r_out.txt", true);
             // r_out_gh->dumpToFile("/home/simon/tmp/r_out_gh.txt", true);
@@ -567,8 +571,8 @@ TEST_CASE("residual gpu gh > 1")
             auto d_in_sv_gh = std::make_shared<mgcl::VaryingStencilGpu>(sv->getDim1(), sv->getDim2(), sv->getDim3(), 3, sv->getGhostsDim1(),
                                                                         tu_gh.getContext(), tu_gh.getCommands());
 
-            d_in_sv->fill(*sv, tu.getCommands());
-            d_in_sv_gh->fill(*sv, tu_gh.getCommands());
+            d_in_sv->fill(*sv, tu.getCommands(), true);
+            d_in_sv_gh->fill(*sv, tu_gh.getCommands(), true);
 
             level.setStencilValuesGpu(d_in_sv);
             level_gh.setStencilValuesGpu(d_in_sv_gh);
@@ -581,8 +585,8 @@ TEST_CASE("residual gpu gh > 1")
             double res_act = mgcl::MultigridEngine::residual(*pgh, level_gh, true);
             tu_gh.finish();
 
-            auto r_out = tu.readOpenCLBuffer(d_in_r, m, n, o, p->getGhosts(), p->getGhosts(), p->getGhosts());
-            auto r_out_gh = tu_gh.readOpenCLBuffer(d_in_r_gh, m, n, o, pgh->getGhosts(), pgh->getGhosts(), pgh->getGhosts());
+            auto r_out = d_in_r->read(tu.getCommands(), nullptr, true);
+            auto r_out_gh = d_in_r_gh->read(tu_gh.getCommands(), nullptr, true);
 
             // r_out->dumpToFile("/home/simon/tmp/r_out.txt", true);
             // r_out_gh->dumpToFile("/home/simon/tmp/r_out_gh.txt", true);
@@ -630,17 +634,17 @@ TEST_CASE("residual throwing")
         SECTION("off too little or too large")
         {
             REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
-                                                              stencilFactor, nullptr, true, true, -50, noff, ooff));
+                                                              stencilFactor, nullptr, true, true, true, -50, noff, ooff));
             REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
-                                                              stencilFactor, nullptr, true, true, 50, noff, ooff));
+                                                              stencilFactor, nullptr, true, true, true, 50, noff, ooff));
             REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
-                                                              stencilFactor, nullptr, true, true, moff, -50, ooff));
+                                                              stencilFactor, nullptr, true, true, true, moff, -50, ooff));
             REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
-                                                              stencilFactor, nullptr, true, true, moff, 50, ooff));
+                                                              stencilFactor, nullptr, true, true, true, moff, 50, ooff));
             REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
-                                                              stencilFactor, nullptr, true, true, moff, -50, ooff));
+                                                              stencilFactor, nullptr, true, true, true, moff, -50, ooff));
             REQUIRE_THROWS(mgcl::MultigridEngine::residualSeq(f_gh, v_gh, r_gh, resnorm, stencilType,
-                                                              stencilFactor, nullptr, true, true, moff, 50, ooff));
+                                                              stencilFactor, nullptr, true, true, true, moff, 50, ooff));
         }
 
         SECTION("stencilValues null and stencilType varying")
@@ -660,10 +664,10 @@ TEST_CASE("residual throwing")
             p_exp->setDeviceType(CL_DEVICE_TYPE_GPU);
 
             mgcl_test::TestUtility tu_exp(p_exp);
-            cl_mem d_f_exp = tu_exp.createOpenCLBuffer(f);
-            cl_mem d_v_exp = tu_exp.createOpenCLBuffer(v);
-            cl_mem d_v_out_exp = tu_exp.createOpenCLBuffer(v);
-            cl_mem d_r_exp = tu_exp.createOpenCLBuffer(r);
+            auto d_f_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f);
+            auto d_v_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v);
+            auto d_v_out_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v);
+            auto d_r_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r);
 
             mgcl::Level level_exp(p_exp.get(), 0);
             level_exp.setDF(d_f_exp);
@@ -711,6 +715,8 @@ TEST_CASE("residual seq moff, noff, koff < 0")
     int act_ghn = -noff + 1;
     int act_gho = -ooff + 1;
 
+    CAPTURE(moff, noff, ooff, exp_m, exp_n, exp_o, act_ghm, act_ghn, act_gho);
+
     // v, r and f with extended ghosts, i.e. no ghost update between iterations
     mgcl::Cuboid v_act(m, n, o, act_ghm, act_ghn, act_gho);
     mgcl::Cuboid r_act(m, n, o, act_ghm, act_ghn, act_gho);
@@ -718,8 +724,8 @@ TEST_CASE("residual seq moff, noff, koff < 0")
 
     v_act.fillRandomInt(-10, 10);
     f_act.fillRandomInt(-10, 10);
-    mgcl::MultigridEngine::updateGhostsSeq(v_act);
-    mgcl::MultigridEngine::updateGhostsSeq(f_act);
+    mgcl::MultigridEngine::updateGhostsSeq(v_act, nullptr, true, true);
+    mgcl::MultigridEngine::updateGhostsSeq(f_act, nullptr, true, true);
 
     // v and r with gh = 1, i.e. regular ghost update between iterations.
     // make this one bigger to include ghosts of the other one, so results should be equal
@@ -746,11 +752,11 @@ TEST_CASE("residual seq moff, noff, koff < 0")
     {
         // First calculate exptected result with gh = 1, off = 0
         double res_exp = mgcl::MultigridEngine::residualSeq(f_exp, v_exp, r_exp, resnorm, stencilType, stencilFactor,
-                                                            nullptr, true, true);
+                                                            nullptr, true, true, true);
 
         // Now calculate with gh > 1 and off < 0
         double res_act = mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, stencilType,
-                                                            stencilFactor, nullptr, true, true, moff, noff, ooff);
+                                                            stencilFactor, nullptr, true, true, true, moff, noff, ooff);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(r_act.isEqualAllCells(r_exp));
@@ -758,17 +764,17 @@ TEST_CASE("residual seq moff, noff, koff < 0")
 
     SECTION("Varying 27p")
     {
-        mgcl::VaryingStencil3x3x3 sv(exp_m, exp_n, exp_o, 2, 2, 2);
+        mgcl::VaryingStencil sv(exp_m, exp_n, exp_o, 3, 2, 2, 2);
         sv.fillRandom();
         sv.updateGhosts();
 
         // First calculate exptected result with gh = 1
         double res_exp = mgcl::MultigridEngine::residualSeq(f_exp, v_exp, r_exp, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, &sv, true, true);
+                                                            stencilFactor, &sv, true, true, true);
 
         // Now calculate with gh > 1
         double res_act = mgcl::MultigridEngine::residualSeq(f_act, v_act, r_act, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, &sv, true, true, moff, noff, ooff);
+                                                            stencilFactor, &sv, true, true, true, moff, noff, ooff);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(r_act.isEqualAllCells(r_exp));
@@ -811,8 +817,8 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
 
     v_act.fillRandomInt(-10, 10);
     f_act.fillRandomInt(-10, 10);
-    mgcl::MultigridEngine::updateGhostsSeq(v_act);
-    mgcl::MultigridEngine::updateGhostsSeq(f_act);
+    mgcl::MultigridEngine::updateGhostsSeq(v_act, nullptr, true, true);
+    mgcl::MultigridEngine::updateGhostsSeq(f_act, nullptr, true, true);
 
     // v and r with gh = 1, i.e. regular ghost update between iterations.
     // make this one bigger to include ghosts of the other one, so results should be equal
@@ -835,7 +841,7 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
     v_act.fillAllFrom(v_exp);
     f_act.fillAllFrom(f_exp);
 
-    mgcl::VaryingStencil3x3x3 dummy(1, 1, 1, 0, 0, 0);
+    mgcl::VaryingStencil dummy(1, 1, 1, 3, 0, 0, 0);
 
     if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
     {
@@ -846,9 +852,9 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
         p_exp->setDeviceType(CL_DEVICE_TYPE_GPU);
 
         mgcl_test::TestUtility tu_exp(p_exp);
-        cl_mem d_f_exp = tu_exp.createOpenCLBuffer(f_exp);
-        cl_mem d_v_exp = tu_exp.createOpenCLBuffer(v_exp);
-        cl_mem d_r_exp = tu_exp.createOpenCLBuffer(r_exp);
+        auto d_f_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_exp);
+        auto d_v_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_exp);
+        auto d_r_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_exp);
 
         mgcl::Level level_exp(p_exp.get(), 0);
         level_exp.setDF(d_f_exp);
@@ -862,9 +868,9 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
         p_act->setDeviceType(CL_DEVICE_TYPE_GPU);
 
         mgcl_test::TestUtility tu_act(p_act);
-        cl_mem d_f_act = tu_act.createOpenCLBuffer(f_act);
-        cl_mem d_v_act = tu_act.createOpenCLBuffer(v_act);
-        cl_mem d_r_act = tu_act.createOpenCLBuffer(r_act);
+        auto d_f_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_act);
+        auto d_v_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_act);
+        auto d_r_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_act);
 
         mgcl::Level level_act(p_act.get(), 0);
         level_act.setDF(d_f_act);
@@ -889,8 +895,8 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
             double res_act = mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, noff, ooff);
             tu_act.finish();
 
-            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, exp_m, exp_n, exp_o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto r_out_exp = d_r_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto r_out_act = d_r_act->read(tu_act.getCommands(), nullptr, true);
 
             REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
             REQUIRE(r_out_act->isEqualAllCells(*r_out_exp));
@@ -909,8 +915,8 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
             double res_act = mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, noff, ooff);
             tu_act.finish();
 
-            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, exp_m, exp_n, exp_o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto r_out_exp = d_r_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto r_out_act = d_r_act->read(tu_act.getCommands(), nullptr, true);
 
             REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
             REQUIRE(r_out_act->isEqualAllCells(*r_out_exp));
@@ -929,8 +935,8 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
             double res_act = mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, noff, ooff);
             tu_act.finish();
 
-            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, exp_m, exp_n, exp_o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto r_out_exp = d_r_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto r_out_act = d_r_act->read(tu_act.getCommands(), nullptr, true);
 
             REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
             REQUIRE(r_out_act->isEqualAllCells(*r_out_exp));
@@ -957,8 +963,8 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
                                                                       sv_act->getGhostsDim1(),
                                                                       tu_act.getContext(), tu_act.getCommands());
 
-            d_sv_exp->fill(*sv_exp, tu_exp.getCommands());
-            d_sv_act->fill(*sv_act, tu_act.getCommands());
+            d_sv_exp->fill(*sv_exp, tu_exp.getCommands(), true);
+            d_sv_act->fill(*sv_act, tu_act.getCommands(), true);
 
             level_exp.setStencilValuesGpu(d_sv_exp);
             level_act.setStencilValuesGpu(d_sv_act);
@@ -971,8 +977,8 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
             double res_act = mgcl::MultigridEngine::residual(*p_act, level_act, true, moff, noff, ooff);
             tu_act.finish();
 
-            auto r_out_exp = tu_exp.readOpenCLBuffer(d_r_exp, exp_m, exp_n, exp_o, p_exp->getGhosts(), p_exp->getGhosts(), p_exp->getGhosts());
-            auto r_out_act = tu_act.readOpenCLBuffer(d_r_act, m, n, o, p_act->getGhosts(), p_act->getGhosts(), p_act->getGhosts());
+            auto r_out_exp = d_r_exp->read(tu_exp.getCommands(), nullptr, true);
+            auto r_out_act = d_r_act->read(tu_act.getCommands(), nullptr, true);
 
             REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
             REQUIRE(r_out_act->isEqualAllCells(*r_out_exp));

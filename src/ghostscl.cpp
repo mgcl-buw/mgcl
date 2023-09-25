@@ -1,14 +1,14 @@
-#include "cuboid.hpp"           // for Cuboid
-#include "mgcl.hpp"             // for BC
+#include "cuboid.hpp" // for Cuboid
+#include "mgcl.hpp"   // for BC
+#include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "opencl_helper.hpp"    // for mgclCheckError, OpenCLHelper
 
 #include <cassert>
 #include <cstddef> // for size_t, NULL
+#include <iostream>
 
-#ifdef MGCL_USE_MPI
-#include "mpi_data.hpp"
-#endif // MGCL_USE_MPI
+#include "mpi_level_data.hpp"
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -20,11 +20,8 @@ namespace mgcl
 {
     using std::size_t;
 
-    /* Updates ghost cells.
-     * If periodic is true, every ghost cell will be updated. Otherwise the outermost ghost cells will be excluded. It
-     *   also affects the update using MPI where nodes are wrapped around in the periodic case.
-     * mpiData parameter is optional (i.e. nullable) and is only used when MPI is used. */
-    void MultigridEngine::updateGhostsSeq(Cuboid &c, /* MPIData *mpiData, */ bool periodic)
+    // Private helper function for updating ghosts without MPI.
+    void updateGhostsSeqLocally(Cuboid& c, bool periodic)
     {
         int m = c.getM();
         int n = c.getN();
@@ -33,7 +30,6 @@ namespace mgcl
         int ghosts_n = c.getGhostsN();
         int ghosts_o = c.getGhostsO();
 
-#ifndef MGCL_USE_MPI
         int ghm_start_right = ghosts_m + m;
         int ghn_start_right = ghosts_n + n;
         int gho_start_right = ghosts_o + o;
@@ -84,222 +80,255 @@ namespace mgcl
                 }
         }
         // clang-format on
-#else
-        // TODO adjust for ghosts > 1
-        // TODO test
-        assert(mpiData != nullptr && "mpiData must not be null if MGCL_USE_MPI is true!");
+    }
 
-        /* MPI variables */
-        int myid;
-        MPI_Status stats[2];
-        MPI_Request reqs[2];
+    /* Updates ghost cells.
+     * If periodic is true, every ghost cell will be updated. Otherwise the outermost ghost cells will be excluded. It
+     *   also affects the update using MPI where nodes are wrapped around in the periodic case.
+     * mpiData parameter is optional (i.e. nullable) and is only used when MPI is used. If mgcl is called with
+     *   only one MPI process, updateGhostsSeqLocally will be used instead.
+     * forceLocal: If true, ghosts will be updated locally (maybe giving wrong results, if m_local < m_global).
+     *   This is used e.g. for levels above the mpiLevelThreshold. */
+    void MultigridEngine::updateGhostsSeq(Cuboid& c, MPILevelData* mpiData, bool periodic, bool forceLocal)
+    {
+        // TODO adjust for ghosts > 1
+        if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
+        {
+            updateGhostsSeqLocally(c, periodic);
+            return;
+        }
+
+        int m = c.getM();
+        int n = c.getN();
+        int o = c.getO();
+        int ghosts_m = c.getGhostsM();
+        int ghosts_n = c.getGhostsN();
+        int ghosts_o = c.getGhostsO();
+        int mgh = c.getMgh();
+        int ngh = c.getNgh();
+        int ogh = c.getOgh();
+
+        // // Create subarray type for the ghost slices for each direction
+        // MPI_Datatype ghostsSliceX;
+        // int sizesX[3] = {mgh, ngh, ogh};
+        // int subsizesX[3] = {ghosts_m, ngh, ogh};
+        // int startsX[3] = {0, 0, 0};
+        // err = MPI_Type_create_subarray(2, sizesX, subsizesX, startsX, MPI_ORDER_C, MPI_DOUBLE, &ghostsSliceX);
+        // mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
+        // err = MPI_Type_commit(&ghostsSliceX);
+        // mgclCheckMpiError(comm, err, "MPI_Type_commit");
+
+        // MPI_Datatype ghostsSliceY;
+        // int sizesY[3] = {mgh, ngh, ogh};
+        // int subsizesY[3] = {mgh, ghosts_n, ogh};
+        // int startsY[3] = {0, 0, 0};
+        // err = MPI_Type_create_subarray(2, sizesY, subsizesY, startsY, MPI_ORDER_C, MPI_DOUBLE, &ghostsSliceY);
+        // mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
+        // err = MPI_Type_commit(&ghostsSliceY);
+        // mgclCheckMpiError(comm, err, "MPI_Type_commit");
+
+        // MPI_Datatype ghostsSliceZ;
+        // int sizesZ[3] = {mgh, ngh, ogh};
+        // int subsizesZ[3] = {mgh, ngh, ghosts_o};
+        // int startsZ[3] = {0, 0, 0};
+        // err = MPI_Type_create_subarray(2, sizesZ, subsizesZ, startsZ, MPI_ORDER_C, MPI_DOUBLE, &ghostsSliceZ);
+        // mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
+        // err = MPI_Type_commit(&ghostsSliceZ);
+        // mgclCheckMpiError(comm, err, "MPI_Type_commit");
+
+        // // Exchange data in x-direction
+        // // Send data left
+        // MPI_Sendrecv(&(c[ghosts_m][0][0]), 1, ghostsSliceX, mpiData->left, 0,
+        //              &(c[0][0][0]), 1, ghostsSliceX, mpiData->right, 0, comm, MPI_STATUS_IGNORE);
+        // // Send data right
+        // MPI_Sendrecv(&(c[0][0][0]), 1, ghostsSliceX, mpiData->right, 0,
+        //              &(c[ghosts_m + m][0][0]), 1, ghostsSliceX, mpiData->left, 0, comm, MPI_STATUS_IGNORE);
+
+        // // Exchange data in y-direction
+        // // Send data upwards
+        // MPI_Sendrecv(&(c[0][ghosts_n][0]), 1, ghostsSliceY, mpiData->up, 0,
+        //              &(c[0][0][0]), 1, ghostsSliceY, mpiData->down, 0, comm, MPI_STATUS_IGNORE);
+        // // Send data downwards
+        // MPI_Sendrecv(&(c[0][0][0]), 1, ghostsSliceY, mpiData->down, 0,
+        //              &(c[0][ghosts_n + n][0]), 1, ghostsSliceY, mpiData->up, 0, comm, MPI_STATUS_IGNORE);
+
+        // // Exchange data in z-direction
+        // // Send data to the back
+        // MPI_Sendrecv(&(c[0][0][ghosts_o]), 1, ghostsSliceZ, mpiData->back, 0,
+        //              &(c[0][0][0]), 1, ghostsSliceZ, mpiData->front, 0, comm, MPI_STATUS_IGNORE);
+        // // Send data to the front
+        // MPI_Sendrecv(&(c[0][0][0]), 1, ghostsSliceZ, mpiData->front, 0,
+        //              &(c[0][0][ghosts_o + o]), 1, ghostsSliceZ, mpiData->back, 0, comm, MPI_STATUS_IGNORE);
+
+        // // Free types
+        // MPI_Type_free(&ghostsSliceX);
+        // MPI_Type_free(&ghostsSliceY);
+        // MPI_Type_free(&ghostsSliceZ);
 
         /* Loop variables */
         int i, j, k;
-        // int m = data[level].m_l, n = data[level].n_l, o = data[level].o_l;
 
-        // Rectangle buffers
-        double **sbufxy = mpiData->sbufxy();
-        double **sbufxz = mpiData->sbufxz();
-        double **sbufyz = mpiData->sbufyz();
-        double **rbufxy = mpiData->rbufxy();
-        double **rbufxz = mpiData->rbufxz();
-        double **rbufyz = mpiData->rbufyz();
+        // int ghm_start_right = ghosts_m + m;
+        // int ghn_start_right = ghosts_n + n;
+        // int gho_start_right = ghosts_o + o;
+
+        // // clang-format off
+        // // sending data in z-direction
+        // for (int i = 0; i < ghosts_m; i++)
+        // {
+        //     int factor_left = (ghosts_m - 1 - i) / m + 1;
+        //     int factor_right = (ghm_start_right + i - ghosts_m) / m;
+
+        //     for (int j = 0; j < n + 2 * ghosts_n; j++)
+        //     for (int k = 0; k < o + 2 * ghosts_o; k++)
+        //         {
+
+        //             c[i][j][k] = c[i + factor_left * m][j][k]; // left ghost cell = right real cell
+        //             c[ghm_start_right + i][j][k] = c[ghm_start_right + i - factor_right * m][j][k]; // right ghost cell = left real cell
+        //         }
+        // }
+        // // clang-format on
 
         /* Getting local rank */
+        int myid;
         MPI_Comm_rank(mpiData->comm, &myid);
 
-        /* Sending data to left */
-        for (j = 0; j < n; j++)
-        {
-            for (k = 0; k < o; k++)
-            {
-                sbufyz[j][k] = c[1][j][k];
-            }
-        }
-        reqs[0] = MPI_REQUEST_NULL;
-        reqs[1] = MPI_REQUEST_NULL;
-        if (myid != mpiData->left)
-            MPI_Isend((void *)sbufyz[0], n * o, MPI_DOUBLE, mpiData->left, 0, mpiData->comm, &reqs[0]);
-        if (myid != mpiData->right)
-            MPI_Irecv((void *)rbufyz[0], n * o, MPI_DOUBLE, mpiData->right, 0, mpiData->comm, &reqs[1]);
-        MPI_Waitall(2, reqs, stats);
-        if (MPI_PROC_NULL != mpiData->right)
-            for (j = 0; j < n; j++)
-            {
-                for (k = 0; k < o; k++)
-                {
-                    c[m - 1][j][k] = rbufyz[j][k];
-                }
-            }
+        int err;
 
-        /* Sending data to right */
-        for (j = 0; j < n; j++)
-        {
-            for (k = 0; k < o; k++)
-            {
-                sbufyz[j][k] = c[m - 2][j][k];
-            }
-        }
-        reqs[0] = MPI_REQUEST_NULL;
-        reqs[1] = MPI_REQUEST_NULL;
-        if (myid != mpiData->right)
-            MPI_Isend((void *)sbufyz[0], n * o, MPI_DOUBLE, mpiData->right, 0, mpiData->comm, &reqs[0]);
-        if (myid != mpiData->left)
-            MPI_Irecv((void *)rbufyz[0], n * o, MPI_DOUBLE, mpiData->left, 0, mpiData->comm, &reqs[1]);
-        MPI_Waitall(2, reqs, stats);
-        if (MPI_PROC_NULL != mpiData->left)
-            for (j = 0; j < n; j++)
-            {
-                for (k = 0; k < o; k++)
-                {
-                    c[0][j][k] = rbufyz[j][k];
-                }
-            }
+        /* Sending data to the front */
+        auto sbuf_ptr = c.sliceIncGhosts(ghosts_m, 2 * ghosts_m - 1, 0, ngh - 1, 0, ogh - 1); // TODO max when gh > m
+        auto sbuf = sbuf_ptr->getData();
+        auto rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
+        auto rbuf = rbuf_ptr->getData();
+
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
+                           static_cast<void*>(rbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
+        if (MPI_PROC_NULL != mpiData->back)
+            for (i = 0; i < ghosts_m; i++)
+                for (j = 0; j < ngh; j++)
+                    for (k = 0; k < ogh; k++)
+                        c[mgh - ghosts_m + i][j][k] = rbuf[i][j][k];
+
+        /* Sending data to the back */
+        sbuf_ptr = c.sliceIncGhosts(m, m + ghosts_m - 1, 0, ngh - 1, 0, ogh - 1); // TODO max when gh > m
+        sbuf = sbuf_ptr->getData();
+        rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
+        rbuf = rbuf_ptr->getData();
+
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
+                           static_cast<void*>(rbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
+        if (MPI_PROC_NULL != mpiData->front)
+            for (i = 0; i < ghosts_m; i++)
+                for (j = 0; j < ngh; j++)
+                    for (k = 0; k < ogh; k++)
+                        c[i][j][k] = rbuf[i][j][k];
 
         /* Sending data downwards */
-        for (i = 0; i < m; i++)
-        {
-            for (k = 0; k < o; k++)
-            {
-                sbufxz[i][k] = c[i][1][k];
-            }
-        }
-        reqs[0] = MPI_REQUEST_NULL;
-        reqs[1] = MPI_REQUEST_NULL;
-        if (myid != mpiData->down)
-            MPI_Isend((void *)sbufxz[0], m * o, MPI_DOUBLE, mpiData->down, 0, mpiData->comm, &reqs[0]);
-        if (myid != mpiData->up)
-            MPI_Irecv((void *)rbufxz[0], m * o, MPI_DOUBLE, mpiData->up, 0, mpiData->comm, &reqs[1]);
-        MPI_Waitall(2, reqs, stats);
+        sbuf_ptr = c.sliceIncGhosts(0, mgh - 1, ghosts_m, 2 * ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
+        sbuf = sbuf_ptr->getData();
+        rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
+        rbuf = rbuf_ptr->getData();
+
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
+                           static_cast<void*>(rbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
         if (MPI_PROC_NULL != mpiData->up)
-            for (i = 0; i < m; i++)
-            {
-                for (k = 0; k < o; k++)
-                {
-                    c[i][n - 1][k] = rbufxz[i][k];
-                }
-            }
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ghosts_n; j++)
+                    for (k = 0; k < ogh; k++)
+                        c[i][ngh - ghosts_n + j][k] = rbuf[i][j][k];
 
         /* Sending data upwards */
-        for (i = 0; i < m; i++)
-        {
-            for (k = 0; k < o; k++)
-            {
-                sbufxz[i][k] = c[i][n - 2][k];
-            }
-        }
-        reqs[0] = MPI_REQUEST_NULL;
-        reqs[1] = MPI_REQUEST_NULL;
-        if (myid != mpiData->up)
-            MPI_Isend((void *)sbufxz[0], m * o, MPI_DOUBLE, mpiData->up, 0, mpiData->comm, &reqs[0]);
-        if (myid != mpiData->down)
-            MPI_Irecv((void *)rbufxz[0], m * o, MPI_DOUBLE, mpiData->down, 0, mpiData->comm, &reqs[1]);
-        MPI_Waitall(2, reqs, stats);
+        sbuf_ptr = c.sliceIncGhosts(0, mgh - 1, n, n + ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
+        sbuf = sbuf_ptr->getData();
+        rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
+        rbuf = rbuf_ptr->getData();
+
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
+                           static_cast<void*>(rbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
         if (MPI_PROC_NULL != mpiData->down)
-            for (i = 0; i < m; i++)
-            {
-                for (k = 0; k < o; k++)
-                {
-                    c[i][0][k] = rbufxz[i][k];
-                }
-            }
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ghosts_n; j++)
+                    for (k = 0; k < ogh; k++)
+                        c[i][j][k] = rbuf[i][j][k];
 
-        /* Sending data backwards */
-        for (i = 0; i < m; i++)
-        {
-            for (j = 0; j < n; j++)
-            {
-                sbufxy[i][j] = c[i][j][1];
-            }
-        }
-        reqs[0] = MPI_REQUEST_NULL;
-        reqs[1] = MPI_REQUEST_NULL;
-        if (myid != mpiData->back)
-            MPI_Isend((void *)sbufxy[0], m * n, MPI_DOUBLE, mpiData->back, 0, mpiData->comm, &reqs[0]);
-        if (myid != mpiData->front)
-            MPI_Irecv((void *)rbufxy[0], m * n, MPI_DOUBLE, mpiData->front, 0, mpiData->comm, &reqs[1]);
-        MPI_Waitall(2, reqs, stats);
-        if (MPI_PROC_NULL != mpiData->front)
-            for (i = 0; i < m; i++)
-            {
-                for (j = 0; j < n; j++)
-                {
-                    c[i][j][o - 1] = rbufxy[i][j];
-                }
-            }
+        /* Sending data to the left */
+        sbuf_ptr = c.sliceIncGhosts(0, mgh - 1, 0, ngh - 1, ghosts_o, 2 * ghosts_o - 1); // TODO max when gh > m
+        sbuf = sbuf_ptr->getData();
+        rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
+        rbuf = rbuf_ptr->getData();
 
-        /* Sending data to front */
-        for (i = 0; i < m; i++)
-        {
-            for (j = 0; j < n; j++)
-            {
-                sbufxy[i][j] = c[i][j][o - 2];
-            }
-        }
-        reqs[0] = MPI_REQUEST_NULL;
-        reqs[1] = MPI_REQUEST_NULL;
-        if (myid != mpiData->front)
-            MPI_Isend((void *)sbufxy[0], m * n, MPI_DOUBLE, mpiData->front, 0, mpiData->comm, &reqs[0]);
-        if (myid != mpiData->back)
-            MPI_Irecv((void *)rbufxy[0], m * n, MPI_DOUBLE, mpiData->back, 0, mpiData->comm, &reqs[1]);
-        MPI_Waitall(2, reqs, stats);
-        if (MPI_PROC_NULL != mpiData->back)
-            for (i = 0; i < m; i++)
-            {
-                for (j = 0; j < n; j++)
-                {
-                    c[i][j][0] = rbufxy[i][j];
-                }
-            }
+        // std::cout << myid << "," << mpiData->left << std::endl;
+        // MPI_Barrier(comm);
+        // sbuf_ptr->dumpToFile("sbuf_ptr_left" + std::to_string(myid) + ".txt");
 
-        if (periodic)
-        {
-            if (myid == mpiData->back && myid == mpiData->front)
-            {
-                for (i = 0; i < m; i++)
-                {
-                    for (j = 0; j < n; j++)
-                    {
-                        c[i][j][0] = c[i][j][o - 2];
-                        c[i][j][o - 1] = c[i][j][1];
-                    }
-                }
-            }
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
+                           static_cast<void*>(rbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
-            if (myid == mpiData->down && myid == mpiData->up)
-            {
-                for (i = 0; i < m; i++)
-                {
-                    for (k = 0; k < o; k++)
-                    {
-                        c[i][0][k] = c[i][n - 2][k];
-                        c[i][n - 1][k] = c[i][1][k];
-                    }
-                }
-            }
+        if (MPI_PROC_NULL != mpiData->right)
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ngh; j++)
+                    for (k = 0; k < ghosts_o; k++)
+                        c[i][j][ogh - ghosts_o + k] = rbuf[i][j][k];
 
-            if (myid == mpiData->left && myid == mpiData->right)
-            {
-                for (j = 0; j < n; j++)
-                {
-                    for (k = 0; k < o; k++)
-                    {
-                        c[0][j][k] = c[m - 2][j][k];
-                        c[m - 1][j][k] = c[1][j][k];
-                    }
-                }
-            }
-        }
-#endif // MGCL_USE_MPI
+        /* Sending data to the right */
+        sbuf_ptr = c.sliceIncGhosts(0, mgh - 1, 0, ngh - 1, o, o + ghosts_o - 1); // TODO max when gh > m
+        sbuf = sbuf_ptr->getData();
+        rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
+        rbuf = rbuf_ptr->getData();
+
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
+                           static_cast<void*>(rbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
+        if (MPI_PROC_NULL != mpiData->left)
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ngh; j++)
+                    for (k = 0; k < ghosts_o; k++)
+                        c[i][j][k] = rbuf[i][j][k];
     }
 
     /* updates ghost cells on opencl device.
      * m,n,o must be size of ghosted grid.
      * Only enqueues the kernel. Neither waits for kernel to finish nor reads back results */
-    int MultigridEngine::updateGhosts(Problem &problem, cl_mem dBuffer, int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o)
+    int MultigridEngine::updateGhosts(Problem& problem, CuboidGpu& dBuffer,
+                                      MPILevelData* mpiData, bool forceLocal)
     {
-        if (problem.bc != BC::PERIODIC)
+        // TODO actually request these as arguments
+        int m = dBuffer.getM();
+        int n = dBuffer.getN();
+        int o = dBuffer.getO();
+        int mgh = dBuffer.getMgh();
+        int ngh = dBuffer.getNgh();
+        int ogh = dBuffer.getOgh();
+        int ghosts_m = dBuffer.getGhostsM();
+        int ghosts_n = dBuffer.getGhostsN();
+        int ghosts_o = dBuffer.getGhostsO();
+
+        if (!forceLocal && problem.useMpi() && mpiData)
+        {
+            updateGhostsOclMpi(problem.getCommands(), dBuffer, *mpiData, problem.isPeriodic(), forceLocal);
+            return CL_SUCCESS;
+        }
+
+        if (problem.useMpi() && !mpiData)
+            throw "Problem uses MPI but mpiData is null!";
+
+        if (!problem.isPeriodic())
             return CL_SUCCESS;
 
         int err;
@@ -307,11 +336,6 @@ namespace mgcl
         // Create the compute kernel from the program
         cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper().getProgram(), "update_ghosts_periodic", &err);
         mgclCheckError(err, "clCreateKernel");
-
-        // TODO actually request these as arguments
-        int m = mgh - 2 * ghosts_m;
-        int n = ngh - 2 * ghosts_n;
-        int o = ogh - 2 * ghosts_o;
 
         // assign kernel arguments
         int pos = 0;
@@ -350,5 +374,31 @@ namespace mgcl
         mgclCheckError(err, "Releasing update_ghosts_periodic kernel");
 
         return err;
+    }
+
+    /**
+     * @brief Updates ghosts of an OpenCL buffer respecting MPI usage. That is, the buffer is sent to host, ghosts
+     * are updated using MPI routines, and the updated buffer is sent back to the device.
+     * Waits for previous commands to finish before reading the buffer.
+     *
+     * @param commands
+     * @param d_buf
+     * @param mpiData
+     * @param m Real grid's size in 1st dim
+     * @param n Real grid's size in 2nd dim
+     * @param o Real grid's size in 3rd dim
+     * @param ghosts_m
+     * @param ghosts_n
+     * @param ghosts_o
+     * @param periodic
+     * @param forceLocal
+     */
+    void MultigridEngine::updateGhostsOclMpi(cl_command_queue commands, CuboidGpu& d_buf, MPILevelData& mpiData,
+                                             bool periodic, bool forceLocal)
+    {
+        // Read back from GPU and update ghosts on host in order to update neighbouring nodes, too.
+        auto tmp = d_buf.read(commands, nullptr, true);
+        MultigridEngine::updateGhostsSeq(*tmp, &mpiData, periodic, forceLocal);
+        d_buf.write(commands, *tmp, true);
     }
 }

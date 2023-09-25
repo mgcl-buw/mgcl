@@ -1,13 +1,15 @@
-#include "cuboid.hpp"           // for Cuboid
-#include "hypercube.hpp"        // for Hypercube6d
-#include "level.hpp"            // for Level
-#include "mgcl.hpp"             // for mgcl_debug, MGCL_LAPLACE_19POINT
+#include "cuboid.hpp"    // for Cuboid
+#include "hypercube.hpp" // for Hypercube6d
+#include "level.hpp"     // for Level
+#include "mgcl.hpp"      // for mgcl_debug, MGCL_LAPLACE_19POINT
+#include "mpi_level_data.hpp"
 #include "multigrid_engine.hpp" // for Problem, VaryingStencil3x3x3, Multig...
 #include "problem.hpp"          // for Problem
 #include "stencil.hpp"          // for mgclCheckError, VaryingStencil3x3x3
 #include "util.hpp"
 
 #include <cstdio> // for printf, size_t, NULL
+#include <iostream>
 #include <math.h> // for fabs, sqrt, ceil
 #include <memory> // for __shared_ptr_access, shared_ptr
 
@@ -26,16 +28,16 @@ namespace mgcl
      * m,n,o is size of real grid
      * stepsPerIter is the amount of iterations done without ghost update in-between. v and r must have adequate ghost
      * cells, i.e. v_gh >= stepsPerIter per border. Defaults to 1. */
-    double MultigridEngine::jacobiSeq(Cuboid &v, Cuboid &f, Cuboid &r, double omega,
+    double MultigridEngine::jacobiSeq(Cuboid& v, Cuboid& f, Cuboid& r, double omega, double h2,
                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
-                                      double stencilFactor, VaryingStencil3x3x3 *stencilValues, bool returnResidualNorm,
-                                      bool periodic, int stepsPerIter)
+                                      double stencilFactor, VaryingStencil* stencilValues, bool returnResidualNorm,
+                                      bool periodic, bool updateGhostsLocally, int stepsPerIter, MPILevelData* mpiData)
     {
         double res = 0.0;
-        double ***vraw = v.getData();
+        double*** vraw = v.getData();
 
         // TODO adjust for mpi, need global m, not local m
-        double h2 = 1.0 / ((double)(v.getM() * v.getM()));
+        // double h2 = 1.0 / ((double)(v.getM() * v.getM()));
         double dinv = h2 / 6.0;
         if (stencilType == MGCL_LAPLACE_19POINT)
             dinv = (6.0 * h2) / 24.0;
@@ -75,7 +77,7 @@ namespace mgcl
         {
             // update ghost cells for periodic boundary condition
             if (periodic)
-                MultigridEngine::updateGhostsSeq(v);
+                MultigridEngine::updateGhostsSeq(v, mpiData, periodic, updateGhostsLocally);
             // TODO else update only neighboring processes if using mpi
 
             // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
@@ -93,10 +95,13 @@ namespace mgcl
                 int istart_r = r.getGhostsM() - off;
                 int jstart_r = r.getGhostsN() - off;
                 int kstart_r = r.getGhostsO() - off;
+                int istart_sv = stencilValues ? stencilValues->getGhostsDim1() - off : 0;
+                int jstart_sv = stencilValues ? stencilValues->getGhostsDim2() - off : 0;
+                int kstart_sv = stencilValues ? stencilValues->getGhostsDim3() - off : 0;
 
                 // r = f - A*v
                 res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, false, periodic,
-                                  -off, -off, -off);
+                                  updateGhostsLocally, -off, -off, -off, mpiData);
 
                 if (stencilType == MGCL_LAPLACE_7POINT || stencilType == MGCL_LAPLACE_19POINT || stencilType == MGCL_LAPLACE_27POINT)
                 {
@@ -117,12 +122,9 @@ namespace mgcl
                     // print27point(v, 1, 2, 5);
                     // print27point_sv(v, 1, 2, 5, stencilValues, 2, 3, 6);
 
-                    int ghmsv = stencilValues->getGhostsDim1();
-                    int ghnsv = stencilValues->getGhostsDim2();
-                    int ghosv = stencilValues->getGhostsDim3();
-                    for (int iv = istart_v, ir = istart_r, isv = ghmsv; iv < iend_v; iv++, ir++, isv++)
-                        for (int jv = jstart_v, jr = jstart_r, jsv = ghnsv; jv < jend_v; jv++, jr++, jsv++)
-                            for (int kv = kstart_v, kr = kstart_r, ksv = ghosv; kv < kend_v; kv++, kr++, ksv++)
+                    for (int iv = istart_v, ir = istart_r, isv = istart_sv; iv < iend_v; iv++, ir++, isv++)
+                        for (int jv = jstart_v, jr = jstart_r, jsv = jstart_sv; jv < jend_v; jv++, jr++, jsv++)
+                            for (int kv = kstart_v, kr = kstart_r, ksv = kstart_sv; kv < kend_v; kv++, kr++, ksv++)
                             {
                                 // if (i == 1 && j == 1 && k == 1)
                                 //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, vraw[i][j][k],
@@ -144,24 +146,25 @@ namespace mgcl
         }
 
         if (periodic)
-            MultigridEngine::updateGhostsSeq(v);
+            MultigridEngine::updateGhostsSeq(v, mpiData, periodic, updateGhostsLocally);
 
         if (returnResidualNorm)
-            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, returnResidualNorm, periodic);
+            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, returnResidualNorm, periodic,
+                              updateGhostsLocally, 0, 0, 0, mpiData);
 
         return res;
     }
 
     /* Runs jacobi method using OpenCL.
      * Doesn't creates ocl buffers and doesn't copy data from host to device and vice versa
-     * v, f and r must be of size [m][n][o] for periodic boundary condition.
+     * v, f and r must be of size [m][n][o] for periodic boundary condition. Ghosts of v and f must be updated.
      * m, n and o must be the dimensions of grid + 2*ghosts
      * If return_residual is true, the residual's 2-norm or inf-norm will be read back from device and returned, else -1.
      * It's not
      * really performant to do so because we have to wait for all kernels to complete and reading a buffer to host is slow.
      * stepsPerIter is amount iterations without ghost update in-between. Ghost cells must be adequate. Defaults to 1.
      */
-    double MultigridEngine::jacobi(Problem &problem, Level &level, int maxiter, bool return_residual, int stepsPerIter)
+    double MultigridEngine::jacobi(Problem& problem, Level& level, int maxiter, bool return_residual, int stepsPerIter)
     {
         int err;
         int mgh = level.mgh;
@@ -195,13 +198,13 @@ namespace mgcl
             throw "#ghosts must be >= stepsPerIter!";
         }
 
-        double h2 = (1.0 / (double)level.m) *
-                    (1.0 / (double)level.m); // TODO minimum of m,n,o when not cube?
+        double h2 = 1.0 / static_cast<double>((problem.getMGlobal() >> level.num) * (problem.getMGlobal() >> level.num));
         double dinv = h2 / 6.0;
         double h2inv = level.stencilFactor; // divisor of the stencil, inverted to use * instead of / in kernel
+        // TODO refactor stencilFactor
 
         // Create the compute kernel from the program
-        const char *kernel_name;
+        const char* kernel_name;
         if (problem.stencilType == MGCL_LAPLACE_7POINT)
             kernel_name = "jacobi_iter_7point";
         else if (problem.stencilType == MGCL_LAPLACE_19POINT)
@@ -222,6 +225,11 @@ namespace mgcl
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
         mgclCheckError(err, "Creating kernel");
 
+        cl_mem dVIn = level.getDVIn().getBuffer();
+        cl_mem dVOut = level.getDVOut().getBuffer();
+        cl_mem dF = level.getDF().getBuffer();
+        cl_mem dR = level.getDR().getBuffer();
+
         // assign kernel arguments
         int pos = 0;
 
@@ -229,10 +237,10 @@ namespace mgcl
         {
             auto svbuf = level.stencilValuesGpu->getBuf();
             int svgh = level.stencilValuesGpu->getGh();
-            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &level.dVIn);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dVOut);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dF);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dR);
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
             err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &svbuf);
             err |= clSetKernelArg(kernel, ++pos, sizeof(double), &problem.omega);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
@@ -245,10 +253,10 @@ namespace mgcl
         }
         else
         {
-            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &level.dVIn);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dVOut);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dF);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dR);
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
             err |= clSetKernelArg(kernel, ++pos, sizeof(double), &h2inv);
             err |= clSetKernelArg(kernel, ++pos, sizeof(double), &dinv);
             err |= clSetKernelArg(kernel, ++pos, sizeof(double), &problem.omega);
@@ -274,35 +282,44 @@ namespace mgcl
                 // printf("%ld (multiple of %ld)\n", global[i], local[i]);
             }
 
-        for (int iter = 0; iter < maxiter; iter++)
+        int globalIter = 0;
+        while (globalIter < maxiter)
         {
+            // Update ghosts of current input v
+            if (globalIter % 2 == 1)
+            {
+                err = MultigridEngine::updateGhosts(problem, level.getDVOut(),
+                                                    level.getMpiDataPtr(), level.isCalculatedLocally());
+                mgclCheckError(err, "Updating ghosts");
+            }
+            else
+            {
+                err = MultigridEngine::updateGhosts(problem, level.getDVIn(),
+                                                    level.getMpiDataPtr(), level.isCalculatedLocally());
+                mgclCheckError(err, "Updating ghosts");
+            }
+
             // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
-            for (int innerIter = 0; innerIter < stepsPerIter && iter + innerIter < maxiter; innerIter++)
+            for (int innerIter = 0; innerIter < stepsPerIter && globalIter < maxiter; innerIter++, globalIter++)
             {
                 // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
 
                 // switch arguments dVIn -> dVOut to use latest values in next iteration
-                if (iter % 2 == 1)
+                if (globalIter % 2 == 1)
                 {
-                    err = clSetKernelArg(kernel, 1, sizeof(cl_mem), &level.dVIn);
-                    err |= clSetKernelArg(kernel, 0, sizeof(cl_mem), &level.dVOut);
+                    err = clSetKernelArg(kernel, 1, sizeof(cl_mem), &dVIn);
+                    err |= clSetKernelArg(kernel, 0, sizeof(cl_mem), &dVOut);
                     mgclCheckError(err, "Setting kernel arguments");
-
-                    err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-                    mgclCheckError(err, "Updating ghosts");
                 }
                 else
                 {
-                    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &level.dVIn);
-                    err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &level.dVOut);
+                    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &dVIn);
+                    err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &dVOut);
                     mgclCheckError(err, "Setting kernel arguments");
-
-                    err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-                    mgclCheckError(err, "Updating ghosts");
                 }
 
                 // set flag to store residual in last iteration
-                if (iter == maxiter - 1)
+                if (globalIter == maxiter - 1)
                 {
                     store_res = 1;
                     err = clSetKernelArg(kernel, pos, sizeof(int), &store_res);
@@ -321,20 +338,20 @@ namespace mgcl
 
         if (store_res)
         {
-            err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+            // TODO check for mpi
+            err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
+                                                level.isCalculatedLocally());
             mgclCheckError(err, "Updating ghosts of dR");
         }
 
         // copy result into dVIn if needed
         if (maxiter % 2 == 1)
-        {
-            err = clEnqueueCopyBuffer(problem.getOpenCLHelper().getCommands(), level.dVOut, level.dVIn, 0, 0, sizeof(double) * mgh * ngh * ogh, 0,
-                                      NULL, NULL);
-            mgclCheckError(err, "Update v");
-        }
+            level.getDVOut().copyTo(problem.getOpenCLHelper().getCommands(), level.getDVIn());
 
-        err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
-        mgclCheckError(err, "Updating ghosts of v_in");
+        // Update ghosts of dVIn
+        err = MultigridEngine::updateGhosts(problem, level.getDVIn(),
+                                            level.getMpiDataPtr(), level.isCalculatedLocally());
+        mgclCheckError(err, "Updating ghosts");
 
         // calculate residual and its norm
         if (return_residual)
@@ -356,7 +373,7 @@ namespace mgcl
      * It's not really performant to do so because we have to wait for all kernels to complete and reading a buffer to host
      * is slow. Runs multiple iterations per kernel call using local memory if enough is available Only jacobi_wg_size_x is
      * used for now. If there is not enough local memory available the kernel will not be called and -2 is returned. */
-    double MultigridEngine::jacobiLocalMem(Problem &problem, Level &level, int maxiter, int return_residual)
+    double MultigridEngine::jacobiLocalMem(Problem& problem, Level& level, int maxiter, int return_residual)
     {
         int err;
         int mgh = level.mgh;
@@ -395,7 +412,7 @@ namespace mgcl
         mgcl_debug("Available local memory on device: %ld Bytes\n", available_local_mem);
 
         // size of shared memory size for one work-group
-        int locmem_size_wg = 3 * ipk * (wg_size + 2 * ipk) * (wg_size + 2 * ipk) * sizeof(double);
+        size_t locmem_size_wg = 3 * ipk * (wg_size + 2 * ipk) * (wg_size + 2 * ipk) * sizeof(double);
 
         // halve wg size until local memory fits
         while (available_local_mem < locmem_size_wg)
@@ -424,7 +441,7 @@ namespace mgcl
         double h2inv = level.stencilFactor; // divisor of the stencil, inverted to use * instead of / in kernel
 
         // Create the compute kernel from the program
-        const char *kernel_name;
+        const char* kernel_name;
         if (problem.stencilType == MGCL_LAPLACE_7POINT)
             kernel_name = "jacobi_stream_shmem_7point";
         else if (problem.stencilType == MGCL_LAPLACE_19POINT)
@@ -440,12 +457,17 @@ namespace mgcl
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
         mgclCheckError(err, "Creating kernel");
 
+        cl_mem dVIn = level.getDVIn().getBuffer();
+        cl_mem dVOut = level.getDVOut().getBuffer();
+        cl_mem dF = level.getDF().getBuffer();
+        cl_mem dR = level.getDR().getBuffer();
+
         // assign kernel arguments
         int pos = 0;
-        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &level.dVIn);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dVOut);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dF);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dR);
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
         err |= clSetKernelArg(kernel, ++pos, locmem_size_wg, NULL);
         err |= clSetKernelArg(kernel, ++pos, sizeof(double), &h2inv);
         err |= clSetKernelArg(kernel, ++pos, sizeof(double), &dinv);
@@ -466,7 +488,6 @@ namespace mgcl
         mgcl_debug("Running Jacobi kernel with %ld,%ld work-items and %ld,%ld work group size\n", global[0], global[1],
                    local[0], local[1]);
 
-        cl_mem tmp;
         if (ipk == maxiter)
         {
             // set flag to store residual of last iteration
@@ -474,16 +495,17 @@ namespace mgcl
             err = clSetKernelArg(kernel, pos, sizeof(int), &store_res);
             mgclCheckError(err, "Setting kernel arguments");
 
-            err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+            err = MultigridEngine::updateGhosts(problem, level.getDVIn(), level.getMpiDataPtr(),
+                                                level.isCalculatedLocally());
             mgclCheckError(err, "Updating ghosts");
 
             err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
             mgclCheckError(err, "Enqueueing kernel");
 
             // swap pointers so result is in dVIn
-            tmp = level.dVIn;
-            level.dVIn = level.dVOut;
-            level.dVOut = tmp;
+            CuboidGpu::swap(level.getDVIn(), level.getDVOut());
+            dVIn = level.getDVIn().getBuffer();
+            dVOut = level.getDVOut().getBuffer();
         }
         else
         {
@@ -507,16 +529,17 @@ namespace mgcl
                 err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing kernel");
 
-                err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+                err = MultigridEngine::updateGhosts(problem, level.getDVOut(), level.getMpiDataPtr(),
+                                                    level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
 
                 // swap pointers so result is in dVIn
-                tmp = level.dVIn;
-                level.dVIn = level.dVOut;
-                level.dVOut = tmp;
+                CuboidGpu::swap(level.getDVIn(), level.getDVOut());
+                dVIn = level.getDVIn().getBuffer();
+                dVOut = level.getDVOut().getBuffer();
 
-                err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &level.dVIn);
-                err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &level.dVOut);
+                err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &dVIn);
+                err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &dVOut);
             }
 
             // call once for remaining iterations
@@ -534,18 +557,20 @@ namespace mgcl
                 err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing kernel");
 
-                err = MultigridEngine::updateGhosts(problem, level.dVOut, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+                err = MultigridEngine::updateGhosts(problem, level.getDVOut(), level.getMpiDataPtr(),
+                                                    level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
 
                 // swap pointers so result is in dVIn
-                tmp = level.dVIn;
-                level.dVIn = level.dVOut;
-                level.dVOut = tmp;
+                CuboidGpu::swap(level.getDVIn(), level.getDVOut());
+                dVIn = level.getDVIn().getBuffer();
+                dVOut = level.getDVOut().getBuffer();
             }
         }
         // result is in dVIn now since pointers were swapped at the end of the loops above
 
-        err = MultigridEngine::updateGhosts(problem, level.dVIn, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+        err = MultigridEngine::updateGhosts(problem, level.getDVIn(), level.getMpiDataPtr(),
+                                            level.isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts of v_in");
 
         // calculate residual's 2-norm. Square elements on device and sum up on host
@@ -573,7 +598,7 @@ namespace mgcl
      *   considered, too. Analogously, with moff = 1 the outermost set of real cells is ignored. The calculation
      *   of the boundaries is e.g. istart = v.ghosts_m + moff.
      */
-    double MultigridEngine::residual(Problem &problem, Level &level, bool return_residual,
+    double MultigridEngine::residual(Problem& problem, Level& level, bool return_residual,
                                      int moff, int noff, int ooff)
     {
         int err;
@@ -582,9 +607,8 @@ namespace mgcl
         int ogh = level.ogh;
         double res = 0.0;
 
-        double h2 = (1.0 / (double)level.m) *
-                    (1.0 / (double)level.m); // TODO minimum of m,n,o when not cube?
-        double h2inv = 1.0 / h2;             // divisor of the stencil, inverted to use * instead of / in kernel
+        double h2 = 1.0 / static_cast<double>((problem.getMGlobal() >> level.num) * (problem.getMGlobal() >> level.num));
+        double h2inv = 1.0 / h2; // divisor of the stencil, inverted to use * instead of / in kernel
 
         // check if off is too small (i.e. start < 0)
         // TODO refactor to use GPUCuboid and check against v.getGhosts
@@ -596,7 +620,7 @@ namespace mgcl
             throw "2*moff, 2*noff and 2*ooff must not be >= m, n or o";
 
         // Create the compute kernel from the program
-        const char *kernel_name;
+        const char* kernel_name;
         if (problem.stencilType == MGCL_LAPLACE_7POINT)
             kernel_name = "residual_7point";
         else if (problem.stencilType == MGCL_LAPLACE_19POINT)
@@ -618,16 +642,19 @@ namespace mgcl
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
         mgclCheckError(err, "Creating kernel");
 
+        cl_mem dVIn = level.getDVIn().getBuffer();
+        cl_mem dF = level.getDF().getBuffer();
+        cl_mem dR = level.getDR().getBuffer();
+
         // assign kernel arguments
         int pos = 0;
-
         if (problem.stencilType == MGCL_VARYING)
         {
             auto svbuf = level.stencilValuesGpu->getBuf();
             int svgh = level.stencilValuesGpu->getGh();
-            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &level.dVIn);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dF);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dR);
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
             err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &svbuf);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
@@ -640,9 +667,9 @@ namespace mgcl
         }
         else
         {
-            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &level.dVIn);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dF);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &level.dR);
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
             err |= clSetKernelArg(kernel, ++pos, sizeof(double), &h2inv);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
@@ -673,7 +700,8 @@ namespace mgcl
 
         if (problem.isPeriodic())
         {
-            err = MultigridEngine::updateGhosts(problem, level.dR, mgh, ngh, ogh, problem.ghosts, problem.ghosts, problem.ghosts);
+            err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
+                                                level.isCalculatedLocally());
             mgclCheckError(err, "Updating ghosts of r");
         }
 
@@ -684,18 +712,15 @@ namespace mgcl
             {
                 // calculate 2-Norm
                 Cuboid rsq(mgh, ngh, ogh);
-                double ***rsquares = rsq.getData();
                 int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
-                cl_mem dRsquares = clCreateBuffer(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag,
-                                                  sizeof(double) * level.m * level.n * level.o, rsquares[0][0], &err);
-                mgclCheckError(err, "Creating rsquares buffer");
+                CuboidGpu dRsquares(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag, rsq);
 
                 // Create the compute kernel from the program
                 cl_kernel kernel_square = clCreateKernel(problem.openCLHelper.getProgram(), "residual_squared", &err);
                 mgclCheckError(err, "Creating residual squared kernel");
 
                 pos = 0;
-                err = clSetKernelArg(kernel_square, pos, sizeof(cl_mem), &level.dR);
+                err = clSetKernelArg(kernel_square, pos, sizeof(cl_mem), &dR);
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(cl_mem), &dRsquares);
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &level.m);
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &level.n);
@@ -707,17 +732,14 @@ namespace mgcl
                 mgclCheckError(err, "Enqueueing residual squared kernel");
 
                 // sum up residual squares
-                res = sqrt(util::sum(dRsquares, level.m * level.n * level.o,
-                                     problem.getContext(), problem.getProgram(), problem.getCommands(), true));
+                res = sqrt(util::sum(dRsquares, problem.getProgram(), problem.getCommands(), true));
 
-                clReleaseMemObject(dRsquares);
                 clReleaseKernel(kernel_square);
             }
             else
             {
                 // calculate Infinity-Norm
-                res = util::max_abs(level.dR, mgh * ngh * ogh,
-                                    problem.getContext(), problem.getProgram(), problem.getCommands(), true);
+                res = util::max_abs(level.getDR(), problem.getProgram(), problem.getCommands(), true);
             }
         }
 
@@ -733,15 +755,15 @@ namespace mgcl
      *   considered, too. Analogously, with moff = 1 the outermost set of real cells is ignored. The calculation
      *   of the boundaries is e.g. istart = v.ghosts_m + moff.
      */
-    double MultigridEngine::residualSeq(Cuboid &f, Cuboid &v, Cuboid &r, MGCL_RESIDUAL_NORM resnorm,
+    double MultigridEngine::residualSeq(Cuboid& f, Cuboid& v, Cuboid& r, MGCL_RESIDUAL_NORM resnorm,
                                         MGCL_STENCIL stencilType, double stencilFactor,
-                                        VaryingStencil3x3x3 *stencilValuesCuboid, bool returnResidualNorm,
-                                        bool periodic, int moff, int noff, int ooff)
+                                        VaryingStencil* stencilValuesCuboid, bool returnResidualNorm,
+                                        bool periodic, bool updateGhostsLocally, int moff, int noff, int ooff, MPILevelData* mpiData)
     {
         double res = 0.0;
         double stencilsum = 0;
-        double ******stencilValues;
-        double ***vraw = v.getData();
+        double****** stencilValues;
+        double*** vraw = v.getData();
 
         int ghmsv = 0;
         int ghnsv = 0;
@@ -783,10 +805,13 @@ namespace mgcl
         int istart_f = f.getGhostsM() + moff;
         int jstart_f = f.getGhostsN() + noff;
         int kstart_f = f.getGhostsO() + ooff;
+        int istart_sv = stencilValuesCuboid ? stencilValuesCuboid->getGhostsDim1() + moff : 0;
+        int jstart_sv = stencilValuesCuboid ? stencilValuesCuboid->getGhostsDim2() + noff : 0;
+        int kstart_sv = stencilValuesCuboid ? stencilValuesCuboid->getGhostsDim3() + ooff : 0;
 
-        for (int iv = istart_v, ir = istart_r, fi = istart_f, isv = ghmsv; iv < iend_v; iv++, ir++, fi++, isv++)
-            for (int jv = jstart_v, jr = jstart_r, fj = jstart_f, jsv = ghnsv; jv < jend_v; jv++, jr++, fj++, jsv++)
-                for (int kv = kstart_v, kr = kstart_r, fk = kstart_f, ksv = ghosv; kv < kend_v; kv++, kr++, fk++, ksv++)
+        for (int iv = istart_v, ir = istart_r, fi = istart_f, isv = istart_sv; iv < iend_v; iv++, ir++, fi++, isv++)
+            for (int jv = jstart_v, jr = jstart_r, fj = jstart_f, jsv = jstart_sv; jv < jend_v; jv++, jr++, fj++, jsv++)
+                for (int kv = kstart_v, kr = kstart_r, fk = kstart_f, ksv = kstart_sv; kv < kend_v; kv++, kr++, fk++, ksv++)
                 {
                     // A*v
                     if (stencilType == MGCL_LAPLACE_7POINT)
@@ -892,13 +917,13 @@ namespace mgcl
                 }
 
         if (periodic)
-            MultigridEngine::updateGhostsSeq(r);
+            MultigridEngine::updateGhostsSeq(r, mpiData, periodic, updateGhostsLocally);
 
         return (returnResidualNorm && resnorm == MGCL_L2) ? sqrt(res) : res;
     }
 
     /* Prints components of 7-point laplacian stencil for debugging purposes */
-    void MultigridEngine::print7point(Cuboid &v, int i, int j, int k)
+    void MultigridEngine::print7point(Cuboid& v, int i, int j, int k)
     {
         printf("7point stencil at %d,%d,%d:\n", i, j, k);
         printf("v[self] = %e\n", v[i][j][k]);
@@ -910,7 +935,7 @@ namespace mgcl
         printf(" v[i+1] = %e\n", v[i + 1][j][k]);
     }
 
-    void MultigridEngine::print19point(Cuboid &v, int i, int j, int k)
+    void MultigridEngine::print19point(Cuboid& v, int i, int j, int k)
     {
         printf("19point stencil at %d,%d,%d:\n", i, j, k);
         printf("v[self] = %e\n", v[i][j][k]);
@@ -934,7 +959,7 @@ namespace mgcl
         printf(" v[i+1][j+1][ k ] = %e\n", v[i + 1][j + 1][k]);
     }
 
-    void MultigridEngine::print27point(Cuboid &v, int i, int j, int k)
+    void MultigridEngine::print27point(Cuboid& v, int i, int j, int k)
     {
         printf("27point stencil at %d,%d,%d:\n", i, j, k);
         printf("v[self] = %e\n", v[i][j][k]);
@@ -966,8 +991,8 @@ namespace mgcl
         printf(" v[i+1][j+1][k+1] = %e\n", v[i + 1][j + 1][k + 1]);
     }
 
-    void MultigridEngine::print27point_sv(Cuboid &v, int i, int j, int k,
-                                          VaryingStencil3x3x3 &sv, int i_sv, int j_sv, int k_sv)
+    void MultigridEngine::print27point_sv(Cuboid& v, int i, int j, int k,
+                                          VaryingStencil& sv, int i_sv, int j_sv, int k_sv)
     {
         // clang-format off
         printf("27point stencil at %d,%d,%d; %d,%d,%d:\n", i_sv, j_sv, k_sv, i, j, k);

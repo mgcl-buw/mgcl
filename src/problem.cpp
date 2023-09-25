@@ -1,7 +1,11 @@
 #include "problem.hpp"
-#include "cuboid.hpp"           // for Cuboid
-#include "level.hpp"            // for Level
+#include "cuboid.hpp" // for Cuboid
+#include "level.hpp"  // for Level
+#include "mpi_level_data.hpp"
+#include "mpi_stencil.hpp"
+#include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
+#include "util.hpp"
 
 #include <CL/cl_platform.h> // for cl_ulong
 #include <algorithm>        // for max
@@ -9,39 +13,72 @@
 #include <cmath>            // for log2
 #include <cstdio>           // for printf, NULL
 #include <functional>       // for function
-#include <stdexcept>        // for runtime_error
-#include <string>           // for to_string, basic_string, string
-#include <sys/types.h>      // for ulong
-#include <utility>          // for move
+#include <iostream>
+#include <stdexcept>   // for runtime_error
+#include <string>      // for to_string, basic_string, string
+#include <sys/types.h> // for ulong
+#include <utility>     // for move
 
 namespace mgcl
 {
-    Problem::Problem(int m_, int n_, int o_)
+
+    Problem::Problem(int m_, int n_, int o_, int m_global_, int n_global_, int o_global_)
         : m(m_), n(n_), o(o_),
+          mGlobal(m_global_ == -1 ? m_ : m_global_),
+          nGlobal(n_global_ == -1 ? n_ : n_global_),
+          oGlobal(o_global_ == -1 ? o_ : o_global_),
           openCLHelper(this)
     {
+        checkGlobalDimensions();
         calculateAndSetMaxLevel();
     }
 
-    Problem::Problem(int m_, int n_, int o_, Cuboid *f_, Cuboid *v_)
+    Problem::Problem(int m_, int n_, int o_, Cuboid* f_, Cuboid* v_, int m_global_, int n_global_, int o_global_)
         : m(m_), n(n_), o(o_), f(f_), v(v_),
+          mGlobal(m_global_ == -1 ? m_ : m_global_),
+          nGlobal(n_global_ == -1 ? n_ : n_global_),
+          oGlobal(o_global_ == -1 ? o_ : o_global_),
           openCLHelper(this)
     {
+        checkGlobalDimensions();
         calculateAndSetMaxLevel();
     }
 
-    Problem::Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_)
+    Problem::Problem(int m_, int n_, int o_, std::shared_ptr<Cuboid> f_, std::shared_ptr<Cuboid> v_,
+                     int m_global_, int n_global_, int o_global_)
         : m(m_), n(n_), o(o_), f(f_), v(v_),
+          mGlobal(m_global_ == -1 ? m_ : m_global_),
+          nGlobal(n_global_ == -1 ? n_ : n_global_),
+          oGlobal(o_global_ == -1 ? o_ : o_global_),
           openCLHelper(this)
     {
+        checkGlobalDimensions();
         calculateAndSetMaxLevel();
     }
 
-    Problem::Problem(int m_, int n_, int o_, cl_mem d_f_, cl_mem d_v_)
+    Problem::Problem(int m_, int n_, int o_, std::shared_ptr<CuboidGpu> d_f_, std::shared_ptr<CuboidGpu> d_v_,
+                     int m_global_, int n_global_, int o_global_)
         : m(m_), n(n_), o(o_), dF(d_f_), dV(d_v_),
+          mGlobal(m_global_ == -1 ? m_ : m_global_),
+          nGlobal(n_global_ == -1 ? n_ : n_global_),
+          oGlobal(o_global_ == -1 ? o_ : o_global_),
           openCLHelper(this)
     {
+        checkGlobalDimensions();
         calculateAndSetMaxLevel();
+    }
+
+    // throws an exception if global dimensions are not a multiple of local dims.
+    void Problem::checkGlobalDimensions()
+    {
+        if (mGlobal <= 0 || mGlobal % m != 0)
+            throw "mGlobal must be a multiple of m!";
+
+        if (nGlobal <= 0 || nGlobal % n != 0)
+            throw "nGlobal must be a multiple of n!";
+
+        if (oGlobal <= 0 || oGlobal % o != 0)
+            throw "oGlobal must be a multiple of o!";
     }
 
     /**
@@ -78,17 +115,36 @@ namespace mgcl
             throw "mgcl: ghosts_in must be > 0 if boundary conditions are not periodic. Aborting.\n";
         }
 
+        // clang-format off
+        if (v && f && (
+            ghosts_in != v->getGhostsM() || ghosts_in != v->getGhostsN() || ghosts_in != v->getGhostsO() ||
+            ghosts_in != f->getGhostsM() || ghosts_in != f->getGhostsN() || ghosts_in != f->getGhostsO()
+            ))
+            // clang-format on
+            throw "ghosts_in is different than ghosts of v and/or f!";
+
+        if (mpiRank() == 0 && getMpiLevelThreshold() == 0 && stencilValues &&
+            (stencilValues->getDim1() < mGlobal || stencilValues->getDim2() < nGlobal || stencilValues->getDim3() < oGlobal))
+            throw "Mpi threshold level is 0 but stencilValues has local size. Please use setMpiMinGridPoints before setStencilType!";
+
+        if (mpiRank() == 0 && getMpiLevelThreshold() > 1 && stencilValues &&
+            (stencilValues->getDim1() > m || stencilValues->getDim2() > n || stencilValues->getDim3() > o))
+            throw "Mpi threshold level is not 0 but stencilValues has global size. Please use setMpiMinGridPoints before setStencilType!";
+
+        if (stencilValues && (stencilValues->getGhostsDim1() < ghosts ||
+                              stencilValues->getGhostsDim2() < ghosts ||
+                              stencilValues->getGhostsDim3() < ghosts))
+            throw "Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!";
+
         return true;
     }
 
     /**
      * @brief Checks if there is enough space available on the OpenCL device s.t. every buffer that is needed
      * can be created. Sets maxlevel and initialized OpenCL environment if not done yet.
-     *
-     * @return true Enough space available.
-     * @return false Otherwise.
+     * @throws string If not enough space is available.
      */
-    bool Problem::checkGpuSizes()
+    void Problem::checkGpuSizes()
     {
         // Set maxlevel if not done yet.
         if (maxlevel == -1)
@@ -178,8 +234,6 @@ namespace mgcl
 
             throw msg;
         }
-
-        return true;
     }
 
     /**
@@ -191,8 +245,8 @@ namespace mgcl
     int Problem::calculateAndSetMaxLevel()
     {
         // find max level or use user specified one
-        int minsize = m < n ? m : n;
-        minsize = minsize < o ? minsize : o;
+        int minsize = mGlobal < nGlobal ? mGlobal : nGlobal;
+        minsize = minsize < oGlobal ? minsize : oGlobal;
         int maxlv = log2(minsize);
 
         if (maxlevel >= 0) // user has specified a maxlevel
@@ -211,6 +265,42 @@ namespace mgcl
     }
 
     /**
+     * @brief Sets the threshold for levels that will be calculated on multiple MPI processes.
+     * All levels below the threshold (exclusively) will be calculated on multiple MPI processes. All levels at or
+     *   above the threshold (inclusively) will be calculated locally on only one process. I.e. for threshold = 0,
+     *   all levels will be calculated on only one process.
+     * Level indices are 0-based, i.e. the finest level has index 0, the coarsest one has index log2(min(mg,ng,og)),
+     *   where mg,ng,og are the global sizes of the domain.
+     * The threshold must not exceed the level on which min(ml,nl,ol) <= ghosts, e.g. for 8 processes, global size of
+     *   8x8x8 and ghosts = 2, the maximum level is 3 and the maximum valid threshold is 1, since starting with level
+     *   2, ml <= ghosts. This constraint exists because the update of ghost cells is too expensive for ml <= ghosts.
+     *   It is not checked in this function but later in checkParameters(), which is called when solve()
+     *   is called.
+     *
+     */
+    void Problem::calculateAndSetMpiLevelThreshold()
+    {
+        if (!useMpi())
+            return;
+
+        if (mpiMinGridPoints <= 1)
+            throw "mpiMinGridPoints must be at least 2!";
+
+        // Threshold was already set (automatically or by user).
+        if (mpiLevelThreshold >= 0)
+            return;
+
+        mpiLevelThreshold = static_cast<int>(log2(util::seq::min3(m, n, o))) -
+                            (static_cast<int>(log2(mpiMinGridPoints)) - 1);
+
+        if (mpiLevelThreshold < 0)
+            throw "mpiMinGridPoints is too high! It must be less than or equal to local min(m,n,o).";
+
+        if (!silent)
+            std::cout << "mpiLevelThreshold automatically set to " << mpiLevelThreshold << std::endl;
+    }
+
+    /**
      * @brief Creates Level objects, allocates memory.
      *
      * @return true All good.
@@ -225,14 +315,18 @@ namespace mgcl
         if (!silent)
             printf("maxlevel = %d\n", maxlevel);
 
+        if (useMpi())
+        {
+            // Create cartesian process grid if none was set and more than one processes are used.
+            mpiGlobalData->createCartGrid(isPeriodic());
+            calculateAndSetMpiLevelThreshold();
+        }
+
         // create opencl environment with default parameters if not done yet
         if (use_opencl)
         {
-            if (initOpenCL() != CL_SUCCESS)
-                return false;
-
-            if (!checkGpuSizes())
-                return false;
+            initOpenCL();
+            checkGpuSizes();
         }
 
         // check opencl components if device buffers should be reused
@@ -243,26 +337,81 @@ namespace mgcl
         }
 
         // initialize levels
+        // gathered flag needed for enforcing local ghost update after stencil values were gathered. If threshold is 0,
+        // no gathering happens at all.
+        bool gathered = getMpiLevelThreshold() == 0;
+        int gh_sv = stencilValues ? stencilValues->getGhostsDim1() : 0;
         for (int level = 0; level <= maxlevel; level++)
         {
-            auto lv = std::make_unique<Level>(this, level);
-            levels.push_back(std::move(lv));
-            levels.back()->init();
+            {
+                auto lv = std::make_unique<Level>(this, level);
+                levels.push_back(std::move(lv)); // lv is invalid after this line, thus restrict the visibility
+                levels.back()->init();
+            }
 
             // Apply Galerkin operator if stencil is varying and we're not on level 0.
-            if (levels[0]->getStencilValues() && level >= 1)
+            if (levels[0]->getStencilValues() && level >= 1 &&
+                levels.back()->getM() > 0 && levels.back()->getN() > 0 && levels.back()->getO() > 0)
             {
+                auto& lvFine = *levels[level - 1];
+                auto& lvCoarse = *levels[level];
+                bool isJustAboveThreshold = level == getMpiLevelThreshold() - 1;
+                bool updateGhostsCoarse = !useMpi() || mpiSize() == 1 || !isJustAboveThreshold;
+
+                // stencilValues of this level must be of global size on rank 0, if this level is just above
+                // the threshold, since it is getting gathered into.
+                int svm = (mpiRank() == 0 && isJustAboveThreshold ? (mGlobal >> level) : lvCoarse.getM());
+                int svn = (mpiRank() == 0 && isJustAboveThreshold ? (nGlobal >> level) : lvCoarse.getN());
+                int svo = (mpiRank() == 0 && isJustAboveThreshold ? (oGlobal >> level) : lvCoarse.getO());
+
                 if (!use_opencl)
                 {
-                    levels.back()->stencilValues = std::make_shared<VaryingStencil3x3x3>(
-                        MultigridEngine::galerkin(*levels[level - 1]->getStencilValues()));
+                    // Gather partial stencil values of the previous level
+                    if (useMpi() && getMpiLevelThreshold() == lvCoarse.getNum())
+                    {
+
+                        mpi_util::gather(getMpiComm(), *lvFine.getStencilValues());
+                        gathered = true;
+                        updateGhostsStencilMpi(*lvFine.getStencilValues(), lvFine.getMpiDataPtr(), isPeriodic(), true);
+                    }
+
+                    // Only calculate galerkin if
+                    // 1. MPI is not used at all, or
+                    // 2. this level is calculated distributively, or
+                    // 3. this level is calculated locally and rank is 0.
+                    // Otherwise we would run into neighbour issues when trying to update ghosts.
+                    if (!useMpi() || !lvCoarse.isCalculatedLocally() || mpiRank() == 0)
+                        lvCoarse.stencilValues = std::make_shared<VaryingStencil>(
+                            MultigridEngine::galerkin(*lvFine.getStencilValues(), gh_sv,
+                                                      lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
+                                                      isPeriodic(), gathered,
+                                                      lvCoarse.isCalculatedLocally(), !updateGhostsCoarse,
+                                                      svm, svn, svo));
                 }
                 else
                 {
-                    levels.back()->stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
-                        MultigridEngine::galerkin(
-                            *levels[level - 1]->getStencilValuesGpu(),
-                            getProgram(), getCommands(), getContext()));
+                    // Gather partial stencil values of the previous level
+                    if (useMpi() && getMpiLevelThreshold() == lvCoarse.getNum())
+                    {
+                        mpi_util::gather(getMpiComm(), getCommands(), *lvFine.getStencilValuesGpu());
+                        gathered = true;
+                        updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvFine.getStencilValuesGpu(),
+                                                  lvFine.getMpiDataPtr(), isPeriodic(), true);
+                    }
+
+                    // Only calculate galerkin if
+                    // 1. MPI is not used at all, or
+                    // 2. this level is calculated distributively, or
+                    // 3. this level is calculated locally and rank is 0.
+                    // Otherwise we would run into neighbour issues when trying to update ghosts.
+                    if (!useMpi() || !lvCoarse.isCalculatedLocally() || mpiRank() == 0)
+                        levels.back()->stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
+                            MultigridEngine::galerkin(
+                                *lvFine.getStencilValuesGpu(), gh_sv,
+                                getProgram(), getCommands(), getContext(),
+                                lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
+                                isPeriodic(), gathered,
+                                lvCoarse.isCalculatedLocally(), !updateGhostsCoarse, svm, svn, svo));
                 }
             }
         }
@@ -278,20 +427,16 @@ namespace mgcl
      * @param commandQueue OpenCL command_queue to be reused.
      * @param deviceId OpenCL device_id to be reused.
      */
-    int Problem::reuseOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
+    void Problem::reuseOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId)
     {
-        int err;
-        err = openCLHelper.release();
-        mgclCheckError(err, "openCLHelper.release");
+        openCLHelper.release();
 
         openCLHelper.setContext(context);
         openCLHelper.setCommands(commandQueue);
         openCLHelper.setDeviceId(deviceId);
         setUseOpencl(true);
 
-        err = openCLHelper.init();
-        mgclCheckError(err, "openCLHelper.init");
-        return err;
+        openCLHelper.init();
     }
 
     /**
@@ -299,15 +444,10 @@ namespace mgcl
      *
      * @return int OpenCL error code
      */
-    int Problem::initOpenCL()
+    void Problem::initOpenCL()
     {
-        int err = CL_SUCCESS;
         if (!openCLHelper.isInitialized())
-        {
-            err = openCLHelper.init();
-            mgclCheckError(err, "openCLHelper.init");
-        }
-        return err;
+            openCLHelper.init();
     }
 
     /* Waits for all running OpenCL kernels to finish and reads back results from device. Creates arrays on host if none
@@ -325,7 +465,7 @@ namespace mgcl
         }
 
         // read back results TODO: only for testing purposes, maybe define TESTING?
-        err = clEnqueueReadBuffer(openCLHelper.getCommands(), levels[0]->dVIn, CL_TRUE, 0,
+        err = clEnqueueReadBuffer(openCLHelper.getCommands(), levels[0]->getDVIn().getBuffer(), CL_TRUE, 0,
                                   sizeof(double) * levels[0]->mgh * levels[0]->ngh * levels[0]->ogh, levels[0]->getV()[0][0], 0, NULL, NULL);
         mgclCheckError(err, "Error: Failed to read output arrays from device!");
 
@@ -362,32 +502,49 @@ namespace mgcl
         if (!init())
             throw std::runtime_error("Failed to initialize mgcl data structures.");
 
-        // calculate initial residual
-        double initres = MultigridEngine::residual(*this, *levels[0], !ignoreTol);
-        if (!silent && !ignoreTol)
-            printf("Starting mgcl with initres = %e\n", initres);
-
-        // run vcycle maxiter_vcycles times
-        double res, relres;
-        for (int i = 0; i < maxiter_vcycles; i++)
+        // Edge case: Do nothing if mpi is used but level threshold is 0 (i.e. all work is done on proc 0).
+        if (!(useMpi() && getMpiLevelThreshold() <= 0 && mpiRank() > 0))
         {
-            auto tstart = std::chrono::steady_clock::now();
-            res = MultigridEngine::vcycle(*this, *levels[0]);
-            auto tend = mgcl_since(tstart).count();
 
-            if (!ignoreTol)
-                relres = initres == 0 ? 0 : res / initres;
+            // calculate initial residual
+            double initres = MultigridEngine::residual(*this, *levels[0], !ignoreTol);
+            if (!silent && !ignoreTol)
+                printf("Starting mgcl with initres = %e\n", initres);
 
-            if (!silent)
+            // run vcycle maxiter_vcycles times
+            double res, relres;
+            for (int i = 0; i < maxiter_vcycles; i++)
             {
-                if (ignoreTol)
-                    printf("iter = %d, elapsed time = %ld ms\n", i, tend);
-                else
-                    printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
-            }
+                auto tstart = std::chrono::steady_clock::now();
+                res = MultigridEngine::vcycle(*this, *levels[0]);
+                auto tend = mgcl_since(tstart).count();
 
-            if (!ignoreTol && relres < tol)
-                break;
+                if (!ignoreTol)
+                    relres = initres == 0 ? 0 : res / initres;
+
+                if (!silent)
+                {
+                    if (ignoreTol)
+                        printf("iter = %d, elapsed time = %ld ms\n", i, tend);
+                    else
+                        printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
+                }
+
+                if (!ignoreTol && relres < tol)
+                    break;
+            }
+        }
+        else if (!silent)
+        {
+            std::cout << "mgcl: Rank " << mpiRank()
+                      << " does nothing (mpiLevelThreshold <= 0). Waiting for results from rank 0 ..." << std::endl;
+        }
+
+        // TODO scatter from proc 0 after solving if useMpi() && getMpiLevelThreshold() == 0
+        // TODO check mpiSize > 1 maybe
+        if (useMpi() && getMpiLevelThreshold() == 0)
+        {
+            mpi_util::scatter_inplace_wgh(mpiGlobalData->getComm(), getCommands(), getLevelAt(0).getDVIn());
         }
 
         // copy resulting v to d_v on device
@@ -410,37 +567,57 @@ namespace mgcl
         if (!init())
             throw std::runtime_error("Failed to initialize mgcl data structures.");
 
-        // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
-        if (bc == BC::PERIODIC)
-            MultigridEngine::updateGhostsSeq(levels[0]->getV());
-
-        double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(),
-                                                      residual_norm, stencilType, levels[0]->stencilFactor,
-                                                      levels[0]->stencilValues.get(), !ignoreTol, bc == BC::PERIODIC);
-        if (!silent && !ignoreTol)
-            printf("Starting mgcl with initres = %e\n", initres);
-
-        // run vcycle maxiter_vcycles times
-        double res, relres;
-        for (int i = 0; i < maxiter_vcycles; i++)
+        // Edge case: Do nothing if mpi is used but level threshold is 0 (i.e. all work is done on proc 0).
+        if (!(useMpi() && getMpiLevelThreshold() <= 0 && mpiRank() > 0))
         {
-            auto tstart = std::chrono::steady_clock::now();
-            res = MultigridEngine::vcycleSeq(*this, *levels[0]);
-            auto tend = mgcl_since(tstart).count();
 
-            if (!ignoreTol)
-                relres = initres == 0 ? 0 : res / initres;
+            // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
+            if (isPeriodic())
+                MultigridEngine::updateGhostsSeq(levels[0]->getV(), levels[0]->getMpiDataPtr(), isPeriodic(),
+                                                 levels[0]->isCalculatedLocally());
 
-            if (!silent)
+            double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(),
+                                                          residual_norm, stencilType, levels[0]->stencilFactor,
+                                                          levels[0]->stencilValues.get(), !ignoreTol, isPeriodic(),
+                                                          levels[0]->isCalculatedLocally(),
+                                                          0, 0, 0, getLevelAt(0).getMpiDataPtr());
+            if (!silent && !ignoreTol)
+                printf("Starting mgcl with initres = %e\n", initres);
+
+            // run vcycle maxiter_vcycles times
+            double res, relres;
+            for (int i = 0; i < maxiter_vcycles; i++)
             {
-                if (ignoreTol)
-                    printf("iter = %d, elapsed time = %ld ms\n", i, tend);
-                else
-                    printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
-            }
+                auto tstart = std::chrono::steady_clock::now();
+                res = MultigridEngine::vcycleSeq(*this, *levels[0]);
+                auto tend = mgcl_since(tstart).count();
 
-            if (!ignoreTol && relres < tol)
-                break;
+                if (!ignoreTol)
+                    relres = initres == 0 ? 0 : res / initres;
+
+                if (!silent)
+                {
+                    if (ignoreTol)
+                        printf("iter = %d, elapsed time = %ld ms\n", i, tend);
+                    else
+                        printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
+                }
+
+                if (!ignoreTol && relres < tol)
+                    break;
+            }
+        }
+        else if (!silent)
+        {
+            std::cout << "mgcl: Rank " << mpiRank()
+                      << " does nothing (mpiLevelThreshold <= 0). Waiting for results from rank 0 ..." << std::endl;
+        }
+
+        // TODO scatter from proc 0 after solving if useMpi() && getMpiLevelThreshold() == 0
+        // TODO check mpiSize > 1 maybe
+        if (useMpi() && getMpiLevelThreshold() == 0)
+        {
+            mpi_util::scatter_inplace(mpiGlobalData->getComm(), getLevelAt(0).getV());
         }
 
         // write data to output
@@ -453,7 +630,7 @@ namespace mgcl
                 }
     }
 
-    Level &Problem::getLevelAt(int index) const
+    Level& Problem::getLevelAt(int index) const
     {
         return *levels[index];
     }
@@ -467,7 +644,7 @@ namespace mgcl
      * Getters and Setters
      ********************************/
 
-    Cuboid &Problem::getF() const
+    Cuboid& Problem::getF() const
     {
         return *f;
     }
@@ -564,27 +741,63 @@ namespace mgcl
 
     void Problem::setJacobiIterationsPerKernel(int jacobiIterationsPerKernel)
     {
+        if (stencilValues && (stencilValues->getGhostsDim1() < jacobiIterationsPerKernel ||
+                              stencilValues->getGhostsDim2() < jacobiIterationsPerKernel ||
+                              stencilValues->getGhostsDim3() < jacobiIterationsPerKernel))
+            throw "Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!";
+
         jacobi_iterations_per_kernel = jacobiIterationsPerKernel;
     }
 
-    cl_mem Problem::getDStencilValues() const
+    CuboidGpu& Problem::getDStencilValues() const
+    {
+        if (!dStencilValues)
+            throw "dStencilValues is null!";
+        return *dStencilValues;
+    }
+
+    std::shared_ptr<CuboidGpu> Problem::getDStencilValuesPtr() const
     {
         return dStencilValues;
     }
 
-    cl_mem Problem::getDV() const
+    void Problem::setDStencilValues(std::shared_ptr<CuboidGpu> dStencilValues_)
+    {
+        dStencilValues = dStencilValues_;
+    }
+
+    CuboidGpu& Problem::getDV() const
+    {
+        if (!dV)
+            throw "dStencilValues is null!";
+        return *dV;
+    }
+
+    std::shared_ptr<CuboidGpu> Problem::getDVPtr() const
     {
         return dV;
     }
 
-    void Problem::setDV(const cl_mem &dV_)
+    void Problem::setDV(std::shared_ptr<CuboidGpu> dV_)
     {
         dV = dV_;
     }
 
-    void Problem::setDStencilValues(const cl_mem &dStencilValues_)
+    CuboidGpu& Problem::getDF() const
     {
-        dStencilValues = dStencilValues_;
+        if (!dF)
+            throw "dF is null!";
+        return *dF;
+    }
+
+    std::shared_ptr<CuboidGpu> Problem::getDFPtr() const
+    {
+        return dF;
+    }
+
+    void Problem::setDF(std::shared_ptr<CuboidGpu> dF_)
+    {
+        dF = dF_;
     }
 
     int Problem::getN() const
@@ -604,6 +817,11 @@ namespace mgcl
 
     void Problem::setGhosts(int ghosts_)
     {
+        if (stencilValues && (stencilValues->getGhostsDim1() < ghosts_ ||
+                              stencilValues->getGhostsDim2() < ghosts_ ||
+                              stencilValues->getGhostsDim3() < ghosts_))
+            throw "Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!";
+
         ghosts = ghosts_;
     }
 
@@ -643,7 +861,7 @@ namespace mgcl
         return residual_norm;
     }
 
-    void Problem::setResidualNorm(const MGCL_RESIDUAL_NORM &residualNorm)
+    void Problem::setResidualNorm(const MGCL_RESIDUAL_NORM& residualNorm)
     {
         residual_norm = residualNorm;
     }
@@ -688,17 +906,7 @@ namespace mgcl
         use_opencl = useOpencl;
     }
 
-    cl_mem Problem::getDF() const
-    {
-        return dF;
-    }
-
-    void Problem::setDF(const cl_mem &dF_)
-    {
-        dF = dF_;
-    }
-
-    OpenCLHelper &Problem::getOpenCLHelper()
+    OpenCLHelper& Problem::getOpenCLHelper()
     {
         return openCLHelper;
     }
@@ -708,7 +916,7 @@ namespace mgcl
         return openCLHelper.deviceName;
     }
 
-    void Problem::setDeviceName(const std::string &deviceName_)
+    void Problem::setDeviceName(const std::string& deviceName_)
     {
         if (!openCLHelper.isInitialized())
             openCLHelper.deviceName = deviceName_;
@@ -729,7 +937,7 @@ namespace mgcl
         return openCLHelper.kernelDir;
     }
 
-    void Problem::setKernelDir(const std::string &kernelDir_)
+    void Problem::setKernelDir(const std::string& kernelDir_)
     {
         if (!openCLHelper.isInitialized())
             openCLHelper.kernelDir = kernelDir_;
@@ -740,7 +948,7 @@ namespace mgcl
         return openCLHelper.deviceType;
     }
 
-    void Problem::setDeviceType(const cl_device_type &deviceType_)
+    void Problem::setDeviceType(const cl_device_type& deviceType_)
     {
         if (!openCLHelper.isInitialized())
             openCLHelper.deviceType = deviceType_;
@@ -771,7 +979,7 @@ namespace mgcl
         return bc;
     }
 
-    void Problem::setBc(const BC &bc_)
+    void Problem::setBc(const BC& bc_)
     {
         bc = bc_;
     }
@@ -786,17 +994,24 @@ namespace mgcl
         return ignoreTol;
     }
 
-    void Problem::setStencilType(const MGCL_STENCIL &stencilType_)
+    void Problem::setStencilType(const MGCL_STENCIL& stencilType_)
     {
         stencilType = stencilType_;
         // TODO move to getStencilValues?
         if (stencilType == MGCL_VARYING)
-            stencilValues = std::make_shared<VaryingStencil3x3x3>(m, n, o, 2, 2, 2);
+        {
+            calculateAndSetMpiLevelThreshold();
+            int gh = std::max(2, jacobi_iterations_per_kernel);
+            if (getMpiLevelThreshold() <= 1 && mpiRank() == 0)
+                stencilValues = std::make_shared<VaryingStencil>(mGlobal, nGlobal, oGlobal, 3, gh, gh, gh);
+            else
+                stencilValues = std::make_shared<VaryingStencil>(m, n, o, 3, gh, gh, gh);
+        }
         else
             stencilValues = nullptr;
     }
 
-    std::shared_ptr<VaryingStencil3x3x3> &Problem::getStencilValues()
+    std::shared_ptr<VaryingStencil>& Problem::getStencilValues()
     {
         return stencilValues;
     }
@@ -806,7 +1021,7 @@ namespace mgcl
         ignoreTol = ignoreTol_;
     }
 
-    Cuboid &Problem::getV() const
+    Cuboid& Problem::getV() const
     {
         return *v;
     }
@@ -819,5 +1034,120 @@ namespace mgcl
     void Problem::setV(std::shared_ptr<Cuboid> v_)
     {
         v = v_;
+    }
+
+    // Sets MPI communicator and checks that cartesian topology is attached to it.
+    void Problem::setMpiComm(MPI_Comm _comm)
+    {
+        mpiGlobalData->setComm(_comm);
+    }
+
+    MPI_Comm Problem::getMpiComm()
+    {
+        return mpiGlobalData->getComm();
+    }
+
+    /**
+     * @brief
+     * All levels below the threshold (exclusively) will be calculated on multiple MPI processes. All levels at or
+     *   above the threshold (inclusively) will be calculated locally on only one process. I.e. for threshold = 0,
+     *   all levels will be calculated on only one process.
+     */
+    int Problem::getMpiLevelThreshold()
+    {
+        return mpiLevelThreshold;
+    }
+
+    /**
+     * @brief Must be between 0 and maxlevel, which is log2(min(mGlobal, nGlobal, oGlobal)) or the maxlevel set by user.
+     * Also updates mpiMinGridPoints.
+     *
+     * @param mpiLevelThreshold_ Number of level between 0 and maxlevel
+     */
+    void Problem::setMpiLevelThreshold(int mpiLevelThreshold_)
+    {
+        if (mpiLevelThreshold_ < 0)
+            throw "MpiLevelThreshold cannot be negative";
+        if (mpiLevelThreshold_ > maxlevel)
+            throw "MpiLevelThreshold cannot be larger than maxlevel (" + std::to_string(maxlevel) + ")";
+        mpiLevelThreshold = mpiLevelThreshold_;
+
+        // update mpiMinGridPoints
+        mpiMinGridPoints = std::pow(2, maxlevel - mpiLevelThreshold);
+    }
+
+    int Problem::getMpiMinGridPoints() const
+    {
+        return mpiMinGridPoints;
+    }
+
+    void Problem::setMpiMinGridPoints(int mpiMinGridPoints_)
+    {
+        mpiMinGridPoints = mpiMinGridPoints_;
+        calculateAndSetMpiLevelThreshold();
+    }
+
+    /**
+     * @brief Returns true, if the program is run with more than one MPI processes. Only then the MPI routines
+     * will be used internally.
+     */
+    bool Problem::useMpi() // TODO maybe as attribute and setter/getter
+    {
+        return mpiSize() > 1;
+    }
+
+    int Problem::mpiRank() const
+    {
+        return mpiGlobalData->mpiRank();
+    }
+
+    /**
+     * @brief Returns the communicator size, i.e. number of processes attached to this communicator.
+     */
+
+    int Problem::mpiSize()
+    {
+        return mpiGlobalData->mpiSize();
+    }
+
+    int Problem::getMGlobal() const
+    {
+        return mGlobal;
+    }
+
+    int Problem::getNGlobal() const
+    {
+        return nGlobal;
+    }
+
+    int Problem::getOGlobal() const
+    {
+        return oGlobal;
+    }
+
+    std::ostream& operator<<(std::ostream& os, const Problem& p)
+    {
+        os << "Problem: " << std::endl
+           << " m,n,o: " << p.m << "," << p.n << "," << p.o << std::endl
+           << " mGlobal,nGlobal,oGlobal: " << p.mGlobal << "," << p.nGlobal << "," << p.oGlobal << std::endl
+           << " ghosts: " << p.ghosts << std::endl
+           << " ghosts_in: " << p.ghosts_in << std::endl
+           << " maxlevel: " << p.maxlevel << std::endl
+           << " maxiter_vcycles: " << p.maxiter_vcycles << std::endl
+           << " nu1,nu2: " << p.nu1 << "," << p.nu2 << std::endl
+           << " omega: " << p.omega << std::endl
+           << " tol: " << p.tol << std::endl
+           << " ignoreTol: " << p.ignoreTol << std::endl
+           << " residual_norm: " << p.residual_norm << std::endl
+           << " stencilType: " << p.stencilType << std::endl
+           << " use_opencl: " << p.use_opencl << std::endl
+           << " reuse_opencl_buffers: " << p.reuse_opencl_buffers << std::endl
+           << " jacobi_iterations_per_kernel: " << p.jacobi_iterations_per_kernel << std::endl
+           << " silent: " << p.silent << std::endl
+           << " mpi_rank: " << p.mpiGlobalData->mpiRank() << std::endl
+           << " mpiLevelThreshold: " << p.mpiLevelThreshold << std::endl
+           << " mpiMinGridPoints: " << p.mpiMinGridPoints << std::endl;
+
+        return os;
     }
 }

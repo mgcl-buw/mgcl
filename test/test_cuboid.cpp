@@ -210,3 +210,112 @@ TEST_CASE("cuboid class")
         CHECK(remove(path.c_str()) == 0);
     }
 }
+
+TEST_CASE("Cuboid::slice")
+{
+    int m = 4;
+    int n = 4;
+    int o = 4;
+
+    mgcl::Cuboid cb(m, n, o, 1, 1, 1);
+    cb.fillRandom();
+
+    SECTION("throwing")
+    {
+        REQUIRE_THROWS(cb.slice(-1, 0, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, -1, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, 0, -1, 0));
+
+        REQUIRE_THROWS(cb.slice(0, m + 1, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, n + 1, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, 0, 0, n + 1));
+    }
+
+    SECTION("success")
+    {
+        auto cs = cb.slice(0, 1, 0, 2, 2, 3, 3, 2);
+
+        REQUIRE(cs->getM() == 2);
+        REQUIRE(cs->getN() == 3);
+        REQUIRE(cs->getO() == 2);
+        REQUIRE(cs->getGhostsM() == 3);
+        REQUIRE(cs->getGhostsN() == 2);
+        REQUIRE(cs->getGhostsO() == cb.getGhostsO());
+
+        for (int i = 0; i < cs->getM(); i++)
+            for (int j = 0; j < cs->getN(); j++)
+                for (int k = 0; k < cs->getO(); k++)
+                {
+                    REQUIRE(cs->getData()[i + cs->getGhostsM()][j + cs->getGhostsN()][k + cs->getGhostsO()] ==
+                            cb[i + cb.getGhostsM()][j + cb.getGhostsN()][k + cb.getGhostsO() + 2]);
+                }
+    }
+}
+
+TEST_CASE("Cuboid::sliceIncGhosts")
+{
+    int m = 4;
+    int n = 4;
+    int o = 4;
+
+    mgcl::Cuboid cb(m, n, o, 1, 1, 1);
+    cb.fillRandom();
+
+    SECTION("throwing")
+    {
+        REQUIRE_THROWS(cb.sliceIncGhosts(-1, 0, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, -1, 0, 0, 0));
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, 0, 0, -1, 0));
+
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, m + 3, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, 0, n + 3, 0, 0));
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, 0, 0, 0, n + 3));
+    }
+
+    SECTION("success")
+    {
+        auto cs = cb.sliceIncGhosts(0, 1, 0, 2, 2, 3);
+
+        REQUIRE(cs->getM() == 2);
+        REQUIRE(cs->getN() == 3);
+        REQUIRE(cs->getO() == 2);
+        REQUIRE(cs->getGhostsM() == 0);
+        REQUIRE(cs->getGhostsN() == 0);
+        REQUIRE(cs->getGhostsO() == 0);
+
+        for (int i = 0; i < cs->getM(); i++)
+            for (int j = 0; j < cs->getN(); j++)
+                for (int k = 0; k < cs->getO(); k++)
+                {
+                    REQUIRE(cs->getData()[i][j][k] == cb[i][j][k + 2]);
+                }
+    }
+}
+
+// Test if Cuboid gets filled with 1d index.
+TEST_CASE("Cuboid::fill1dindex")
+{
+    int m = 1;
+    int n = 2;
+    int o = 3;
+    int ghm = 0;
+    int ghn = 1;
+    int gho = 2;
+
+    mgcl::Cuboid c_real(m, n, o, ghm, ghn, gho);
+    c_real.fill1dIndex(true);
+    mgcl::Cuboid c_gh(m, n, o, ghm, ghn, gho);
+    c_gh.fill1dIndex(false);
+
+    int cnt = 0;
+    for (int i = 0; i < c_real.getMgh(); i++)
+        for (int j = 0; j < c_real.getNgh(); j++)
+            for (int k = 0; k < c_real.getOgh(); k++)
+            {
+                if (i > ghm && i < m + ghm && j > ghn && j < n + ghn && k > gho && k < o + gho)
+                    REQUIRE(c_real[i][j][k] == cnt);
+
+                REQUIRE(c_gh[i][j][k] == cnt);
+                cnt++;
+            }
+}

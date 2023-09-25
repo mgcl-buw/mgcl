@@ -1,99 +1,99 @@
-# ==========================
-Include(FetchContent)
+find_package(MPI REQUIRED)
 
-if(${CMAKE_VERSION} VERSION_LESS "3.24.0") 
-  FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG        ${MGCL_catch2_version} # or a later release
-    GIT_SHALLOW TRUE
-  )
-else()
-  FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG        ${MGCL_catch2_version} # or a later release
-    GIT_SHALLOW TRUE
-    FIND_PACKAGE_ARGS # try to find using find_package first
-  )
-endif()
+cpmaddpackage("gh:catchorg/Catch2#${MGCL_catch2_version}")
+cpmaddpackage("gh:bombela/backward-cpp#${MGCL_backwardcpp_version}")
 
-FetchContent_MakeAvailable(Catch2)
+# Test binary for unit testing mgcl These tests can use the Catch2-provided main
+set(SOURCES_TEST
+    test_cuboid.cpp
+    test_cuboid_gpu.cpp
+    test_problem_conf.cpp
+    test_opencl_helper.cpp
+    test_utility.hpp
+    test_utility.cpp
+    test_test_utility.cpp
+    test_ghosts.cpp
+    test_restriction.cpp
+    test_prolongation.cpp
+    test_residual.cpp
+    test_jacobi.cpp
+    test_level.cpp
+    test_stencil.cpp
+    test_stencil_gpu.cpp
+    test_hypercube.cpp
+    test_galerkin.cpp
+    matrix2d.hpp
+    matrix2d.cpp
+    test_matrix2d.cpp
+    test_results.hpp
+    test_results.cpp
+    test_util.cpp
+    ocl_wrapper.hpp
+    ocl_wrapper.cpp
+    mpi/catch2_main_mpi.cpp)
 
-# don't use iwyu for Catch2
-set_property(
-  TARGET Catch2
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
-set_property(
-  TARGET Catch2WithMain
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
+add_executable(tests ${SOURCES_TEST} ${BACKWARD_ENABLE})
+add_backward(tests)
 
-# Test binary for unit testing mgcl
-# These tests can use the Catch2-provided main
-set(SOURCES_TEST 
-test_cuboid.cpp
-test_problem_conf.cpp
-test_opencl_helper.cpp
-test_utility.hpp
-test_utility.cpp
-test_test_utility.cpp
-test_ghosts.cpp
-test_restriction.cpp
-test_prolongation.cpp
-test_residual.cpp
-test_jacobi.cpp
-test_level.cpp
-test_stencil.cpp
-test_stencil_gpu.cpp
-test_hypercube.cpp
-test_galerkin.cpp
-matrix2d.hpp
-matrix2d.cpp
-test_matrix2d.cpp
-test_results.hpp
-test_results.cpp
-test_util.cpp
-ocl_wrapper.hpp
-ocl_wrapper.cpp
-)
-
-add_executable(tests ${SOURCES_TEST})
-target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(tests PRIVATE Catch2::Catch2 MPI::MPI_CXX)
 target_link_libraries(tests PRIVATE mgcl)
 
-# don't use iwyu for tests
-set_property(
-  TARGET tests
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
+# ==========================
 
-# Test binary for solving problems
-# These tests can use the Catch2-provided main
+# Test binary for solving problems These tests must use custom Catch2-Main for
+# MPI
 set(SOURCES_TEST_SOLVING
-test_problem_solve.cpp
-test_utility.hpp
-test_utility.cpp
-matrix2d.hpp
-matrix2d.cpp
-test_results.hpp
-test_results.cpp
-catch2_main_mpi.cpp
-)
+    test_problem_solve.cpp
+    test_utility.hpp
+    test_utility.cpp
+    matrix2d.hpp
+    matrix2d.cpp
+    test_results.hpp
+    test_results.cpp
+    mpi/catch2_main_mpi.cpp)
 
-add_executable(tests_solving ${SOURCES_TEST_SOLVING})
+add_executable(tests_solving ${SOURCES_TEST_SOLVING} ${BACKWARD_ENABLE})
+add_backward(tests_solving)
 
-find_package(MPI REQUIRED)
-# target_include_directories(pmg SYSTEM PUBLIC ${MPI_INCLUDE_PATH})
-# set(MPI_CXX_SKIP_MPICXX TRUE)
+# find_package(MPI REQUIRED) target_include_directories(pmg SYSTEM PUBLIC
+# ${MPI_INCLUDE_PATH}) set(MPI_CXX_SKIP_MPICXX TRUE)
 target_link_libraries(tests_solving PRIVATE MPI::MPI_CXX)
 target_link_libraries(tests_solving PRIVATE Catch2::Catch2)
 target_link_libraries(tests_solving PRIVATE mgcl)
 target_link_libraries(tests_solving PRIVATE pmg)
 
-# don't use iwyu for tests_solving
-set_property(
-  TARGET tests_solving
-  PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-)
+# ==========================
+
+# Test binary for mpi These tests must use custom Catch2-Main for MPI
+set(SOURCES_TEST_MPI
+    test_utility.hpp
+    test_utility.cpp
+    mpi/test_mpi_level.cpp
+    mpi/test_mpi_problem.cpp
+    mpi/test_mpi_ghosts.cpp
+    mpi/test_mpi_jacobi.cpp
+    mpi/test_mpi_util.cpp
+    mpi/test_mpi_vcycle.cpp
+    mpi/test_mpi_stencil.cpp
+    mpi/test_bench_vcycle_mpi.cpp
+    mpi/catch2_main_mpi.cpp)
+
+add_executable(tests_mpi ${SOURCES_TEST_MPI} ${BACKWARD_ENABLE})
+add_backward(tests_mpi)
+
+# find_package(MPI REQUIRED) target_include_directories(pmg SYSTEM PUBLIC
+# ${MPI_INCLUDE_PATH}) set(MPI_CXX_SKIP_MPICXX TRUE)
+target_link_libraries(tests_mpi PRIVATE MPI::MPI_CXX Catch2::Catch2 mgcl)
+
+# copy run-all script file to build directory
+add_custom_command(
+  OUTPUT "${CMAKE_BINARY_DIR}/test/run-all.sh"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mpi/run-all.sh"
+          "${CMAKE_BINARY_DIR}/test"
+  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/mpi/run-all.sh")
+
+# Custom target for activate the custom command above
+add_custom_target(copy_script DEPENDS "${CMAKE_BINARY_DIR}/test/run-all.sh")
+
+# Whenever target 'tests_mpi' is requested, the custom target will be evaluated.
+add_dependencies(tests_mpi copy_script)

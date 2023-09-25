@@ -3,7 +3,7 @@
 #include "mpi.h"
 
 // Initializes MPI, runs Catch2 tests and finalizes MPI.
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
 

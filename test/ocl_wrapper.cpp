@@ -56,7 +56,7 @@ OCLWrapper::OCLWrapper(cl_device_type deviceType, std::string deviceName, std::s
                     mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
 
                     // continue to next device if name doesn't fit
-                    if (std::string((char *)device_name_available).find(deviceName) == std::string::npos)
+                    if (std::string((char*)device_name_available).find(deviceName) == std::string::npos)
                         continue;
                 }
 
@@ -88,7 +88,7 @@ OCLWrapper::OCLWrapper(cl_device_type deviceType, std::string deviceName, std::s
     if (kernelString == "")
         kernelString = mgcl::OpenCLHelper::loadKernelSource(kernelFilePath);
 
-    const char *kernelSource = kernelString.c_str();
+    const char* kernelSource = kernelString.c_str();
 
     // Create the compute program from the source buffer
     program = clCreateProgramWithSource(context, 1, &kernelSource, nullptr, &err);
@@ -103,7 +103,7 @@ OCLWrapper::OCLWrapper(cl_device_type deviceType, std::string deviceName, std::s
         clGetProgramBuildInfo(program, deviceId, CL_PROGRAM_BUILD_LOG, 0, nullptr, &log_size);
 
         // Allocate memory for the log
-        char *log = (char *)malloc(log_size);
+        char* log = (char*)malloc(log_size);
 
         // Get the log
         clGetProgramBuildInfo(program, deviceId, CL_PROGRAM_BUILD_LOG, log_size, log, nullptr);

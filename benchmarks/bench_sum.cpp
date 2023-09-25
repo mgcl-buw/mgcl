@@ -47,7 +47,7 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][seqVsOcl]")
         mgcl::Cuboid data(m, n, o);
         data.fillRandom(-10, 10);
 
-        cl_mem dData = tu.createOpenCLBuffer(data);
+        auto dData = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, data);
 
         ankerl::nanobench::Bench b;
         b.timeUnit(1ns, "ns")
@@ -73,8 +73,7 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][seqVsOcl]")
         b.run(std::string("ocl, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
               {
                   ankerl::nanobench::doNotOptimizeAway(
-                      mgcl::util::sum(dData, data.field1d().size(), tu.getContext(), tu.getProgram(),
-                                      tu.getCommands(), true, local)); //
+                      mgcl::util::sum(*dData, tu.getProgram(), tu.getCommands(), true, local)); //
               });
     }
 }
@@ -412,7 +411,7 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][locals]")
         mgcl::Cuboid data(m, n, o);
         data.fillRandom(-10, 10);
 
-        cl_mem dData = tu.createOpenCLBuffer(data);
+        auto dData = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, data);
 
         ankerl::nanobench::Bench b;
         b.timeUnit(1ns, "ns")
@@ -427,8 +426,7 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][locals]")
             b.run(std::string("ocl, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
                   {
                       ankerl::nanobench::doNotOptimizeAway(
-                          mgcl::util::sum(dData, data.field1d().size(), tu.getContext(), tu.getProgram(),
-                                          tu.getCommands(), true, local)); //
+                          mgcl::util::sum(*dData, tu.getProgram(), tu.getCommands(), true, local)); //
                   });
         }
         std::cout << "=============" << std::endl;

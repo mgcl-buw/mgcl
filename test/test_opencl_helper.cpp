@@ -18,10 +18,9 @@ TEST_CASE("OpenCLHelper")
     SECTION("init default conf")
     {
         REQUIRE_FALSE(openCLHelper.isInitialized());
-        int err = openCLHelper.init();
+        REQUIRE_NOTHROW(openCLHelper.init());
         REQUIRE(openCLHelper.isInitialized());
 
-        REQUIRE(err == CL_SUCCESS);
         REQUIRE(openCLHelper.getCommands() != nullptr);
         REQUIRE(openCLHelper.getContext() != nullptr);
         REQUIRE(openCLHelper.getDeviceId() != nullptr);
@@ -37,9 +36,8 @@ TEST_CASE("OpenCLHelper")
         openCLHelper.setKernelDir(dirPath.append("/../build/test/"));
 
         REQUIRE_FALSE(openCLHelper.isInitialized());
-        int err = openCLHelper.init();
+        REQUIRE_NOTHROW(openCLHelper.init());
         REQUIRE(openCLHelper.isInitialized());
-        REQUIRE(err == CL_SUCCESS);
         REQUIRE(openCLHelper.getProgram() != nullptr);
     }
 
@@ -57,9 +55,8 @@ TEST_CASE("OpenCLHelper")
         openCLHelper.setDeviceType(deviceType);
 
         REQUIRE_FALSE(openCLHelper.isInitialized());
-        int err = openCLHelper.init();
+        REQUIRE_NOTHROW(openCLHelper.init());
         REQUIRE(openCLHelper.isInitialized());
-        REQUIRE(err == CL_SUCCESS);
 
         auto v2 = std::make_shared<mgcl::Cuboid>(3, 3, 3);
         auto f2 = std::make_shared<mgcl::Cuboid>(3, 3, 3);
@@ -71,8 +68,7 @@ TEST_CASE("OpenCLHelper")
         openCLHelper2.setCommands(openCLHelper.getCommands());
         openCLHelper2.setDeviceId(openCLHelper.getDeviceId());
 
-        err = openCLHelper2.init();
-        REQUIRE(err == CL_SUCCESS);
+        REQUIRE_NOTHROW(openCLHelper2.init());
 
         REQUIRE(openCLHelper2.getContext() == openCLHelper.getContext());
         REQUIRE(openCLHelper2.getCommands() == openCLHelper.getCommands());
@@ -82,7 +78,7 @@ TEST_CASE("OpenCLHelper")
     SECTION("isInitialized")
     {
         REQUIRE(!openCLHelper.isInitialized());
-        openCLHelper.init();
+        REQUIRE_NOTHROW(openCLHelper.init());
         REQUIRE(openCLHelper.isInitialized());
     }
 }

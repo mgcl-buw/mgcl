@@ -42,8 +42,8 @@ TEST_CASE("Problem conf")
         REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
         REQUIRE(p.getKernelDir() == "./");
         REQUIRE(p.getDeviceName() == "");
-        REQUIRE(p.getDV() == nullptr);
-        REQUIRE(p.getDF() == nullptr);
+        REQUIRE(p.getDVPtr() == nullptr);
+        REQUIRE(p.getDFPtr() == nullptr);
         REQUIRE(p.getUseOpencl() == false);
         REQUIRE(p.getReuseOpenclBuffers() == false);
         REQUIRE(p.getCopyBufferData() == false);
@@ -52,7 +52,7 @@ TEST_CASE("Problem conf")
 
         REQUIRE(p.getJacobiWgSizeX() == 16);
         REQUIRE(p.getJacobiWgSizeY() == 16);
-        REQUIRE(p.getJacobiIterationsPerKernel() == 3);
+        REQUIRE(p.getJacobiIterationsPerKernel() == 1);
     }
 }
 
@@ -63,13 +63,13 @@ TEST_CASE("Problem::checkParameters")
 
     SECTION("m,n,o wrong")
     {
-        mgcl::Problem pm(0, 1, 1, v, f);
-        mgcl::Problem pn(1, 0, 1, v, f);
-        mgcl::Problem po(1, 1, 0, v, f);
+        REQUIRE_THROWS(std::make_unique<mgcl::Problem>(0, 1, 1, v, f));
+        REQUIRE_THROWS(std::make_unique<mgcl::Problem>(1, 0, 1, v, f));
+        REQUIRE_THROWS(std::make_unique<mgcl::Problem>(1, 1, 0, v, f));
 
-        REQUIRE_THROWS(pm.checkParameters());
-        REQUIRE_THROWS(pn.checkParameters());
-        REQUIRE_THROWS(po.checkParameters());
+        // REQUIRE_THROWS(pm.checkParameters());
+        // REQUIRE_THROWS(pn.checkParameters());
+        // REQUIRE_THROWS(po.checkParameters());
     }
 
     SECTION("ghosts 0")
@@ -84,6 +84,18 @@ TEST_CASE("Problem::checkParameters")
         mgcl::Problem pm(8, 8, 8, v, f);
         pm.setGhostsIn(-1);
         REQUIRE_THROWS(pm.checkParameters());
+    }
+
+    SECTION("ghosts_in != ghosts of v or f")
+    {
+        mgcl::Problem pm(8, 8, 8, v, f);
+        pm.setGhostsIn(1);
+        REQUIRE_THROWS(pm.checkParameters());
+
+        auto v2 = std::make_shared<mgcl::Cuboid>(8, 8, 8, 1, 1, 1);
+        mgcl::Problem pm2(8, 8, 8, v2, f);
+        pm2.setGhostsIn(0);
+        REQUIRE_THROWS(pm2.checkParameters());
     }
 
     SECTION("all good")
@@ -116,7 +128,7 @@ TEST_CASE("Problem::checkGpuSizes")
         p.setUseOpencl(true);
         p.setDeviceType(deviceType);
 
-        REQUIRE(p.checkGpuSizes());
+        REQUIRE_NOTHROW(p.checkGpuSizes());
     }
 
     SECTION("not enough space available")
@@ -148,6 +160,24 @@ TEST_CASE("Problem::checkGpuSizes")
         p.setStencilType(mgcl::MGCL_VARYING);
 
         REQUIRE_THROWS(p.checkGpuSizes());
+    }
+}
+
+// Global dimensions must be a whole multiple of local dims
+TEST_CASE("Problem::checkGlobalDimensions")
+{
+    SECTION("throwing when invalid")
+    {
+        REQUIRE_THROWS(mgcl::Problem(4, 4, 4, 3, 3, 3));
+        REQUIRE_THROWS(mgcl::Problem(4, 4, 4, 2, 2, 2));
+    }
+
+    SECTION("not throwing when valid")
+    {
+        REQUIRE_NOTHROW(mgcl::Problem(4, 4, 4));
+        REQUIRE_NOTHROW(mgcl::Problem(2, 2, 2, 4, 4, 4));
+        REQUIRE_NOTHROW(mgcl::Problem(1, 1, 1, 4, 4, 4));
+        REQUIRE_NOTHROW(mgcl::Problem(1, 1, 1, 1, 1, 1));
     }
 }
 
@@ -398,12 +428,9 @@ TEST_CASE("Problem::init")
     {
         // run this section for ghosts_in = 0, 1 and 2
         auto ghosts_in = GENERATE(0, 1, 2);
-        int mgh = m + 2 * ghosts_in;
-        int ngh = n + 2 * ghosts_in;
-        int ogh = o + 2 * ghosts_in;
 
-        auto v2 = std::make_shared<mgcl::Cuboid>(mgh, ngh, ogh);
-        auto f2 = std::make_shared<mgcl::Cuboid>(mgh, ngh, ogh);
+        auto v2 = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_in, ghosts_in, ghosts_in);
+        auto f2 = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_in, ghosts_in, ghosts_in);
         mgcl::Problem p2(m, n, o, v2, f2);
 
         p2.setGhostsIn(ghosts_in);
@@ -486,18 +513,18 @@ TEST_CASE("Problem::init")
         mgcl::Cuboid fgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
 
         mgcl_test::TestUtility tu(deviceType);
-        cl_mem d_v = tu.createOpenCLBuffer(vgh);
-        cl_mem d_f = tu.createOpenCLBuffer(fgh);
+        auto d_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, vgh);
+        auto d_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, fgh);
 
         mgcl::Problem p2(m, n, o, d_f, d_v);
         p2.setGhostsIn(ghosts);
         p2.setReuseOpenclBuffers(true);
         p2.getOpenCLHelper().setKernelDir("./");
-        REQUIRE(p2.getDF() == d_f);
-        REQUIRE(p2.getDV() == d_v);
+        REQUIRE(p2.getDFPtr() == d_f);
+        REQUIRE(p2.getDVPtr() == d_v);
         REQUIRE(p2.getOpenCLHelper().getProblem() == &p2);
 
-        REQUIRE(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()) == CL_SUCCESS);
+        REQUIRE_NOTHROW(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()));
         REQUIRE(p2.init());
         REQUIRE(p2.getDeviceType() == deviceType);
         REQUIRE(p2.getLevelsSize() == p2.getMaxlevel() + 1);
@@ -513,38 +540,24 @@ TEST_CASE("Problem::init")
         }
 
         // buffers are created
-        REQUIRE(p2.getDV() == d_v);
-        REQUIRE(p2.getDF() == d_f);
-        REQUIRE(p2.getLevelAt(0).getDVIn() == d_v);
-        REQUIRE(p2.getLevelAt(0).getDF() == d_f);
+        REQUIRE(p2.getDVPtr() == d_v);
+        REQUIRE(p2.getDFPtr() == d_f);
+        REQUIRE(p2.getLevelAt(0).getDVInPtr() == d_v.get());
+        REQUIRE(p2.getLevelAt(0).getDFPtr() == d_f.get());
         for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
         {
             // check if buffers are not nullptr
-            REQUIRE(p2.getLevelAt(lv).getDVIn());
-            REQUIRE(p2.getLevelAt(lv).getDVOut());
-            REQUIRE(p2.getLevelAt(lv).getDF());
-            REQUIRE(p2.getLevelAt(lv).getDR());
+            REQUIRE(p2.getLevelAt(lv).getDVInPtr());
+            REQUIRE(p2.getLevelAt(lv).getDVOutPtr());
+            REQUIRE(p2.getLevelAt(lv).getDFPtr());
+            REQUIRE(p2.getLevelAt(lv).getDRPtr());
 
             // check sizes of buffers
-            int err;
-            size_t bufsize;
-            int sizeNeeded = sizeof(double) * p2.getLevelAt(lv).getMgh() * p2.getLevelAt(lv).getNgh() * p2.getLevelAt(lv).getOgh();
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDVIn(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDVOut(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDR(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
+            int sizeNeeded = p2.getLevelAt(lv).getMgh() * p2.getLevelAt(lv).getNgh() * p2.getLevelAt(lv).getOgh();
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDVIn().getSize());
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDVOut().getSize());
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDF().getSize());
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDR().getSize());
         }
     }
 
@@ -560,21 +573,21 @@ TEST_CASE("Problem::init")
         }
 
         int ghosts = 1;
-        mgcl::Cuboid vgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
-        mgcl::Cuboid fgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
+        mgcl::Cuboid vgh(m, n, o, ghosts, ghosts, ghosts);
+        mgcl::Cuboid fgh(m, n, o, ghosts, ghosts, ghosts);
 
         mgcl_test::TestUtility tu(deviceType);
-        cl_mem d_v = tu.createOpenCLBuffer(vgh);
-        cl_mem d_f = tu.createOpenCLBuffer(fgh);
+        auto d_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, vgh);
+        auto d_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, fgh);
 
         mgcl::Problem p2(m, n, o, d_f, d_v);
         p2.setGhostsIn(ghosts);
         p2.setCopyBufferData(true);
-        REQUIRE(p2.getDF() == d_f);
-        REQUIRE(p2.getDV() == d_v);
+        REQUIRE(p2.getDFPtr() == d_f);
+        REQUIRE(p2.getDVPtr() == d_v);
         REQUIRE(p2.getOpenCLHelper().getProblem() == &p2);
 
-        REQUIRE(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()) == CL_SUCCESS);
+        REQUIRE_NOTHROW(p2.reuseOpenCL(tu.getContext(), tu.getCommands(), tu.getDeviceId()));
         REQUIRE(p2.init());
         REQUIRE(p2.getDeviceType() == deviceType);
         REQUIRE(p2.getLevelsSize() == p2.getMaxlevel() + 1);
@@ -590,42 +603,28 @@ TEST_CASE("Problem::init")
         }
 
         // buffers are created
-        REQUIRE(p2.getDV() == d_v);
-        REQUIRE(p2.getDF() == d_f);
-        REQUIRE(p2.getLevelAt(0).getDVIn() != d_v);
-        REQUIRE(p2.getLevelAt(0).getDF() != d_f);
+        REQUIRE(p2.getDVPtr() == d_v);
+        REQUIRE(p2.getDFPtr() == d_f);
+        REQUIRE(p2.getLevelAt(0).getDVInPtr() != d_v.get());
+        REQUIRE(p2.getLevelAt(0).getDFPtr() != d_f.get());
         for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
         {
-            REQUIRE(p2.getLevelAt(lv).getDVIn());
-            REQUIRE(p2.getLevelAt(lv).getDVOut());
-            REQUIRE(p2.getLevelAt(lv).getDF());
-            REQUIRE(p2.getLevelAt(lv).getDR());
+            REQUIRE(p2.getLevelAt(lv).getDVInPtr());
+            REQUIRE(p2.getLevelAt(lv).getDVOutPtr());
+            REQUIRE(p2.getLevelAt(lv).getDFPtr());
+            REQUIRE(p2.getLevelAt(lv).getDRPtr());
 
             // check sizes of buffers
-            int err;
-            size_t bufsize;
-            int sizeNeeded = sizeof(double) * p2.getLevelAt(lv).getMgh() * p2.getLevelAt(lv).getNgh() * p2.getLevelAt(lv).getOgh();
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDVIn(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDVOut(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDF(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
-
-            err = clGetMemObjectInfo(p2.getLevelAt(lv).getDR(), CL_MEM_SIZE, sizeof(size_t), &bufsize, nullptr);
-            mgcl::mgclCheckError(err, "clGetMemObjectInfo");
-            REQUIRE(sizeNeeded == bufsize);
+            int sizeNeeded = p2.getLevelAt(lv).getMgh() * p2.getLevelAt(lv).getNgh() * p2.getLevelAt(lv).getOgh();
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDVIn().getSize());
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDVOut().getSize());
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDF().getSize());
+            REQUIRE(sizeNeeded == p2.getLevelAt(lv).getDR().getSize());
         }
 
         // contents of copied buffer and input buffers are equal
-        auto lv0d = tu.readOpenCLBuffer(p2.getLevelAt(0).getDVIn(), p2.getLevelAt(0).getMgh(), p2.getLevelAt(0).getNgh(), p2.getLevelAt(0).getOgh());
-        auto lv0f = tu.readOpenCLBuffer(p2.getLevelAt(0).getDF(), p2.getLevelAt(0).getMgh(), p2.getLevelAt(0).getNgh(), p2.getLevelAt(0).getOgh());
+        auto lv0d = p2.getLevelAt(0).getDVIn().read(tu.getCommands(), nullptr, true);
+        auto lv0f = p2.getLevelAt(0).getDF().read(tu.getCommands(), nullptr, true);
 
         REQUIRE(vgh.isEqual(*lv0d));
         REQUIRE(fgh.isEqual(*lv0f));
@@ -637,7 +636,7 @@ TEST_CASE("Problem::init")
         // is done in an own galerkin test.
 
         p.setStencilType(mgcl::MGCL_VARYING);
-        auto &s = *p.getStencilValues();
+        auto& s = *p.getStencilValues();
 
         REQUIRE(s.getDim1() == m);
         REQUIRE(s.getDim2() == n);
@@ -669,10 +668,10 @@ TEST_CASE("Problem::init")
 
         for (int lv = 0; lv <= p.getMaxlevel(); lv++)
         {
-            auto &level = p.getLevelAt(lv);
+            auto& level = p.getLevelAt(lv);
 
             REQUIRE(level.getStencilValues());
-            auto &sv = *level.getStencilValues();
+            auto& sv = *level.getStencilValues();
 
             CHECK(sv.getDim1() == level.getM());
             CHECK(sv.getDim2() == level.getN());
@@ -711,13 +710,7 @@ TEST_CASE("Problem::readResults")
         REQUIRE(p.getVPtr() == v);
 
         // alter values of dVIn on lowest level
-        cl_double one = 1.0;
-        int err = clEnqueueFillBuffer(p.getOpenCLHelper().getCommands(), p.getLevelAt(0).getDVIn(), &one,
-                                      sizeof(cl_double), 0,
-                                      sizeof(double) * p.getLevelAt(0).getMgh() * p.getLevelAt(0).getNgh() * p.getLevelAt(0).getOgh(),
-                                      0, NULL, NULL);
-        mgcl::mgclCheckError(err, "clEnqueueFillBuffer");
-        REQUIRE(err == CL_SUCCESS);
+        p.getLevelAt(0).getDVIn().fill(p.getCommands(), 1.0, true);
 
         // read back and check if values were copied successfully
         REQUIRE(p.readResults() == CL_SUCCESS);
@@ -775,4 +768,38 @@ TEST_CASE("Problem::setStencilType")
     CHECK(p.getStencilValues()->getDim1gh() == p.getM() + 4);
     CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 4);
     CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 4);
+}
+
+/**
+ * @brief Test that Problem::setMpiLevelThreshold:
+ * - throws correctly for invalid values,
+ * - updates mpiMinGridPoints correctly for valid input.
+ *
+ */
+TEST_CASE("Problem::setMpiLevelThreshold")
+{
+    mgcl::Problem p(16, 32, 64);
+    REQUIRE(p.getMpiLevelThreshold() == -1);
+    REQUIRE(p.getMpiMinGridPoints() == 4);
+
+    SECTION("invalid values")
+    {
+        REQUIRE_THROWS(p.setMpiLevelThreshold(-1));
+        REQUIRE_THROWS(p.setMpiLevelThreshold(5));
+    }
+
+    SECTION("valid values")
+    {
+        p.setMpiLevelThreshold(0);
+        REQUIRE(p.getMpiLevelThreshold() == 0);
+        REQUIRE(p.getMpiMinGridPoints() == 16);
+
+        p.setMpiLevelThreshold(1);
+        REQUIRE(p.getMpiLevelThreshold() == 1);
+        REQUIRE(p.getMpiMinGridPoints() == 8);
+
+        p.setMpiLevelThreshold(2);
+        REQUIRE(p.getMpiLevelThreshold() == 2);
+        REQUIRE(p.getMpiMinGridPoints() == 4);
+    }
 }
