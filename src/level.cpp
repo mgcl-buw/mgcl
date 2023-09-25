@@ -78,7 +78,12 @@ namespace mgcl
             if (stencilType == MGCL_VARYING)
             {
                 stencilValues = problem->stencilValues;
-                updateGhostsStencilMpi(*stencilValues, mpiData.get(), problem->isPeriodic(), false);
+
+                // Only update ghosts of stencilValues if the threshold is not 1, because when applying Galerkin,
+                // the values of level 0 are gathered anyways. Plus the sizes are different, so this would result
+                // in a MPI error when trying to update ghosts.
+                if (problem->getMpiLevelThreshold() != 1)
+                    updateGhostsStencilMpi(*stencilValues, mpiData.get(), problem->isPeriodic(), false);
             }
 
             // create ghosted arrays for v and f on host if device buffer should not be reused
