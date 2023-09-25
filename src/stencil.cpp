@@ -427,6 +427,15 @@ namespace mgcl
         return std::make_unique<VaryingStencil>(dim1, dim2, dim3, getWidth(), ghostsDim1, ghostsDim2, ghostsDim3);
     }
 
+    std::ostream& operator<<(std::ostream& os, const VaryingStencil& v)
+    {
+        os << "VaryingStencil: " << std::endl
+           << " m,n,o: " << v.dim1 << "," << v.dim2 << "," << v.dim3 << std::endl
+           << " width: " << v.dim4 << std::endl
+           << " ghm,ghn,gho: " << v.ghostsDim1 << "," << v.ghostsDim2 << "," << v.ghostsDim3 << std::endl;
+        return os;
+    }
+
     /*****************************************************
      * Static methods
      *****************************************************/

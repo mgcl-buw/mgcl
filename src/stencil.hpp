@@ -75,6 +75,8 @@ namespace mgcl
         std::unique_ptr<VaryingStencil> sliceIncGhosts(int m_start, int m_end, int n_start, int n_end,
                                                        int o_start, int o_end);
         std::unique_ptr<VaryingStencil> copyShallow();
+
+        friend std::ostream& operator<<(std::ostream& os, const VaryingStencil& lv);
     };
 
     FixedStencil create3dFullWeightRestrictionStencil();
