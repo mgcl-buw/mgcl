@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#include <cpptrace/cpptrace.hpp>
+
 namespace mgcl::mpi_util
 {
     /**
@@ -613,9 +615,14 @@ namespace mgcl::mpi_util
     {
         if (err != MPI_SUCCESS)
         {
+            int length;
+            char message[MPI_MAX_ERROR_STRING];
+            MPI_Error_string(err, message, &length);
+
             fprintf(stderr, "Error during operation '%s', ", operation);
             fprintf(stderr, "in '%s' on line %d\n", filename, line);
-            fprintf(stderr, "Error code was %d\n", err);
+            fprintf(stderr, "Error code %d: message was %s\n", err, message);
+            cpptrace::generate_trace().print();
             MPI_Abort(comm, err);
         }
     }
