@@ -3,6 +3,7 @@
 
 #include "mpi_stencil.hpp"
 #include "mpi_level_data.hpp"
+#include "mpi_util.hpp"
 #include "opencl_helper.hpp"
 #include "stencil.hpp"
 
@@ -46,6 +47,7 @@ namespace mgcl
 
         /* Loop variables */
         int i, j, k;
+        int err;
 
         // Size of one stencil
         int ssize = s.getDim4gh() * s.getDim5gh() * s.getDim6gh();
@@ -60,9 +62,10 @@ namespace mgcl
         auto rbuf_ptr = sbuf_ptr->copyShallow();
         auto rbuf = rbuf_ptr->getData();
 
-        MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->front, 0,
-                     static_cast<void*>(rbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->back, 0,
-                     mpiData->comm, MPI_STATUS_IGNORE);
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->front, 0,
+                           static_cast<void*>(rbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->back, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
         if (MPI_PROC_NULL != mpiData->back)
             for (i = 0; i < ghosts_m; i++)
@@ -79,9 +82,10 @@ namespace mgcl
         rbuf_ptr = sbuf_ptr->copyShallow();
         rbuf = rbuf_ptr->getData();
 
-        MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->back, 0,
-                     static_cast<void*>(rbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->front, 0,
-                     mpiData->comm, MPI_STATUS_IGNORE);
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->back, 0,
+                           static_cast<void*>(rbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->front, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
         if (MPI_PROC_NULL != mpiData->front)
             for (i = 0; i < ghosts_m; i++)
@@ -98,9 +102,10 @@ namespace mgcl
         rbuf_ptr = sbuf_ptr->copyShallow();
         rbuf = rbuf_ptr->getData();
 
-        MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->down, 0,
-                     static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->up, 0,
-                     mpiData->comm, MPI_STATUS_IGNORE);
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->down, 0,
+                           static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->up, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
         if (MPI_PROC_NULL != mpiData->up)
             for (i = 0; i < mgh; i++)
@@ -117,9 +122,10 @@ namespace mgcl
         rbuf_ptr = sbuf_ptr->copyShallow();
         rbuf = rbuf_ptr->getData();
 
-        MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->up, 0,
-                     static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->down, 0,
-                     mpiData->comm, MPI_STATUS_IGNORE);
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->up, 0,
+                           static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->down, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
         if (MPI_PROC_NULL != mpiData->down)
             for (i = 0; i < mgh; i++)
@@ -140,9 +146,10 @@ namespace mgcl
         // MPI_Barrier(comm);
         // sbuf_ptr->dumpToFile("sbuf_ptr_left" + std::to_string(myid) + ".txt");
 
-        MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->left, 0,
-                     static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->right, 0,
-                     mpiData->comm, MPI_STATUS_IGNORE);
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->left, 0,
+                           static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->right, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
         if (MPI_PROC_NULL != mpiData->right)
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ngh; j++)
@@ -158,9 +165,10 @@ namespace mgcl
         rbuf_ptr = sbuf_ptr->copyShallow();
         rbuf = rbuf_ptr->getData();
 
-        MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->right, 0,
-                     static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->left, 0,
-                     mpiData->comm, MPI_STATUS_IGNORE);
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->right, 0,
+                           static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->left, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
         if (MPI_PROC_NULL != mpiData->left)
             for (i = 0; i < mgh; i++)

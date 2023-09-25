@@ -1,5 +1,6 @@
-#include "cuboid.hpp"           // for Cuboid
-#include "mgcl.hpp"             // for BC
+#include "cuboid.hpp" // for Cuboid
+#include "mgcl.hpp"   // for BC
+#include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "opencl_helper.hpp"    // for mgclCheckError, OpenCLHelper
 
@@ -192,15 +193,18 @@ namespace mgcl
         int myid;
         MPI_Comm_rank(mpiData->comm, &myid);
 
+        int err;
+
         /* Sending data to the front */
         auto sbuf_ptr = c.sliceIncGhosts(ghosts_m, 2 * ghosts_m - 1, 0, ngh - 1, 0, ogh - 1); // TODO max when gh > m
         auto sbuf = sbuf_ptr->getData();
         auto rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
         auto rbuf = rbuf_ptr->getData();
 
-        MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
-                     static_cast<void*>(rbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
-                     mpiData->comm, MPI_STATUS_IGNORE);
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
+                           static_cast<void*>(rbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
         if (MPI_PROC_NULL != mpiData->back)
             for (i = 0; i < ghosts_m; i++)
@@ -214,9 +218,10 @@ namespace mgcl
         rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
         rbuf = rbuf_ptr->getData();
 
-        MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
-                     static_cast<void*>(rbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
-                     mpiData->comm, MPI_STATUS_IGNORE);
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
+                           static_cast<void*>(rbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
         if (MPI_PROC_NULL != mpiData->front)
             for (i = 0; i < ghosts_m; i++)
@@ -230,9 +235,10 @@ namespace mgcl
         rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
         rbuf = rbuf_ptr->getData();
 
-        MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
-                     static_cast<void*>(rbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
-                     mpiData->comm, MPI_STATUS_IGNORE);
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
+                           static_cast<void*>(rbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
         if (MPI_PROC_NULL != mpiData->up)
             for (i = 0; i < mgh; i++)
@@ -246,9 +252,10 @@ namespace mgcl
         rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
         rbuf = rbuf_ptr->getData();
 
-        MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
-                     static_cast<void*>(rbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
-                     mpiData->comm, MPI_STATUS_IGNORE);
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
+                           static_cast<void*>(rbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
         if (MPI_PROC_NULL != mpiData->down)
             for (i = 0; i < mgh; i++)
@@ -266,9 +273,11 @@ namespace mgcl
         // MPI_Barrier(comm);
         // sbuf_ptr->dumpToFile("sbuf_ptr_left" + std::to_string(myid) + ".txt");
 
-        MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
-                     static_cast<void*>(rbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
-                     mpiData->comm, MPI_STATUS_IGNORE);
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
+                           static_cast<void*>(rbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
         if (MPI_PROC_NULL != mpiData->right)
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ngh; j++)
@@ -281,9 +290,10 @@ namespace mgcl
         rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
         rbuf = rbuf_ptr->getData();
 
-        MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
-                     static_cast<void*>(rbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
-                     mpiData->comm, MPI_STATUS_IGNORE);
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
+                           static_cast<void*>(rbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
         if (MPI_PROC_NULL != mpiData->left)
             for (i = 0; i < mgh; i++)
