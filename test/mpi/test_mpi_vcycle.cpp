@@ -337,6 +337,8 @@ TEST_CASE("MPI_vcycle_immediate_gather_scatter_Varying27p")
     MPI_Comm_size(mpi_comm, &mpi_size);
     // REQUIRE(mpi_size == 8);
 
+    // MPI_Comm_set_errhandler(mpi_comm, MPI_ERRORS_RETURN);
+
     /* MPI variables */
     int mpi_rank;
     int mpi_dims[3] = {0, 0, 0};
