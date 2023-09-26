@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "../src/cuboid.hpp"
+#include "../src/level.hpp"
 #include "../src/multigrid_engine.hpp"
 #include "test_utility.hpp"
 

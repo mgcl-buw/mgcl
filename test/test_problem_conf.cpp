@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "../src/cuboid.hpp"
+#include "../src/level.hpp"
 #include "../src/opencl_helper.hpp"
 #include "../src/problem.hpp"
 #include "../src/stencil.hpp"

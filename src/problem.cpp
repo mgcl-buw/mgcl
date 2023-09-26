@@ -1,6 +1,7 @@
 #include "problem.hpp"
 #include "cuboid.hpp" // for Cuboid
 #include "level.hpp"  // for Level
+#include "mpi_global_data.hpp"
 #include "mpi_level_data.hpp"
 #include "mpi_stencil.hpp"
 #include "mpi_util.hpp"

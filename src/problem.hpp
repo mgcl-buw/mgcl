@@ -31,6 +31,7 @@ namespace mgcl
 {
     // forward declarations
     class Cuboid;
+    class CuboidGpu;
 
     /**
      * @brief Main interface class for using mgcl. Defines all the parameters which can be set using the appropriate

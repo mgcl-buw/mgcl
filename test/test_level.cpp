@@ -5,6 +5,8 @@
 #include <memory>
 
 #include "../src/cuboid.hpp"
+#include "../src/level.hpp"
+#include "../src/mpi_global_data.hpp"
 #include "../src/problem.hpp"
 #include "test_utility.hpp"
 
