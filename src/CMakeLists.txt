@@ -3,55 +3,108 @@ find_package(MPI REQUIRED)
 
 # ============================================
 
-# Add cpptrace for debug builds for easier stacktrace printing.
-cpmaddpackage("gh:jeremy-rifkin/cpptrace#${MGCL_cpptrace_version}")
+# # Add cpptrace for debug builds for easier stacktrace printing.
+# cpmaddpackage("gh:jeremy-rifkin/cpptrace#${MGCL_cpptrace_version}")
 
-# On windows copy cpptrace.dll to the same directory as the executable for mgcl
-if(WIN32)
-add_custom_command(
-  TARGET mgcl POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different
-  $<TARGET_FILE:cpptrace> $<TARGET_FILE_DIR:mgcl>
-)
-endif()
+# # On windows copy cpptrace.dll to the same directory as the executable for mgcl
+# if(WIN32)
+# add_custom_command(
+#   TARGET mgcl POST_BUILD
+#   COMMAND ${CMAKE_COMMAND} -E copy_if_different
+#   $<TARGET_FILE:cpptrace> $<TARGET_FILE_DIR:mgcl>
+# )
+# endif()
 
 # ============================================
+set(MGCL_PUBLIC_HEADERS
+  cuboid.hpp
+  cuboid_gpu.hpp
+  mgcl.hpp
+  problem.hpp
+  opencl_helper.hpp
+  stencil.hpp
+)
 
 set(SOURCES_LIB
-    cuboid.hpp
-    cuboid.cpp
-    cuboid_gpu.hpp
-    cuboid_gpu.cpp
-    ghostscl.cpp
-    jacobicl.cpp
-    mgcl.hpp
-    problem.hpp
-    problem.cpp
-    level.hpp
-    level.cpp
-    opencl_helper.hpp
-    opencl_helper.cpp
-    multigrid_engine.hpp
-    multigrid_engine.cpp
-    prolongation.cpp
-    restriction.cpp
-    stencil.hpp
-    stencil.cpp
-    hypercube.hpp
-    hypercube.cpp
-    util.hpp
-    util.cpp
-    mpi_level_data.hpp
-    mpi_level_data.cpp
-    mpi_global_data.hpp
-    mpi_global_data.cpp
-    mpi_util.hpp
-    mpi_util.cpp
-    mpi_stencil.hpp
-    mpi_stencil.cpp)
+  cuboid.cpp
+  cuboid_gpu.cpp
+  ghostscl.cpp
+  jacobicl.cpp
+  problem.cpp
+  level.hpp
+  level.cpp
+  opencl_helper.cpp
+  multigrid_engine.hpp
+  multigrid_engine.cpp
+  prolongation.cpp
+  restriction.cpp
+  stencil.cpp
+  hypercube.hpp
+  hypercube.cpp
+  util.hpp
+  util.cpp
+  mpi_level_data.hpp
+  mpi_level_data.cpp
+  mpi_global_data.hpp
+  mpi_global_data.cpp
+  mpi_util.hpp
+  mpi_util.cpp
+  mpi_stencil.hpp
+  mpi_stencil.cpp
+)
 
-add_library(mgcl ${SOURCES_LIB})
-target_link_libraries(mgcl PRIVATE OpenCL::OpenCL MPI::MPI_CXX cpptrace)
+add_library(mgcl ${MGCL_PUBLIC_HEADERS} ${SOURCES_LIB})
+add_library(mgcl::mgcl ALIAS mgcl)
+
+target_link_libraries(mgcl PRIVATE OpenCL::OpenCL MPI::MPI_CXX)
+
+# Set PUBLIC_HEADER property so they get installed.
+set_target_properties(mgcl PROPERTIES PUBLIC_HEADER "${MGCL_PUBLIC_HEADERS}")
+
+# Set include directories depending on build or install type.
+target_include_directories(mgcl PUBLIC
+  $<BUILD_INTERFACE:${mgcl_BINARY_DIR}/src>
+  $<BUILD_INTERFACE:${mgcl_SOURCE_DIR}/src>
+  $<INSTALL_INTERFACE:mgcl>
+)
+
+# Install targets and export interface
+include(GNUInstallDirs)
+install(TARGETS mgcl EXPORT mgclTargets
+  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mgcl # include/mgcl
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} # include
+)
+install(EXPORT mgclTargets
+  NAMESPACE mgcl::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/mgcl
+)
+# Install kernel file into include directory
+install(FILES mgcl.cl DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mgcl)
+
+# Write config package files for making mgcl includable in other projects
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/mgclConfigVersion.cmake"
+  COMPATIBILITY
+    SameMajorVersion
+)
+configure_package_config_file(
+  ${CMAKE_CURRENT_LIST_DIR}/../cmake/mgclConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/mgclConfig.cmake
+  INSTALL_DESTINATION
+  ${CMAKE_INSTALL_LIBDIR}/cmake/mgcl
+)
+install(
+  FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/mgclConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/mgclConfigVersion.cmake"
+  DESTINATION
+    ${CMAKE_INSTALL_LIBDIR}/cmake/mgcl
+)
 
 # Use additional flags for debugging purposes if build type is Debug.
 if(CMAKE_BUILD_TYPE MATCHES Debug)
@@ -99,6 +152,3 @@ add_custom_target(copy_kernels DEPENDS "${CMAKE_BINARY_DIR}/src/mgcl.cl")
 # Whenever target 'mgcl' is requested, the custom target will be evaluated.
 add_dependencies(mgcl copy_kernels)
 
-# Reset cppcheck and iwyu
-set(CMAKE_CXX_CPPCHECK "")
-set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE "")

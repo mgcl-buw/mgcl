@@ -1,0 +1,10 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(OpenCL)
+
+if(NOT TARGET mgcl::mgcl)
+  include(${CMAKE_CURRENT_LIST_DIR}/mgclTargets.cmake)
+endif()
+
+check_required_components(mgcl)

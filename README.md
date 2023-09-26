@@ -140,3 +140,10 @@ For a development build enabling switching between build types without recompili
 ```
 "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}"
 ```
+
+## Install
+
+Run the cmake install target in order to install mgcl. The install path can be set using the variable CMAKE_INSTALL_PATH.
+
+```
+```

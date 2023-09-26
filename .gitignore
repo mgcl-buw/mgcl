@@ -4,3 +4,4 @@ main
 *.o
 *.html
 slurm*.out
+install/
