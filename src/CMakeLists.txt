@@ -23,6 +23,10 @@ set(MGCL_PUBLIC_HEADERS
   problem.hpp
   opencl_helper.hpp
   stencil.hpp
+  level.hpp
+  mpi_global_data.hpp
+  mpi_level_data.hpp
+  hypercube.hpp
 )
 
 set(SOURCES_LIB
@@ -31,7 +35,6 @@ set(SOURCES_LIB
   ghostscl.cpp
   jacobicl.cpp
   problem.cpp
-  level.hpp
   level.cpp
   opencl_helper.cpp
   multigrid_engine.hpp
@@ -39,13 +42,10 @@ set(SOURCES_LIB
   prolongation.cpp
   restriction.cpp
   stencil.cpp
-  hypercube.hpp
   hypercube.cpp
   util.hpp
   util.cpp
-  mpi_level_data.hpp
   mpi_level_data.cpp
-  mpi_global_data.hpp
   mpi_global_data.cpp
   mpi_util.hpp
   mpi_util.cpp
@@ -56,7 +56,7 @@ set(SOURCES_LIB
 add_library(mgcl ${MGCL_PUBLIC_HEADERS} ${SOURCES_LIB})
 add_library(mgcl::mgcl ALIAS mgcl)
 
-target_link_libraries(mgcl PRIVATE OpenCL::OpenCL MPI::MPI_CXX)
+target_link_libraries(mgcl PUBLIC OpenCL::OpenCL MPI::MPI_CXX)
 
 # Set PUBLIC_HEADER property so they get installed.
 set_target_properties(mgcl PROPERTIES PUBLIC_HEADER "${MGCL_PUBLIC_HEADERS}")
@@ -65,7 +65,7 @@ set_target_properties(mgcl PROPERTIES PUBLIC_HEADER "${MGCL_PUBLIC_HEADERS}")
 target_include_directories(mgcl PUBLIC
   $<BUILD_INTERFACE:${mgcl_BINARY_DIR}/src>
   $<BUILD_INTERFACE:${mgcl_SOURCE_DIR}/src>
-  $<INSTALL_INTERFACE:mgcl>
+  $<INSTALL_INTERFACE:include/mgcl>
 )
 
 # Install targets and export interface
@@ -75,15 +75,14 @@ install(TARGETS mgcl EXPORT mgclTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
   INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mgcl # include/mgcl
-  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} # include
+  PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/mgcl" # include/mgcl
 )
 install(EXPORT mgclTargets
   NAMESPACE mgcl::
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/mgcl
 )
 # Install kernel file into include directory
-install(FILES mgcl.cl DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mgcl)
+install(FILES mgcl.cl DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/mgcl")
 
 # Write config package files for making mgcl includable in other projects
 include(CMakePackageConfigHelpers)
