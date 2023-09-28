@@ -11,9 +11,9 @@
 #include <vector>
 using namespace std::chrono_literals;
 
-#include "../src/cuboid.hpp"
-#include "../src/problem.hpp"
-#include "../src/util.hpp"
+#include "../src/mgcl/cuboid.hpp"
+#include "../src/mgcl/problem.hpp"
+#include "../src/mgcl/util.hpp"
 #include "../test/ocl_wrapper.hpp"
 #include "../test/test_utility.hpp"
 #include "bench_render_templates.hpp"

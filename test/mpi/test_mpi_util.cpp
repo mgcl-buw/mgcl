@@ -5,13 +5,13 @@
 #include <iostream>
 #include <memory>
 
-#include "../../src/cuboid.hpp"
-#include "../../src/cuboid_gpu.hpp"
-#include "../../src/mpi_level_data.hpp"
-#include "../../src/mpi_util.hpp"
-#include "../../src/multigrid_engine.hpp"
-#include "../../src/problem.hpp"
-#include "../../src/stencil.hpp"
+#include "../../src/mgcl/cuboid.hpp"
+#include "../../src/mgcl/cuboid_gpu.hpp"
+#include "../../src/mgcl/mpi_level_data.hpp"
+#include "../../src/mgcl/mpi_util.hpp"
+#include "../../src/mgcl/multigrid_engine.hpp"
+#include "../../src/mgcl/problem.hpp"
+#include "../../src/mgcl/stencil.hpp"
 #include "../test_utility.hpp"
 
 #include "mpi.h"

@@ -4,11 +4,11 @@
 #include <iostream>
 #include <memory>
 
-#include "../src/cuboid.hpp"
-#include "../src/level.hpp"
-#include "../src/opencl_helper.hpp"
-#include "../src/problem.hpp"
-#include "../src/stencil.hpp"
+#include "../src/mgcl/cuboid.hpp"
+#include "../src/mgcl/level.hpp"
+#include "../src/mgcl/opencl_helper.hpp"
+#include "../src/mgcl/problem.hpp"
+#include "../src/mgcl/stencil.hpp"
 #include "test_utility.hpp"
 
 /**

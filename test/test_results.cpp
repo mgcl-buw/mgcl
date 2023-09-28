@@ -1,6 +1,6 @@
 #include "test_results.hpp"
 
-#include "../src/multigrid_engine.hpp"
+#include "../src/mgcl/multigrid_engine.hpp"
 
 namespace mgcl_test
 {

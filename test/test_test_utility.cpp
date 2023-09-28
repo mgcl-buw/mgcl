@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "../src/cuboid.hpp"
+#include "../src/mgcl/cuboid.hpp"
 #include "test_utility.hpp"
 
 TEST_CASE("TestUtility setup")

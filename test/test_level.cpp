@@ -4,10 +4,10 @@
 #include <iostream>
 #include <memory>
 
-#include "../src/cuboid.hpp"
-#include "../src/level.hpp"
-#include "../src/mpi_global_data.hpp"
-#include "../src/problem.hpp"
+#include "../src/mgcl/cuboid.hpp"
+#include "../src/mgcl/level.hpp"
+#include "../src/mgcl/mpi_global_data.hpp"
+#include "../src/mgcl/problem.hpp"
 #include "test_utility.hpp"
 
 /**

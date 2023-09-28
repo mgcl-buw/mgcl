@@ -17,40 +17,40 @@ find_package(MPI REQUIRED)
 
 # ============================================
 set(MGCL_PUBLIC_HEADERS
-  cuboid.hpp
-  cuboid_gpu.hpp
-  mgcl.hpp
-  problem.hpp
-  opencl_helper.hpp
-  stencil.hpp
-  level.hpp
-  mpi_global_data.hpp
-  mpi_level_data.hpp
-  hypercube.hpp
+  mgcl/cuboid.hpp
+  mgcl/cuboid_gpu.hpp
+  mgcl/mgcl.hpp
+  mgcl/problem.hpp
+  mgcl/opencl_helper.hpp
+  mgcl/stencil.hpp
+  mgcl/level.hpp
+  mgcl/mpi_global_data.hpp
+  mgcl/mpi_level_data.hpp
+  mgcl/hypercube.hpp
 )
 
 set(SOURCES_LIB
-  cuboid.cpp
-  cuboid_gpu.cpp
-  ghostscl.cpp
-  jacobicl.cpp
-  problem.cpp
-  level.cpp
-  opencl_helper.cpp
-  multigrid_engine.hpp
-  multigrid_engine.cpp
-  prolongation.cpp
-  restriction.cpp
-  stencil.cpp
-  hypercube.cpp
-  util.hpp
-  util.cpp
-  mpi_level_data.cpp
-  mpi_global_data.cpp
-  mpi_util.hpp
-  mpi_util.cpp
-  mpi_stencil.hpp
-  mpi_stencil.cpp
+  mgcl/cuboid.cpp
+  mgcl/cuboid_gpu.cpp
+  mgcl/ghostscl.cpp
+  mgcl/jacobicl.cpp
+  mgcl/problem.cpp
+  mgcl/level.cpp
+  mgcl/opencl_helper.cpp
+  mgcl/multigrid_engine.hpp
+  mgcl/multigrid_engine.cpp
+  mgcl/prolongation.cpp
+  mgcl/restriction.cpp
+  mgcl/stencil.cpp
+  mgcl/hypercube.cpp
+  mgcl/util.hpp
+  mgcl/util.cpp
+  mgcl/mpi_level_data.cpp
+  mgcl/mpi_global_data.cpp
+  mgcl/mpi_util.hpp
+  mgcl/mpi_util.cpp
+  mgcl/mpi_stencil.hpp
+  mgcl/mpi_stencil.cpp
 )
 
 add_library(mgcl ${MGCL_PUBLIC_HEADERS} ${SOURCES_LIB})
@@ -82,7 +82,7 @@ install(EXPORT mgclTargets
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/mgcl
 )
 # Install kernel file into include directory
-install(FILES mgcl.cl DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/mgcl")
+install(FILES mgcl/mgcl.cl DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/mgcl")
 
 # Write config package files for making mgcl includable in other projects
 include(CMakePackageConfigHelpers)
@@ -131,22 +131,24 @@ endif()
 # PRIVATE MGCL_DEBUG)
 
 # copy kernel file to build directory
+# TODO check MGCL_BUILD_TESTS etc.
 add_custom_command(
-  OUTPUT "${CMAKE_BINARY_DIR}/src/mgcl.cl" "${CMAKE_BINARY_DIR}/test/mgcl.cl"
+  OUTPUT "${CMAKE_BINARY_DIR}/src/mgcl/mgcl.cl"
+         "${CMAKE_BINARY_DIR}/test/mgcl.cl"
          "${CMAKE_BINARY_DIR}/benchmarks/mgcl.cl"
          "${CMAKE_BINARY_DIR}/examples/mgcl.cl"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mgcl.cl"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mgcl/mgcl.cl"
           "${CMAKE_BINARY_DIR}/src"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mgcl.cl"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mgcl/mgcl.cl"
           "${CMAKE_BINARY_DIR}/test"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mgcl.cl"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mgcl/mgcl.cl"
           "${CMAKE_BINARY_DIR}/benchmarks"
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mgcl.cl"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mgcl/mgcl.cl"
           "${CMAKE_BINARY_DIR}/examples"
-  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/mgcl.cl")
+  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/mgcl/mgcl.cl")
 
 # Custom target for activate the custom command above
-add_custom_target(copy_kernels DEPENDS "${CMAKE_BINARY_DIR}/src/mgcl.cl")
+add_custom_target(copy_kernels DEPENDS "${CMAKE_BINARY_DIR}/src/mgcl/mgcl.cl")
 
 # Whenever target 'mgcl' is requested, the custom target will be evaluated.
 add_dependencies(mgcl copy_kernels)

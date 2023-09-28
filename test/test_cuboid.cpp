@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <fstream>
 
-#include "../src/cuboid.hpp"
+#include "../src/mgcl/cuboid.hpp"
 
 TEST_CASE("cuboid class")
 {

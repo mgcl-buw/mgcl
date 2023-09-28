@@ -5,9 +5,9 @@
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/generators/catch_generators.hpp"
 
-#include "../src/level.hpp"
-#include "../src/multigrid_engine.hpp"
-#include "../src/stencil.hpp"
+#include "../src/mgcl/level.hpp"
+#include "../src/mgcl/multigrid_engine.hpp"
+#include "../src/mgcl/stencil.hpp"
 
 #include "test_utility.hpp"
 

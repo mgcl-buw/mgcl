@@ -6,10 +6,10 @@
 #include "ocl_wrapper.hpp"
 #include "test_utility.hpp"
 
-#include "../src/cuboid.hpp"
-#include "../src/cuboid_gpu.hpp"
-#include "../src/opencl_helper.hpp"
-#include "../src/util.hpp"
+#include "../src/mgcl/cuboid.hpp"
+#include "../src/mgcl/cuboid_gpu.hpp"
+#include "../src/mgcl/opencl_helper.hpp"
+#include "../src/mgcl/util.hpp"
 
 #ifdef __APPLE__
 #include <OpenCL/cl.h> // for clSetKernelArg, _cl_mem, cl_mem, clE...
