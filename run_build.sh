@@ -16,11 +16,11 @@
 
 # init cmake
 cd "$HOME"/projects/mgcl/build || exit
-cmake "$HOME"/projects/mgcl
-
+cmake -DCMAKE_BUILD_TYPE=Release "$HOME"/projects/mgcl
 cd "$HOME"/projects/mgcl || exit
 
-cmake -DCMAKE_BUILD_TYPE=Release "$HOME"/projects/mgcl/build
+# cmake -DCMAKE_BUILD_TYPE=Release "$HOME"/projects/mgcl/build
 cmake --build "$HOME"/projects/mgcl/build
+cmake -DCMAKE_INSTALL_PREFIX=$HOME/mgcl -DCMAKE_BUILD_TYPE=Release --build "$HOME"/projects/mgcl/build --target install
 
 # cd "$HOME"/projects/mgcl || exit
