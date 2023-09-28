@@ -6,9 +6,9 @@
 #include <cmath>
 #include <iostream>
 
-#include "../src/cuboid.hpp"
-#include "../src/level.hpp"
-#include "../src/multigrid_engine.hpp"
+#include "../src/mgcl/cuboid.hpp"
+#include "../src/mgcl/level.hpp"
+#include "../src/mgcl/multigrid_engine.hpp"
 #include "test_results.hpp"
 #include "test_utility.hpp"
 

@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <fstream>
 
-#include "../src/hypercube.hpp"
+#include "../src/mgcl/hypercube.hpp"
 
 TEST_CASE("Hypercube4d")
 {

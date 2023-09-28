@@ -5,10 +5,10 @@
 #include <iostream>
 #include <memory>
 
-#include "../../src/cuboid.hpp"
-#include "../../src/mpi_stencil.hpp"
-#include "../../src/multigrid_engine.hpp"
-#include "../../src/problem.hpp"
+#include "../../src/mgcl/cuboid.hpp"
+#include "../../src/mgcl/mpi_stencil.hpp"
+#include "../../src/mgcl/multigrid_engine.hpp"
+#include "../../src/mgcl/problem.hpp"
 #include "../test_utility.hpp"
 
 #include "mpi.h"

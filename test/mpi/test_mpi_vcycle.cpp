@@ -8,10 +8,10 @@
 #include <iostream>
 #include <memory>
 
-#include "../../src/cuboid.hpp"
-#include "../../src/mpi_level_data.hpp"
-#include "../../src/mpi_util.hpp"
-#include "../../src/problem.hpp"
+#include "../../src/mgcl/cuboid.hpp"
+#include "../../src/mgcl/mpi_level_data.hpp"
+#include "../../src/mgcl/mpi_util.hpp"
+#include "../../src/mgcl/problem.hpp"
 #include "../test_utility.hpp"
 
 #include "mpi.h"

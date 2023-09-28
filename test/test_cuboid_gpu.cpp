@@ -5,8 +5,8 @@
 #include <cstdio>
 #include <fstream>
 
-#include "../src/cuboid.hpp"
-#include "../src/cuboid_gpu.hpp"
+#include "../src/mgcl/cuboid.hpp"
+#include "../src/mgcl/cuboid_gpu.hpp"
 #include "test_utility.hpp"
 
 // Check if CuboidGpu gets initialized correctly with host_ptr being null.

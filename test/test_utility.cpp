@@ -1,6 +1,6 @@
 #include "test_utility.hpp"
 
-#include "../src/mgcl.hpp"
+#include "../src/mgcl/mgcl.hpp"
 
 #include <iostream>
 #include <stdexcept>

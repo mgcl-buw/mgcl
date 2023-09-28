@@ -16,8 +16,8 @@
 #include <string>
 #include <vector>
 
-#include "../src/cuboid.hpp"
-#include "../src/problem.hpp"
+#include "../src/mgcl/cuboid.hpp"
+#include "../src/mgcl/problem.hpp"
 
 // forward declarations
 static std::vector<std::string> split(std::string s, std::string delimiter);

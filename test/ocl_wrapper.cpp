@@ -1,5 +1,5 @@
 #include "ocl_wrapper.hpp"
-#include "../src/opencl_helper.hpp"
+#include "../src/mgcl/opencl_helper.hpp"
 
 OCLWrapper::OCLWrapper(cl_device_type deviceType, std::string deviceName, std::string kernelString,
                        std::string kernelFilePath, cl_context _context)

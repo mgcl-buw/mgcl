@@ -9,10 +9,10 @@
 #include <vector>
 using namespace std::chrono_literals;
 
-#include "../src/cuboid.hpp"
-#include "../src/opencl_helper.hpp"
-#include "../src/problem.hpp"
-#include "../src/stencil.hpp"
+#include "../src/mgcl/cuboid.hpp"
+#include "../src/mgcl/opencl_helper.hpp"
+#include "../src/mgcl/problem.hpp"
+#include "../src/mgcl/stencil.hpp"
 #include "../test/ocl_wrapper.hpp"
 #include "../test/test_utility.hpp"
 #include "bench_render_templates.hpp"
