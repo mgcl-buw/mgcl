@@ -36,3 +36,9 @@ target_link_libraries(example_mpi PRIVATE mgcl MPI::MPI_CXX)
 add_dependencies(example_mpi copy_kernels)
 # target_compile_options(example_galerkin PRIVATE "-pg")
 # target_link_options(example_galerkin PRIVATE "-pg")
+
+# ==========================
+add_executable(example_print_devices example_print_devices.cpp)
+target_link_libraries(example_print_devices PRIVATE mgcl MPI::MPI_CXX)
+add_dependencies(example_print_devices copy_kernels)
+
