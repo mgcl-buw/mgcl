@@ -73,10 +73,10 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_only_galerkin")
     {
         std::cout << "Testing the following grid sizes (N local; m,n,o global)" << std::endl;
         for (auto N : CLI_ARGS::grids)
-            {
-                std::cout << "  local size: " << N << ", global sizes: " 
-                    << N * mpi_dims[0] << "," << N * mpi_dims[1] << "," << N * mpi_dims[2] << std::endl;
-            }
+        {
+            std::cout << "  local size: " << N << ", global sizes: "
+                      << N * mpi_dims[0] << "," << N * mpi_dims[1] << "," << N * mpi_dims[2] << std::endl;
+        }
     }
     MPI_Barrier(mpi_comm);
 
@@ -136,7 +136,6 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_only_galerkin")
             MPI_Barrier(mpi_comm);
         });
     }
-
 }
 
 // Benchmarks the vcycle using MPI seq vs opencl.
@@ -192,10 +191,10 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_vs_OCL_galerkin")
     {
         std::cout << "Testing the following grid sizes (N local; m,n,o global)" << std::endl;
         for (auto N : CLI_ARGS::grids)
-            {
-                std::cout << "  local size: " << N << ", global sizes: " 
-                    << N * mpi_dims[0] << "," << N * mpi_dims[1] << "," << N * mpi_dims[2] << std::endl;
-            }
+        {
+            std::cout << "  local size: " << N << ", global sizes: "
+                      << N * mpi_dims[0] << "," << N * mpi_dims[1] << "," << N * mpi_dims[2] << std::endl;
+        }
     }
     MPI_Barrier(mpi_comm);
 

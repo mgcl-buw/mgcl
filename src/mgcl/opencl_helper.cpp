@@ -11,6 +11,12 @@
 #include <cstdlib> // for malloc, exit, free, EXIT_FAILURE
 #include <iostream>
 
+#ifdef __APPLE__
+#include <OpenCL/cl_ext.h>
+#else
+#include <CL/cl_ext.h>
+#endif
+
 // #include <cpptrace/cpptrace.hpp>
 
 namespace mgcl
@@ -55,22 +61,21 @@ namespace mgcl
             for (cl_uint i = 0; i < numPlatforms; i++)
             {
                 err = clGetDeviceIDs(Platform[i], deviceType, 1, &device_id_, nullptr);
-                if (err == CL_SUCCESS)
+                mgclCheckError(err, "clGetDeviceIDs");
+
+                if (deviceName != "" && deviceName != "default")
                 {
-                    if (deviceName != "" && deviceName != "default")
-                    {
-                        err = clGetDeviceInfo(device_id_, CL_DEVICE_NAME, sizeof(device_name_available),
-                                              &device_name_available, nullptr);
-                        mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
+                    err = clGetDeviceInfo(device_id_, CL_DEVICE_NAME, sizeof(device_name_available),
+                                          &device_name_available, nullptr);
+                    mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
 
-                        // continue to next device if name doesn't fit
-                        if (std::string(device_name_available).find(deviceName) == std::string::npos)
-                            continue;
-                    }
-
-                    deviceId = device_id_;
-                    break;
+                    // continue to next device if name doesn't fit
+                    if (std::string(device_name_available).find(deviceName) == std::string::npos)
+                        continue;
                 }
+
+                deviceId = device_id_;
+                break;
             }
 
             if (deviceId == nullptr)
@@ -471,7 +476,27 @@ namespace mgcl
 
         err = clGetDeviceInfo(device_id, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &comp_units, NULL);
         mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_COMPUTE_UNITS)");
-        printf(" with a max of %d compute units \n", comp_units);
+        printf(" with a max of %d compute units", comp_units);
+
+        cl_uchar uuid[CL_UUID_SIZE_KHR];
+        bool uuid_available = false;
+        err = clGetDeviceInfo(device_id, CL_DEVICE_UUID_KHR, sizeof(cl_uchar) * CL_UUID_SIZE_KHR,
+                              &uuid, nullptr);
+        uuid_available = err == CL_SUCCESS;
+        if (uuid_available)
+            printf(", uuid: %02x%02x%02x%02x-"
+                   "%02x%02x-"
+                   "%02x%02x-"
+                   "%02x%02x-"
+                   "%02x%02x%02x%02x%02x%02x\n",
+                   uuid[0], uuid[1], uuid[2], uuid[3], uuid[4],
+                   uuid[5], uuid[6],
+                   uuid[7], uuid[8],
+                   uuid[9], uuid[10],
+                   uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
+
+        else
+            printf("\n");
 
         return err;
     }
