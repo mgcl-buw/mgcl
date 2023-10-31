@@ -4,11 +4,11 @@
 #SBATCH --partition=gpu
 #SBATCH --account=imacm_gpu
 #SBATCH --nodes=1
-## #SBATCH --ntasks-per-node=4
-## #SBATCH --gpus 4
-#SBATCH --gres=gpu:4            # number of GPUs per node (gres=gpu:N)
-## #SBATCH --gpus-per-task 1
-## #SBATCH --cpus-per-task 4
+#SBATCH --ntasks=2
+#SBATCH --gpus=2
+#SBATCH --gpus-per-task=1
+
+## srun -n 2 --partition=gpu --account=imacm_gpu --nodes=1 --gpus=2 --gpus-per-task=1 -w gpu21004  build/examples/example_print_devices
 
 current_time=$(date "+%Y.%m.%d-%H.%M.%S")
 
@@ -18,6 +18,6 @@ cd "$EX_DIR" || exit
 
 # run e.g. with 
 # sbatch --chdir /beegfs/shoffmann/projects/mgcl/build/ run_benchmarks.sh [solve][console]
-mpiexec -n 4 "$EX_DIR"/example_print_devices "$@" > ~/output/"$current_time"-mgcl-ex-print-devices.txt 2>&1
+srun -n 2 "$EX_DIR"/example_print_devices "$@" > ~/output/"$current_time"-mgcl-ex-print-devices.txt 2>&1
 
 cd "$HOME"/projects/mgcl || exit

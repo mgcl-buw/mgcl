@@ -33,7 +33,7 @@ int main(int argc, char** argv)
         MPI_Barrier(MPI_COMM_WORLD);
         if (i == mpi_rank)
         {
-            std::cerr << "on rank " << i << ": ";
+            std::cout << "on rank " << i << ": ";
             p.getOpenCLHelper().init();
             std::cout << std::flush;
         }
