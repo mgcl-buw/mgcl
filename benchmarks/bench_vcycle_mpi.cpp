@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -27,8 +28,17 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_only_galerkin")
 {
     using std::min;
 
-    if (CLI_ARGS::grids.size() == 0)
-        throw "Need to specify at least one local grid size, e.g. using --grids 4,8,16";
+    if (CLI_ARGS::grids.size() == 0 && (CLI_ARGS::gridsMin.size() == 0 || CLI_ARGS::gridsMax.size() == 0))
+        throw "Need to specify at least one local grid size, e.g. using --grids 4,8,16 or --gridsMin 4,4,4 AND --gridsMax 32,32,32";
+
+    // build grids to be tested from CLI args
+    std::vector<std::vector<int>> gridsTBT;
+    for (auto N : CLI_ARGS::grids)
+        gridsTBT.push_back({N, N, N});
+    for (int m = CLI_ARGS::gridsMin[0]; m <= CLI_ARGS::gridsMax[0]; m *= 2)
+        for (int n = CLI_ARGS::gridsMin[1]; n <= CLI_ARGS::gridsMax[1]; n *= 2)
+            for (int o = CLI_ARGS::gridsMin[2]; o <= CLI_ARGS::gridsMax[2]; o *= 2)
+                gridsTBT.push_back({m, n, o});
 
     // Check if mpi is initialized
     int isInitialized = 0;
@@ -62,6 +72,7 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_only_galerkin")
     int nu2 = 3;
 
     if (mpi_rank == 0)
+    {
         std::cout << "Problem parameters:" << std::endl
                   << "  Omega: " << omega << std::endl
                   << "  Nu1: " << nu1 << std::endl
@@ -69,41 +80,48 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_only_galerkin")
                   << "  VCycle iterations: " << CLI_ARGS::vCycleIterations << std::endl
                   << "  #procs: " << mpi_size << std::endl;
 
-    if (mpi_rank == 0)
-    {
-        std::cout << "Testing the following grid sizes (N local; m,n,o global)" << std::endl;
-        for (auto N : CLI_ARGS::grids)
+        std::cout << "Testing the following grid sizes" << std::endl;
+        for (auto gr : gridsTBT)
         {
-            std::cout << "  local size: " << N << ", global sizes: "
-                      << N * mpi_dims[0] << "," << N * mpi_dims[1] << "," << N * mpi_dims[2] << std::endl;
+            int m = gr[0];
+            int n = gr[1];
+            int o = gr[2];
+            std::cout << "  local size: " << m << "," << n << "," << o << ", global sizes: "
+                      << m * mpi_dims[0] << "," << n * mpi_dims[1] << "," << o * mpi_dims[2] << std::endl;
         }
     }
     MPI_Barrier(mpi_comm);
 
-    int maxStepsPerIter = 3;
-    std::stringstream ss;
-    ss << "N;iters;spi;ns" << std::endl;
-
-    // Vector to collect all minimum times per spi, in order to get avg results later.
-    std::vector<std::vector<int>> mintimesPerSpi(maxStepsPerIter);
-
-    for (auto N : CLI_ARGS::grids)
+    struct Result
     {
-        int mglob = N * mpi_dims[0];
-        int nglob = N * mpi_dims[1];
-        int oglob = N * mpi_dims[2];
+        std::string name;
+        double minTime;
+        int m;
+        int n;
+        int o;
+    };
+    std::vector<Result> minTimes;
+
+    for (auto gr : gridsTBT)
+    {
+        int m = gr[0];
+        int n = gr[1];
+        int o = gr[2];
+        int mglob = m * mpi_dims[0];
+        int nglob = n * mpi_dims[1];
+        int oglob = o * mpi_dims[2];
         double h = 1.0 / (double)mglob;
 
         mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
         mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
 
         int ghin = 0;
-        auto v = std::make_shared<mgcl::Cuboid>(N, N, N, ghin, ghin, ghin);
-        auto f = std::make_shared<mgcl::Cuboid>(N, N, N, ghin, ghin, ghin);
+        auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+        auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
         v->fillRandom();
         f->fillRandom();
 
-        mgcl::Problem pseq(N, N, N, v, f, mglob, nglob, oglob);
+        mgcl::Problem pseq(m, n, o, v, f, mglob, nglob, oglob);
         pseq.setSilent(true);
         pseq.setOmega(omega);
         pseq.setNu1(nu1);
@@ -122,20 +140,51 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_only_galerkin")
             .epochs(11)
             .epochIterations(1)
             // .minEpochTime(100ms)
-            .relative(true);
+            .relative(false);
 
         // disable output for non-root processes
         if (mpi_rank > 0)
             bench.output(nullptr);
 
-        std::string name = std::string("seqN").append(std::to_string(N));
+        std::string name = std::string("seq_mno")
+                               .append(std::to_string(m))
+                               .append("_")
+                               .append(std::to_string(n))
+                               .append("_")
+                               .append(std::to_string(o));
 
         bench.run(std::string(name).c_str(), [&] { //
             pseq.solveSeq();
             // tu.finish(); //
             MPI_Barrier(mpi_comm);
         });
+
+        // Get minimum of all epochs in ns
+        double min = 1000000;
+        for (auto r : bench.results())
+            if (r.minimum(ankerl::nanobench::Result::Measure::elapsed) < min)
+                min = r.minimum(ankerl::nanobench::Result::Measure::elapsed) * 1000.0 /* * 1000.0 * 1000.0*/;
+
+        Result r;
+        r.name = name;
+        r.minTime = min;
+        r.m = m;
+        r.n = n;
+        r.o = o;
+        minTimes.push_back(r);
     }
+
+    // print min times
+    if (mpi_rank == 0)
+    {
+        std::cout << "name;m;n;o;dof;minTimeInMs" << std::endl;
+        for (auto r : minTimes)
+        {
+            std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << r.m * r.n * r.o
+                      << ";" << std::setprecision(17) << r.minTime << std::endl;
+        }
+    }
+    MPI_Barrier(mpi_comm);
 }
 
 // Benchmarks the vcycle using MPI ocl.
@@ -209,12 +258,15 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_only_galerkin")
     }
     MPI_Barrier(mpi_comm);
 
-    // int maxStepsPerIter = 3;
-    // std::stringstream ss;
-    // ss << "N;iters;spi;ns" << std::endl;
-
-    // // Vector to collect all minimum times per spi, in order to get avg results later.
-    // std::vector<std::vector<int>> mintimesPerSpi(maxStepsPerIter);
+    struct Result
+    {
+        std::string name;
+        double minTime;
+        int m;
+        int n;
+        int o;
+    };
+    std::vector<Result> minTimes;
 
     for (auto gr : gridsTBT)
     {
@@ -255,7 +307,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_only_galerkin")
             .epochs(11)
             .epochIterations(1)
             // .minEpochTime(100ms)
-            .relative(true);
+            .relative(false);
 
         // disable output for non-root processes
         if (mpi_rank > 0)
@@ -274,7 +326,33 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_only_galerkin")
             p.getOpenCLHelper().finish();
             MPI_Barrier(mpi_comm);
         });
+
+        // Get minimum of all epochs in ns
+        double min = 1000000;
+        for (auto r : bench.results())
+            if (r.minimum(ankerl::nanobench::Result::Measure::elapsed) < min)
+                min = r.minimum(ankerl::nanobench::Result::Measure::elapsed) * 1000.0 /* * 1000.0 * 1000.0*/;
+
+        Result r;
+        r.name = name;
+        r.minTime = min;
+        r.m = m;
+        r.n = n;
+        r.o = o;
+        minTimes.push_back(r);
     }
+
+    // print min times
+    if (mpi_rank == 0)
+    {
+        std::cout << "name;m;n;o;dof;minTimeInMs" << std::endl;
+        for (auto r : minTimes)
+        {
+            std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << r.m * r.n * r.o
+                      << ";" << std::setprecision(17) << r.minTime << std::endl;
+        }
+    }
+    MPI_Barrier(mpi_comm);
 }
 
 // Benchmarks the vcycle using MPI seq vs opencl.
