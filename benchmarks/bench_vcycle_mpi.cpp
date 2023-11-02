@@ -99,6 +99,9 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_only_galerkin")
         int m;
         int n;
         int o;
+        int mglob;
+        int nglob;
+        int oglob;
     };
     std::vector<Result> minTimes;
 
@@ -171,16 +174,21 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_only_galerkin")
         r.m = m;
         r.n = n;
         r.o = o;
+        r.mglob = mglob;
+        r.nglob = nglob;
+        r.oglob = oglob;
         minTimes.push_back(r);
     }
 
     // print min times
     if (mpi_rank == 0)
     {
-        std::cout << "name;m;n;o;dof;minTimeInMs" << std::endl;
+        std::cout << "name;m;n;o;mglob;nglob;oglob;dof;minTimeInMs" << std::endl;
         for (auto r : minTimes)
         {
-            std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << r.m * r.n * r.o
+            std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";"
+                      << r.mglob << ";" << r.nglob << ";" << r.oglob << ";"
+                      << r.mglob * r.nglob * r.oglob
                       << ";" << std::setprecision(17) << r.minTime << std::endl;
         }
     }
@@ -265,6 +273,9 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_only_galerkin")
         int m;
         int n;
         int o;
+        int mglob;
+        int nglob;
+        int oglob;
     };
     std::vector<Result> minTimes;
 
@@ -339,16 +350,21 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_only_galerkin")
         r.m = m;
         r.n = n;
         r.o = o;
+        r.mglob = mglob;
+        r.nglob = nglob;
+        r.oglob = oglob;
         minTimes.push_back(r);
     }
 
     // print min times
     if (mpi_rank == 0)
     {
-        std::cout << "name;m;n;o;dof;minTimeInMs" << std::endl;
+        std::cout << "name;m;n;o;mglob;nglob;oglob;dof;minTimeInMs" << std::endl;
         for (auto r : minTimes)
         {
-            std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << r.m * r.n * r.o
+            std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";"
+                      << r.mglob << ";" << r.nglob << ";" << r.oglob << ";"
+                      << r.mglob * r.nglob * r.oglob
                       << ";" << std::setprecision(17) << r.minTime << std::endl;
         }
     }
