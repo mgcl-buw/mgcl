@@ -10,6 +10,8 @@ std::vector<int> CLI_ARGS::grids;
 int CLI_ARGS::minEpochIterations = 0;
 int CLI_ARGS::vCycleIterations = 10;
 std::string CLI_ARGS::outputPath = ".";
+std::vector<int> CLI_ARGS::gridsMin; // e.g. {4,4,4}
+std::vector<int> CLI_ARGS::gridsMax; // e.g. {64,64,32}
 
 // helper functions
 std::vector<int> split_int(std::string s, std::string delimiter);
@@ -19,6 +21,10 @@ std::vector<int> split_int(std::string s, std::string delimiter);
 // Valid arguments are:
 // --grids 8,16,32
 // --minEpochIterations N
+// --gridsMin 4,4,4
+// --gridsMax 32,32,32
+//
+// If gridsMin and gridsMax are set, each grid size between those to limits that is a power of 2 is tested.
 int main(int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
@@ -29,6 +35,9 @@ int main(int argc, char* argv[])
     int minEpochIterations = CLI_ARGS::minEpochIterations;
     int vCycleIterations = CLI_ARGS::vCycleIterations;
     std::string outputPath = ".";
+
+    std::string gridsMin;
+    std::string gridsMax;
 
     // Build a new parser on top of Catch2's
     using namespace Catch::Clara;
@@ -45,9 +54,17 @@ int main(int argc, char* argv[])
                      ["--vCycleIterations"]                // the option names it will respond to
                ("vCycleIterations, 10 is default")         // description string for the help output
 
-               | Opt(outputPath, "outputPath")                                         // bind variable to a new option, with a hint string
-                     ["--outputPath"]                                                  // the option names it will respond to
-               ("specify a path where any output should be written to. Default is ."); // description string for the help output
+               | Opt(outputPath, "outputPath")                                        // bind variable to a new option, with a hint string
+                     ["--outputPath"]                                                 // the option names it will respond to
+               ("specify a path where any output should be written to. Default is .") // description string for the help output
+
+               | Opt(gridsMin, "gridsMin")                                          // bind variable to a new option, with a hint string
+                     ["--gridsMin"]                                                 // the option names it will respond to
+               ("minimum size of grids to be tested, seperated by ',', e.g. 4,4,4") // description string for the help output
+
+               | Opt(gridsMax, "gridsMax")                                              // bind variable to a new option, with a hint string
+                     ["--gridsMax"]                                                     // the option names it will respond to
+               ("maximum size of grids to be tested, seperated by ',', e.g. 64,64,32"); // description string for the help output
 
     // Now pass the new composite back to Catch2 so it uses that
     session.cli(cli);
@@ -57,7 +74,6 @@ int main(int argc, char* argv[])
     if (returnCode != 0) // Indicates a command line error
         return returnCode;
 
-    // if set on the command line then 'height' is now set at this point
     if (!grids.empty())
     {
         std::cout << "grids: " << grids << std::endl;
@@ -84,6 +100,18 @@ int main(int argc, char* argv[])
 
         std::cout << "outputPath: " << outputPath << std::endl;
         CLI_ARGS::outputPath = outputPath;
+    }
+
+    if (!gridsMin.empty())
+    {
+        std::cout << "gridsMin: " << gridsMin << std::endl;
+        CLI_ARGS::gridsMin = split_int(gridsMin, ",");
+    }
+
+    if (!gridsMax.empty())
+    {
+        std::cout << "gridsMax: " << gridsMax << std::endl;
+        CLI_ARGS::gridsMax = split_int(gridsMax, ",");
     }
 
     int result = session.run();
