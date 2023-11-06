@@ -18,6 +18,6 @@ cd "$EX_DIR" || exit
 
 # run e.g. with 
 # sbatch --chdir /beegfs/shoffmann/projects/mgcl/build/ run_benchmarks.sh [solve][console]
-srun -n 2 "$EX_DIR"/example_print_devices "$@" > ~/output/"$current_time"-mgcl-ex-print-devices.txt 2>&1
+srun "$EX_DIR"/example_print_devices "$@" > ~/output/"$current_time"-mgcl-ex-print-devices.txt 2>&1
 
 cd "$HOME"/projects/mgcl || exit

@@ -17,9 +17,11 @@ int main(int argc, char** argv)
 
     int mpi_size;
     int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
 
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
 
     int N = 16;
 
@@ -33,7 +35,8 @@ int main(int argc, char** argv)
         MPI_Barrier(MPI_COMM_WORLD);
         if (i == mpi_rank)
         {
-            std::cout << "on rank " << i << ": ";
+            std::cout << "on rank " << i << ": " << std::endl;
+            std::cout << "  > dims: " << mpi_dims[0] << "," << mpi_dims[1] << "," << mpi_dims[2] << std::endl << "  > ";
             p.getOpenCLHelper().init();
             std::cout << std::flush;
         }
