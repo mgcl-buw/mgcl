@@ -269,7 +269,7 @@ TEST_CASE("exec_params_residual")
             minTimes.push_back(result);
         }
 
-    std::cout << "name;m;n;o;locm;locn;locominTimeInNs" << std::endl;
+    std::cout << "name;m;n;o;locm;locn;loco;minTimeInNs" << std::endl;
     for (auto r : minTimes)
     {
         std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << //
