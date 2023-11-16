@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cmath>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <vector>
 using namespace std::chrono_literals;
@@ -22,6 +23,18 @@ using namespace std::chrono_literals;
 #include "bench_render_templates.hpp"
 #include "cli_args.hpp"
 
+struct Result
+{
+    std::string name;
+    double minTime;
+    double m;
+    double n;
+    double o;
+    double locm;
+    double locn;
+    double loco;
+};
+
 /*
  * The benchmarks in this file aim to find the optimal execution parameters, i.e. work group sizes, for each step of
  * the multigrid method for a single GPU without MPI. These steps are:
@@ -35,7 +48,6 @@ using namespace std::chrono_literals;
  *
  * The implementation is a copy of residual from 11-02-2023
  */
-
 TEST_CASE("exec_params_residual")
 {
     if (CLI_ARGS::grids.size() == 0 && (CLI_ARGS::gridsMin.size() == 0 || CLI_ARGS::gridsMax.size() == 0))
@@ -80,6 +92,8 @@ TEST_CASE("exec_params_residual")
     ankerl::nanobench::Bench b;
     b.timeUnit(1ns, "ns")
         .minEpochTime(100ms);
+
+    std::vector<Result> minTimes;
 
     for (auto gr : gridsTBT)
         for (auto lo : localsTBT)
@@ -236,5 +250,29 @@ TEST_CASE("exec_params_residual")
 
                       clReleaseKernel(kernel); // TODO maybe clFinish before release?
                   });
+
+            // Get minimum of all epochs in ms
+            double min = 1000000;
+            for (auto r : b.results())
+                if (r.minimum(ankerl::nanobench::Result::Measure::elapsed) < min)
+                    min = r.minimum(ankerl::nanobench::Result::Measure::elapsed) * 1000.0 * 1000.0 * 1000.0;
+
+            Result result;
+            result.name = name;
+            result.minTime = min;
+            result.m = m;
+            result.n = n;
+            result.o = o;
+            result.locm = lo[0];
+            result.locn = lo[1];
+            result.loco = lo[2];
+            minTimes.push_back(result);
         }
+
+    std::cout << "name;m;n;o;locm;locn;locominTimeInNs" << std::endl;
+    for (auto r : minTimes)
+    {
+        std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << //
+            r.locm << ";" << r.locn << ";" << r.loco << ";" << std::setprecision(17) << r.minTime << std::endl;
+    }
 }
