@@ -90,7 +90,7 @@ TEST_CASE("exec_params_residual")
     bool return_residual = true;
 
     ankerl::nanobench::Bench b;
-    b.timeUnit(1ns, "ns")
+    b.timeUnit(1ms, "ms")
         .minEpochTime(100ms);
 
     std::vector<Result> minTimes;
@@ -255,7 +255,7 @@ TEST_CASE("exec_params_residual")
             double min = 1000000;
             for (auto r : b.results())
                 if (r.minimum(ankerl::nanobench::Result::Measure::elapsed) < min)
-                    min = r.minimum(ankerl::nanobench::Result::Measure::elapsed) * 1000.0 * 1000.0 * 1000.0;
+                    min = r.minimum(ankerl::nanobench::Result::Measure::elapsed) * 1000.0 /** 1000.0 * 1000.0*/;
 
             Result result;
             result.name = name;
@@ -269,7 +269,7 @@ TEST_CASE("exec_params_residual")
             minTimes.push_back(result);
         }
 
-    std::cout << "name;m;n;o;locm;locn;loco;minTimeInNs" << std::endl;
+    std::cout << "name;m;n;o;locm;locn;loco;minTimeInMs" << std::endl;
     for (auto r : minTimes)
     {
         std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << //
