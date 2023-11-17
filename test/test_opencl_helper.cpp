@@ -77,4 +77,9 @@ TEST_CASE("OpenCLHelper")
         REQUIRE_NOTHROW(openCLHelper.init());
         REQUIRE(openCLHelper.isInitialized());
     }
+
+    SECTION("setKernelFile throwing")
+    {
+        REQUIRE_THROWS(openCLHelper.setKernelFile("kjhnfkasdf"));
+    }
 }

@@ -652,9 +652,18 @@ namespace mgcl
         return kernelFile;
     }
 
+    /**
+     * @brief Sets kernel file. Throws if file does not exist. Check is done by trying to open the file.
+     */
     void OpenCLHelper::setKernelFile(const std::string& kernelFile_)
     {
-        // TODO check if file actually exists
+        // Check if file actually exists by trying to open it
+        std::ifstream f;
+        f.open(kernelFile_);
+        if (f.fail())
+            throw std::string("Kernel file '").append(kernelFile_).append("' does not exist.");
+        f.close();
+
         kernelFile = kernelFile_;
     }
 
