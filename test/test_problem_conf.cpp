@@ -41,7 +41,7 @@ TEST_CASE("Problem conf")
 
         REQUIRE(!p.getOpenCLHelper().isInitialized());
         REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
-        REQUIRE(p.getKernelDir() == "./");
+        REQUIRE(p.getKernelFile() == "./mgcl.cl");
         REQUIRE(p.getDeviceName() == "");
         REQUIRE(p.getDVPtr() == nullptr);
         REQUIRE(p.getDFPtr() == nullptr);
@@ -292,7 +292,7 @@ TEST_CASE("set OpenCLHelper values")
         REQUIRE(p.getContext() == nullptr);
         REQUIRE(p.getDeviceId() == nullptr);
         REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
-        REQUIRE(p.getKernelDir() == "./");
+        REQUIRE(p.getKernelFile() == "./mgcl.cl");
         REQUIRE(p.getDeviceName() == "");
     }
 
@@ -305,11 +305,11 @@ TEST_CASE("set OpenCLHelper values")
         REQUIRE(!p.getOpenCLHelper().isInitialized());
 
         p.setDeviceType(CL_DEVICE_TYPE_GPU);
-        p.setKernelDir("test/");
+        p.setKernelFile("test/");
         p.setDeviceName("Quadro");
 
         REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_GPU);
-        REQUIRE(p.getKernelDir() == "test/");
+        REQUIRE(p.getKernelFile() == "test/");
         REQUIRE(p.getDeviceName() == "Quadro");
     }
 
@@ -325,11 +325,11 @@ TEST_CASE("set OpenCLHelper values")
         REQUIRE(p.getOpenCLHelper().isInitialized());
 
         p.setDeviceType(CL_DEVICE_TYPE_CPU);
-        p.setKernelDir("test/");
+        p.setKernelFile("test/");
         p.setDeviceName("Quadro");
 
         REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_GPU);
-        REQUIRE(p.getKernelDir() == "./");
+        REQUIRE(p.getKernelFile() == "./mgcl.cl");
         REQUIRE(p.getDeviceName() == "");
     }
 }

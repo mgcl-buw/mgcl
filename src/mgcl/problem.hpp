@@ -273,8 +273,8 @@ namespace mgcl
 
         OpenCLHelper& getOpenCLHelper();
 
-        std::string getKernelDir() const;
-        void setKernelDir(const std::string& kernelDir_);
+        std::string getKernelFile() const;
+        void setKernelFile(const std::string& kernelFile_);
 
         std::string getDeviceName() const;
         void setDeviceName(const std::string& deviceName_);

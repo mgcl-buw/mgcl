@@ -113,8 +113,7 @@ namespace mgcl
         mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
 
         // read kernel source
-        std::string filename = kernelDir + "mgcl.cl";
-        std::string kernelSource = loadKernelSource(filename);
+        std::string kernelSource = loadKernelSource(kernelFile);
         const char* ksc = kernelSource.c_str();
 
         // Create the compute program from the source buffer
@@ -648,15 +647,15 @@ namespace mgcl
         deviceName = deviceName_;
     }
 
-    std::string OpenCLHelper::getKernelDir() const
+    std::string OpenCLHelper::getKernelFile() const
     {
-        return kernelDir;
+        return kernelFile;
     }
 
-    void OpenCLHelper::setKernelDir(const std::string& kernelDir_)
+    void OpenCLHelper::setKernelFile(const std::string& kernelFile_)
     {
-        // TODO add trailing slash and test
-        kernelDir = kernelDir_;
+        // TODO check if file actually exists
+        kernelFile = kernelFile_;
     }
 
     cl_device_type OpenCLHelper::getDeviceType() const

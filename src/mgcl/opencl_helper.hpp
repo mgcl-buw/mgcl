@@ -29,7 +29,7 @@ namespace mgcl
     private:
         Problem* problem;
 
-        std::string kernelDir = "./";
+        std::string kernelFile = "./mgcl.cl";
         std::string deviceName = "";                        /* Use first found device if not set */
         cl_device_type deviceType = CL_DEVICE_TYPE_DEFAULT; /* Defaults to CL_DEVICE_TYPE_DEFAULT */
         cl_device_id deviceId = nullptr;                    /* must be set if a specific device should be reused */
@@ -61,8 +61,8 @@ namespace mgcl
         static std::string loadKernelSource(std::string file);
         static int outputDeviceInfo(cl_device_id device_id);
 
-        std::string getKernelDir() const;
-        void setKernelDir(const std::string& kernelDir_);
+        std::string getKernelFile() const;
+        void setKernelFile(const std::string& kernelFile_);
 
         std::string getDeviceName() const;
         void setDeviceName(const std::string& deviceName_);
