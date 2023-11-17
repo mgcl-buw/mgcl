@@ -8,9 +8,9 @@
  * Remember to update ghosts of c if ghc > 0 afterwards.
  */
 __kernel void mult_stencils_var_var(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int gha, int ghb, int ghc)
@@ -73,9 +73,9 @@ __kernel void mult_stencils_var_var(
 
 // this version replaces the if-statement inside the loop by just multiplying the boolean result with the inner calculation.
 __kernel void mult_stencils_var_var_branchless(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int gha, int ghb, int ghc)
@@ -137,9 +137,9 @@ __kernel void mult_stencils_var_var_branchless(
 // This version has a reordered foor loop structure s.t. intermediate results for c can be stored in a private variable and written
 // to the global buffer later only once.
 __kernel void mult_stencils_var_var_reordered(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int gha, int ghb, int ghc)
@@ -200,9 +200,9 @@ __kernel void mult_stencils_var_var_reordered(
 
 // Same as mult_stencils_var_var_reordered but using min function instead of ternary operators.
 __kernel void mult_stencils_var_var_reordered_minfn(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int gha, int ghb, int ghc)
@@ -263,9 +263,9 @@ __kernel void mult_stencils_var_var_reordered_minfn(
 
 // Same as mult_stencils_var_var_reordered_minfn but using smaller data types, too.
 __kernel void mult_stencils_var_var_reordered_minfn_small_types(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     ushort m, ushort n, ushort o,
     uchar wa, uchar wb,
     uchar gha, uchar ghb, uchar ghc)
@@ -326,9 +326,9 @@ __kernel void mult_stencils_var_var_reordered_minfn_small_types(
 
 // Same as mult_stencils_var_var_reordered_minfn but with const specifiers.
 __kernel void mult_stencils_var_var_reordered_minfn_consts(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     const int m, const int n, const int o,
     const int wa, const int wb,
     const int gha, const int ghb, const int ghc)
@@ -389,9 +389,9 @@ __kernel void mult_stencils_var_var_reordered_minfn_consts(
 
 // Same as mult_stencils_var_var_reordered_minfn but started as a 1d kernel.
 __kernel void mult_stencils_var_var_reordered_minfn_1d(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int gha, int ghb, int ghc)
@@ -462,9 +462,9 @@ __kernel void mult_stencils_var_var_reordered_minfn_1d(
  * Remember to update ghosts of c if ghc > 0 afterwards.
  */
 __kernel void mult_stencils_var_fix(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int gha, int ghc)
@@ -531,9 +531,9 @@ __kernel void mult_stencils_var_fix(
  * Remember to update ghosts of c if ghc > 0 afterwards.
  */
 __kernel void mult_stencils_var_fix_reordered(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int gha, int ghc)
@@ -587,9 +587,9 @@ __kernel void mult_stencils_var_fix_reordered(
 }
 
 __kernel void mult_stencils_var_fix_reordered_constb(
-    __global double *restrict a,
-    __constant double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __constant double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int gha, int ghc)
@@ -644,9 +644,9 @@ __kernel void mult_stencils_var_fix_reordered_constb(
 
 // CAUTION: Probably does not yield correct results for small grids, only for experimental purposes!
 __kernel void mult_stencils_var_fix_reordered_localb(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int gha, int ghc)
@@ -712,9 +712,9 @@ __kernel void mult_stencils_var_fix_reordered_localb(
 // this version has the widths of the stencils as inline numbers (e.g. replaced via string manipulation and recompiled)
 // only for wa = wb = 3 for now
 __kernel void mult_stencils_var_fix_reordered_widths_inline(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int gha, int ghc)
 {
@@ -757,9 +757,9 @@ __kernel void mult_stencils_var_fix_reordered_widths_inline(
 
 // stores bounds of innermost loop in variables to reduce calls to min
 __kernel void mult_stencils_var_fix_reordered_loop_bounds_preserved(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int gha, int ghc)
@@ -833,9 +833,9 @@ __kernel void mult_stencils_var_fix_reordered_loop_bounds_preserved(
 
 // reordered + parallel c loop. Must be called with m x n x o*wc*wc*wc work-items
 __kernel void mult_stencils_var_fix_reordered_parallel_c(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int gha, int ghc)
@@ -894,9 +894,9 @@ __kernel void mult_stencils_var_fix_reordered_parallel_c(
  * Remember to update ghosts of c if ghc > 0 afterwards.
  */
 __kernel void mult_stencils_fix_var(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int ghb, int ghc)
@@ -959,9 +959,9 @@ __kernel void mult_stencils_fix_var(
 
 // reordered for loops
 __kernel void mult_stencils_fix_var_reordered(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int ghb, int ghc)
@@ -1020,9 +1020,9 @@ __kernel void mult_stencils_fix_var_reordered(
 
 // reordered for loops + parallel c loops. Must be called with m x n x o*wc*wc*wc work-items
 __kernel void mult_stencils_fix_var_reordered_parallel_c(
-    __global double *restrict a,
-    __global double *restrict b,
-    __global double *restrict c,
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
     int m, int n, int o,
     int wa, int wb,
     int ghb, int ghc)
@@ -1078,7 +1078,7 @@ __kernel void mult_stencils_fix_var_reordered_parallel_c(
 }
 
 /*********************************************************
- ******************** Utility kernels ********************
+ *                    Utility kernels                    *
  *********************************************************/
 
 // Form partial sum of buf per work-group and write result into buf_local.
@@ -1089,9 +1089,9 @@ __kernel void mult_stencils_fix_var_reordered_parallel_c(
 // partial_sums's size must be equal to number of work-groups.
 // buf_local's size must be equal to work-group size.
 __kernel void sum_partial_global_eq_num_elements(
-    __global double *restrict buf,
-    __global double *restrict partial_sums,
-    __local double *buf_local,
+    __global double* restrict buf,
+    __global double* restrict partial_sums,
+    __local double* buf_local,
     int num_elements)
 {
     int i = get_global_id(0);
@@ -1133,9 +1133,9 @@ __kernel void sum_partial_global_eq_num_elements(
 // partial_sums's size must be equal to number of work-groups.
 // buf_local's size must be equal to work-group size.
 __kernel void sum_partial_global_eq_half_num_elements(
-    __global double *restrict buf,
-    __global double *restrict partial_sums,
-    __local double *buf_local,
+    __global double* restrict buf,
+    __global double* restrict partial_sums,
+    __local double* buf_local,
     int num_elements)
 {
     int i = get_global_id(0);
@@ -1174,14 +1174,14 @@ __kernel void sum_partial_global_eq_half_num_elements(
 // Form partial sum of buf per work-group and write result into buf_local.
 // For full sum of buf sum_finish must be enqueued after this kernel (so global memory gets synchronized between work-groups).
 // Not that using barrier(CLK_GLOBAL_MEM_FENCE) does not work for this as it does not synchronize work-groups.
-// Must be called with a 1-D kernel range with #work-items = 0.5 * #elements in buf.
-// num_elements must be half of #elements in buf.
+// Must be called with a 1-D kernel range with #work-items = 0.25 * #elements in buf.
+// num_elements must be quarter of #elements in buf.
 // partial_sums's size must be equal to number of work-groups.
 // buf_local's size must be equal to work-group size.
 __kernel void sum_partial_global_eq_quarter_num_elements(
-    __global double *restrict buf,
-    __global double *restrict partial_sums,
-    __local double *buf_local,
+    __global double* restrict buf,
+    __global double* restrict partial_sums,
+    __local double* buf_local,
     int num_elements)
 {
     int i = get_global_id(0);
@@ -1224,15 +1224,15 @@ __kernel void sum_partial_global_eq_quarter_num_elements(
 // Form partial sum of buf per work-group and write result into buf_local.
 // For full sum of buf sum_finish must be enqueued after this kernel (so global memory gets synchronized between work-groups).
 // Not that using barrier(CLK_GLOBAL_MEM_FENCE) does not work for this as it does not synchronize work-groups.
-// Must be called with a 1-D kernel range with #work-items = 0.5 * #elements in buf.
-// num_elements must be half of #elements in buf.
+// Must be called with a 1-D kernel range with #work-items = 1/fractions * #elements in buf.
+// num_elements must be 1/fraction * #elements in buf.
 // partial_sums's size must be equal to number of work-groups.
 // buf_local's size must be equal to work-group size.
 // fractions determines the size of mapping of work-items to num_elements, i.e. 4 means #wi = 1/4 * #elements
 __kernel void sum_partial_global_eq_x_num_elements(
-    __global double *restrict buf,
-    __global double *restrict partial_sums,
-    __local double *buf_local,
+    __global double* restrict buf,
+    __global double* restrict partial_sums,
+    __local double* buf_local,
     int num_elements,
     int fractions)
 {
@@ -1242,7 +1242,7 @@ __kernel void sum_partial_global_eq_x_num_elements(
 
     if (i < num_elements)
     {
-        // copy buf of this work-item into local storage. Two values since #wi = num_elements / 2 + padding
+        // copy buf of this work-item into local storage.
         buf_local[iloc] = buf[i];
 
         for (int f = 1; f < fractions; f++)
@@ -1274,8 +1274,8 @@ __kernel void sum_partial_global_eq_x_num_elements(
 // Sums buf_partial_sums and writes result into buf_sum. buf_partial_sums needs to be filled using sum_partial before using this kernel.
 // Must be called with only one work-item which iterates over the partial sums.
 __kernel void sum_finish(
-    __global double *restrict buf_partial_sums,
-    __global double *restrict buf_sum,
+    __global double* restrict buf_partial_sums,
+    __global double* restrict buf_sum,
     int partial_sums_count)
 {
     double sum = 0;
