@@ -271,8 +271,9 @@ namespace mgcl
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
         size_t global[2] = {static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-        const size_t local[2] = {static_cast<size_t>(ngh > 4 ? 4 : ngh),
-                                 static_cast<size_t>(ogh > 8 ? 8 : ogh)}; // TODO problem.jacobi_wg_size_x
+        // const size_t local[2] = {static_cast<size_t>(ngh > 4 ? 4 : ngh),
+        //                          static_cast<size_t>(ogh > 8 ? 8 : ogh)}; // TODO problem.jacobi_wg_size_x
+        const size_t local[2] = {1, 32};
 
         for (int i = 0; i < 2; i++)
             if (global[i] % local[i] != 0)
@@ -684,8 +685,9 @@ namespace mgcl
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-        const size_t local[3] = {static_cast<size_t>(mgh > 4 ? 4 : mgh), static_cast<size_t>(ngh > 4 ? 4 : ngh),
-                                 static_cast<size_t>(ogh > 4 ? 4 : ogh)};
+        // const size_t local[3] = {static_cast<size_t>(mgh > 4 ? 4 : mgh), static_cast<size_t>(ngh > 4 ? 4 : ngh),
+        //                          static_cast<size_t>(ogh > 4 ? 4 : ogh)};
+        const size_t local[3] = {1, 1, 32};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
