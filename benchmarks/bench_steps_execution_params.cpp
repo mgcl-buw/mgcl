@@ -35,6 +35,13 @@ struct Result
     double loco;
 };
 
+std::string getKernelOptimizationsFilePath()
+{
+    std::string filePath = __FILE__;
+    std::string dirPath = filePath.substr(0, filePath.rfind("/"));
+    return dirPath.append("/kernel_optimizations.cl");
+}
+
 /*
  * The benchmarks in this file aim to find the optimal execution parameters, i.e. work group sizes, for each step of
  * the multigrid method for a single GPU without MPI. These steps are:
