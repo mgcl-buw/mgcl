@@ -1285,3 +1285,115 @@ __kernel void sum_finish(
 
     buf_sum[0] = sum;
 }
+
+/**************************************
+ ***                                ***
+ *          Jacobi Kernels            *
+ ***                                ***
+ **************************************/
+
+// TODO
+
+/**************************************
+ ***                                ***
+ *          Residual Kernels          *
+ ***                                ***
+ **************************************/
+
+/*
+ * Calculates residual with a 27p varying stencil.
+ * 3d kernel, must be launched with ghosted mxnxo work-items, i.e. #work-items == amount of ghosted grid cells.
+ * Work-group size can be arbitrary chosen. 1x1x32 seems optimal for my laptop gpu.
+ * Arguments:
+ *   v_in: current guess, same size of ghosted grid. Only gets read in this kernel.
+ *      f: rhs, same size of ghosted grids. Only gets read in this kernel.
+ *      r: residual, same size of ghosted grid. Only gets written in this kernel.
+ * stencilValues: 27p varying stencil per grid cell. Size = mgh*ngh*ogh * 27.
+ *      m: ghosted grid size in dim 1
+ *      n: ghosted grid size in dim 2
+ *      o: ghosted grid size in dim 3
+ * ghosts: Amount of ghosts of v_in, f and r
+ * ghosts_sv: Amount of ghosts of stencilValues
+ *   moff: Amount of ghost cells which shall be calculated in dim 1.
+ *   noff: Amount of ghost cells which shall be calculated in dim 2.
+ *   ooff: Amount of ghost cells which shall be calculated in dim 3.
+ *   I.e. moff = -1 means that the first layer of ghost cells will be updated, too. That would require ghosts >= 2 however.
+ */
+__kernel void residual_27point_varying_stencil(
+    __global double* restrict v_in,
+    __global double* restrict f,
+    __global double* restrict r,
+    __global double* restrict stencilValues,
+    const int m, const int n, const int o,
+    const int ghosts, const int ghosts_sv,
+    const int moff, const int noff, const int ooff)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
+
+    // loop boundaries
+    // TODO maybe refactor to use v_ghm, etc.?
+    int istart_v = ghosts + moff;
+    int jstart_v = ghosts + noff;
+    int kstart_v = ghosts + ooff;
+    int iend_v = m - ghosts - moff;
+    int jend_v = n - ghosts - noff;
+    int kend_v = o - ghosts - ooff;
+
+    // calculate residual only for relevant cells (off = 0: only real cells)
+    if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
+    {
+        int ioff = n * o;
+        int joff = o;
+        int koff = 1;
+        int index = i * ioff + j * o + k;
+
+        int koff_sv = 27;
+        int joff_sv = ((o - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
+        int ioff_sv = ((n - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
+        int index_sv = (i + (ghosts_sv - ghosts)) * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
+
+        // A*v
+        // clang-format off
+        double stencilsum = stencilValues[index_sv + 9 + 3 + 1] * v_in[index]
+            + stencilValues[index_sv + 9 + 3]      * v_in[index - 1]
+            + stencilValues[index_sv + 9 + 3 + 2]  * v_in[index + 1]
+            + stencilValues[index_sv + 9 + 1]      * v_in[index - joff]
+            + stencilValues[index_sv + 9 + 6 + 1]  * v_in[index + joff]
+            + stencilValues[index_sv + 3 + 1]      * v_in[index - ioff]
+            + stencilValues[index_sv + 18 + 3 + 1] * v_in[index + ioff]
+            
+            + stencilValues[index_sv + 9]          * v_in[index - joff - koff]
+            + stencilValues[index_sv + 9 + 2]      * v_in[index - joff + koff]
+            + stencilValues[index_sv + 9 + 6]      * v_in[index + joff - koff]
+            + stencilValues[index_sv + 9 + 6 + 2]  * v_in[index + joff + koff]
+            + stencilValues[index_sv + 3]          * v_in[index - ioff - koff]
+            + stencilValues[index_sv + 3 + 2]      * v_in[index - ioff + koff]
+            + stencilValues[index_sv + 18 + 3]     * v_in[index + ioff - koff]
+            + stencilValues[index_sv + 18 + 3 + 2] * v_in[index + ioff + koff]
+            + stencilValues[index_sv + 1]          * v_in[index - ioff - joff]
+            + stencilValues[index_sv + 6 + 1]      * v_in[index - ioff + joff]
+            + stencilValues[index_sv + 18 + 1]     * v_in[index + ioff - joff]
+            + stencilValues[index_sv + 18 + 6 + 1] * v_in[index + ioff + joff]
+
+            + stencilValues[index_sv]              * v_in[index - ioff - joff - koff]
+            + stencilValues[index_sv + 2]          * v_in[index - ioff - joff + koff]
+            + stencilValues[index_sv + 6]          * v_in[index - ioff + joff - koff]
+            + stencilValues[index_sv + 6 + 2]      * v_in[index - ioff + joff + koff]
+            + stencilValues[index_sv + 18]         * v_in[index + ioff - joff - koff]
+            + stencilValues[index_sv + 18 + 2]     * v_in[index + ioff - joff + koff]
+            + stencilValues[index_sv + 18 + 6]     * v_in[index + ioff + joff - koff]
+            + stencilValues[index_sv + 18 + 6 + 2] * v_in[index + ioff + joff + koff];
+        // clang-format on
+
+        // if (i == 2 && j == 2 && k == 2)
+        // {
+        //     printf("ocl stencilsum = %e\n", stencilsum);
+        //     print27point_sv(v_in, index, ioff, joff, koff, stencilValues, index_sv);
+        // }
+
+        // r = f - A*v
+        r[index] = f[index] - stencilsum;
+    }
+}
