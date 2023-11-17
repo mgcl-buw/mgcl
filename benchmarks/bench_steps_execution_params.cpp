@@ -42,6 +42,10 @@ std::string getKernelOptimizationsFilePath()
     return dirPath.append("/kernel_optimizations.cl");
 }
 
+void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
+                      std::vector<Result>& minTimes,
+                      int ghosts, bool return_residual, std::string kernelName);
+
 /*
  * The benchmarks in this file aim to find the optimal execution parameters, i.e. work group sizes, for each step of
  * the multigrid method for a single GPU without MPI. These steps are:
@@ -96,11 +100,34 @@ TEST_CASE("exec_params_residual")
     int ghosts = 1;
     bool return_residual = true;
 
+    std::vector<Result> minTimes;
+    runResidualBench(gridsTBT, localsTBT, minTimes, ghosts, return_residual, "residual_27point_varying_stencil_3d_one_wi_per_cell");
+
+    std::cout << "name;m;n;o;locm;locn;loco;minTimeInMs" << std::endl;
+    for (auto r : minTimes)
+    {
+        std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << //
+            r.locm << ";" << r.locn << ";" << r.loco << ";" << std::setprecision(17) << r.minTime << std::endl;
+    }
+}
+
+/**
+ * @brief Benchmarks different grid sizes and work-group sizes for a given residual kernel.
+ *
+ * @param gridsTBT grids to be tested
+ * @param localsTBT wg sizes to be tested
+ * @param benchname name of the benchmark
+ * @param minTimes array of Result, minimum timings of this benchmark will be appended
+ * @param kernelName name of the kernel in kernel_optimizations.cl file
+ */
+void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
+                      std::vector<Result>& minTimes, int ghosts, bool return_residual,
+                      std::string kernelName)
+{
+
     ankerl::nanobench::Bench b;
     b.timeUnit(1ms, "ms")
         .minEpochTime(100ms);
-
-    std::vector<Result> minTimes;
 
     for (auto gr : gridsTBT)
         for (auto lo : localsTBT)
@@ -124,6 +151,7 @@ TEST_CASE("exec_params_residual")
             mgcl::Problem problem(m, n, o, f, v);
             problem.setUseOpencl(true);
             problem.setSilent(true);
+            problem.setKernelFile(getKernelOptimizationsFilePath());
             problem.getOpenCLHelper().init();
             mgcl::OpenCLHelper& oclh = problem.getOpenCLHelper();
             cl_context context = oclh.getContext();
@@ -174,8 +202,7 @@ TEST_CASE("exec_params_residual")
             b.run(name.c_str(), [&]
                   {
                       // Create the compute kernel from the program
-                      const char* kernel_name;
-                      kernel_name = "residual_27point_varying_stencil";
+                      const char* kernel_name = kernelName.c_str();
 
                       // Create the compute kernel from the program
                       cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper().getProgram(), kernel_name, &err);
@@ -275,11 +302,4 @@ TEST_CASE("exec_params_residual")
             result.loco = lo[2];
             minTimes.push_back(result);
         }
-
-    std::cout << "name;m;n;o;locm;locn;loco;minTimeInMs" << std::endl;
-    for (auto r : minTimes)
-    {
-        std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << //
-            r.locm << ";" << r.locn << ";" << r.loco << ";" << std::setprecision(17) << r.minTime << std::endl;
-    }
 }
