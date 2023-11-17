@@ -31,10 +31,6 @@ TEST_CASE("OpenCLHelper")
 
     SECTION("init kernelDir")
     {
-        std::string filePath = __FILE__;
-        std::string dirPath = filePath.substr(0, filePath.rfind("/"));
-        openCLHelper.setKernelDir(dirPath.append("/../build/test/"));
-
         REQUIRE_FALSE(openCLHelper.isInitialized());
         REQUIRE_NOTHROW(openCLHelper.init());
         REQUIRE(openCLHelper.isInitialized());

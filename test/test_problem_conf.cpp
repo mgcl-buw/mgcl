@@ -520,7 +520,6 @@ TEST_CASE("Problem::init")
         mgcl::Problem p2(m, n, o, d_f, d_v);
         p2.setGhostsIn(ghosts);
         p2.setReuseOpenclBuffers(true);
-        p2.getOpenCLHelper().setKernelDir("./");
         REQUIRE(p2.getDFPtr() == d_f);
         REQUIRE(p2.getDVPtr() == d_v);
         REQUIRE(p2.getOpenCLHelper().getProblem() == &p2);
