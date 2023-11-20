@@ -169,6 +169,9 @@ TEST_CASE("exec_params_jacobi")
     std::vector<std::vector<int>> localsTBT3d = {
         {32, 1, 1}, {1, 1, 32}, {64, 1, 1}, {1, 1, 64}, {128, 1, 1}, {4, 4, 4}, {4, 4, 8} //
     };
+    std::vector<std::vector<int>> localsTBT2d = {
+        {32, 1, 1}, {1, 32, 1}, {4, 8, 1}, {8, 4, 1}, {4, 4, 1}, {4, 16, 1} //
+    };
     std::vector<std::vector<int>> localsTBT1d = {
         {32, 1, 1}, {64, 1, 1}, {128, 1, 1}, {256, 1, 1}, {512, 1, 1}, //
     };
@@ -179,6 +182,13 @@ TEST_CASE("exec_params_jacobi")
         int n = lo[1];
         int o = lo[2];
         std::cout << "  " << m << "," << n << "," << o << std::endl;
+    }
+    std::cout << "Testing the following local sizes for 2d" << std::endl;
+    for (auto lo : localsTBT2d)
+    {
+        int m = lo[0];
+        int n = lo[1];
+        std::cout << "  " << m << "," << n << std::endl;
     }
     std::cout << "Testing the following local sizes for 1d" << std::endl;
     for (auto lo : localsTBT1d)
@@ -191,7 +201,7 @@ TEST_CASE("exec_params_jacobi")
     bool return_residual = true;
 
     std::vector<Result> minTimes;
-    runJacobiBench(gridsTBT, localsTBT1d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil", 2,
+    runJacobiBench(gridsTBT, localsTBT2d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil", 2,
                    CLI_ARGS::nu1, 1, 0.8);
 
     std::cout << "name;m;n;o;locm;locn;loco;minTimeInMs" << std::endl;
