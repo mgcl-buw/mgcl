@@ -268,9 +268,9 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
                               // printf("%ld (multiple of %ld)\n", global[i], local[i]);
                           }
 
-                      if (kernelDim == 1)
+                      if (kernelDim == D1)
                           err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 1, NULL, &global[0], &local[0], 0, NULL, NULL);
-                      else if (kernelDim == 3)
+                      else if (kernelDim == D3)
                           err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
                       mgcl::mgclCheckError(err, "Enqueueing residual kernel");
 
