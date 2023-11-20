@@ -335,7 +335,7 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
                       // set 3d sizes initially
                       size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
                       size_t local[3] = {static_cast<size_t>(lo[0]), static_cast<size_t>(lo[1]), static_cast<size_t>(lo[2])};
-                      if (kernelDim == 1)
+                      if (kernelDim == D1)
                       {
                           global[0] = static_cast<size_t>(mgh * ngh * ogh);
                           local[0] = static_cast<size_t>(lo[0]);
@@ -539,12 +539,23 @@ void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vec
                       mgcl::mgclCheckError(err, "Setting kernel arguments");
 
                       // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
-                      size_t global[2] = {static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-                      // const size_t local[2] = {static_cast<size_t>(ngh > 4 ? 4 : ngh),
-                      //                          static_cast<size_t>(ogh > 8 ? 8 : ogh)}; // TODO problem.jacobi_wg_size_x
-                      const size_t local[2] = {1, 32};
+                      // set 3d sizes initially
+                      size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
+                      size_t local[3] = {static_cast<size_t>(lo[0]), static_cast<size_t>(lo[1]), static_cast<size_t>(lo[2])};
+                      if (kernelDim == D1)
+                      {
+                          global[0] = static_cast<size_t>(mgh * ngh * ogh);
+                          local[0] = static_cast<size_t>(lo[0]);
+                      }
+                      else if (kernelDim == D2)
+                      {
+                          global[0] = static_cast<size_t>(mgh);
+                          global[1] = static_cast<size_t>(ngh);
+                          local[0] = static_cast<size_t>(lo[0]);
+                          local[2] = static_cast<size_t>(lo[1]);
+                      }
 
-                      for (int i = 0; i < 2; i++)
+                      for (int i = 0; i < 3; i++)
                           if (global[i] % local[i] != 0)
                           {
                               // printf("padding global size %d from %ld to ", i, global[i]);
@@ -601,7 +612,8 @@ void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vec
                               err = clSetKernelArg(kernel, pos - 1, sizeof(int), &idx_start);
                               mgcl::mgclCheckError(err, "Setting kernel arguments");
 
-                              err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
+                              if (kernelDim == D2)
+                                  err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
                               mgcl::mgclCheckError(err, "Enqueueing kernel");
                           }
                       }
@@ -631,5 +643,22 @@ void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vec
                       clReleaseKernel(kernel); //
                       oclh.finish();           //
                   });
+
+            // Get minimum of all epochs in ms
+            double min = 1000000;
+            for (auto r : b.results())
+                if (r.minimum(ankerl::nanobench::Result::Measure::elapsed) < min)
+                    min = r.minimum(ankerl::nanobench::Result::Measure::elapsed) * 1000.0 /** 1000.0 * 1000.0*/;
+
+            Result result;
+            result.name = name;
+            result.minTime = min;
+            result.m = m;
+            result.n = n;
+            result.o = o;
+            result.locm = lo[0];
+            result.locn = lo[1];
+            result.loco = lo[2];
+            minTimes.push_back(result);
         }
 }
