@@ -35,8 +35,7 @@ struct Result
     double loco;
 };
 
-std::string
-getKernelOptimizationsFilePath()
+std::string getKernelOptimizationsFilePath()
 {
     std::string filePath = __FILE__;
     std::string dirPath = filePath.substr(0, filePath.rfind("/"));
