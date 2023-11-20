@@ -311,6 +311,7 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
                       }
 
                       clReleaseKernel(kernel); // TODO maybe clFinish before release?
+                      oclh.finish();           //
                   });
 
             // Get minimum of all epochs in ms
