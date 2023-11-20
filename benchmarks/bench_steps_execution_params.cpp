@@ -35,7 +35,15 @@ struct Result
     double loco;
 };
 
-std::string getKernelOptimizationsFilePath()
+enum KernelDim
+{
+    D1,
+    D2,
+    D3
+};
+
+std::string
+getKernelOptimizationsFilePath()
 {
     std::string filePath = __FILE__;
     std::string dirPath = filePath.substr(0, filePath.rfind("/"));
@@ -44,7 +52,7 @@ std::string getKernelOptimizationsFilePath()
 
 void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
                       std::vector<Result>& minTimes,
-                      int ghosts, bool return_residual, std::string kernelName);
+                      int ghosts, bool return_residual, std::string kernelName, KernelDim kernelDim);
 
 /*
  * The benchmarks in this file aim to find the optimal execution parameters, i.e. work group sizes, for each step of
@@ -85,23 +93,33 @@ TEST_CASE("exec_params_residual")
         std::cout << "  " << m << "," << n << "," << o << std::endl;
     }
 
-    std::vector<std::vector<int>> localsTBT = {
+    std::vector<std::vector<int>> localsTBT3d = {
         {32, 1, 1}, {1, 1, 32}, {64, 1, 1}, {1, 1, 64}, {128, 1, 1}, {4, 4, 4}, {4, 4, 8} //
     };
-    std::cout << "Testing the following local sizes" << std::endl;
-    for (auto lo : localsTBT)
+    std::vector<std::vector<int>> localsTBT1d = {
+        {32, 1, 1}, {64, 1, 1}, {128, 1, 1}, {256, 1, 1}, {512, 1, 1}, //
+    };
+    std::cout << "Testing the following local sizes for 3d" << std::endl;
+    for (auto lo : localsTBT3d)
     {
         int m = lo[0];
         int n = lo[1];
         int o = lo[2];
         std::cout << "  " << m << "," << n << "," << o << std::endl;
     }
+    std::cout << "Testing the following local sizes for 1d" << std::endl;
+    for (auto lo : localsTBT1d)
+    {
+        int m = lo[0];
+        std::cout << "  " << m << std::endl;
+    }
 
     int ghosts = 1;
     bool return_residual = true;
 
     std::vector<Result> minTimes;
-    runResidualBench(gridsTBT, localsTBT, minTimes, ghosts, return_residual, "residual_27point_varying_stencil_3d_one_wi_per_cell");
+    runResidualBench(gridsTBT, localsTBT3d, minTimes, ghosts, return_residual, "residual_27point_varying_stencil_3d_one_wi_per_cell", D3);
+    runResidualBench(gridsTBT, localsTBT1d, minTimes, ghosts, return_residual, "residual_27point_varying_stencil_1d_one_wi_per_cell", D1);
 
     std::cout << "name;m;n;o;locm;locn;loco;minTimeInMs" << std::endl;
     for (auto r : minTimes)
@@ -119,10 +137,11 @@ TEST_CASE("exec_params_residual")
  * @param benchname name of the benchmark
  * @param minTimes array of Result, minimum timings of this benchmark will be appended
  * @param kernelName name of the kernel in kernel_optimizations.cl file
+ * @param kernelDim dimensions of the kernel
  */
 void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
                       std::vector<Result>& minTimes, int ghosts, bool return_residual,
-                      std::string kernelName)
+                      std::string kernelName, KernelDim kernelDim)
 {
 
     ankerl::nanobench::Bench b;
@@ -187,7 +206,8 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
             if (moff * 2 >= m || noff * 2 >= n || ooff * 2 >= o)
                 throw "2*moff, 2*noff and 2*ooff must not be >= m, n or o";
 
-            std::string name = std::string("mgcl_residual")
+            std::string name = std::string(kernelName)
+                                   .append("_")
                                    .append(std::to_string(m))
                                    .append("x")
                                    .append(std::to_string(n))
@@ -231,9 +251,14 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
                       mgcl::mgclCheckError(err, "Setting residual kernel arguments");
 
                       // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
+                      // set 3d sizes initially
                       size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-                      const size_t local[3] = {static_cast<size_t>(lo[0]), static_cast<size_t>(lo[1]),
-                                               static_cast<size_t>(lo[2])};
+                      size_t local[3] = {static_cast<size_t>(lo[0]), static_cast<size_t>(lo[1]), static_cast<size_t>(lo[2])};
+                      if (kernelDim == 1)
+                      {
+                          global[0] = static_cast<size_t>(mgh * ngh * ogh);
+                          local[0] = static_cast<size_t>(lo[0]);
+                      }
 
                       for (int i = 0; i < 3; i++)
                           if (global[i] % local[i] != 0)
@@ -243,7 +268,10 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
                               // printf("%ld (multiple of %ld)\n", global[i], local[i]);
                           }
 
-                      err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
+                      if (kernelDim == 1)
+                          err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 1, NULL, &global[0], &local[0], 0, NULL, NULL);
+                      else if (kernelDim == 3)
+                          err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
                       mgcl::mgclCheckError(err, "Enqueueing residual kernel");
 
                       if (problem.isPeriodic())
