@@ -544,7 +544,7 @@ void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vec
                           global[0] = static_cast<size_t>(mgh);
                           global[1] = static_cast<size_t>(ngh);
                           local[0] = static_cast<size_t>(lo[0]);
-                          local[2] = static_cast<size_t>(lo[1]);
+                          local[1] = static_cast<size_t>(lo[1]);
                       }
 
                       for (int i = 0; i < 3; i++)
