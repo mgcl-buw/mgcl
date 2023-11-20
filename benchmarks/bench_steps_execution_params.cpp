@@ -35,13 +35,6 @@ struct Result
     double loco;
 };
 
-enum KernelDim
-{
-    D1,
-    D2,
-    D3
-};
-
 std::string
 getKernelOptimizationsFilePath()
 {
@@ -52,10 +45,10 @@ getKernelOptimizationsFilePath()
 
 void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
                       std::vector<Result>& minTimes,
-                      int ghosts, bool return_residual, std::string kernelName, KernelDim kernelDim);
+                      int ghosts, bool return_residual, std::string kernelName, int kernelDim);
 void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
                     std::vector<Result>& minTimes,
-                    int ghosts, bool return_residual, std::string kernelName, KernelDim kernelDim,
+                    int ghosts, bool return_residual, std::string kernelName, int kernelDim,
                     int maxiter, int stepsPerIter, double omega);
 
 /*
@@ -122,8 +115,8 @@ TEST_CASE("exec_params_residual")
     bool return_residual = true;
 
     std::vector<Result> minTimes;
-    runResidualBench(gridsTBT, localsTBT3d, minTimes, ghosts, return_residual, "residual_27point_varying_stencil_3d_one_wi_per_cell", D3);
-    runResidualBench(gridsTBT, localsTBT1d, minTimes, ghosts, return_residual, "residual_27point_varying_stencil_1d_one_wi_per_cell", D1);
+    runResidualBench(gridsTBT, localsTBT3d, minTimes, ghosts, return_residual, "residual_27point_varying_stencil_3d_one_wi_per_cell", 3);
+    runResidualBench(gridsTBT, localsTBT1d, minTimes, ghosts, return_residual, "residual_27point_varying_stencil_1d_one_wi_per_cell", 1);
 
     std::cout << "name;m;n;o;locm;locn;loco;minTimeInMs" << std::endl;
     for (auto r : minTimes)
@@ -199,7 +192,7 @@ TEST_CASE("exec_params_jacobi")
     bool return_residual = true;
 
     std::vector<Result> minTimes;
-    runJacobiBench(gridsTBT, localsTBT1d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil", D2,
+    runJacobiBench(gridsTBT, localsTBT1d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil", 2,
                    CLI_ARGS::nu1, 1, 0.8);
 
     std::cout << "name;m;n;o;locm;locn;loco;minTimeInMs" << std::endl;
@@ -222,7 +215,7 @@ TEST_CASE("exec_params_jacobi")
  */
 void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
                       std::vector<Result>& minTimes, int ghosts, bool return_residual,
-                      std::string kernelName, KernelDim kernelDim)
+                      std::string kernelName, int kernelDim)
 {
 
     ankerl::nanobench::Bench b;
@@ -335,7 +328,7 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
                       // set 3d sizes initially
                       size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
                       size_t local[3] = {static_cast<size_t>(lo[0]), static_cast<size_t>(lo[1]), static_cast<size_t>(lo[2])};
-                      if (kernelDim == D1)
+                      if (kernelDim == 1)
                       {
                           global[0] = static_cast<size_t>(mgh * ngh * ogh);
                           local[0] = static_cast<size_t>(lo[0]);
@@ -349,9 +342,9 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
                               // printf("%ld (multiple of %ld)\n", global[i], local[i]);
                           }
 
-                      if (kernelDim == D1)
+                      if (kernelDim == 1)
                           err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 1, NULL, &global[0], &local[0], 0, NULL, NULL);
-                      else if (kernelDim == D3)
+                      else if (kernelDim == 3)
                           err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
                       mgcl::mgclCheckError(err, "Enqueueing residual kernel");
 
@@ -416,7 +409,7 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
 
 void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
                     std::vector<Result>& minTimes,
-                    int ghosts, bool return_residual, std::string kernelName, KernelDim kernelDim,
+                    int ghosts, bool return_residual, std::string kernelName, int kernelDim,
                     int maxiter, int stepsPerIter, double omega)
 {
     ankerl::nanobench::Bench b;
@@ -542,12 +535,12 @@ void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vec
                       // set 3d sizes initially
                       size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
                       size_t local[3] = {static_cast<size_t>(lo[0]), static_cast<size_t>(lo[1]), static_cast<size_t>(lo[2])};
-                      if (kernelDim == D1)
+                      if (kernelDim == 1)
                       {
                           global[0] = static_cast<size_t>(mgh * ngh * ogh);
                           local[0] = static_cast<size_t>(lo[0]);
                       }
-                      else if (kernelDim == D2)
+                      else if (kernelDim == 2)
                       {
                           global[0] = static_cast<size_t>(mgh);
                           global[1] = static_cast<size_t>(ngh);
@@ -612,7 +605,7 @@ void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vec
                               err = clSetKernelArg(kernel, pos - 1, sizeof(int), &idx_start);
                               mgcl::mgclCheckError(err, "Setting kernel arguments");
 
-                              if (kernelDim == D2)
+                              if (kernelDim == 2)
                                   err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
                               mgcl::mgclCheckError(err, "Enqueueing kernel");
                           }
