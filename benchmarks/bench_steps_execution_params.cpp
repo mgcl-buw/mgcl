@@ -175,7 +175,7 @@ TEST_CASE("exec_params_jacobi")
     }
 
     std::vector<std::vector<int>> localsTBT3d = {
-        {1, 1, 32}, {1, 1, 64}, {4, 4, 4}, {4, 4, 8}, {8, 8, 8} //
+        {1, 1, 32}, {1, 4, 32}, {1, 1, 64}, {4, 4, 4}, {4, 4, 8}, {8, 8, 8} //
     };
     std::vector<std::vector<int>> localsTBT2d = {
         {1, 32, 1}, {4, 8, 1}, {8, 4, 1}, {4, 4, 1}, {4, 16, 1} //
