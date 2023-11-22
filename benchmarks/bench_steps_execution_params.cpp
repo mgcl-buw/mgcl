@@ -45,10 +45,10 @@ std::string getKernelOptimizationsFilePath()
 void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
                       std::vector<Result>& minTimes,
                       int ghosts, bool return_residual, std::string kernelName, int kernelDim);
-void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
-                    std::vector<Result>& minTimes,
-                    int ghosts, bool return_residual, std::string kernelName, int kernelDim,
-                    int maxiter, int stepsPerIter, double omega, bool checkResults);
+std::shared_ptr<mgcl::Cuboid> runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
+                                             std::vector<Result>& minTimes,
+                                             int ghosts, bool return_residual, std::string kernelName, int kernelDim,
+                                             int maxiter, int stepsPerIter, double omega, bool checkResults);
 
 // helper functions
 void create4thOrderProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl::Cuboid& solution);
@@ -236,10 +236,15 @@ TEST_CASE("exec_params_jacobi_check_results")
     bool return_residual = true;
 
     std::vector<Result> minTimes;
-    runJacobiBench(gridsTBT, localsTBT2d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil", 2,
-                   CLI_ARGS::nu1, 1, 0.8, true);
-    runJacobiBench(gridsTBT, localsTBT3d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil_3d", 3,
-                   CLI_ARGS::nu1, 1, 0.8, true);
+    auto v1 = runJacobiBench(gridsTBT, localsTBT2d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil", 2,
+                             CLI_ARGS::nu1, 1, 0.8, true);
+    auto v2 = runJacobiBench(gridsTBT, localsTBT3d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil_3d", 3,
+                             CLI_ARGS::nu1, 1, 0.8, true);
+
+    if (!v1->isEqual(*v2))
+        std::cerr << "solution not ok for kernel jacobi_iter_27point_varying_stencil_3d" << std::endl;
+    else
+        std::cerr << "solution ok for kernel jacobi_iter_27point_varying_stencil_3d" << std::endl;
 }
 
 /**
@@ -446,10 +451,26 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
         }
 }
 
-void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
-                    std::vector<Result>& minTimes,
-                    int ghosts, bool return_residual, std::string kernelName, int kernelDim,
-                    int maxiter, int stepsPerIter, double omega, bool checkResults)
+/**
+ * @brief Benchmarks Jacobi on the GPU.
+ *
+ * @param gridsTBT
+ * @param localsTBT
+ * @param minTimes
+ * @param ghosts
+ * @param return_residual
+ * @param kernelName
+ * @param kernelDim
+ * @param maxiter
+ * @param stepsPerIter
+ * @param omega
+ * @param checkResults If true, resuts will be checked and Jacobi is called only once.
+ * @returns Result v if checkResults is true
+ */
+std::shared_ptr<mgcl::Cuboid> runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
+                                             std::vector<Result>& minTimes,
+                                             int ghosts, bool return_residual, std::string kernelName, int kernelDim,
+                                             int maxiter, int stepsPerIter, double omega, bool checkResults)
 {
     ankerl::nanobench::Bench b;
     b.timeUnit(1ms, "ms")
@@ -674,15 +695,6 @@ void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vec
                       err = mgcl::MultigridEngine::updateGhosts(problem, dVIn_cuboid, nullptr, true);
                       mgcl::mgclCheckError(err, "Updating ghosts");
 
-                      if (checkResults)
-                      {
-                          dVIn_cuboid.read(commands, v.get(), true);
-                          if (!v->isEqual(*solution, 1e-1, true))
-                              std::cerr << " !!! solution not good from kernel " << kernelName << std::endl;
-                          else
-                              std::cerr << "solution ok for kernel " << kernelName << std::endl;
-                      }
-
                       // calculate residual and its norm
                       // if (return_residual)
                       // {
@@ -693,6 +705,12 @@ void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vec
                       clReleaseKernel(kernel); //
                       oclh.finish();           //
                   });
+
+            if (checkResults)
+            {
+                dVIn_cuboid.read(commands, v.get(), true);
+                return v;
+            }
 
             // Get minimum of all epochs in ms
             double min = 1000000;
@@ -711,6 +729,8 @@ void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vec
             result.loco = lo[2];
             minTimes.push_back(result);
         }
+
+    return nullptr;
 }
 
 // fills v, f and solution with a periodic 4th order problem. Dimensions and ghosts of all 3 inputs must match.
