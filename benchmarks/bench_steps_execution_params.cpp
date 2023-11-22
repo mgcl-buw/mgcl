@@ -244,8 +244,10 @@ TEST_CASE("exec_params_jacobi_check_results")
     bool return_residual = true;
 
     std::vector<Result> minTimes;
+    std::cout << "Running jacobi_iter_27point_varying_stencil ..." << std::endl;
     auto v1 = runJacobiBench(gridsTBT, localsTBT2d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil", 2,
                              CLI_ARGS::nu1, 1, 0.8, true);
+    std::cout << "Running jacobi_iter_27point_varying_stencil_3d ..." << std::endl;
     auto v2 = runJacobiBench(gridsTBT, localsTBT3d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil_3d", 3,
                              CLI_ARGS::nu1, 1, 0.8, true);
 
