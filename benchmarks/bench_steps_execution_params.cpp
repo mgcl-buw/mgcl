@@ -48,7 +48,11 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
 void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
                     std::vector<Result>& minTimes,
                     int ghosts, bool return_residual, std::string kernelName, int kernelDim,
-                    int maxiter, int stepsPerIter, double omega);
+                    int maxiter, int stepsPerIter, double omega, bool checkResults);
+
+// helper functions
+void create4thOrderProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl::Cuboid& solution);
+void sv_fill_27p_laplace(mgcl::VaryingStencil& s);
 
 /*
  * The benchmarks in this file aim to find the optimal execution parameters, i.e. work group sizes, for each step of
@@ -202,9 +206,9 @@ TEST_CASE("exec_params_jacobi")
 
     std::vector<Result> minTimes;
     runJacobiBench(gridsTBT, localsTBT2d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil", 2,
-                   CLI_ARGS::nu1, 1, 0.8);
+                   CLI_ARGS::nu1, 1, 0.8, false);
     runJacobiBench(gridsTBT, localsTBT3d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil_3d", 3,
-                   CLI_ARGS::nu1, 1, 0.8);
+                   CLI_ARGS::nu1, 1, 0.8, false);
 
     std::cout << "name;m;n;o;locm;locn;loco;minTimeInMs" << std::endl;
     for (auto r : minTimes)
@@ -212,6 +216,30 @@ TEST_CASE("exec_params_jacobi")
         std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << //
             r.locm << ";" << r.locn << ";" << r.loco << ";" << std::setprecision(17) << r.minTime << std::endl;
     }
+}
+
+TEST_CASE("exec_params_jacobi_check_results")
+{
+
+    std::vector<std::vector<int>> gridsTBT = {{32, 32, 32}};
+    std::vector<std::vector<int>> localsTBT3d = {
+        {1, 1, 32} //
+    };
+    std::vector<std::vector<int>> localsTBT2d = {
+        {1, 32, 1} //
+    };
+    std::vector<std::vector<int>> localsTBT1d = {
+        {32, 1, 1} //
+    };
+
+    int ghosts = 1;
+    bool return_residual = true;
+
+    std::vector<Result> minTimes;
+    runJacobiBench(gridsTBT, localsTBT2d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil", 2,
+                   CLI_ARGS::nu1, 1, 0.8, true);
+    runJacobiBench(gridsTBT, localsTBT3d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil_3d", 3,
+                   CLI_ARGS::nu1, 1, 0.8, true);
 }
 
 /**
@@ -421,11 +449,15 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
 void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vector<int>> localsTBT,
                     std::vector<Result>& minTimes,
                     int ghosts, bool return_residual, std::string kernelName, int kernelDim,
-                    int maxiter, int stepsPerIter, double omega)
+                    int maxiter, int stepsPerIter, double omega, bool checkResults)
 {
     ankerl::nanobench::Bench b;
     b.timeUnit(1ms, "ms")
         .minEpochTime(100ms);
+
+    // set number of epochs and epoch iterations to 1 if results shall be checked.
+    if (checkResults)
+        b.epochs(1).epochIterations(1).output(nullptr);
 
     int store_res = 0;
     int idx_start = 0;
@@ -444,7 +476,10 @@ void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vec
             auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
             auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
             auto r = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+            auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+            create4thOrderProblem(*v, *f, *solution);
             mgcl::VaryingStencil sv(m, n, o, 3, 2, 2, 2);
+            sv_fill_27p_laplace(sv);
             // int mgh = m + 2 * ghosts;
             // int ngh = n + 2 * ghosts;
             // int ogh = o + 2 * ghosts;
@@ -639,6 +674,15 @@ void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vec
                       err = mgcl::MultigridEngine::updateGhosts(problem, dVIn_cuboid, nullptr, true);
                       mgcl::mgclCheckError(err, "Updating ghosts");
 
+                      if (checkResults)
+                      {
+                          dVIn_cuboid.read(commands, v.get(), true);
+                          if (!v->isEqual(*solution, 1e-1, true))
+                              std::cerr << " !!! solution not good from kernel " << kernelName << std::endl;
+                          else
+                              std::cerr << "solution ok for kernel " << kernelName << std::endl;
+                      }
+
                       // calculate residual and its norm
                       // if (return_residual)
                       // {
@@ -667,4 +711,104 @@ void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vec
             result.loco = lo[2];
             minTimes.push_back(result);
         }
+}
+
+// fills v, f and solution with a periodic 4th order problem. Dimensions and ghosts of all 3 inputs must match.
+void create4thOrderProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl::Cuboid& solution)
+{
+    if (v.getM() != f.getM() || v.getN() != f.getN() || v.getO() != f.getO() || v.getM() != solution.getM() || v.getN() != solution.getN() || v.getO() != solution.getO())
+        throw "Dimensions must match.";
+
+    if (v.getGhostsM() != f.getGhostsM() || v.getGhostsN() != f.getGhostsN() || v.getGhostsO() != f.getGhostsO() || v.getGhostsM() != solution.getGhostsM() || v.getGhostsN() != solution.getGhostsN() || v.getGhostsO() != solution.getGhostsO())
+        throw "Ghosts must match.";
+
+    double hm = 1.0 / v.getM();
+    double hn = 1.0 / v.getN();
+    double ho = 1.0 / v.getO();
+
+    for (int i = v.getGhostsM(); i < v.getM() + v.getGhostsM(); i++)
+        for (int j = v.getGhostsN(); j < v.getN() + v.getGhostsN(); j++)
+            for (int k = v.getGhostsO(); k < v.getO() + v.getGhostsO(); k++)
+            {
+                double zs = i * hm;
+                double ys = j * hn;
+                double xs = k * ho;
+                double xs2 = xs * xs;
+                double ys2 = ys * ys;
+                double zs2 = zs * zs;
+                double xsm1_2 = (xs - 1) * (xs - 1);
+                double ysm1_2 = (ys - 1) * (ys - 1);
+                double zsm1_2 = (zs - 1) * (zs - 1);
+                double xs3 = xs * xs * xs;
+                double ys3 = ys * ys * ys;
+                double zs3 = zs * zs * zs;
+                double xsm1_3 = (xs - 1) * (xs - 1) * (xs - 1);
+                double ysm1_3 = (ys - 1) * (ys - 1) * (ys - 1);
+                double zsm1_3 = (zs - 1) * (zs - 1) * (zs - 1);
+                double xs4 = xs * xs * xs * xs;
+                double ys4 = ys * ys * ys * ys;
+                double zs4 = zs * zs * zs * zs;
+                double xsm1_4 = (xs - 1) * (xs - 1) * (xs - 1) * (xs - 1);
+                double ysm1_4 = (ys - 1) * (ys - 1) * (ys - 1) * (ys - 1);
+                double zsm1_4 = (zs - 1) * (zs - 1) * (zs - 1) * (zs - 1);
+                v[i][j][k] = 0;
+                solution[i][j][k] = 1000000 * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) *
+                                    (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) *
+                                    (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1));
+                f[i][j][k] =
+                    -1000000 *
+                    (12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_2 + 12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_2 * zsm1_4 +
+                     12 * xs4 * ys4 * zs4 * xsm1_2 * ysm1_4 * zsm1_4 + 32 * xs4 * ys4 * zs3 * xsm1_4 * ysm1_4 * zsm1_3 +
+                     12 * xs4 * ys4 * zs2 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs4 * ys3 * zs4 * xsm1_4 * ysm1_3 * zsm1_4 +
+                     12 * xs4 * ys2 * zs4 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs3 * ys4 * zs4 * xsm1_3 * ysm1_4 * zsm1_4 +
+                     12 * xs2 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_4);
+            }
+}
+
+void sv_fill_27p_laplace(mgcl::VaryingStencil& s)
+{
+    double hm = 1.0 / s.getDim1();
+    double factor = 1.0 / (30.0 * hm * hm);
+
+    // Fill with 27-point Laplace
+    for (int i = 0; i < s.getDim1gh(); i++)
+        for (int j = 0; j < s.getDim2gh(); j++)
+            for (int k = 0; k < s.getDim3gh(); k++)
+            {
+                // 27-point Laplace
+                // center
+                s[i][j][k][1][1][1] = factor * 128.0;
+
+                // adjacent to center
+                s[i][j][k][0][1][1] = factor * -1.0;
+                s[i][j][k][1][0][1] = factor * -1.0;
+                s[i][j][k][1][1][0] = factor * -1.0;
+                s[i][j][k][1][1][2] = factor * -1.0;
+                s[i][j][k][1][2][1] = factor * -1.0;
+                s[i][j][k][2][1][1] = factor * -1.0;
+
+                // diagonally adjacent to center
+                s[i][j][k][1][0][0] = -3.0 * factor;
+                s[i][j][k][1][0][2] = -3.0 * factor;
+                s[i][j][k][1][2][0] = -3.0 * factor;
+                s[i][j][k][1][2][2] = -3.0 * factor;
+                s[i][j][k][0][1][0] = -3.0 * factor;
+                s[i][j][k][0][1][2] = -3.0 * factor;
+                s[i][j][k][2][1][0] = -3.0 * factor;
+                s[i][j][k][2][1][2] = -3.0 * factor;
+                s[i][j][k][0][0][1] = -3.0 * factor;
+                s[i][j][k][0][2][1] = -3.0 * factor;
+                s[i][j][k][2][0][1] = -3.0 * factor;
+                s[i][j][k][2][2][1] = -3.0 * factor;
+
+                // corners
+                s[i][j][k][0][0][0] = -1.0 * factor;
+                s[i][j][k][0][0][2] = -1.0 * factor;
+                s[i][j][k][0][2][0] = -1.0 * factor;
+                s[i][j][k][0][2][2] = -1.0 * factor;
+                s[i][j][k][2][0][0] = -1.0 * factor;
+                s[i][j][k][2][0][2] = -1.0 * factor;
+                s[i][j][k][2][2][0] = -1.0 * factor;
+                s[i][j][k][2][2][2] = -1.0 * factor;
+            }
 }
