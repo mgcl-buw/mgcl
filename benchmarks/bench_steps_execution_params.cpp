@@ -167,10 +167,10 @@ TEST_CASE("exec_params_jacobi")
     }
 
     std::vector<std::vector<int>> localsTBT3d = {
-        {32, 1, 1}, {1, 1, 32}, {64, 1, 1}, {1, 1, 64}, {128, 1, 1}, {4, 4, 4}, {4, 4, 8} //
+        {1, 1, 32}, {1, 1, 64}, {4, 4, 4}, {4, 4, 8}, {8, 8, 8} //
     };
     std::vector<std::vector<int>> localsTBT2d = {
-        {32, 1, 1}, {1, 32, 1}, {4, 8, 1}, {8, 4, 1}, {4, 4, 1}, {4, 16, 1} //
+        {1, 32, 1}, {4, 8, 1}, {8, 4, 1}, {4, 4, 1}, {4, 16, 1} //
     };
     std::vector<std::vector<int>> localsTBT1d = {
         {32, 1, 1}, {64, 1, 1}, {128, 1, 1}, {256, 1, 1}, {512, 1, 1}, //
@@ -202,6 +202,8 @@ TEST_CASE("exec_params_jacobi")
 
     std::vector<Result> minTimes;
     runJacobiBench(gridsTBT, localsTBT2d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil", 2,
+                   CLI_ARGS::nu1, 1, 0.8);
+    runJacobiBench(gridsTBT, localsTBT3d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil_3d", 3,
                    CLI_ARGS::nu1, 1, 0.8);
 
     std::cout << "name;m;n;o;locm;locn;loco;minTimeInMs" << std::endl;
@@ -616,6 +618,8 @@ void runJacobiBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::vec
 
                               if (kernelDim == 2)
                                   err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
+                              else if (kernelDim == 3)
+                                  err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
                               mgcl::mgclCheckError(err, "Enqueueing kernel");
                           }
                       }
