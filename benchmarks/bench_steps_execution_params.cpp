@@ -121,12 +121,16 @@ TEST_CASE("exec_params_residual")
     runResidualBench(gridsTBT, localsTBT3d, minTimes, ghosts, return_residual, "residual_27point_varying_stencil_3d_one_wi_per_cell", 3);
     runResidualBench(gridsTBT, localsTBT1d, minTimes, ghosts, return_residual, "residual_27point_varying_stencil_1d_one_wi_per_cell", 1);
 
-    std::cout << "name;m;n;o;locm;locn;loco;minTimeInMs" << std::endl;
+    std::stringstream ss;
+    ss << "name;m;n;o;locm;locn;loco;minTimeInMs" << std::endl;
     for (auto r : minTimes)
     {
-        std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << //
+        ss << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << //
             r.locm << ";" << r.locn << ";" << r.loco << ";" << std::setprecision(17) << r.minTime << std::endl;
     }
+    std::string output = ss.str();
+    std::replace(output.begin(), output.end(), '.', ',');
+    std::cout << output;
 }
 
 /*
@@ -210,12 +214,16 @@ TEST_CASE("exec_params_jacobi")
     runJacobiBench(gridsTBT, localsTBT3d, minTimes, ghosts, return_residual, "jacobi_iter_27point_varying_stencil_3d", 3,
                    CLI_ARGS::nu1, 1, 0.8, false);
 
-    std::cout << "name;m;n;o;locm;locn;loco;minTimeInMs" << std::endl;
+    std::stringstream ss;
+    ss << "name;m;n;o;locm;locn;loco;minTimeInMs" << std::endl;
     for (auto r : minTimes)
     {
-        std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << //
+        ss << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << //
             r.locm << ";" << r.locn << ";" << r.loco << ";" << std::setprecision(17) << r.minTime << std::endl;
     }
+    std::string output = ss.str();
+    std::replace(output.begin(), output.end(), '.', ',');
+    std::cout << output;
 }
 
 TEST_CASE("exec_params_jacobi_check_results")
