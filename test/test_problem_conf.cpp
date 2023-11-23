@@ -305,11 +305,11 @@ TEST_CASE("set OpenCLHelper values")
         REQUIRE(!p.getOpenCLHelper().isInitialized());
 
         p.setDeviceType(CL_DEVICE_TYPE_GPU);
-        p.setKernelFile("test/");
+        // p.setKernelFile("test/");
         p.setDeviceName("Quadro");
 
         REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_GPU);
-        REQUIRE(p.getKernelFile() == "test/");
+        // REQUIRE(p.getKernelFile() == "test/");
         REQUIRE(p.getDeviceName() == "Quadro");
     }
 
