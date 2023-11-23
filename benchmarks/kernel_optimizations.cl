@@ -1321,7 +1321,7 @@ __kernel void jacobi_iter_27point_varying_stencil_3d(
     int k = get_global_id(2);
 
     // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
-    if (i >= idx_start && j >= idx_start && k >= idx_start && j < ngh - idx_start && j < ngh - idx_start && k < ogh - idx_start)
+    if (i >= idx_start && j >= idx_start && k >= idx_start && i < mgh - idx_start && j < ngh - idx_start && k < ogh - idx_start)
     {
         int ioff = ngh * ogh;
         int joff = ogh;
@@ -1331,7 +1331,7 @@ __kernel void jacobi_iter_27point_varying_stencil_3d(
         int koff_sv = 27;
         int joff_sv = ((ogh - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
         int ioff_sv = ((ngh - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
-        int index_sv = (idx_start - ghosts + ghosts_sv) * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
+        int index_sv = (i - ghosts + ghosts_sv) * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
 
         double res;
         double v_in_index = v_in[index];

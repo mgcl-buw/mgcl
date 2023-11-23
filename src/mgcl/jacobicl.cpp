@@ -219,7 +219,7 @@ namespace mgcl
         }
         else if (problem.stencilType == MGCL_VARYING)
         {
-            kernel_name = "jacobi_iter_27point_varying_stencil";
+            kernel_name = "jacobi_iter_27point_varying_stencil_3d";
         }
 
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
@@ -270,12 +270,21 @@ namespace mgcl
         mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
-        size_t global[2] = {static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
+        size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
         // const size_t local[2] = {static_cast<size_t>(ngh > 4 ? 4 : ngh),
         //                          static_cast<size_t>(ogh > 8 ? 8 : ogh)}; // TODO problem.jacobi_wg_size_x
-        const size_t local[2] = {1, 32};
+        size_t local[3] = {static_cast<size_t>(1), static_cast<size_t>(1), static_cast<size_t>(64)};
 
-        for (int i = 0; i < 2; i++)
+        // kernels that use constant Laplace stencils are 2d and need different global sizes
+        if (problem.stencilType != MGCL_VARYING)
+        {
+            global[0] = static_cast<size_t>(ngh);
+            global[1] = static_cast<size_t>(ogh);
+            local[0] = static_cast<size_t>(1);
+            local[1] = static_cast<size_t>(64);
+        }
+
+        for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
             {
                 // printf("padding global size %d from %ld to ", i, global[i]);
@@ -332,7 +341,10 @@ namespace mgcl
                 err = clSetKernelArg(kernel, pos - 1, sizeof(int), &idx_start);
                 mgclCheckError(err, "Setting kernel arguments");
 
-                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
+                if (problem.stencilType != MGCL_VARYING)
+                    err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
+                else
+                    err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing kernel");
             }
         }
