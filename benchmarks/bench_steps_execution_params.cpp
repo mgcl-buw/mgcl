@@ -386,9 +386,13 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
                       {
                           global[0] = static_cast<size_t>(mgh * ngh * ogh);
                           local[0] = static_cast<size_t>(lo[0]);
+                          global[1] = static_cast<size_t>(0);
+                          local[1] = static_cast<size_t>(1);
+                          global[2] = static_cast<size_t>(0);
+                          local[2] = static_cast<size_t>(1);
                       }
 
-                      for (int i = 0; i < 3; i++)
+                      for (int i = 0; i < 3 && i < kernelDim; i++)
                           if (global[i] % local[i] != 0)
                           {
                               // printf("padding global size %d from %ld to ", i, global[i]);
@@ -616,16 +620,22 @@ std::shared_ptr<mgcl::Cuboid> runJacobiBench(std::vector<std::vector<int>> grids
                       {
                           global[0] = static_cast<size_t>(mgh * ngh * ogh);
                           local[0] = static_cast<size_t>(lo[0]);
+                          global[1] = static_cast<size_t>(0);
+                          local[1] = static_cast<size_t>(1);
+                          global[2] = static_cast<size_t>(0);
+                          local[2] = static_cast<size_t>(1);
                       }
                       else if (kernelDim == 2)
                       {
                           global[0] = static_cast<size_t>(mgh);
                           global[1] = static_cast<size_t>(ngh);
+                          global[2] = static_cast<size_t>(0);
                           local[0] = static_cast<size_t>(lo[0]);
                           local[1] = static_cast<size_t>(lo[1]);
+                          local[2] = static_cast<size_t>(1);
                       }
 
-                      for (int i = 0; i < 3; i++)
+                      for (int i = 0; i < 3 && i < kernelDim; i++)
                           if (global[i] % local[i] != 0)
                           {
                               // printf("padding global size %d from %ld to ", i, global[i]);
