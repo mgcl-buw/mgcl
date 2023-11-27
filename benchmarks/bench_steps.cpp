@@ -150,6 +150,109 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
 }
 
 /**
+ * @brief Measures each step of vcycle and compares against full solve (to get overhead).
+ *
+ */
+TEST_CASE("mgcl_steps_galerkin_vs_solve")
+{
+    int N = GENERATE(8, 16, 32, 64);
+    //     int N = 16;
+    int m = N;
+    int n = N;
+    int o = N;
+    double h = 1.0 / static_cast<double>(N);
+
+    mgcl::BC bc = mgcl::BC::PERIODIC;
+    bool periodic = bc == mgcl::BC::PERIODIC;
+
+    ankerl::nanobench::Bench b;
+    b.timeUnit(1us, "us")
+        // .epochs(1)
+        // .epochIterations(1)
+        .minEpochTime(100ms)
+        .maxEpochTime(5s)
+        .relative(false);
+
+    SECTION(std::string("gpu_ocl gpu N = ").append(std::to_string(N)).c_str())
+    {
+        auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
+        auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+        f->fillRandom(0, 10);
+
+        mgcl::Problem p(m, n, o, f, v);
+        p.setUseOpencl(true);
+        if (mgcl_test::TestUtility::deviceAvailable("Quadro", CL_DEVICE_TYPE_GPU))
+            p.setDeviceName("Quadro");
+        p.setSilent(true);
+        p.setStencilType(mgcl::MGCL_VARYING);
+
+        auto& sv = p.getStencilValues();
+        sv->fill1dIndex(true);
+
+        p.init();
+
+        auto& v0 = p.getLevelAt(0).getV();
+        auto& v0d = p.getLevelAt(0).getDVIn();
+        auto& fine = p.getLevelAt(0);
+        auto& coarse = p.getLevelAt(1);
+
+        // jacobi
+        b.run(std::string("gpu_jacobiN").append(std::to_string(N)).c_str(),
+              [&]
+              {
+                  mgcl::MultigridEngine::jacobi(p, fine, p.getNu1(), false);
+                  clFinish(p.getCommands());
+              });
+
+        // residual
+        b.run(std::string("gpu_residualN").append(std::to_string(N)).c_str(),
+              [&]
+              {
+                  mgcl::MultigridEngine::residual(p, fine, false);
+                  clFinish(p.getCommands());
+              });
+
+        // updateGhosts
+        b.run(std::string("gpu_updateGhostsN").append(std::to_string(N)).c_str(),
+              [&]
+              {
+                  mgcl::MultigridEngine::updateGhosts(p, v0d, nullptr, false);
+                  clFinish(p.getCommands());
+              });
+
+        // restriction
+        b.run(std::string("gpu_restrictN").append(std::to_string(N)).c_str(),
+              [&]
+              {
+                  mgcl::MultigridEngine::restrict(fine, coarse, fine.getDR(), coarse.getDF());
+                  clFinish(p.getCommands());
+              });
+
+        // prolongation
+        b.run(std::string("gpu_prolongateN").append(std::to_string(N)).c_str(),
+              [&]
+              {
+                  mgcl::MultigridEngine::prolongate(fine, coarse, fine.getDR(), coarse.getDVIn());
+                  clFinish(p.getCommands());
+              });
+
+        // prolongation
+        b.run(std::string("gpu_galerkinN").append(std::to_string(N)).c_str(),
+              [&]
+              {
+                  mgcl::MultigridEngine::galerkin(*fine.getStencilValuesGpu(), 2,
+                                                  p.getProgram(), p.getCommands(), p.getContext(),
+                                                  nullptr, nullptr, periodic, true, true, false);
+                  clFinish(p.getCommands());
+              });
+
+        //   std::ofstream renderOut(std::string("gpu_solvingBoxplot_").append(std::to_string(N)).append(".html"));
+        //   b.render(ankerl::nanobench::templates::htmlBoxplot(), renderOut);
+        std::cout << "=============" << std::endl;
+    }
+}
+
+/**
  * @brief Measures each step of vcycle and compares seq vs ocl versions
  *
  */

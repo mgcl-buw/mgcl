@@ -833,6 +833,178 @@ __kernel void jacobi_iter_27point_varying_stencil(
     }
 }
 
+/* runs one iteration of jacobi's method using one work-item per grid node.
+ * uses a 3D kernel, which parallelizes all three loop in x,y and z directions.
+ * global size must be of ghosted grid.
+ * m, n and o must be dimensions of ghosted grid, too.
+ * h2 is grid spacing to the power of 2
+ * dinv is h2/A(i,i), e.g. h2/6.0 for 3D laplacian stencil
+ * if store_residual is true, the residual will be stored into global field r.
+ * stencilValues is a VaryingStencilGpu having width 3 (i.e. a 6d array).
+ * ghosts_sv is the amount of ghost cells of stencilValues.
+ * idx_start determines which cells shall be calculated, which is relevant for running
+ *   Jacobi with multiple iterations without ghost cell update in-between. I.e. when
+ *   stepsPerIter = 1: idx_start = ghosts.
+ */
+__kernel void jacobi_iter_27point_varying_stencil_3d(
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out,
+    __global double* restrict f,
+    __global double* restrict r,
+    __global double* restrict stencilValues,
+    const double omega,
+    const int mgh, const int ngh, const int ogh,
+    const int ghosts, const int ghosts_sv,
+    const int idx_start, const int store_residual)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
+
+    // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
+    if (i >= idx_start && j >= idx_start && k >= idx_start && i < mgh - idx_start && j < ngh - idx_start && k < ogh - idx_start)
+    {
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
+        int index = i * ioff + j * ogh + k;
+
+        int koff_sv = 27;
+        int joff_sv = ((ogh - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
+        int ioff_sv = ((ngh - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
+        int index_sv = (i - ghosts + ghosts_sv) * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
+
+        double res;
+        double v_in_index = v_in[index];
+        double sv_self = stencilValues[index_sv + 9 + 3 + 1];
+
+        // A*v
+        // clang-format off
+        double stencilsum = sv_self * v_in_index
+            + stencilValues[index_sv + 9 + 3]      * v_in[index - 1]
+            + stencilValues[index_sv + 9 + 3 + 2]  * v_in[index + 1]
+            + stencilValues[index_sv + 9 + 1]      * v_in[index - joff]
+            + stencilValues[index_sv + 9 + 6 + 1]  * v_in[index + joff]
+            + stencilValues[index_sv + 3 + 1]      * v_in[index - ioff]
+            + stencilValues[index_sv + 18 + 3 + 1] * v_in[index + ioff]
+            
+            + stencilValues[index_sv + 9]          * v_in[index - joff - koff]
+            + stencilValues[index_sv + 9 + 2]      * v_in[index - joff + koff]
+            + stencilValues[index_sv + 9 + 6]      * v_in[index + joff - koff]
+            + stencilValues[index_sv + 9 + 6 + 2]  * v_in[index + joff + koff]
+            + stencilValues[index_sv + 3]          * v_in[index - ioff - koff]
+            + stencilValues[index_sv + 3 + 2]      * v_in[index - ioff + koff]
+            + stencilValues[index_sv + 18 + 3]     * v_in[index + ioff - koff]
+            + stencilValues[index_sv + 18 + 3 + 2] * v_in[index + ioff + koff]
+            + stencilValues[index_sv + 1]          * v_in[index - ioff - joff]
+            + stencilValues[index_sv + 6 + 1]      * v_in[index - ioff + joff]
+            + stencilValues[index_sv + 18 + 1]     * v_in[index + ioff - joff]
+            + stencilValues[index_sv + 18 + 6 + 1] * v_in[index + ioff + joff]
+
+            + stencilValues[index_sv]              * v_in[index - ioff - joff - koff]
+            + stencilValues[index_sv + 2]          * v_in[index - ioff - joff + koff]
+            + stencilValues[index_sv + 6]          * v_in[index - ioff + joff - koff]
+            + stencilValues[index_sv + 6 + 2]      * v_in[index - ioff + joff + koff]
+            + stencilValues[index_sv + 18]         * v_in[index + ioff - joff - koff]
+            + stencilValues[index_sv + 18 + 2]     * v_in[index + ioff - joff + koff]
+            + stencilValues[index_sv + 18 + 6]     * v_in[index + ioff + joff - koff]
+            + stencilValues[index_sv + 18 + 6 + 2] * v_in[index + ioff + joff + koff];
+        // clang-format on
+
+        // clang-format off
+            // double stencilsum = sv_self * v_in_index
+            //     + stencilValues[index_sv + 1 * 9 + 1 * 3 + 0] * v_in[index - 1]
+            //     + stencilValues[index_sv + 1 * 9 + 1 * 3 + 2] * v_in[index + 1]
+            //     + stencilValues[index_sv + 1 * 9 + 0 * 3 + 1] * v_in[index - joff]
+            //     + stencilValues[index_sv + 1 * 9 + 2 * 3 + 1] * v_in[index + joff]
+            //     + stencilValues[index_sv + 0 * 9 + 1 * 3 + 1] * v_in[index - ioff]
+            //     + stencilValues[index_sv + 2 * 9 + 1 * 3 + 1] * v_in[index + ioff]
+            //     + stencilValues[index_sv + 1 * 9 + 0 * 3 + 0] * v_in[index - joff - koff]
+            //     + stencilValues[index_sv + 1 * 9 + 0 * 3 + 2] * v_in[index - joff + koff]
+            //     + stencilValues[index_sv + 1 * 9 + 2 * 3 + 0] * v_in[index + joff - koff]
+            //     + stencilValues[index_sv + 1 * 9 + 2 * 3 + 2] * v_in[index + joff + koff]
+            //     + stencilValues[index_sv + 0 * 9 + 1 * 3 + 0] * v_in[index - ioff - koff]
+            //     + stencilValues[index_sv + 0 * 9 + 1 * 3 + 2] * v_in[index - ioff + koff]
+            //     + stencilValues[index_sv + 2 * 9 + 1 * 3 + 0] * v_in[index + ioff - koff]
+            //     + stencilValues[index_sv + 2 * 9 + 1 * 3 + 2] * v_in[index + ioff + koff]
+            //     + stencilValues[index_sv + 0 * 9 + 0 * 3 + 1] * v_in[index - ioff - joff]
+            //     + stencilValues[index_sv + 0 * 9 + 2 * 3 + 1] * v_in[index - ioff + joff]
+            //     + stencilValues[index_sv + 2 * 9 + 0 * 3 + 1] * v_in[index + ioff - joff]
+            //     + stencilValues[index_sv + 2 * 9 + 2 * 3 + 1] * v_in[index + ioff + joff]
+            //     + stencilValues[index_sv + 0 * 9 + 0 * 3 + 0] * v_in[index - ioff - joff - koff]
+            //     + stencilValues[index_sv + 0 * 9 + 0 * 3 + 2] * v_in[index - ioff - joff + koff]
+            //     + stencilValues[index_sv + 0 * 9 + 2 * 3 + 0] * v_in[index - ioff + joff - koff]
+            //     + stencilValues[index_sv + 0 * 9 + 2 * 3 + 2] * v_in[index - ioff + joff + koff]
+            //     + stencilValues[index_sv + 2 * 9 + 0 * 3 + 0] * v_in[index + ioff - joff - koff]
+            //     + stencilValues[index_sv + 2 * 9 + 0 * 3 + 2] * v_in[index + ioff - joff + koff]
+            //     + stencilValues[index_sv + 2 * 9 + 2 * 3 + 0] * v_in[index + ioff + joff - koff]
+            //     + stencilValues[index_sv + 2 * 9 + 2 * 3 + 2] * v_in[index + ioff + joff + koff];
+        // clang-format on
+
+        // clang-format off
+            // stencilsum = stencilValues[isv][jsv][ksv][1][1][1]  * vraw[i][j][k]
+            //     + stencilValues[isv][jsv][ksv][1][1][0]         * vraw[i][j][k - 1]
+            //     + stencilValues[isv][jsv][ksv][1][1][2]         * vraw[i][j][k + 1]
+            //     + stencilValues[isv][jsv][ksv][1][0][1]         * vraw[i][j - 1][k]
+            //     + stencilValues[isv][jsv][ksv][1][2][1]         * vraw[i][j + 1][k]
+            //     + stencilValues[isv][jsv][ksv][0][1][1]         * vraw[i - 1][j][k]
+            //     + stencilValues[isv][jsv][ksv][2][1][1]         * vraw[i + 1][j][k]
+               
+            //     + stencilValues[isv][jsv][ksv][1][0][0] * vraw[i][j - 1][k - 1]
+            //     + stencilValues[isv][jsv][ksv][1][0][2] * vraw[i][j - 1][k + 1]
+            //     + stencilValues[isv][jsv][ksv][1][2][0] * vraw[i][j + 1][k - 1]
+            //     + stencilValues[isv][jsv][ksv][1][2][2] * vraw[i][j + 1][k + 1]
+            //     + stencilValues[isv][jsv][ksv][0][1][0] * vraw[i - 1][j][k - 1]
+            //     + stencilValues[isv][jsv][ksv][0][1][2] * vraw[i - 1][j][k + 1]
+            //     + stencilValues[isv][jsv][ksv][2][1][0] * vraw[i + 1][j][k - 1]
+            //     + stencilValues[isv][jsv][ksv][2][1][2] * vraw[i + 1][j][k + 1]
+            //     + stencilValues[isv][jsv][ksv][0][0][1] * vraw[i - 1][j - 1][k]
+            //     + stencilValues[isv][jsv][ksv][0][2][1] * vraw[i - 1][j + 1][k]
+            //     + stencilValues[isv][jsv][ksv][2][0][1] * vraw[i + 1][j - 1][k]
+            //     + stencilValues[isv][jsv][ksv][2][2][1] * vraw[i + 1][j + 1][k]
+                
+            //     + stencilValues[isv][jsv][ksv][0][0][0] * vraw[i - 1][j - 1][k - 1]
+            //     + stencilValues[isv][jsv][ksv][0][0][2] * vraw[i - 1][j - 1][k + 1]
+            //     + stencilValues[isv][jsv][ksv][0][2][0] * vraw[i - 1][j + 1][k - 1]
+            //     + stencilValues[isv][jsv][ksv][0][2][2] * vraw[i - 1][j + 1][k + 1]
+            //     + stencilValues[isv][jsv][ksv][2][0][0] * vraw[i + 1][j - 1][k - 1]
+            //     + stencilValues[isv][jsv][ksv][2][0][2] * vraw[i + 1][j - 1][k + 1]
+            //     + stencilValues[isv][jsv][ksv][2][2][0] * vraw[i + 1][j + 1][k - 1]
+            //     + stencilValues[isv][jsv][ksv][2][2][2] * vraw[i + 1][j + 1][k + 1];
+        // clang-format on
+
+        // r = f - A*v
+        res = f[index] - stencilsum;
+
+        // barrier(CLK_GLOBAL_MEM_FENCE);
+        // if (get_global_id(0) == 2 && get_global_id(1) == 5 && i == 1)
+        // {
+        //     // printf("ocl x = %d, omega = %e, stencilsum = %e, res = %e,  v_in = %e, sv_self = %e\n", i, omega, stencilsum, res, v_in[index], sv_self);
+        //     // printf("ocl omega * (1.0 / sv_self) * res = %e\n", omega * (1.0 / sv_self) * res);
+        //     // printf("ocl omega = %e, (1.0 / sv_self) = %e, res = %e\n", omega, (1.0 / sv_self), res);
+        //     printf("ocl stencilsum = %e\n", stencilsum);
+        //     // print27point(v_in, index, ioff, joff, koff);
+        //     print27point_sv(v_in, index, ioff, joff, koff, stencilValues, index_sv);
+        //     // print_7point(v_in, index, ioff, joff, koff);
+        // }
+        // barrier(CLK_GLOBAL_MEM_FENCE);
+
+        // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
+        v_out[index] = v_in_index + omega * (1.0 / sv_self) * res;
+
+        // barrier(CLK_GLOBAL_MEM_FENCE);
+        // if (get_global_id(0) == 2 && get_global_id(1) == 5 && i == 1)
+        // {
+        //     printf("ocl x = %d, omega = %e, res = %e, v_out = %e, sv_self = %e\n", i, omega, res, v_out[index], sv_self);
+        //     print27point(v_out, index, ioff, joff, koff);
+        //     // print_7point(v_in, index, ioff, joff, koff);
+        // }
+
+        if (store_residual)
+            r[index] = res;
+    }
+}
+
 /* Restricts from fine to coarse grid.
  * Needs to get called with m*n*o work-items.
  * m,n,o is size of ghosted coarse grid.

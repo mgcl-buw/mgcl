@@ -933,15 +933,15 @@ namespace mgcl
         return openCLHelper.commands;
     }
 
-    std::string Problem::getKernelDir() const
+    std::string Problem::getKernelFile() const
     {
-        return openCLHelper.kernelDir;
+        return openCLHelper.getKernelFile();
     }
 
-    void Problem::setKernelDir(const std::string& kernelDir_)
+    void Problem::setKernelFile(const std::string& kernelFile_)
     {
         if (!openCLHelper.isInitialized())
-            openCLHelper.kernelDir = kernelDir_;
+            openCLHelper.setKernelFile(kernelFile_);
     }
 
     cl_device_type Problem::getDeviceType() const

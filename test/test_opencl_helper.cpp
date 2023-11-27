@@ -25,16 +25,12 @@ TEST_CASE("OpenCLHelper")
         REQUIRE(openCLHelper.getContext() != nullptr);
         REQUIRE(openCLHelper.getDeviceId() != nullptr);
         REQUIRE(openCLHelper.getDeviceName() == "");
-        REQUIRE(openCLHelper.getKernelDir() == "./");
+        REQUIRE(openCLHelper.getKernelFile() == "./mgcl.cl");
         REQUIRE(openCLHelper.getProgram() != nullptr);
     }
 
     SECTION("init kernelDir")
     {
-        std::string filePath = __FILE__;
-        std::string dirPath = filePath.substr(0, filePath.rfind("/"));
-        openCLHelper.setKernelDir(dirPath.append("/../build/test/"));
-
         REQUIRE_FALSE(openCLHelper.isInitialized());
         REQUIRE_NOTHROW(openCLHelper.init());
         REQUIRE(openCLHelper.isInitialized());
@@ -80,5 +76,10 @@ TEST_CASE("OpenCLHelper")
         REQUIRE(!openCLHelper.isInitialized());
         REQUIRE_NOTHROW(openCLHelper.init());
         REQUIRE(openCLHelper.isInitialized());
+    }
+
+    SECTION("setKernelFile throwing")
+    {
+        REQUIRE_THROWS(openCLHelper.setKernelFile("kjhnfkasdf"));
     }
 }

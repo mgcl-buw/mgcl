@@ -35,10 +35,11 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_only_galerkin")
     std::vector<std::vector<int>> gridsTBT;
     for (auto N : CLI_ARGS::grids)
         gridsTBT.push_back({N, N, N});
-    for (int m = CLI_ARGS::gridsMin[0]; m <= CLI_ARGS::gridsMax[0]; m *= 2)
-        for (int n = CLI_ARGS::gridsMin[1]; n <= CLI_ARGS::gridsMax[1]; n *= 2)
-            for (int o = CLI_ARGS::gridsMin[2]; o <= CLI_ARGS::gridsMax[2]; o *= 2)
-                gridsTBT.push_back({m, n, o});
+    if (CLI_ARGS::gridsMin.size() > 0 && CLI_ARGS::gridsMax.size() > 0)
+        for (int m = CLI_ARGS::gridsMin[0]; m <= CLI_ARGS::gridsMax[0]; m *= 2)
+            for (int n = CLI_ARGS::gridsMin[1]; n <= CLI_ARGS::gridsMax[1]; n *= 2)
+                for (int o = CLI_ARGS::gridsMin[2]; o <= CLI_ARGS::gridsMax[2]; o *= 2)
+                    gridsTBT.push_back({m, n, o});
 
     // Check if mpi is initialized
     int isInitialized = 0;

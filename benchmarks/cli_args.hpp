@@ -15,6 +15,9 @@ namespace CLI_ARGS
     // 3-component vectors
     extern std::vector<int> gridsMin; // e.g. {4,4,4}
     extern std::vector<int> gridsMax; // e.g. {64,64,32}
+
+    extern int nu1;
+    extern int nu2;
 }
 
 // // Simple wrapper for command line args which are static variables.
