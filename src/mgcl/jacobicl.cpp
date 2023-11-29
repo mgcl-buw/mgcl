@@ -273,7 +273,7 @@ namespace mgcl
         size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
         // const size_t local[2] = {static_cast<size_t>(ngh > 4 ? 4 : ngh),
         //                          static_cast<size_t>(ogh > 8 ? 8 : ogh)}; // TODO problem.jacobi_wg_size_x
-        size_t local[3] = {static_cast<size_t>(1), static_cast<size_t>(1), static_cast<size_t>(64)};
+        size_t local[3] = {static_cast<size_t>(1), static_cast<size_t>(1), static_cast<size_t>(32)};
 
         // kernels that use constant Laplace stencils are 2d and need different global sizes
         if (problem.stencilType != MGCL_VARYING)
