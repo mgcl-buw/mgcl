@@ -97,7 +97,7 @@ TEST_CASE("exec_params_residual")
         {32, 1, 1}, {1, 1, 32}, {64, 1, 1}, {1, 1, 64}, {128, 1, 1}, {4, 4, 4}, {4, 4, 8} //
     };
     std::vector<std::vector<int>> localsTBT1d = {
-        {32, 1, 1}, {64, 1, 1}, {128, 1, 1}, {256, 1, 1}, {512, 1, 1}, //
+        {16, 1, 1}, {32, 1, 1}, {64, 1, 1}, {128, 1, 1}, {256, 1, 1}, {512, 1, 1}, //
     };
     std::cout << "Testing the following local sizes for 3d" << std::endl;
     for (auto lo : localsTBT3d)
@@ -175,13 +175,13 @@ TEST_CASE("exec_params_jacobi")
     }
 
     std::vector<std::vector<int>> localsTBT3d = {
-        {1, 1, 32}, {1, 4, 32}, {1, 1, 64}, {4, 4, 4}, {4, 4, 8}, {8, 8, 8} //
+        {1, 1, 16}, {1, 1, 32}, {1, 4, 32}, {1, 1, 64}, {4, 4, 4}, {4, 4, 8}, {8, 8, 8} //
     };
     std::vector<std::vector<int>> localsTBT2d = {
-        {1, 32, 1}, {4, 8, 1}, {8, 4, 1}, {4, 4, 1}, {4, 16, 1} //
+        {1, 16, 1}, {1, 32, 1}, {4, 8, 1}, {8, 4, 1}, {4, 4, 1}, {4, 16, 1} //
     };
     std::vector<std::vector<int>> localsTBT1d = {
-        {32, 1, 1}, {64, 1, 1}, {128, 1, 1}, {256, 1, 1}, {512, 1, 1}, //
+        {16, 1, 1}, {32, 1, 1}, {64, 1, 1}, {128, 1, 1}, {256, 1, 1}, {512, 1, 1}, //
     };
     std::cout << "Testing the following local sizes for 3d" << std::endl;
     for (auto lo : localsTBT3d)
