@@ -275,6 +275,10 @@ namespace mgcl
         //                          static_cast<size_t>(ogh > 8 ? 8 : ogh)}; // TODO problem.jacobi_wg_size_x
         size_t local[3] = {static_cast<size_t>(1), static_cast<size_t>(1), static_cast<size_t>(32)};
 
+        // decrease wg size for bigger grids
+        if (mgh >= 32 && ngh >= 32 && ogh >= 32)
+            local[2] = 16;
+
         // kernels that use constant Laplace stencils are 2d and need different global sizes
         if (problem.stencilType != MGCL_VARYING)
         {
@@ -699,7 +703,10 @@ namespace mgcl
         size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
         // const size_t local[3] = {static_cast<size_t>(mgh > 4 ? 4 : mgh), static_cast<size_t>(ngh > 4 ? 4 : ngh),
         //                          static_cast<size_t>(ogh > 4 ? 4 : ogh)};
-        const size_t local[3] = {1, 1, 32};
+        size_t local[3] = {1, 1, 32};
+        // decrease wg size for bigger grids
+        if (mgh >= 32 && ngh >= 32 && ogh >= 32)
+            local[2] = 16;
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
