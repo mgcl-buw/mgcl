@@ -8,7 +8,12 @@
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "util.hpp"
 
+#ifdef __APPLE__
+#include <OpenCL/cl_platform.h> // for cl_ulong
+#define ulong unsigned long
+#else
 #include <CL/cl_platform.h> // for cl_ulong
+#endif
 #include <algorithm>        // for max
 #include <chrono>           // for __enable_if_is_duration, steady_clock
 #include <cmath>            // for log2

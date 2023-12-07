@@ -54,6 +54,8 @@ int main(int argc, char** argv)
         else if (std::string(argv[3]) == "new+old")
             impl = OLD_NEW;
     }
+    
+    MPI_Init(&argc,&argv);
 
     std::cout << "Running with parameters:" << std::endl;
     std::cout << "  N = " << N << std::endl;

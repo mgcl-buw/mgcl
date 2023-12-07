@@ -23,11 +23,11 @@
 namespace mgcl::util
 {
     double sum(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-               bool return_sum, size_t localSize = 512);
+               bool return_sum, size_t localSize = 256);
     double max(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-               bool return_sum, size_t localSize = 512);
+               bool return_sum, size_t localSize = 256);
     double max_abs(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-                   bool return_sum, size_t localSize = 512);
+                   bool return_sum, size_t localSize = 256);
 
     namespace seq
     {

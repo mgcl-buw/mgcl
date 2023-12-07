@@ -477,6 +477,7 @@ namespace mgcl
         mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_COMPUTE_UNITS)");
         printf(" with a max of %d compute units", comp_units);
 
+#ifdef CL_DEVICE_UUID_KHR
         cl_uchar uuid[CL_UUID_SIZE_KHR];
         bool uuid_available = false;
         err = clGetDeviceInfo(device_id, CL_DEVICE_UUID_KHR, sizeof(cl_uchar) * CL_UUID_SIZE_KHR,
@@ -495,6 +496,7 @@ namespace mgcl
                    uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
 
         else
+#endif
             printf("\n");
 
         return err;
