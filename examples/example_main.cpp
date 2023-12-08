@@ -125,6 +125,20 @@ int main(int argc, char** argv)
         // p.init();
 
         p.solveSeq();
+        
+        // If problem is small, output solution
+        if (m<=4&&n<=4&&o<=4) {
+    	    for (int i{0};i<m;++i) {
+        		for (int j{0};j<n;++j) {
+        			for (int k{0};k<o;++k) {
+        				std::cout << (*v)[i][j][k];
+	        		}
+    	    		std::cout << std::endl;
+        		}
+       			std::cout << std::endl;
+	        }
+	    }
+
     }
 
     if ((impl == NEW || impl == OLD_NEW) && (runs == OCL || runs == SEQ_OCL) && mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
@@ -133,7 +147,7 @@ int main(int argc, char** argv)
         auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
 
         mgcl::Problem p(m, n, o, f, v);
-        p.setMaxiterVcycles(maxIterVCycles);
+        p.setMaxiterVcycles(1);//maxIterVCycles);
         p.setIgnoreTol(false);
         p.setUseOpencl(true);
         p.setDeviceType(CL_DEVICE_TYPE_GPU);
@@ -151,6 +165,21 @@ int main(int argc, char** argv)
 
         // p.init();
         p.solve();
+        
+        // If problem is small, output solution
+        if (m<=4&&n<=4&&o<=4) {
+	        p.readResults();
+    	    for (int i{0};i<m;++i) {
+        		for (int j{0};j<n;++j) {
+        			for (int k{0};k<o;++k) {
+        				std::cout << (*v)[i][j][k];
+	        		}
+    	    		std::cout << std::endl;
+        		}
+       			std::cout << std::endl;
+	        }
+	    }
+        
     }
 
     if ((impl == OLD || impl == OLD_NEW) && (runs == SEQ || runs == SEQ_OCL))
