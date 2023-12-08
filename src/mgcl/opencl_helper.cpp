@@ -69,9 +69,20 @@ namespace mgcl
                                           &device_name_available, nullptr);
                     mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
 
-                    // continue to next device if name doesn't fit
-                    if (std::string(device_name_available).find(deviceName) == std::string::npos)
+                    // get device extensions and check for double precision
+                    size_t numExtensions;
+                    err = clGetDeviceInfo(device_id_, CL_DEVICE_EXTENSIONS, 0, nullptr, &numExtensions);
+                    mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_EXTENSIONS)");
+
+                    char* extensions = new char[numExtensions];
+                    err = clGetDeviceInfo(device_id_, CL_DEVICE_EXTENSIONS, numExtensions, extensions, nullptr);
+                    mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_EXTENSIONS)");
+
+                    if (std::string(device_name_available).find(deviceName) == std::string::npos ||
+                        std::string(extensions).find("cl_khr_fp64") == std::string::npos)
                         continue;
+
+                    delete[] extensions;
                 }
 
                 deviceId = device_id_;
