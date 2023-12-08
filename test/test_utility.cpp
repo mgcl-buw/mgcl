@@ -137,7 +137,8 @@ bool mgcl_test::TestUtility::deviceAvailable(std::string deviceName, cl_device_t
 {
     int err, i;
     cl_uint numPlatforms;
-    cl_device_id device_id_;
+    cl_uint numDevices;
+    cl_device_id* device_ids;
 
     // Find number of platforms
     err = clGetPlatformIDs(0, nullptr, &numPlatforms);
@@ -158,11 +159,14 @@ bool mgcl_test::TestUtility::deviceAvailable(std::string deviceName, cl_device_t
     // take first device that conforms given device_type and name
     for (i = 0; i < numPlatforms; i++)
     {
-        err = clGetDeviceIDs(Platform[i], deviceType, 1, &device_id_, nullptr);
-        if (err == CL_SUCCESS)
+    	// Find number of devices for a platform
+    	err = clGetDeviceIDs(Platform[i], deviceType, 0, nullptr, &numDevices);
+    	mgcl::mgclCheckError(err, "Finding devices");
+    	device_ids = new cl_device_id[numDevices];
+        err = clGetDeviceIDs(Platform[i], deviceType, numDevices, device_ids, nullptr);
+        if (err == CL_SUCCESS) for (int i{0}; i<numDevices; ++i)
         {
-
-            err = clGetDeviceInfo(device_id_, CL_DEVICE_NAME, sizeof(device_name_available),
+            err = clGetDeviceInfo(device_ids[i], CL_DEVICE_NAME, sizeof(device_name_available),
                                   &device_name_available, nullptr);
             if (err != CL_SUCCESS)
             {
@@ -174,6 +178,7 @@ bool mgcl_test::TestUtility::deviceAvailable(std::string deviceName, cl_device_t
             if (std::string((char*)device_name_available).find(deviceName) != std::string::npos)
                 return true;
         }
+        delete[] device_ids;
     }
 
     return false;

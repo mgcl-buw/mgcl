@@ -145,6 +145,10 @@ int main(int argc, char** argv)
         if (mgcl_test::TestUtility::deviceAvailable("Quadro", p.getDeviceType()))
             p.setDeviceName("Quadro");
 
+/*        if (mgcl_test::TestUtility::deviceAvailable("AMD Radeon Pro 5500M Compute Engine", p.getDeviceType()))
+            p.setDeviceName("AMD Radeon Pro 5500M Compute Engine");
+*/
+
         // p.init();
         p.solve();
     }
