@@ -137,7 +137,6 @@ namespace mgcl
                 for (int jj = 0; jj < getWidth(); jj++)
                 for (int kk = 0; kk < getWidth(); kk++)
                 {
-                    
                     c[ii][jj][kk][i][j][k] = c[ii][jj][kk][i + factor_left * m][j][k]; // left ghost cell = right real cell
                     c[ii][jj][kk][ghm_start_right + i][j][k] = c[ii][jj][kk][ghm_start_right + i - factor_right * m][j][k]; // right ghost cell = left real cell
                 }
