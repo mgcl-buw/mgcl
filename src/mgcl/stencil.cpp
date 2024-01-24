@@ -111,12 +111,12 @@ namespace mgcl
     // updates ghost cells, respects periodic ghosts, i.e. when gh > m
     void VaryingStencil::updateGhosts()
     {
-        int m = dim4;
-        int n = dim5;
-        int o = dim6;
-        int ghosts_m = ghostsDim4;
-        int ghosts_n = ghostsDim5;
-        int ghosts_o = ghostsDim6;
+        int m = getM();
+        int n = getN();
+        int o = getO();
+        int ghosts_m = getGhostsM();
+        int ghosts_n = getGhostsN();
+        int ghosts_o = getGhostsO();
 
         auto& c = *this;
 
