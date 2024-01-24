@@ -257,64 +257,64 @@ namespace mgcl
     VaryingStencil VaryingStencil::multiply(VaryingStencil& b, int ghc,
                                             MPILevelData* mpiData, bool periodic, bool forceLocal) const
     {
-        if (dim1 != b.getDim1() ||
-            dim2 != b.getDim2() ||
-            dim3 != b.getDim3())
+        if (getM() != b.getM() ||
+            getN() != b.getN() ||
+            getO() != b.getO())
             throw "Stencils map to different amount of grid cells!";
 
-        if (b.getGhostsDim1() != b.getGhostsDim2() ||
-            b.getGhostsDim1() != b.getGhostsDim3())
+        if (b.getGhostsM() != b.getGhostsN() ||
+            b.getGhostsM() != b.getGhostsO())
             throw "Ghosts of b must be equal in each dimension!";
 
-        if (getGhostsDim1() != getGhostsDim2() ||
-            getGhostsDim1() != getGhostsDim3())
+        if (getGhostsM() != getGhostsN() ||
+            getGhostsM() != getGhostsO())
             throw "Ghosts of a must be equal in each dimension!";
 
         int N = getWidth();
 
-        if (b.getGhostsDim1() < N >> 1)
+        if (b.getGhostsM() < N >> 1)
             throw std::string("Ghosts of b be must be >= ").append(std::to_string(N >> 1));
 
         int NB = b.getWidth();
 
-        int m = dim1;
-        int n = dim2;
-        int o = dim3;
+        int m = getM();
+        int n = getN();
+        int o = getO();
         int N2 = N >> 1;
-        int gha = getGhostsDim1();
-        int ghb = b.getGhostsDim1();
+        int gha = getGhostsM();
+        int ghb = b.getGhostsM();
 
         int wc = N + NB - 1;
-        auto c = VaryingStencil(dim1, dim2, dim3, wc, ghc, ghc, ghc);
+        auto c = VaryingStencil(getM(), getN(), getO(), wc, ghc, ghc, ghc);
 
         // clang-format off
-            for (int x = 0; x < m; x++)
-            for (int y = 0; y < n; y++)
-            for (int z = 0; z < o; z++)
-                for (int a_i = 0; a_i < N; a_i++)
-                for (int a_j = 0; a_j < N; a_j++)
-                for (int a_k = 0; a_k < N; a_k++)
-                    for (int b_i = 0; b_i < NB; b_i++)
-                    for (int b_j = 0; b_j < NB; b_j++)
-                    for (int b_k = 0; b_k < NB; b_k++)
+        for (int x = 0; x < m; x++)
+        for (int y = 0; y < n; y++)
+        for (int z = 0; z < o; z++)
+            for (int a_i = 0; a_i < N; a_i++)
+            for (int a_j = 0; a_j < N; a_j++)
+            for (int a_k = 0; a_k < N; a_k++)
+                for (int b_i = 0; b_i < NB; b_i++)
+                for (int b_j = 0; b_j < NB; b_j++)
+                for (int b_k = 0; b_k < NB; b_k++)
+                {
+                    int gpi = x + a_i - N2 + ghb;
+                    int gpj = y + a_j - N2 + ghb;
+                    int gpk = z + a_k - N2 + ghb;
+
+                    int ci = a_i + b_i;
+                    int cj = a_j + b_j;
+                    int ck = a_k + b_k;
+
+                    if (ci >= 0 && ci < wc &&
+                        cj >= 0 && cj < wc &&
+                        ck >= 0 && ck < wc)
                     {
-                        int gpi = x + a_i - N2 + ghb;
-                        int gpj = y + a_j - N2 + ghb;
-                        int gpk = z + a_k - N2 + ghb;
-
-                        int ci = a_i + b_i;
-                        int cj = a_j + b_j;
-                        int ck = a_k + b_k;
-
-                        if (ci >= 0 && ci < wc &&
-                            cj >= 0 && cj < wc &&
-                            ck >= 0 && ck < wc)
-                        {
-                            c[x + ghc][y + ghc][z + ghc][ci][cj][ck] +=
-                                field_6d[x + gha][y + gha][z + gha][a_i][a_j][a_k] *
-                                b[gpi][gpj][gpk][b_i][b_j][b_k];
-                        }
+                        c[ci][cj][ck][x + ghc][y + ghc][z + ghc] +=
+                            field_6d[a_i][a_j][a_k][x + gha][y + gha][z + gha] *
+                            b[b_i][b_j][b_k][gpi][gpj][gpk];
                     }
+                }
         // clang-format on
 
         if (ghc > 0)

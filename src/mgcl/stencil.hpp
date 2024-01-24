@@ -62,6 +62,12 @@ namespace mgcl
             Hypercube6d::operator=(std::move(o));
             return *this;
         }
+        inline int getM() const { return dim4; }
+        inline int getN() const { return dim5; }
+        inline int getO() const { return dim6; }
+        inline int getGhostsM() const { return ghostsDim4; }
+        inline int getGhostsN() const { return ghostsDim5; }
+        inline int getGhostsO() const { return ghostsDim6; }
         inline int getWidth() const { return dim1; }
         void updateGhosts();
         VaryingStencil multiply(FixedStencil& b, int ghc,

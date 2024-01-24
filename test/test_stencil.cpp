@@ -706,43 +706,43 @@ TEST_CASE("VaryingStencil::multiply")
                 for (int k = 0; k < o; k++)
                 {
                     // 7-point Laplace
-                    a[i][j][k][0][1][1] = 1;
-                    a[i][j][k][1][0][1] = 1;
-                    a[i][j][k][1][1][0] = 1;
-                    a[i][j][k][1][1][1] = -6;
-                    a[i][j][k][1][1][2] = 1;
-                    a[i][j][k][1][2][1] = 1;
-                    a[i][j][k][2][1][1] = 1;
+                    a[0][1][1][i][j][k] = 1;
+                    a[1][0][1][i][j][k] = 1;
+                    a[1][1][0][i][j][k] = 1;
+                    a[1][1][1][i][j][k] = -6;
+                    a[1][1][2][i][j][k] = 1;
+                    a[1][2][1][i][j][k] = 1;
+                    a[2][1][1][i][j][k] = 1;
 
                     // full-weight restriction
                     // fill only real cells, ghosts cells must be zero (Dirichlet condition)
-                    b[i + 1][j + 1][k + 1][0][0][0] = factor4;
-                    b[i + 1][j + 1][k + 1][0][0][1] = factor3;
-                    b[i + 1][j + 1][k + 1][0][0][2] = factor4;
-                    b[i + 1][j + 1][k + 1][0][1][0] = factor3;
-                    b[i + 1][j + 1][k + 1][0][1][1] = factor2;
-                    b[i + 1][j + 1][k + 1][0][1][2] = factor3;
-                    b[i + 1][j + 1][k + 1][0][2][0] = factor4;
-                    b[i + 1][j + 1][k + 1][0][2][1] = factor3;
-                    b[i + 1][j + 1][k + 1][0][2][2] = factor4;
-                    b[i + 1][j + 1][k + 1][1][0][0] = factor3;
-                    b[i + 1][j + 1][k + 1][1][0][1] = factor2;
-                    b[i + 1][j + 1][k + 1][1][0][2] = factor3;
-                    b[i + 1][j + 1][k + 1][1][1][0] = factor2;
-                    b[i + 1][j + 1][k + 1][1][1][1] = factor1;
-                    b[i + 1][j + 1][k + 1][1][1][2] = factor2;
-                    b[i + 1][j + 1][k + 1][1][2][0] = factor3;
-                    b[i + 1][j + 1][k + 1][1][2][1] = factor2;
-                    b[i + 1][j + 1][k + 1][1][2][2] = factor3;
-                    b[i + 1][j + 1][k + 1][2][0][0] = factor4;
-                    b[i + 1][j + 1][k + 1][2][0][1] = factor3;
-                    b[i + 1][j + 1][k + 1][2][0][2] = factor4;
-                    b[i + 1][j + 1][k + 1][2][1][0] = factor3;
-                    b[i + 1][j + 1][k + 1][2][1][1] = factor2;
-                    b[i + 1][j + 1][k + 1][2][1][2] = factor3;
-                    b[i + 1][j + 1][k + 1][2][2][0] = factor4;
-                    b[i + 1][j + 1][k + 1][2][2][1] = factor3;
-                    b[i + 1][j + 1][k + 1][2][2][2] = factor4;
+                    b[0][0][0][i + 1][j + 1][k + 1] = factor4;
+                    b[0][0][1][i + 1][j + 1][k + 1] = factor3;
+                    b[0][0][2][i + 1][j + 1][k + 1] = factor4;
+                    b[0][1][0][i + 1][j + 1][k + 1] = factor3;
+                    b[0][1][1][i + 1][j + 1][k + 1] = factor2;
+                    b[0][1][2][i + 1][j + 1][k + 1] = factor3;
+                    b[0][2][0][i + 1][j + 1][k + 1] = factor4;
+                    b[0][2][1][i + 1][j + 1][k + 1] = factor3;
+                    b[0][2][2][i + 1][j + 1][k + 1] = factor4;
+                    b[1][0][0][i + 1][j + 1][k + 1] = factor3;
+                    b[1][0][1][i + 1][j + 1][k + 1] = factor2;
+                    b[1][0][2][i + 1][j + 1][k + 1] = factor3;
+                    b[1][1][0][i + 1][j + 1][k + 1] = factor2;
+                    b[1][1][1][i + 1][j + 1][k + 1] = factor1;
+                    b[1][1][2][i + 1][j + 1][k + 1] = factor2;
+                    b[1][2][0][i + 1][j + 1][k + 1] = factor3;
+                    b[1][2][1][i + 1][j + 1][k + 1] = factor2;
+                    b[1][2][2][i + 1][j + 1][k + 1] = factor3;
+                    b[2][0][0][i + 1][j + 1][k + 1] = factor4;
+                    b[2][0][1][i + 1][j + 1][k + 1] = factor3;
+                    b[2][0][2][i + 1][j + 1][k + 1] = factor4;
+                    b[2][1][0][i + 1][j + 1][k + 1] = factor3;
+                    b[2][1][1][i + 1][j + 1][k + 1] = factor2;
+                    b[2][1][2][i + 1][j + 1][k + 1] = factor3;
+                    b[2][2][0][i + 1][j + 1][k + 1] = factor4;
+                    b[2][2][1][i + 1][j + 1][k + 1] = factor3;
+                    b[2][2][2][i + 1][j + 1][k + 1] = factor4;
                 }
 
         auto c = a.multiply(b, 2, nullptr, false, true);
@@ -782,43 +782,43 @@ TEST_CASE("VaryingStencil::multiply")
                     // 7-point Laplace, real cells only
                     if (i < m && j < n && k < o)
                     {
-                        a[i][j][k][0][1][1] = 1;
-                        a[i][j][k][1][0][1] = 1;
-                        a[i][j][k][1][1][0] = 1;
-                        a[i][j][k][1][1][1] = -6;
-                        a[i][j][k][1][1][2] = 1;
-                        a[i][j][k][1][2][1] = 1;
-                        a[i][j][k][2][1][1] = 1;
+                        a[0][1][1][i][j][k] = 1;
+                        a[1][0][1][i][j][k] = 1;
+                        a[1][1][0][i][j][k] = 1;
+                        a[1][1][1][i][j][k] = -6;
+                        a[1][1][2][i][j][k] = 1;
+                        a[1][2][1][i][j][k] = 1;
+                        a[2][1][1][i][j][k] = 1;
                     }
 
                     // full-weight restriction
-                    b[i][j][k][0][0][0] = factor4;
-                    b[i][j][k][0][0][1] = factor3;
-                    b[i][j][k][0][0][2] = factor4;
-                    b[i][j][k][0][1][0] = factor3;
-                    b[i][j][k][0][1][1] = factor2;
-                    b[i][j][k][0][1][2] = factor3;
-                    b[i][j][k][0][2][0] = factor4;
-                    b[i][j][k][0][2][1] = factor3;
-                    b[i][j][k][0][2][2] = factor4;
-                    b[i][j][k][1][0][0] = factor3;
-                    b[i][j][k][1][0][1] = factor2;
-                    b[i][j][k][1][0][2] = factor3;
-                    b[i][j][k][1][1][0] = factor2;
-                    b[i][j][k][1][1][1] = factor1;
-                    b[i][j][k][1][1][2] = factor2;
-                    b[i][j][k][1][2][0] = factor3;
-                    b[i][j][k][1][2][1] = factor2;
-                    b[i][j][k][1][2][2] = factor3;
-                    b[i][j][k][2][0][0] = factor4;
-                    b[i][j][k][2][0][1] = factor3;
-                    b[i][j][k][2][0][2] = factor4;
-                    b[i][j][k][2][1][0] = factor3;
-                    b[i][j][k][2][1][1] = factor2;
-                    b[i][j][k][2][1][2] = factor3;
-                    b[i][j][k][2][2][0] = factor4;
-                    b[i][j][k][2][2][1] = factor3;
-                    b[i][j][k][2][2][2] = factor4;
+                    b[0][0][0][i][j][k] = factor4;
+                    b[0][0][1][i][j][k] = factor3;
+                    b[0][0][2][i][j][k] = factor4;
+                    b[0][1][0][i][j][k] = factor3;
+                    b[0][1][1][i][j][k] = factor2;
+                    b[0][1][2][i][j][k] = factor3;
+                    b[0][2][0][i][j][k] = factor4;
+                    b[0][2][1][i][j][k] = factor3;
+                    b[0][2][2][i][j][k] = factor4;
+                    b[1][0][0][i][j][k] = factor3;
+                    b[1][0][1][i][j][k] = factor2;
+                    b[1][0][2][i][j][k] = factor3;
+                    b[1][1][0][i][j][k] = factor2;
+                    b[1][1][1][i][j][k] = factor1;
+                    b[1][1][2][i][j][k] = factor2;
+                    b[1][2][0][i][j][k] = factor3;
+                    b[1][2][1][i][j][k] = factor2;
+                    b[1][2][2][i][j][k] = factor3;
+                    b[2][0][0][i][j][k] = factor4;
+                    b[2][0][1][i][j][k] = factor3;
+                    b[2][0][2][i][j][k] = factor4;
+                    b[2][1][0][i][j][k] = factor3;
+                    b[2][1][1][i][j][k] = factor2;
+                    b[2][1][2][i][j][k] = factor3;
+                    b[2][2][0][i][j][k] = factor4;
+                    b[2][2][1][i][j][k] = factor3;
+                    b[2][2][2][i][j][k] = factor4;
                 }
 
         auto c = a.multiply(b, 2, nullptr, true, true);
@@ -1072,9 +1072,9 @@ TEST_CASE("VaryingStencil::multiply")
         mgcl::VaryingStencil a(m, n, o, 3, ghm, ghn, gho);
         mgcl::VaryingStencil b(m, n, o, 3, ghm, ghn, gho);
 
-        bool dimsNotEqual = a.getDim1() != b.getDim1() || a.getDim2() != b.getDim2() || a.getDim3() != b.getDim3();
-        bool ghostsNotBigEnough = b.getGhostsDim1() < 1 || b.getGhostsDim2() < 1 || b.getGhostsDim3() < 1;
-        bool ghostsNotEqual = b.getGhostsDim1() != b.getGhostsDim2() || b.getGhostsDim1() != b.getGhostsDim3();
+        bool dimsNotEqual = a.getM() != b.getM() || a.getN() != b.getN() || a.getO() != b.getO();
+        bool ghostsNotBigEnough = b.getGhostsM() < 1 || b.getGhostsN() < 1 || b.getGhostsO() < 1;
+        bool ghostsNotEqual = b.getGhostsM() != b.getGhostsN() || b.getGhostsM() != b.getGhostsO();
 
         if (dimsNotEqual || ghostsNotEqual || ghostsNotBigEnough)
             REQUIRE_THROWS(a.multiply(b, 2, nullptr, true, true));

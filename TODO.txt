@@ -22,7 +22,7 @@
   [x] VaryingStencil::getWidth()
   [x] VaryingStencil::updateGhosts()
   [x] Matrix2d::fromVaryingStencil()
-  [ ] VaryingStencil::multiply(VaryingStencil)
+  [x] VaryingStencil::multiply(VaryingStencil)
   [ ] VaryingStencil::multiply(FixedStencil)
   [ ] FixedStencil::multiply(VaryingStencil)
   [ ] VaryingStencil::slice()
