@@ -347,13 +347,13 @@ TEST_CASE("Matrix2d::fromVaryingStencil")
                 for (int k = 0; k < o + 2 * gh; k++)
                 {
                     // 7-point Laplace
-                    s[i][j][k][0][1][1] = 1;
-                    s[i][j][k][1][0][1] = 1;
-                    s[i][j][k][1][1][0] = 1;
-                    s[i][j][k][1][1][1] = -6;
-                    s[i][j][k][1][1][2] = 1;
-                    s[i][j][k][1][2][1] = 1;
-                    s[i][j][k][2][1][1] = 1;
+                    s[0][1][1][i][j][k] = 1;
+                    s[1][0][1][i][j][k] = 1;
+                    s[1][1][0][i][j][k] = 1;
+                    s[1][1][1][i][j][k] = -6;
+                    s[1][1][2][i][j][k] = 1;
+                    s[1][2][1][i][j][k] = 1;
+                    s[2][1][1][i][j][k] = 1;
                 }
 
         auto c = mgcl_test::Matrix2d::fromVaryingStencil(s, false);
@@ -374,13 +374,13 @@ TEST_CASE("Matrix2d::fromVaryingStencil")
                 for (int k = 0; k < o + 2 * gh; k++)
                 {
                     // 7-point Laplace
-                    s[i][j][k][0][1][1] = 1;
-                    s[i][j][k][1][0][1] = 1;
-                    s[i][j][k][1][1][0] = 1;
-                    s[i][j][k][1][1][1] = -6;
-                    s[i][j][k][1][1][2] = 1;
-                    s[i][j][k][1][2][1] = 1;
-                    s[i][j][k][2][1][1] = 1;
+                    s[0][1][1][i][j][k] = 1;
+                    s[1][0][1][i][j][k] = 1;
+                    s[1][1][0][i][j][k] = 1;
+                    s[1][1][1][i][j][k] = -6;
+                    s[1][1][2][i][j][k] = 1;
+                    s[1][2][1][i][j][k] = 1;
+                    s[2][1][1][i][j][k] = 1;
                 }
 
         auto c = mgcl_test::Matrix2d::fromVaryingStencil(s, true);
