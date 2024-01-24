@@ -196,16 +196,16 @@ namespace mgcl
             getGhostsDim1() != getGhostsDim3())
             throw "Ghosts of a must be equal in each dimension!";
 
-        int m = dim1;
-        int n = dim2;
-        int o = dim3;
-        int gha = getGhostsDim1();
+        int m = getM();
+        int n = getN();
+        int o = getO();
+        int gha = getGhostsM();
 
         int N = getWidth();
         int NB = b.getWidth();
 
         int wc = N + NB - 1;
-        auto c = VaryingStencil(dim1, dim2, dim3, wc, ghc, ghc, ghc);
+        auto c = VaryingStencil(getM(), getN(), getO(), wc, ghc, ghc, ghc);
 
         // clang-format off
             for (int x = 0; x < m; x++)
@@ -227,11 +227,11 @@ namespace mgcl
                             a_k++, b_k--)
                     {
                         csum +=
-                            field_6d[x + gha][y + gha][z + gha][a_i][a_j][a_k] *
+                            field_6d[a_i][a_j][a_k][x + gha][y + gha][z + gha] *
                             b[b_i][b_j][b_k];
                     }                              
 
-                    c[x + ghc][y + ghc][z + ghc][ci][cj][ck] = csum;
+                    c[ci][cj][ck][x + ghc][y + ghc][z + ghc] = csum;
                 }
         // clang-format on
 
