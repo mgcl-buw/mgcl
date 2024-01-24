@@ -5,3 +5,5 @@ main
 *.html
 slurm*.out
 install/
+.cache/
+compile_commands.json

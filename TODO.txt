@@ -21,6 +21,7 @@
   [x] VaryingStencil::ctor()
   [x] VaryingStencil::getWidth()
   [x] VaryingStencil::updateGhosts()
+  [ ] Matrix2d::fromVaryingStencil()
   [ ] VaryingStencil::multiply(VaryingStencil)
   [ ] VaryingStencil::multiply(FixedStencil)
   [ ] FixedStencil::multiply(VaryingStencil)
