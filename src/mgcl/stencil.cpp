@@ -154,7 +154,6 @@ namespace mgcl
                 for (int jj = 0; jj < getWidth(); jj++)
                 for (int kk = 0; kk < getWidth(); kk++)
                 {
-                    
                     c[ii][jj][kk][j][i][k] = c[ii][jj][kk][j][i + factor_left * n][k]; // left ghost cell = right real cell
                     c[ii][jj][kk][j][ghn_start_right + i][k] = c[ii][jj][kk][j][ghn_start_right + i - factor_right * n][k]; // right ghost cell = left real cell
                 }
@@ -172,7 +171,6 @@ namespace mgcl
                 for (int jj = 0; jj < getWidth(); jj++)
                 for (int kk = 0; kk < getWidth(); kk++)
                 {
-                    
                     c[ii][jj][kk][j][k][i] = c[ii][jj][kk][j][k][i + factor_left * o]; // left ghost cell = right real cell
                     c[ii][jj][kk][j][k][gho_start_right + i] = c[ii][jj][kk][j][k][gho_start_right + i - factor_right * o]; // right ghost cell = left real cell
                 }
