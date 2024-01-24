@@ -18,7 +18,9 @@
   Before: [c0_gp0, c1_gp0, ..., c26_gp0, c0_gp1, ...]
   After: [c0_gp0, c0_gp1, ..., c0_gpN, c1_gp0, ...]
   Locations to change:
-  [ ] VaryingStencil::updateGhosts()
+  [x] VaryingStencil::ctor()
+  [x] VaryingStencil::getWidth()
+  [x] VaryingStencil::updateGhosts()
   [ ] FixedStencil::updateGhosts()
   [ ] VaryingStencil::multiply(VaryingStencil)
   [ ] VaryingStencil::multiply(FixedStencil)

@@ -402,8 +402,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 3; jj++)
                                 for (int kk = 0; kk < 3; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i + m][j][k][ii][jj][kk]);
-                                    CHECK(a[i + gh][j][k][ii][jj][kk] == a[i + gh + m][j][k][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i + m][j][k]);
+                                    REQUIRE(a[ii][jj][kk][i + gh][j][k] == a[ii][jj][kk][i + gh + m][j][k]);
                                 }
 
             // check in y-direction
@@ -414,8 +414,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 3; jj++)
                                 for (int kk = 0; kk < 3; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i][j + n][k][ii][jj][kk]);
-                                    CHECK(a[i][j + gh][k][ii][jj][kk] == a[i][j + gh + n][k][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i][j + n][k]);
+                                    REQUIRE(a[ii][jj][kk][i][j + gh][k] == a[ii][jj][kk][i][j + gh + n][k]);
                                 }
 
             // check in x-direction
@@ -426,8 +426,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 3; jj++)
                                 for (int kk = 0; kk < 3; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i][j][k + o][ii][jj][kk]);
-                                    CHECK(a[i][j][k + gh][ii][jj][kk] == a[i][j][k + gh + o][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i][j][k + o]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k + gh] == a[ii][jj][kk][i][j][k + gh + o]);
                                 }
         }
 
@@ -445,8 +445,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 5; jj++)
                                 for (int kk = 0; kk < 5; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i + m][j][k][ii][jj][kk]);
-                                    CHECK(a[i + gh][j][k][ii][jj][kk] == a[i + gh + m][j][k][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i + m][j][k]);
+                                    REQUIRE(a[ii][jj][kk][i + gh][j][k] == a[ii][jj][kk][i + gh + m][j][k]);
                                 }
 
             // check in y-direction
@@ -457,8 +457,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 5; jj++)
                                 for (int kk = 0; kk < 5; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i][j + n][k][ii][jj][kk]);
-                                    CHECK(a[i][j + gh][k][ii][jj][kk] == a[i][j + gh + n][k][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i][j + n][k]);
+                                    REQUIRE(a[ii][jj][kk][i][j + gh][k] == a[ii][jj][kk][i][j + gh + n][k]);
                                 }
 
             // check in x-direction
@@ -469,8 +469,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 5; jj++)
                                 for (int kk = 0; kk < 5; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i][j][k + o][ii][jj][kk]);
-                                    CHECK(a[i][j][k + gh][ii][jj][kk] == a[i][j][k + gh + o][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i][j][k + o]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k + gh] == a[ii][jj][kk][i][j][k + gh + o]);
                                 }
         }
     }
@@ -501,8 +501,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 3; jj++)
                                 for (int kk = 0; kk < 3; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i + m][j][k][ii][jj][kk]);
-                                    CHECK(a[i + gh][j][k][ii][jj][kk] == a[i + gh + m][j][k][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i + m][j][k]);
+                                    REQUIRE(a[ii][jj][kk][i + gh][j][k] == a[ii][jj][kk][i + gh + m][j][k]);
                                 }
 
             // check in y-direction
@@ -513,8 +513,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 3; jj++)
                                 for (int kk = 0; kk < 3; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i][j + n][k][ii][jj][kk]);
-                                    CHECK(a[i][j + gh][k][ii][jj][kk] == a[i][j + gh + n][k][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i][j + n][k]);
+                                    REQUIRE(a[ii][jj][kk][i][j + gh][k] == a[ii][jj][kk][i][j + gh + n][k]);
                                 }
 
             // check in x-direction
@@ -525,8 +525,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 3; jj++)
                                 for (int kk = 0; kk < 3; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i][j][k + o][ii][jj][kk]);
-                                    CHECK(a[i][j][k + gh][ii][jj][kk] == a[i][j][k + gh + o][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i][j][k + o]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k + gh] == a[ii][jj][kk][i][j][k + gh + o]);
                                 }
         }
 
@@ -544,8 +544,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 5; jj++)
                                 for (int kk = 0; kk < 5; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i + m][j][k][ii][jj][kk]);
-                                    CHECK(a[i + gh][j][k][ii][jj][kk] == a[i + gh + m][j][k][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i + m][j][k]);
+                                    REQUIRE(a[ii][jj][kk][i + gh][j][k] == a[ii][jj][kk][i + gh + m][j][k]);
                                 }
 
             // check in y-direction
@@ -556,8 +556,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 5; jj++)
                                 for (int kk = 0; kk < 5; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i][j + n][k][ii][jj][kk]);
-                                    CHECK(a[i][j + gh][k][ii][jj][kk] == a[i][j + gh + n][k][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i][j + n][k]);
+                                    REQUIRE(a[ii][jj][kk][i][j + gh][k] == a[ii][jj][kk][i][j + gh + n][k]);
                                 }
 
             // check in x-direction
@@ -568,8 +568,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 5; jj++)
                                 for (int kk = 0; kk < 5; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i][j][k + o][ii][jj][kk]);
-                                    CHECK(a[i][j][k + gh][ii][jj][kk] == a[i][j][k + gh + o][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i][j][k + o]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k + gh] == a[ii][jj][kk][i][j][k + gh + o]);
                                 }
         }
     }
@@ -607,8 +607,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 3; jj++)
                                 for (int kk = 0; kk < 3; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i + m][j][k][ii][jj][kk]);
-                                    CHECK(a[i + ghm][j][k][ii][jj][kk] == a[i + ghm + m][j][k][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i + m][j][k]);
+                                    REQUIRE(a[ii][jj][kk][i + ghm][j][k] == a[ii][jj][kk][i + ghm + m][j][k]);
                                 }
 
             // check in y-direction
@@ -619,8 +619,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 3; jj++)
                                 for (int kk = 0; kk < 3; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i][j + n][k][ii][jj][kk]);
-                                    CHECK(a[i][j + ghn][k][ii][jj][kk] == a[i][j + ghn + n][k][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i][j + n][k]);
+                                    REQUIRE(a[ii][jj][kk][i][j + ghn][k] == a[ii][jj][kk][i][j + ghn + n][k]);
                                 }
 
             // check in x-direction
@@ -631,8 +631,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 3; jj++)
                                 for (int kk = 0; kk < 3; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i][j][k + o][ii][jj][kk]);
-                                    CHECK(a[i][j][k + gho][ii][jj][kk] == a[i][j][k + gho + o][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i][j][k + o]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k + gho] == a[ii][jj][kk][i][j][k + gho + o]);
                                 }
         }
 
@@ -650,8 +650,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 5; jj++)
                                 for (int kk = 0; kk < 5; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i + m][j][k][ii][jj][kk]);
-                                    CHECK(a[i + ghm][j][k][ii][jj][kk] == a[i + ghm + m][j][k][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i + m][j][k]);
+                                    REQUIRE(a[ii][jj][kk][i + ghm][j][k] == a[ii][jj][kk][i + ghm + m][j][k]);
                                 }
 
             // check in y-direction
@@ -662,8 +662,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 5; jj++)
                                 for (int kk = 0; kk < 5; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i][j + n][k][ii][jj][kk]);
-                                    CHECK(a[i][j + ghn][k][ii][jj][kk] == a[i][j + ghn + n][k][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i][j + n][k]);
+                                    REQUIRE(a[ii][jj][kk][i][j + ghn][k] == a[ii][jj][kk][i][j + ghn + n][k]);
                                 }
 
             // check in x-direction
@@ -674,8 +674,8 @@ TEST_CASE("VaryingStencil::updateGhosts")
                             for (int jj = 0; jj < 5; jj++)
                                 for (int kk = 0; kk < 5; kk++)
                                 {
-                                    CHECK(a[i][j][k][ii][jj][kk] == a[i][j][k + o][ii][jj][kk]);
-                                    CHECK(a[i][j][k + gho][ii][jj][kk] == a[i][j][k + gho + o][ii][jj][kk]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k] == a[ii][jj][kk][i][j][k + o]);
+                                    REQUIRE(a[ii][jj][kk][i][j][k + gho] == a[ii][jj][kk][i][j][k + gho + o]);
                                 }
         }
     }

@@ -62,7 +62,7 @@ namespace mgcl
             Hypercube6d::operator=(std::move(o));
             return *this;
         }
-        inline int getWidth() const { return dim4; }
+        inline int getWidth() const { return dim1; }
         void updateGhosts();
         VaryingStencil multiply(FixedStencil& b, int ghc,
                                 MPILevelData* mpiData, bool periodic, bool forceLocal) const;

@@ -102,7 +102,7 @@ namespace mgcl
      *****************************************************/
 
     VaryingStencil::VaryingStencil(int m, int n, int o, int _width, int ghosts_m, int ghosts_n, int ghosts_o)
-        : Hypercube6d(m, n, o, _width, _width, _width, ghosts_m, ghosts_n, ghosts_o, 0, 0, 0)
+        : Hypercube6d(_width, _width, _width, m, n, o, 0, 0, 0, ghosts_m, ghosts_n, ghosts_o)
     {
         if (_width % 2 == 0 || _width < 3)
             throw "VaryingStencil is only defined for odd width >= 3!";
@@ -111,12 +111,12 @@ namespace mgcl
     // updates ghost cells, respects periodic ghosts, i.e. when gh > m
     void VaryingStencil::updateGhosts()
     {
-        int m = dim1;
-        int n = dim2;
-        int o = dim3;
-        int ghosts_m = ghostsDim1;
-        int ghosts_n = ghostsDim2;
-        int ghosts_o = ghostsDim3;
+        int m = dim4;
+        int n = dim5;
+        int o = dim6;
+        int ghosts_m = ghostsDim4;
+        int ghosts_n = ghostsDim5;
+        int ghosts_o = ghostsDim6;
 
         auto& c = *this;
 
@@ -125,59 +125,59 @@ namespace mgcl
         int gho_start_right = ghosts_o + o;
 
         // clang-format off
-            // sending data in z-direction           
-            for (int i = 0; i < ghosts_m; i++)
-            {
-                int factor_left = (ghosts_m - 1 - i) / m + 1;
-                int factor_right = (ghm_start_right + i - ghosts_m) / m;
+        // sending data in z-direction           
+        for (int i = 0; i < ghosts_m; i++)
+        {
+            int factor_left = (ghosts_m - 1 - i) / m + 1;
+            int factor_right = (ghm_start_right + i - ghosts_m) / m;
 
-                for (int j = 0; j < n + 2 * ghosts_n; j++)
-                for (int k = 0; k < o + 2 * ghosts_o; k++)
-                    for (int ii = 0; ii < getWidth(); ii++)
-                    for (int jj = 0; jj < getWidth(); jj++)
-                    for (int kk = 0; kk < getWidth(); kk++)
-                    {
-                        
-                        c[i][j][k][ii][jj][kk] = c[i + factor_left * m][j][k][ii][jj][kk]; // left ghost cell = right real cell
-                        c[ghm_start_right + i][j][k][ii][jj][kk] = c[ghm_start_right + i - factor_right * m][j][k][ii][jj][kk]; // right ghost cell = left real cell
-                    }
-            }
+            for (int j = 0; j < n + 2 * ghosts_n; j++)
+            for (int k = 0; k < o + 2 * ghosts_o; k++)
+                for (int ii = 0; ii < getWidth(); ii++)
+                for (int jj = 0; jj < getWidth(); jj++)
+                for (int kk = 0; kk < getWidth(); kk++)
+                {
+                    
+                    c[ii][jj][kk][i][j][k] = c[ii][jj][kk][i + factor_left * m][j][k]; // left ghost cell = right real cell
+                    c[ii][jj][kk][ghm_start_right + i][j][k] = c[ii][jj][kk][ghm_start_right + i - factor_right * m][j][k]; // right ghost cell = left real cell
+                }
+        }
 
-            // sending data in y-direction           
-            for (int i = 0; i < ghosts_n; i++)
-            {
-                int factor_left = (ghosts_n - 1 - i) / n + 1;
-                int factor_right = (ghn_start_right + i - ghosts_n) / n;
+        // sending data in y-direction           
+        for (int i = 0; i < ghosts_n; i++)
+        {
+            int factor_left = (ghosts_n - 1 - i) / n + 1;
+            int factor_right = (ghn_start_right + i - ghosts_n) / n;
 
-                for (int j = 0; j < m + 2 * ghosts_m; j++)
-                for (int k = 0; k < o + 2 * ghosts_o; k++)
-                    for (int ii = 0; ii < getWidth(); ii++)
-                    for (int jj = 0; jj < getWidth(); jj++)
-                    for (int kk = 0; kk < getWidth(); kk++)
-                    {
-                        
-                        c[j][i][k][ii][jj][kk] = c[j][i + factor_left * n][k][ii][jj][kk]; // left ghost cell = right real cell
-                        c[j][ghn_start_right + i][k][ii][jj][kk] = c[j][ghn_start_right + i - factor_right * n][k][ii][jj][kk]; // right ghost cell = left real cell
-                    }
-            }
+            for (int j = 0; j < m + 2 * ghosts_m; j++)
+            for (int k = 0; k < o + 2 * ghosts_o; k++)
+                for (int ii = 0; ii < getWidth(); ii++)
+                for (int jj = 0; jj < getWidth(); jj++)
+                for (int kk = 0; kk < getWidth(); kk++)
+                {
+                    
+                    c[ii][jj][kk][j][i][k] = c[ii][jj][kk][j][i + factor_left * n][k]; // left ghost cell = right real cell
+                    c[ii][jj][kk][j][ghn_start_right + i][k] = c[ii][jj][kk][j][ghn_start_right + i - factor_right * n][k]; // right ghost cell = left real cell
+                }
+        }
 
-            // sending data in x-direction           
-            for (int i = 0; i < ghosts_o; i++)
-            {
-                int factor_left = (ghosts_o - 1 - i) / o + 1;
-                int factor_right = (gho_start_right + i - ghosts_o) / o;
+        // sending data in x-direction           
+        for (int i = 0; i < ghosts_o; i++)
+        {
+            int factor_left = (ghosts_o - 1 - i) / o + 1;
+            int factor_right = (gho_start_right + i - ghosts_o) / o;
 
-                for (int j = 0; j < m + 2 * ghosts_m; j++)
-                for (int k = 0; k < n + 2 * ghosts_n; k++)
-                    for (int ii = 0; ii < getWidth(); ii++)
-                    for (int jj = 0; jj < getWidth(); jj++)
-                    for (int kk = 0; kk < getWidth(); kk++)
-                    {
-                        
-                        c[j][k][i][ii][jj][kk] = c[j][k][i + factor_left * o][ii][jj][kk]; // left ghost cell = right real cell
-                        c[j][k][gho_start_right + i][ii][jj][kk] = c[j][k][gho_start_right + i - factor_right * o][ii][jj][kk]; // right ghost cell = left real cell
-                    }
-            }
+            for (int j = 0; j < m + 2 * ghosts_m; j++)
+            for (int k = 0; k < n + 2 * ghosts_n; k++)
+                for (int ii = 0; ii < getWidth(); ii++)
+                for (int jj = 0; jj < getWidth(); jj++)
+                for (int kk = 0; kk < getWidth(); kk++)
+                {
+                    
+                    c[ii][jj][kk][j][k][i] = c[ii][jj][kk][j][k][i + factor_left * o]; // left ghost cell = right real cell
+                    c[ii][jj][kk][j][k][gho_start_right + i] = c[ii][jj][kk][j][k][gho_start_right + i - factor_right * o]; // right ghost cell = left real cell
+                }
+        }
         // clang-format on
     }
 
@@ -430,9 +430,9 @@ namespace mgcl
     std::ostream& operator<<(std::ostream& os, const VaryingStencil& v)
     {
         os << "VaryingStencil: " << std::endl
-           << " m,n,o: " << v.dim1 << "," << v.dim2 << "," << v.dim3 << std::endl
-           << " width: " << v.dim4 << std::endl
-           << " ghm,ghn,gho: " << v.ghostsDim1 << "," << v.ghostsDim2 << "," << v.ghostsDim3 << std::endl;
+           << " m,n,o: " << v.dim4 << "," << v.dim5 << "," << v.dim6 << std::endl
+           << " width: " << v.dim1 << std::endl
+           << " ghm,ghn,gho: " << v.ghostsDim4 << "," << v.ghostsDim5 << "," << v.ghostsDim6 << std::endl;
         return os;
     }
 
