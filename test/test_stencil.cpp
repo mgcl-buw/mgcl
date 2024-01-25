@@ -278,9 +278,9 @@ TEST_CASE("StencilVarying27p periodic")
     v[2][2][2] = 2;
 
     mgcl::VaryingStencil vals(N, N, N, 3, gh, gh, gh);
-    REQUIRE(vals.getDim1() == v.getM());
-    REQUIRE(vals.getDim2() == v.getN());
-    REQUIRE(vals.getDim3() == v.getO());
+    REQUIRE(vals.getM() == v.getM());
+    REQUIRE(vals.getN() == v.getN());
+    REQUIRE(vals.getO() == v.getO());
 
     // fill varying stencil with 27p Laplace stencil
     double h2inv = (4.0 * 4.0) / 30.0;
