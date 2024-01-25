@@ -42,53 +42,53 @@ namespace mgcl
     VaryingStencil FixedStencil::multiply(VaryingStencil& b, int ghc,
                                           MPILevelData* mpiData, bool periodic, bool forceLocal) const
     {
-        if (b.getGhostsDim1() != b.getGhostsDim2() ||
-            b.getGhostsDim1() != b.getGhostsDim3())
+        if (b.getGhostsM() != b.getGhostsN() ||
+            b.getGhostsM() != b.getGhostsO())
             throw "Ghosts of b must be equal in each dimension!";
 
         int N = getWidth();
 
-        if (b.getGhostsDim1() < N >> 1)
+        if (b.getGhostsM() < N >> 1)
             throw std::string("Ghosts of b be must be >= ").append(std::to_string(N >> 1));
 
         int NB = b.getWidth();
         int N2 = N >> 1;
-        int ghb = b.getGhostsDim1();
+        int ghb = b.getGhostsM();
 
         // TODO ghosts of c?
         int wc = N + NB - 1;
-        auto c = VaryingStencil(b.getDim1(), b.getDim2(), b.getDim3(), wc, ghc, ghc, ghc);
+        auto c = VaryingStencil(b.getM(), b.getN(), b.getO(), wc, ghc, ghc, ghc);
 
         // clang-format off
-            for (int x = 0; x < b.getDim1(); x++)
-            for (int y = 0; y < b.getDim2(); y++)
-            for (int z = 0; z < b.getDim3(); z++)
-                for (int ci = 0; ci < wc; ci++)
-                for (int cj = 0; cj < wc; cj++)
-                for (int ck = 0; ck < wc; ck++)
+        for (int x = 0; x < b.getM(); x++)
+        for (int y = 0; y < b.getN(); y++)
+        for (int z = 0; z < b.getO(); z++)
+            for (int ci = 0; ci < wc; ci++)
+            for (int cj = 0; cj < wc; cj++)
+            for (int ck = 0; ck < wc; ck++)
+            {
+                double csum = 0;
+                for (int a_i = ci - (min(ci, NB - 1)), b_i = min(ci, NB - 1);
+                    a_i <= min(ci, N - 1) && b_i >= ci - min(ci, N - 1);
+                    a_i++, b_i--)
+                for (int a_j = cj - (min(cj, NB - 1)), b_j = min(cj, NB - 1);
+                        a_j <= min(cj, N - 1) && b_j >= cj - min(cj, N - 1);
+                        a_j++, b_j--)
+                for (int a_k = ck - (min(ck, NB - 1)), b_k = min(ck, NB - 1);
+                        a_k <= min(ck, N - 1) && b_k >= ck - min(ck, N - 1);
+                        a_k++, b_k--)
                 {
-                    double csum = 0;
-                    for (int a_i = ci - (min(ci, NB - 1)), b_i = min(ci, NB - 1);
-                        a_i <= min(ci, N - 1) && b_i >= ci - min(ci, N - 1);
-                        a_i++, b_i--)
-                    for (int a_j = cj - (min(cj, NB - 1)), b_j = min(cj, NB - 1);
-                            a_j <= min(cj, N - 1) && b_j >= cj - min(cj, N - 1);
-                            a_j++, b_j--)
-                    for (int a_k = ck - (min(ck, NB - 1)), b_k = min(ck, NB - 1);
-                            a_k <= min(ck, N - 1) && b_k >= ck - min(ck, N - 1);
-                            a_k++, b_k--)
-                    {
-                        int gpi = x + a_i - N2 + ghb;
-                        int gpj = y + a_j - N2 + ghb;
-                        int gpk = z + a_k - N2 + ghb;
+                    int gpi = x + a_i - N2 + ghb;
+                    int gpj = y + a_j - N2 + ghb;
+                    int gpk = z + a_k - N2 + ghb;
 
-                        csum +=
-                            field_3d[a_i][a_j][a_k] *
-                            b[gpi][gpj][gpk][b_i][b_j][b_k];
-                    }
-
-                    c[x + ghc][y + ghc][z + ghc][ci][cj][ck] = csum;
+                    csum +=
+                        field_3d[a_i][a_j][a_k] *
+                        b[b_i][b_j][b_k][gpi][gpj][gpk];
                 }
+
+                c[ci][cj][ck][x + ghc][y + ghc][z + ghc] = csum;
+            }
         // clang-format on
 
         if (ghc > 0)
@@ -192,8 +192,8 @@ namespace mgcl
     VaryingStencil VaryingStencil::multiply(FixedStencil& b, int ghc,
                                             MPILevelData* mpiData, bool periodic, bool forceLocal) const
     {
-        if (getGhostsDim1() != getGhostsDim2() ||
-            getGhostsDim1() != getGhostsDim3())
+        if (getGhostsM() != getGhostsN() ||
+            getGhostsM() != getGhostsO())
             throw "Ghosts of a must be equal in each dimension!";
 
         int m = getM();

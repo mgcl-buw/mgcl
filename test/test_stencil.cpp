@@ -1274,14 +1274,14 @@ TEST_CASE("FixedStencil::multiply")
     // create varying stencil from fixed
     mgcl::VaryingStencil vf(m, n, o, 3, 0, 0, 0);
     // clang-format off
-    for (int i = 0; i < vf.getDim1(); i++)
-    for (int j = 0; j < vf.getDim2(); j++)
-    for (int k = 0; k < vf.getDim3(); k++)
-        for (int ii = 0; ii < vf.getDim4(); ii++)
-        for (int jj = 0; jj < vf.getDim5(); jj++)
-        for (int kk = 0; kk < vf.getDim6(); kk++)
+    for (int i = 0; i < vf.getM(); i++)
+    for (int j = 0; j < vf.getN(); j++)
+    for (int k = 0; k < vf.getO(); k++)
+        for (int ii = 0; ii < vf.getWidth(); ii++)
+        for (int jj = 0; jj < vf.getWidth(); jj++)
+        for (int kk = 0; kk < vf.getWidth(); kk++)
         {
-            vf[i][j][k][ii][jj][kk] = f[ii][jj][kk];
+            vf[ii][jj][kk][i][j][k] = f[ii][jj][kk];
         }
     // clang-format on
 
@@ -1308,14 +1308,14 @@ TEST_CASE("FixedStencil::multiply")
     // check results
 
     // clang-format off
-    for (int i = 0; i < vf.getDim1(); i++)
-    for (int j = 0; j < vf.getDim2(); j++)
-    for (int k = 0; k < vf.getDim3(); k++)
-        for (int ii = 0; ii < vf.getDim4(); ii++)
-        for (int jj = 0; jj < vf.getDim5(); jj++)
-        for (int kk = 0; kk < vf.getDim6(); kk++)
+    for (int i = 0; i < vf.getM(); i++)
+    for (int j = 0; j < vf.getN(); j++)
+    for (int k = 0; k < vf.getO(); k++)
+        for (int ii = 0; ii < vf.getWidth(); ii++)
+        for (int jj = 0; jj < vf.getWidth(); jj++)
+        for (int kk = 0; kk < vf.getWidth(); kk++)
         {
-            REQUIRE(fres[i][j][k][ii][jj][kk] == vres[i][j][k][ii][jj][kk]);
+            REQUIRE(fres[ii][jj][kk][i][j][k] == vres[ii][jj][kk][i][j][k]);
         }
     // clang-format on
 }
