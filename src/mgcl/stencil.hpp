@@ -68,6 +68,9 @@ namespace mgcl
         inline int getGhostsM() const { return ghostsDim4; }
         inline int getGhostsN() const { return ghostsDim5; }
         inline int getGhostsO() const { return ghostsDim6; }
+        inline int getMgh() const { return dim4 + 2 * ghostsDim4; }
+        inline int getNgh() const { return dim5 + 2 * ghostsDim5; }
+        inline int getOgh() const { return dim6 + 2 * ghostsDim6; }
         inline int getWidth() const { return dim1; }
         void updateGhosts();
         VaryingStencil multiply(FixedStencil& b, int ghc,

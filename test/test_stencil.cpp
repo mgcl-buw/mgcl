@@ -1214,27 +1214,24 @@ TEST_CASE("VaryingStencil::sliceIncGhosts")
     {
         auto cs = cb.sliceIncGhosts(0, 1, 0, 2, 2, 3);
 
-        REQUIRE(cs->getDim1() == 2);
-        REQUIRE(cs->getDim2() == 3);
-        REQUIRE(cs->getDim3() == 2);
-        REQUIRE(cs->getDim4() == cb.getDim4());
-        REQUIRE(cs->getDim5() == cb.getDim5());
-        REQUIRE(cs->getDim6() == cb.getDim6());
-        REQUIRE(cs->getGhostsDim1() == 0);
-        REQUIRE(cs->getGhostsDim2() == 0);
-        REQUIRE(cs->getGhostsDim3() == 0);
-        REQUIRE(cs->getGhostsDim4() == 0);
-        REQUIRE(cs->getGhostsDim5() == 0);
-        REQUIRE(cs->getGhostsDim6() == 0);
+        REQUIRE(cs->getM() == 2);
+        REQUIRE(cs->getN() == 3);
+        REQUIRE(cs->getO() == 2);
+        REQUIRE(cs->getWidth() == cb.getWidth());
+        REQUIRE(cs->getWidth() == cb.getWidth());
+        REQUIRE(cs->getWidth() == cb.getWidth());
+        REQUIRE(cs->getGhostsM() == 0);
+        REQUIRE(cs->getGhostsN() == 0);
+        REQUIRE(cs->getGhostsO() == 0);
 
-        for (int d1 = 0; d1 < cs->getDim1gh(); d1++)
-            for (int d2 = 0; d2 < cs->getDim2gh(); d2++)
-                for (int d3 = 0; d3 < cs->getDim3gh(); d3++)
-                    for (int d4 = 0; d4 < cs->getDim4gh(); d4++)
-                        for (int d5 = 0; d5 < cs->getDim5gh(); d5++)
-                            for (int d6 = 0; d6 < cs->getDim6gh(); d6++)
+        for (int d1 = 0; d1 < cs->getMgh(); d1++)
+            for (int d2 = 0; d2 < cs->getNgh(); d2++)
+                for (int d3 = 0; d3 < cs->getOgh(); d3++)
+                    for (int d4 = 0; d4 < cs->getWidth(); d4++)
+                        for (int d5 = 0; d5 < cs->getWidth(); d5++)
+                            for (int d6 = 0; d6 < cs->getWidth(); d6++)
                             {
-                                REQUIRE(cs->getData()[d1][d2][d3][d4][d5][d6] == cb[d1][d2][d3 + 2][d4][d5][d6]);
+                                REQUIRE(cs->getData()[d4][d5][d6][d1][d2][d3] == cb[d4][d5][d6][d1][d2][d3 + 2]);
                             }
     }
 }

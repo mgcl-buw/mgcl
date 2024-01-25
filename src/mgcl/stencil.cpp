@@ -395,7 +395,7 @@ namespace mgcl
                                                                    int o_start, int o_end)
     {
         if (m_start < 0 || n_start < 0 || o_start < 0 ||
-            m_end >= dim1gh || n_end >= dim2gh || o_end >= dim3gh)
+            m_end >= getMgh() || n_end >= getNgh() || o_end >= getOgh())
             throw "Boundaries out of range!";
 
         auto ret = std::make_unique<VaryingStencil>((m_end - m_start) + 1, (n_end - n_start) + 1,
@@ -404,11 +404,11 @@ namespace mgcl
         for (int i = m_start, is = i - m_start; i <= m_end; i++, is++)
             for (int j = n_start, js = j - n_start; j <= n_end; j++, js++)
                 for (int k = o_start, ks = k - o_start; k <= o_end; k++, ks++)
-                    for (int ii = 0; ii < dim4; ii++)
-                        for (int jj = 0; jj < dim5; jj++)
-                            for (int kk = 0; kk < dim6; kk++)
+                    for (int ii = 0; ii < getWidth(); ii++)
+                        for (int jj = 0; jj < getWidth(); jj++)
+                            for (int kk = 0; kk < getWidth(); kk++)
                             {
-                                ret->getData()[is][js][ks][ii][jj][kk] = getData()[i][j][k][ii][jj][kk];
+                                ret->getData()[ii][jj][kk][is][js][ks] = getData()[ii][jj][kk][i][j][k];
                             }
 
         return ret;
