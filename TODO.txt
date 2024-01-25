@@ -24,7 +24,7 @@
   [x] Matrix2d::fromVaryingStencil()
   [x] VaryingStencil::multiply(VaryingStencil)
   [x] VaryingStencil::multiply(FixedStencil)
-  [ ] FixedStencil::multiply(VaryingStencil)
+  [x] FixedStencil::multiply(VaryingStencil)
   [ ] VaryingStencil::slice()
   [ ] VaryingStencil::sliceIncGhosts()
   [ ] MultigridEngine::galerkin
