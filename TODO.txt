@@ -25,7 +25,7 @@
   [x] VaryingStencil::multiply(VaryingStencil)
   [x] VaryingStencil::multiply(FixedStencil)
   [x] FixedStencil::multiply(VaryingStencil)
-  [ ] VaryingStencil::slice()
+  [x] VaryingStencil::slice()
   [ ] VaryingStencil::sliceIncGhosts()
   [ ] MultigridEngine::galerkin
 

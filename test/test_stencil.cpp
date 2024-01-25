@@ -1166,29 +1166,26 @@ TEST_CASE("VaryingStencil::slice")
     {
         auto cs = cb.slice(0, 1, 0, 2, 2, 3);
 
-        REQUIRE(cs->getDim1() == 2);
-        REQUIRE(cs->getDim2() == 3);
-        REQUIRE(cs->getDim3() == 2);
-        REQUIRE(cs->getDim4() == cb.getDim4());
-        REQUIRE(cs->getDim5() == cb.getDim5());
-        REQUIRE(cs->getDim6() == cb.getDim6());
-        REQUIRE(cs->getGhostsDim1() == cb.getGhostsDim1());
-        REQUIRE(cs->getGhostsDim2() == cb.getGhostsDim2());
-        REQUIRE(cs->getGhostsDim3() == cb.getGhostsDim3());
-        REQUIRE(cs->getGhostsDim4() == cb.getGhostsDim4());
-        REQUIRE(cs->getGhostsDim5() == cb.getGhostsDim5());
-        REQUIRE(cs->getGhostsDim6() == cb.getGhostsDim6());
+        REQUIRE(cs->getM() == 2);
+        REQUIRE(cs->getN() == 3);
+        REQUIRE(cs->getO() == 2);
+        REQUIRE(cs->getWidth() == cb.getWidth());
+        REQUIRE(cs->getWidth() == cb.getWidth());
+        REQUIRE(cs->getWidth() == cb.getWidth());
+        REQUIRE(cs->getGhostsM() == cb.getGhostsM());
+        REQUIRE(cs->getGhostsN() == cb.getGhostsN());
+        REQUIRE(cs->getGhostsO() == cb.getGhostsO());
 
-        for (int d1 = cs->getGhostsDim1(); d1 < cs->getDim1() + cs->getGhostsDim1(); d1++)
-            for (int d2 = cs->getGhostsDim2(); d2 < cs->getDim2() + cs->getGhostsDim2(); d2++)
-                for (int d3 = cs->getGhostsDim3(); d3 < cs->getDim3() + cs->getGhostsDim3(); d3++)
-                    for (int d4 = 0; d4 < cs->getDim4(); d4++)
-                        for (int d5 = 0; d5 < cs->getDim5(); d5++)
-                            for (int d6 = 0; d6 < cs->getDim6(); d6++)
+        for (int d1 = cs->getGhostsM(); d1 < cs->getM() + cs->getGhostsM(); d1++)
+            for (int d2 = cs->getGhostsN(); d2 < cs->getN() + cs->getGhostsN(); d2++)
+                for (int d3 = cs->getGhostsO(); d3 < cs->getO() + cs->getGhostsO(); d3++)
+                    for (int d4 = 0; d4 < cs->getWidth(); d4++)
+                        for (int d5 = 0; d5 < cs->getWidth(); d5++)
+                            for (int d6 = 0; d6 < cs->getWidth(); d6++)
                             {
                                 CAPTURE(d1, d2, d3, d4, d5, d6);
                                 REQUIRE(
-                                    cs->getData()[d1][d2][d3][d4][d5][d6] == cb[d1][d2][d3 + 2][d4][d5][d6]);
+                                    cs->getData()[d4][d5][d6][d1][d2][d3] == cb[d4][d5][d6][d1][d2][d3 + 2]);
                             }
     }
 }

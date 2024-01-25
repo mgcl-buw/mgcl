@@ -356,26 +356,26 @@ namespace mgcl
                                                           int ghm, int ghn, int gho)
     {
         if (m_start < 0 || n_start < 0 || o_start < 0 ||
-            m_end >= dim1 || n_end >= dim2 || o_end >= dim3)
+            m_end >= getM() || n_end >= getN() || o_end >= getO())
             throw "Boundaries out of range!";
 
         if (ghm < 0)
-            ghm = ghostsDim1;
+            ghm = getGhostsM();
         if (ghn < 0)
-            ghn = ghostsDim2;
+            ghn = getGhostsN();
         if (gho < 0)
-            gho = ghostsDim3;
+            gho = getGhostsO();
 
         auto ret = std::make_unique<VaryingStencil>((m_end - m_start) + 1, (n_end - n_start) + 1,
                                                     (o_end - o_start) + 1, getWidth(), ghm, ghn, gho);
-        for (int i = m_start, is = ghm, ib = i + ghostsDim1; i <= m_end; i++, is++, ib++)
-            for (int j = n_start, js = ghn, jb = j + ghostsDim2; j <= n_end; j++, js++, jb++)
-                for (int k = o_start, ks = gho, kb = k + ghostsDim3; k <= o_end; k++, ks++, kb++)
-                    for (int ii = 0; ii < dim4; ii++)
-                        for (int jj = 0; jj < dim5; jj++)
-                            for (int kk = 0; kk < dim6; kk++)
+        for (int i = m_start, is = ghm, ib = i + getGhostsM(); i <= m_end; i++, is++, ib++)
+            for (int j = n_start, js = ghn, jb = j + getGhostsN(); j <= n_end; j++, js++, jb++)
+                for (int k = o_start, ks = gho, kb = k + getGhostsO(); k <= o_end; k++, ks++, kb++)
+                    for (int ii = 0; ii < getWidth(); ii++)
+                        for (int jj = 0; jj < getWidth(); jj++)
+                            for (int kk = 0; kk < getWidth(); kk++)
                             {
-                                ret->getData()[is][js][ks][ii][jj][kk] = getData()[ib][jb][kb][ii][jj][kk];
+                                ret->getData()[ii][jj][kk][is][js][ks] = getData()[ii][jj][kk][ib][jb][kb];
                             }
 
         return ret;
