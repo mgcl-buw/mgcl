@@ -16,28 +16,17 @@ TEST_CASE("galerkin Laplace vs Matrix")
     int m = GENERATE(2, 4, 8);
     int n = GENERATE(2, 4, 8);
     int o = GENERATE(2, 4, 8);
+    double h2inv = static_cast<double>(m) * static_cast<double>(m);
 
     // Fill varying stencil on fine grid with 7p Laplace
     mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
-    for (int i = 0; i < m + 4; i++)
-        for (int j = 0; j < n + 4; j++)
-            for (int k = 0; k < o + 4; k++)
-            {
-                // 7-point Laplace
-                a_h[i][j][k][0][1][1] = 1;
-                a_h[i][j][k][1][0][1] = 1;
-                a_h[i][j][k][1][1][0] = 1;
-                a_h[i][j][k][1][1][1] = -6;
-                a_h[i][j][k][1][1][2] = 1;
-                a_h[i][j][k][1][2][1] = 1;
-                a_h[i][j][k][2][1][1] = 1;
-            }
+    mgcl_test::fill7pLaplace(a_h);
 
     auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
 
     // calculate results with Matrices to check
-    auto ah = mgcl_test::Matrix2d::laplace7p3d(m, n, o);
+    auto ah = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * h2inv;
     auto r = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
     auto p = mgcl_test::Matrix2d::prolongationBilinear(m, n, o);
 
@@ -158,19 +147,7 @@ TEST_CASE("galerkin symmetric")
 
     // Fill varying stencil on fine grid with 7p Laplace
     mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
-    for (int i = 0; i < m + 4; i++)
-        for (int j = 0; j < n + 4; j++)
-            for (int k = 0; k < o + 4; k++)
-            {
-                // 7-point Laplace
-                a_h[i][j][k][0][1][1] = 1;
-                a_h[i][j][k][1][0][1] = 1;
-                a_h[i][j][k][1][1][0] = 1;
-                a_h[i][j][k][1][1][1] = -6;
-                a_h[i][j][k][1][1][2] = 1;
-                a_h[i][j][k][1][2][1] = 1;
-                a_h[i][j][k][2][1][1] = 1;
-            }
+    mgcl_test::fill7pLaplace(a_h);
 
     auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
@@ -188,24 +165,10 @@ TEST_CASE("galerkin Laplace SA == AS")
     int m = 8; // GENERATE(2, 4, 8);
     int n = 8; // GENERATE(2, 4, 8);
     int o = 8; // GENERATE(2, 4, 8);
-    double h = 1.0 / (double)m;
-    double h2inv = static_cast<double>(m * m);
 
     // Fill varying stencil on fine grid with 7p Laplace
     mgcl::VaryingStencil a(m, n, o, 3, 2, 2, 2);
-    for (int i = 0; i < m + 4; i++)
-        for (int j = 0; j < n + 4; j++)
-            for (int k = 0; k < o + 4; k++)
-            {
-                // 7-point Laplace
-                a[i][j][k][0][1][1] = h2inv * 1.0;
-                a[i][j][k][1][0][1] = h2inv * 1.0;
-                a[i][j][k][1][1][0] = h2inv * 1.0;
-                a[i][j][k][1][1][1] = h2inv * -6.0;
-                a[i][j][k][1][1][2] = h2inv * 1.0;
-                a[i][j][k][1][2][1] = h2inv * 1.0;
-                a[i][j][k][2][1][1] = h2inv * 1.0;
-            }
+    mgcl_test::fill7pLaplace(a);
 
     auto s = mgcl::create3dFullWeightRestrictionStencil();
 
@@ -215,11 +178,11 @@ TEST_CASE("galerkin Laplace SA == AS")
     for (int i = 0; i < m; i++)
         for (int j = 0; j < n; j++)
             for (int k = 0; k < o; k++)
-                for (int ii = 0; ii < as.getDim4gh(); ii++)
-                    for (int jj = 0; jj < as.getDim5gh(); jj++)
-                        for (int kk = 0; kk < as.getDim6gh(); kk++)
+                for (int ii = 0; ii < as.getWidth(); ii++)
+                    for (int jj = 0; jj < as.getWidth(); jj++)
+                        for (int kk = 0; kk < as.getWidth(); kk++)
                         {
-                            REQUIRE(as[i][j][k][ii][jj][kk] == sa[i][j][k][ii][jj][kk]);
+                            REQUIRE(as[ii][jj][kk][i][j][k] == sa[ii][jj][kk][i][j][k]);
                         }
 }
 
@@ -239,19 +202,7 @@ TEST_CASE("galerkin Laplace rediscretized")
 
     // Fill varying stencil on fine grid with 7p Laplace
     mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
-    for (int i = 0; i < m + 4; i++)
-        for (int j = 0; j < n + 4; j++)
-            for (int k = 0; k < o + 4; k++)
-            {
-                // 7-point Laplace
-                a_h[i][j][k][0][1][1] = h2inv * 1.0;
-                a_h[i][j][k][1][0][1] = h2inv * 1.0;
-                a_h[i][j][k][1][1][0] = h2inv * 1.0;
-                a_h[i][j][k][1][1][1] = h2inv * -6.0;
-                a_h[i][j][k][1][1][2] = h2inv * 1.0;
-                a_h[i][j][k][1][2][1] = h2inv * 1.0;
-                a_h[i][j][k][2][1][1] = h2inv * 1.0;
-            }
+    mgcl_test::fill7pLaplace(a_h);
 
     auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
 
@@ -261,37 +212,37 @@ TEST_CASE("galerkin Laplace rediscretized")
     double factor3 = h2inv * (3.0 / 64.0);   // straight off
     double factor4 = h2inv * (-27.0 / 32.0); // center
 
-    for (int i = 0; i < a_2h.getDim1(); i++)
-        for (int j = 0; j < a_2h.getDim2(); j++)
-            for (int k = 0; k < a_2h.getDim3(); k++)
+    for (int i = 0; i < a_2h.getM(); i++)
+        for (int j = 0; j < a_2h.getN(); j++)
+            for (int k = 0; k < a_2h.getO(); k++)
             {
-                REQUIRE(a_2h[i][j][k][0][0][0] == factor1);
-                REQUIRE(a_2h[i][j][k][0][0][1] == factor2);
-                REQUIRE(a_2h[i][j][k][0][0][2] == factor1);
-                REQUIRE(a_2h[i][j][k][0][1][0] == factor2);
-                REQUIRE(a_2h[i][j][k][0][1][1] == factor3);
-                REQUIRE(a_2h[i][j][k][0][1][2] == factor2);
-                REQUIRE(a_2h[i][j][k][0][2][0] == factor1);
-                REQUIRE(a_2h[i][j][k][0][2][1] == factor2);
-                REQUIRE(a_2h[i][j][k][0][2][2] == factor1);
-                REQUIRE(a_2h[i][j][k][1][0][0] == factor2);
-                REQUIRE(a_2h[i][j][k][1][0][1] == factor3);
-                REQUIRE(a_2h[i][j][k][1][0][2] == factor2);
-                REQUIRE(a_2h[i][j][k][1][1][0] == factor3);
-                REQUIRE(a_2h[i][j][k][1][1][1] == factor4);
-                REQUIRE(a_2h[i][j][k][1][1][2] == factor3);
-                REQUIRE(a_2h[i][j][k][1][2][0] == factor2);
-                REQUIRE(a_2h[i][j][k][1][2][1] == factor3);
-                REQUIRE(a_2h[i][j][k][1][2][2] == factor2);
-                REQUIRE(a_2h[i][j][k][2][0][0] == factor1);
-                REQUIRE(a_2h[i][j][k][2][0][1] == factor2);
-                REQUIRE(a_2h[i][j][k][2][0][2] == factor1);
-                REQUIRE(a_2h[i][j][k][2][1][0] == factor2);
-                REQUIRE(a_2h[i][j][k][2][1][1] == factor3);
-                REQUIRE(a_2h[i][j][k][2][1][2] == factor2);
-                REQUIRE(a_2h[i][j][k][2][2][0] == factor1);
-                REQUIRE(a_2h[i][j][k][2][2][1] == factor2);
-                REQUIRE(a_2h[i][j][k][2][2][2] == factor1);
+                REQUIRE(a_2h[0][0][0][i][j][k] == factor1);
+                REQUIRE(a_2h[0][0][1][i][j][k] == factor2);
+                REQUIRE(a_2h[0][0][2][i][j][k] == factor1);
+                REQUIRE(a_2h[0][1][0][i][j][k] == factor2);
+                REQUIRE(a_2h[0][1][1][i][j][k] == factor3);
+                REQUIRE(a_2h[0][1][2][i][j][k] == factor2);
+                REQUIRE(a_2h[0][2][0][i][j][k] == factor1);
+                REQUIRE(a_2h[0][2][1][i][j][k] == factor2);
+                REQUIRE(a_2h[0][2][2][i][j][k] == factor1);
+                REQUIRE(a_2h[1][0][0][i][j][k] == factor2);
+                REQUIRE(a_2h[1][0][1][i][j][k] == factor3);
+                REQUIRE(a_2h[1][0][2][i][j][k] == factor2);
+                REQUIRE(a_2h[1][1][0][i][j][k] == factor3);
+                REQUIRE(a_2h[1][1][1][i][j][k] == factor4);
+                REQUIRE(a_2h[1][1][2][i][j][k] == factor3);
+                REQUIRE(a_2h[1][2][0][i][j][k] == factor2);
+                REQUIRE(a_2h[1][2][1][i][j][k] == factor3);
+                REQUIRE(a_2h[1][2][2][i][j][k] == factor2);
+                REQUIRE(a_2h[2][0][0][i][j][k] == factor1);
+                REQUIRE(a_2h[2][0][1][i][j][k] == factor2);
+                REQUIRE(a_2h[2][0][2][i][j][k] == factor1);
+                REQUIRE(a_2h[2][1][0][i][j][k] == factor2);
+                REQUIRE(a_2h[2][1][1][i][j][k] == factor3);
+                REQUIRE(a_2h[2][1][2][i][j][k] == factor2);
+                REQUIRE(a_2h[2][2][0][i][j][k] == factor1);
+                REQUIRE(a_2h[2][2][1][i][j][k] == factor2);
+                REQUIRE(a_2h[2][2][2][i][j][k] == factor1);
             }
 }
 

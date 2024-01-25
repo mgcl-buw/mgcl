@@ -27,8 +27,10 @@
   [x] FixedStencil::multiply(VaryingStencil)
   [x] VaryingStencil::slice()
   [x] VaryingStencil::sliceIncGhosts()
+  [ ] VaryingStencil::copyRealFrom()
   [ ] MultigridEngine::galerkin
 
+  [ ] VaryingStencilGpu::fill
   [ ] VaryingStencilGpu::updateGhosts
   [ ] VaryingStencilGpu::multiply(VaryingStencilGpu)
   [ ] VaryingStencilGpu::multiply(FixedStencilGpu)

@@ -249,7 +249,7 @@ namespace mgcl
         // TODO respect problem::ghosts maybe
 
         // Make sure a_h has two ghosts at each border for periodic bc.
-        if (a_h.getGhostsDim1() < 2 || a_h.getGhostsDim2() < 2 || a_h.getGhostsDim3() < 2)
+        if (a_h.getGhostsM() < 2 || a_h.getGhostsN() < 2 || a_h.getGhostsO() < 2)
             throw "galerkin: a_h needs to have at least 2 ghosts at each border for periodic bc!";
 
         if (gh_a2h < 2)
@@ -270,23 +270,23 @@ namespace mgcl
         // std::cout << "sas[1][1][1][1][1][1] = " << sas[1][1][1][1][1][1] << std::endl;
 
         if (resm <= 0)
-            resm = a_h.getDim1() >> 1;
+            resm = a_h.getM() >> 1;
         if (resn <= 0)
-            resn = a_h.getDim2() >> 1;
+            resn = a_h.getN() >> 1;
         if (reso <= 0)
-            reso = a_h.getDim3() >> 1;
+            reso = a_h.getO() >> 1;
 
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
         VaryingStencil a_2h(resm, resn, reso, 3, gh_a2h, gh_a2h, gh_a2h);
         // clang-format off
-        for (int i = gh_a2h, i2 = 1; i < (a_h.getDim1() >> 1) + gh_a2h; i++, i2 += 2)
-        for (int j = gh_a2h, j2 = 1; j < (a_h.getDim2() >> 1) + gh_a2h; j++, j2 += 2)
-        for (int k = gh_a2h, k2 = 1; k < (a_h.getDim3() >> 1) + gh_a2h; k++, k2 += 2)
+        for (int i = gh_a2h, i2 = 1; i < (a_h.getM() >> 1) + gh_a2h; i++, i2 += 2)
+        for (int j = gh_a2h, j2 = 1; j < (a_h.getN() >> 1) + gh_a2h; j++, j2 += 2)
+        for (int k = gh_a2h, k2 = 1; k < (a_h.getO() >> 1) + gh_a2h; k++, k2 += 2)
             for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
             for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
             for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
             {
-                a_2h[i][j][k][ii][jj][kk] = sas[i2][j2][k2][ii2][jj2][kk2];
+                a_2h[ii][jj][kk][i][j][k] = sas[ii2][jj2][kk2][i2][j2][k2];
             }
         // clang-format on
 

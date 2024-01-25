@@ -49,4 +49,5 @@ namespace mgcl_test
     };
 
     void create4hOrderPeriodicProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl::Cuboid& solution);
+    void fill7pLaplace(mgcl::VaryingStencil& v);
 }

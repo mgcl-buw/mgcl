@@ -141,9 +141,9 @@ TEST_CASE("StencilVarying7p periodic")
     v[2][1][1] = 2;
 
     mgcl::VaryingStencil vals(N, N, N, 3, gh, gh, gh);
-    REQUIRE(vals.getDim1() == v.getM());
-    REQUIRE(vals.getDim2() == v.getN());
-    REQUIRE(vals.getDim3() == v.getO());
+    REQUIRE(vals.getM() == v.getM());
+    REQUIRE(vals.getN() == v.getN());
+    REQUIRE(vals.getO() == v.getO());
 
     // fill varying stencil values with 7p Laplace stencil
     double h2inv = 4.0 * 4.0;
@@ -151,13 +151,13 @@ TEST_CASE("StencilVarying7p periodic")
         for (int j = 0; j < vals.getDim2gh(); j++)
             for (int k = 0; k < vals.getDim3gh(); k++)
             {
-                vals[i][j][k][1][1][1] = 6.0 * h2inv;
-                vals[i][j][k][1][1][0] = -1.0 * h2inv;
-                vals[i][j][k][1][1][2] = -1.0 * h2inv;
-                vals[i][j][k][1][0][1] = -1.0 * h2inv;
-                vals[i][j][k][1][2][1] = -1.0 * h2inv;
-                vals[i][j][k][0][1][1] = -1.0 * h2inv;
-                vals[i][j][k][2][1][1] = -1.0 * h2inv;
+                vals[1][1][1][i][j][k] = 6.0 * h2inv;
+                vals[1][1][0][i][j][k] = -1.0 * h2inv;
+                vals[1][1][2][i][j][k] = -1.0 * h2inv;
+                vals[1][0][1][i][j][k] = -1.0 * h2inv;
+                vals[1][2][1][i][j][k] = -1.0 * h2inv;
+                vals[0][1][1][i][j][k] = -1.0 * h2inv;
+                vals[2][1][1][i][j][k] = -1.0 * h2inv;
             }
 
     mgcl::Cuboid f(N, N, N, gh, gh, gh);
@@ -199,9 +199,9 @@ TEST_CASE("StencilVarying19p periodic")
     v[2][2][1] = 1;
 
     mgcl::VaryingStencil vals(N, N, N, 3, gh, gh, gh);
-    REQUIRE(vals.getDim1() == v.getM());
-    REQUIRE(vals.getDim2() == v.getN());
-    REQUIRE(vals.getDim3() == v.getO());
+    REQUIRE(vals.getM() == v.getM());
+    REQUIRE(vals.getN() == v.getN());
+    REQUIRE(vals.getO() == v.getO());
 
     // fill varying stencil with 19p Laplace stencil
     double h2inv = (4.0 * 4.0) / 6.0;
@@ -209,25 +209,25 @@ TEST_CASE("StencilVarying19p periodic")
         for (int j = 0; j < vals.getDim2gh(); j++)
             for (int k = 0; k < vals.getDim3gh(); k++)
             {
-                vals[i][j][k][1][1][1] = 24.0 * h2inv;
-                vals[i][j][k][1][1][0] = -2.0 * h2inv;
-                vals[i][j][k][1][1][2] = -2.0 * h2inv;
-                vals[i][j][k][1][0][1] = -2.0 * h2inv;
-                vals[i][j][k][1][2][1] = -2.0 * h2inv;
-                vals[i][j][k][0][1][1] = -2.0 * h2inv;
-                vals[i][j][k][2][1][1] = -2.0 * h2inv;
-                vals[i][j][k][1][0][0] = -h2inv;
-                vals[i][j][k][1][0][2] = -h2inv;
-                vals[i][j][k][1][2][0] = -h2inv;
-                vals[i][j][k][1][2][2] = -h2inv;
-                vals[i][j][k][0][1][0] = -h2inv;
-                vals[i][j][k][0][1][2] = -h2inv;
-                vals[i][j][k][2][1][0] = -h2inv;
-                vals[i][j][k][2][1][2] = -h2inv;
-                vals[i][j][k][0][0][1] = -h2inv;
-                vals[i][j][k][0][2][1] = -h2inv;
-                vals[i][j][k][2][0][1] = -h2inv;
-                vals[i][j][k][2][2][1] = -h2inv;
+                vals[1][1][1][i][j][k] = 24.0 * h2inv;
+                vals[1][1][0][i][j][k] = -2.0 * h2inv;
+                vals[1][1][2][i][j][k] = -2.0 * h2inv;
+                vals[1][0][1][i][j][k] = -2.0 * h2inv;
+                vals[1][2][1][i][j][k] = -2.0 * h2inv;
+                vals[0][1][1][i][j][k] = -2.0 * h2inv;
+                vals[2][1][1][i][j][k] = -2.0 * h2inv;
+                vals[1][0][0][i][j][k] = -h2inv;
+                vals[1][0][2][i][j][k] = -h2inv;
+                vals[1][2][0][i][j][k] = -h2inv;
+                vals[1][2][2][i][j][k] = -h2inv;
+                vals[0][1][0][i][j][k] = -h2inv;
+                vals[0][1][2][i][j][k] = -h2inv;
+                vals[2][1][0][i][j][k] = -h2inv;
+                vals[2][1][2][i][j][k] = -h2inv;
+                vals[0][0][1][i][j][k] = -h2inv;
+                vals[0][2][1][i][j][k] = -h2inv;
+                vals[2][0][1][i][j][k] = -h2inv;
+                vals[2][2][1][i][j][k] = -h2inv;
             }
 
     mgcl::Cuboid f(N, N, N, gh, gh, gh);
@@ -288,33 +288,33 @@ TEST_CASE("StencilVarying27p periodic")
         for (int j = 0; j < vals.getDim2gh(); j++)
             for (int k = 0; k < vals.getDim3gh(); k++)
             {
-                vals[i][j][k][1][1][1] = 128.0 * h2inv;
-                vals[i][j][k][1][1][0] = -14.0 * h2inv;
-                vals[i][j][k][1][1][2] = -14.0 * h2inv;
-                vals[i][j][k][1][0][1] = -14.0 * h2inv;
-                vals[i][j][k][1][2][1] = -14.0 * h2inv;
-                vals[i][j][k][0][1][1] = -14.0 * h2inv;
-                vals[i][j][k][2][1][1] = -14.0 * h2inv;
-                vals[i][j][k][1][0][0] = -3.0 * h2inv;
-                vals[i][j][k][1][0][2] = -3.0 * h2inv;
-                vals[i][j][k][1][2][0] = -3.0 * h2inv;
-                vals[i][j][k][1][2][2] = -3.0 * h2inv;
-                vals[i][j][k][0][1][0] = -3.0 * h2inv;
-                vals[i][j][k][0][1][2] = -3.0 * h2inv;
-                vals[i][j][k][2][1][0] = -3.0 * h2inv;
-                vals[i][j][k][2][1][2] = -3.0 * h2inv;
-                vals[i][j][k][0][0][1] = -3.0 * h2inv;
-                vals[i][j][k][0][2][1] = -3.0 * h2inv;
-                vals[i][j][k][2][0][1] = -3.0 * h2inv;
-                vals[i][j][k][2][2][1] = -3.0 * h2inv;
-                vals[i][j][k][0][0][0] = -h2inv;
-                vals[i][j][k][0][0][2] = -h2inv;
-                vals[i][j][k][0][2][0] = -h2inv;
-                vals[i][j][k][0][2][2] = -h2inv;
-                vals[i][j][k][2][0][0] = -h2inv;
-                vals[i][j][k][2][0][2] = -h2inv;
-                vals[i][j][k][2][2][0] = -h2inv;
-                vals[i][j][k][2][2][2] = -h2inv;
+                vals[1][1][1][i][j][k] = 128.0 * h2inv;
+                vals[1][1][0][i][j][k] = -14.0 * h2inv;
+                vals[1][1][2][i][j][k] = -14.0 * h2inv;
+                vals[1][0][1][i][j][k] = -14.0 * h2inv;
+                vals[1][2][1][i][j][k] = -14.0 * h2inv;
+                vals[0][1][1][i][j][k] = -14.0 * h2inv;
+                vals[2][1][1][i][j][k] = -14.0 * h2inv;
+                vals[1][0][0][i][j][k] = -3.0 * h2inv;
+                vals[1][0][2][i][j][k] = -3.0 * h2inv;
+                vals[1][2][0][i][j][k] = -3.0 * h2inv;
+                vals[1][2][2][i][j][k] = -3.0 * h2inv;
+                vals[0][1][0][i][j][k] = -3.0 * h2inv;
+                vals[0][1][2][i][j][k] = -3.0 * h2inv;
+                vals[2][1][0][i][j][k] = -3.0 * h2inv;
+                vals[2][1][2][i][j][k] = -3.0 * h2inv;
+                vals[0][0][1][i][j][k] = -3.0 * h2inv;
+                vals[0][2][1][i][j][k] = -3.0 * h2inv;
+                vals[2][0][1][i][j][k] = -3.0 * h2inv;
+                vals[2][2][1][i][j][k] = -3.0 * h2inv;
+                vals[0][0][0][i][j][k] = -h2inv;
+                vals[0][0][2][i][j][k] = -h2inv;
+                vals[0][2][0][i][j][k] = -h2inv;
+                vals[0][2][2][i][j][k] = -h2inv;
+                vals[2][0][0][i][j][k] = -h2inv;
+                vals[2][0][2][i][j][k] = -h2inv;
+                vals[2][2][0][i][j][k] = -h2inv;
+                vals[2][2][2][i][j][k] = -h2inv;
             }
 
     mgcl::Cuboid f(N, N, N, gh, gh, gh);
@@ -346,7 +346,7 @@ TEST_CASE("VaryingStencil move ctor")
                     for (int jj = 0; jj < 3; jj++)
                         for (int kk = 0; kk < 3; kk++)
                         {
-                            h_check[i][j][k][ii][jj][kk] = h[i][j][k][ii][jj][kk];
+                            h_check[ii][jj][kk][i][j][k] = h[ii][jj][kk][i][j][k];
                         }
 
     // check move ctor
