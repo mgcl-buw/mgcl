@@ -96,8 +96,8 @@ namespace mgcl
                 int jstart_r = r.getGhostsN() - off;
                 int kstart_r = r.getGhostsO() - off;
                 int istart_sv = stencilValues ? stencilValues->getGhostsM() - off : 0;
-                int jstart_sv = stencilValues ? stencilValues->getGhostsDim2() - off : 0;
-                int kstart_sv = stencilValues ? stencilValues->getGhostsDim3() - off : 0;
+                int jstart_sv = stencilValues ? stencilValues->getGhostsN() - off : 0;
+                int kstart_sv = stencilValues ? stencilValues->getGhostsO() - off : 0;
 
                 // r = f - A*v
                 res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, false, periodic,

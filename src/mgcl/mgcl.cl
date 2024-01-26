@@ -2159,9 +2159,9 @@ __kernel void cut_stencils_w7_to_w3(
         // clang-format on
 
         // clang-format off
-        // for (int i = 2, i2 = 3; i < a_2h.getDim1() + 2; i++, i2 += 2)
-        // for (int j = 2, j2 = 3; j < a_2h.getDim2() + 2; j++, j2 += 2)
-        // for (int k = 2, k2 = 3; k < a_2h.getDim3() + 2; k++, k2 += 2)
+        // for (int i = 2, i2 = 3; i < a_2h.getM() + 2; i++, i2 += 2)
+        // for (int j = 2, j2 = 3; j < a_2h.getN() + 2; j++, j2 += 2)
+        // for (int k = 2, k2 = 3; k < a_2h.getO() + 2; k++, k2 += 2)
         //     for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
         //     for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
         //     for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)

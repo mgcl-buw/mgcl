@@ -6,9 +6,9 @@
 #include <chrono>
 #include <cmath>
 #include <fstream>
-#include <sstream>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <vector>
 using namespace std::chrono_literals;
 
@@ -808,13 +808,13 @@ void create4thOrderProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl::Cuboid& solut
 
 void sv_fill_27p_laplace(mgcl::VaryingStencil& s)
 {
-    double hm = 1.0 / s.getDim1();
+    double hm = 1.0 / s.getM();
     double factor = 1.0 / (30.0 * hm * hm);
 
     // Fill with 27-point Laplace
-    for (int i = 0; i < s.getDim1gh(); i++)
-        for (int j = 0; j < s.getDim2gh(); j++)
-            for (int k = 0; k < s.getDim3gh(); k++)
+    for (int i = 0; i < s.getMgh(); i++)
+        for (int j = 0; j < s.getNgh(); j++)
+            for (int k = 0; k < s.getOgh(); k++)
             {
                 // 27-point Laplace
                 // center

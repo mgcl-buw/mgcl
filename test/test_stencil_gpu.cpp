@@ -671,23 +671,23 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         t.finish();
 
         // check results
-        REQUIRE(c.getM() == c_h.getDim1());
-        REQUIRE(c.getN() == c_h.getDim2());
-        REQUIRE(c.getO() == c_h.getDim3());
-        REQUIRE(c.getWidth() == c_h.getDim4());
-        REQUIRE(c.getWidth() == c_h.getDim5());
-        REQUIRE(c.getWidth() == c_h.getDim6());
-        REQUIRE(c.getGh() == c_h.getGhostsDim1());
-        REQUIRE(c.getGh() == c_h.getGhostsDim2());
-        REQUIRE(c.getGh() == c_h.getGhostsDim3());
+        REQUIRE(c.getM() == c_h.getM());
+        REQUIRE(c.getN() == c_h.getN());
+        REQUIRE(c.getO() == c_h.getO());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getGh() == c_h.getGhostsM());
+        REQUIRE(c.getGh() == c_h.getGhostsN());
+        REQUIRE(c.getGh() == c_h.getGhostsO());
 
         // clang-format off
-        for (int i = 0; i < c_h.getDim1gh(); i++)
-        for (int j = 0; j < c_h.getDim2gh(); j++)
-        for (int k = 0; k < c_h.getDim3gh(); k++)
-            for (int ii = 0; ii < c_h.getDim4(); ii++)
-            for (int jj = 0; jj < c_h.getDim5(); jj++)
-            for (int kk = 0; kk < c_h.getDim6(); kk++)
+        for (int i = 0; i < c_h.getMgh(); i++)
+        for (int j = 0; j < c_h.getNgh(); j++)
+        for (int k = 0; k < c_h.getOgh(); k++)
+            for (int ii = 0; ii < c_h.getWidth(); ii++)
+            for (int jj = 0; jj < c_h.getWidth(); jj++)
+            for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
                 REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
             }
@@ -720,23 +720,23 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         t.finish();
 
         // check results
-        REQUIRE(c.getM() == c_h.getDim1());
-        REQUIRE(c.getN() == c_h.getDim2());
-        REQUIRE(c.getO() == c_h.getDim3());
-        REQUIRE(c.getWidth() == c_h.getDim4());
-        REQUIRE(c.getWidth() == c_h.getDim5());
-        REQUIRE(c.getWidth() == c_h.getDim6());
-        REQUIRE(c.getGh() == c_h.getGhostsDim1());
-        REQUIRE(c.getGh() == c_h.getGhostsDim2());
-        REQUIRE(c.getGh() == c_h.getGhostsDim3());
+        REQUIRE(c.getM() == c_h.getM());
+        REQUIRE(c.getN() == c_h.getN());
+        REQUIRE(c.getO() == c_h.getO());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getGh() == c_h.getGhostsM());
+        REQUIRE(c.getGh() == c_h.getGhostsN());
+        REQUIRE(c.getGh() == c_h.getGhostsO());
 
         // clang-format off
-        for (int i = 0; i < c_h.getDim1gh(); i++)
-        for (int j = 0; j < c_h.getDim2gh(); j++)
-        for (int k = 0; k < c_h.getDim3gh(); k++)
-            for (int ii = 0; ii < c_h.getDim4(); ii++)
-            for (int jj = 0; jj < c_h.getDim5(); jj++)
-            for (int kk = 0; kk < c_h.getDim6(); kk++)
+        for (int i = 0; i < c_h.getMgh(); i++)
+        for (int j = 0; j < c_h.getNgh(); j++)
+        for (int k = 0; k < c_h.getOgh(); k++)
+            for (int ii = 0; ii < c_h.getWidth(); ii++)
+            for (int jj = 0; jj < c_h.getWidth(); jj++)
+            for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
                 REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
             }
@@ -769,23 +769,23 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         t.finish();
 
         // check results
-        REQUIRE(c.getM() == c_h.getDim1());
-        REQUIRE(c.getN() == c_h.getDim2());
-        REQUIRE(c.getO() == c_h.getDim3());
-        REQUIRE(c.getWidth() == c_h.getDim4());
-        REQUIRE(c.getWidth() == c_h.getDim5());
-        REQUIRE(c.getWidth() == c_h.getDim6());
-        REQUIRE(c.getGh() == c_h.getGhostsDim1());
-        REQUIRE(c.getGh() == c_h.getGhostsDim2());
-        REQUIRE(c.getGh() == c_h.getGhostsDim3());
+        REQUIRE(c.getM() == c_h.getM());
+        REQUIRE(c.getN() == c_h.getN());
+        REQUIRE(c.getO() == c_h.getO());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getGh() == c_h.getGhostsM());
+        REQUIRE(c.getGh() == c_h.getGhostsN());
+        REQUIRE(c.getGh() == c_h.getGhostsO());
 
         // clang-format off
-        for (int i = 0; i < c_h.getDim1gh(); i++)
-        for (int j = 0; j < c_h.getDim2gh(); j++)
-        for (int k = 0; k < c_h.getDim3gh(); k++)
-            for (int ii = 0; ii < c_h.getDim4(); ii++)
-            for (int jj = 0; jj < c_h.getDim5(); jj++)
-            for (int kk = 0; kk < c_h.getDim6(); kk++)
+        for (int i = 0; i < c_h.getMgh(); i++)
+        for (int j = 0; j < c_h.getNgh(); j++)
+        for (int k = 0; k < c_h.getOgh(); k++)
+            for (int ii = 0; ii < c_h.getWidth(); ii++)
+            for (int jj = 0; jj < c_h.getWidth(); jj++)
+            for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
                 REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
             }
@@ -818,23 +818,23 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
         t.finish();
 
         // check results
-        REQUIRE(c.getM() == c_h.getDim1());
-        REQUIRE(c.getN() == c_h.getDim2());
-        REQUIRE(c.getO() == c_h.getDim3());
-        REQUIRE(c.getWidth() == c_h.getDim4());
-        REQUIRE(c.getWidth() == c_h.getDim5());
-        REQUIRE(c.getWidth() == c_h.getDim6());
-        REQUIRE(c.getGh() == c_h.getGhostsDim1());
-        REQUIRE(c.getGh() == c_h.getGhostsDim2());
-        REQUIRE(c.getGh() == c_h.getGhostsDim3());
+        REQUIRE(c.getM() == c_h.getM());
+        REQUIRE(c.getN() == c_h.getN());
+        REQUIRE(c.getO() == c_h.getO());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getGh() == c_h.getGhostsM());
+        REQUIRE(c.getGh() == c_h.getGhostsN());
+        REQUIRE(c.getGh() == c_h.getGhostsO());
 
         // clang-format off
-        for (int i = 0; i < c_h.getDim1gh(); i++)
-        for (int j = 0; j < c_h.getDim2gh(); j++)
-        for (int k = 0; k < c_h.getDim3gh(); k++)
-            for (int ii = 0; ii < c_h.getDim4(); ii++)
-            for (int jj = 0; jj < c_h.getDim5(); jj++)
-            for (int kk = 0; kk < c_h.getDim6(); kk++)
+        for (int i = 0; i < c_h.getMgh(); i++)
+        for (int j = 0; j < c_h.getNgh(); j++)
+        for (int k = 0; k < c_h.getOgh(); k++)
+            for (int ii = 0; ii < c_h.getWidth(); ii++)
+            for (int jj = 0; jj < c_h.getWidth(); jj++)
+            for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
                 REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
             }
@@ -884,23 +884,23 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
         t.finish();
 
         // check results
-        REQUIRE(c.getM() == c_h.getDim1());
-        REQUIRE(c.getN() == c_h.getDim2());
-        REQUIRE(c.getO() == c_h.getDim3());
-        REQUIRE(c.getWidth() == c_h.getDim4());
-        REQUIRE(c.getWidth() == c_h.getDim5());
-        REQUIRE(c.getWidth() == c_h.getDim6());
-        REQUIRE(c.getGh() == c_h.getGhostsDim1());
-        REQUIRE(c.getGh() == c_h.getGhostsDim2());
-        REQUIRE(c.getGh() == c_h.getGhostsDim3());
+        REQUIRE(c.getM() == c_h.getM());
+        REQUIRE(c.getN() == c_h.getN());
+        REQUIRE(c.getO() == c_h.getO());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getGh() == c_h.getGhostsM());
+        REQUIRE(c.getGh() == c_h.getGhostsN());
+        REQUIRE(c.getGh() == c_h.getGhostsO());
 
         // clang-format off
-        for (int i = 0; i < c_h.getDim1gh(); i++)
-        for (int j = 0; j < c_h.getDim2gh(); j++)
-        for (int k = 0; k < c_h.getDim3gh(); k++)
-            for (int ii = 0; ii < c_h.getDim4(); ii++)
-            for (int jj = 0; jj < c_h.getDim5(); jj++)
-            for (int kk = 0; kk < c_h.getDim6(); kk++)
+        for (int i = 0; i < c_h.getMgh(); i++)
+        for (int j = 0; j < c_h.getNgh(); j++)
+        for (int k = 0; k < c_h.getOgh(); k++)
+            for (int ii = 0; ii < c_h.getWidth(); ii++)
+            for (int jj = 0; jj < c_h.getWidth(); jj++)
+            for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
                 REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
             }
@@ -931,23 +931,23 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
         t.finish();
 
         // check results
-        REQUIRE(c.getM() == c_h.getDim1());
-        REQUIRE(c.getN() == c_h.getDim2());
-        REQUIRE(c.getO() == c_h.getDim3());
-        REQUIRE(c.getWidth() == c_h.getDim4());
-        REQUIRE(c.getWidth() == c_h.getDim5());
-        REQUIRE(c.getWidth() == c_h.getDim6());
-        REQUIRE(c.getGh() == c_h.getGhostsDim1());
-        REQUIRE(c.getGh() == c_h.getGhostsDim2());
-        REQUIRE(c.getGh() == c_h.getGhostsDim3());
+        REQUIRE(c.getM() == c_h.getM());
+        REQUIRE(c.getN() == c_h.getN());
+        REQUIRE(c.getO() == c_h.getO());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getGh() == c_h.getGhostsM());
+        REQUIRE(c.getGh() == c_h.getGhostsN());
+        REQUIRE(c.getGh() == c_h.getGhostsO());
 
         // clang-format off
-        for (int i = 0; i < c_h.getDim1gh(); i++)
-        for (int j = 0; j < c_h.getDim2gh(); j++)
-        for (int k = 0; k < c_h.getDim3gh(); k++)
-            for (int ii = 0; ii < c_h.getDim4(); ii++)
-            for (int jj = 0; jj < c_h.getDim5(); jj++)
-            for (int kk = 0; kk < c_h.getDim6(); kk++)
+        for (int i = 0; i < c_h.getMgh(); i++)
+        for (int j = 0; j < c_h.getNgh(); j++)
+        for (int k = 0; k < c_h.getOgh(); k++)
+            for (int ii = 0; ii < c_h.getWidth(); ii++)
+            for (int jj = 0; jj < c_h.getWidth(); jj++)
+            for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
                 REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
             }
@@ -978,23 +978,23 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
         t.finish();
 
         // check results
-        REQUIRE(c.getM() == c_h.getDim1());
-        REQUIRE(c.getN() == c_h.getDim2());
-        REQUIRE(c.getO() == c_h.getDim3());
-        REQUIRE(c.getWidth() == c_h.getDim4());
-        REQUIRE(c.getWidth() == c_h.getDim5());
-        REQUIRE(c.getWidth() == c_h.getDim6());
-        REQUIRE(c.getGh() == c_h.getGhostsDim1());
-        REQUIRE(c.getGh() == c_h.getGhostsDim2());
-        REQUIRE(c.getGh() == c_h.getGhostsDim3());
+        REQUIRE(c.getM() == c_h.getM());
+        REQUIRE(c.getN() == c_h.getN());
+        REQUIRE(c.getO() == c_h.getO());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getGh() == c_h.getGhostsM());
+        REQUIRE(c.getGh() == c_h.getGhostsN());
+        REQUIRE(c.getGh() == c_h.getGhostsO());
 
         // clang-format off
-        for (int i = 0; i < c_h.getDim1gh(); i++)
-        for (int j = 0; j < c_h.getDim2gh(); j++)
-        for (int k = 0; k < c_h.getDim3gh(); k++)
-            for (int ii = 0; ii < c_h.getDim4(); ii++)
-            for (int jj = 0; jj < c_h.getDim5(); jj++)
-            for (int kk = 0; kk < c_h.getDim6(); kk++)
+        for (int i = 0; i < c_h.getMgh(); i++)
+        for (int j = 0; j < c_h.getNgh(); j++)
+        for (int k = 0; k < c_h.getOgh(); k++)
+            for (int ii = 0; ii < c_h.getWidth(); ii++)
+            for (int jj = 0; jj < c_h.getWidth(); jj++)
+            for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
                 REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
             }
@@ -1025,23 +1025,23 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
         t.finish();
 
         // check results
-        REQUIRE(c.getM() == c_h.getDim1());
-        REQUIRE(c.getN() == c_h.getDim2());
-        REQUIRE(c.getO() == c_h.getDim3());
-        REQUIRE(c.getWidth() == c_h.getDim4());
-        REQUIRE(c.getWidth() == c_h.getDim5());
-        REQUIRE(c.getWidth() == c_h.getDim6());
-        REQUIRE(c.getGh() == c_h.getGhostsDim1());
-        REQUIRE(c.getGh() == c_h.getGhostsDim2());
-        REQUIRE(c.getGh() == c_h.getGhostsDim3());
+        REQUIRE(c.getM() == c_h.getM());
+        REQUIRE(c.getN() == c_h.getN());
+        REQUIRE(c.getO() == c_h.getO());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getGh() == c_h.getGhostsM());
+        REQUIRE(c.getGh() == c_h.getGhostsN());
+        REQUIRE(c.getGh() == c_h.getGhostsO());
 
         // clang-format off
-        for (int i = 0; i < c_h.getDim1gh(); i++)
-        for (int j = 0; j < c_h.getDim2gh(); j++)
-        for (int k = 0; k < c_h.getDim3gh(); k++)
-            for (int ii = 0; ii < c_h.getDim4(); ii++)
-            for (int jj = 0; jj < c_h.getDim5(); jj++)
-            for (int kk = 0; kk < c_h.getDim6(); kk++)
+        for (int i = 0; i < c_h.getMgh(); i++)
+        for (int j = 0; j < c_h.getNgh(); j++)
+        for (int k = 0; k < c_h.getOgh(); k++)
+            for (int ii = 0; ii < c_h.getWidth(); ii++)
+            for (int jj = 0; jj < c_h.getWidth(); jj++)
+            for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
                 REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
             }
@@ -1220,9 +1220,9 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
 
         // clang-format off
         // simulate call with one work-item per cell using these 3 for loops
-        for (int i = 2; i < a_2h.getDim1() + 2; i++)
-        for (int j = 2; j < a_2h.getDim2() + 2; j++)
-        for (int k = 2; k < a_2h.getDim3() + 2; k++)
+        for (int i = 2; i < a_2h.getM() + 2; i++)
+        for (int j = 2; j < a_2h.getN() + 2; j++)
+        for (int k = 2; k < a_2h.getO() + 2; k++)
         {
             int i2 = (i - 2) * 2 + 1;
             int j2 = (j - 2) * 2 + 1;
@@ -1257,11 +1257,11 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
         t.finish();
 
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
-        mgcl::VaryingStencil a_2h(a_h.getDim1() >> 1, a_h.getDim2() >> 1, a_h.getDim3() >> 1, 3, 2, 2, 2);
+        mgcl::VaryingStencil a_2h(a_h.getM() >> 1, a_h.getN() >> 1, a_h.getO() >> 1, 3, 2, 2, 2);
         // clang-format off
-        for (int i = 2, i2 = 1; i < a_2h.getDim1() + 2; i++, i2 += 2)
-        for (int j = 2, j2 = 1; j < a_2h.getDim2() + 2; j++, j2 += 2)
-        for (int k = 2, k2 = 1; k < a_2h.getDim3() + 2; k++, k2 += 2)
+        for (int i = 2, i2 = 1; i < a_2h.getM() + 2; i++, i2 += 2)
+        for (int j = 2, j2 = 1; j < a_2h.getN() + 2; j++, j2 += 2)
+        for (int k = 2, k2 = 1; k < a_2h.getO() + 2; k++, k2 += 2)
             for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
             for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
             for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
@@ -1275,18 +1275,15 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
         auto ret = a_2h_gpu.read(t.getCommands(), true);
         t.finish();
 
-        REQUIRE(ret.getDim1() == a_2h.getDim1());
-        REQUIRE(ret.getDim2() == a_2h.getDim2());
-        REQUIRE(ret.getDim3() == a_2h.getDim3());
-        REQUIRE(ret.getDim4() == a_2h.getDim4());
-        REQUIRE(ret.getDim5() == a_2h.getDim5());
-        REQUIRE(ret.getDim6() == a_2h.getDim6());
-        REQUIRE(ret.getDim1gh() == a_2h.getDim1gh());
-        REQUIRE(ret.getDim2gh() == a_2h.getDim2gh());
-        REQUIRE(ret.getDim3gh() == a_2h.getDim3gh());
-        REQUIRE(ret.getDim4gh() == a_2h.getDim4gh());
-        REQUIRE(ret.getDim5gh() == a_2h.getDim5gh());
-        REQUIRE(ret.getDim6gh() == a_2h.getDim6gh());
+        REQUIRE(ret.getM() == a_2h.getM());
+        REQUIRE(ret.getN() == a_2h.getN());
+        REQUIRE(ret.getO() == a_2h.getO());
+        REQUIRE(ret.getWidth() == a_2h.getWidth());
+        REQUIRE(ret.getWidth() == a_2h.getWidth());
+        REQUIRE(ret.getWidth() == a_2h.getWidth());
+        REQUIRE(ret.getMgh() == a_2h.getMgh());
+        REQUIRE(ret.getNgh() == a_2h.getNgh());
+        REQUIRE(ret.getOgh() == a_2h.getOgh());
 
         REQUIRE(ret.isEqual(a_2h));
     }
@@ -1383,23 +1380,23 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         t.finish();
 
         // check results
-        REQUIRE(c.getM() == c_h.getDim1());
-        REQUIRE(c.getN() == c_h.getDim2());
-        REQUIRE(c.getO() == c_h.getDim3());
-        REQUIRE(c.getWidth() == c_h.getDim4());
-        REQUIRE(c.getWidth() == c_h.getDim5());
-        REQUIRE(c.getWidth() == c_h.getDim6());
-        REQUIRE(c.getGh() == c_h.getGhostsDim1());
-        REQUIRE(c.getGh() == c_h.getGhostsDim2());
-        REQUIRE(c.getGh() == c_h.getGhostsDim3());
+        REQUIRE(c.getM() == c_h.getM());
+        REQUIRE(c.getN() == c_h.getN());
+        REQUIRE(c.getO() == c_h.getO());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getGh() == c_h.getGhostsM());
+        REQUIRE(c.getGh() == c_h.getGhostsN());
+        REQUIRE(c.getGh() == c_h.getGhostsO());
 
         // clang-format off
-        for (int i = 0; i < c_h.getDim1gh(); i++)
-        for (int j = 0; j < c_h.getDim2gh(); j++)
-        for (int k = 0; k < c_h.getDim3gh(); k++)
-            for (int ii = 0; ii < c_h.getDim4(); ii++)
-            for (int jj = 0; jj < c_h.getDim5(); jj++)
-            for (int kk = 0; kk < c_h.getDim6(); kk++)
+        for (int i = 0; i < c_h.getMgh(); i++)
+        for (int j = 0; j < c_h.getNgh(); j++)
+        for (int k = 0; k < c_h.getOgh(); k++)
+            for (int ii = 0; ii < c_h.getWidth(); ii++)
+            for (int jj = 0; jj < c_h.getWidth(); jj++)
+            for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
                 REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
             }
@@ -1432,23 +1429,23 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         t.finish();
 
         // check results
-        REQUIRE(c.getM() == c_h.getDim1());
-        REQUIRE(c.getN() == c_h.getDim2());
-        REQUIRE(c.getO() == c_h.getDim3());
-        REQUIRE(c.getWidth() == c_h.getDim4());
-        REQUIRE(c.getWidth() == c_h.getDim5());
-        REQUIRE(c.getWidth() == c_h.getDim6());
-        REQUIRE(c.getGh() == c_h.getGhostsDim1());
-        REQUIRE(c.getGh() == c_h.getGhostsDim2());
-        REQUIRE(c.getGh() == c_h.getGhostsDim3());
+        REQUIRE(c.getM() == c_h.getM());
+        REQUIRE(c.getN() == c_h.getN());
+        REQUIRE(c.getO() == c_h.getO());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getGh() == c_h.getGhostsM());
+        REQUIRE(c.getGh() == c_h.getGhostsN());
+        REQUIRE(c.getGh() == c_h.getGhostsO());
 
         // clang-format off
-        for (int i = 0; i < c_h.getDim1gh(); i++)
-        for (int j = 0; j < c_h.getDim2gh(); j++)
-        for (int k = 0; k < c_h.getDim3gh(); k++)
-            for (int ii = 0; ii < c_h.getDim4(); ii++)
-            for (int jj = 0; jj < c_h.getDim5(); jj++)
-            for (int kk = 0; kk < c_h.getDim6(); kk++)
+        for (int i = 0; i < c_h.getMgh(); i++)
+        for (int j = 0; j < c_h.getNgh(); j++)
+        for (int k = 0; k < c_h.getOgh(); k++)
+            for (int ii = 0; ii < c_h.getWidth(); ii++)
+            for (int jj = 0; jj < c_h.getWidth(); jj++)
+            for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
                 REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
             }
@@ -1481,23 +1478,23 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         t.finish();
 
         // check results
-        REQUIRE(c.getM() == c_h.getDim1());
-        REQUIRE(c.getN() == c_h.getDim2());
-        REQUIRE(c.getO() == c_h.getDim3());
-        REQUIRE(c.getWidth() == c_h.getDim4());
-        REQUIRE(c.getWidth() == c_h.getDim5());
-        REQUIRE(c.getWidth() == c_h.getDim6());
-        REQUIRE(c.getGh() == c_h.getGhostsDim1());
-        REQUIRE(c.getGh() == c_h.getGhostsDim2());
-        REQUIRE(c.getGh() == c_h.getGhostsDim3());
+        REQUIRE(c.getM() == c_h.getM());
+        REQUIRE(c.getN() == c_h.getN());
+        REQUIRE(c.getO() == c_h.getO());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getGh() == c_h.getGhostsM());
+        REQUIRE(c.getGh() == c_h.getGhostsN());
+        REQUIRE(c.getGh() == c_h.getGhostsO());
 
         // clang-format off
-        for (int i = 0; i < c_h.getDim1gh(); i++)
-        for (int j = 0; j < c_h.getDim2gh(); j++)
-        for (int k = 0; k < c_h.getDim3gh(); k++)
-            for (int ii = 0; ii < c_h.getDim4(); ii++)
-            for (int jj = 0; jj < c_h.getDim5(); jj++)
-            for (int kk = 0; kk < c_h.getDim6(); kk++)
+        for (int i = 0; i < c_h.getMgh(); i++)
+        for (int j = 0; j < c_h.getNgh(); j++)
+        for (int k = 0; k < c_h.getOgh(); k++)
+            for (int ii = 0; ii < c_h.getWidth(); ii++)
+            for (int jj = 0; jj < c_h.getWidth(); jj++)
+            for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
                 REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
             }
@@ -1530,23 +1527,23 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
         t.finish();
 
         // check results
-        REQUIRE(c.getM() == c_h.getDim1());
-        REQUIRE(c.getN() == c_h.getDim2());
-        REQUIRE(c.getO() == c_h.getDim3());
-        REQUIRE(c.getWidth() == c_h.getDim4());
-        REQUIRE(c.getWidth() == c_h.getDim5());
-        REQUIRE(c.getWidth() == c_h.getDim6());
-        REQUIRE(c.getGh() == c_h.getGhostsDim1());
-        REQUIRE(c.getGh() == c_h.getGhostsDim2());
-        REQUIRE(c.getGh() == c_h.getGhostsDim3());
+        REQUIRE(c.getM() == c_h.getM());
+        REQUIRE(c.getN() == c_h.getN());
+        REQUIRE(c.getO() == c_h.getO());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getWidth() == c_h.getWidth());
+        REQUIRE(c.getGh() == c_h.getGhostsM());
+        REQUIRE(c.getGh() == c_h.getGhostsN());
+        REQUIRE(c.getGh() == c_h.getGhostsO());
 
         // clang-format off
-        for (int i = 0; i < c_h.getDim1gh(); i++)
-        for (int j = 0; j < c_h.getDim2gh(); j++)
-        for (int k = 0; k < c_h.getDim3gh(); k++)
-            for (int ii = 0; ii < c_h.getDim4(); ii++)
-            for (int jj = 0; jj < c_h.getDim5(); jj++)
-            for (int kk = 0; kk < c_h.getDim6(); kk++)
+        for (int i = 0; i < c_h.getMgh(); i++)
+        for (int j = 0; j < c_h.getNgh(); j++)
+        for (int k = 0; k < c_h.getOgh(); k++)
+            for (int ii = 0; ii < c_h.getWidth(); ii++)
+            for (int jj = 0; jj < c_h.getWidth(); jj++)
+            for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
                 REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
             }

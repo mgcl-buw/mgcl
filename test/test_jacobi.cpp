@@ -848,18 +848,18 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             sv_act->copyRealFrom(*sv_exp);
             sv_act->updateGhosts();
 
-            REQUIRE(sv_exp->getGhostsDim1() == 2);
-            REQUIRE(sv_exp->getGhostsDim2() == 2);
-            REQUIRE(sv_exp->getGhostsDim3() == 2);
-            REQUIRE(sv_act->getGhostsDim1() == std::max(2, stepsPerIter));
-            REQUIRE(sv_act->getGhostsDim2() == std::max(2, stepsPerIter));
-            REQUIRE(sv_act->getGhostsDim3() == std::max(2, stepsPerIter));
+            REQUIRE(sv_exp->getGhostsM() == 2);
+            REQUIRE(sv_exp->getGhostsN() == 2);
+            REQUIRE(sv_exp->getGhostsO() == 2);
+            REQUIRE(sv_act->getGhostsM() == std::max(2, stepsPerIter));
+            REQUIRE(sv_act->getGhostsN() == std::max(2, stepsPerIter));
+            REQUIRE(sv_act->getGhostsO() == std::max(2, stepsPerIter));
 
-            auto d_sv_exp = std::make_shared<mgcl::VaryingStencilGpu>(sv_exp->getDim1(), sv_exp->getDim2(), sv_exp->getDim3(), 3,
-                                                                      sv_exp->getGhostsDim1(),
+            auto d_sv_exp = std::make_shared<mgcl::VaryingStencilGpu>(sv_exp->getM(), sv_exp->getN(), sv_exp->getO(), 3,
+                                                                      sv_exp->getGhostsM(),
                                                                       tu_exp.getContext(), tu_exp.getCommands());
-            auto d_sv_act = std::make_shared<mgcl::VaryingStencilGpu>(sv_act->getDim1(), sv_act->getDim2(), sv_act->getDim3(), 3,
-                                                                      sv_act->getGhostsDim1(),
+            auto d_sv_act = std::make_shared<mgcl::VaryingStencilGpu>(sv_act->getM(), sv_act->getN(), sv_act->getO(), 3,
+                                                                      sv_act->getGhostsM(),
                                                                       tu_act.getContext(), tu_act.getCommands());
 
             d_sv_exp->fill(*sv_exp, tu_exp.getCommands(), true);

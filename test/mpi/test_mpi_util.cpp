@@ -1163,7 +1163,7 @@ TEST_CASE("mpi_util::gather-GPU-src-dest-same-stencil")
 
         // Create gpu buffer from cglob_recv.
         mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
-        mgcl::VaryingStencilGpu d_cglob_recv(cglob_recv->getDim1(), cglob_recv->getDim2(), cglob_recv->getDim3(),
+        mgcl::VaryingStencilGpu d_cglob_recv(cglob_recv->getM(), cglob_recv->getN(), cglob_recv->getO(),
                                              3, gh, tu.getContext(), tu.getCommands());
         d_cglob_recv.fill(*cglob_recv, tu.getCommands(), true);
 

@@ -418,16 +418,16 @@ TEST_CASE("MPI_vcycle_immediate_gather_scatter_Varying27p")
 
     if (mpi_rank == 0)
     {
-        REQUIRE(sv.getDim1() == m);
-        REQUIRE(sv.getDim1() == n);
-        REQUIRE(sv.getDim1() == o);
+        REQUIRE(sv.getM() == m);
+        REQUIRE(sv.getM() == n);
+        REQUIRE(sv.getM() == o);
     }
 
     // Fill with 7-point Laplace
     double h2inv = m * m; // h = 1/N -> 1/h = N
-    for (int i = 0; i < sv.getDim1gh(); i++)
-        for (int j = 0; j < sv.getDim2gh(); j++)
-            for (int k = 0; k < sv.getDim3gh(); k++)
+    for (int i = 0; i < sv.getMgh(); i++)
+        for (int j = 0; j < sv.getNgh(); j++)
+            for (int k = 0; k < sv.getOgh(); k++)
             {
                 // 7-point Laplace
                 sv[i][j][k][0][1][1] = h2inv * -1.0;
@@ -887,16 +887,16 @@ TEST_CASE("MPI_vcycle_threshold_eq_1_Varying27p")
     {
         // For threshold level 0 or 1, stencilValues must have global sizes.
         REQUIRE(p.getMpiLevelThreshold() == 1);
-        REQUIRE(sv.getDim1() == m);
-        REQUIRE(sv.getDim2() == n);
-        REQUIRE(sv.getDim3() == o);
+        REQUIRE(sv.getM() == m);
+        REQUIRE(sv.getN() == n);
+        REQUIRE(sv.getO() == o);
     }
 
     // Fill with 7-point Laplace
     double h2inv = m * m; // h = 1/N -> 1/h = N
-    for (int i = 0; i < sv.getDim1gh(); i++)
-        for (int j = 0; j < sv.getDim2gh(); j++)
-            for (int k = 0; k < sv.getDim3gh(); k++)
+    for (int i = 0; i < sv.getMgh(); i++)
+        for (int j = 0; j < sv.getNgh(); j++)
+            for (int k = 0; k < sv.getOgh(); k++)
             {
                 // 7-point Laplace
                 sv[i][j][k][0][1][1] = h2inv * -1.0;
@@ -1064,16 +1064,16 @@ TEST_CASE("MPI_vcycle_threshold_eq_2_Varying27p")
     {
         // For threshold level 0 or 1, stencilValues must have global sizes, else local sizes.
         REQUIRE(p.getMpiLevelThreshold() == 2);
-        REQUIRE(sv.getDim1() == ml);
-        REQUIRE(sv.getDim2() == nl);
-        REQUIRE(sv.getDim3() == ol);
+        REQUIRE(sv.getM() == ml);
+        REQUIRE(sv.getN() == nl);
+        REQUIRE(sv.getO() == ol);
     }
 
     // Fill with 7-point Laplace
     double h2inv = m * m; // h = 1/N -> 1/h = N
-    for (int i = 0; i < sv.getDim1gh(); i++)
-        for (int j = 0; j < sv.getDim2gh(); j++)
-            for (int k = 0; k < sv.getDim3gh(); k++)
+    for (int i = 0; i < sv.getMgh(); i++)
+        for (int j = 0; j < sv.getNgh(); j++)
+            for (int k = 0; k < sv.getOgh(); k++)
             {
                 // 7-point Laplace
                 sv[i][j][k][0][1][1] = h2inv * -1.0;
@@ -1243,16 +1243,16 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_1_Varying27p")
     {
         // For threshold level 0 or 1, stencilValues must have global sizes.
         REQUIRE(p.getMpiLevelThreshold() == 1);
-        REQUIRE(sv.getDim1() == m);
-        REQUIRE(sv.getDim2() == n);
-        REQUIRE(sv.getDim3() == o);
+        REQUIRE(sv.getM() == m);
+        REQUIRE(sv.getN() == n);
+        REQUIRE(sv.getO() == o);
     }
 
     // Fill with 7-point Laplace
     double h2inv = m * m; // h = 1/N -> 1/h = N
-    for (int i = 0; i < sv.getDim1gh(); i++)
-        for (int j = 0; j < sv.getDim2gh(); j++)
-            for (int k = 0; k < sv.getDim3gh(); k++)
+    for (int i = 0; i < sv.getMgh(); i++)
+        for (int j = 0; j < sv.getNgh(); j++)
+            for (int k = 0; k < sv.getOgh(); k++)
             {
                 // 7-point Laplace
                 sv[i][j][k][0][1][1] = h2inv * -1.0;
@@ -1423,16 +1423,16 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
     {
         // For threshold level 0 or 1, stencilValues must have global sizes, else local sizes.
         REQUIRE(p.getMpiLevelThreshold() == 2);
-        REQUIRE(sv.getDim1() == ml);
-        REQUIRE(sv.getDim2() == nl);
-        REQUIRE(sv.getDim3() == ol);
+        REQUIRE(sv.getM() == ml);
+        REQUIRE(sv.getN() == nl);
+        REQUIRE(sv.getO() == ol);
     }
 
     // Fill with 7-point Laplace
     double h2inv = m * m; // h = 1/N -> 1/h = N
-    for (int i = 0; i < sv.getDim1gh(); i++)
-        for (int j = 0; j < sv.getDim2gh(); j++)
-            for (int k = 0; k < sv.getDim3gh(); k++)
+    for (int i = 0; i < sv.getMgh(); i++)
+        for (int j = 0; j < sv.getNgh(); j++)
+            for (int k = 0; k < sv.getOgh(); k++)
             {
                 // 7-point Laplace
                 sv[i][j][k][0][1][1] = h2inv * -1.0;
@@ -1606,16 +1606,16 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters")
     {
         // For threshold level 0 or 1, stencilValues must have global sizes, else local sizes.
         REQUIRE(p.getMpiLevelThreshold() == 2);
-        REQUIRE(sv.getDim1() == ml);
-        REQUIRE(sv.getDim2() == nl);
-        REQUIRE(sv.getDim3() == ol);
+        REQUIRE(sv.getM() == ml);
+        REQUIRE(sv.getN() == nl);
+        REQUIRE(sv.getO() == ol);
     }
 
     // Fill with 7-point Laplace
     double h2inv = m * m; // h = 1/N -> 1/h = N
-    for (int i = 0; i < sv.getDim1gh(); i++)
-        for (int j = 0; j < sv.getDim2gh(); j++)
-            for (int k = 0; k < sv.getDim3gh(); k++)
+    for (int i = 0; i < sv.getMgh(); i++)
+        for (int j = 0; j < sv.getNgh(); j++)
+            for (int k = 0; k < sv.getOgh(); k++)
             {
                 // 7-point Laplace
                 sv[i][j][k][0][1][1] = h2inv * -1.0;

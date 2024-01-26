@@ -130,7 +130,7 @@ namespace mgcl
             throw "ghosts_in is different than ghosts of v and/or f!";
 
         if (mpiRank() == 0 && getMpiLevelThreshold() == 0 && stencilValues &&
-            (stencilValues->getDim1() < mGlobal || stencilValues->getDim2() < nGlobal || stencilValues->getDim3() < oGlobal))
+            (stencilValues->getM() < mGlobal || stencilValues->getN() < nGlobal || stencilValues->getO() < oGlobal))
             throw "Mpi threshold level is 0 but stencilValues has local size. Please use setMpiMinGridPoints before setStencilType!";
 
         if (mpiRank() == 0 && getMpiLevelThreshold() > 1 && stencilValues &&

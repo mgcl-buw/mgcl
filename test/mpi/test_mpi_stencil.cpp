@@ -415,7 +415,7 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     // Create local slice of global data
     auto clptr = sglob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
     auto& sloc = *clptr;
-    mgcl::VaryingStencilGpu sgpuLocal(sloc.getDim1(), sloc.getDim2(), sloc.getDim3(), 3, gh, tu.getContext(), tu.getCommands());
+    mgcl::VaryingStencilGpu sgpuLocal(sloc.getM(), sloc.getN(), sloc.getO(), 3, gh, tu.getContext(), tu.getCommands());
     sgpuLocal.fill(sloc, tu.getCommands(), true);
     tu.finish();
 
@@ -603,12 +603,12 @@ TEST_CASE("MPI_galerkin_different_thresholds")
     p_th2.setStencilType(mgcl::MGCL_VARYING);
     sv = p_th2.getStencilValues();
     // copy data manually since for threshold 2 stencil values has local size.
-    for (int i = 0; i < sv->getDim1gh(); i++)
-        for (int j = 0; j < sv->getDim2gh(); j++)
-            for (int k = 0; k < sv->getDim3gh(); k++)
-                for (int ii = 0; ii < sv->getDim4gh(); ii++)
-                    for (int jj = 0; jj < sv->getDim5gh(); jj++)
-                        for (int kk = 0; kk < sv->getDim6gh(); kk++)
+    for (int i = 0; i < sv->getMgh(); i++)
+        for (int j = 0; j < sv->getNgh(); j++)
+            for (int k = 0; k < sv->getOgh(); k++)
+                for (int ii = 0; ii < sv->getWidth(); ii++)
+                    for (int jj = 0; jj < sv->getWidth(); jj++)
+                        for (int kk = 0; kk < sv->getWidth(); kk++)
                             sv->getData()[i][j][k][ii][jj][kk] = sv0->getData()[i][j][k][ii][jj][kk];
 
     p_th2.init();

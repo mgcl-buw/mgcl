@@ -147,9 +147,9 @@ TEST_CASE("StencilVarying7p periodic")
 
     // fill varying stencil values with 7p Laplace stencil
     double h2inv = 4.0 * 4.0;
-    for (int i = 0; i < vals.getDim1gh(); i++)
-        for (int j = 0; j < vals.getDim2gh(); j++)
-            for (int k = 0; k < vals.getDim3gh(); k++)
+    for (int i = 0; i < vals.getMgh(); i++)
+        for (int j = 0; j < vals.getNgh(); j++)
+            for (int k = 0; k < vals.getOgh(); k++)
             {
                 vals[1][1][1][i][j][k] = 6.0 * h2inv;
                 vals[1][1][0][i][j][k] = -1.0 * h2inv;
@@ -205,9 +205,9 @@ TEST_CASE("StencilVarying19p periodic")
 
     // fill varying stencil with 19p Laplace stencil
     double h2inv = (4.0 * 4.0) / 6.0;
-    for (int i = 0; i < vals.getDim1gh(); i++)
-        for (int j = 0; j < vals.getDim2gh(); j++)
-            for (int k = 0; k < vals.getDim3gh(); k++)
+    for (int i = 0; i < vals.getMgh(); i++)
+        for (int j = 0; j < vals.getNgh(); j++)
+            for (int k = 0; k < vals.getOgh(); k++)
             {
                 vals[1][1][1][i][j][k] = 24.0 * h2inv;
                 vals[1][1][0][i][j][k] = -2.0 * h2inv;
@@ -284,9 +284,9 @@ TEST_CASE("StencilVarying27p periodic")
 
     // fill varying stencil with 27p Laplace stencil
     double h2inv = (4.0 * 4.0) / 30.0;
-    for (int i = 0; i < vals.getDim1gh(); i++)
-        for (int j = 0; j < vals.getDim2gh(); j++)
-            for (int k = 0; k < vals.getDim3gh(); k++)
+    for (int i = 0; i < vals.getMgh(); i++)
+        for (int j = 0; j < vals.getNgh(); j++)
+            for (int k = 0; k < vals.getOgh(); k++)
             {
                 vals[1][1][1][i][j][k] = 128.0 * h2inv;
                 vals[1][1][0][i][j][k] = -14.0 * h2inv;
@@ -352,24 +352,24 @@ TEST_CASE("VaryingStencil move ctor")
     // check move ctor
     auto h2(std::move(h));
 
-    CHECK(h.getDim1() == 0);
-    CHECK(h.getDim2() == 0);
-    CHECK(h.getDim3() == 0);
-    CHECK(h.getDim4() == 0);
-    CHECK(h.getDim5() == 0);
-    CHECK(h.getDim6() == 0);
+    CHECK(h.getM() == 0);
+    CHECK(h.getN() == 0);
+    CHECK(h.getO() == 0);
+    CHECK(h.getWidth() == 0);
+    CHECK(h.getWidth() == 0);
+    CHECK(h.getWidth() == 0);
     CHECK(h.getData() == nullptr);
     CHECK(h2.isEqual(h_check));
 
     // check move assignment
     auto h3 = std::move(h2);
 
-    CHECK(h2.getDim1() == 0);
-    CHECK(h2.getDim2() == 0);
-    CHECK(h2.getDim3() == 0);
-    CHECK(h2.getDim4() == 0);
-    CHECK(h2.getDim5() == 0);
-    CHECK(h2.getDim6() == 0);
+    CHECK(h2.getM() == 0);
+    CHECK(h2.getN() == 0);
+    CHECK(h2.getO() == 0);
+    CHECK(h2.getWidth() == 0);
+    CHECK(h2.getWidth() == 0);
+    CHECK(h2.getWidth() == 0);
     CHECK(h2.getData() == nullptr);
     CHECK(h3.isEqual(h_check));
 }
@@ -1113,15 +1113,15 @@ TEST_CASE("VaryingStencil::multiply(FixedStencil)")
     auto vres = vr.multiply(vf, 2, nullptr, true, true);
 
     // Check dimensions
-    REQUIRE(fres.getDim1() == vres.getDim1());
-    REQUIRE(fres.getDim2() == vres.getDim2());
-    REQUIRE(fres.getDim3() == vres.getDim3());
-    REQUIRE(fres.getDim4() == vres.getDim4());
-    REQUIRE(fres.getDim5() == vres.getDim5());
-    REQUIRE(fres.getDim6() == vres.getDim6());
-    REQUIRE(fres.getGhostsDim1() == vres.getGhostsDim1());
-    REQUIRE(fres.getGhostsDim2() == vres.getGhostsDim2());
-    REQUIRE(fres.getGhostsDim3() == vres.getGhostsDim3());
+    REQUIRE(fres.getM() == vres.getM());
+    REQUIRE(fres.getN() == vres.getN());
+    REQUIRE(fres.getO() == vres.getO());
+    REQUIRE(fres.getWidth() == vres.getWidth());
+    REQUIRE(fres.getWidth() == vres.getWidth());
+    REQUIRE(fres.getWidth() == vres.getWidth());
+    REQUIRE(fres.getGhostsM() == vres.getGhostsM());
+    REQUIRE(fres.getGhostsN() == vres.getGhostsN());
+    REQUIRE(fres.getGhostsO() == vres.getGhostsO());
     REQUIRE(fres.getGhostsDim4() == vres.getGhostsDim4());
     REQUIRE(fres.getGhostsDim5() == vres.getGhostsDim5());
     REQUIRE(fres.getGhostsDim6() == vres.getGhostsDim6());
@@ -1242,15 +1242,15 @@ TEST_CASE("VaryingStecnil::copyShallow")
     s1.fillRandom();
     auto s2 = s1.copyShallow();
 
-    REQUIRE(s1.getDim1() == s2->getDim1());
-    REQUIRE(s1.getDim2() == s2->getDim2());
-    REQUIRE(s1.getDim3() == s2->getDim3());
-    REQUIRE(s1.getDim4() == s2->getDim4());
-    REQUIRE(s1.getDim5() == s2->getDim5());
-    REQUIRE(s1.getDim6() == s2->getDim6());
-    REQUIRE(s1.getGhostsDim1() == s2->getGhostsDim1());
-    REQUIRE(s1.getGhostsDim2() == s2->getGhostsDim2());
-    REQUIRE(s1.getGhostsDim3() == s2->getGhostsDim3());
+    REQUIRE(s1.getM() == s2->getM());
+    REQUIRE(s1.getN() == s2->getN());
+    REQUIRE(s1.getO() == s2->getO());
+    REQUIRE(s1.getWidth() == s2->getWidth());
+    REQUIRE(s1.getWidth() == s2->getWidth());
+    REQUIRE(s1.getWidth() == s2->getWidth());
+    REQUIRE(s1.getGhostsM() == s2->getGhostsM());
+    REQUIRE(s1.getGhostsN() == s2->getGhostsN());
+    REQUIRE(s1.getGhostsO() == s2->getGhostsO());
     REQUIRE(s1.getGhostsDim4() == s2->getGhostsDim4());
     REQUIRE(s1.getGhostsDim5() == s2->getGhostsDim5());
     REQUIRE(s1.getGhostsDim6() == s2->getGhostsDim6());
@@ -1286,15 +1286,15 @@ TEST_CASE("FixedStencil::multiply")
     auto vres = vf.multiply(vr, 2, nullptr, false, true);
 
     // Check dimensions
-    REQUIRE(fres.getDim1() == vres.getDim1());
-    REQUIRE(fres.getDim2() == vres.getDim2());
-    REQUIRE(fres.getDim3() == vres.getDim3());
-    REQUIRE(fres.getDim4() == vres.getDim4());
-    REQUIRE(fres.getDim5() == vres.getDim5());
-    REQUIRE(fres.getDim6() == vres.getDim6());
-    REQUIRE(fres.getGhostsDim1() == vres.getGhostsDim1());
-    REQUIRE(fres.getGhostsDim2() == vres.getGhostsDim2());
-    REQUIRE(fres.getGhostsDim3() == vres.getGhostsDim3());
+    REQUIRE(fres.getM() == vres.getM());
+    REQUIRE(fres.getN() == vres.getN());
+    REQUIRE(fres.getO() == vres.getO());
+    REQUIRE(fres.getWidth() == vres.getWidth());
+    REQUIRE(fres.getWidth() == vres.getWidth());
+    REQUIRE(fres.getWidth() == vres.getWidth());
+    REQUIRE(fres.getGhostsM() == vres.getGhostsM());
+    REQUIRE(fres.getGhostsN() == vres.getGhostsN());
+    REQUIRE(fres.getGhostsO() == vres.getGhostsO());
     REQUIRE(fres.getGhostsDim4() == vres.getGhostsDim4());
     REQUIRE(fres.getGhostsDim5() == vres.getGhostsDim5());
     REQUIRE(fres.getGhostsDim6() == vres.getGhostsDim6());

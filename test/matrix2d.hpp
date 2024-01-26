@@ -81,9 +81,9 @@ namespace mgcl_test
          */
         static Matrix2d fromVaryingStencil(const mgcl::VaryingStencil& s, bool periodic)
         {
-            int m = s.getDim4();
-            int n = s.getDim5();
-            int o = s.getDim6();
+            int m = s.getM();
+            int n = s.getN();
+            int o = s.getO();
             Matrix2d c(m * n * o, m * n * o);
             int N2 = s.getWidth() >> 1;
 
@@ -126,7 +126,7 @@ namespace mgcl_test
                         // row: current grid point
                         // column: grid point the current stencil entry maps to (dependent on current grid point)
                         c[i * n * o + j * o + k][gpi * n * o + gpj * o + gpk] +=
-                            s[ii][jj][kk][i + s.getGhostsDim4()][j + s.getGhostsDim5()][k + s.getGhostsDim6()];
+                            s[ii][jj][kk][i + s.getGhostsM()][j + s.getGhostsN()][k + s.getGhostsO()];
                     }
                 }
             // clang-format on

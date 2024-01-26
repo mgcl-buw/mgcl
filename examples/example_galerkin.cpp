@@ -105,9 +105,9 @@ int main(int argc, char** argv)
         auto& s = *p.getStencilValues();
 
         // fill with 7-point Laplace
-        for (int i = 0; i < s.getDim1gh(); i++)
-            for (int j = 0; j < s.getDim2gh(); j++)
-                for (int k = 0; k < s.getDim3gh(); k++)
+        for (int i = 0; i < s.getMgh(); i++)
+            for (int j = 0; j < s.getNgh(); j++)
+                for (int k = 0; k < s.getOgh(); k++)
                 {
                     // 7-point Laplace
                     s[i][j][k][0][1][1] = 1;

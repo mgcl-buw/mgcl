@@ -387,7 +387,7 @@ namespace mgcl
      * The returned VaryingStencil<N> has no ghosts cells.
      * Boundaries are 0-based, i.e. both start and end will be included.
      * This behaves just like Cuboid::sliceIncGhosts.
-     * The stencil can only be sliced for grid points, i.e. dim1, dim2 and dim3.
+     * The stencil can only be sliced for grid points, i.e. getM(), getN() and getO().
      *
      * @return std::unique_ptr<VaryingStencil<N>>
      */
@@ -421,15 +421,15 @@ namespace mgcl
      */
     std::unique_ptr<VaryingStencil> VaryingStencil::copyShallow()
     {
-        return std::make_unique<VaryingStencil>(dim1, dim2, dim3, getWidth(), ghostsDim1, ghostsDim2, ghostsDim3);
+        return std::make_unique<VaryingStencil>(getM(), getN(), getO(), getWidth(), getGhostsM(), getGhostsN(), getGhostsO());
     }
 
     std::ostream& operator<<(std::ostream& os, const VaryingStencil& v)
     {
         os << "VaryingStencil: " << std::endl
-           << " m,n,o: " << v.dim4 << "," << v.dim5 << "," << v.dim6 << std::endl
-           << " width: " << v.dim1 << std::endl
-           << " ghm,ghn,gho: " << v.ghostsDim4 << "," << v.ghostsDim5 << "," << v.ghostsDim6 << std::endl;
+           << " m,n,o: " << v.getM() << "," << v.getN() << "," << v.getO() << std::endl
+           << " width: " << v.getWidth() << std::endl
+           << " ghm,ghn,gho: " << v.getGhostsM() << "," << v.getGhostsN() << "," << v.getGhostsO() << std::endl;
         return os;
     }
 
@@ -597,12 +597,12 @@ namespace mgcl
         if (f.getWidth() != width)
             throw "Widths are not equal!";
 
-        if (m != f.getDim1() || n != f.getDim2() || o != f.getDim3() ||
-            gh != f.getGhostsDim1() || gh != f.getGhostsDim2() || gh != f.getGhostsDim3())
+        if (m != f.getM() || n != f.getN() || o != f.getO() ||
+            gh != f.getGhostsM() || gh != f.getGhostsN() || gh != f.getGhostsO())
             throw "VaryingStencilGpu::fill: Dimensions are not equal. this.m,n,o = " +
                 std::to_string(m) + "," + std::to_string(n) + "," + std::to_string(o) +
-                ", f.m,n,o = " + std::to_string(f.getDim1()) + "," + std::to_string(f.getDim2()) +
-                "," + std::to_string(f.getDim3());
+                ", f.m,n,o = " + std::to_string(f.getM()) + "," + std::to_string(f.getN()) +
+                "," + std::to_string(f.getO());
 
         int err = clEnqueueWriteBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0,
                                        sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width,

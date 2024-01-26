@@ -638,12 +638,12 @@ TEST_CASE("Problem::init")
         p.setStencilType(mgcl::MGCL_VARYING);
         auto& s = *p.getStencilValues();
 
-        REQUIRE(s.getDim1() == m);
-        REQUIRE(s.getDim2() == n);
-        REQUIRE(s.getDim3() == o);
-        REQUIRE(s.getDim4() == 3);
-        REQUIRE(s.getDim5() == 3);
-        REQUIRE(s.getDim6() == 3);
+        REQUIRE(s.getM() == m);
+        REQUIRE(s.getN() == n);
+        REQUIRE(s.getO() == o);
+        REQUIRE(s.getWidth() == 3);
+        REQUIRE(s.getWidth() == 3);
+        REQUIRE(s.getWidth() == 3);
 
         // fill with 7-point Laplace
         for (int i = 0; i < m; i++)
@@ -673,12 +673,12 @@ TEST_CASE("Problem::init")
             REQUIRE(level.getStencilValues());
             auto& sv = *level.getStencilValues();
 
-            CHECK(sv.getDim1() == level.getM());
-            CHECK(sv.getDim2() == level.getN());
-            CHECK(sv.getDim3() == level.getO());
-            CHECK(sv.getDim4() == 3);
-            CHECK(sv.getDim5() == 3);
-            CHECK(sv.getDim6() == 3);
+            CHECK(sv.getM() == level.getM());
+            CHECK(sv.getN() == level.getN());
+            CHECK(sv.getO() == level.getO());
+            CHECK(sv.getWidth() == 3);
+            CHECK(sv.getWidth() == 3);
+            CHECK(sv.getWidth() == 3);
         }
     }
 }
@@ -744,30 +744,30 @@ TEST_CASE("Problem::setStencilType")
 
     p.setStencilType(mgcl::MGCL_VARYING);
     REQUIRE(p.getStencilValues() != nullptr);
-    CHECK(p.getStencilValues()->getDim1() == p.getM());
-    CHECK(p.getStencilValues()->getDim2() == p.getN());
-    CHECK(p.getStencilValues()->getDim3() == p.getO());
-    CHECK(p.getStencilValues()->getDim1gh() == p.getM() + 4);
-    CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 4);
-    CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 4);
+    CHECK(p.getStencilValues()->getM() == p.getM());
+    CHECK(p.getStencilValues()->getN() == p.getN());
+    CHECK(p.getStencilValues()->getO() == p.getO());
+    CHECK(p.getStencilValues()->getMgh() == p.getM() + 4);
+    CHECK(p.getStencilValues()->getNgh() == p.getN() + 4);
+    CHECK(p.getStencilValues()->getOgh() == p.getO() + 4);
 
     p.setStencilType(mgcl::MGCL_VARYING);
     REQUIRE(p.getStencilValues() != nullptr);
-    CHECK(p.getStencilValues()->getDim1() == p.getM());
-    CHECK(p.getStencilValues()->getDim2() == p.getN());
-    CHECK(p.getStencilValues()->getDim3() == p.getO());
-    CHECK(p.getStencilValues()->getDim1gh() == p.getM() + 4);
-    CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 4);
-    CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 4);
+    CHECK(p.getStencilValues()->getM() == p.getM());
+    CHECK(p.getStencilValues()->getN() == p.getN());
+    CHECK(p.getStencilValues()->getO() == p.getO());
+    CHECK(p.getStencilValues()->getMgh() == p.getM() + 4);
+    CHECK(p.getStencilValues()->getNgh() == p.getN() + 4);
+    CHECK(p.getStencilValues()->getOgh() == p.getO() + 4);
 
     p.setStencilType(mgcl::MGCL_VARYING);
     REQUIRE(p.getStencilValues() != nullptr);
-    CHECK(p.getStencilValues()->getDim1() == p.getM());
-    CHECK(p.getStencilValues()->getDim2() == p.getN());
-    CHECK(p.getStencilValues()->getDim3() == p.getO());
-    CHECK(p.getStencilValues()->getDim1gh() == p.getM() + 4);
-    CHECK(p.getStencilValues()->getDim2gh() == p.getN() + 4);
-    CHECK(p.getStencilValues()->getDim3gh() == p.getO() + 4);
+    CHECK(p.getStencilValues()->getM() == p.getM());
+    CHECK(p.getStencilValues()->getN() == p.getN());
+    CHECK(p.getStencilValues()->getO() == p.getO());
+    CHECK(p.getStencilValues()->getMgh() == p.getM() + 4);
+    CHECK(p.getStencilValues()->getNgh() == p.getN() + 4);
+    CHECK(p.getStencilValues()->getOgh() == p.getO() + 4);
 }
 
 /**
