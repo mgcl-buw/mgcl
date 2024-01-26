@@ -95,7 +95,7 @@ namespace mgcl
                 int istart_r = r.getGhostsM() - off;
                 int jstart_r = r.getGhostsN() - off;
                 int kstart_r = r.getGhostsO() - off;
-                int istart_sv = stencilValues ? stencilValues->getGhostsDim1() - off : 0;
+                int istart_sv = stencilValues ? stencilValues->getGhostsM() - off : 0;
                 int jstart_sv = stencilValues ? stencilValues->getGhostsDim2() - off : 0;
                 int kstart_sv = stencilValues ? stencilValues->getGhostsDim3() - off : 0;
 
@@ -786,10 +786,6 @@ namespace mgcl
         double****** stencilValues;
         double*** vraw = v.getData();
 
-        int ghmsv = 0;
-        int ghnsv = 0;
-        int ghosv = 0;
-
         // check if off is too small (i.e. start < 0)
         if (moff <= -v.getGhostsM() || noff <= -v.getGhostsN() || ooff <= -v.getGhostsO())
             throw "moff, noff and ooff must not be <= -ghosts";
@@ -803,16 +799,7 @@ namespace mgcl
             throw "stencilType is varying but stencilValues is null!";
 
         if (stencilType == MGCL_VARYING)
-        {
             stencilValues = stencilValuesCuboid->getData();
-            ghmsv = stencilValuesCuboid->getGhostsDim1();
-            ghnsv = stencilValuesCuboid->getGhostsDim2();
-            ghosv = stencilValuesCuboid->getGhostsDim3();
-            // if (ghmsv != ghm ||
-            //     ghnsv != ghn ||
-            //     ghosv != gho)
-            //     throw "Ghosts of inputs and stencilValues must be the same!";
-        }
 
         int istart_v = v.getGhostsM() + moff;
         int jstart_v = v.getGhostsN() + noff;
@@ -826,9 +813,9 @@ namespace mgcl
         int istart_f = f.getGhostsM() + moff;
         int jstart_f = f.getGhostsN() + noff;
         int kstart_f = f.getGhostsO() + ooff;
-        int istart_sv = stencilValuesCuboid ? stencilValuesCuboid->getGhostsDim1() + moff : 0;
-        int jstart_sv = stencilValuesCuboid ? stencilValuesCuboid->getGhostsDim2() + noff : 0;
-        int kstart_sv = stencilValuesCuboid ? stencilValuesCuboid->getGhostsDim3() + ooff : 0;
+        int istart_sv = stencilValuesCuboid ? stencilValuesCuboid->getGhostsM() + moff : 0;
+        int jstart_sv = stencilValuesCuboid ? stencilValuesCuboid->getGhostsN() + noff : 0;
+        int kstart_sv = stencilValuesCuboid ? stencilValuesCuboid->getGhostsO() + ooff : 0;
 
         for (int iv = istart_v, ir = istart_r, fi = istart_f, isv = istart_sv; iv < iend_v; iv++, ir++, fi++, isv++)
             for (int jv = jstart_v, jr = jstart_r, fj = jstart_f, jsv = jstart_sv; jv < jend_v; jv++, jr++, fj++, jsv++)
@@ -887,35 +874,35 @@ namespace mgcl
                     else if (stencilType == MGCL_VARYING)
                     {
                         // clang-format off
-                        stencilsum = stencilValues[isv][jsv][ksv][1][1][1]  * vraw[iv][jv][kv]
-                            + stencilValues[isv][jsv][ksv][1][1][0] * vraw[ iv ][ jv ][kv-1]
-                            + stencilValues[isv][jsv][ksv][1][1][2] * vraw[ iv ][ jv ][kv+1]
-                            + stencilValues[isv][jsv][ksv][1][0][1] * vraw[ iv ][jv-1][ kv ]
-                            + stencilValues[isv][jsv][ksv][1][2][1] * vraw[ iv ][jv+1][ kv ]
-                            + stencilValues[isv][jsv][ksv][0][1][1] * vraw[iv-1][ jv ][ kv ]
-                            + stencilValues[isv][jsv][ksv][2][1][1] * vraw[iv+1][ jv ][ kv ]
+                        stencilsum = stencilValues[1][1][1][isv][jsv][ksv]  * vraw[iv][jv][kv]
+                            + stencilValues[1][1][0][isv][jsv][ksv] * vraw[ iv ][ jv ][kv-1]
+                            + stencilValues[1][1][2][isv][jsv][ksv] * vraw[ iv ][ jv ][kv+1]
+                            + stencilValues[1][0][1][isv][jsv][ksv] * vraw[ iv ][jv-1][ kv ]
+                            + stencilValues[1][2][1][isv][jsv][ksv] * vraw[ iv ][jv+1][ kv ]
+                            + stencilValues[0][1][1][isv][jsv][ksv] * vraw[iv-1][ jv ][ kv ]
+                            + stencilValues[2][1][1][isv][jsv][ksv] * vraw[iv+1][ jv ][ kv ]
                             
-                            + stencilValues[isv][jsv][ksv][1][0][0] * vraw[ iv ][jv-1][kv-1]
-                            + stencilValues[isv][jsv][ksv][1][0][2] * vraw[ iv ][jv-1][kv+1]
-                            + stencilValues[isv][jsv][ksv][1][2][0] * vraw[ iv ][jv+1][kv-1]
-                            + stencilValues[isv][jsv][ksv][1][2][2] * vraw[ iv ][jv+1][kv+1]
-                            + stencilValues[isv][jsv][ksv][0][1][0] * vraw[iv-1][ jv ][kv-1]
-                            + stencilValues[isv][jsv][ksv][0][1][2] * vraw[iv-1][ jv ][kv+1]
-                            + stencilValues[isv][jsv][ksv][2][1][0] * vraw[iv+1][ jv ][kv-1]
-                            + stencilValues[isv][jsv][ksv][2][1][2] * vraw[iv+1][ jv ][kv+1]
-                            + stencilValues[isv][jsv][ksv][0][0][1] * vraw[iv-1][jv-1][ kv ]
-                            + stencilValues[isv][jsv][ksv][0][2][1] * vraw[iv-1][jv+1][ kv ]
-                            + stencilValues[isv][jsv][ksv][2][0][1] * vraw[iv+1][jv-1][ kv ]
-                            + stencilValues[isv][jsv][ksv][2][2][1] * vraw[iv+1][jv+1][ kv ]
+                            + stencilValues[1][0][0][isv][jsv][ksv] * vraw[ iv ][jv-1][kv-1]
+                            + stencilValues[1][0][2][isv][jsv][ksv] * vraw[ iv ][jv-1][kv+1]
+                            + stencilValues[1][2][0][isv][jsv][ksv] * vraw[ iv ][jv+1][kv-1]
+                            + stencilValues[1][2][2][isv][jsv][ksv] * vraw[ iv ][jv+1][kv+1]
+                            + stencilValues[0][1][0][isv][jsv][ksv] * vraw[iv-1][ jv ][kv-1]
+                            + stencilValues[0][1][2][isv][jsv][ksv] * vraw[iv-1][ jv ][kv+1]
+                            + stencilValues[2][1][0][isv][jsv][ksv] * vraw[iv+1][ jv ][kv-1]
+                            + stencilValues[2][1][2][isv][jsv][ksv] * vraw[iv+1][ jv ][kv+1]
+                            + stencilValues[0][0][1][isv][jsv][ksv] * vraw[iv-1][jv-1][ kv ]
+                            + stencilValues[0][2][1][isv][jsv][ksv] * vraw[iv-1][jv+1][ kv ]
+                            + stencilValues[2][0][1][isv][jsv][ksv] * vraw[iv+1][jv-1][ kv ]
+                            + stencilValues[2][2][1][isv][jsv][ksv] * vraw[iv+1][jv+1][ kv ]
                             
-                            + stencilValues[isv][jsv][ksv][0][0][0] * vraw[iv-1][jv-1][kv-1]
-                            + stencilValues[isv][jsv][ksv][0][0][2] * vraw[iv-1][jv-1][kv+1]
-                            + stencilValues[isv][jsv][ksv][0][2][0] * vraw[iv-1][jv+1][kv-1]
-                            + stencilValues[isv][jsv][ksv][0][2][2] * vraw[iv-1][jv+1][kv+1]
-                            + stencilValues[isv][jsv][ksv][2][0][0] * vraw[iv+1][jv-1][kv-1]
-                            + stencilValues[isv][jsv][ksv][2][0][2] * vraw[iv+1][jv-1][kv+1]
-                            + stencilValues[isv][jsv][ksv][2][2][0] * vraw[iv+1][jv+1][kv-1]
-                            + stencilValues[isv][jsv][ksv][2][2][2] * vraw[iv+1][jv+1][kv+1];
+                            + stencilValues[0][0][0][isv][jsv][ksv] * vraw[iv-1][jv-1][kv-1]
+                            + stencilValues[0][0][2][isv][jsv][ksv] * vraw[iv-1][jv-1][kv+1]
+                            + stencilValues[0][2][0][isv][jsv][ksv] * vraw[iv-1][jv+1][kv-1]
+                            + stencilValues[0][2][2][isv][jsv][ksv] * vraw[iv-1][jv+1][kv+1]
+                            + stencilValues[2][0][0][isv][jsv][ksv] * vraw[iv+1][jv-1][kv-1]
+                            + stencilValues[2][0][2][isv][jsv][ksv] * vraw[iv+1][jv-1][kv+1]
+                            + stencilValues[2][2][0][isv][jsv][ksv] * vraw[iv+1][jv+1][kv-1]
+                            + stencilValues[2][2][2][isv][jsv][ksv] * vraw[iv+1][jv+1][kv+1];
                         // clang-format on
 
                         // if (j == 2 && k == 2 && i == 2)
@@ -1017,33 +1004,33 @@ namespace mgcl
     {
         // clang-format off
         printf("27point stencil at %d,%d,%d; %d,%d,%d:\n", i_sv, j_sv, k_sv, i, j, k);
-        printf(" sv * v[    self     ] = %e * %e\n", sv[i_sv][j_sv][k_sv][1][1][1], v[ i ][ j ][ k ]);
-        printf(" sv * v[ i ][ j ][k-1] = %e * %e\n", sv[i_sv][j_sv][k_sv][1][1][0], v[ i ][ j ][k-1]);
-        printf(" sv * v[ i ][ j ][k+1] = %e * %e\n", sv[i_sv][j_sv][k_sv][1][1][2], v[ i ][ j ][k+1]);
-        printf(" sv * v[ i ][j-1][ k ] = %e * %e\n", sv[i_sv][j_sv][k_sv][1][0][1], v[ i ][j-1][ k ]);
-        printf(" sv * v[ i ][j+1][ k ] = %e * %e\n", sv[i_sv][j_sv][k_sv][1][2][1], v[ i ][j+1][ k ]);
-        printf(" sv * v[i-1][ j ][ k ] = %e * %e\n", sv[i_sv][j_sv][k_sv][0][1][1], v[i-1][ j ][ k ]);
-        printf(" sv * v[i+1][ j ][ k ] = %e * %e\n", sv[i_sv][j_sv][k_sv][2][1][1], v[i+1][ j ][ k ]);
-        printf(" sv * v[ i ][j-1][k-1] = %e * %e\n", sv[i_sv][j_sv][k_sv][1][0][0], v[ i ][j-1][k-1]);
-        printf(" sv * v[ i ][j-1][k+1] = %e * %e\n", sv[i_sv][j_sv][k_sv][1][0][2], v[ i ][j-1][k+1]);
-        printf(" sv * v[ i ][j+1][k-1] = %e * %e\n", sv[i_sv][j_sv][k_sv][1][2][0], v[ i ][j+1][k-1]);
-        printf(" sv * v[ i ][j+1][k+1] = %e * %e\n", sv[i_sv][j_sv][k_sv][1][2][2], v[ i ][j+1][k+1]);
-        printf(" sv * v[i-1][ j ][k-1] = %e * %e\n", sv[i_sv][j_sv][k_sv][0][1][0], v[i-1][ j ][k-1]);
-        printf(" sv * v[i-1][ j ][k+1] = %e * %e\n", sv[i_sv][j_sv][k_sv][0][1][2], v[i-1][ j ][k+1]);
-        printf(" sv * v[i+1][ j ][k-1] = %e * %e\n", sv[i_sv][j_sv][k_sv][2][1][0], v[i+1][ j ][k-1]);
-        printf(" sv * v[i+1][ j ][k+1] = %e * %e\n", sv[i_sv][j_sv][k_sv][2][1][2], v[i+1][ j ][k+1]);
-        printf(" sv * v[i-1][j-1][ k ] = %e * %e\n", sv[i_sv][j_sv][k_sv][0][0][1], v[i-1][j-1][ k ]);
-        printf(" sv * v[i-1][j+1][ k ] = %e * %e\n", sv[i_sv][j_sv][k_sv][0][2][1], v[i-1][j+1][ k ]);
-        printf(" sv * v[i+1][j-1][ k ] = %e * %e\n", sv[i_sv][j_sv][k_sv][2][0][1], v[i+1][j-1][ k ]);
-        printf(" sv * v[i+1][j+1][ k ] = %e * %e\n", sv[i_sv][j_sv][k_sv][2][2][1], v[i+1][j+1][ k ]);
-        printf(" sv * v[i-1][j-1][k-1] = %e * %e\n", sv[i_sv][j_sv][k_sv][0][0][0], v[i-1][j-1][k-1]);
-        printf(" sv * v[i-1][j-1][k+1] = %e * %e\n", sv[i_sv][j_sv][k_sv][0][0][2], v[i-1][j-1][k+1]);
-        printf(" sv * v[i-1][j+1][k-1] = %e * %e\n", sv[i_sv][j_sv][k_sv][0][2][0], v[i-1][j+1][k-1]);
-        printf(" sv * v[i-1][j+1][k+1] = %e * %e\n", sv[i_sv][j_sv][k_sv][0][2][2], v[i-1][j+1][k+1]);
-        printf(" sv * v[i+1][j-1][k-1] = %e * %e\n", sv[i_sv][j_sv][k_sv][2][0][0], v[i+1][j-1][k-1]);
-        printf(" sv * v[i+1][j-1][k+1] = %e * %e\n", sv[i_sv][j_sv][k_sv][2][0][2], v[i+1][j-1][k+1]);
-        printf(" sv * v[i+1][j+1][k-1] = %e * %e\n", sv[i_sv][j_sv][k_sv][2][2][0], v[i+1][j+1][k-1]);
-        printf(" sv * v[i+1][j+1][k+1] = %e * %e\n", sv[i_sv][j_sv][k_sv][2][2][2], v[i+1][j+1][k+1]);
+        printf(" sv * v[    self     ] = %e * %e\n", sv[1][1][1][i_sv][j_sv][k_sv], v[ i ][ j ][ k ]);
+        printf(" sv * v[ i ][ j ][k-1] = %e * %e\n", sv[1][1][0][i_sv][j_sv][k_sv], v[ i ][ j ][k-1]);
+        printf(" sv * v[ i ][ j ][k+1] = %e * %e\n", sv[1][1][2][i_sv][j_sv][k_sv], v[ i ][ j ][k+1]);
+        printf(" sv * v[ i ][j-1][ k ] = %e * %e\n", sv[1][0][1][i_sv][j_sv][k_sv], v[ i ][j-1][ k ]);
+        printf(" sv * v[ i ][j+1][ k ] = %e * %e\n", sv[1][2][1][i_sv][j_sv][k_sv], v[ i ][j+1][ k ]);
+        printf(" sv * v[i-1][ j ][ k ] = %e * %e\n", sv[0][1][1][i_sv][j_sv][k_sv], v[i-1][ j ][ k ]);
+        printf(" sv * v[i+1][ j ][ k ] = %e * %e\n", sv[2][1][1][i_sv][j_sv][k_sv], v[i+1][ j ][ k ]);
+        printf(" sv * v[ i ][j-1][k-1] = %e * %e\n", sv[1][0][0][i_sv][j_sv][k_sv], v[ i ][j-1][k-1]);
+        printf(" sv * v[ i ][j-1][k+1] = %e * %e\n", sv[1][0][2][i_sv][j_sv][k_sv], v[ i ][j-1][k+1]);
+        printf(" sv * v[ i ][j+1][k-1] = %e * %e\n", sv[1][2][0][i_sv][j_sv][k_sv], v[ i ][j+1][k-1]);
+        printf(" sv * v[ i ][j+1][k+1] = %e * %e\n", sv[1][2][2][i_sv][j_sv][k_sv], v[ i ][j+1][k+1]);
+        printf(" sv * v[i-1][ j ][k-1] = %e * %e\n", sv[0][1][0][i_sv][j_sv][k_sv], v[i-1][ j ][k-1]);
+        printf(" sv * v[i-1][ j ][k+1] = %e * %e\n", sv[0][1][2][i_sv][j_sv][k_sv], v[i-1][ j ][k+1]);
+        printf(" sv * v[i+1][ j ][k-1] = %e * %e\n", sv[2][1][0][i_sv][j_sv][k_sv], v[i+1][ j ][k-1]);
+        printf(" sv * v[i+1][ j ][k+1] = %e * %e\n", sv[2][1][2][i_sv][j_sv][k_sv], v[i+1][ j ][k+1]);
+        printf(" sv * v[i-1][j-1][ k ] = %e * %e\n", sv[0][0][1][i_sv][j_sv][k_sv], v[i-1][j-1][ k ]);
+        printf(" sv * v[i-1][j+1][ k ] = %e * %e\n", sv[0][2][1][i_sv][j_sv][k_sv], v[i-1][j+1][ k ]);
+        printf(" sv * v[i+1][j-1][ k ] = %e * %e\n", sv[2][0][1][i_sv][j_sv][k_sv], v[i+1][j-1][ k ]);
+        printf(" sv * v[i+1][j+1][ k ] = %e * %e\n", sv[2][2][1][i_sv][j_sv][k_sv], v[i+1][j+1][ k ]);
+        printf(" sv * v[i-1][j-1][k-1] = %e * %e\n", sv[0][0][0][i_sv][j_sv][k_sv], v[i-1][j-1][k-1]);
+        printf(" sv * v[i-1][j-1][k+1] = %e * %e\n", sv[0][0][2][i_sv][j_sv][k_sv], v[i-1][j-1][k+1]);
+        printf(" sv * v[i-1][j+1][k-1] = %e * %e\n", sv[0][2][0][i_sv][j_sv][k_sv], v[i-1][j+1][k-1]);
+        printf(" sv * v[i-1][j+1][k+1] = %e * %e\n", sv[0][2][2][i_sv][j_sv][k_sv], v[i-1][j+1][k+1]);
+        printf(" sv * v[i+1][j-1][k-1] = %e * %e\n", sv[2][0][0][i_sv][j_sv][k_sv], v[i+1][j-1][k-1]);
+        printf(" sv * v[i+1][j-1][k+1] = %e * %e\n", sv[2][0][2][i_sv][j_sv][k_sv], v[i+1][j-1][k+1]);
+        printf(" sv * v[i+1][j+1][k-1] = %e * %e\n", sv[2][2][0][i_sv][j_sv][k_sv], v[i+1][j+1][k-1]);
+        printf(" sv * v[i+1][j+1][k+1] = %e * %e\n", sv[2][2][2][i_sv][j_sv][k_sv], v[i+1][j+1][k+1]);
         // clang-format on
     }
 }

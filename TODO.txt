@@ -27,8 +27,8 @@
   [x] FixedStencil::multiply(VaryingStencil)
   [x] VaryingStencil::slice()
   [x] VaryingStencil::sliceIncGhosts()
-  [ ] VaryingStencil::copyRealFrom()
-  [ ] MultigridEngine::galerkin
+  [x] MultigridEngine::galerkin
+  [x] residualSeq()
 
   [ ] VaryingStencilGpu::fill
   [ ] VaryingStencilGpu::updateGhosts
@@ -37,7 +37,6 @@
   [ ] FixedStencilGpu::multiply(VaryingStencilGpu)
   [ ] VaryingStencilGpu::cutFromW7ToW3()
   
-  [ ] residualSeq()
   [ ] residual()
 
   [ ] updateGhostsStencilMpi()

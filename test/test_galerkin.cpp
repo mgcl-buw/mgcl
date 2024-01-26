@@ -20,7 +20,7 @@ TEST_CASE("galerkin Laplace vs Matrix")
 
     // Fill varying stencil on fine grid with 7p Laplace
     mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
-    mgcl_test::fill7pLaplace(a_h);
+    mgcl_test::fill7pLaplace(a_h, true);
 
     auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
@@ -147,7 +147,7 @@ TEST_CASE("galerkin symmetric")
 
     // Fill varying stencil on fine grid with 7p Laplace
     mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
-    mgcl_test::fill7pLaplace(a_h);
+    mgcl_test::fill7pLaplace(a_h, true);
 
     auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
@@ -168,7 +168,7 @@ TEST_CASE("galerkin Laplace SA == AS")
 
     // Fill varying stencil on fine grid with 7p Laplace
     mgcl::VaryingStencil a(m, n, o, 3, 2, 2, 2);
-    mgcl_test::fill7pLaplace(a);
+    mgcl_test::fill7pLaplace(a, true);
 
     auto s = mgcl::create3dFullWeightRestrictionStencil();
 
@@ -202,7 +202,7 @@ TEST_CASE("galerkin Laplace rediscretized")
 
     // Fill varying stencil on fine grid with 7p Laplace
     mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
-    mgcl_test::fill7pLaplace(a_h);
+    mgcl_test::fill7pLaplace(a_h, true);
 
     auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
 
@@ -291,15 +291,15 @@ TEST_CASE("galerkin_different_jacobi_iters_per_kernel")
         for (int i = 0; i < p1.getMaxlevel(); i++)
         {
             CAPTURE(i);
-            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim1() == 2);
-            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim2() == 2);
-            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsDim3() == 2);
-            REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim1() == 2);
-            REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim2() == 2);
-            REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsDim3() == 2);
-            REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim1() == 3);
-            REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim2() == 3);
-            REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsDim3() == 3);
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsM() == 2);
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsN() == 2);
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsO() == 2);
+            REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsM() == 2);
+            REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsN() == 2);
+            REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsO() == 2);
+            REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsM() == 3);
+            REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsN() == 3);
+            REQUIRE(p3.getLevelAt(i).getStencilValues()->getGhostsO() == 3);
 
             REQUIRE(p1.getLevelAt(i).getStencilValues()->isEqual(*p2.getLevelAt(i).getStencilValues()));
             REQUIRE(p1.getLevelAt(i).getStencilValues()->isEqual(*p3.getLevelAt(i).getStencilValues()));

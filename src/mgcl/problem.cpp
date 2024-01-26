@@ -14,11 +14,11 @@
 #else
 #include <CL/cl_platform.h> // for cl_ulong
 #endif
-#include <algorithm>        // for max
-#include <chrono>           // for __enable_if_is_duration, steady_clock
-#include <cmath>            // for log2
-#include <cstdio>           // for printf, NULL
-#include <functional>       // for function
+#include <algorithm>  // for max
+#include <chrono>     // for __enable_if_is_duration, steady_clock
+#include <cmath>      // for log2
+#include <cstdio>     // for printf, NULL
+#include <functional> // for function
 #include <iostream>
 #include <stdexcept>   // for runtime_error
 #include <string>      // for to_string, basic_string, string
@@ -134,12 +134,12 @@ namespace mgcl
             throw "Mpi threshold level is 0 but stencilValues has local size. Please use setMpiMinGridPoints before setStencilType!";
 
         if (mpiRank() == 0 && getMpiLevelThreshold() > 1 && stencilValues &&
-            (stencilValues->getDim1() > m || stencilValues->getDim2() > n || stencilValues->getDim3() > o))
+            (stencilValues->getM() > m || stencilValues->getN() > n || stencilValues->getO() > o))
             throw "Mpi threshold level is not 0 but stencilValues has global size. Please use setMpiMinGridPoints before setStencilType!";
 
-        if (stencilValues && (stencilValues->getGhostsDim1() < ghosts ||
-                              stencilValues->getGhostsDim2() < ghosts ||
-                              stencilValues->getGhostsDim3() < ghosts))
+        if (stencilValues && (stencilValues->getGhostsM() < ghosts ||
+                              stencilValues->getGhostsN() < ghosts ||
+                              stencilValues->getGhostsO() < ghosts))
             throw "Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!";
 
         return true;
@@ -346,7 +346,7 @@ namespace mgcl
         // gathered flag needed for enforcing local ghost update after stencil values were gathered. If threshold is 0,
         // no gathering happens at all.
         bool gathered = getMpiLevelThreshold() == 0;
-        int gh_sv = stencilValues ? stencilValues->getGhostsDim1() : 0;
+        int gh_sv = stencilValues ? stencilValues->getGhostsM() : 0;
         for (int level = 0; level <= maxlevel; level++)
         {
             {
@@ -747,9 +747,9 @@ namespace mgcl
 
     void Problem::setJacobiIterationsPerKernel(int jacobiIterationsPerKernel)
     {
-        if (stencilValues && (stencilValues->getGhostsDim1() < jacobiIterationsPerKernel ||
-                              stencilValues->getGhostsDim2() < jacobiIterationsPerKernel ||
-                              stencilValues->getGhostsDim3() < jacobiIterationsPerKernel))
+        if (stencilValues && (stencilValues->getGhostsM() < jacobiIterationsPerKernel ||
+                              stencilValues->getGhostsN() < jacobiIterationsPerKernel ||
+                              stencilValues->getGhostsO() < jacobiIterationsPerKernel))
             throw "Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!";
 
         jacobi_iterations_per_kernel = jacobiIterationsPerKernel;
@@ -823,9 +823,9 @@ namespace mgcl
 
     void Problem::setGhosts(int ghosts_)
     {
-        if (stencilValues && (stencilValues->getGhostsDim1() < ghosts_ ||
-                              stencilValues->getGhostsDim2() < ghosts_ ||
-                              stencilValues->getGhostsDim3() < ghosts_))
+        if (stencilValues && (stencilValues->getGhostsM() < ghosts_ ||
+                              stencilValues->getGhostsN() < ghosts_ ||
+                              stencilValues->getGhostsO() < ghosts_))
             throw "Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!";
 
         ghosts = ghosts_;

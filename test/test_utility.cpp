@@ -266,20 +266,21 @@ void mgcl_test::create4hOrderPeriodicProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, m
             }
 }
 
-void mgcl_test::fill7pLaplace(mgcl::VaryingStencil& v)
+void mgcl_test::fill7pLaplace(mgcl::VaryingStencil& v, bool negativeCenter)
 {
-    double h2inv = static_cast<double>(v.getM()) * static_cast<double>(v.getM());
+    double f = negativeCenter ? -1.0 : 1.0;
+    double h2inv = f * static_cast<double>(v.getM()) * static_cast<double>(v.getM());
     for (int i = 0; i < v.getMgh(); i++)
         for (int j = 0; j < v.getNgh(); j++)
             for (int k = 0; k < v.getOgh(); k++)
             {
                 // 7-point Laplace
-                v[0][1][1][i][j][k] = h2inv * 1.0;
-                v[1][0][1][i][j][k] = h2inv * 1.0;
-                v[1][1][0][i][j][k] = h2inv * 1.0;
-                v[1][1][1][i][j][k] = h2inv * -6.0;
-                v[1][1][2][i][j][k] = h2inv * 1.0;
-                v[1][2][1][i][j][k] = h2inv * 1.0;
-                v[2][1][1][i][j][k] = h2inv * 1.0;
+                v[0][1][1][i][j][k] = h2inv * -1.0;
+                v[1][0][1][i][j][k] = h2inv * -1.0;
+                v[1][1][0][i][j][k] = h2inv * -1.0;
+                v[1][1][1][i][j][k] = h2inv * 6.0;
+                v[1][1][2][i][j][k] = h2inv * -1.0;
+                v[1][2][1][i][j][k] = h2inv * -1.0;
+                v[2][1][1][i][j][k] = h2inv * -1.0;
             }
 }

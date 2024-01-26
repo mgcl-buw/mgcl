@@ -86,20 +86,7 @@ TEST_CASE("residual")
     {
         int n = 16;
         auto vals = mgcl::VaryingStencil(n, n, n, 3, 1, 1, 1);
-
-        double h2inv = static_cast<double>(n * n);
-        for (int i = 0; i < vals.getDim1gh(); i++)
-            for (int j = 0; j < vals.getDim2gh(); j++)
-                for (int k = 0; k < vals.getDim3gh(); k++)
-                {
-                    vals[i][j][k][1][1][1] = 6.0 * h2inv;
-                    vals[i][j][k][1][1][0] = -1.0 * h2inv;
-                    vals[i][j][k][1][1][2] = -1.0 * h2inv;
-                    vals[i][j][k][1][0][1] = -1.0 * h2inv;
-                    vals[i][j][k][1][2][1] = -1.0 * h2inv;
-                    vals[i][j][k][0][1][1] = -1.0 * h2inv;
-                    vals[i][j][k][2][1][1] = -1.0 * h2inv;
-                }
+        mgcl_test::fill7pLaplace(vals, false);
 
         double res = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r, mgcl::MGCL_L2,
                                                         mgcl::MGCL_VARYING, stencilFactor, &vals, true, true,
@@ -567,9 +554,9 @@ TEST_CASE("residual gpu gh > 1")
             sv->fillRandom();
             sv->updateGhosts();
 
-            auto d_in_sv = std::make_shared<mgcl::VaryingStencilGpu>(sv->getDim1(), sv->getDim2(), sv->getDim3(), 3, sv->getGhostsDim1(),
+            auto d_in_sv = std::make_shared<mgcl::VaryingStencilGpu>(sv->getM(), sv->getN(), sv->getO(), 3, sv->getGhostsM(),
                                                                      tu.getContext(), tu.getCommands());
-            auto d_in_sv_gh = std::make_shared<mgcl::VaryingStencilGpu>(sv->getDim1(), sv->getDim2(), sv->getDim3(), 3, sv->getGhostsDim1(),
+            auto d_in_sv_gh = std::make_shared<mgcl::VaryingStencilGpu>(sv->getM(), sv->getN(), sv->getO(), 3, sv->getGhostsM(),
                                                                         tu_gh.getContext(), tu_gh.getCommands());
 
             d_in_sv->fill(*sv, tu.getCommands(), true);
@@ -957,11 +944,11 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
             for (int i = 0; i < sv_exp->field1d().size(); i++)
                 sv_act->field1d()[i] = sv_exp->field1d()[i];
 
-            auto d_sv_exp = std::make_shared<mgcl::VaryingStencilGpu>(sv_exp->getDim1(), sv_exp->getDim2(), sv_exp->getDim3(), 3,
-                                                                      sv_exp->getGhostsDim1(),
+            auto d_sv_exp = std::make_shared<mgcl::VaryingStencilGpu>(sv_exp->getM(), sv_exp->getN(), sv_exp->getO(), 3,
+                                                                      sv_exp->getGhostsM(),
                                                                       tu_exp.getContext(), tu_exp.getCommands());
-            auto d_sv_act = std::make_shared<mgcl::VaryingStencilGpu>(sv_act->getDim1(), sv_act->getDim2(), sv_act->getDim3(), 3,
-                                                                      sv_act->getGhostsDim1(),
+            auto d_sv_act = std::make_shared<mgcl::VaryingStencilGpu>(sv_act->getM(), sv_act->getN(), sv_act->getO(), 3,
+                                                                      sv_act->getGhostsM(),
                                                                       tu_act.getContext(), tu_act.getCommands());
 
             d_sv_exp->fill(*sv_exp, tu_exp.getCommands(), true);
