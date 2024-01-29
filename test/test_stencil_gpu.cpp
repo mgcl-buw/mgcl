@@ -97,7 +97,7 @@ TEST_CASE("VaryingStencilGpu move ctor")
                     for (int jj = 0; jj < 3; jj++)
                         for (int kk = 0; kk < 3; kk++)
                         {
-                            h_check[i][j][k][ii][jj][kk] = h[i][j][k][ii][jj][kk];
+                            h_check[ii][jj][kk][i][j][k] = h[ii][jj][kk][i][j][k];
                         }
 
     // check move ctor
@@ -372,22 +372,24 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
                         int jreal = j + floor(((double)(gh - 1 - j)) / n + 1) * n;
                         int kreal = k + floor(((double)(gh - 1 - k)) / o + 1) * o;
 
-                        int idx_gh_cell = i * widthPow3on + j * widthPow3o + k * widthPow3;
-                        int idx_real_cell = ireal * widthPow3on + jreal * widthPow3o + kreal * widthPow3;
+                        int gridsize = (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh);
+                        int idx_gh_cell = i * (n + 2 * gh) * (o + 2 * gh) + j * (o + 2 * gh) + k;
+                        int idx_real_cell = ireal * (n + 2 * gh) * (o + 2 * gh) + jreal * (o + 2 * gh) + kreal;
 
+                        // Iterate over every coefficient for the grid point this work-item maps to.
+                        // for (int s = 0; s < width * width * width; s++)
                         // clang-format off
-                        // update every stencil entry of current cell
                         for (int ii = 0; ii < width; ii++)
                         for (int jj = 0; jj < width; jj++)
                         for (int kk = 0; kk < width; kk++)
                         {
-                            s3.field1d()[idx_gh_cell + ii * widthPow2 + jj * width + kk]++;
+                            s3.field1d()[idx_gh_cell]++;
 
                             // check that ghost cell is written to once
-                            REQUIRE(s3[i][j][k][ii][jj][kk] == 1);
+                            REQUIRE(s3[ii][jj][kk][i][j][k] == 1);
 
                             // check that 1d index coincides with 6d index
-                            REQUIRE(s3[i][j][k][ii][jj][kk] == s3.field1d()[idx_gh_cell + ii * widthPow2 + jj * width + kk]);
+                            REQUIRE(s3[ii][jj][kk][i][j][k] == s3.field1d()[idx_gh_cell]);
 
                             // check that calculated indices of real cell is actually a real cell
                             REQUIRE(ireal >= gh);
@@ -396,6 +398,9 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
                             REQUIRE(jreal < n + gh);
                             REQUIRE(kreal >= gh);
                             REQUIRE(kreal < o + gh);
+
+                            idx_gh_cell += gridsize;
+                            idx_real_cell += gridsize;
                         }
                         // clang-format on
                     }
@@ -411,9 +416,9 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
                             {
                                 if (i < gh || j < gh || k < gh ||
                                     i >= gh + m || j >= gh + n || k >= gh + o)
-                                    REQUIRE(s3[i][j][k][ii][jj][kk] == 1);
+                                    REQUIRE(s3[ii][jj][kk][i][j][k] == 1);
                                 else
-                                    REQUIRE(s3[i][j][k][ii][jj][kk] == 0);
+                                    REQUIRE(s3[ii][jj][kk][i][j][k] == 0);
                             }
     }
 
@@ -445,22 +450,24 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
                         int jreal = j + floor(((double)(gh - 1 - j)) / n + 1) * n;
                         int kreal = k + floor(((double)(gh - 1 - k)) / o + 1) * o;
 
-                        int idx_gh_cell = i * widthPow3on + j * widthPow3o + k * widthPow3;
-                        int idx_real_cell = ireal * widthPow3on + jreal * widthPow3o + kreal * widthPow3;
+                        int gridsize = (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh);
+                        int idx_gh_cell = i * (n + 2 * gh) * (o + 2 * gh) + j * (o + 2 * gh) + k;
+                        int idx_real_cell = ireal * (n + 2 * gh) * (o + 2 * gh) + jreal * (o + 2 * gh) + kreal;
 
+                        // Iterate over every coefficient for the grid point this work-item maps to.
+                        // for (int s = 0; s < width * width * width; s++)
                         // clang-format off
-                        // update every stencil entry of current cell
                         for (int ii = 0; ii < width; ii++)
                         for (int jj = 0; jj < width; jj++)
                         for (int kk = 0; kk < width; kk++)
                         {
-                            s3.field1d()[idx_gh_cell + ii * widthPow2 + jj * width + kk]++;
+                            s3.field1d()[idx_gh_cell]++;
 
                             // check that ghost cell is written to once
-                            REQUIRE(s3[i][j][k][ii][jj][kk] == 1);
+                            REQUIRE(s3[ii][jj][kk][i][j][k] == 1);
 
                             // check that 1d index coincides with 6d index
-                            REQUIRE(s3[i][j][k][ii][jj][kk] == s3.field1d()[idx_gh_cell + ii * widthPow2 + jj * width + kk]);
+                            REQUIRE(s3[ii][jj][kk][i][j][k] == s3.field1d()[idx_gh_cell]);
 
                             // check that calculated indices of real cell is actually a real cell
                             REQUIRE(ireal >= gh);
@@ -469,6 +476,9 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
                             REQUIRE(jreal < n + gh);
                             REQUIRE(kreal >= gh);
                             REQUIRE(kreal < o + gh);
+
+                            idx_gh_cell += gridsize;
+                            idx_real_cell += gridsize;
                         }
                         // clang-format on
                     }
@@ -484,9 +494,9 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
                             {
                                 if (i < gh || j < gh || k < gh ||
                                     i >= gh + m || j >= gh + n || k >= gh + o)
-                                    REQUIRE(s3[i][j][k][ii][jj][kk] == 1);
+                                    REQUIRE(s3[ii][jj][kk][i][j][k] == 1);
                                 else
-                                    REQUIRE(s3[i][j][k][ii][jj][kk] == 0);
+                                    REQUIRE(s3[ii][jj][kk][i][j][k] == 0);
                             }
     }
 

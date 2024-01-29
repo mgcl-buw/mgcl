@@ -30,8 +30,8 @@
   [x] MultigridEngine::galerkin
   [x] residualSeq()
 
-  [ ] VaryingStencilGpu::fill
-  [ ] VaryingStencilGpu::updateGhosts
+  [x] VaryingStencilGpu::fill
+  [x] VaryingStencilGpu::updateGhosts
   [ ] VaryingStencilGpu::multiply(VaryingStencilGpu)
   [ ] VaryingStencilGpu::multiply(FixedStencilGpu)
   [ ] FixedStencilGpu::multiply(VaryingStencilGpu)

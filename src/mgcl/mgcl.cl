@@ -1892,24 +1892,17 @@ __kernel void update_ghosts_varying_stencil(
         int jreal = j + floor(((double)(gh - 1 - j)) / n + 1) * n;
         int kreal = k + floor(((double)(gh - 1 - k)) / o + 1) * o;
 
-        // 1d indices
-        int widthPow2 = width * width;
-        int widthPow3 = widthPow2 * width;
-        int widthPow3o = widthPow3 * (o + 2 * gh);
-        int widthPow3on = widthPow3o * (n + 2 * gh);
+        int gridsize = (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh);
+        int idx_gh_cell = i * (n + 2 * gh) * (o + 2 * gh) + j * (o + 2 * gh) + k;
+        int idx_real_cell = ireal * (n + 2 * gh) * (o + 2 * gh) + jreal * (o + 2 * gh) + kreal;
 
-        int idx_gh_cell = i * widthPow3on + j * widthPow3o + k * widthPow3;
-        int idx_real_cell = ireal * widthPow3on + jreal * widthPow3o + kreal * widthPow3;
-
-        // clang-format off
-        // update every stencil entry of current cell
-        for (int ii = 0; ii < width; ii++)
-        for (int jj = 0; jj < width; jj++)
-        for (int kk = 0; kk < width; kk++)
+        // Iterate over every coefficient for the grid point this work-item maps to.
+        for (int s = 0; s < width * width * width; s++)
         {
-            c[idx_gh_cell + ii * widthPow2 + jj * width + kk] = c[idx_real_cell + ii * widthPow2 + jj * width + kk];
+            c[idx_gh_cell] = c[idx_real_cell];
+            idx_gh_cell += gridsize;
+            idx_real_cell += gridsize;
         }
-        // clang-format on
     }
 }
 
