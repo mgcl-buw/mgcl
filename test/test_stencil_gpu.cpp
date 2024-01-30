@@ -594,7 +594,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
 
         int wa = 3;
         int wb = 3;
-        int wc = 5;
+        // int wc = 5;
         int gha = gh;
         int ghb = gh;
         int ghc = gh;
@@ -606,52 +606,57 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
                     int wa2 = wa >> 1;
                     int wc = wa + wb - 1;
 
-                    // 1d indices
+                    int gridsize_a = (m + 2 * gha) * (n + 2 * gha) * (o + 2 * gha);
+                    int gridsize_b = (m + 2 * ghb) * (n + 2 * ghb) * (o + 2 * ghb);
+                    int gridsize_c = (m + 2 * ghc) * (n + 2 * ghc) * (o + 2 * ghc);
+
+                    // 1d grid point index offset from the start of the coefficient list
                     int wcPow2 = wc * wc;
                     int wcPow3 = wcPow2 * wc;
-                    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) * wcPow3 + (j + ghc) * (o + 2 * ghc) * wcPow3 + (k + ghc) * wcPow3;
+                    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) + (j + ghc) * (o + 2 * ghc) + (k + ghc);
 
                     int waPow2 = wa * wa;
                     int waPow3 = waPow2 * wa;
-                    int cell_a = (i + gha) * (n + 2 * gha) * (o + 2 * gha) * waPow3 + (j + gha) * (o + 2 * gha) * waPow3 + (k + gha) * waPow3;
+                    int cell_a = (i + gha) * (n + 2 * gha) * (o + 2 * gha) + (j + gha) * (o + 2 * gha) + (k + gha);
 
                     int wbPow2 = wb * wb;
                     int wbPow3 = wbPow2 * wb;
 
-                    // clang-format off
-                    for (int a_i = 0; a_i < wa; a_i++)
-                    for (int a_j = 0; a_j < wa; a_j++)
-                    for (int a_k = 0; a_k < wa; a_k++)
-                        for (int b_i = 0; b_i < wb; b_i++)
-                        for (int b_j = 0; b_j < wb; b_j++)
-                        for (int b_k = 0; b_k < wb; b_k++)
+                    if (i < m && j < n && k < o)
+                    {
+                        // clang-format off
+                        for (int ci = 0; ci < wc; ci++)
+                        for (int cj = 0; cj < wc; cj++)
+                        for (int ck = 0; ck < wc; ck++)
                         {
-                            int gpi = i + a_i - wa2 + ghb;
-                            int gpj = j + a_j - wa2 + ghb;
-                            int gpk = k + a_k - wa2 + ghb;
-
-                            int cell_b = gpi * (n + 2 * ghb) * (o + 2 * ghb) * wbPow3 + gpj * (o + 2 * ghb) * wbPow3 + gpk * wbPow3;
-
-                            int ci = a_i + b_i;
-                            int cj = a_j + b_j;
-                            int ck = a_k + b_k;
-
-                            if (ci >= 0 && ci < wc &&
-                                cj >= 0 && cj < wc &&
-                                ck >= 0 && ck < wc)
+                            double csum = 0;
+                            for (int a_i = ci - (min(ci, wb - 1)), b_i = min(ci, wb - 1);
+                                a_i <= min(ci, wa - 1) && b_i >= ci - min(ci, wa - 1);
+                                a_i++, b_i--)
+                            for (int a_j = cj - (min(cj, wb - 1)), b_j = min(cj, wb - 1);
+                                    a_j <= min(cj, wa - 1) && b_j >= cj - min(cj, wa - 1);
+                                    a_j++, b_j--)
+                            for (int a_k = ck - (min(ck, wb - 1)), b_k = min(ck, wb - 1);
+                                    a_k <= min(ck, wa - 1) && b_k >= ck - min(ck, wa - 1);
+                                    a_k++, b_k--)
                             {
-                                REQUIRE(c.field1d()[cell_c + ci * wcPow2 + cj * wc + ck] == c[i + ghc][j + ghc][k + ghc][a_i + b_i][a_j + b_j][a_k + b_k]);
-                                REQUIRE(a.field1d()[cell_a + a_i * waPow2 + a_j * wa + a_k] == a[i + gha][j + gha][k + gha][a_i][a_j][a_k]);
-                                REQUIRE(b.field1d()[cell_b + b_i * wbPow2 + b_j * wb + b_k] == b[gpi][gpj][gpk][b_i][b_j][b_k]);
-                                // c[cell_c + ci * wcPow2 + cj * wc + ck] +=
-                                //     a[cell_a + a_i * waPow2 + a_j * wa + a_k] *
-                                //     b[cell_b + b_i * wbPow2 + b_j * wb + b_k];
-                                // c[i + ghc][j + ghc][k + ghc][a_i + b_i][a_j + b_j][a_k + b_k] +=
-                                //     a[i + gha][j + gha][k + gha][a_i][a_j][a_k] *
-                                //     b[b_i][b_j][b_k];
+                                int gpi = i + a_i - wa2 + ghb;
+                                int gpj = j + a_j - wa2 + ghb;
+                                int gpk = k + a_k - wa2 + ghb;
+                                
+                                int cell_b = gpi * (n + 2 * ghb) * (o + 2 * ghb) + gpj * (o + 2 * ghb) + gpk;
+
+                                // index of a coefficient is equal to the index of the coefficient block plus grid point offset.
+                                int idx_a = cell_a + (a_i * waPow2 + a_j * wa + a_k) * gridsize_a;
+                                int idx_b = cell_b + (b_i * wbPow2 + b_j * wb + b_k) * gridsize_b;
+
+                                REQUIRE(c.field1d()[cell_c + (ci * wcPow2 + cj * wc + ck) * gridsize_c] == c[ci][cj][ck][i + ghc][j + ghc][k + ghc]);
+                                REQUIRE(a.field1d()[idx_a] == a[a_i][a_j][a_k][i + gha][j + gha][k + gha]);
+                                REQUIRE(b.field1d()[idx_b] == b[b_i][b_j][b_k][gpi][gpj][gpk]);
                             }
                         }
-                    // clang-format on
+                        // clang-format on
+                    }
                 }
     }
 
@@ -699,7 +704,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
             for (int jj = 0; jj < c_h.getWidth(); jj++)
             for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
-                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+                REQUIRE(c_h[ii][jj][kk][i][j][k] == ret[ii][jj][kk][i][j][k]);
             }
         // clang-format on
     }
@@ -748,7 +753,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
             for (int jj = 0; jj < c_h.getWidth(); jj++)
             for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
-                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+                REQUIRE(c_h[ii][jj][kk][i][j][k] == ret[ii][jj][kk][i][j][k]);
             }
         // clang-format on
     }
@@ -797,7 +802,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
             for (int jj = 0; jj < c_h.getWidth(); jj++)
             for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
-                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+                REQUIRE(c_h[ii][jj][kk][i][j][k] == ret[ii][jj][kk][i][j][k]);
             }
         // clang-format on
     }
@@ -846,7 +851,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
             for (int jj = 0; jj < c_h.getWidth(); jj++)
             for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
-                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+                REQUIRE(c_h[ii][jj][kk][i][j][k] == ret[ii][jj][kk][i][j][k]);
             }
         // clang-format on
     }
@@ -912,7 +917,7 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
             for (int jj = 0; jj < c_h.getWidth(); jj++)
             for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
-                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+                REQUIRE(c_h[ii][jj][kk][i][j][k] == ret[ii][jj][kk][i][j][k]);
             }
         // clang-format on
     }
@@ -959,7 +964,7 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
             for (int jj = 0; jj < c_h.getWidth(); jj++)
             for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
-                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+                REQUIRE(c_h[ii][jj][kk][i][j][k] == ret[ii][jj][kk][i][j][k]);
             }
         // clang-format on
     }
@@ -1006,7 +1011,7 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
             for (int jj = 0; jj < c_h.getWidth(); jj++)
             for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
-                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+                REQUIRE(c_h[ii][jj][kk][i][j][k] == ret[ii][jj][kk][i][j][k]);
             }
         // clang-format on
     }
@@ -1053,7 +1058,7 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
             for (int jj = 0; jj < c_h.getWidth(); jj++)
             for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
-                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+                REQUIRE(c_h[ii][jj][kk][i][j][k] == ret[ii][jj][kk][i][j][k]);
             }
         // clang-format on
     }

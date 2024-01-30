@@ -1930,14 +1930,18 @@ __kernel void mult_stencils_var_var(
     int wa2 = wa >> 1;
     int wc = wa + wb - 1;
 
-    // 1d indices
+    int gridsize_a = (m + 2 * gha) * (n + 2 * gha) * (o + 2 * gha);
+    int gridsize_b = (m + 2 * ghb) * (n + 2 * ghb) * (o + 2 * ghb);
+    int gridsize_c = (m + 2 * ghc) * (n + 2 * ghc) * (o + 2 * ghc);
+
+    // 1d grid point index offset from the start of the coefficient list
     int wcPow2 = wc * wc;
     int wcPow3 = wcPow2 * wc;
-    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) * wcPow3 + (j + ghc) * (o + 2 * ghc) * wcPow3 + (k + ghc) * wcPow3;
+    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) + (j + ghc) * (o + 2 * ghc) + (k + ghc);
 
     int waPow2 = wa * wa;
     int waPow3 = waPow2 * wa;
-    int cell_a = (i + gha) * (n + 2 * gha) * (o + 2 * gha) * waPow3 + (j + gha) * (o + 2 * gha) * waPow3 + (k + gha) * waPow3;
+    int cell_a = (i + gha) * (n + 2 * gha) * (o + 2 * gha) + (j + gha) * (o + 2 * gha) + (k + gha);
 
     int wbPow2 = wb * wb;
     int wbPow3 = wbPow2 * wb;
@@ -1963,15 +1967,19 @@ __kernel void mult_stencils_var_var(
                 int gpi = i + a_i - wa2 + ghb;
                 int gpj = j + a_j - wa2 + ghb;
                 int gpk = k + a_k - wa2 + ghb;
+                
+                int cell_b = gpi * (n + 2 * ghb) * (o + 2 * ghb) + gpj * (o + 2 * ghb) + gpk;
 
-                int cell_b = gpi * (n + 2 * ghb) * (o + 2 * ghb) * wbPow3 + gpj * (o + 2 * ghb) * wbPow3 + gpk * wbPow3;
+                // index of a coefficient is equal to the index of the coefficient block plus grid point offset.
+                int idx_a = cell_a + (a_i * waPow2 + a_j * wa + a_k) * gridsize_a;
+                int idx_b = cell_b + (b_i * wbPow2 + b_j * wb + b_k) * gridsize_b;
 
                 csum +=
-                    a[cell_a + a_i * waPow2 + a_j * wa + a_k] *
-                    b[cell_b + b_i * wbPow2 + b_j * wb + b_k];
+                    a[idx_a] *
+                    b[idx_b];
             }
 
-            c[cell_c + ci * wcPow2 + cj * wc + ck] = csum;
+            c[cell_c + (ci * wcPow2 + cj * wc + ck) * gridsize_c] = csum;
         }
         // clang-format on
     }
