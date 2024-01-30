@@ -1117,9 +1117,6 @@ TEST_CASE("VaryingStencilGpu::multiply loop index reordering", "[stencilIndexReo
              a_k <= (ck < (wa - 1) ? ck : (wa - 1)) && b_k >= ck - (ck < (wa - 1) ? ck : (wa - 1)); 
              a_k++, b_k--)
         {
-            int ci = a_i + b_i;
-            int cj = a_j + b_j;
-            int ck = a_k + b_k;
             int idx1d = ci * wc * wc + cj * wc + ck;
 
             indices_new.push_back(std::vector<int> {
@@ -1148,9 +1145,6 @@ TEST_CASE("VaryingStencilGpu::multiply loop index reordering", "[stencilIndexReo
                 a_k <= min(ck, wa - 1) && b_k >= ck - min(ck, wa - 1);
                 a_k++, b_k--)
         {
-            int ci = a_i + b_i;
-            int cj = a_j + b_j;
-            int ck = a_k + b_k;
             int idx1d = ci * wc * wc + cj * wc + ck;
 
             indices_new_minfn.push_back(std::vector<int> {
@@ -1413,7 +1407,7 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
             for (int jj = 0; jj < c_h.getWidth(); jj++)
             for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
-                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+                REQUIRE(c_h[ii][jj][kk][i][j][k] == ret[ii][jj][kk][i][j][k]);
             }
         // clang-format on
     }
@@ -1462,7 +1456,7 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
             for (int jj = 0; jj < c_h.getWidth(); jj++)
             for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
-                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+                REQUIRE(c_h[ii][jj][kk][i][j][k] == ret[ii][jj][kk][i][j][k]);
             }
         // clang-format on
     }
@@ -1511,7 +1505,7 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
             for (int jj = 0; jj < c_h.getWidth(); jj++)
             for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
-                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+                REQUIRE(c_h[ii][jj][kk][i][j][k] == ret[ii][jj][kk][i][j][k]);
             }
         // clang-format on
     }
@@ -1560,7 +1554,7 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
             for (int jj = 0; jj < c_h.getWidth(); jj++)
             for (int kk = 0; kk < c_h.getWidth(); kk++)
             {
-                REQUIRE(c_h[i][j][k][ii][jj][kk] == ret[i][j][k][ii][jj][kk]);
+                REQUIRE(c_h[ii][jj][kk][i][j][k] == ret[ii][jj][kk][i][j][k]);
             }
         // clang-format on
     }

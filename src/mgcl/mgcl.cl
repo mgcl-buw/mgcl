@@ -2082,8 +2082,11 @@ __kernel void mult_stencils_fix_var(
     int cj = (get_global_id(2) / wc) % wc;
     int ck = get_global_id(2) % wc;
 
+    int gridsize_b = (m + 2 * ghb) * (n + 2 * ghb) * (o + 2 * ghb);
+    int gridsize_c = (m + 2 * ghc) * (n + 2 * ghc) * (o + 2 * ghc);
+
     // 1d indices
-    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) * wcPow3 + (j + ghc) * (o + 2 * ghc) * wcPow3 + (k + ghc) * wcPow3;
+    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) + (j + ghc) * (o + 2 * ghc) + (k + ghc);
 
     int waPow2 = wa * wa;
 
@@ -2108,14 +2111,15 @@ __kernel void mult_stencils_fix_var(
             int gpj = j + a_j - wa2 + ghb;
             int gpk = k + a_k - wa2 + ghb;
 
-            int cell_b = gpi * (n + 2 * ghb) * (o + 2 * ghb) * wbPow3 + gpj * (o + 2 * ghb) * wbPow3 + gpk * wbPow3;
+            int cell_b = gpi * (n + 2 * ghb) * (o + 2 * ghb) + gpj * (o + 2 * ghb) + gpk;
+            int idx_b = cell_b + (b_i * wbPow2 + b_j * wb + b_k) * gridsize_b;
 
             csum +=
                 a[a_i * waPow2 + a_j * wa + a_k] *
-                b[cell_b + b_i * wbPow2 + b_j * wb + b_k];
+                b[idx_b];
         }
 
-        c[cell_c + ci * wcPow2 + cj * wc + ck] = csum;
+        c[cell_c + (ci * wcPow2 + cj * wc + ck) * gridsize_c] = csum;
         // clang-format on
     }
 }
