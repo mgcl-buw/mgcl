@@ -34,7 +34,7 @@
   [x] VaryingStencilGpu::updateGhosts
   [x] VaryingStencilGpu::multiply(VaryingStencilGpu)
   [x] VaryingStencilGpu::multiply(FixedStencilGpu)
-  [ ] FixedStencilGpu::multiply(VaryingStencilGpu)
+  [x] FixedStencilGpu::multiply(VaryingStencilGpu)
   [ ] VaryingStencilGpu::cutFromW7ToW3()
   
   [ ] residual()
