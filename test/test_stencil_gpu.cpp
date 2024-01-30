@@ -1227,6 +1227,9 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
         int ghin = 0;
         int ghout = 2;
 
+        int nghout = (n + 2 * ghout);
+        int oghout = (o + 2 * ghout);
+
         // clang-format off
         // simulate call with one work-item per cell using these 3 for loops
         for (int i = 2; i < a_2h.getM() + 2; i++)
@@ -1237,18 +1240,27 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
             int j2 = (j - 2) * 2 + 1;
             int k2 = (k - 2) * 2 + 1;
 
-            // 7^3 = 343
-            int cell_h = i2 * (2 * n + 2 * ghin) * (2 * o + 2 * ghin) * 343 + j2 * (2 * o + 2 * ghin) * 343 + k2 * 343;
+            int gridsize_fine = (2 * m + 2 * ghin) * (2 * n + 2 * ghin) * (2 * o + 2 * ghin);
+            int gridsize_coarse = (m + 2 * ghout) * nghout * oghout;
 
-            // 3^3 = 27
-            int cell_h2 = i * (n + 2 * ghout) * (o + 2 * ghout) * 27 + j * (o + 2 * ghout) * 27 + k * 27;
+            // grid point offsets
+            int cell_fine = i2 * (2 * n + 2 * ghin) * (2 * o + 2 * ghin) + j2 * (2 * o + 2 * ghin) + k2;
+            int cell_coarse = i * nghout * oghout + j * oghout + k;
+
+            // starting index for coarse grid
+            int idx_coarse = cell_coarse;
 
             for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
             for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
             for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
             {
-                REQUIRE(a_2h[i][j][k][ii][jj][kk] == a_2h.field1d()[cell_h2 + ii * 9 + jj * 3 + kk]);
-                REQUIRE(a_h[i2][j2][k2][ii2][jj2][kk2] == a_h.field1d()[cell_h + ii2 * 49 + jj2 * 7 + kk2]);
+                CAPTURE(i, j, k, ii, jj, kk, gridsize_fine, gridsize_coarse, cell_fine, cell_coarse, idx_coarse);
+                // REQUIRE(cell_fine + ( ii2 * 49 + jj2 * 7 + kk2 ) * gridsize_fine == idx_fine);
+                REQUIRE(cell_coarse + ( ii * 9 + jj * 3 + kk ) * gridsize_coarse == idx_coarse);
+                REQUIRE(a_2h[ii][jj][kk][i][j][k] == a_2h.field1d()[idx_coarse]);
+                REQUIRE(a_h[ii2][jj2][kk2][i2][j2][k2] == a_h.field1d()[cell_fine + (ii2 * 49 + jj2 * 7 + kk2) * gridsize_fine]);
+                // idx_fine += gridsize_fine * 2;
+                idx_coarse += gridsize_coarse;
             }
         }
         // clang-format on
@@ -1275,7 +1287,7 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
             for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
             for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
             {
-                a_2h[i][j][k][ii][jj][kk] = a_h[i2][j2][k2][ii2][jj2][kk2];
+                a_2h[ii][jj][kk][i][j][k] = a_h[ii2][jj2][kk2][i2][j2][k2];
             }
         // clang-format on
 

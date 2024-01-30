@@ -2151,33 +2151,26 @@ __kernel void cut_stencils_w7_to_w3(
     int j2 = get_global_id(1) * 2 + 1;
     int k2 = get_global_id(2) * 2 + 1;
 
-    // 7^3 = 343
-    int cell_h = i2 * (2 * n + 2 * ghin) * (2 * o + 2 * ghin) * 343 + j2 * (2 * o + 2 * ghin) * 343 + k2 * 343;
+    int gridsize_fine = (2 * m + 2 * ghin) * (2 * n + 2 * ghin) * (2 * o + 2 * ghin);
+    int gridsize_coarse = (m + 2 * ghout) * nghout * oghout;
 
-    // 3^3 = 27
-    int cell_h2 = i * nghout * oghout * 27 + j * oghout * 27 + k * 27;
+    // grid point offsets
+    int cell_fine = i2 * (2 * n + 2 * ghin) * (2 * o + 2 * ghin) + j2 * (2 * o + 2 * ghin) + k2;
+    int cell_coarse = i * nghout * oghout + j * oghout + k;
 
     if (i < m + ghout && j < n + ghout && k < o + ghout)
     {
+        // starting index for coarse grid
+        int idx_coarse = cell_coarse;
+
         // clang-format off
         for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
         for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
         for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
         {
-            out[cell_h2 + ii * 9 + jj * 3 + kk] = in[cell_h + ii2 * 49 + jj2 * 7 + kk2];
+            out[idx_coarse] = in[cell_fine + (ii2 * 49 + jj2 * 7 + kk2) * gridsize_fine];
+            idx_coarse += gridsize_coarse;
         }
-        // clang-format on
-
-        // clang-format off
-        // for (int i = 2, i2 = 3; i < a_2h.getM() + 2; i++, i2 += 2)
-        // for (int j = 2, j2 = 3; j < a_2h.getN() + 2; j++, j2 += 2)
-        // for (int k = 2, k2 = 3; k < a_2h.getO() + 2; k++, k2 += 2)
-        //     for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
-        //     for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
-        //     for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
-        //     {
-        //         a_2h[i][j][k][ii][jj][kk] = sas[i2][j2][k2][ii2][jj2][kk2];
-        //     }
         // clang-format on
     }
 }
