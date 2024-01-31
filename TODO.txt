@@ -39,7 +39,7 @@
   
   [x] residual()
   
-  [ ] jacobiSeq()
+  [x] jacobiSeq()
   [ ] jacobiOcl()
 
   [ ] updateGhostsStencilMpi()

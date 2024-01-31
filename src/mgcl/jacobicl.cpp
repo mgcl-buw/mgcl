@@ -129,7 +129,7 @@ namespace mgcl
                                 // if (i == 1 && j == 1 && k == 1)
                                 //     printf("v[%d][%d][%d] = %f, r[%d][%d][%d] = %f, omega = %f\n", i,j,k, vraw[i][j][k],
                                 //     i,j,k,r[i][j][k], omega);
-                                vraw[iv][jv][kv] = vraw[iv][jv][kv] + omega * (1.0 / (*stencilValues)[isv][jsv][ksv][1][1][1]) * r[ir][jr][kr];
+                                vraw[iv][jv][kv] = vraw[iv][jv][kv] + omega * (1.0 / (*stencilValues)[1][1][1][isv][jsv][ksv]) * r[ir][jr][kr];
 
                                 // if (j == 2 && k == 5 && i == 1)
                                 // {
