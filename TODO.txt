@@ -37,7 +37,10 @@
   [x] FixedStencilGpu::multiply(VaryingStencilGpu)
   [x] VaryingStencilGpu::cutFromW7ToW3()
   
-  [ ] residual()
+  [x] residual()
+  
+  [ ] jacobiSeq()
+  [ ] jacobiOcl()
 
   [ ] updateGhostsStencilMpi()
   [ ] updateGhostsStencilOclMpi()
