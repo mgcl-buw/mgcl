@@ -276,8 +276,8 @@ namespace mgcl
         size_t local[3] = {static_cast<size_t>(1), static_cast<size_t>(1), static_cast<size_t>(32)};
 
         // decrease wg size for bigger grids
-        if (mgh >= 32 && ngh >= 32 && ogh >= 32)
-            local[2] = 16;
+        // if (mgh >= 32 && ngh >= 32 && ogh >= 32)
+        //     local[2] = 16;
 
         // kernels that use constant Laplace stencils are 2d and need different global sizes
         if (problem.stencilType != MGCL_VARYING)

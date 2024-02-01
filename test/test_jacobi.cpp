@@ -172,44 +172,44 @@ TEST_CASE("jacobi GPU varying stencil")
                 int koff = 1;
                 int index = ghosts * ioff + j * o + k;
 
-                int koff_sv = 27;
-                int joff_sv = ((o - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
-                int ioff_sv = ((n - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
-                int index_sv = ghosts_sv * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
+                int svno = ((n - 2 * ghosts) + 2 * ghosts_sv) * ((o - 2 * ghosts) + 2 * ghosts_sv);
+                // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
+                int gridsize = ((m - 2 * ghosts) + 2 * ghosts_sv) * ((n - 2 * ghosts) + 2 * ghosts_sv) * ((o - 2 * ghosts) + 2 * ghosts_sv);
 
                 for (int i = ghosts, isv = ghosts_sv; i < m - ghosts; i++, isv++)
                 {
-                    REQUIRE(index_sv == isv * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv);
+                    int index_sv = isv * svno + jsv * ((o - 2 * ghosts) + 2 * ghosts_sv) + ksv;
+                    REQUIRE(index_sv == isv * svno + (j + (ghosts_sv - ghosts)) * ((o - 2 * ghosts) + 2 * ghosts_sv) + (k + (ghosts_sv - ghosts)));
 
-                    REQUIRE(stencilValues[isv][jsv][ksv][1][1][1] == stencilValues.field1d()[index_sv + 9 + 3 + 1]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][1][1][0] == stencilValues.field1d()[index_sv + 9 + 3]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][1][1][2] == stencilValues.field1d()[index_sv + 9 + 3 + 2]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][1][0][1] == stencilValues.field1d()[index_sv + 9 + 1]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][1][2][1] == stencilValues.field1d()[index_sv + 9 + 6 + 1]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][0][1][1] == stencilValues.field1d()[index_sv + 3 + 1]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][2][1][1] == stencilValues.field1d()[index_sv + 18 + 3 + 1]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][1][0][0] == stencilValues.field1d()[index_sv + 9]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][1][0][2] == stencilValues.field1d()[index_sv + 9 + 2]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][1][2][0] == stencilValues.field1d()[index_sv + 9 + 6]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][1][2][2] == stencilValues.field1d()[index_sv + 9 + 6 + 2]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][0][1][0] == stencilValues.field1d()[index_sv + 3]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][0][1][2] == stencilValues.field1d()[index_sv + 3 + 2]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][2][1][0] == stencilValues.field1d()[index_sv + 18 + 3]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][2][1][2] == stencilValues.field1d()[index_sv + 18 + 3 + 2]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][0][0][1] == stencilValues.field1d()[index_sv + 1]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][0][2][1] == stencilValues.field1d()[index_sv + 6 + 1]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][2][0][1] == stencilValues.field1d()[index_sv + 18 + 1]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][2][2][1] == stencilValues.field1d()[index_sv + 18 + 6 + 1]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][0][0][0] == stencilValues.field1d()[index_sv]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][0][0][2] == stencilValues.field1d()[index_sv + 2]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][0][2][0] == stencilValues.field1d()[index_sv + 6]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][0][2][2] == stencilValues.field1d()[index_sv + 6 + 2]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][2][0][0] == stencilValues.field1d()[index_sv + 18]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][2][0][2] == stencilValues.field1d()[index_sv + 18 + 2]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][2][2][0] == stencilValues.field1d()[index_sv + 18 + 6]);
-                    REQUIRE(stencilValues[isv][jsv][ksv][2][2][2] == stencilValues.field1d()[index_sv + 18 + 6 + 2]);
+                    REQUIRE(stencilValues[1][1][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 3 + 1) * gridsize]);
+                    REQUIRE(stencilValues[1][1][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 3) * gridsize]);
+                    REQUIRE(stencilValues[1][1][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 3 + 2) * gridsize]);
+                    REQUIRE(stencilValues[1][0][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 1) * gridsize]);
+                    REQUIRE(stencilValues[1][2][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 6 + 1) * gridsize]);
+                    REQUIRE(stencilValues[0][1][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (3 + 1) * gridsize]);
+                    REQUIRE(stencilValues[2][1][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 3 + 1) * gridsize]);
+                    REQUIRE(stencilValues[1][0][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9) * gridsize]);
+                    REQUIRE(stencilValues[1][0][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 2) * gridsize]);
+                    REQUIRE(stencilValues[1][2][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 6) * gridsize]);
+                    REQUIRE(stencilValues[1][2][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 6 + 2) * gridsize]);
+                    REQUIRE(stencilValues[0][1][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (3) * gridsize]);
+                    REQUIRE(stencilValues[0][1][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (3 + 2) * gridsize]);
+                    REQUIRE(stencilValues[2][1][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 3) * gridsize]);
+                    REQUIRE(stencilValues[2][1][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 3 + 2) * gridsize]);
+                    REQUIRE(stencilValues[0][0][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (1) * gridsize]);
+                    REQUIRE(stencilValues[0][2][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (6 + 1) * gridsize]);
+                    REQUIRE(stencilValues[2][0][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 1) * gridsize]);
+                    REQUIRE(stencilValues[2][2][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 6 + 1) * gridsize]);
+                    REQUIRE(stencilValues[0][0][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv]);
+                    REQUIRE(stencilValues[0][0][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (2) * gridsize]);
+                    REQUIRE(stencilValues[0][2][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (6) * gridsize]);
+                    REQUIRE(stencilValues[0][2][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (6 + 2) * gridsize]);
+                    REQUIRE(stencilValues[2][0][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18) * gridsize]);
+                    REQUIRE(stencilValues[2][0][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 2) * gridsize]);
+                    REQUIRE(stencilValues[2][2][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 6) * gridsize]);
+                    REQUIRE(stencilValues[2][2][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 6 + 2) * gridsize]);
 
-                    index_sv += ioff_sv;
+                    index_sv += svno;
                 }
             }
     }
@@ -630,7 +630,7 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
     int iters = GENERATE(1, 2, 5);
     int stepsPerIter = GENERATE(1, 2, 3);
     // int iters = 1;
-    // int stepsPerIter = 1;
+    // int stepsPerIter = 3;
 
     int N = GENERATE(1, 16);
     int m = N;
@@ -638,7 +638,8 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
     int o = N;
 
     // gpu implementation currently only supports one ghost cell amount for all fields and directions
-    int gh = std::max(4, stepsPerIter);
+    // int gh = std::max(4, stepsPerIter);
+    int gh = stepsPerIter;
     // int ghm_v = GENERATE(3, 4);
     // int ghn_v = GENERATE(3, 4);
     // int gho_v = stepsPerIter;
