@@ -120,20 +120,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][all]")
                 p->setStencilType(mgcl::MGCL_VARYING);
                 auto& s = *p->getStencilValues();
 
-                // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
-                for (int i = 0; i < N; i++)
-                    for (int j = 0; j < N; j++)
-                        for (int k = 0; k < N; k++)
-                        {
-                            // 7-point Laplace
-                            s[i][j][k][0][1][1] = 1;
-                            s[i][j][k][1][0][1] = 1;
-                            s[i][j][k][1][1][0] = 1;
-                            s[i][j][k][1][1][1] = -6;
-                            s[i][j][k][1][1][2] = 1;
-                            s[i][j][k][1][2][1] = 1;
-                            s[i][j][k][2][1][1] = 1;
-                        }
+                mgcl_test::fill7pLaplace(s, true);
 
                 return p;
             };
@@ -233,20 +220,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][all]")
                 p->setStencilType(mgcl::MGCL_VARYING);
                 auto& s = *p->getStencilValues();
 
-                // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
-                for (int i = 0; i < N; i++)
-                    for (int j = 0; j < N; j++)
-                        for (int k = 0; k < N; k++)
-                        {
-                            // 7-point Laplace
-                            s[i][j][k][0][1][1] = 1;
-                            s[i][j][k][1][0][1] = 1;
-                            s[i][j][k][1][1][0] = 1;
-                            s[i][j][k][1][1][1] = -6;
-                            s[i][j][k][1][1][2] = 1;
-                            s[i][j][k][1][2][1] = 1;
-                            s[i][j][k][2][1][1] = 1;
-                        }
+                mgcl_test::fill7pLaplace(s, true);
 
                 return p;
             };
@@ -467,20 +441,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
                 p->setStencilType(mgcl::MGCL_VARYING);
                 auto& s = *p->getStencilValues();
 
-                // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
-                for (int i = 0; i < N; i++)
-                    for (int j = 0; j < N; j++)
-                        for (int k = 0; k < N; k++)
-                        {
-                            // 7-point Laplace
-                            s[i][j][k][0][1][1] = 1;
-                            s[i][j][k][1][0][1] = 1;
-                            s[i][j][k][1][1][0] = 1;
-                            s[i][j][k][1][1][1] = -6;
-                            s[i][j][k][1][1][2] = 1;
-                            s[i][j][k][1][2][1] = 1;
-                            s[i][j][k][2][1][1] = 1;
-                        }
+                mgcl_test::fill7pLaplace(s, true);
 
                 return p;
             };

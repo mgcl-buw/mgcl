@@ -818,38 +818,38 @@ void sv_fill_27p_laplace(mgcl::VaryingStencil& s)
             {
                 // 27-point Laplace
                 // center
-                s[i][j][k][1][1][1] = factor * 128.0;
+                s[1][1][1][i][j][k] = factor * 128.0;
 
                 // adjacent to center
-                s[i][j][k][0][1][1] = factor * -1.0;
-                s[i][j][k][1][0][1] = factor * -1.0;
-                s[i][j][k][1][1][0] = factor * -1.0;
-                s[i][j][k][1][1][2] = factor * -1.0;
-                s[i][j][k][1][2][1] = factor * -1.0;
-                s[i][j][k][2][1][1] = factor * -1.0;
+                s[0][1][1][i][j][k] = factor * -1.0;
+                s[1][0][1][i][j][k] = factor * -1.0;
+                s[1][1][0][i][j][k] = factor * -1.0;
+                s[1][1][2][i][j][k] = factor * -1.0;
+                s[1][2][1][i][j][k] = factor * -1.0;
+                s[2][1][1][i][j][k] = factor * -1.0;
 
                 // diagonally adjacent to center
-                s[i][j][k][1][0][0] = -3.0 * factor;
-                s[i][j][k][1][0][2] = -3.0 * factor;
-                s[i][j][k][1][2][0] = -3.0 * factor;
-                s[i][j][k][1][2][2] = -3.0 * factor;
-                s[i][j][k][0][1][0] = -3.0 * factor;
-                s[i][j][k][0][1][2] = -3.0 * factor;
-                s[i][j][k][2][1][0] = -3.0 * factor;
-                s[i][j][k][2][1][2] = -3.0 * factor;
-                s[i][j][k][0][0][1] = -3.0 * factor;
-                s[i][j][k][0][2][1] = -3.0 * factor;
-                s[i][j][k][2][0][1] = -3.0 * factor;
-                s[i][j][k][2][2][1] = -3.0 * factor;
+                s[1][0][0][i][j][k] = -3.0 * factor;
+                s[1][0][2][i][j][k] = -3.0 * factor;
+                s[1][2][0][i][j][k] = -3.0 * factor;
+                s[1][2][2][i][j][k] = -3.0 * factor;
+                s[0][1][0][i][j][k] = -3.0 * factor;
+                s[0][1][2][i][j][k] = -3.0 * factor;
+                s[2][1][0][i][j][k] = -3.0 * factor;
+                s[2][1][2][i][j][k] = -3.0 * factor;
+                s[0][0][1][i][j][k] = -3.0 * factor;
+                s[0][2][1][i][j][k] = -3.0 * factor;
+                s[2][0][1][i][j][k] = -3.0 * factor;
+                s[2][2][1][i][j][k] = -3.0 * factor;
 
                 // corners
-                s[i][j][k][0][0][0] = -1.0 * factor;
-                s[i][j][k][0][0][2] = -1.0 * factor;
-                s[i][j][k][0][2][0] = -1.0 * factor;
-                s[i][j][k][0][2][2] = -1.0 * factor;
-                s[i][j][k][2][0][0] = -1.0 * factor;
-                s[i][j][k][2][0][2] = -1.0 * factor;
-                s[i][j][k][2][2][0] = -1.0 * factor;
-                s[i][j][k][2][2][2] = -1.0 * factor;
+                s[0][0][0][i][j][k] = -1.0 * factor;
+                s[0][0][2][i][j][k] = -1.0 * factor;
+                s[0][2][0][i][j][k] = -1.0 * factor;
+                s[0][2][2][i][j][k] = -1.0 * factor;
+                s[2][0][0][i][j][k] = -1.0 * factor;
+                s[2][0][2][i][j][k] = -1.0 * factor;
+                s[2][2][0][i][j][k] = -1.0 * factor;
+                s[2][2][2][i][j][k] = -1.0 * factor;
             }
 }

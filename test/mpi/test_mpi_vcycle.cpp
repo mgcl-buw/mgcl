@@ -423,21 +423,7 @@ TEST_CASE("MPI_vcycle_immediate_gather_scatter_Varying27p")
         REQUIRE(sv.getM() == o);
     }
 
-    // Fill with 7-point Laplace
-    double h2inv = m * m; // h = 1/N -> 1/h = N
-    for (int i = 0; i < sv.getMgh(); i++)
-        for (int j = 0; j < sv.getNgh(); j++)
-            for (int k = 0; k < sv.getOgh(); k++)
-            {
-                // 7-point Laplace
-                sv[i][j][k][0][1][1] = h2inv * -1.0;
-                sv[i][j][k][1][0][1] = h2inv * -1.0;
-                sv[i][j][k][1][1][0] = h2inv * -1.0;
-                sv[i][j][k][1][1][1] = h2inv * 6.0;
-                sv[i][j][k][1][1][2] = h2inv * -1.0;
-                sv[i][j][k][1][2][1] = h2inv * -1.0;
-                sv[i][j][k][2][1][1] = h2inv * -1.0;
-            }
+    mgcl_test::fill7pLaplace(sv, true);
 
     p.solveSeq();
 
@@ -892,21 +878,7 @@ TEST_CASE("MPI_vcycle_threshold_eq_1_Varying27p")
         REQUIRE(sv.getO() == o);
     }
 
-    // Fill with 7-point Laplace
-    double h2inv = m * m; // h = 1/N -> 1/h = N
-    for (int i = 0; i < sv.getMgh(); i++)
-        for (int j = 0; j < sv.getNgh(); j++)
-            for (int k = 0; k < sv.getOgh(); k++)
-            {
-                // 7-point Laplace
-                sv[i][j][k][0][1][1] = h2inv * -1.0;
-                sv[i][j][k][1][0][1] = h2inv * -1.0;
-                sv[i][j][k][1][1][0] = h2inv * -1.0;
-                sv[i][j][k][1][1][1] = h2inv * 6.0;
-                sv[i][j][k][1][1][2] = h2inv * -1.0;
-                sv[i][j][k][1][2][1] = h2inv * -1.0;
-                sv[i][j][k][2][1][1] = h2inv * -1.0;
-            }
+    mgcl_test::fill7pLaplace(sv, true);
 
     p.solveSeq();
 
@@ -1069,21 +1041,7 @@ TEST_CASE("MPI_vcycle_threshold_eq_2_Varying27p")
         REQUIRE(sv.getO() == ol);
     }
 
-    // Fill with 7-point Laplace
-    double h2inv = m * m; // h = 1/N -> 1/h = N
-    for (int i = 0; i < sv.getMgh(); i++)
-        for (int j = 0; j < sv.getNgh(); j++)
-            for (int k = 0; k < sv.getOgh(); k++)
-            {
-                // 7-point Laplace
-                sv[i][j][k][0][1][1] = h2inv * -1.0;
-                sv[i][j][k][1][0][1] = h2inv * -1.0;
-                sv[i][j][k][1][1][0] = h2inv * -1.0;
-                sv[i][j][k][1][1][1] = h2inv * 6.0;
-                sv[i][j][k][1][1][2] = h2inv * -1.0;
-                sv[i][j][k][1][2][1] = h2inv * -1.0;
-                sv[i][j][k][2][1][1] = h2inv * -1.0;
-            }
+    mgcl_test::fill7pLaplace(sv, true);
 
     p.solveSeq();
 
@@ -1248,21 +1206,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_1_Varying27p")
         REQUIRE(sv.getO() == o);
     }
 
-    // Fill with 7-point Laplace
-    double h2inv = m * m; // h = 1/N -> 1/h = N
-    for (int i = 0; i < sv.getMgh(); i++)
-        for (int j = 0; j < sv.getNgh(); j++)
-            for (int k = 0; k < sv.getOgh(); k++)
-            {
-                // 7-point Laplace
-                sv[i][j][k][0][1][1] = h2inv * -1.0;
-                sv[i][j][k][1][0][1] = h2inv * -1.0;
-                sv[i][j][k][1][1][0] = h2inv * -1.0;
-                sv[i][j][k][1][1][1] = h2inv * 6.0;
-                sv[i][j][k][1][1][2] = h2inv * -1.0;
-                sv[i][j][k][1][2][1] = h2inv * -1.0;
-                sv[i][j][k][2][1][1] = h2inv * -1.0;
-            }
+    mgcl_test::fill7pLaplace(sv, true);
 
     p.solve();
 
@@ -1428,21 +1372,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
         REQUIRE(sv.getO() == ol);
     }
 
-    // Fill with 7-point Laplace
-    double h2inv = m * m; // h = 1/N -> 1/h = N
-    for (int i = 0; i < sv.getMgh(); i++)
-        for (int j = 0; j < sv.getNgh(); j++)
-            for (int k = 0; k < sv.getOgh(); k++)
-            {
-                // 7-point Laplace
-                sv[i][j][k][0][1][1] = h2inv * -1.0;
-                sv[i][j][k][1][0][1] = h2inv * -1.0;
-                sv[i][j][k][1][1][0] = h2inv * -1.0;
-                sv[i][j][k][1][1][1] = h2inv * 6.0;
-                sv[i][j][k][1][1][2] = h2inv * -1.0;
-                sv[i][j][k][1][2][1] = h2inv * -1.0;
-                sv[i][j][k][2][1][1] = h2inv * -1.0;
-            }
+    mgcl_test::fill7pLaplace(sv, true);
 
     p.solve();
 
@@ -1611,21 +1541,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters")
         REQUIRE(sv.getO() == ol);
     }
 
-    // Fill with 7-point Laplace
-    double h2inv = m * m; // h = 1/N -> 1/h = N
-    for (int i = 0; i < sv.getMgh(); i++)
-        for (int j = 0; j < sv.getNgh(); j++)
-            for (int k = 0; k < sv.getOgh(); k++)
-            {
-                // 7-point Laplace
-                sv[i][j][k][0][1][1] = h2inv * -1.0;
-                sv[i][j][k][1][0][1] = h2inv * -1.0;
-                sv[i][j][k][1][1][0] = h2inv * -1.0;
-                sv[i][j][k][1][1][1] = h2inv * 6.0;
-                sv[i][j][k][1][1][2] = h2inv * -1.0;
-                sv[i][j][k][1][2][1] = h2inv * -1.0;
-                sv[i][j][k][2][1][1] = h2inv * -1.0;
-            }
+    mgcl_test::fill7pLaplace(sv, true);
 
     p.solve();
 
