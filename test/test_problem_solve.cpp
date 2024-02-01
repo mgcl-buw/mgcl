@@ -125,20 +125,7 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
             auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
-            // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
-            for (int i = 0; i < s.getMgh(); i++)
-                for (int j = 0; j < s.getNgh(); j++)
-                    for (int k = 0; k < s.getOgh(); k++)
-                    {
-                        // 7-point Laplace
-                        s[i][j][k][0][1][1] = h2inv * -1.0;
-                        s[i][j][k][1][0][1] = h2inv * -1.0;
-                        s[i][j][k][1][1][0] = h2inv * -1.0;
-                        s[i][j][k][1][1][1] = h2inv * 6.0;
-                        s[i][j][k][1][1][2] = h2inv * -1.0;
-                        s[i][j][k][1][2][1] = h2inv * -1.0;
-                        s[i][j][k][2][1][1] = h2inv * -1.0;
-                    }
+            mgcl_test::fill7pLaplace(s, false);
 
             p.solveSeq();
 
@@ -215,20 +202,7 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
             auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
-            // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
-            for (int i = 0; i < s.getMgh(); i++)
-                for (int j = 0; j < s.getNgh(); j++)
-                    for (int k = 0; k < s.getOgh(); k++)
-                    {
-                        // 7-point Laplace
-                        s[i][j][k][0][1][1] = h2inv * -1.0;
-                        s[i][j][k][1][0][1] = h2inv * -1.0;
-                        s[i][j][k][1][1][0] = h2inv * -1.0;
-                        s[i][j][k][1][1][1] = h2inv * 6.0;
-                        s[i][j][k][1][1][2] = h2inv * -1.0;
-                        s[i][j][k][1][2][1] = h2inv * -1.0;
-                        s[i][j][k][2][1][1] = h2inv * -1.0;
-                    }
+            mgcl_test::fill7pLaplace(s, false);
 
             p.solve();
 
@@ -440,20 +414,7 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
             auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
-            // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
-            for (int i = 0; i < s.getMgh(); i++)
-                for (int j = 0; j < s.getNgh(); j++)
-                    for (int k = 0; k < s.getOgh(); k++)
-                    {
-                        // 7-point Laplace
-                        s[i][j][k][0][1][1] = h2inv * -1.0;
-                        s[i][j][k][1][0][1] = h2inv * -1.0;
-                        s[i][j][k][1][1][0] = h2inv * -1.0;
-                        s[i][j][k][1][1][1] = h2inv * 6.0;
-                        s[i][j][k][1][1][2] = h2inv * -1.0;
-                        s[i][j][k][1][2][1] = h2inv * -1.0;
-                        s[i][j][k][2][1][1] = h2inv * -1.0;
-                    }
+            mgcl_test::fill7pLaplace(s, false);
 
             p.solveSeq();
 
@@ -521,20 +482,7 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
             auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
-            // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
-            for (int i = 0; i < s.getMgh(); i++)
-                for (int j = 0; j < s.getNgh(); j++)
-                    for (int k = 0; k < s.getOgh(); k++)
-                    {
-                        // 7-point Laplace
-                        s[i][j][k][0][1][1] = h2inv * -1.0;
-                        s[i][j][k][1][0][1] = h2inv * -1.0;
-                        s[i][j][k][1][1][0] = h2inv * -1.0;
-                        s[i][j][k][1][1][1] = h2inv * 6.0;
-                        s[i][j][k][1][1][2] = h2inv * -1.0;
-                        s[i][j][k][1][2][1] = h2inv * -1.0;
-                        s[i][j][k][2][1][1] = h2inv * -1.0;
-                    }
+            mgcl_test::fill7pLaplace(s, false);
 
             p.solve();
 
@@ -771,20 +719,7 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
             auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
-            // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
-            for (int i = 0; i < s.getMgh(); i++)
-                for (int j = 0; j < s.getNgh(); j++)
-                    for (int k = 0; k < s.getOgh(); k++)
-                    {
-                        // 7-point Laplace
-                        s[i][j][k][0][1][1] = h2inv * -1.0;
-                        s[i][j][k][1][0][1] = h2inv * -1.0;
-                        s[i][j][k][1][1][0] = h2inv * -1.0;
-                        s[i][j][k][1][1][1] = h2inv * 6.0;
-                        s[i][j][k][1][1][2] = h2inv * -1.0;
-                        s[i][j][k][1][2][1] = h2inv * -1.0;
-                        s[i][j][k][2][1][1] = h2inv * -1.0;
-                    }
+            mgcl_test::fill7pLaplace(s, false);
 
             p.solveSeq();
 
@@ -861,20 +796,7 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
             auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
-            // Fill with 7-point Laplace, which is also used by the other two Sections in this test case
-            for (int i = 0; i < s.getMgh(); i++)
-                for (int j = 0; j < s.getNgh(); j++)
-                    for (int k = 0; k < s.getOgh(); k++)
-                    {
-                        // 7-point Laplace
-                        s[i][j][k][0][1][1] = h2inv * -1.0;
-                        s[i][j][k][1][0][1] = h2inv * -1.0;
-                        s[i][j][k][1][1][0] = h2inv * -1.0;
-                        s[i][j][k][1][1][1] = h2inv * 6.0;
-                        s[i][j][k][1][1][2] = h2inv * -1.0;
-                        s[i][j][k][1][2][1] = h2inv * -1.0;
-                        s[i][j][k][2][1][1] = h2inv * -1.0;
-                    }
+            mgcl_test::fill7pLaplace(s, false);
 
             p.solve();
 
