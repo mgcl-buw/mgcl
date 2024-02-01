@@ -645,20 +645,7 @@ TEST_CASE("Problem::init")
         REQUIRE(s.getWidth() == 3);
         REQUIRE(s.getWidth() == 3);
 
-        // fill with 7-point Laplace
-        for (int i = 0; i < m; i++)
-            for (int j = 0; j < n; j++)
-                for (int k = 0; k < o; k++)
-                {
-                    // 7-point Laplace
-                    s[i][j][k][0][1][1] = 1;
-                    s[i][j][k][1][0][1] = 1;
-                    s[i][j][k][1][1][0] = 1;
-                    s[i][j][k][1][1][1] = -6;
-                    s[i][j][k][1][1][2] = 1;
-                    s[i][j][k][1][2][1] = 1;
-                    s[i][j][k][2][1][1] = 1;
-                }
+        mgcl_test::fill7pLaplace(s, true);
 
         p.init();
 

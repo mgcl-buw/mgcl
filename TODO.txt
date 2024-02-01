@@ -41,11 +41,15 @@
   
   [x] jacobiSeq()
   [x] jacobiOcl()
+  [x] all non-mpi code done (incl. tests)
 
   [ ] updateGhostsStencilMpi()
   [ ] updateGhostsStencilOclMpi()
   
   [ ] All the tests
+
+- check Dirichlet tests
+- check non-uniform domains
 
 Done:
 - aggregate residual norm on gpu
