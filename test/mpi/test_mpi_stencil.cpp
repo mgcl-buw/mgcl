@@ -88,8 +88,8 @@ TEST_CASE("MPI-stencil-updateGhostsSeq-1proc")
                         for (int jj = 0; jj < 3; jj++)
                             for (int kk = 0; kk < 3; kk++)
                             {
-                                CHECK(s3[i][j][k][ii][jj][kk] == s3[i + m][j][k][ii][jj][kk]);
-                                CHECK(s3[i + gh][j][k][ii][jj][kk] == s3[i + gh + m][j][k][ii][jj][kk]);
+                                CHECK(s3[ii][jj][kk][i][j][k] == s3[ii][jj][kk][i + m][j][k]);
+                                CHECK(s3[ii][jj][kk][i + gh][j][k] == s3[ii][jj][kk][i + gh + m][j][k]);
                             }
 
         // check in y-direction
@@ -100,8 +100,8 @@ TEST_CASE("MPI-stencil-updateGhostsSeq-1proc")
                         for (int jj = 0; jj < 3; jj++)
                             for (int kk = 0; kk < 3; kk++)
                             {
-                                CHECK(s3[i][j][k][ii][jj][kk] == s3[i][j + n][k][ii][jj][kk]);
-                                CHECK(s3[i][j + gh][k][ii][jj][kk] == s3[i][j + gh + n][k][ii][jj][kk]);
+                                CHECK(s3[ii][jj][kk][i][j][k] == s3[ii][jj][kk][i][j + n][k]);
+                                CHECK(s3[ii][jj][kk][i][j + gh][k] == s3[ii][jj][kk][i][j + gh + n][k]);
                             }
 
         // check in x-direction
@@ -112,8 +112,8 @@ TEST_CASE("MPI-stencil-updateGhostsSeq-1proc")
                         for (int jj = 0; jj < 3; jj++)
                             for (int kk = 0; kk < 3; kk++)
                             {
-                                CHECK(s3[i][j][k][ii][jj][kk] == s3[i][j][k + o][ii][jj][kk]);
-                                CHECK(s3[i][j][k + gh][ii][jj][kk] == s3[i][j][k + gh + o][ii][jj][kk]);
+                                CHECK(s3[ii][jj][kk][i][j][k] == s3[ii][jj][kk][i][j][k + o]);
+                                CHECK(s3[ii][jj][kk][i][j][k + gh] == s3[ii][jj][kk][i][j][k + gh + o]);
                             }
     }
 }
@@ -249,14 +249,14 @@ TEST_CASE("MPI-stencil-updateGhostsSeq-nprocs")
                         for (int kk = 0; kk < 3; kk++)
                         {
                             if (mpi_coords[0] > 0) // not the first process
-                                REQUIRE(cl[i][j][k][ii][jj][kk] == cg[m_start + i][j + n_start][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k] == cg[ii][jj][kk][m_start + i][j + n_start][k + o_start]);
                             else
-                                REQUIRE(cl[i][j][k][ii][jj][kk] == cg[i + m][j + n_start][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k] == cg[ii][jj][kk][i + m][j + n_start][k + o_start]);
 
                             if (mpi_coords[0] < mpi_dims[0]) // not the last process
-                                REQUIRE(cl[i + gh + ml][j][k][ii][jj][kk] == cg[m_end + gh + 1 + i][j + n_start][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i + gh + ml][j][k] == cg[ii][jj][kk][m_end + gh + 1 + i][j + n_start][k + o_start]);
                             else
-                                REQUIRE(cl[i + gh + ml][j][k][ii][jj][kk] == cg[i + gh][j + n_start][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i + gh + ml][j][k] == cg[ii][jj][kk][i + gh][j + n_start][k + o_start]);
                         }
 
     // check in y-direction
@@ -268,14 +268,14 @@ TEST_CASE("MPI-stencil-updateGhostsSeq-nprocs")
                         for (int kk = 0; kk < 3; kk++)
                         {
                             if (mpi_coords[1] > 0) // not the first process
-                                REQUIRE(cl[i][j][k][ii][jj][kk] == cg[i + m_start][n_start + j][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k] == cg[ii][jj][kk][i + m_start][n_start + j][k + o_start]);
                             else
-                                REQUIRE(cl[i][j][k][ii][jj][kk] == cg[i + m_start][j + n][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k] == cg[ii][jj][kk][i + m_start][j + n][k + o_start]);
 
                             if (mpi_coords[1] < mpi_dims[1]) // not the last process
-                                REQUIRE(cl[i][j + gh + nl][k][ii][jj][kk] == cg[i + m_start][n_end + gh + 1 + j][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j + gh + nl][k] == cg[ii][jj][kk][i + m_start][n_end + gh + 1 + j][k + o_start]);
                             else
-                                REQUIRE(cl[i][j + gh + nl][k][ii][jj][kk] == cg[i + m_start][j + gh][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j + gh + nl][k] == cg[ii][jj][kk][i + m_start][j + gh][k + o_start]);
                         }
 
     // check in x-direction
@@ -287,14 +287,14 @@ TEST_CASE("MPI-stencil-updateGhostsSeq-nprocs")
                         for (int kk = 0; kk < 3; kk++)
                         {
                             if (mpi_coords[2] > 0) // not the first process
-                                REQUIRE(cl[i][j][k][ii][jj][kk] == cg[i + m_start][j + n_start][o_start + k][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k] == cg[ii][jj][kk][i + m_start][j + n_start][o_start + k]);
                             else
-                                REQUIRE(cl[i][j][k][ii][jj][kk] == cg[i + m_start][j + n_start][k + o][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k] == cg[ii][jj][kk][i + m_start][j + n_start][k + o]);
 
                             if (mpi_coords[2] < mpi_dims[2]) // not the last process
-                                REQUIRE(cl[i][j][k + gh + ol][ii][jj][kk] == cg[i + m_start][j + n_start][o_end + gh + 1 + k][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k + gh + ol] == cg[ii][jj][kk][i + m_start][j + n_start][o_end + gh + 1 + k]);
                             else
-                                REQUIRE(cl[i][j][k + gh + ol][ii][jj][kk] == cg[i + m_start][j + n_start][k + gh][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k + gh + ol] == cg[ii][jj][kk][i + m_start][j + n_start][k + gh]);
                         }
 }
 
@@ -443,14 +443,14 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
                         for (int kk = 0; kk < 3; kk++)
                         {
                             if (mpi_coords[0] > 0) // not the first process
-                                REQUIRE(cl[i][j][k][ii][jj][kk] == cg[m_start + i][j + n_start][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k] == cg[ii][jj][kk][m_start + i][j + n_start][k + o_start]);
                             else
-                                REQUIRE(cl[i][j][k][ii][jj][kk] == cg[i + m][j + n_start][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k] == cg[ii][jj][kk][i + m][j + n_start][k + o_start]);
 
                             if (mpi_coords[0] < mpi_dims[0]) // not the last process
-                                REQUIRE(cl[i + gh + ml][j][k][ii][jj][kk] == cg[m_end + gh + 1 + i][j + n_start][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i + gh + ml][j][k] == cg[ii][jj][kk][m_end + gh + 1 + i][j + n_start][k + o_start]);
                             else
-                                REQUIRE(cl[i + gh + ml][j][k][ii][jj][kk] == cg[i + gh][j + n_start][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i + gh + ml][j][k] == cg[ii][jj][kk][i + gh][j + n_start][k + o_start]);
                         }
 
     // check in y-direction
@@ -462,14 +462,14 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
                         for (int kk = 0; kk < 3; kk++)
                         {
                             if (mpi_coords[1] > 0) // not the first process
-                                REQUIRE(cl[i][j][k][ii][jj][kk] == cg[i + m_start][n_start + j][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k] == cg[ii][jj][kk][i + m_start][n_start + j][k + o_start]);
                             else
-                                REQUIRE(cl[i][j][k][ii][jj][kk] == cg[i + m_start][j + n][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k] == cg[ii][jj][kk][i + m_start][j + n][k + o_start]);
 
                             if (mpi_coords[1] < mpi_dims[1]) // not the last process
-                                REQUIRE(cl[i][j + gh + nl][k][ii][jj][kk] == cg[i + m_start][n_end + gh + 1 + j][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j + gh + nl][k] == cg[ii][jj][kk][i + m_start][n_end + gh + 1 + j][k + o_start]);
                             else
-                                REQUIRE(cl[i][j + gh + nl][k][ii][jj][kk] == cg[i + m_start][j + gh][k + o_start][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j + gh + nl][k] == cg[ii][jj][kk][i + m_start][j + gh][k + o_start]);
                         }
 
     // check in x-direction
@@ -481,14 +481,14 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
                         for (int kk = 0; kk < 3; kk++)
                         {
                             if (mpi_coords[2] > 0) // not the first process
-                                REQUIRE(cl[i][j][k][ii][jj][kk] == cg[i + m_start][j + n_start][o_start + k][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k] == cg[ii][jj][kk][i + m_start][j + n_start][o_start + k]);
                             else
-                                REQUIRE(cl[i][j][k][ii][jj][kk] == cg[i + m_start][j + n_start][k + o][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k] == cg[ii][jj][kk][i + m_start][j + n_start][k + o]);
 
                             if (mpi_coords[2] < mpi_dims[2]) // not the last process
-                                REQUIRE(cl[i][j][k + gh + ol][ii][jj][kk] == cg[i + m_start][j + n_start][o_end + gh + 1 + k][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k + gh + ol] == cg[ii][jj][kk][i + m_start][j + n_start][o_end + gh + 1 + k]);
                             else
-                                REQUIRE(cl[i][j][k + gh + ol][ii][jj][kk] == cg[i + m_start][j + n_start][k + gh][ii][jj][kk]);
+                                REQUIRE(cl[ii][jj][kk][i][j][k + gh + ol] == cg[ii][jj][kk][i + m_start][j + n_start][k + gh]);
                         }
 }
 
@@ -609,7 +609,7 @@ TEST_CASE("MPI_galerkin_different_thresholds")
                 for (int ii = 0; ii < sv->getWidth(); ii++)
                     for (int jj = 0; jj < sv->getWidth(); jj++)
                         for (int kk = 0; kk < sv->getWidth(); kk++)
-                            sv->getData()[i][j][k][ii][jj][kk] = sv0->getData()[i][j][k][ii][jj][kk];
+                            sv->getData()[ii][jj][kk][i][j][k] = sv0->getData()[ii][jj][kk][i][j][k];
 
     p_th2.init();
 
