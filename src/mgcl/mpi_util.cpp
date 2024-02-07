@@ -106,6 +106,17 @@ namespace mgcl::mpi_util
                 displ[i] = coords[0] * mloc * nglobgh * oglobgh + coords[1] * nloc * oglobgh + coords[2] * oloc;
             }
 
+        // MPI_Gatherv signature:
+        // int MPI_Gatherv(const void* buffer_send,
+        //                 int count_send,
+        //                 MPI_Datatype datatype_send,
+        //                 void* buffer_recv,
+        //                 const int* counts_recv,
+        //                 const int* displacements,
+        //                 MPI_Datatype datatype_recv,
+        //                 int root,
+        //                 MPI_Comm communicator);
+
         if (rank == 0)
             MPI_Gatherv(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL,
                         c.field1d().data(), counts, displ, subarrayRecvResized, 0, comm);
@@ -128,7 +139,7 @@ namespace mgcl::mpi_util
      * On rank 0 c must have the size of the global grid, all other processes just need to send their local grid.
      *
      * @param comm
-     * @param c Global grid for root process (rank 0), local grids for all other processes.
+     * @param c Global varying stencil for root process (rank 0), local varying stencil for all other processes.
      */
     void gather(MPI_Comm comm, VaryingStencil& c)
     {
@@ -147,7 +158,7 @@ namespace mgcl::mpi_util
         // Get local grid size from another process
         MPI_Status stats[2];
         MPI_Request reqs[2] = {MPI_REQUEST_NULL, MPI_REQUEST_NULL};
-        int locsizes[6] = {c.getDim1(), c.getDim2(), c.getDim3(), c.getGhostsDim1(), c.getGhostsDim2(), c.getGhostsDim3()};
+        int locsizes[6] = {c.getM(), c.getN(), c.getO(), c.getGhostsM(), c.getGhostsN(), c.getGhostsO()};
         if (rank == 1)
         {
             err = MPI_Isend(locsizes, 6, MPI_INT, 0, 0, comm, &reqs[0]);
@@ -166,18 +177,18 @@ namespace mgcl::mpi_util
         int mlocgh = mloc + 2 * locsizes[3];
         int nlocgh = nloc + 2 * locsizes[4];
         int olocgh = oloc + 2 * locsizes[5];
-        int mglobgh = c.getDim1gh();
-        int nglobgh = c.getDim2gh();
-        int oglobgh = c.getDim3gh();
+        int mglobgh = c.getMgh();
+        int nglobgh = c.getNgh();
+        int oglobgh = c.getOgh();
         int width = c.getWidth();
 
         // Create subarray type for the send buffer
         MPI_Datatype subarraySend;
         if (rank != 0)
         {
-            int sizes[6] = {mlocgh, nlocgh, olocgh, width, width, width};
-            int subsizes[6] = {mloc, nloc, oloc, width, width, width};
-            int starts[6] = {locsizes[3], locsizes[4], locsizes[5], 0, 0, 0};
+            int sizes[6] = {width, width, width, mlocgh, nlocgh, olocgh};
+            int subsizes[6] = {width, width, width, mloc, nloc, oloc};
+            int starts[6] = {0, 0, 0, locsizes[3], locsizes[4], locsizes[5]};
             err = MPI_Type_create_subarray(6, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &subarraySend);
             mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
             err = MPI_Type_commit(&subarraySend);
@@ -189,9 +200,9 @@ namespace mgcl::mpi_util
         MPI_Datatype subarrayRecvResized;
         if (rank == 0)
         {
-            int sizes[6] = {mglobgh, nglobgh, oglobgh, width, width, width};
-            int subsizes[6] = {mloc, nloc, oloc, width, width, width};
-            int starts[6] = {c.getGhostsDim1(), c.getGhostsDim2(), c.getGhostsDim3(), 0, 0, 0};
+            int sizes[6] = {width, width, width, mglobgh, nglobgh, oglobgh};
+            int subsizes[6] = {width, width, width, mloc, nloc, oloc};
+            int starts[6] = {0, 0, 0, c.getGhostsM(), c.getGhostsN(), c.getGhostsO()};
             // int starts[3] = {0, 0, 0};
             err = MPI_Type_create_subarray(6, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &subarrayRecv);
             mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
@@ -208,8 +219,8 @@ namespace mgcl::mpi_util
         }
 
         int counts[mpi_size];
-        int displ[mpi_size];
-        int width3 = width * width * width; // size of one stencil
+        int displ[mpi_size]; // displacements, 1d coordinate in the global receive buffer for each process
+        // int width3 = width * width * width; // size of one stencil
         if (rank == 0)
             for (int i = 0; i < mpi_size; i++)
             {
@@ -218,10 +229,21 @@ namespace mgcl::mpi_util
                 mgclCheckMpiError(comm, err, "MPI_Cart_coords");
 
                 counts[i] = 1;
-                displ[i] = coords[0] * mloc * nglobgh * oglobgh * width3 +
-                           coords[1] * nloc * oglobgh * width3 +
-                           coords[2] * oloc * width3;
+                displ[i] = coords[0] * mloc * nglobgh * oglobgh +
+                           coords[1] * nloc * oglobgh +
+                           coords[2] * oloc;
             }
+
+        // MPI_Gatherv signature:
+        // int MPI_Gatherv(const void* buffer_send,
+        //                 int count_send,
+        //                 MPI_Datatype datatype_send,
+        //                 void* buffer_recv,
+        //                 const int* counts_recv,
+        //                 const int* displacements,
+        //                 MPI_Datatype datatype_recv,
+        //                 int root,
+        //                 MPI_Comm communicator);
 
         if (rank == 0)
             MPI_Gatherv(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL,

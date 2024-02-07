@@ -45,8 +45,10 @@
 
   [x] updateGhostsStencilMpi()
   [x] updateGhostsStencilOclMpi()
-  [ ] gather(VaryingStencil)
-  [ ] scatter(VaryingStencil)
+  [x] gather(VaryingStencil)
+  [x] scatter(VaryingStencil)
+  
+  [ ] mpi vcycle (check with test/run-all.sh -v)
   
   [ ] All the tests
 

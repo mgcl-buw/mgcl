@@ -1042,7 +1042,7 @@ TEST_CASE("mpi_util::gather-src-dest-same-stencil")
                         for (int jj = 0; jj < 3; jj++)
                             for (int kk = 0; kk < 3; kk++)
                             {
-                                (*cglob_recv)[i][j][k][ii][jj][kk] = cglob[i][j][k][ii][jj][kk];
+                                (*cglob_recv)[ii][jj][kk][i][j][k] = cglob[ii][jj][kk][i][j][k];
                             }
     }
     else
@@ -1151,7 +1151,7 @@ TEST_CASE("mpi_util::gather-GPU-src-dest-same-stencil")
                             for (int jj = 0; jj < 3; jj++)
                                 for (int kk = 0; kk < 3; kk++)
                                 {
-                                    (*cglob_recv)[i][j][k][ii][jj][kk] = cglob[i][j][k][ii][jj][kk];
+                                    (*cglob_recv)[ii][jj][kk][i][j][k] = cglob[ii][jj][kk][i][j][k];
                                 }
         }
         else

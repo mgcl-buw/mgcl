@@ -24,11 +24,11 @@ print_help() {
   echo "Available options:"
   echo "-p,--problem: Run Problem specific tests"
   echo "-l,--level: Run Level specific tests"
-  echo "-g,--ghosts: Run Ghost-Update specific tests"
+  echo "-g,--ghosts: Run Ghost-Update specific tests (Cuboid only)"
   echo "-j,--jacobi: Run Jacobi specific tests"
-  echo "-u,--util: Run Utility specific tests"
-  echo "-v,--vcycle: Run Vcycle specific tests"
-  echo "-s,--stencil: Run Stencil specific tests"
+  echo "-u,--util: Run Utility specific tests (e.g. gather and scatter)"
+  echo "-v,--vcycle: Run Vcycle specific tests (i.e. solving a problem)"
+  echo "-s,--stencil: Run Stencil specific tests (mult, ghost update, etc.)"
   echo "If no option is given, all tests will be run."
 }
 
