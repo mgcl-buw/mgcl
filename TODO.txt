@@ -43,8 +43,10 @@
   [x] jacobiOcl()
   [x] all non-mpi code done (incl. tests)
 
-  [ ] updateGhostsStencilMpi()
-  [ ] updateGhostsStencilOclMpi()
+  [x] updateGhostsStencilMpi()
+  [x] updateGhostsStencilOclMpi()
+  [ ] gather(VaryingStencil)
+  [ ] scatter(VaryingStencil)
   
   [ ] All the tests
 

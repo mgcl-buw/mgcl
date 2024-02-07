@@ -32,15 +32,15 @@ namespace mgcl
             return;
         }
 
-        int m = s.getDim1();
-        int n = s.getDim2();
-        int o = s.getDim3();
-        int ghosts_m = s.getGhostsDim1();
-        int ghosts_n = s.getGhostsDim2();
-        int ghosts_o = s.getGhostsDim3();
-        int mgh = s.getDim1gh();
-        int ngh = s.getDim2gh();
-        int ogh = s.getDim3gh();
+        int m = s.getM();
+        int n = s.getN();
+        int o = s.getO();
+        int ghosts_m = s.getGhostsM();
+        int ghosts_n = s.getGhostsN();
+        int ghosts_o = s.getGhostsO();
+        int mgh = s.getMgh();
+        int ngh = s.getNgh();
+        int ogh = s.getOgh();
 
         if (m < ghosts_m || n < ghosts_n || o < ghosts_o)
             throw "Ghost-update using MPI is only allowed for gh <= m,n,o.";
@@ -50,7 +50,7 @@ namespace mgcl
         int err;
 
         // Size of one stencil
-        int ssize = s.getDim4gh() * s.getDim5gh() * s.getDim6gh();
+        int ssize = s.getWidth() * s.getWidth() * s.getWidth();
 
         /* Getting local rank */
         int myid;
@@ -71,10 +71,10 @@ namespace mgcl
             for (i = 0; i < ghosts_m; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ogh; k++)
-                        for (int ii = 0; ii < s.getDim4(); ii++)
-                            for (int jj = 0; jj < s.getDim5(); jj++)
-                                for (int kk = 0; kk < s.getDim6(); kk++)
-                                    s[mgh - ghosts_m + i][j][k][ii][jj][kk] = rbuf[i][j][k][ii][jj][kk];
+                        for (int ii = 0; ii < s.getWidth(); ii++)
+                            for (int jj = 0; jj < s.getWidth(); jj++)
+                                for (int kk = 0; kk < s.getWidth(); kk++)
+                                    s[ii][jj][kk][mgh - ghosts_m + i][j][k] = rbuf[ii][jj][kk][i][j][k];
 
         /* Sending data to the back */
         sbuf_ptr = s.sliceIncGhosts(m, m + ghosts_m - 1, 0, ngh - 1, 0, ogh - 1); // TODO max when gh > m
@@ -91,10 +91,10 @@ namespace mgcl
             for (i = 0; i < ghosts_m; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ogh; k++)
-                        for (int ii = 0; ii < s.getDim4(); ii++)
-                            for (int jj = 0; jj < s.getDim5(); jj++)
-                                for (int kk = 0; kk < s.getDim6(); kk++)
-                                    s[i][j][k][ii][jj][kk] = rbuf[i][j][k][ii][jj][kk];
+                        for (int ii = 0; ii < s.getWidth(); ii++)
+                            for (int jj = 0; jj < s.getWidth(); jj++)
+                                for (int kk = 0; kk < s.getWidth(); kk++)
+                                    s[ii][jj][kk][i][j][k] = rbuf[ii][jj][kk][i][j][k];
 
         /* Sending data downwards */
         sbuf_ptr = s.sliceIncGhosts(0, mgh - 1, ghosts_m, 2 * ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
@@ -111,10 +111,10 @@ namespace mgcl
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ghosts_n; j++)
                     for (k = 0; k < ogh; k++)
-                        for (int ii = 0; ii < s.getDim4(); ii++)
-                            for (int jj = 0; jj < s.getDim5(); jj++)
-                                for (int kk = 0; kk < s.getDim6(); kk++)
-                                    s[i][ngh - ghosts_n + j][k][ii][jj][kk] = rbuf[i][j][k][ii][jj][kk];
+                        for (int ii = 0; ii < s.getWidth(); ii++)
+                            for (int jj = 0; jj < s.getWidth(); jj++)
+                                for (int kk = 0; kk < s.getWidth(); kk++)
+                                    s[ii][jj][kk][i][ngh - ghosts_n + j][k] = rbuf[ii][jj][kk][i][j][k];
 
         /* Sending data upwards */
         sbuf_ptr = s.sliceIncGhosts(0, mgh - 1, n, n + ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
@@ -131,10 +131,10 @@ namespace mgcl
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ghosts_n; j++)
                     for (k = 0; k < ogh; k++)
-                        for (int ii = 0; ii < s.getDim4(); ii++)
-                            for (int jj = 0; jj < s.getDim5(); jj++)
-                                for (int kk = 0; kk < s.getDim6(); kk++)
-                                    s[i][j][k][ii][jj][kk] = rbuf[i][j][k][ii][jj][kk];
+                        for (int ii = 0; ii < s.getWidth(); ii++)
+                            for (int jj = 0; jj < s.getWidth(); jj++)
+                                for (int kk = 0; kk < s.getWidth(); kk++)
+                                    s[ii][jj][kk][i][j][k] = rbuf[ii][jj][kk][i][j][k];
 
         /* Sending data to the left */
         sbuf_ptr = s.sliceIncGhosts(0, mgh - 1, 0, ngh - 1, ghosts_o, 2 * ghosts_o - 1); // TODO max when gh > m
@@ -154,10 +154,10 @@ namespace mgcl
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ghosts_o; k++)
-                        for (int ii = 0; ii < s.getDim4(); ii++)
-                            for (int jj = 0; jj < s.getDim5(); jj++)
-                                for (int kk = 0; kk < s.getDim6(); kk++)
-                                    s[i][j][ogh - ghosts_o + k][ii][jj][kk] = rbuf[i][j][k][ii][jj][kk];
+                        for (int ii = 0; ii < s.getWidth(); ii++)
+                            for (int jj = 0; jj < s.getWidth(); jj++)
+                                for (int kk = 0; kk < s.getWidth(); kk++)
+                                    s[ii][jj][kk][i][j][ogh - ghosts_o + k] = rbuf[ii][jj][kk][i][j][k];
 
         /* Sending data to the right */
         sbuf_ptr = s.sliceIncGhosts(0, mgh - 1, 0, ngh - 1, o, o + ghosts_o - 1); // TODO max when gh > m
@@ -174,10 +174,10 @@ namespace mgcl
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ghosts_o; k++)
-                        for (int ii = 0; ii < s.getDim4(); ii++)
-                            for (int jj = 0; jj < s.getDim5(); jj++)
-                                for (int kk = 0; kk < s.getDim6(); kk++)
-                                    s[i][j][k][ii][jj][kk] = rbuf[i][j][k][ii][jj][kk];
+                        for (int ii = 0; ii < s.getWidth(); ii++)
+                            for (int jj = 0; jj < s.getWidth(); jj++)
+                                for (int kk = 0; kk < s.getWidth(); kk++)
+                                    s[ii][jj][kk][i][j][k] = rbuf[ii][jj][kk][i][j][k];
     }
 
     /**
