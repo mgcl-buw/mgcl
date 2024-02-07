@@ -50,6 +50,7 @@
 
 - check Dirichlet tests
 - check non-uniform domains
+- inline kernel source code, add CMake option MGCL_USE_EXTERNAL_KERNEL_FILE with false as default. Copy content of mgcl.cl into string at build time using CMake.
 
 Done:
 - aggregate residual norm on gpu
