@@ -423,7 +423,7 @@ TEST_CASE("MPI_vcycle_immediate_gather_scatter_Varying27p")
         REQUIRE(sv.getM() == o);
     }
 
-    mgcl_test::fill7pLaplace(sv, true);
+    mgcl_test::fill7pLaplace(sv, false);
 
     p.solveSeq();
 
@@ -878,7 +878,7 @@ TEST_CASE("MPI_vcycle_threshold_eq_1_Varying27p")
         REQUIRE(sv.getO() == o);
     }
 
-    mgcl_test::fill7pLaplace(sv, true);
+    mgcl_test::fill7pLaplace(sv, false);
 
     p.solveSeq();
 
@@ -1041,7 +1041,7 @@ TEST_CASE("MPI_vcycle_threshold_eq_2_Varying27p")
         REQUIRE(sv.getO() == ol);
     }
 
-    mgcl_test::fill7pLaplace(sv, true);
+    mgcl_test::fill7pLaplace(sv, false);
 
     p.solveSeq();
 
@@ -1206,7 +1206,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_1_Varying27p")
         REQUIRE(sv.getO() == o);
     }
 
-    mgcl_test::fill7pLaplace(sv, true);
+    mgcl_test::fill7pLaplace(sv, false);
 
     p.solve();
 
@@ -1372,7 +1372,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
         REQUIRE(sv.getO() == ol);
     }
 
-    mgcl_test::fill7pLaplace(sv, true);
+    mgcl_test::fill7pLaplace(sv, false);
 
     p.solve();
 
@@ -1541,7 +1541,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters")
         REQUIRE(sv.getO() == ol);
     }
 
-    mgcl_test::fill7pLaplace(sv, true);
+    mgcl_test::fill7pLaplace(sv, false);
 
     p.solve();
 
