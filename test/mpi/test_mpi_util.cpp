@@ -968,10 +968,10 @@ TEST_CASE("mpi_util::gather-src-dest-same-stencil")
 {
     using std::min;
 
-    int mloc = 8;
+    int mloc = 4;
     int nloc = 8;
     int oloc = 8;
-    int gh = 1;
+    int gh = 2;
     int periodic = 1;
 
     // check if mpi is initialized
@@ -1080,7 +1080,7 @@ TEST_CASE("mpi_util::gather-GPU-src-dest-same-stencil")
         int mloc = 8;
         int nloc = 8;
         int oloc = 8;
-        int gh = 1;
+        int gh = 2;
         int periodic = 1;
 
         // check if mpi is initialized
