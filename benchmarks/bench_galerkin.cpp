@@ -120,7 +120,8 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][all]")
                 p->setStencilType(mgcl::MGCL_VARYING);
                 auto& s = *p->getStencilValues();
 
-                mgcl_test::fill7pLaplace(s, true);
+                double h = 1.0 / static_cast<double>(m);
+                mgcl_test::fill7pLaplace(s, h, true);
 
                 return p;
             };
@@ -220,7 +221,8 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][all]")
                 p->setStencilType(mgcl::MGCL_VARYING);
                 auto& s = *p->getStencilValues();
 
-                mgcl_test::fill7pLaplace(s, true);
+                double h = 1.0 / static_cast<double>(m);
+                mgcl_test::fill7pLaplace(s, h, true);
 
                 return p;
             };
@@ -441,7 +443,8 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
                 p->setStencilType(mgcl::MGCL_VARYING);
                 auto& s = *p->getStencilValues();
 
-                mgcl_test::fill7pLaplace(s, true);
+                double h = 1.0 / static_cast<double>(m);
+                mgcl_test::fill7pLaplace(s, h, true);
 
                 return p;
             };

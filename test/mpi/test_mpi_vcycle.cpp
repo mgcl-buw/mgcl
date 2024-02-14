@@ -423,7 +423,8 @@ TEST_CASE("MPI_vcycle_immediate_gather_scatter_Varying27p")
         REQUIRE(sv.getM() == o);
     }
 
-    mgcl_test::fill7pLaplace(sv, false);
+    double h = 1.0 / static_cast<double>(m);
+    mgcl_test::fill7pLaplace(sv, h, false);
 
     p.solveSeq();
 
@@ -878,7 +879,8 @@ TEST_CASE("MPI_vcycle_threshold_eq_1_Varying27p")
         REQUIRE(sv.getO() == o);
     }
 
-    mgcl_test::fill7pLaplace(sv, false);
+    double h = 1.0 / static_cast<double>(m);
+    mgcl_test::fill7pLaplace(sv, h, false);
 
     p.solveSeq();
 
@@ -898,6 +900,21 @@ TEST_CASE("MPI_vcycle_threshold_eq_1_Varying27p")
         // Gather into v from other processes
         if (mpi_size > 1)
             mgcl::mpi_util::gather(p.getMpiComm(), *v); // TODO check with different ghost amounts
+    }
+
+    // dump local grids
+    // if (mpi_rank > 0)
+    // {
+    //     vloc->dumpToFile("vloc" + std::to_string(mpi_rank) + ".txt", true);
+    // }
+    // else
+    // {
+    //     solution->dumpToFile("solution" + std::to_string(mpi_rank) + ".txt", true);
+    //     v->dumpToFile("v" + std::to_string(mpi_rank) + ".txt", true);
+    // }
+
+    if (mpi_rank == 0)
+    {
 
         // check if solution is good
         auto err = calculateError(*solution, *v);
@@ -1041,7 +1058,8 @@ TEST_CASE("MPI_vcycle_threshold_eq_2_Varying27p")
         REQUIRE(sv.getO() == ol);
     }
 
-    mgcl_test::fill7pLaplace(sv, false);
+    double h = 1.0 / static_cast<double>(m);
+    mgcl_test::fill7pLaplace(sv, h, false);
 
     p.solveSeq();
 
@@ -1206,7 +1224,8 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_1_Varying27p")
         REQUIRE(sv.getO() == o);
     }
 
-    mgcl_test::fill7pLaplace(sv, false);
+    double h = 1.0 / static_cast<double>(m);
+    mgcl_test::fill7pLaplace(sv, h, false);
 
     p.solve();
 
@@ -1372,7 +1391,8 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
         REQUIRE(sv.getO() == ol);
     }
 
-    mgcl_test::fill7pLaplace(sv, false);
+    double h = 1.0 / static_cast<double>(m);
+    mgcl_test::fill7pLaplace(sv, h, false);
 
     p.solve();
 
@@ -1541,7 +1561,8 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters")
         REQUIRE(sv.getO() == ol);
     }
 
-    mgcl_test::fill7pLaplace(sv, false);
+    double h = 1.0 / static_cast<double>(m);
+    mgcl_test::fill7pLaplace(sv, h, false);
 
     p.solve();
 

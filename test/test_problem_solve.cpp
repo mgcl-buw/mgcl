@@ -125,7 +125,8 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
             auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
-            mgcl_test::fill7pLaplace(s, false);
+            double h = 1.0 / static_cast<double>(N);
+            mgcl_test::fill7pLaplace(s, h, false);
 
             p.solveSeq();
 
@@ -202,7 +203,8 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
             auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
-            mgcl_test::fill7pLaplace(s, false);
+            double h = 1.0 / static_cast<double>(N);
+            mgcl_test::fill7pLaplace(s, h, false);
 
             p.solve();
 
@@ -414,7 +416,8 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
             auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
-            mgcl_test::fill7pLaplace(s, false);
+            double h = 1.0 / static_cast<double>(N);
+            mgcl_test::fill7pLaplace(s, h, false);
 
             p.solveSeq();
 
@@ -482,7 +485,8 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
             auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
-            mgcl_test::fill7pLaplace(s, false);
+            double h = 1.0 / static_cast<double>(N);
+            mgcl_test::fill7pLaplace(s, h, false);
 
             p.solve();
 
@@ -719,7 +723,8 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
             auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
-            mgcl_test::fill7pLaplace(s, false);
+            double h = 1.0 / static_cast<double>(N);
+            mgcl_test::fill7pLaplace(s, h, false);
 
             p.solveSeq();
 
@@ -796,7 +801,8 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
             auto& s = *p.getStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
-            mgcl_test::fill7pLaplace(s, false);
+            double h = 1.0 / static_cast<double>(N);
+            mgcl_test::fill7pLaplace(s, h, false);
 
             p.solve();
 

@@ -86,7 +86,7 @@ TEST_CASE("residual")
     {
         int n = 16;
         auto vals = mgcl::VaryingStencil(n, n, n, 3, 1, 1, 1);
-        mgcl_test::fill7pLaplace(vals, false);
+        mgcl_test::fill7pLaplace(vals, h, false);
 
         double res = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r, mgcl::MGCL_L2,
                                                         mgcl::MGCL_VARYING, stencilFactor, &vals, true, true,

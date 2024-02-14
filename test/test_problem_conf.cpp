@@ -645,7 +645,8 @@ TEST_CASE("Problem::init")
         REQUIRE(s.getWidth() == 3);
         REQUIRE(s.getWidth() == 3);
 
-        mgcl_test::fill7pLaplace(s, true);
+        double h = 1.0 / static_cast<double>(m);
+        mgcl_test::fill7pLaplace(s, h, true);
 
         p.init();
 

@@ -20,7 +20,8 @@ TEST_CASE("galerkin Laplace vs Matrix")
 
     // Fill varying stencil on fine grid with 7p Laplace
     mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
-    mgcl_test::fill7pLaplace(a_h, true);
+    double h = 1.0 / static_cast<double>(m);
+    mgcl_test::fill7pLaplace(a_h, h, true);
 
     auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
@@ -147,7 +148,8 @@ TEST_CASE("galerkin symmetric")
 
     // Fill varying stencil on fine grid with 7p Laplace
     mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
-    mgcl_test::fill7pLaplace(a_h, true);
+    double h = 1.0 / static_cast<double>(m);
+    mgcl_test::fill7pLaplace(a_h, h, true);
 
     auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
@@ -168,7 +170,8 @@ TEST_CASE("galerkin Laplace SA == AS")
 
     // Fill varying stencil on fine grid with 7p Laplace
     mgcl::VaryingStencil a(m, n, o, 3, 2, 2, 2);
-    mgcl_test::fill7pLaplace(a, true);
+    double h = 1.0 / static_cast<double>(m);
+    mgcl_test::fill7pLaplace(a, h, true);
 
     auto s = mgcl::create3dFullWeightRestrictionStencil();
 
@@ -197,12 +200,12 @@ TEST_CASE("galerkin Laplace rediscretized")
     int m = 8; // GENERATE(2, 4, 8);
     int n = 8; // GENERATE(2, 4, 8);
     int o = 8; // GENERATE(2, 4, 8);
-    double h = 1.0 / (double)m;
     double h2inv = static_cast<double>(m * m);
 
     // Fill varying stencil on fine grid with 7p Laplace
     mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
-    mgcl_test::fill7pLaplace(a_h, true);
+    double h = 1.0 / static_cast<double>(m);
+    mgcl_test::fill7pLaplace(a_h, h, true);
 
     auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
 

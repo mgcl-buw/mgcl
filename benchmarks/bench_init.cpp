@@ -142,7 +142,8 @@ TEST_CASE("mgcl benchmarks console: init", "[!benchmark][init][console]")
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
 
-            mgcl_test::fill7pLaplace(s, true);
+            double h = 1.0 / static_cast<double>(m);
+            mgcl_test::fill7pLaplace(s, h, true);
 
             bool ret;
             b.run(std::string("sequential 7p Varying, N = ").append(std::to_string(N)).c_str(), [&]
