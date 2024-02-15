@@ -134,7 +134,7 @@ if [ "$TEST_JACOBI" = true ] || [ "$TEST_ALL" = true ] ; then
     echo "#######################"
 
     run_test --oversubscribe -n 8 "$exe" "MPI jacobiSeq (n processes)"
-    run_test --oversubscribe -n 8 "$exe" "MPI jacobi ocl (n processes)"
+    run_test --oversubscribe -n 8 "$exe" "MPI jacobi ocl Laplace (n processes)"
 fi
 
 if [ "$TEST_UTIL" = true ] || [ "$TEST_ALL" = true ] ; then

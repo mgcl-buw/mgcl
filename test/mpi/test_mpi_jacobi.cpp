@@ -160,7 +160,7 @@ TEST_CASE("MPI jacobiSeq (n processes)", "[mpiN]")
 // Checks ghost update for any number of processes that is allowed by mgcl, e.g. 1, 2, 4, 8, 24.
 // Run with: mpiexec -n 8 tests_mpi "MPI jacobi ocl (n processes)"
 // TODO non-periodic
-TEST_CASE("MPI jacobi ocl (n processes)", "[mpiN]")
+TEST_CASE("MPI jacobi ocl Laplace (n processes)", "[mpiN]")
 {
     using std::min;
 
