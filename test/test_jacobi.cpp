@@ -148,70 +148,168 @@ TEST_CASE("jacobi")
 
 TEST_CASE("jacobi GPU varying stencil")
 {
-    SECTION("indices")
+    // checks 1d indexing inside 2d kernel
+    SECTION("indices_2d")
     {
         int mreal = 8;
         int nreal = 8;
         int oreal = 8;
         int ghosts = 1;
-        int m = 8 + 2 * ghosts;
-        int n = 8 + 2 * ghosts;
-        int o = 8 + 2 * ghosts;
+        int mgh = 8 + 2 * ghosts;
+        int ngh = 8 + 2 * ghosts;
+        int ogh = 8 + 2 * ghosts;
 
-        mgcl::VaryingStencil stencilValues(mreal, nreal, oreal, 3, 2, 2, 2);
+        // Set different grid size for stencilValues, which happens when using MPI at
+        // the level of mpiLevelTreshold.
+        int ghosts_sv = 2;
+        int svm = 8;
+        int svn = 16;
+        int svo = 16;
+        int svmgh = svm + 2 * ghosts_sv;
+        int svngh = svn + 2 * ghosts_sv;
+        int svogh = svo + 2 * ghosts_sv;
+        int svGridSize = svmgh * svngh * svogh;
+
+        mgcl::VaryingStencil stencilValues(svm, svn, svo, 3, ghosts_sv, ghosts_sv, ghosts_sv);
         for (int i = 0; i < stencilValues.field1d().size(); i++)
             stencilValues.field1d()[i] = i;
 
-        int ghosts_sv = 2;
+        int idx_start = ghosts;
 
-        for (int j = ghosts, jsv = ghosts_sv; j < n - ghosts; j++, jsv++)
-            for (int k = ghosts, ksv = ghosts_sv; k < o - ghosts; k++, ksv++)
+        for (int j = ghosts, jsv = ghosts_sv; j < ngh - ghosts; j++, jsv++)
+            for (int k = ghosts, ksv = ghosts_sv; k < ogh - ghosts; k++, ksv++)
             {
-                int ioff = n * o;
-                int joff = o;
+                int ioff = ngh * ogh;
+                int joff = ogh;
                 int koff = 1;
-                int index = ghosts * ioff + j * o + k;
+                int index = ghosts * ioff + j * ogh + k;
 
-                int svno = ((n - 2 * ghosts) + 2 * ghosts_sv) * ((o - 2 * ghosts) + 2 * ghosts_sv);
+                int svno = svngh * svogh;
                 // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
-                int gridsize = ((m - 2 * ghosts) + 2 * ghosts_sv) * ((n - 2 * ghosts) + 2 * ghosts_sv) * ((o - 2 * ghosts) + 2 * ghosts_sv);
+                int index_sv = (idx_start - ghosts + ghosts_sv) * svno + (j - ghosts + ghosts_sv) * svogh + (k - ghosts + ghosts_sv);
 
-                for (int i = ghosts, isv = ghosts_sv; i < m - ghosts; i++, isv++)
+                for (int i = idx_start, isv = ghosts_sv; i < mgh - ghosts; i++, isv++)
                 {
-                    int index_sv = isv * svno + jsv * ((o - 2 * ghosts) + 2 * ghosts_sv) + ksv;
-                    REQUIRE(index_sv == isv * svno + (j + (ghosts_sv - ghosts)) * ((o - 2 * ghosts) + 2 * ghosts_sv) + (k + (ghosts_sv - ghosts)));
+                    CAPTURE(i, j, k, isv, jsv, ksv);
 
-                    REQUIRE(stencilValues[1][1][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 3 + 1) * gridsize]);
-                    REQUIRE(stencilValues[1][1][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 3) * gridsize]);
-                    REQUIRE(stencilValues[1][1][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 3 + 2) * gridsize]);
-                    REQUIRE(stencilValues[1][0][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 1) * gridsize]);
-                    REQUIRE(stencilValues[1][2][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 6 + 1) * gridsize]);
-                    REQUIRE(stencilValues[0][1][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (3 + 1) * gridsize]);
-                    REQUIRE(stencilValues[2][1][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 3 + 1) * gridsize]);
-                    REQUIRE(stencilValues[1][0][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9) * gridsize]);
-                    REQUIRE(stencilValues[1][0][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 2) * gridsize]);
-                    REQUIRE(stencilValues[1][2][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 6) * gridsize]);
-                    REQUIRE(stencilValues[1][2][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 6 + 2) * gridsize]);
-                    REQUIRE(stencilValues[0][1][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (3) * gridsize]);
-                    REQUIRE(stencilValues[0][1][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (3 + 2) * gridsize]);
-                    REQUIRE(stencilValues[2][1][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 3) * gridsize]);
-                    REQUIRE(stencilValues[2][1][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 3 + 2) * gridsize]);
-                    REQUIRE(stencilValues[0][0][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (1) * gridsize]);
-                    REQUIRE(stencilValues[0][2][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (6 + 1) * gridsize]);
-                    REQUIRE(stencilValues[2][0][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 1) * gridsize]);
-                    REQUIRE(stencilValues[2][2][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 6 + 1) * gridsize]);
+                    // make sure isv, jsv and ksv are correct (only needed in this test, not in the actual kernel)
+                    REQUIRE(isv == (i - ghosts + ghosts_sv));
+                    REQUIRE(jsv == (j - ghosts + ghosts_sv));
+                    REQUIRE(ksv == (k - ghosts + ghosts_sv));
+
+                    // Check that index_sv is updated correctly after each iteration
+                    REQUIRE(index_sv == (i - ghosts + ghosts_sv) * svno + (j - ghosts + ghosts_sv) * svogh + (k - ghosts + ghosts_sv));
+
+                    // Check actual values
+                    REQUIRE(stencilValues[1][1][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 3 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[1][1][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 3) * svGridSize]);
+                    REQUIRE(stencilValues[1][1][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 3 + 2) * svGridSize]);
+                    REQUIRE(stencilValues[1][0][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[1][2][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 6 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[0][1][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (3 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[2][1][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 3 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[1][0][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9) * svGridSize]);
+                    REQUIRE(stencilValues[1][0][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 2) * svGridSize]);
+                    REQUIRE(stencilValues[1][2][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 6) * svGridSize]);
+                    REQUIRE(stencilValues[1][2][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 6 + 2) * svGridSize]);
+                    REQUIRE(stencilValues[0][1][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (3) * svGridSize]);
+                    REQUIRE(stencilValues[0][1][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (3 + 2) * svGridSize]);
+                    REQUIRE(stencilValues[2][1][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 3) * svGridSize]);
+                    REQUIRE(stencilValues[2][1][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 3 + 2) * svGridSize]);
+                    REQUIRE(stencilValues[0][0][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (1) * svGridSize]);
+                    REQUIRE(stencilValues[0][2][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (6 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[2][0][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[2][2][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 6 + 1) * svGridSize]);
                     REQUIRE(stencilValues[0][0][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv]);
-                    REQUIRE(stencilValues[0][0][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (2) * gridsize]);
-                    REQUIRE(stencilValues[0][2][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (6) * gridsize]);
-                    REQUIRE(stencilValues[0][2][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (6 + 2) * gridsize]);
-                    REQUIRE(stencilValues[2][0][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18) * gridsize]);
-                    REQUIRE(stencilValues[2][0][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 2) * gridsize]);
-                    REQUIRE(stencilValues[2][2][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 6) * gridsize]);
-                    REQUIRE(stencilValues[2][2][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 6 + 2) * gridsize]);
+                    REQUIRE(stencilValues[0][0][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (2) * svGridSize]);
+                    REQUIRE(stencilValues[0][2][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (6) * svGridSize]);
+                    REQUIRE(stencilValues[0][2][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (6 + 2) * svGridSize]);
+                    REQUIRE(stencilValues[2][0][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18) * svGridSize]);
+                    REQUIRE(stencilValues[2][0][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 2) * svGridSize]);
+                    REQUIRE(stencilValues[2][2][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 6) * svGridSize]);
+                    REQUIRE(stencilValues[2][2][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 6 + 2) * svGridSize]);
 
                     index_sv += svno;
                 }
             }
+    }
+    // checks 1d indexing inside 3d kernel
+    SECTION("indices_3d")
+    {
+        int mreal = 8;
+        int nreal = 8;
+        int oreal = 8;
+        int ghosts = 1;
+        int mgh = 8 + 2 * ghosts;
+        int ngh = 8 + 2 * ghosts;
+        int ogh = 8 + 2 * ghosts;
+
+        // Set different grid size for stencilValues, which happens when using MPI at
+        // the level of mpiLevelTreshold.
+        int ghosts_sv = 2;
+        int svm = 8;
+        int svn = 16;
+        int svo = 16;
+        int svmgh = svm + 2 * ghosts_sv;
+        int svngh = svn + 2 * ghosts_sv;
+        int svogh = svo + 2 * ghosts_sv;
+        int svGridSize = svmgh * svngh * svogh;
+
+        mgcl::VaryingStencil stencilValues(svm, svn, svo, 3, ghosts_sv, ghosts_sv, ghosts_sv);
+        for (int i = 0; i < stencilValues.field1d().size(); i++)
+            stencilValues.field1d()[i] = i;
+
+        int idx_start = ghosts;
+
+        for (int i = idx_start, isv = ghosts_sv; i < ngh - ghosts; i++, isv++)
+            for (int j = idx_start, jsv = ghosts_sv; j < ngh - ghosts; j++, jsv++)
+                for (int k = idx_start, ksv = ghosts_sv; k < ogh - ghosts; k++, ksv++)
+                {
+                    int ioff = ngh * ogh;
+                    int joff = ogh;
+                    int koff = 1;
+                    int index = ghosts * ioff + j * ogh + k;
+
+                    int svno = svngh * svogh;
+                    // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
+                    int index_sv = (i - ghosts + ghosts_sv) * svno + (j - ghosts + ghosts_sv) * svogh + (k - ghosts + ghosts_sv);
+
+                    CAPTURE(i, j, k, isv, jsv, ksv);
+
+                    // make sure isv, jsv and ksv are correct (only needed in this test, not in the actual kernel)
+                    REQUIRE(isv == (i - ghosts + ghosts_sv));
+                    REQUIRE(jsv == (j - ghosts + ghosts_sv));
+                    REQUIRE(ksv == (k - ghosts + ghosts_sv));
+
+                    // Check actual values
+                    REQUIRE(stencilValues[1][1][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 3 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[1][1][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 3) * svGridSize]);
+                    REQUIRE(stencilValues[1][1][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 3 + 2) * svGridSize]);
+                    REQUIRE(stencilValues[1][0][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[1][2][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 6 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[0][1][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (3 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[2][1][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 3 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[1][0][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9) * svGridSize]);
+                    REQUIRE(stencilValues[1][0][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 2) * svGridSize]);
+                    REQUIRE(stencilValues[1][2][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 6) * svGridSize]);
+                    REQUIRE(stencilValues[1][2][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (9 + 6 + 2) * svGridSize]);
+                    REQUIRE(stencilValues[0][1][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (3) * svGridSize]);
+                    REQUIRE(stencilValues[0][1][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (3 + 2) * svGridSize]);
+                    REQUIRE(stencilValues[2][1][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 3) * svGridSize]);
+                    REQUIRE(stencilValues[2][1][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 3 + 2) * svGridSize]);
+                    REQUIRE(stencilValues[0][0][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (1) * svGridSize]);
+                    REQUIRE(stencilValues[0][2][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (6 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[2][0][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[2][2][1][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 6 + 1) * svGridSize]);
+                    REQUIRE(stencilValues[0][0][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv]);
+                    REQUIRE(stencilValues[0][0][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (2) * svGridSize]);
+                    REQUIRE(stencilValues[0][2][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (6) * svGridSize]);
+                    REQUIRE(stencilValues[0][2][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (6 + 2) * svGridSize]);
+                    REQUIRE(stencilValues[2][0][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18) * svGridSize]);
+                    REQUIRE(stencilValues[2][0][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 2) * svGridSize]);
+                    REQUIRE(stencilValues[2][2][0][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 6) * svGridSize]);
+                    REQUIRE(stencilValues[2][2][2][isv][jsv][ksv] == stencilValues.field1d()[index_sv + (18 + 6 + 2) * svGridSize]);
+                }
     }
 
     SECTION("ocl vs seq periodic")
