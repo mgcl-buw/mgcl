@@ -887,14 +887,9 @@ namespace mgcl
         return a_2h;
     }
 
-    int VaryingStencilGpu::getO() const
+    int VaryingStencilGpu::getM() const
     {
-        return o;
-    }
-
-    cl_mem VaryingStencilGpu::getBuf() const
-    {
-        return buf;
+        return m;
     }
 
     int VaryingStencilGpu::getN() const
@@ -902,14 +897,34 @@ namespace mgcl
         return n;
     }
 
+    int VaryingStencilGpu::getO() const
+    {
+        return o;
+    }
+
+    int VaryingStencilGpu::getMgh() const
+    {
+        return m + 2 * gh;
+    }
+
+    int VaryingStencilGpu::getNgh() const
+    {
+        return n + 2 * gh;
+    }
+
+    int VaryingStencilGpu::getOgh() const
+    {
+        return o + 2 * gh;
+    }
+
+    cl_mem VaryingStencilGpu::getBuf() const
+    {
+        return buf;
+    }
+
     int VaryingStencilGpu::getGh() const
     {
         return gh;
-    }
-
-    int VaryingStencilGpu::getM() const
-    {
-        return m;
     }
 
     int VaryingStencilGpu::getWidth() const

@@ -56,6 +56,7 @@
 - check non-uniform domains
 - inline kernel source code, add CMake option MGCL_USE_EXTERNAL_KERNEL_FILE with false as default. Copy content of mgcl.cl into string at build time using CMake.
 - measure kernel timings using OpenCL built-in profiling
+- add Jacobi mpi ocl tests for different mpiLevelThresholds
 
 Done:
 - aggregate residual norm on gpu

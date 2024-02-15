@@ -1251,7 +1251,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_1_Varying27p")
         auto errNorm = calculateErrorNorm(1.0 / (double)m, *err);
         auto errMax = calculateMaxError(*err);
 
-        std::cout << "seq MPI Varying27p" << std::endl;
+        std::cout << "ocl MPI Varying27p" << std::endl;
         std::cout << "rank 0: " << std::endl;
         std::cout
             << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
@@ -1418,7 +1418,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
         auto errNorm = calculateErrorNorm(1.0 / (double)m, *err);
         auto errMax = calculateMaxError(*err);
 
-        std::cout << "seq MPI Varying27p" << std::endl;
+        std::cout << "ocl MPI Varying27p" << std::endl;
         std::cout << "rank 0: " << std::endl;
         std::cout
             << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl

@@ -133,6 +133,9 @@ namespace mgcl
         int getM() const;
         int getN() const;
         int getO() const;
+        int getMgh() const;
+        int getNgh() const;
+        int getOgh() const;
         int getWidth() const;
         int getGh() const;
         cl_mem getBuf() const;

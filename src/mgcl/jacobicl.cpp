@@ -237,6 +237,10 @@ namespace mgcl
         {
             auto svbuf = level.stencilValuesGpu->getBuf();
             int svgh = level.stencilValuesGpu->getGh();
+            int svmgh = level.stencilValuesGpu->getMgh();
+            int svngh = level.stencilValuesGpu->getNgh();
+            int svogh = level.stencilValuesGpu->getOgh();
+            int svGridSize = svmgh * svngh * svogh;
             err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
             err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
             err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
@@ -246,8 +250,12 @@ namespace mgcl
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svmgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svogh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
         }
