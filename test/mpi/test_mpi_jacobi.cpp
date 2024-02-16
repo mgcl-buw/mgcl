@@ -150,6 +150,9 @@ TEST_CASE("MPI jacobiSeq (n processes)", "[mpiN]")
                 v_loc[i][j][k] = v_glob[i + m_start][j + n_start][k + o_start];
             }
 
+    // TODO
+    FAIL();
+
     // cl.dumpToFile("cl" + std::to_string(mpi_rank) + ".txt");
 
     // if (mpi_rank == 0)
@@ -160,7 +163,7 @@ TEST_CASE("MPI jacobiSeq (n processes)", "[mpiN]")
 // Checks ghost update for any number of processes that is allowed by mgcl, e.g. 1, 2, 4, 8, 24.
 // Run with: mpiexec -n 8 tests_mpi "MPI jacobi ocl Laplace (n processes)"
 // TODO non-periodic
-TEST_CASE("MPI jacobi ocl Laplace (n processes)", "[mpiN]")
+TEST_CASE("MPI_jacobi_ocl_Laplace_(n_processes)", "[mpiN]")
 {
     using std::min;
 
@@ -171,6 +174,7 @@ TEST_CASE("MPI jacobi ocl Laplace (n processes)", "[mpiN]")
     int periodic = 1;
 
     int stepsPerIter = GENERATE(1, 2);
+    // int stepsPerIter = 1;
     CAPTURE(stepsPerIter);
 
     // check if mpi is initialized
@@ -198,6 +202,8 @@ TEST_CASE("MPI jacobi ocl Laplace (n processes)", "[mpiN]")
     MPI_Comm_rank(mpi_comm, &mpi_rank);
     MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
 
+    CAPTURE(mpi_rank);
+
     /* Initialize start and end for local grid */
     int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
     int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
@@ -209,6 +215,8 @@ TEST_CASE("MPI jacobi ocl Laplace (n processes)", "[mpiN]")
     int ml = (m_end - m_start) + 1;
     int nl = (n_end - n_start) + 1;
     int ol = (o_end - o_start) + 1;
+
+    CAPTURE(m_start, m_end, n_start, n_end, o_start, o_end, ml, nl, ol);
 
     // print coords and boundaries per rank
     // if (mpi_rank == 0)
@@ -238,14 +246,15 @@ TEST_CASE("MPI jacobi ocl Laplace (n processes)", "[mpiN]")
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
     double stencilFactor = 1.0 / (30.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
-    int maxiter = 10;
+    int maxiter = 1;
 
     int gh = stepsPerIter;
 
     // global test data
-    mgcl::Cuboid v_glob(m, n, o, gh, gh, gh);
-    mgcl::Cuboid r_glob(m, n, o, gh, gh, gh);
-    mgcl::Cuboid f_glob(m, n, o, gh, gh, gh);
+    auto v_glob_ptr = std::make_shared<mgcl::Cuboid>(m, n, o, gh, gh, gh);
+    auto f_glob_ptr = std::make_shared<mgcl::Cuboid>(m, n, o, gh, gh, gh);
+    auto& v_glob = *v_glob_ptr;
+    auto& f_glob = *f_glob_ptr;
 
     // Fill with 4th order periodic Problem
     mgcl::Cuboid solution(m, n, o);
@@ -260,8 +269,19 @@ TEST_CASE("MPI jacobi ocl Laplace (n processes)", "[mpiN]")
     // Update ghosts of test data
     // mgcl::MultigridEngine::updateGhostsSeq(vl, mpiData, true);
 
+    // Init global problem to create all needed structures
+    auto pptr_glob = std::make_shared<mgcl::Problem>(m, n, o, f_glob_ptr, v_glob_ptr);
+    auto& p_glob = *pptr_glob;
+    p_glob.setUseOpencl(true);
+    p_glob.setGhosts(gh);
+    p_glob.setGhostsIn(gh);
+    // p_glob.setMpiComm(mpi_comm);
+    p_glob.setStencilType(stencilType);
+    p_glob.setResidualNorm(resnorm);
+    p_glob.init();
+
     // Init Problem to create all needed structures
-    auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, vlptr, flptr, m, n, o);
+    auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, flptr, vlptr, m, n, o);
     auto& p = *pptr;
     p.setUseOpencl(true);
     p.setGhosts(gh);
@@ -276,6 +296,7 @@ TEST_CASE("MPI jacobi ocl Laplace (n processes)", "[mpiN]")
     // Check on level 0
     auto& lv = p.getLevelAt(0);
     auto mpiData = lv.getMpiDataPtr();
+    auto& lv_glob = p_glob.getLevelAt(0);
 
     // print neighbours per rank
     // for (int i = 0; i < mpi_size; i++)
@@ -287,28 +308,42 @@ TEST_CASE("MPI jacobi ocl Laplace (n processes)", "[mpiN]")
     //                   << mpiData->back << "," << mpiData->front << std::endl;
     // }
 
-    // Run Jacobi on global dataset for the expected result.
-    mgcl::MultigridEngine::jacobiSeq(v_glob, f_glob, r_glob, omega, h * h, maxiter, resnorm, stencilType,
-                                     stencilFactor, nullptr, true, true, false, stepsPerIter, nullptr);
+    auto f_loc_ret_ptr = lv.getDF().read(p.getCommands(), nullptr, true);
+    auto& f_loc_ret = *f_loc_ret_ptr;
 
+    CAPTURE(v_glob.getMgh(), v_glob.getNgh(), v_glob.getOgh());
+    CAPTURE(v_loc.getMgh(), v_loc.getNgh(), v_loc.getOgh());
+
+    // Make sure input is equal
+    for (int il = v_glob.getGhostsM(), ig = mpi_coords[0] * ml + v_loc.getGhostsM(); il < v_loc.getM() + v_glob.getGhostsM(); il++, ig++)
+        for (int jl = v_glob.getGhostsN(), jg = mpi_coords[1] * nl + v_loc.getGhostsN(); jl < v_loc.getN() + v_glob.getGhostsN(); jl++, jg++)
+            for (int kl = v_glob.getGhostsO(), kg = mpi_coords[2] * ol + v_loc.getGhostsO(); kl < v_loc.getO() + v_glob.getGhostsO(); kl++, kg++)
+            {
+                CAPTURE(il, jl, kl, ig, jg, kg);
+                REQUIRE(v_loc[il][jl][kl] == v_glob[ig][jg][kg]);
+                REQUIRE(f_loc[il][jl][kl] == f_glob[ig][jg][kg]);
+                REQUIRE(f_loc_ret[il][jl][kl] == f_loc[il][jl][kl]);
+                REQUIRE(f_loc_ret[il][jl][kl] == f_glob[ig][jg][kg]);
+            }
+
+    // Run Jacobi on global dataset for the expected result
+    mgcl::MultigridEngine::jacobi(p_glob, lv_glob, maxiter, true, stepsPerIter);
     mgcl::MultigridEngine::jacobi(p, lv, maxiter, true, stepsPerIter);
     tu.finish();
 
     auto v_loc_ret_ptr = lv.getDVIn().read(tu.getCommands(), nullptr, true);
     auto& v_loc_ret = *v_loc_ret_ptr;
+    auto v_glob_ret_ptr = lv_glob.getDVIn().read(p_glob.getCommands(), nullptr, true);
+    auto& v_glob_ret = *v_glob_ret_ptr;
 
-    for (int i = gh; i < ml + gh; i++)
-        for (int j = gh; j < nl + gh; j++)
-            for (int k = gh; k < ol + gh; k++)
+    // Compare local results with respective chunk of global results
+    for (int il = v_glob.getGhostsM(), ig = mpi_coords[0] * ml + v_loc.getGhostsM(); il < v_loc.getM() + v_glob.getGhostsM(); il++, ig++)
+        for (int jl = v_glob.getGhostsN(), jg = mpi_coords[1] * nl + v_loc.getGhostsN(); jl < v_loc.getN() + v_glob.getGhostsN(); jl++, jg++)
+            for (int kl = v_glob.getGhostsO(), kg = mpi_coords[2] * ol + v_loc.getGhostsO(); kl < v_loc.getO() + v_glob.getGhostsO(); kl++, kg++)
             {
-                v_loc_ret[i][j][k] = v_glob[i + m_start][j + n_start][k + o_start];
+                CAPTURE(il, jl, kl, ig, jg, kg);
+                REQUIRE(v_loc_ret[il][jl][kl] == v_glob_ret[ig][jg][kg]);
             }
-
-    // cl.dumpToFile("cl" + std::to_string(mpi_rank) + ".txt");
-
-    // if (mpi_rank == 0)
-    // {
-    //     cg.dumpToFile("cg.txt");
 }
 
 // Checks Jacobi using a VaryingStencil for any number of processes that is allowed by mgcl, e.g. 1, 2, 4, 8, 24.
@@ -399,20 +434,14 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_(n_processes)", "[mpiN]")
     int gh = stepsPerIter;
 
     // global test data
-    mgcl::Cuboid v_glob(m, n, o, gh, gh, gh);
-    mgcl::Cuboid r_glob(m, n, o, gh, gh, gh);
-    mgcl::Cuboid f_glob(m, n, o, gh, gh, gh);
+    auto v_glob_ptr = std::make_shared<mgcl::Cuboid>(m, n, o, gh, gh, gh);
+    auto f_glob_ptr = std::make_shared<mgcl::Cuboid>(m, n, o, gh, gh, gh);
+    auto& v_glob = *v_glob_ptr;
+    auto& f_glob = *f_glob_ptr;
 
     // Fill with 4th order periodic Problem
     mgcl::Cuboid solution(m, n, o);
     mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution);
-
-    // Create global stencilValues seperately since its bigger
-    int svgh = std::max(gh, 2);
-    mgcl::VaryingStencil sv_glob(m, n, o, 3, svgh, svgh, svgh);
-    // mgcl_test::fill7pLaplace(sv_glob, h, false);
-    for (int i = 0; i < sv_glob.field1d().size(); i++)
-        sv_glob.field1d()[i] = i;
 
     // Create local slices of global data
     std::shared_ptr<mgcl::Cuboid> vlptr = v_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
@@ -423,8 +452,26 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_(n_processes)", "[mpiN]")
     // Update ghosts of test data
     // mgcl::MultigridEngine::updateGhostsSeq(vl, mpiData, true);
 
+    // Init global problem to create all needed structures
+    auto pptr_glob = std::make_shared<mgcl::Problem>(m, n, o, f_glob_ptr, v_glob_ptr);
+    auto& p_glob = *pptr_glob;
+    p_glob.setUseOpencl(true);
+    p_glob.setGhosts(gh);
+    p_glob.setGhostsIn(gh);
+    // p_glob.setMpiComm(mpi_comm);
+    p_glob.setStencilType(stencilType);
+    p_glob.setResidualNorm(resnorm);
+
+    auto svptr_glob = p_glob.getStencilValues();
+    auto& sv_glob = *svptr_glob;
+    // mgcl_test::fill7pLaplace(sv, h, false);
+    for (int i = 0; i < sv_glob.field1d().size(); i++)
+        sv_glob.field1d()[i] = i;
+
+    p_glob.init();
+
     // Init Problem to create all needed structures
-    auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, vlptr, flptr, m, n, o);
+    auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, flptr, vlptr, m, n, o);
     auto& p = *pptr;
     p.setUseOpencl(true);
     p.setGhosts(gh);
@@ -446,6 +493,7 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_(n_processes)", "[mpiN]")
     // Check on level 0
     auto& lv = p.getLevelAt(0);
     auto mpiData = lv.getMpiDataPtr();
+    auto& lv_glob = p_glob.getLevelAt(0);
 
     // print neighbours per rank
     // for (int i = 0; i < mpi_size; i++)
@@ -457,26 +505,39 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_(n_processes)", "[mpiN]")
     //                   << mpiData->back << "," << mpiData->front << std::endl;
     // }
 
-    // Run Jacobi on global dataset for the expected result.
-    mgcl::MultigridEngine::jacobiSeq(v_glob, f_glob, r_glob, omega, h * h, maxiter, resnorm, stencilType,
-                                     stencilFactor, &sv_glob, true, true, false, stepsPerIter, nullptr);
+    auto f_loc_ret_ptr = lv.getDF().read(p.getCommands(), nullptr, true);
+    auto& f_loc_ret = *f_loc_ret_ptr;
 
+    CAPTURE(v_glob.getMgh(), v_glob.getNgh(), v_glob.getOgh());
+    CAPTURE(v_loc.getMgh(), v_loc.getNgh(), v_loc.getOgh());
+
+    // Make sure input is equal
+    for (int il = v_glob.getGhostsM(), ig = mpi_coords[0] * ml + v_loc.getGhostsM(); il < v_loc.getM() + v_glob.getGhostsM(); il++, ig++)
+        for (int jl = v_glob.getGhostsN(), jg = mpi_coords[1] * nl + v_loc.getGhostsN(); jl < v_loc.getN() + v_glob.getGhostsN(); jl++, jg++)
+            for (int kl = v_glob.getGhostsO(), kg = mpi_coords[2] * ol + v_loc.getGhostsO(); kl < v_loc.getO() + v_glob.getGhostsO(); kl++, kg++)
+            {
+                CAPTURE(il, jl, kl, ig, jg, kg);
+                REQUIRE(v_loc[il][jl][kl] == v_glob[ig][jg][kg]);
+                REQUIRE(f_loc[il][jl][kl] == f_glob[ig][jg][kg]);
+                REQUIRE(f_loc_ret[il][jl][kl] == f_loc[il][jl][kl]);
+                REQUIRE(f_loc_ret[il][jl][kl] == f_glob[ig][jg][kg]);
+            }
+
+    mgcl::MultigridEngine::jacobi(p_glob, lv_glob, maxiter, true, stepsPerIter);
     mgcl::MultigridEngine::jacobi(p, lv, maxiter, true, stepsPerIter);
     tu.finish();
 
     auto v_loc_ret_ptr = lv.getDVIn().read(tu.getCommands(), nullptr, true);
     auto& v_loc_ret = *v_loc_ret_ptr;
+    auto v_glob_ret_ptr = lv_glob.getDVIn().read(p_glob.getCommands(), nullptr, true);
+    auto& v_glob_ret = *v_glob_ret_ptr;
 
-    for (int i = gh; i < ml + gh; i++)
-        for (int j = gh; j < nl + gh; j++)
-            for (int k = gh; k < ol + gh; k++)
+    // Compare local results with respective chunk of global results
+    for (int il = v_glob.getGhostsM(), ig = mpi_coords[0] * ml + v_loc.getGhostsM(); il < v_loc.getM() + v_glob.getGhostsM(); il++, ig++)
+        for (int jl = v_glob.getGhostsN(), jg = mpi_coords[1] * nl + v_loc.getGhostsN(); jl < v_loc.getN() + v_glob.getGhostsN(); jl++, jg++)
+            for (int kl = v_glob.getGhostsO(), kg = mpi_coords[2] * ol + v_loc.getGhostsO(); kl < v_loc.getO() + v_glob.getGhostsO(); kl++, kg++)
             {
-                v_loc_ret[i][j][k] = v_glob[i + m_start][j + n_start][k + o_start];
+                CAPTURE(il, jl, kl, ig, jg, kg);
+                REQUIRE(v_loc_ret[il][jl][kl] == v_glob_ret[ig][jg][kg]);
             }
-
-    // cl.dumpToFile("cl" + std::to_string(mpi_rank) + ".txt");
-
-    // if (mpi_rank == 0)
-    // {
-    //     cg.dumpToFile("cg.txt");
 }
