@@ -445,8 +445,6 @@ TEST_CASE("MPI_jacobi_ocl_Laplace_n_processes", "[mpiN]")
     p.setResidualNorm(resnorm);
     p.init();
 
-    mgcl_test::TestUtility tu(pptr);
-
     // Check on level 0
     auto& lv = p.getLevelAt(0);
     auto mpiData = lv.getMpiDataPtr();
@@ -483,9 +481,10 @@ TEST_CASE("MPI_jacobi_ocl_Laplace_n_processes", "[mpiN]")
     // Run Jacobi on global dataset for the expected result
     mgcl::MultigridEngine::jacobi(p_glob, lv_glob, maxiter, true, stepsPerIter);
     mgcl::MultigridEngine::jacobi(p, lv, maxiter, true, stepsPerIter);
-    tu.finish();
+    p.getOpenCLHelper().finish();
+    p_glob.getOpenCLHelper().finish();
 
-    auto v_loc_ret_ptr = lv.getDVIn().read(tu.getCommands(), nullptr, true);
+    auto v_loc_ret_ptr = lv.getDVIn().read(p.getCommands(), nullptr, true);
     auto& v_loc_ret = *v_loc_ret_ptr;
     auto v_glob_ret_ptr = lv_glob.getDVIn().read(p_glob.getCommands(), nullptr, true);
     auto& v_glob_ret = *v_glob_ret_ptr;
@@ -654,8 +653,6 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_n_processes", "[mpiN]")
 
     p.init();
 
-    mgcl_test::TestUtility tu(pptr);
-
     // Check on level 0
     auto& lv = p.getLevelAt(0);
     auto mpiData = lv.getMpiDataPtr();
@@ -691,9 +688,10 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_n_processes", "[mpiN]")
 
     mgcl::MultigridEngine::jacobi(p_glob, lv_glob, maxiter, true, stepsPerIter);
     mgcl::MultigridEngine::jacobi(p, lv, maxiter, true, stepsPerIter);
-    tu.finish();
+    p.getOpenCLHelper().finish();
+    p_glob.getOpenCLHelper().finish();
 
-    auto v_loc_ret_ptr = lv.getDVIn().read(tu.getCommands(), nullptr, true);
+    auto v_loc_ret_ptr = lv.getDVIn().read(p.getCommands(), nullptr, true);
     auto& v_loc_ret = *v_loc_ret_ptr;
     auto v_glob_ret_ptr = lv_glob.getDVIn().read(p_glob.getCommands(), nullptr, true);
     auto& v_glob_ret = *v_glob_ret_ptr;
