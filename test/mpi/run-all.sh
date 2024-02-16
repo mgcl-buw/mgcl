@@ -133,9 +133,14 @@ if [ "$TEST_JACOBI" = true ] || [ "$TEST_ALL" = true ] ; then
     echo "Run Tests from test_mpi_jacobi.cpp ..."
     echo "#######################"
 
-    run_test --oversubscribe -n 8 "$exe" "MPI jacobiSeq (n processes)"
-    run_test --oversubscribe -n 8 "$exe" "MPI jacobi ocl Laplace (n processes)"
-    run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_VaryingStencil_(n_processes)"
+    run_test --oversubscribe -n 1 "$exe" "MPI_jacobiSeq_Laplace_n_processes"
+    run_test --oversubscribe -n 8 "$exe" "MPI_jacobiSeq_Laplace_n_processes"
+    run_test --oversubscribe -n 1 "$exe" "MPI_jacobiSeq_VaryingStencil_n_processes"
+    run_test --oversubscribe -n 8 "$exe" "MPI_jacobiSeq_VaryingStencil_n_processes"
+    run_test --oversubscribe -n 1 "$exe" "MPI_jacobi_ocl_Laplace_n_processes"
+    run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_Laplace_n_processes"
+    run_test --oversubscribe -n 1 "$exe" "MPI_jacobi_ocl_VaryingStencil_n_processes"
+    run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_VaryingStencil_n_processes"
 fi
 
 if [ "$TEST_UTIL" = true ] || [ "$TEST_ALL" = true ] ; then
