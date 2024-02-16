@@ -713,8 +713,8 @@ namespace mgcl
         //                          static_cast<size_t>(ogh > 4 ? 4 : ogh)};
         size_t local[3] = {1, 1, 32};
         // decrease wg size for bigger grids
-        if (mgh >= 32 && ngh >= 32 && ogh >= 32)
-            local[2] = 16;
+        // if (mgh >= 32 && ngh >= 32 && ogh >= 32)
+        //     local[2] = 16;
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
