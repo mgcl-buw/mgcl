@@ -312,6 +312,8 @@ TEST_CASE("MPI jacobi ocl Laplace (n processes)", "[mpiN]")
 }
 
 // Checks Jacobi using a VaryingStencil for any number of processes that is allowed by mgcl, e.g. 1, 2, 4, 8, 24.
+// Use an arbitrary stencil with no duplicate values (result is only checked against global jacobi, not
+// against the actual solution).
 // Run with: mpiexec -n 8 tests_mpi "MPI_jacobi_ocl_VaryingStencil_(n_processes)"
 // TODO non-periodic
 TEST_CASE("MPI_jacobi_ocl_VaryingStencil_(n_processes)", "[mpiN]")
@@ -408,7 +410,9 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_(n_processes)", "[mpiN]")
     // Create global stencilValues seperately since its bigger
     int svgh = std::max(gh, 2);
     mgcl::VaryingStencil sv_glob(m, n, o, 3, svgh, svgh, svgh);
-    mgcl_test::fill7pLaplace(sv_glob, h, false);
+    // mgcl_test::fill7pLaplace(sv_glob, h, false);
+    for (int i = 0; i < sv_glob.field1d().size(); i++)
+        sv_glob.field1d()[i] = i;
 
     // Create local slices of global data
     std::shared_ptr<mgcl::Cuboid> vlptr = v_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
@@ -431,7 +435,9 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_(n_processes)", "[mpiN]")
 
     auto svptr = p.getStencilValues();
     auto& sv = *svptr;
-    mgcl_test::fill7pLaplace(sv, h, false);
+    // mgcl_test::fill7pLaplace(sv, h, false);
+    for (int i = 0; i < sv.field1d().size(); i++)
+        sv.field1d()[i] = i;
 
     p.init();
 
