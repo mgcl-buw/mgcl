@@ -1094,12 +1094,12 @@ namespace mgcl
     }
 
     /**
-     * @brief Returns true, if the program is run with more than one MPI processes. Only then the MPI routines
-     * will be used internally.
+     * @brief Returns true, if the program is run with more than one MPI processes and ignoreMpi is false.
+     * Only then the MPI routines will be used internally.
      */
     bool Problem::useMpi() // TODO maybe as attribute and setter/getter
     {
-        return mpiSize() > 1;
+        return !getIgnoreMpi() && mpiSize() > 1;
     }
 
     int Problem::mpiRank() const

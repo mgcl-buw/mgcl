@@ -151,6 +151,9 @@ namespace mgcl
         /* Minimum amount of grid points for which MPI is used. Coarser levels will be run on one process. */
         int mpiMinGridPoints = 4;
 
+        /* If true, all MPI routines are ignored, even if the program is started with more than one MPI process. */
+        bool ignoreMpi = false;
+
         void checkGlobalDimensions();
         bool useMpi();
 
@@ -320,6 +323,9 @@ namespace mgcl
         int getMGlobal() const;
         int getNGlobal() const;
         int getOGlobal() const;
+
+        bool getIgnoreMpi() const { return ignoreMpi; }
+        void setIgnoreMpi(bool ignoreMpi_) { ignoreMpi = ignoreMpi_; }
 
         friend std::ostream& operator<<(std::ostream& os, const Problem& lv);
     };
