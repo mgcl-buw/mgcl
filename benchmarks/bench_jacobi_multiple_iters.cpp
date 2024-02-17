@@ -109,6 +109,7 @@ TEST_CASE("benchmark Jacobi OCL multiple iters", "[console][jacobiMulti][ocl]")
 
                 auto p = std::make_shared<mgcl::Problem>(m, n, o, v, f);
                 p->setGhosts(spi);
+                p->setGhostsIn(spi);
                 p->setJacobiIterationsPerKernel(spi);
                 p->setUseOpencl(true);
                 p->setSilent(true);

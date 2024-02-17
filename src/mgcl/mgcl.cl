@@ -801,9 +801,6 @@ __kernel void jacobi_iter_27point_varying_stencil_3d(
         // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
         int index_sv = (i - ghosts + ghosts_sv) * svno + (j - ghosts + ghosts_sv) * svogh + (k - ghosts + ghosts_sv);
 
-        int index_sv = (i - ghosts + ghosts_sv) * svno + (j - ghosts + ghosts_sv) * ((ogh - 2 * ghosts) + 2 * ghosts_sv) + (k - ghosts + ghosts_sv);
-        int gridsize = ((mgh - 2 * ghosts) + 2 * ghosts_sv) * ((ngh - 2 * ghosts) + 2 * ghosts_sv) * ((ogh - 2 * ghosts) + 2 * ghosts_sv);
-
         double res;
         double v_in_index = v_in[index];
         double sv_self = stencilValues[index_sv + (9 + 3 + 1) * svGridSize];
