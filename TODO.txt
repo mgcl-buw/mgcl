@@ -13,6 +13,28 @@
   - Dirichlet
 - add flag, e.g. UNSAFE, where, if set, checks and exceptions are skipped for performance's sake
 - add/use multiple jacobi iters flag
+- check Dirichlet tests
+- check non-uniform domains
+- inline kernel source code, add CMake option MGCL_USE_EXTERNAL_KERNEL_FILE with false as default. Copy content of mgcl.cl into string at build time using CMake.
+- measure kernel timings using OpenCL built-in profiling
+- add Jacobi mpi ocl tests for different mpiLevelThresholds
+
+Done:
+- aggregate residual norm on gpu
+  - implement max kernel
+  - implement + test sum
+  - retest jacobi / residual
+  - bench sum
+- check if residual must be recalculated after last jacobi iteration in v-cycle (before restriction)
+- multiple jacobi iters without ghost update in-between, requires #ghosts = #iters
+  (especially good for MPI since for every ghost update data needs to be transferred
+  from device to host, process to process and back to device again)
+- add MPI Support
+  - update ghosts
+  - Helper class
+  - initialize Levels
+- multi-gpu for bigger problems (+ mpi)
+ -> aggregate data on one MPI node for small grids (i.e. 64^3?, tbd) and many nodes for big grids
 - rework stencilValues layout: Instead of storing the entire stencil for one grid point consecutively, store one coefficient
   for all grid points consecutively. This should yield performance gains for the GPU due to enhanced memory coalescing. (HYPRE does this, too.)
   Before: [c0_gp0, c1_gp0, ..., c26_gp0, c0_gp1, ...]
@@ -48,29 +70,6 @@
   [x] gather(VaryingStencil)
   [x] scatter(VaryingStencil)
   
-  [ ] mpi vcycle (check with test/run-all.sh -v)
+  [x] mpi vcycle (check with test/run-all.sh -v)
   
-  [ ] All the tests
-
-- check Dirichlet tests
-- check non-uniform domains
-- inline kernel source code, add CMake option MGCL_USE_EXTERNAL_KERNEL_FILE with false as default. Copy content of mgcl.cl into string at build time using CMake.
-- measure kernel timings using OpenCL built-in profiling
-- add Jacobi mpi ocl tests for different mpiLevelThresholds
-
-Done:
-- aggregate residual norm on gpu
-  - implement max kernel
-  - implement + test sum
-  - retest jacobi / residual
-  - bench sum
-- check if residual must be recalculated after last jacobi iteration in v-cycle (before restriction)
-- multiple jacobi iters without ghost update in-between, requires #ghosts = #iters
-  (especially good for MPI since for every ghost update data needs to be transferred
-  from device to host, process to process and back to device again)
-- add MPI Support
-  - update ghosts
-  - Helper class
-  - initialize Levels
-- multi-gpu for bigger problems (+ mpi)
- -> aggregate data on one MPI node for small grids (i.e. 64^3?, tbd) and many nodes for big grids
+  [x] All the tests
