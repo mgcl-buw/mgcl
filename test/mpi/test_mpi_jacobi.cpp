@@ -625,7 +625,7 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_n_processes", "[mpiN]")
     for (int i = 0; i < sv_glob.field1d().size(); i++)
         sv_glob.field1d()[i] = i;
 
-    p_glob.init(); // TODO crash here. Need mpiForceLocal param?
+    p_glob.init();
     return;
 
     // Init Problem to create all needed structures

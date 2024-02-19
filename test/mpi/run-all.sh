@@ -26,6 +26,7 @@ print_help() {
   echo "-l,--level: Run Level specific tests"
   echo "-g,--ghosts: Run Ghost-Update specific tests (Cuboid only)"
   echo "-j,--jacobi: Run Jacobi specific tests"
+  echo "-r,--residual: Run Residual specific tests"
   echo "-u,--util: Run Utility specific tests (e.g. gather and scatter)"
   echo "-v,--vcycle: Run Vcycle specific tests (i.e. solving a problem)"
   echo "-s,--stencil: Run Stencil specific tests (mult, ghost update, etc.)"
@@ -37,6 +38,7 @@ TEST_PROBLEM=false
 TEST_LEVEL=false
 TEST_GHOSTS=false
 TEST_JACOBI=false
+TEST_RESIDUAL=false
 TEST_UTIL=false
 TEST_VCYCLE=false
 TEST_STENCIL=false
@@ -64,6 +66,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     -j|--jacobi)
       TEST_JACOBI=true
+      TEST_ALL=false
+      shift # past argument
+      ;;
+    -r|--residual)
+      TEST_RESIDUAL=true
       TEST_ALL=false
       shift # past argument
       ;;
@@ -141,6 +148,17 @@ if [ "$TEST_JACOBI" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_Laplace_n_processes"
     run_test --oversubscribe -n 1 "$exe" "MPI_jacobi_ocl_VaryingStencil_n_processes"
     run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_VaryingStencil_n_processes"
+fi
+
+if [ "$TEST_RESIDUAL" = true ] || [ "$TEST_ALL" = true ] ; then
+    echo "#######################"
+    echo "Run Tests from test_mpi_residual.cpp ..."
+    echo "#######################"
+
+    run_test --oversubscribe -n 1 "$exe" "MPI_residual_seq_VaryingStencil_n_processes"
+    run_test --oversubscribe -n 8 "$exe" "MPI_residual_seq_VaryingStencil_n_processes"
+    run_test --oversubscribe -n 1 "$exe" "MPI_residual_ocl_VaryingStencil_n_processes"
+    run_test --oversubscribe -n 8 "$exe" "MPI_residual_ocl_VaryingStencil_n_processes"
 fi
 
 if [ "$TEST_UTIL" = true ] || [ "$TEST_ALL" = true ] ; then
