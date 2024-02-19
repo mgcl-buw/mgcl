@@ -1986,7 +1986,8 @@ __kernel void mult_stencils_fix_var(
 __kernel void cut_stencils_w7_to_w3(
     __global double* restrict in,
     __global double* restrict out,
-    const int m, const int n, const int o,
+    const int m_fine, const int n_fine, const int o_fine,
+    const int m_coarse, const int n_coarse, const int o_coarse,
     const int ghin, const int ghout,
     const int nghout, const int oghout)
 {
@@ -1998,25 +1999,22 @@ __kernel void cut_stencils_w7_to_w3(
     int j2 = get_global_id(1) * 2 + 1;
     int k2 = get_global_id(2) * 2 + 1;
 
-    int gridsize_fine = (2 * m + 2 * ghin) * (2 * n + 2 * ghin) * (2 * o + 2 * ghin);
-    int gridsize_coarse = (m + 2 * ghout) * nghout * oghout;
+    int gridsize_fine = (m_fine + 2 * ghin) * (n_fine + 2 * ghin) * (o_fine + 2 * ghin);
+    int gridsize_coarse = (m_coarse + 2 * ghout) * nghout * oghout;
 
     // grid point offsets
-    int cell_fine = i2 * (2 * n + 2 * ghin) * (2 * o + 2 * ghin) + j2 * (2 * o + 2 * ghin) + k2;
+    int cell_fine = i2 * (n_fine + 2 * ghin) * (o_fine + 2 * ghin) + j2 * (o_fine + 2 * ghin) + k2;
     int cell_coarse = i * nghout * oghout + j * oghout + k;
 
-    if (i < m + ghout && j < n + ghout && k < o + ghout)
+    if (i < m_coarse + ghout && j < n_coarse + ghout && k < o_coarse + ghout)
     {
-        // starting index for coarse grid
-        int idx_coarse = cell_coarse;
-
         // clang-format off
         for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
         for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
         for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
         {
-            out[idx_coarse] = in[cell_fine + (ii2 * 49 + jj2 * 7 + kk2) * gridsize_fine];
-            idx_coarse += gridsize_coarse;
+            out[cell_coarse] = in[cell_fine + (ii2 * 49 + jj2 * 7 + kk2) * gridsize_fine];
+            cell_coarse += gridsize_coarse;
         }
         // clang-format on
     }

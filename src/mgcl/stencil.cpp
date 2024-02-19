@@ -856,9 +856,12 @@ namespace mgcl
         int pos = 0;
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buf);
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &outbuf);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m2);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n2);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o2);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &resm);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &resn);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &reso);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghout);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &nghout);

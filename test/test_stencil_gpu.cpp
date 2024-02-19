@@ -1214,7 +1214,8 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
     int gh = 2;
 
     // This section checks if the indices inside the kernel are correctly reduced to 1d.
-    SECTION("indices")
+    // Here, a_2h has indeed half the grid size of a_h
+    SECTION("indices_regular")
     {
         // create test stencils and fill with unique values
         mgcl::VaryingStencil a_h(2 * m, 2 * n, 2 * o, 7, 0, 0, 0);
@@ -1293,6 +1294,55 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
 
         // cut on gpu and read back result
         auto a_2h_gpu = a_gpu.cutFromW7ToW3(t.getProgram(), t.getCommands(), t.getContext(), 2);
+        auto ret = a_2h_gpu.read(t.getCommands(), true);
+        t.finish();
+
+        REQUIRE(ret.getM() == a_2h.getM());
+        REQUIRE(ret.getN() == a_2h.getN());
+        REQUIRE(ret.getO() == a_2h.getO());
+        REQUIRE(ret.getWidth() == a_2h.getWidth());
+        REQUIRE(ret.getWidth() == a_2h.getWidth());
+        REQUIRE(ret.getWidth() == a_2h.getWidth());
+        REQUIRE(ret.getMgh() == a_2h.getMgh());
+        REQUIRE(ret.getNgh() == a_2h.getNgh());
+        REQUIRE(ret.getOgh() == a_2h.getOgh());
+
+        REQUIRE(ret.isEqual(a_2h));
+    }
+
+    // This section checks if the actual calculation is correct by checking results vs the sequential version.
+    // Special case when using mpi, where the resulting stencil should *not* be half of the fine stencil (happens when
+    // the level is just above the threshold on root).
+    SECTION("vs_seq_special_case_mpi")
+    {
+        int resm = m;
+        int resn = n;
+        int reso = o;
+
+        mgcl::VaryingStencilGpu a_gpu(m, n, o, 7, gh, t.getContext(), t.getCommands());
+
+        // create VaryingStencil, fill with random values and copy to gpu buffer
+        mgcl::VaryingStencil a_h(m, n, o, 7, gh, gh, gh);
+        a_h.fillRandomInt();
+        a_gpu.fill(a_h, t.getCommands(), true);
+        t.finish();
+
+        // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
+        mgcl::VaryingStencil a_2h(resm, resn, reso, 3, 2, 2, 2);
+        // clang-format off
+        for (int i = 2, i2 = 1; i < (a_h.getM() >> 1) + 2; i++, i2 += 2)
+        for (int j = 2, j2 = 1; j < (a_h.getN() >> 1) + 2; j++, j2 += 2)
+        for (int k = 2, k2 = 1; k < (a_h.getO() >> 1) + 2; k++, k2 += 2)
+            for (int ii = 0, ii2 = 1; ii < 3; ii++, ii2 += 2)
+            for (int jj = 0, jj2 = 1; jj < 3; jj++, jj2 += 2)
+            for (int kk = 0, kk2 = 1; kk < 3; kk++, kk2 += 2)
+            {
+                a_2h[ii][jj][kk][i][j][k] = a_h[ii2][jj2][kk2][i2][j2][k2];
+            }
+        // clang-format on
+
+        // cut on gpu and read back result
+        auto a_2h_gpu = a_gpu.cutFromW7ToW3(t.getProgram(), t.getCommands(), t.getContext(), 2, resm, resn, reso);
         auto ret = a_2h_gpu.read(t.getCommands(), true);
         t.finish();
 
