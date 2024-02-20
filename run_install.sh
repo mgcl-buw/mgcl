@@ -23,6 +23,6 @@ cd "$HOME"/projects/mgcl || exit
 # cmake --build "$HOME"/projects/mgcl/build
 # cmake -DCMAKE_INSTALL_PREFIX=$HOME/mgcl -DCMAKE_BUILD_TYPE=Release --build "$HOME"/projects/mgcl/build --target install
 
-cmake -DCMAKE_BUILD_TYPE=Release --build "$HOME"/projects/mgcl/build
+cmake --build "$HOME"/projects/mgcl/build
 cmake --install "$HOME"/projects/mgcl/build --prefix "$HOME"/mgcl 
 # cd "$HOME"/projects/mgcl || exit
