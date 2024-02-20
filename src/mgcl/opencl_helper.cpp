@@ -143,8 +143,17 @@ namespace mgcl
         mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
 
         // read kernel source
-        std::string kernelSource = loadKernelSource(kernelFile);
-        const char* ksc = kernelSource.c_str();
+        std::string kernelSource;
+        const char* ksc;
+        if (readKernelFromFile)
+        {
+            kernelSource = loadKernelSource(kernelFile);
+            ksc = kernelSource.c_str();
+        }
+        else
+        {
+            ksc = MGCL_KERNEL_SOURCE.c_str();
+        }
 
         // Create the compute program from the source buffer
         program = clCreateProgramWithSource(context, 1, &ksc, nullptr, &err);

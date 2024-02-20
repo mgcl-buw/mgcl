@@ -1,0 +1,15 @@
+/**
+ * This file contains the variable for the kernel source, which gets filled
+ * by cmake at configure time every time the content of mgcl.cl changes.
+ * This file itself is not modified but rather serves as a template for inserting
+ * the kernel code. The generated file is placed alongside
+ * and named 'mgcl_kernel.hpp'.
+ *
+ */
+
+#include <string>
+
+namespace mgcl
+{
+    const std::string MGCL_KERNEL_SOURCE = R"DELIM(<replaceme>)DELIM";
+}

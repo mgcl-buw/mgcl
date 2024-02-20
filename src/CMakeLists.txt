@@ -51,6 +51,7 @@ set(SOURCES_LIB
   mgcl/mpi_util.cpp
   mgcl/mpi_stencil.hpp
   mgcl/mpi_stencil.cpp
+  mgcl/mgcl_kernel.hpp
 )
 
 add_library(mgcl ${MGCL_PUBLIC_HEADERS} ${SOURCES_LIB})
@@ -153,3 +154,19 @@ add_custom_target(copy_kernels DEPENDS "${CMAKE_BINARY_DIR}/src/mgcl/mgcl.cl")
 # Whenever target 'mgcl' is requested, the custom target will be evaluated.
 add_dependencies(mgcl copy_kernels)
 
+# Create a custom command to update kernel cpp src whenever the .cl-file changes
+add_custom_command(
+  OUTPUT 
+    "${CMAKE_CURRENT_SOURCE_DIR}/mgcl/mgcl_kernel.hpp"
+    
+  COMMAND "${CMAKE_COMMAND}" 
+    "-Dcl_file=${CMAKE_CURRENT_SOURCE_DIR}/mgcl/mgcl.cl"
+    "-Dcpp_file_template=${CMAKE_CURRENT_SOURCE_DIR}/mgcl/mgcl_kernel.hpp.in"
+    "-Dcpp_file=${CMAKE_CURRENT_SOURCE_DIR}/mgcl/mgcl_kernel.hpp"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/substitude_kernel_source.cmake"
+  
+  DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/mgcl/mgcl.cl"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mgcl/mgcl_kernel.hpp.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/substitude_kernel_source.cmake"
+)

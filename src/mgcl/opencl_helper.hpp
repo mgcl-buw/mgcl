@@ -37,6 +37,10 @@ namespace mgcl
         cl_command_queue commands = nullptr;                /* must be set if a specific context/device/buffers should be reused */
         cl_program program = nullptr;                       /* compute program, only for internal purposes */
 
+        /* If true, kernel code is read from separate file, which is denoted by kernelFile. This allows
+         * us to use a different kernel file for e.g. benchmarking. */
+        bool readKernelFromFile = false;
+
         friend class Problem;
 
     public:
@@ -86,6 +90,9 @@ namespace mgcl
         void setDeviceId(const cl_device_id& deviceId_);
 
         Problem* getProblem() const;
+
+        bool getReadKernelFromFile() const { return readKernelFromFile; }
+        void setReadKernelFromFile(bool readKernelFromFile_) { readKernelFromFile = readKernelFromFile_; }
     };
 
 #define mgclCheckError(E, S) OpenCLHelper::mgcl_check_error(E, S, __FILE__, __LINE__)
