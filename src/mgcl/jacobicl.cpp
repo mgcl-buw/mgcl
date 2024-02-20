@@ -219,7 +219,7 @@ namespace mgcl
         }
         else if (problem.stencilType == MGCL_VARYING)
         {
-            kernel_name = "jacobi_iter_27point_varying_stencil_3d";
+            kernel_name = "jacobi_iter_27point_varying_stencil_1d";
         }
 
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
@@ -277,17 +277,12 @@ namespace mgcl
         }
         mgclCheckError(err, "Setting kernel arguments");
 
-        // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
-        size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-        // const size_t local[2] = {static_cast<size_t>(ngh > 4 ? 4 : ngh),
-        //                          static_cast<size_t>(ogh > 8 ? 8 : ogh)}; // TODO problem.jacobi_wg_size_x
-        size_t local[3] = {static_cast<size_t>(1), static_cast<size_t>(1), static_cast<size_t>(32)};
+        // One work-item per cell (including ghost cells).
+        // TODO Optimal local size to be found.
+        size_t global[2] = {static_cast<size_t>(mgh * ngh * ogh), static_cast<size_t>(1)};
+        size_t local[2] = {static_cast<size_t>(512), static_cast<size_t>(1)};
 
-        // decrease wg size for bigger grids
-        // if (mgh >= 32 && ngh >= 32 && ogh >= 32)
-        //     local[2] = 16;
-
-        // kernels that use constant Laplace stencils are 2d and need different global sizes
+        // kernels that use constant Laplace stencils are 2d and need different global and local sizes
         if (problem.stencilType != MGCL_VARYING)
         {
             global[0] = static_cast<size_t>(ngh);
@@ -296,12 +291,11 @@ namespace mgcl
             local[1] = static_cast<size_t>(64);
         }
 
-        for (int i = 0; i < 3; i++)
+        // Pad global sizes to fit to local sizes
+        for (int i = 0; i < (problem.stencilType == MGCL_VARYING ? 1 : 2); i++)
             if (global[i] % local[i] != 0)
             {
-                // printf("padding global size %d from %ld to ", i, global[i]);
                 global[i] += local[i] - (global[i] % local[i]);
-                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
             }
 
         int globalIter = 0;
@@ -356,7 +350,7 @@ namespace mgcl
                 if (problem.stencilType != MGCL_VARYING)
                     err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
                 else
-                    err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
+                    err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 1, NULL, global, local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing kernel");
             }
         }

@@ -786,7 +786,7 @@ __kernel void jacobi_iter_27point_varying_stencil(
 }
 
 /* runs one iteration of jacobi's method using one work-item per grid node.
- * uses a 3D kernel, which parallelizes all three loop in x,y and z directions.
+ * uses a 1d kernel, which parallelizes all three loop in x,y and z directions.
  * global size must be of ghosted grid.
  * mgh, ngh and ogh must be dimensions of local ghosted grid, too.
  * svmgh, svngh and svogh are ghosted grid sizes of stencilValues (might differ from mgh,ngh,ogh when using MPI).
@@ -800,7 +800,7 @@ __kernel void jacobi_iter_27point_varying_stencil(
  *   Jacobi with multiple iterations without ghost cell update in-between. I.e. when
  *   stepsPerIter = 1: idx_start = ghosts.
  */
-__kernel void jacobi_iter_27point_varying_stencil_3d(
+__kernel void jacobi_iter_27point_varying_stencil_1d(
     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
     __global double* restrict v_out,
     __global double* restrict f,
@@ -813,9 +813,11 @@ __kernel void jacobi_iter_27point_varying_stencil_3d(
     const int svGridSize,
     const int idx_start, const int store_residual)
 {
-    int i = get_global_id(0);
-    int j = get_global_id(1);
-    int k = get_global_id(2);
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
 
     // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
     if (i >= idx_start && j >= idx_start && k >= idx_start && i < mgh - idx_start && j < ngh - idx_start && k < ogh - idx_start)
