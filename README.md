@@ -122,6 +122,7 @@ Optional useful CMake options:
 - `-DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/openmpi` (if mpi is not found by default)
 - `-DBACKWARD_HAS_DWARF=ON` (for tests targets)
 - `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` (needs to have ccache installed on your system)
+- `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`: Generate a `compile_commands.json` file, that can be used by a language server like clangd.
 
 Not used anymore:
 - `-DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=include-what-you-use;-Xiwyu;--cxx17ns` (currently hard-coded only for src and for Debug type)
@@ -143,7 +144,8 @@ For a development build enabling switching between build types without recompili
 
 ## Install
 
-Run the cmake install target in order to install mgcl. The install path can be set using the variable CMAKE_INSTALL_PATH.
+Run the cmake install target in order to install mgcl. The install location can be adjusted by providing the `--prefix <path>` argument. For example:
 
 ```
+cmake --install "$HOME"/projects/mgcl/build --prefix "$HOME"/mgcl
 ```
