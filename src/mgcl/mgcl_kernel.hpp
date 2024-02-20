@@ -234,31 +234,34 @@ __kernel void residual_7point(
     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
     __global double* restrict f,
     __global double* restrict r,
-    const double h2inv, const int m, const int n, const int o,
+    const double h2inv, const int mgh, const int ngh, const int ogh,
     const int ghosts, const int moff, const int noff, const int ooff)
 {
-    int i = get_global_id(0);
-    int j = get_global_id(1);
-    int k = get_global_id(2);
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
 
     // loop boundaries
     // TODO maybe refactor to use v_ghm, etc.?
     int istart_v = ghosts + moff;
     int jstart_v = ghosts + noff;
     int kstart_v = ghosts + ooff;
-    int iend_v = m - ghosts - moff;
-    int jend_v = n - ghosts - noff;
-    int kend_v = o - ghosts - ooff;
+    int iend_v = mgh - ghosts - moff;
+    int jend_v = ngh - ghosts - noff;
+    int kend_v = ogh - ghosts - ooff;
 
     // calculate residual only for relevant cells (off = 0: only real cells)
     if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
     {
-        int index = i * n * o + j * o + k;
+        int index = i * no + j * ogh + k;
 
+        // TODO refactor like in 27point
         // A*v
-        double stencilsum = (6.0 * v_in[index] - v_in[index - 1] - v_in[index + 1] - v_in[i * n * o + (j - 1) * o + k] -
-                             v_in[i * n * o + (j + 1) * o + k] - v_in[(i - 1) * n * o + j * o + k] -
-                             v_in[(i + 1) * n * o + j * o + k]) *
+        double stencilsum = (6.0 * v_in[index] - v_in[index - 1] - v_in[index + 1] - v_in[i * no + (j - 1) * ogh + k] -
+                             v_in[i * no + (j + 1) * ogh + k] - v_in[(i - 1) * no + j * ogh + k] -
+                             v_in[(i + 1) * no + j * ogh + k]) *
                             h2inv;
 
         // if (i == 1 && j == 1 && k == 2)
@@ -275,37 +278,40 @@ __kernel void residual_19point(
     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
     __global double* restrict f,
     __global double* restrict r,
-    const double h2inv, const int m, const int n, const int o,
+    const double h2inv, const int mgh, const int ngh, const int ogh,
     const int ghosts, const int moff, const int noff, const int ooff)
 {
-    int i = get_global_id(0);
-    int j = get_global_id(1);
-    int k = get_global_id(2);
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
 
     // loop boundaries
     // TODO maybe refactor to use v_ghm, etc.?
     int istart_v = ghosts + moff;
     int jstart_v = ghosts + noff;
     int kstart_v = ghosts + ooff;
-    int iend_v = m - ghosts - moff;
-    int jend_v = n - ghosts - noff;
-    int kend_v = o - ghosts - ooff;
+    int iend_v = mgh - ghosts - moff;
+    int jend_v = ngh - ghosts - noff;
+    int kend_v = ogh - ghosts - ooff;
 
     // calculate residual only for relevant cells (off = 0: only real cells)
     if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
     {
-        int index = i * n * o + j * o + k;
+        int index = i * no + j * ogh + k;
 
+        // TODO refactor like in 27point
         // A*v
         double stencilsum = (24.0 * v_in[index] - 2.0 * v_in[index - 1] - 2.0 * v_in[index + 1] -
-                             2.0 * v_in[i * n * o + (j - 1) * o + k] - 2.0 * v_in[i * n * o + (j + 1) * o + k] -
-                             2.0 * v_in[(i - 1) * n * o + j * o + k] - 2.0 * v_in[(i + 1) * n * o + j * o + k] -
-                             v_in[i * n * o + (j - 1) * o + k - 1] - v_in[i * n * o + (j - 1) * o + k + 1] -
-                             v_in[i * n * o + (j + 1) * o + k - 1] - v_in[i * n * o + (j + 1) * o + k + 1] -
-                             v_in[(i - 1) * n * o + j * o + k - 1] - v_in[(i - 1) * n * o + j * o + k + 1] -
-                             v_in[(i + 1) * n * o + j * o + k - 1] - v_in[(i + 1) * n * o + j * o + k + 1] -
-                             v_in[(i - 1) * n * o + (j - 1) * o + k] - v_in[(i - 1) * n * o + (j + 1) * o + k] -
-                             v_in[(i + 1) * n * o + (j - 1) * o + k] - v_in[(i + 1) * n * o + (j + 1) * o + k]) *
+                             2.0 * v_in[i * no + (j - 1) * ogh + k] - 2.0 * v_in[i * no + (j + 1) * ogh + k] -
+                             2.0 * v_in[(i - 1) * no + j * ogh + k] - 2.0 * v_in[(i + 1) * no + j * ogh + k] -
+                             v_in[i * no + (j - 1) * ogh + k - 1] - v_in[i * no + (j - 1) * ogh + k + 1] -
+                             v_in[i * no + (j + 1) * ogh + k - 1] - v_in[i * no + (j + 1) * ogh + k + 1] -
+                             v_in[(i - 1) * no + j * ogh + k - 1] - v_in[(i - 1) * no + j * ogh + k + 1] -
+                             v_in[(i + 1) * no + j * ogh + k - 1] - v_in[(i + 1) * no + j * ogh + k + 1] -
+                             v_in[(i - 1) * no + (j - 1) * ogh + k] - v_in[(i - 1) * no + (j + 1) * ogh + k] -
+                             v_in[(i + 1) * no + (j - 1) * ogh + k] - v_in[(i + 1) * no + (j + 1) * ogh + k]) *
                             h2inv;
 
         // if (i == 1 && j == 1 && k == 2)
@@ -322,21 +328,23 @@ __kernel void residual_27point(
     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
     __global double* restrict f,
     __global double* restrict r,
-    const double h2inv, const int m, const int n, const int o,
+    const double h2inv, const int mgh, const int ngh, const int ogh,
     const int ghosts, const int moff, const int noff, const int ooff)
 {
-    int i = get_global_id(0);
-    int j = get_global_id(1);
-    int k = get_global_id(2);
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
 
     // loop boundaries
     // TODO maybe refactor to use v_ghm, etc.?
     int istart_v = ghosts + moff;
     int jstart_v = ghosts + noff;
     int kstart_v = ghosts + ooff;
-    int iend_v = m - ghosts - moff;
-    int jend_v = n - ghosts - noff;
-    int kend_v = o - ghosts - ooff;
+    int iend_v = mgh - ghosts - moff;
+    int jend_v = ngh - ghosts - noff;
+    int kend_v = ogh - ghosts - ooff;
     // int istart_r = r.getGhostsM() + moff;
     // int jstart_r = r.getGhostsN() + noff;
     // int kstart_r = r.getGhostsO() + ooff;
@@ -347,9 +355,9 @@ __kernel void residual_27point(
     // calculate residual only for relevant cells (off = 0: only real cells)
     if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
     {
-        int index = i * n * o + j * o + k;
-        int ioff = n * o;
-        int joff = o;
+        int index = i * ngh * ogh + j * ogh + k;
+        int ioff = ngh * ogh;
+        int joff = ogh;
         int koff = 1;
 
         // A*v
@@ -389,9 +397,11 @@ __kernel void residual_27point_varying_stencil(
     const int moff, const int noff, const int ooff)
 
 {
-    int i = get_global_id(0);
-    int j = get_global_id(1);
-    int k = get_global_id(2);
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
 
     // loop boundaries
     // TODO maybe refactor to use v_ghm, etc.?
@@ -472,17 +482,19 @@ __kernel void residual_27point_varying_stencil(
 __kernel void residual_squared(
     __global double* restrict r,
     __global double* restrict rsquares,
-    const int m, const int n, const int o, const int ghosts)
+    const int mgh, const int ngh, const int ogh, const int ghosts)
 {
-    int i = get_global_id(0);
-    int j = get_global_id(1);
-    int k = get_global_id(2);
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
 
     // account for padding
-    if (i < m && j < n && k < o)
+    if (i < mgh && j < ngh && k < ogh)
     {
-        int index = i * (n + 2 * ghosts) * (o + 2 * ghosts) + j * (o + 2 * ghosts) + k;
-        int index_sq = i * n * o + j * o + k;
+        int index = i * (ngh + 2 * ghosts) * (ogh + 2 * ghosts) + j * (ogh + 2 * ghosts) + k;
+        int index_sq = i * ngh * ogh + j * ogh + k;
         double ridx = r[index];
         rsquares[index_sq] = ridx * ridx;
     }

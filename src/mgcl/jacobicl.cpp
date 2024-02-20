@@ -8,10 +8,10 @@
 #include "stencil.hpp"          // for mgclCheckError, VaryingStencil3x3x3
 #include "util.hpp"
 
+#include <cstddef>
 #include <cstdio> // for printf, size_t, NULL
-#include <iostream>
+// #include <iostream>
 #include <math.h> // for fabs, sqrt, ceil
-#include <memory> // for __shared_ptr_access, shared_ptr
 
 #ifdef __APPLE__
 #include <OpenCL/cl.h>          // for clSetKernelArg, _cl_mem, cl_mem, clE...
@@ -717,23 +717,15 @@ namespace mgcl
         mgclCheckError(err, "Setting residual kernel arguments");
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
-        size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-        // const size_t local[3] = {static_cast<size_t>(mgh > 4 ? 4 : mgh), static_cast<size_t>(ngh > 4 ? 4 : ngh),
-        //                          static_cast<size_t>(ogh > 4 ? 4 : ogh)};
-        size_t local[3] = {1, 1, 32};
-        // decrease wg size for bigger grids
-        // if (mgh >= 32 && ngh >= 32 && ogh >= 32)
-        //     local[2] = 16;
+        size_t global = mgh * ngh * ogh;
+        size_t local = 512;
 
-        for (int i = 0; i < 3; i++)
-            if (global[i] % local[i] != 0)
-            {
-                // printf("padding global size %d from %ld to ", i, global[i]);
-                global[i] += local[i] - (global[i] % local[i]);
-                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
-            }
+        if (global % local != 0)
+        {
+            global += local - (global % local);
+        }
 
-        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
+        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 1, NULL, &global, &local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing residual kernel");
 
         if (problem.isPeriodic())
@@ -766,7 +758,7 @@ namespace mgcl
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &problem.ghosts);
                 mgclCheckError(err, "Setting residual squared kernel arguments");
 
-                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 3, NULL, global, local, 0, NULL, NULL);
+                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 1, NULL, &global, &local, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing residual squared kernel");
 
                 // sum up residual squares
