@@ -142,7 +142,7 @@ bool mgcl_test::TestUtility::deviceAvailable(std::string deviceName, cl_device_t
 
     // Find number of platforms
     err = clGetPlatformIDs(0, nullptr, &numPlatforms);
-    mgcl::mgclCheckError(err, "Finding platforms");
+    mgcl::mgclCheckError(err, "clGetPlatformIDs numPlatforms");
     if (numPlatforms == 0)
     {
         printf("Found 0 platforms!\n");
@@ -152,31 +152,39 @@ bool mgcl_test::TestUtility::deviceAvailable(std::string deviceName, cl_device_t
     // Get all platforms
     cl_platform_id Platform[numPlatforms];
     err = clGetPlatformIDs(numPlatforms, Platform, nullptr);
-    mgcl::mgclCheckError(err, "Getting platforms");
+    mgcl::mgclCheckError(err, "clGetPlatformIDs platforms");
 
     cl_char device_name_available[1024] = {0}; // string to hold name of compute device
 
     // take first device that conforms given device_type and name
     for (i = 0; i < numPlatforms; i++)
     {
-    	// Find number of devices for a platform
-    	err = clGetDeviceIDs(Platform[i], deviceType, 0, nullptr, &numDevices);
-    	mgcl::mgclCheckError(err, "Finding devices");
-    	device_ids = new cl_device_id[numDevices];
-        err = clGetDeviceIDs(Platform[i], deviceType, numDevices, device_ids, nullptr);
-        if (err == CL_SUCCESS) for (int i{0}; i<numDevices; ++i)
+        // Find number of devices for a platform
+        err = clGetDeviceIDs(Platform[i], deviceType, 0, nullptr, &numDevices);
+        if (err == CL_DEVICE_NOT_FOUND)
         {
-            err = clGetDeviceInfo(device_ids[i], CL_DEVICE_NAME, sizeof(device_name_available),
-                                  &device_name_available, nullptr);
-            if (err != CL_SUCCESS)
+            continue; // no device with given type found in current platform
+        }
+        mgcl::mgclCheckError(err, "clgetdeviceids numdevices for devicetype");
+        device_ids = new cl_device_id[numDevices];
+        err = clGetDeviceIDs(Platform[i], deviceType, numDevices, device_ids, nullptr);
+        mgcl::mgclCheckError(err, "clGetDeviceIDs device_ids for deviceType");
+        if (err == CL_SUCCESS)
+        {
+            for (int j = 0; j < numDevices; j++)
             {
-                printf("Error: Failed to access device name!\n");
-                return false;
-            }
+                err = clGetDeviceInfo(device_ids[j], CL_DEVICE_NAME, sizeof(device_name_available),
+                                      &device_name_available, nullptr);
+                if (err != CL_SUCCESS)
+                {
+                    printf("Error: Failed to access device name!\n");
+                    return false;
+                }
 
-            // return true if a device was found
-            if (std::string((char*)device_name_available).find(deviceName) != std::string::npos)
-                return true;
+                // return true if a device was found
+                if (std::string((char*)device_name_available).find(deviceName) != std::string::npos)
+                    return true;
+            }
         }
         delete[] device_ids;
     }

@@ -1,6 +1,7 @@
 #include "opencl_helper.hpp"
-#include "cuboid.hpp"  // for
-#include "level.hpp"   // for Level
+#include "cuboid.hpp" // for
+#include "level.hpp"  // for Level
+#include "mgcl_kernel.hpp"
 #include "problem.hpp" // for Problem
 
 #include <cassert>
@@ -36,7 +37,7 @@ namespace mgcl
         int err;
         cl_uint numPlatforms;
         cl_uint numDevices;
-	    cl_device_id* device_ids;
+        cl_device_id* device_ids;
 
         // initialize opencl stuff if not done yet and if buffers should not be reused
         if (!isInitialized() && !problem->getReuseOpenclBuffers() && !problem->getCopyBufferData())
@@ -61,44 +62,50 @@ namespace mgcl
             // take first device that conforms given device_type and name
             for (cl_uint i = 0; i < numPlatforms; i++)
             {
-    			// Find number of devices for a platform
-	    		err = clGetDeviceIDs(Platform[i], deviceType, 0, nullptr, &numDevices);
-		    	mgcl::mgclCheckError(err, "Finding devices using clGetDeviceIDs");
-    			device_ids = new cl_device_id[numDevices];
-		        err = clGetDeviceIDs(Platform[i], deviceType, numDevices, device_ids, nullptr);
+                // Find number of devices for a platform
+                err = clGetDeviceIDs(Platform[i], deviceType, 0, nullptr, &numDevices);
+                if (err == CL_DEVICE_NOT_FOUND)
+                {
+                    continue; // no device with given type found in current platform
+                }
+                mgcl::mgclCheckError(err, "Finding devices using clGetDeviceIDs");
+                device_ids = new cl_device_id[numDevices];
+                err = clGetDeviceIDs(Platform[i], deviceType, numDevices, device_ids, nullptr);
                 mgclCheckError(err, "clGetDeviceIDs");
 
-				// Loop over all devices for a given plattform
-				for (cl_uint j{0}; j < numDevices; ++j) {
-						// get device extensions and check for double precision
-                    	size_t numExtensions;
-                    	err = clGetDeviceInfo(device_ids[j], CL_DEVICE_EXTENSIONS, 0, nullptr, &numExtensions);
-                    	mgclCheckError(err, "Finding number of extensions using clGetDeviceInfo(CL_DEVICE_EXTENSIONS)");
+                // Loop over all devices for a given plattform
+                for (cl_uint j{0}; j < numDevices; ++j)
+                {
+                    // get device extensions and check for double precision
+                    size_t numExtensions;
+                    err = clGetDeviceInfo(device_ids[j], CL_DEVICE_EXTENSIONS, 0, nullptr, &numExtensions);
+                    mgclCheckError(err, "Finding number of extensions using clGetDeviceInfo(CL_DEVICE_EXTENSIONS)");
 
-                    	char* extensions = new char[numExtensions];
-                    	err = clGetDeviceInfo(device_ids[j], CL_DEVICE_EXTENSIONS, numExtensions, extensions, nullptr);
-                    	mgclCheckError(err, "Finding extensions using clGetDeviceInfo(CL_DEVICE_EXTENSIONS)");
-                    	
-                    	// if device does not support double precision, continue to next device
-                    	if (std::string(extensions).find("cl_khr_fp64") == std::string::npos)
-                        	continue;
-                        
-                        if (deviceName != "" && deviceName != "default") {
-                        	err = clGetDeviceInfo(device_ids[j], CL_DEVICE_NAME, 
-                    			sizeof(device_name_available), &device_name_available, 
-                    			nullptr);
-                    		mgclCheckError(err, "Finding device name using clGetDeviceInfo(CL_DEVICE_NAME)");
+                    char* extensions = new char[numExtensions];
+                    err = clGetDeviceInfo(device_ids[j], CL_DEVICE_EXTENSIONS, numExtensions, extensions, nullptr);
+                    mgclCheckError(err, "Finding extensions using clGetDeviceInfo(CL_DEVICE_EXTENSIONS)");
 
-							// if device name does not match, continue to next device
-                    		if (std::string(device_name_available).find(deviceName) == std::string::npos)
-                    			continue;
-                    	}
-                    	
-                    	deviceId = device_ids[j];
-                    	break;
-				}
+                    // if device does not support double precision, continue to next device
+                    if (std::string(extensions).find("cl_khr_fp64") == std::string::npos)
+                        continue;
 
-				delete[] device_ids;
+                    if (deviceName != "" && deviceName != "default")
+                    {
+                        err = clGetDeviceInfo(device_ids[j], CL_DEVICE_NAME,
+                                              sizeof(device_name_available), &device_name_available,
+                                              nullptr);
+                        mgclCheckError(err, "Finding device name using clGetDeviceInfo(CL_DEVICE_NAME)");
+
+                        // if device name does not match, continue to next device
+                        if (std::string(device_name_available).find(deviceName) == std::string::npos)
+                            continue;
+                    }
+
+                    deviceId = device_ids[j];
+                    break;
+                }
+
+                delete[] device_ids;
             }
 
             if (deviceId == nullptr)
