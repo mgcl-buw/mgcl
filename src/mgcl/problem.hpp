@@ -142,6 +142,9 @@ namespace mgcl
         /* Manages OpenCL stuff */
         OpenCLHelper openCLHelper;
 
+        /* If true, kernel timings will be measured. */
+        bool profilingEnabled = false;
+
         /* MPI relevant data. */
         std::unique_ptr<MPIGlobalData> mpiGlobalData = std::make_unique<MPIGlobalData>();
 
@@ -326,6 +329,9 @@ namespace mgcl
 
         bool getIgnoreMpi() const { return ignoreMpi; }
         void setIgnoreMpi(bool ignoreMpi_) { ignoreMpi = ignoreMpi_; }
+
+        bool isProfilingEnabled() const { return profilingEnabled; }
+        void setProfilingEnabled(bool profilingEnabled_) { profilingEnabled = profilingEnabled_; }
 
         friend std::ostream& operator<<(std::ostream& os, const Problem& lv);
     };

@@ -122,7 +122,8 @@ namespace mgcl
             mgclCheckError(err, "Creating context");
 
             // Create a command queue
-            commands = clCreateCommandQueue(context, deviceId, 0, &err);
+            cl_command_queue_properties props = problem->isProfilingEnabled() ? CL_QUEUE_PROFILING_ENABLE : 0;
+            commands = clCreateCommandQueue(context, deviceId, props, &err);
             mgclCheckError(err, "Creating command queue");
         }
         else
