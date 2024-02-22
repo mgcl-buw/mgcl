@@ -27,6 +27,7 @@ set(MGCL_PUBLIC_HEADERS
   mgcl/mpi_global_data.hpp
   mgcl/mpi_level_data.hpp
   mgcl/hypercube.hpp
+  mgcl/kernel_config.hpp
 )
 
 set(SOURCES_LIB
@@ -52,6 +53,7 @@ set(SOURCES_LIB
   mgcl/mpi_stencil.hpp
   mgcl/mpi_stencil.cpp
   mgcl/mgcl_kernel.hpp
+  mgcl/kernel_config.cpp
 )
 
 add_library(mgcl ${MGCL_PUBLIC_HEADERS} ${SOURCES_LIB})

@@ -312,7 +312,7 @@ namespace mgcl
      *
      * @return std::unique_ptr<KernelConfig>
      */
-    KernelConfig createDefaultKernelConfig()
+    KernelConfig Problem::createDefaultKernelConfig()
     {
         KernelConfig ret;
 

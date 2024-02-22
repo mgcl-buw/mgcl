@@ -17,5 +17,7 @@ namespace mgcl
     // Alias for the kernel configuration, which can be supplied to
     // a problem before calling solve.
     using KernelConfig = std::map<std::string, KernelWorkgroupSizes>;
+
+    std::array<size_t, 3>& getWorkGroupSizeForKernelAndWiCount(std::string kernelName, size_t wiCount);
 }
 #endif // __KERNEL_CONFIG_H__

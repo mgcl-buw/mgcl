@@ -182,7 +182,7 @@ namespace mgcl
         bool checkParameters();
         void checkGpuSizes();
         int calculateAndSetMaxLevel();
-        KernelConfig createDefaultKernelConfig();
+        static KernelConfig createDefaultKernelConfig();
         bool init();
 
         void reuseOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
