@@ -145,7 +145,7 @@ namespace mgcl
 
         /* Kernel config, can be customized to set inidividual work-group sizes per kernel, dependend on number
          * of work-items. */
-        KernelConfig kernelConfig = createDefaultKernelConfig();
+        conf::KernelConfig kernelConfig = conf::createDefaultKernelConfig();
 
         /* MPI relevant data. */
         std::unique_ptr<MPIGlobalData> mpiGlobalData = std::make_unique<MPIGlobalData>();
@@ -182,7 +182,6 @@ namespace mgcl
         bool checkParameters();
         void checkGpuSizes();
         int calculateAndSetMaxLevel();
-        static KernelConfig createDefaultKernelConfig();
         bool init();
 
         void reuseOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
@@ -333,7 +332,7 @@ namespace mgcl
         bool getIgnoreMpi() const { return ignoreMpi; }
         void setIgnoreMpi(bool ignoreMpi_) { ignoreMpi = ignoreMpi_; }
 
-        KernelConfig& getKernelConfig() { return kernelConfig; }
+        conf::KernelConfig& getKernelConfig() { return kernelConfig; }
 
         friend std::ostream& operator<<(std::ostream& os, const Problem& lv);
     };

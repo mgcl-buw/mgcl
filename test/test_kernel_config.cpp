@@ -67,29 +67,29 @@ TEST_CASE("getWorkGroupSizeForKernelAndWiCount")
     c["jacobi_iter_27point_varying_stencil_1d"].push_back({20, {20, 1, 1}});
 
     // Check if correct wg sizes are returned when work-item count matches a boundary exactly.
-    auto& wg10 = mgcl::getWorkGroupSizeForKernelAndWiCount(c, "jacobi_iter_27point_varying_stencil_1d", 10);
+    auto& wg10 = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(c, "jacobi_iter_27point_varying_stencil_1d", 10);
     REQUIRE(wg10[0] == 10);
     REQUIRE(wg10[1] == 1);
     REQUIRE(wg10[2] == 1);
 
     // Check if correct wg sizes are returned when work-item count is between two boundaries.
-    auto& wg15 = mgcl::getWorkGroupSizeForKernelAndWiCount(c, "jacobi_iter_27point_varying_stencil_1d", 15);
+    auto& wg15 = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(c, "jacobi_iter_27point_varying_stencil_1d", 15);
     REQUIRE(wg15[0] == 10);
     REQUIRE(wg15[1] == 1);
     REQUIRE(wg15[2] == 1);
 
     // Check if correct wg sizes are returned when work-item count is bigger than the biggest boundary.
-    auto& wg25 = mgcl::getWorkGroupSizeForKernelAndWiCount(c, "jacobi_iter_27point_varying_stencil_1d", 25);
+    auto& wg25 = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(c, "jacobi_iter_27point_varying_stencil_1d", 25);
     REQUIRE(wg25[0] == 20);
     REQUIRE(wg25[1] == 1);
     REQUIRE(wg25[2] == 1);
 
     // Check if the wg sizes for the smallest boundary is returned, when work-item count is smaller than the smallest boundary.
-    auto& wg5 = mgcl::getWorkGroupSizeForKernelAndWiCount(c, "jacobi_iter_27point_varying_stencil_1d", 5);
+    auto& wg5 = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(c, "jacobi_iter_27point_varying_stencil_1d", 5);
     REQUIRE(wg5[0] == 10);
     REQUIRE(wg5[1] == 1);
     REQUIRE(wg5[2] == 1);
 
     // Check if an exception is thrown if the kernel name does not exist.
-    REQUIRE_THROWS(mgcl::getWorkGroupSizeForKernelAndWiCount(c, "does_not_exist", 5));
+    REQUIRE_THROWS(mgcl::conf::getWorkGroupSizeForKernelAndWiCount(c, "does_not_exist", 5));
 }

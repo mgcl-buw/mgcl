@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace mgcl
+namespace mgcl::conf
 {
     // Alias for the size of the workgroup for a kernel, dependend on the number of work-items launched.
     // The work-item count is a lower bound, i.e. all work-item counts between that bound and the next bigger
@@ -18,6 +18,7 @@ namespace mgcl
     // a problem before calling solve.
     using KernelConfig = std::map<std::string, KernelWorkgroupSizes>;
 
+    KernelConfig createDefaultKernelConfig();
     std::array<size_t, 3>& getWorkGroupSizeForKernelAndWiCount(KernelConfig& conf, std::string kernelName, size_t wiCount);
 }
 #endif // __KERNEL_CONFIG_H__
