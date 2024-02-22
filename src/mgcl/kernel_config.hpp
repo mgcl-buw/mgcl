@@ -18,6 +18,6 @@ namespace mgcl
     // a problem before calling solve.
     using KernelConfig = std::map<std::string, KernelWorkgroupSizes>;
 
-    std::array<size_t, 3>& getWorkGroupSizeForKernelAndWiCount(std::string kernelName, size_t wiCount);
+    std::array<size_t, 3>& getWorkGroupSizeForKernelAndWiCount(KernelConfig& conf, std::string kernelName, size_t wiCount);
 }
 #endif // __KERNEL_CONFIG_H__

@@ -23,7 +23,7 @@ namespace mgcl
         // Loop through the workgroup sizes from high wiCount to low and return the first one that is bigger
         // or equal to wiCount.
         for (auto& workgroupSize : confForKernel)
-            if (workgroupSize.first >= wiCount)
+            if (wiCount >= workgroupSize.first)
                 return workgroupSize.second;
 
         return confForKernel.back().second;
