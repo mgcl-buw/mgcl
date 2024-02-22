@@ -1,8 +1,8 @@
 #include "problem.hpp"
 #include "cuboid.hpp" // for Cuboid
-#include "level.hpp"  // for Level
+#include "kernel_config.hpp"
+#include "level.hpp" // for Level
 #include "mpi_global_data.hpp"
-#include "mpi_level_data.hpp"
 #include "mpi_stencil.hpp"
 #include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
@@ -304,6 +304,58 @@ namespace mgcl
 
         if (!silent)
             std::cout << "mpiLevelThreshold automatically set to " << mpiLevelThreshold << std::endl;
+    }
+
+    /**
+     * @brief Create a KernelConfig object with default values. Note that this function does not set the
+     * attribute kernelConfig. If a customized KernelConfig shall be used, it must be set using setKernelConfig().
+     *
+     * @return std::unique_ptr<KernelConfig>
+     */
+    KernelConfig createDefaultKernelConfig()
+    {
+        KernelConfig ret;
+
+        // Jacobi kernels
+        ret["jacobi_iter_27point_varying_stencil_1d"] = KernelWorkgroupSizes{{1, {512, 1, 1}}};
+        ret["jacobi_iter_7point"] = KernelWorkgroupSizes{{1, {1, 64, 1}}};
+        ret["jacobi_iter_19point"] = KernelWorkgroupSizes{{1, {1, 64, 1}}};
+        ret["jacobi_iter_27point"] = KernelWorkgroupSizes{{1, {1, 64, 1}}};
+
+        // Residual kernels
+        ret["residual_27point_varying_stencil"] = KernelWorkgroupSizes{{1, {512, 1, 1}}};
+        ret["residual_7point"] = KernelWorkgroupSizes{{1, {512, 1, 1}}};
+        ret["residual_19point"] = KernelWorkgroupSizes{{1, {512, 1, 1}}};
+        ret["residual_27point"] = KernelWorkgroupSizes{{1, {512, 1, 1}}};
+        ret["residual_squared"] = KernelWorkgroupSizes{{1, {512, 1, 1}}};
+
+        // Ghost update kernels
+        ret["update_ghosts_periodic"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
+
+        // Copy buffer kernels
+        ret["copy_input_data"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
+        ret["copy_output_data"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
+
+        // V-cycle kernels
+        ret["correct_error"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
+        ret["restrict_to_coarse"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
+        ret["prolongate_to_fine"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
+
+        // Stencil kernels
+        ret["update_ghosts_varying_stencil"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
+        ret["mult_stencils_var_var"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
+        ret["mult_stencils_var_fix"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
+        ret["mult_stencils_fix_var"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
+        ret["cut_stencils_w7_to_w3"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
+
+        // Utility kernels
+        ret["sum_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {256, 1, 1}}};
+        // c["sum_finish"] = KernelWorkgroupSizes{{1, {4, 4, 4}}}; // Launches only 1 wi
+        ret["max_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {256, 1, 1}}};
+        // c["max_finish"] = KernelWorkgroupSizes{{1, {4, 4, 4}}}; // Launches only 1 wi
+        ret["max_abs_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {256, 1, 1}}};
+
+        return ret;
     }
 
     /**
