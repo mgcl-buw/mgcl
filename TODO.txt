@@ -22,7 +22,8 @@
 - benchmark OpenCLHelper::readKernelFile true or false
 - measure kernel timings using OpenCL built-in profiling
   [ ] create struct ProfilingResults and pass a pointer to it into each kernel driver function
-    - should encapsulate a map with key=kernelName and value=vector of timings
+    - should encapsulate a map with key=kernelName and value=Measurement
+    - Measurement has: time in ns, triple work-items, triple wg-size
   [x] add Problem::profilingEnabled attribute (default is false)
   [x] enable profiling in OpenCLHelper
   [ ] in each kernel driver method, add instructions using if-directives. Kernel returning info:

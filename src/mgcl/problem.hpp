@@ -1,5 +1,6 @@
 #pragma once
 
+#include "profiling_data.hpp"
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #endif // CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -144,6 +145,7 @@ namespace mgcl
 
         /* If true, kernel timings will be measured. */
         bool profilingEnabled = false;
+        std::unique_ptr<ProfilingData> profilingData = nullptr;
 
         /* MPI relevant data. */
         std::unique_ptr<MPIGlobalData> mpiGlobalData = std::make_unique<MPIGlobalData>();
@@ -332,6 +334,8 @@ namespace mgcl
 
         bool isProfilingEnabled() const { return profilingEnabled; }
         void setProfilingEnabled(bool profilingEnabled_) { profilingEnabled = profilingEnabled_; }
+
+        ProfilingData& getProfilingData();
 
         friend std::ostream& operator<<(std::ostream& os, const Problem& lv);
     };
