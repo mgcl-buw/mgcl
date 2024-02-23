@@ -313,6 +313,7 @@ namespace mgcl
                                                 MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
                                                 bool periodic, bool forceLocalFine, bool forceLocalCoarse,
                                                 bool skipUpdateGhostsCoarse,
+                                                conf::KernelConfig* kernelConfig,
                                                 int resm, int resn, int reso)
     {
         // Make sure a_h has two ghosts at each border for periodic bc.
@@ -329,14 +330,14 @@ namespace mgcl
 
         // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
         // S * A_h * S and cut out later manually.
-        auto sas = sr.multiply(a_h, 2, program, queue, context, mpiDataFine, periodic, forceLocalFine)
-                       .multiply(sp, 0, program, queue, context, mpiDataFine, periodic, forceLocalFine);
+        auto sas = sr.multiply(a_h, 2, program, queue, context, mpiDataFine, periodic, forceLocalFine, kernelConfig)
+                       .multiply(sp, 0, program, queue, context, mpiDataFine, periodic, forceLocalFine, kernelConfig);
 
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
-        auto a_2h = sas.cutFromW7ToW3(program, queue, context, gh_a2h, resm, resn, reso);
+        auto a_2h = sas.cutFromW7ToW3(program, queue, context, gh_a2h, kernelConfig, resm, resn, reso);
 
         if (!skipUpdateGhostsCoarse)
-            updateGhostsStencilOclMpi(queue, program, a_2h, mpiDataCoarse, periodic, forceLocalCoarse);
+            updateGhostsStencilOclMpi(queue, program, a_2h, mpiDataCoarse, periodic, forceLocalCoarse, kernelConfig);
 
         return a_2h;
     }

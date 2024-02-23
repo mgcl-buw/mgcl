@@ -1,6 +1,7 @@
 #ifndef MGCL_MULTIGRID_ENGINE_HPP
 #define MGCL_MULTIGRID_ENGINE_HPP
 
+#include "kernel_config.hpp"
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #endif // CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -74,6 +75,7 @@ namespace mgcl
                                           MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
                                           bool periodic, bool forceLocalFine, bool forceLocalCoarse,
                                           bool skipUpdateGhostsCoarse,
+                                          conf::KernelConfig* kernelConfig,
                                           int resm = 0, int resn = 0, int reso = 0);
 
         static void print7point(Cuboid& v, int i, int j, int k);
