@@ -76,3 +76,4 @@ Done:
   [x] mpi vcycle (check with test/run-all.sh -v)
   
   [x] All the tests
+- add KernelConfig (configure work-group sizes of various kernels)
