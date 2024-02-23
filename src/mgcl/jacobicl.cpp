@@ -762,14 +762,14 @@ namespace mgcl
                 mgclCheckError(err, "Enqueueing residual squared kernel");
 
                 // sum up residual squares
-                res = sqrt(util::sum(dRsquares, problem.getProgram(), problem.getCommands(), true));
+                res = sqrt(util::sum(dRsquares, problem.getProgram(), problem.getCommands(), true, problem.getKernelConfig()));
 
                 clReleaseKernel(kernel_square);
             }
             else
             {
                 // calculate Infinity-Norm
-                res = util::max_abs(level.getDR(), problem.getProgram(), problem.getCommands(), true);
+                res = util::max_abs(level.getDR(), problem.getProgram(), problem.getCommands(), true, problem.getKernelConfig());
             }
         }
 
