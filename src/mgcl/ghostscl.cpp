@@ -1,5 +1,6 @@
 #include "cuboid.hpp" // for Cuboid
-#include "mgcl.hpp"   // for BC
+#include "kernel_config.hpp"
+#include "mgcl.hpp" // for BC
 #include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "opencl_helper.hpp"    // for mgclCheckError, OpenCLHelper
@@ -334,7 +335,8 @@ namespace mgcl
         int err;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper().getProgram(), "update_ghosts_periodic", &err);
+        const char* kernelName = "update_ghosts_periodic";
+        cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper().getProgram(), kernelName, &err);
         mgclCheckError(err, "clCreateKernel");
 
         // assign kernel arguments
@@ -353,10 +355,11 @@ namespace mgcl
         // int ngh = n + 2 * gh;
         // int ogh = o + 2 * gh;
         size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
+        const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, 1);
         const size_t local[3] = {
-            static_cast<size_t>(mgh > 4 ? 4 : mgh),
-            static_cast<size_t>(ngh > 4 ? 4 : ngh),
-            static_cast<size_t>(ogh > 4 ? 4 : ogh)};
+            static_cast<size_t>(mgh > c[0] ? c[0] : mgh),
+            static_cast<size_t>(ngh > c[1] ? c[1] : ngh),
+            static_cast<size_t>(ogh > c[2] ? c[2] : ogh)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)

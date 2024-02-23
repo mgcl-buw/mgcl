@@ -192,7 +192,8 @@ namespace mgcl
         int err;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), "correct_error", &err);
+        const char* kernelName = "correct_error";
+        cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernelName, &err);
         mgclCheckError(err, "Creating kernel");
 
         cl_mem dvraw = d_v.getBuffer();
@@ -210,8 +211,11 @@ namespace mgcl
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-        const size_t local[3] = {static_cast<size_t>(mgh > 4 ? 4 : mgh), static_cast<size_t>(ngh > 4 ? 4 : ngh),
-                                 static_cast<size_t>(ogh > 4 ? 4 : ogh)};
+        const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, 1);
+        const size_t local[3] = {
+            static_cast<size_t>(mgh > c[0] ? c[0] : mgh),
+            static_cast<size_t>(ngh > c[1] ? c[1] : ngh),
+            static_cast<size_t>(ogh > c[2] ? c[2] : ogh)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)

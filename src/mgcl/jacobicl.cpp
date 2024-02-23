@@ -278,9 +278,9 @@ namespace mgcl
         mgclCheckError(err, "Setting kernel arguments");
 
         // One work-item per cell (including ghost cells).
-        // TODO Optimal local size to be found.
         size_t global[2] = {static_cast<size_t>(mgh * ngh * ogh), static_cast<size_t>(1)};
-        size_t local[2] = {static_cast<size_t>(512), static_cast<size_t>(1)};
+        const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernel_name, 1);
+        size_t local[2] = {c[0], c[1]};
 
         // kernels that use constant Laplace stencils are 2d and need different global and local sizes
         if (problem.stencilType != MGCL_VARYING)
@@ -712,12 +712,11 @@ namespace mgcl
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
         size_t global = mgh * ngh * ogh;
-        size_t local = 512;
+        const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernel_name, global);
+        size_t local = c[0];
 
         if (global % local != 0)
-        {
             global += local - (global % local);
-        }
 
         err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 1, NULL, &global, &local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing residual kernel");
@@ -740,7 +739,8 @@ namespace mgcl
                 CuboidGpu dRsquares(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag, rsq);
 
                 // Create the compute kernel from the program
-                cl_kernel kernel_square = clCreateKernel(problem.openCLHelper.getProgram(), "residual_squared", &err);
+                const char* kernelName = "residual_squared";
+                cl_kernel kernel_square = clCreateKernel(problem.openCLHelper.getProgram(), kernelName, &err);
                 mgclCheckError(err, "Creating residual squared kernel");
 
                 pos = 0;
@@ -752,7 +752,13 @@ namespace mgcl
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &problem.ghosts);
                 mgclCheckError(err, "Setting residual squared kernel arguments");
 
-                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 1, NULL, &global, &local, 0, NULL, NULL);
+                const auto& c_sq = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
+                size_t local_sq = c_sq[0];
+
+                if (global % local_sq != 0)
+                    global += local_sq - (global % local_sq);
+
+                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 1, NULL, &global, &local_sq, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing residual squared kernel");
 
                 // sum up residual squares

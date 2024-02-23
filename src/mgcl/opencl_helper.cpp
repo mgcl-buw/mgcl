@@ -318,7 +318,8 @@ namespace mgcl
         int ghosts_in = problem->getGhostsIn();
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(program, "copy_input_data", &err);
+        const char* kernelName = "copy_input_data";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
         mgclCheckError(err, "Creating copy input data kernel");
 
         cl_mem d_pv = problem->getDV().getBuffer();
@@ -340,8 +341,11 @@ namespace mgcl
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
-        const size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m), static_cast<size_t>(n > 4 ? 4 : n),
-                                 static_cast<size_t>(o > 4 ? 4 : o)};
+        const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem->getKernelConfig(), kernelName, 1);
+        const size_t local[3] = {
+            static_cast<size_t>(m > c[0] ? c[0] : m),
+            static_cast<size_t>(n > c[1] ? c[1] : n),
+            static_cast<size_t>(o > c[2] ? c[2] : o)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
@@ -374,7 +378,8 @@ namespace mgcl
         int ghosts_in = problem->ghosts_in;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(program, "copy_output_data", &err);
+        const char* kernelName = "copy_output_data";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
         mgclCheckError(err, "Creating copy output data kernel");
 
         // assign kernel arguments
@@ -389,8 +394,11 @@ namespace mgcl
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
-        const size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m), static_cast<size_t>(n > 4 ? 4 : n),
-                                 static_cast<size_t>(o > 4 ? 4 : o)};
+        const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem->getKernelConfig(), kernelName, 1);
+        const size_t local[3] = {
+            static_cast<size_t>(m > c[0] ? c[0] : m),
+            static_cast<size_t>(n > c[1] ? c[1] : n),
+            static_cast<size_t>(o > c[2] ? c[2] : o)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
