@@ -4,8 +4,9 @@
 #include "mgcl.hpp"      // for mgcl_debug, MGCL_LAPLACE_19POINT
 #include "mpi_level_data.hpp"
 #include "multigrid_engine.hpp" // for Problem, VaryingStencil3x3x3, Multig...
-#include "problem.hpp"          // for Problem
-#include "stencil.hpp"          // for mgclCheckError, VaryingStencil3x3x3
+#include "opencl_helper.hpp"
+#include "problem.hpp" // for Problem
+#include "stencil.hpp" // for mgclCheckError, VaryingStencil3x3x3
 #include "util.hpp"
 
 #include <cstddef>
@@ -198,31 +199,33 @@ namespace mgcl
             throw "#ghosts must be >= stepsPerIter!";
         }
 
+        cl_event ev;
+
         double h2 = 1.0 / static_cast<double>((problem.getMGlobal() >> level.num) * (problem.getMGlobal() >> level.num));
         double dinv = h2 / 6.0;
         double h2inv = level.stencilFactor; // divisor of the stencil, inverted to use * instead of / in kernel
         // TODO refactor stencilFactor
 
         // Create the compute kernel from the program
-        const char* kernel_name;
+        const char* kernelName;
         if (problem.stencilType == MGCL_LAPLACE_7POINT)
-            kernel_name = "jacobi_iter_7point";
+            kernelName = "jacobi_iter_7point";
         else if (problem.stencilType == MGCL_LAPLACE_19POINT)
         {
-            kernel_name = "jacobi_iter_19point";
+            kernelName = "jacobi_iter_19point";
             dinv = (6.0 * h2) / 24.0;
         }
         else if (problem.stencilType == MGCL_LAPLACE_27POINT)
         {
-            kernel_name = "jacobi_iter_27point";
+            kernelName = "jacobi_iter_27point";
             dinv = (30.0 * h2) / 128.0;
         }
         else if (problem.stencilType == MGCL_VARYING)
         {
-            kernel_name = "jacobi_iter_27point_varying_stencil_1d";
+            kernelName = "jacobi_iter_27point_varying_stencil_1d";
         }
 
-        cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
+        cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernelName, &err);
         mgclCheckError(err, "Creating kernel");
 
         cl_mem dVIn = level.getDVIn().getBuffer();
@@ -278,8 +281,8 @@ namespace mgcl
         mgclCheckError(err, "Setting kernel arguments");
 
         // One work-item per cell (including ghost cells).
-        size_t global[2] = {static_cast<size_t>(mgh * ngh * ogh), static_cast<size_t>(1)};
-        const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernel_name, 1);
+        size_t global[2] = {static_cast<size_t>(mgh * ngh * ogh), static_cast<size_t>(0)};
+        const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, 1);
         size_t local[2] = {c[0], c[1]};
 
         // kernels that use constant Laplace stencils are 2d and need different global and local sizes
@@ -287,8 +290,8 @@ namespace mgcl
         {
             global[0] = static_cast<size_t>(ngh);
             global[1] = static_cast<size_t>(ogh);
-            local[0] = static_cast<size_t>(1);
-            local[1] = static_cast<size_t>(64);
+            // local[0] = static_cast<size_t>(1);
+            // local[1] = static_cast<size_t>(64);
         }
 
         // Pad global sizes to fit to local sizes
@@ -348,10 +351,25 @@ namespace mgcl
                 mgclCheckError(err, "Setting kernel arguments");
 
                 if (problem.stencilType != MGCL_VARYING)
-                    err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, NULL);
+                    err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, &ev);
                 else
-                    err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 1, NULL, global, local, 0, NULL, NULL);
+                    err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 1, NULL, global, local, 0, NULL, &ev);
                 mgclCheckError(err, "Enqueueing kernel");
+
+                if (problem.isProfilingEnabled())
+                {
+                    clFinish(problem.getCommands());
+
+                    cl_ulong start_time, end_time;
+                    mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start_time, NULL), "clGetEventProfilingInfo");
+                    mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end_time, NULL), "clGetEventProfilingInfo");
+                    cl_ulong execution_time_ns = end_time - start_time;
+
+                    problem.getProfilingData()->getMeasurements()[kernelName].push_back(ProfilingMeasurement{
+                        execution_time_ns,
+                        {global[0], global[1], 0},
+                        {local[0], local[1], 0}});
+                }
             }
         }
 
