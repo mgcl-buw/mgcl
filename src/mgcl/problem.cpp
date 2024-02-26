@@ -1,12 +1,13 @@
 #include "problem.hpp"
 #include "cuboid.hpp" // for Cuboid
-#include "kernel_config.hpp"
-#include "level.hpp" // for Level
+#include "level.hpp"  // for Level
 #include "mpi_global_data.hpp"
 #include "mpi_stencil.hpp"
 #include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
+#include "profiling_data.hpp"
 #include "util.hpp"
+#include <memory>
 
 #ifdef __APPLE__
 #include <OpenCL/cl_platform.h> // for cl_ulong
@@ -1041,6 +1042,20 @@ namespace mgcl
     void Problem::setV(std::shared_ptr<Cuboid> v_)
     {
         v = v_;
+    }
+
+    /**
+     * @brief Toggles collection of GPU kernel profiling data. Sets or resets profilingData.
+     *
+     * @param profilingEnabled_
+     */
+    void Problem::setProfilingEnabled(bool profilingEnabled_)
+    {
+        profilingEnabled = profilingEnabled_;
+        if (profilingEnabled)
+            profilingData = std::make_unique<mgcl::ProfilingData>();
+        else
+            profilingData = nullptr;
     }
 
     // Sets MPI communicator and checks that cartesian topology is attached to it.

@@ -338,9 +338,9 @@ namespace mgcl
         void setIgnoreMpi(bool ignoreMpi_) { ignoreMpi = ignoreMpi_; }
 
         bool isProfilingEnabled() const { return profilingEnabled; }
-        void setProfilingEnabled(bool profilingEnabled_) { profilingEnabled = profilingEnabled_; }
+        void setProfilingEnabled(bool profilingEnabled_);
 
-        ProfilingData& getProfilingData();
+        ProfilingData* getProfilingData() { return profilingData.get(); }
 
         conf::KernelConfig& getKernelConfig() { return kernelConfig; }
 
