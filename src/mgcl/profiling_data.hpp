@@ -22,10 +22,12 @@ namespace mgcl
      */
     struct ProfilingMeasurement
     {
-        unsigned long elapsed;
+        unsigned long elapsed; // Elapsed time from kernel begin to end in ns
         int work_items[3];
         int work_group[3];
     };
+
+    using MeasurementsPerKernel = std::map<std::string, std::vector<ProfilingMeasurement>>;
 
     /**
      * @brief Collection of ProfilingMeasurements. New measurements can be added by getting the underlying
@@ -35,10 +37,10 @@ namespace mgcl
     class ProfilingData
     {
     private:
-        std::map<std::string, std::vector<ProfilingMeasurement>> measurements;
+        MeasurementsPerKernel measurements;
 
     public:
-        std::map<std::string, std::vector<ProfilingMeasurement>> getMeasurements()
+        MeasurementsPerKernel& getMeasurements()
         {
             return measurements;
         }
