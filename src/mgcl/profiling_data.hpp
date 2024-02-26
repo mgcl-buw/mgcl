@@ -44,6 +44,8 @@ namespace mgcl
         {
             return measurements;
         }
+
+        friend std::ostream& operator<<(std::ostream& os, const ProfilingData& pd);
     };
 }
 

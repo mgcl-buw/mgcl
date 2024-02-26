@@ -54,6 +54,7 @@ set(SOURCES_LIB
   mgcl/mpi_stencil.cpp
   mgcl/mgcl_kernel.hpp
   mgcl/kernel_config.cpp
+  mgcl/profiling_data.cpp
 )
 
 add_library(mgcl ${MGCL_PUBLIC_HEADERS} ${SOURCES_LIB})
