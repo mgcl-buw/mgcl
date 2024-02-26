@@ -174,9 +174,6 @@ TEST_CASE("profiling_kernels")
 
     SECTION("copy_input_buffers")
     {
-        // update ghosts is already called in Problem::init, so clear measurements first
-        p.getProfilingData()->getMeasurements().clear();
-
         std::string kernelName = "copy_input_data";
 
         // create buffers manually, so they can be copied
@@ -187,14 +184,46 @@ TEST_CASE("profiling_kernels")
 
         p.getOpenCLHelper().copyInputBuffers();
 
-        // auto& dbuf = lv0.getDVIn();
-        // mgcl::MultigridEngine::updateGhosts(p, dbuf, nullptr, true);
-
         // get workgroup size from config for smallest problem size
         auto& wg = conf[kernelName][0].second;
 
         // calculate padded work-item count
         size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
+        for (int i = 0; i < 3; i++)
+            if (global[i] % wg[i] != 0)
+                global[i] += wg[i] - (global[i] % wg[i]);
+
+        // extract profiling data for this kernel
+        auto d = p.getProfilingData()->getMeasurements();
+        auto& measurements = d[kernelName];
+        REQUIRE(measurements.size() == 1);
+        for (auto el : measurements)
+        {
+            REQUIRE(el.elapsed > 0);
+            REQUIRE(el.work_group[0] == wg[0]);
+            REQUIRE(el.work_group[1] == wg[1]);
+            REQUIRE(el.work_group[2] == wg[2]);
+            REQUIRE(el.work_items[0] == global[0]);
+            REQUIRE(el.work_items[1] == global[1]);
+            REQUIRE(el.work_items[2] == global[2]);
+        }
+    }
+
+    SECTION("copy_output_buffers")
+    {
+        std::string kernelName = "copy_output_data";
+
+        // create buffers manually, so they can be copied
+        std::shared_ptr<mgcl::CuboidGpu> dv = lv0.getDVIn().copyShallow();
+        p.setDV(dv);
+
+        p.getOpenCLHelper().copyOutputBuffers();
+
+        // get workgroup size from config for smallest problem size
+        auto& wg = conf[kernelName][0].second;
+
+        // calculate padded work-item count
+        size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
         for (int i = 0; i < 3; i++)
             if (global[i] % wg[i] != 0)
                 global[i] += wg[i] - (global[i] % wg[i]);
