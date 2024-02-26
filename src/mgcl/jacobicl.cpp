@@ -368,7 +368,7 @@ namespace mgcl
                     problem.getProfilingData()->getMeasurements()[kernelName].push_back(ProfilingMeasurement{
                         execution_time_ns,
                         {global[0], global[1], 0},
-                        {local[0], local[1], 0}});
+                        {local[0], local[1], 1}});
                 }
             }
         }
@@ -657,26 +657,28 @@ namespace mgcl
             throw "2*moff, 2*noff and 2*ooff must not be >= m, n or o";
 
         // Create the compute kernel from the program
-        const char* kernel_name;
+        const char* kernelName;
         if (problem.stencilType == MGCL_LAPLACE_7POINT)
-            kernel_name = "residual_7point";
+            kernelName = "residual_7point";
         else if (problem.stencilType == MGCL_LAPLACE_19POINT)
         {
-            kernel_name = "residual_19point";
+            kernelName = "residual_19point";
             h2inv = 1.0 / (6.0 * h2);
         }
         else if (problem.stencilType == MGCL_LAPLACE_27POINT)
         {
-            kernel_name = "residual_27point";
+            kernelName = "residual_27point";
             h2inv = 1.0 / (30.0 * h2);
         }
         else if (problem.stencilType == MGCL_VARYING)
         {
-            kernel_name = "residual_27point_varying_stencil";
+            kernelName = "residual_27point_varying_stencil";
         }
 
+        cl_event ev;
+
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
+        cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernelName, &err);
         mgclCheckError(err, "Creating kernel");
 
         cl_mem dVIn = level.getDVIn().getBuffer();
@@ -730,14 +732,29 @@ namespace mgcl
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
         size_t global = mgh * ngh * ogh;
-        const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernel_name, global);
+        const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
         size_t local = c[0];
 
         if (global % local != 0)
             global += local - (global % local);
 
-        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 1, NULL, &global, &local, 0, NULL, NULL);
+        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 1, NULL, &global, &local, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing residual kernel");
+
+        if (problem.isProfilingEnabled())
+        {
+            clFinish(problem.getCommands());
+
+            cl_ulong start_time, end_time;
+            mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start_time, NULL), "clGetEventProfilingInfo");
+            mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end_time, NULL), "clGetEventProfilingInfo");
+            cl_ulong execution_time_ns = end_time - start_time;
+
+            problem.getProfilingData()->getMeasurements()[kernelName].push_back(ProfilingMeasurement{
+                execution_time_ns,
+                {global, 0, 0},
+                {local, 1, 1}});
+        }
 
         if (problem.isPeriodic())
         {
@@ -778,6 +795,21 @@ namespace mgcl
 
                 err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 1, NULL, &global, &local_sq, 0, NULL, NULL);
                 mgclCheckError(err, "Enqueueing residual squared kernel");
+
+                if (problem.isProfilingEnabled())
+                {
+                    clFinish(problem.getCommands());
+
+                    cl_ulong start_time, end_time;
+                    mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start_time, NULL), "clGetEventProfilingInfo");
+                    mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end_time, NULL), "clGetEventProfilingInfo");
+                    cl_ulong execution_time_ns = end_time - start_time;
+
+                    problem.getProfilingData()->getMeasurements()[kernelName].push_back(ProfilingMeasurement{
+                        execution_time_ns,
+                        {global, 0, 0},
+                        {local_sq, 1, 1}});
+                }
 
                 // sum up residual squares
                 res = sqrt(util::sum(dRsquares, problem.getProgram(), problem.getCommands(), true, problem.getKernelConfig()));

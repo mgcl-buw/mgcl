@@ -61,15 +61,78 @@ TEST_CASE("profiling_kernels")
 
         // extract profiling data for this kernel
         auto d = p.getProfilingData()->getMeasurements();
-        auto& jac = d[kernelName];
-        REQUIRE(jac.size() == maxiter);
-        for (auto el : jac)
+        auto& measurements = d[kernelName];
+        REQUIRE(measurements.size() == maxiter);
+        for (auto el : measurements)
         {
             REQUIRE(el.elapsed > 0);
             REQUIRE(el.work_group[0] == wg[0]);
             REQUIRE(el.work_group[1] == wg[1]);
+            REQUIRE(el.work_group[2] == wg[2]);
             REQUIRE(el.work_items[0] == global);
             REQUIRE(el.work_items[1] == 0);
+            REQUIRE(el.work_items[2] == 0);
+        }
+    }
+
+    SECTION("residual")
+    {
+        mgcl::MultigridEngine::residual(p, lv0, true);
+
+        // check residual itself
+        {
+            std::string kernelName = "residual_27point_varying_stencil";
+
+            // get workgroup size from config for smallest problem size
+            auto& wg = conf[kernelName][0].second;
+
+            // calculate padded work-item count
+            size_t global = static_cast<size_t>(mgh * ngh * ogh);
+            if (global % wg[0] != 0)
+                global += wg[0] - (global % wg[0]);
+
+            // extract profiling data for this kernel
+            auto d = p.getProfilingData()->getMeasurements();
+            auto& measurements = d[kernelName];
+            REQUIRE(measurements.size() == 1);
+            for (auto el : measurements)
+            {
+                REQUIRE(el.elapsed > 0);
+                REQUIRE(el.work_group[0] == wg[0]);
+                REQUIRE(el.work_group[1] == wg[1]);
+                REQUIRE(el.work_group[2] == wg[2]);
+                REQUIRE(el.work_items[0] == global);
+                REQUIRE(el.work_items[1] == 0);
+                REQUIRE(el.work_items[2] == 0);
+            }
+        }
+
+        // check residual_squared
+        {
+            std::string kernelName = "residual_squared";
+
+            // get workgroup size from config for smallest problem size
+            auto& wg = conf[kernelName][0].second;
+
+            // calculate padded work-item count
+            size_t global = static_cast<size_t>(mgh * ngh * ogh);
+            if (global % wg[0] != 0)
+                global += wg[0] - (global % wg[0]);
+
+            // extract profiling data for this kernel
+            auto d = p.getProfilingData()->getMeasurements();
+            auto& measurements = d[kernelName];
+            REQUIRE(measurements.size() == 1);
+            for (auto el : measurements)
+            {
+                REQUIRE(el.elapsed > 0);
+                REQUIRE(el.work_group[0] == wg[0]);
+                REQUIRE(el.work_group[1] == wg[1]);
+                REQUIRE(el.work_group[2] == wg[2]);
+                REQUIRE(el.work_items[0] == global);
+                REQUIRE(el.work_items[1] == 0);
+                REQUIRE(el.work_items[2] == 0);
+            }
         }
     }
 }
