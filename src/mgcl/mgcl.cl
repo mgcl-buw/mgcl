@@ -200,17 +200,22 @@ __kernel void copy_output_data(__global double* v_output, __global double* v_in,
     }
 }
 
-/* Corrects error by adding e to v */
-__kernel void correct_error(__global double* restrict v, __global double* restrict e, const int m, const int n,
-                            const int o, const int ghosts)
+/* Corrects error by adding e to v, whereas both have the same size.
+ * 3d kernel that needs to be started with m x n x o work-items.
+ * m, n and o are dimensions of ghosted grid. */
+__kernel void correct_error(
+    __global double* restrict v,
+    __global double* restrict e,
+    const int m, const int n, const int o,
+    const int ghosts)
 {
-    int i = get_global_id(0);
-    int j = get_global_id(1);
-    int k = get_global_id(2);
+    int i = get_global_id(0) + ghosts;
+    int j = get_global_id(1) + ghosts;
+    int k = get_global_id(2) + ghosts;
     int idx = i * n * o + j * o + k;
 
     // only for real cells
-    if (i > ghosts - 1 && j > ghosts - 1 && k > ghosts - 1 && i < m - ghosts && j < n - ghosts && k < o - ghosts)
+    if (i >= ghosts && j >= ghosts && k >= ghosts && i < m - ghosts && j < n - ghosts && k < o - ghosts)
     {
         v[idx] += e[idx];
     }

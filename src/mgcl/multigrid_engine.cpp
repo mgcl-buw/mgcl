@@ -174,7 +174,7 @@ namespace mgcl
         prolongate(level, levelAbove, level.getDR(), levelAbove.getDVIn());
 
         // correct error
-        correctError(problem, level.getDVIn(), level.getDR(), level.mgh, level.ngh, level.ogh);
+        correctError(level);
 
         // relax nu2 times
         res = jacobi(problem, level, problem.nu2, !problem.ignoreTol, problem.getJacobiIterationsPerKernel());
@@ -185,45 +185,46 @@ namespace mgcl
         return res;
     }
 
-    /* Starts kernel to correct error, e.g. v = v + e
-     * m,n,o is size of ghosted grid */
-    int MultigridEngine::correctError(Problem& problem, CuboidGpu& d_v, CuboidGpu& d_r, int mgh, int ngh, int ogh)
+    /**
+     * @brief Starts kernel to correct the error, i.e. v = v + e.
+     *
+     * @param level
+     * @return int
+     */
+    int MultigridEngine::correctError(Level& level)
     {
         int err;
+        auto& problem = *level.problem;
 
         // Create the compute kernel from the program
         const char* kernelName = "correct_error";
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernelName, &err);
         mgclCheckError(err, "Creating kernel");
 
-        cl_mem dvraw = d_v.getBuffer();
-        cl_mem drraw = d_r.getBuffer();
+        cl_mem dvraw = level.getDVIn().getBuffer();
+        cl_mem drraw = level.getDR().getBuffer();
 
         // assign kernel arguments
         int pos = 0;
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dvraw);
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &drraw);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &level.mgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &level.ngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &level.ogh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
         mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
-        size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
+        size_t global[3] = {static_cast<size_t>(level.m), static_cast<size_t>(level.n), static_cast<size_t>(level.o)};
         const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, 1);
         const size_t local[3] = {
-            static_cast<size_t>(mgh > c[0] ? c[0] : mgh),
-            static_cast<size_t>(ngh > c[1] ? c[1] : ngh),
-            static_cast<size_t>(ogh > c[2] ? c[2] : ogh)};
+            static_cast<size_t>(level.m > c[0] ? c[0] : level.m),
+            static_cast<size_t>(level.n > c[1] ? c[1] : level.n),
+            static_cast<size_t>(level.o > c[2] ? c[2] : level.o)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
-            {
-                // printf("padding global size %d from %ld to ", i, global[i]);
                 global[i] += local[i] - (global[i] % local[i]);
-                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
-            }
 
         err = clEnqueueNDRangeKernel(problem.openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
         mgclCheckError(err, "Enqueueing kernel");

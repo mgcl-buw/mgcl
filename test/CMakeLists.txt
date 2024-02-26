@@ -30,6 +30,7 @@ set(SOURCES_TEST
     test_util.cpp
     test_kernel_config.cpp
     test_profiling.cpp
+    test_correct_error.cpp
     ocl_wrapper.hpp
     ocl_wrapper.cpp
     mpi/catch2_main_mpi.cpp)

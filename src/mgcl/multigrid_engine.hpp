@@ -38,7 +38,7 @@ namespace mgcl
     public:
         static double vcycleSeq(Problem& problem, Level& level);
         static double vcycle(Problem& problem, Level& level);
-        static int correctError(Problem& problem, CuboidGpu& d_v, CuboidGpu& d_r, int m, int n, int o);
+        static int correctError(Level& level);
 
         static void restrictSeq(Level& fine, Level& coarse, Cuboid& fineVals, Cuboid& coarseVals);
         static void restrict(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values);
