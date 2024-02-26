@@ -1,8 +1,8 @@
 #include "problem.hpp"
 #include "cuboid.hpp" // for Cuboid
-#include "level.hpp"  // for Level
+#include "kernel_config.hpp"
+#include "level.hpp" // for Level
 #include "mpi_global_data.hpp"
-#include "mpi_level_data.hpp"
 #include "mpi_stencil.hpp"
 #include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
@@ -402,7 +402,7 @@ namespace mgcl
                         mpi_util::gather(getMpiComm(), getCommands(), *lvFine.getStencilValuesGpu());
                         gathered = true;
                         updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvFine.getStencilValuesGpu(),
-                                                  lvFine.getMpiDataPtr(), isPeriodic(), true);
+                                                  lvFine.getMpiDataPtr(), isPeriodic(), true, &getKernelConfig());
                     }
 
                     // Only calculate galerkin if
@@ -417,7 +417,8 @@ namespace mgcl
                                 getProgram(), getCommands(), getContext(),
                                 lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
                                 isPeriodic(), gathered,
-                                lvCoarse.isCalculatedLocally(), !updateGhostsCoarse, svm, svn, svo));
+                                lvCoarse.isCalculatedLocally(), !updateGhostsCoarse,
+                                &getKernelConfig(), svm, svn, svo));
                 }
             }
         }

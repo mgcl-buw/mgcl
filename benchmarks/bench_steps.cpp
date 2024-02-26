@@ -242,7 +242,7 @@ TEST_CASE("mgcl_steps_galerkin_vs_solve")
               {
                   mgcl::MultigridEngine::galerkin(*fine.getStencilValuesGpu(), 2,
                                                   p.getProgram(), p.getCommands(), p.getContext(),
-                                                  nullptr, nullptr, periodic, true, true, false);
+                                                  nullptr, nullptr, periodic, true, true, false, nullptr);
                   clFinish(p.getCommands());
               });
 

@@ -2,6 +2,7 @@
 #define MGCL_MPI_STENCIL_HPP
 
 #include "mpi_stencil.hpp"
+#include "kernel_config.hpp"
 #include "mpi_level_data.hpp"
 #include "mpi_util.hpp"
 #include "opencl_helper.hpp"
@@ -189,14 +190,16 @@ namespace mgcl
      * @param commands
      * @param periodic
      * @param forceLocal
+     * @param conf Optional kernel config, if local ghost update is done.
      */
     void updateGhostsStencilOclMpi(cl_command_queue commands, cl_program program,
                                    VaryingStencilGpu& s,
-                                   MPILevelData* mpiData, bool periodic, bool forceLocal)
+                                   MPILevelData* mpiData, bool periodic, bool forceLocal,
+                                   conf::KernelConfig* conf)
     {
         if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
         {
-            s.updateGhosts(program, commands);
+            s.updateGhosts(program, commands, conf);
             return;
         }
 

@@ -87,7 +87,8 @@ namespace mgcl
         auto problem = fine.problem;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(problem->openCLHelper.getProgram(), "restrict_to_coarse", &err);
+        const char* kernelName = "restrict_to_coarse";
+        cl_kernel kernel = clCreateKernel(problem->openCLHelper.getProgram(), kernelName, &err);
         mgclCheckError(err, "Creating kernel");
 
         cl_mem buf_fine = d_fine_values.getBuffer();
@@ -115,8 +116,10 @@ namespace mgcl
 
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(mreal), static_cast<size_t>(nreal), static_cast<size_t>(oreal)};
-        const size_t local[3] = {static_cast<size_t>(mreal > 4 ? 4 : mreal), static_cast<size_t>(nreal > 4 ? 4 : nreal),
-                                 static_cast<size_t>(oreal > 4 ? 4 : oreal)};
+        const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(fine.problem->getKernelConfig(), kernelName, 1);
+        const size_t local[3] = {static_cast<size_t>(mreal > c[0] ? c[0] : mreal),
+                                 static_cast<size_t>(nreal > c[1] ? c[1] : nreal),
+                                 static_cast<size_t>(oreal > c[2] ? c[2] : oreal)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)

@@ -9,6 +9,7 @@
 #define CL_TARGET_OPENCL_VERSION 120
 #endif // CL_TARGET_OPENCL_VERSION
 
+#include "kernel_config.hpp"
 #include "level.hpp"
 #include "mgcl.hpp" // for MGCL_RESIDUAL_NORM, MGCL_STENCIL, MGCL_L2
 #include "mpi_global_data.hpp"
@@ -146,6 +147,10 @@ namespace mgcl
         /* If true, kernel timings will be measured. */
         bool profilingEnabled = false;
         std::unique_ptr<ProfilingData> profilingData = nullptr;
+
+        /* Kernel config, can be customized to set inidividual work-group sizes per kernel, dependend on number
+         * of work-items. */
+        conf::KernelConfig kernelConfig = conf::createDefaultKernelConfig();
 
         /* MPI relevant data. */
         std::unique_ptr<MPIGlobalData> mpiGlobalData = std::make_unique<MPIGlobalData>();
@@ -336,6 +341,8 @@ namespace mgcl
         void setProfilingEnabled(bool profilingEnabled_) { profilingEnabled = profilingEnabled_; }
 
         ProfilingData& getProfilingData();
+
+        conf::KernelConfig& getKernelConfig() { return kernelConfig; }
 
         friend std::ostream& operator<<(std::ostream& os, const Problem& lv);
     };

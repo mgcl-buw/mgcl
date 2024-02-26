@@ -192,7 +192,8 @@ namespace mgcl
         int err;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), "correct_error", &err);
+        const char* kernelName = "correct_error";
+        cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernelName, &err);
         mgclCheckError(err, "Creating kernel");
 
         cl_mem dvraw = d_v.getBuffer();
@@ -210,8 +211,11 @@ namespace mgcl
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-        const size_t local[3] = {static_cast<size_t>(mgh > 4 ? 4 : mgh), static_cast<size_t>(ngh > 4 ? 4 : ngh),
-                                 static_cast<size_t>(ogh > 4 ? 4 : ogh)};
+        const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, 1);
+        const size_t local[3] = {
+            static_cast<size_t>(mgh > c[0] ? c[0] : mgh),
+            static_cast<size_t>(ngh > c[1] ? c[1] : ngh),
+            static_cast<size_t>(ogh > c[2] ? c[2] : ogh)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
@@ -309,6 +313,7 @@ namespace mgcl
                                                 MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
                                                 bool periodic, bool forceLocalFine, bool forceLocalCoarse,
                                                 bool skipUpdateGhostsCoarse,
+                                                conf::KernelConfig* kernelConfig,
                                                 int resm, int resn, int reso)
     {
         // Make sure a_h has two ghosts at each border for periodic bc.
@@ -325,14 +330,14 @@ namespace mgcl
 
         // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
         // S * A_h * S and cut out later manually.
-        auto sas = sr.multiply(a_h, 2, program, queue, context, mpiDataFine, periodic, forceLocalFine)
-                       .multiply(sp, 0, program, queue, context, mpiDataFine, periodic, forceLocalFine);
+        auto sas = sr.multiply(a_h, 2, program, queue, context, mpiDataFine, periodic, forceLocalFine, kernelConfig)
+                       .multiply(sp, 0, program, queue, context, mpiDataFine, periodic, forceLocalFine, kernelConfig);
 
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
-        auto a_2h = sas.cutFromW7ToW3(program, queue, context, gh_a2h, resm, resn, reso);
+        auto a_2h = sas.cutFromW7ToW3(program, queue, context, gh_a2h, kernelConfig, resm, resn, reso);
 
         if (!skipUpdateGhostsCoarse)
-            updateGhostsStencilOclMpi(queue, program, a_2h, mpiDataCoarse, periodic, forceLocalCoarse);
+            updateGhostsStencilOclMpi(queue, program, a_2h, mpiDataCoarse, periodic, forceLocalCoarse, kernelConfig);
 
         return a_2h;
     }

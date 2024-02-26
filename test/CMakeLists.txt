@@ -28,6 +28,7 @@ set(SOURCES_TEST
     test_results.hpp
     test_results.cpp
     test_util.cpp
+    test_kernel_config.cpp
     ocl_wrapper.hpp
     ocl_wrapper.cpp
     mpi/catch2_main_mpi.cpp)

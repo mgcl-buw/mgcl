@@ -1,11 +1,31 @@
 #include "util.hpp"
 
+#include "kernel_config.hpp"
 #include "opencl_helper.hpp"
 
 #include <cmath>
 
 namespace mgcl::util
 {
+
+    /**
+     * @brief Overload for sum that accepts localSize as parameter. This overload uses the localSize given
+     * in the kernel config.
+     *
+     * @param buf
+     * @param program
+     * @param commands
+     * @param return_sum
+     * @param conf
+     * @return double
+     */
+    double sum(CuboidGpu& buf, cl_program program, cl_command_queue commands,
+               bool return_sum, mgcl::conf::KernelConfig& conf)
+    {
+        const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(
+            conf, "sum_partial_global_eq_x_num_elements", buf.getSize());
+        return sum(buf, program, commands, return_sum, c[0]);
+    }
 
     /**
      * @brief Builds the sum of a buffer on device and returns it if return_sum is true.
@@ -110,6 +130,25 @@ namespace mgcl::util
     }
 
     /**
+     * @brief Overload for max that accepts localSize as parameter. This overload uses the localSize given
+     * in the kernel config.
+     *
+     * @param buf
+     * @param program
+     * @param commands
+     * @param return_sum
+     * @param conf
+     * @return double
+     */
+    double max(CuboidGpu& buf, cl_program program, cl_command_queue commands,
+               bool return_sum, mgcl::conf::KernelConfig& conf)
+    {
+        const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(
+            conf, "max_partial_global_eq_x_num_elements", buf.getSize());
+        return max(buf, program, commands, return_sum, c[0]);
+    }
+
+    /**
      * @brief Finds the maximum value of a buffer on device and returns it if return_max is true.
      * First build partial maxima, then build global maximum so work-groups get synchronized.
      *
@@ -209,6 +248,25 @@ namespace mgcl::util
         mgclCheckError(clReleaseKernel(kernel_max_finish), "clReleaseKernel(kernel_max_finish)");
 
         return ret;
+    }
+
+    /**
+     * @brief Overload for max_abs that accepts localSize as parameter. This overload uses the localSize given
+     * in the kernel config.
+     *
+     * @param buf
+     * @param program
+     * @param commands
+     * @param return_sum
+     * @param conf
+     * @return double
+     */
+    double max_abs(CuboidGpu& buf, cl_program program, cl_command_queue commands,
+                   bool return_sum, mgcl::conf::KernelConfig& conf)
+    {
+        const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(
+            conf, "max_abs_partial_global_eq_x_num_elements", buf.getSize());
+        return max_abs(buf, program, commands, return_sum, c[0]);
     }
 
     /**

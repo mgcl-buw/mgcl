@@ -1,4 +1,5 @@
 #include "stencil.hpp"
+#include "kernel_config.hpp"
 #include "mpi_stencil.hpp"
 #include "opencl_helper.hpp"
 
@@ -626,14 +627,19 @@ namespace mgcl
     }
 
     /**
-     * Updates ghost cells, respects periodic ghosts, i.e. when gh > m
+     * @brief Updates ghost cells, respects periodic ghosts, i.e. when gh > m
+     *
+     * @param program
+     * @param queue
+     * @param conf Kernel Config, i.e. determines the work-group size. If null, a default value is used.
      */
-    void VaryingStencilGpu::updateGhosts(cl_program program, cl_command_queue queue)
+    void VaryingStencilGpu::updateGhosts(cl_program program, cl_command_queue queue, conf::KernelConfig* conf)
     {
         int err;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(program, "update_ghosts_varying_stencil", &err);
+        const char* kernelName = "update_ghosts_varying_stencil";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
         mgclCheckError(err, "clCreateKernel");
 
         // assign kernel arguments
@@ -651,10 +657,19 @@ namespace mgcl
         int ngh = n + 2 * gh;
         int ogh = o + 2 * gh;
         size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-        const size_t local[3] = {
+        size_t local[3] = {
             static_cast<size_t>(mgh > 4 ? 4 : mgh),
             static_cast<size_t>(ngh > 4 ? 4 : ngh),
             static_cast<size_t>(ogh > 4 ? 4 : ogh)};
+
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, mgh * ngh * ogh);
+            local[0] = static_cast<size_t>(mgh > c[0] ? c[0] : mgh);
+            local[1] = static_cast<size_t>(ngh > c[1] ? c[1] : ngh);
+            local[2] = static_cast<size_t>(ogh > c[2] ? c[2] : ogh);
+        }
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
@@ -676,20 +691,28 @@ namespace mgcl
      * @brief Multiplies two varying stencils on the gpu and creates a new gpu buffer which will be returned.
      *
      * @param b
-     * @param ghc
+     * @param ghc Amount of ghost cells for the result.
      * @param program
      * @param queue
      * @param context
+     * @param mpiData Pointer to MPI data, which is required for the ghost update, if MPI is in use. Set to nullptr if
+     * MPI is not in use.
+     * @param periodic Forwarded to the ghost update.
+     * @param forceLocal Forwarded to the ghost update. If true, ghost cells are updated without the use of MPI
+     * routines, even when mpiData is not null.
+     * @param conf Kernel Config, i.e. determines the work-group size. If null, a default value is used.
      * @return VaryingStencilGpu
      */
     VaryingStencilGpu VaryingStencilGpu::multiply(VaryingStencilGpu& b, int ghc,
                                                   cl_program program, cl_command_queue queue, cl_context context,
-                                                  MPILevelData* mpiData, bool periodic, bool forceLocal)
+                                                  MPILevelData* mpiData, bool periodic, bool forceLocal,
+                                                  conf::KernelConfig* conf)
     {
         int err;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(program, "mult_stencils_var_var", &err);
+        const char* kernelName = "mult_stencils_var_var";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
         mgclCheckError(err, "clCreateKernel");
 
         // create output buffer c
@@ -717,8 +740,18 @@ namespace mgcl
 
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
-        const size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m), static_cast<size_t>(n > 4 ? 4 : n),
-                                 static_cast<size_t>(o > 4 ? 4 : o)};
+        size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m),
+                           static_cast<size_t>(n > 4 ? 4 : n),
+                           static_cast<size_t>(o > 4 ? 4 : o)};
+
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, m * n * o);
+            local[0] = static_cast<size_t>(m > c[0] ? c[0] : m);
+            local[1] = static_cast<size_t>(n > c[1] ? c[1] : n);
+            local[2] = static_cast<size_t>(o > c[2] ? c[2] : o);
+        }
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
@@ -737,7 +770,7 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal);
+            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal, conf);
 
         clReleaseKernel(kernel);
         return c;
@@ -748,20 +781,28 @@ namespace mgcl
      * be returned, i.e. a * b = c
      *
      * @param b
-     * @param ghc
+     * @param ghc Amount of ghost cells for the result.
      * @param program
      * @param queue
      * @param context
+     * @param mpiData Pointer to MPI data, which is required for the ghost update, if MPI is in use. Set to nullptr if
+     * MPI is not in use.
+     * @param periodic Forwarded to the ghost update.
+     * @param forceLocal Forwarded to the ghost update. If true, ghost cells are updated without the use of MPI
+     * routines, even when mpiData is not null.
+     * @param conf Kernel Config, i.e. determines the work-group size. If null, a default value is used.
      * @return VaryingStencilGpu
      */
     VaryingStencilGpu VaryingStencilGpu::multiply(FixedStencilGpu& b, int ghc,
                                                   cl_program program, cl_command_queue queue, cl_context context,
-                                                  MPILevelData* mpiData, bool periodic, bool forceLocal)
+                                                  MPILevelData* mpiData, bool periodic, bool forceLocal,
+                                                  conf::KernelConfig* conf)
     {
         int err;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(program, "mult_stencils_var_fix", &err);
+        const char* kernelName = "mult_stencils_var_fix";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
         mgclCheckError(err, "clCreateKernel");
 
         // create output buffer c
@@ -788,8 +829,18 @@ namespace mgcl
         int wc = c.getWidth();
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o * wc * wc * wc)};
-        const size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m), static_cast<size_t>(n > 4 ? 4 : n),
-                                 static_cast<size_t>(o > 4 ? 4 : o)};
+        size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m),
+                           static_cast<size_t>(n > 4 ? 4 : n),
+                           static_cast<size_t>(o > 4 ? 4 : o)};
+
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, m * n * o * wc * wc * wc);
+            local[0] = static_cast<size_t>(m > c[0] ? c[0] : m);
+            local[1] = static_cast<size_t>(n > c[1] ? c[1] : n);
+            local[2] = static_cast<size_t>(o > c[2] ? c[2] : o);
+        }
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
@@ -805,7 +856,7 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal);
+            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal, conf);
 
         clReleaseKernel(kernel);
         return c;
@@ -818,6 +869,7 @@ namespace mgcl
      * @param queue OpenCL command queue
      * @param context OpenCL context
      * @param ghout Number of ghost cells of the output stencil.
+     * @param conf Kernel Config, i.e. determines the work-group size. If null, a default value is used.
      * @param resm Size of resulting stencil's grid. Per default halve of this's size.
      * @param resn Size of resulting stencil's grid. Per default halve of this's size.
      * @param reso Size of resulting stencil's grid. Per default halve of this's size.
@@ -825,7 +877,8 @@ namespace mgcl
      */
 
     VaryingStencilGpu VaryingStencilGpu::cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context,
-                                                       int ghout, int resm, int resn, int reso)
+                                                       int ghout, mgcl::conf::KernelConfig* conf,
+                                                       int resm, int resn, int reso)
     {
         int err;
 
@@ -845,7 +898,8 @@ namespace mgcl
         VaryingStencilGpu a_2h(resm, resn, reso, 3, ghout, context, queue);
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(program, "cut_stencils_w7_to_w3", &err);
+        const char* kernelName = "cut_stencils_w7_to_w3";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
         mgclCheckError(err, "clCreateKernel");
 
         auto outbuf = a_2h.getBuf();
@@ -870,8 +924,17 @@ namespace mgcl
 
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(m2), static_cast<size_t>(n2), static_cast<size_t>(o2)};
-        const size_t local[3] = {static_cast<size_t>(m2 > 4 ? 4 : m2), static_cast<size_t>(n2 > 4 ? 4 : n2),
-                                 static_cast<size_t>(o2 > 4 ? 4 : o2)};
+        size_t local[3] = {static_cast<size_t>(m2 > 4 ? 4 : m2), static_cast<size_t>(n2 > 4 ? 4 : n2),
+                           static_cast<size_t>(o2 > 4 ? 4 : o2)};
+
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, m2 * n2 * o2);
+            local[0] = static_cast<size_t>(m > c[0] ? c[0] : m);
+            local[1] = static_cast<size_t>(n > c[1] ? c[1] : n);
+            local[2] = static_cast<size_t>(o > c[2] ? c[2] : o);
+        }
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
@@ -1031,20 +1094,28 @@ namespace mgcl
      * be returned, i.e. a * b = c.
      *
      * @param b
-     * @param ghc
+     * @param ghc Amount of ghost cells for the result.
      * @param program
      * @param queue
      * @param context
+     * @param mpiData Pointer to MPI data, which is required for the ghost update, if MPI is in use. Set to nullptr if
+     * MPI is not in use.
+     * @param periodic Forwarded to the ghost update.
+     * @param forceLocal Forwarded to the ghost update. If true, ghost cells are updated without the use of MPI
+     * routines, even when mpiData is not null.
+     * @param conf Kernel Config, i.e. determines the work-group size. If null, a default value is used.
      * @return VaryingStencilGpu
      */
     VaryingStencilGpu FixedStencilGpu::multiply(VaryingStencilGpu& b, int ghc,
                                                 cl_program program, cl_command_queue queue, cl_context context,
-                                                MPILevelData* mpiData, bool periodic, bool forceLocal)
+                                                MPILevelData* mpiData, bool periodic, bool forceLocal,
+                                                conf::KernelConfig* conf)
     {
         int err;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(program, "mult_stencils_fix_var", &err);
+        const char* kernelName = "mult_stencils_fix_var";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
         mgclCheckError(err, "clCreateKernel");
 
         int m = b.getM();
@@ -1076,8 +1147,18 @@ namespace mgcl
         int wc = c.getWidth();
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
         size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o * wc * wc * wc)};
-        const size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m), static_cast<size_t>(n > 4 ? 4 : n),
-                                 static_cast<size_t>(o > 4 ? 4 : o)};
+        size_t local[3] = {static_cast<size_t>(m > 4 ? 4 : m),
+                           static_cast<size_t>(n > 4 ? 4 : n),
+                           static_cast<size_t>(o > 4 ? 4 : o)};
+
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, m * n * o * wc * wc * wc);
+            local[0] = static_cast<size_t>(m > c[0] ? c[0] : m);
+            local[1] = static_cast<size_t>(n > c[1] ? c[1] : n);
+            local[2] = static_cast<size_t>(o > c[2] ? c[2] : o);
+        }
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
@@ -1096,7 +1177,7 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal);
+            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal, conf);
 
         clReleaseKernel(kernel);
         return c;

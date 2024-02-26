@@ -34,7 +34,7 @@ namespace mgcl
      */
     void updateGhostsStencilOclMpi(cl_command_queue commands, cl_program program,
                                    VaryingStencilGpu& s,
-                                   MPILevelData* mpiData, bool periodic, bool forceLocal);
+                                   MPILevelData* mpiData, bool periodic, bool forceLocal, conf::KernelConfig* conf);
 }
 
 #endif // MGCL_MPI_STENCIL_HPP
