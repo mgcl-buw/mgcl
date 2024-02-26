@@ -243,4 +243,35 @@ TEST_CASE("profiling_kernels")
             REQUIRE(el.work_items[2] == global[2]);
         }
     }
+
+    SECTION("correct_error")
+    {
+        std::string kernelName = "correct_error";
+
+        mgcl::MultigridEngine::correctError(lv0);
+
+        // get workgroup size from config for smallest problem size
+        auto& wg = conf[kernelName][0].second;
+
+        // calculate padded work-item count
+        size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
+        for (int i = 0; i < 3; i++)
+            if (global[i] % wg[i] != 0)
+                global[i] += wg[i] - (global[i] % wg[i]);
+
+        // extract profiling data for this kernel
+        auto d = p.getProfilingData()->getMeasurements();
+        auto& measurements = d[kernelName];
+        REQUIRE(measurements.size() == 1);
+        for (auto el : measurements)
+        {
+            REQUIRE(el.elapsed > 0);
+            REQUIRE(el.work_group[0] == wg[0]);
+            REQUIRE(el.work_group[1] == wg[1]);
+            REQUIRE(el.work_group[2] == wg[2]);
+            REQUIRE(el.work_items[0] == global[0]);
+            REQUIRE(el.work_items[1] == global[1]);
+            REQUIRE(el.work_items[2] == global[2]);
+        }
+    }
 }

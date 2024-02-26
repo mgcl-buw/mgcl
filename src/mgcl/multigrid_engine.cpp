@@ -226,8 +226,25 @@ namespace mgcl
             if (global[i] % local[i] != 0)
                 global[i] += local[i] - (global[i] % local[i]);
 
-        err = clEnqueueNDRangeKernel(problem.openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
+        cl_event ev;
+
+        err = clEnqueueNDRangeKernel(problem.openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing kernel");
+
+        if (problem.isProfilingEnabled())
+        {
+            clFinish(problem.getCommands());
+
+            cl_ulong start_time, end_time;
+            mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start_time, NULL), "clGetEventProfilingInfo");
+            mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end_time, NULL), "clGetEventProfilingInfo");
+            cl_ulong execution_time_ns = end_time - start_time;
+
+            problem.getProfilingData()->getMeasurements()[kernelName].push_back(ProfilingMeasurement{
+                execution_time_ns,
+                {global[0], global[1], global[2]},
+                {local[0], local[1], local[2]}});
+        }
 
         clReleaseKernel(kernel);
         return err;
