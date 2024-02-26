@@ -363,15 +363,28 @@ namespace mgcl
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
-            {
-                // printf("padding global size %d from %ld to ", i, global[i]);
                 global[i] += local[i] - (global[i] % local[i]);
-                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
-            }
+
+        cl_event ev;
 
         // enqueue kernel
-        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
+        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing update_ghosts_periodic kernel");
+
+        if (problem.isProfilingEnabled())
+        {
+            clFinish(problem.getCommands());
+
+            cl_ulong start_time, end_time;
+            mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start_time, NULL), "clGetEventProfilingInfo");
+            mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end_time, NULL), "clGetEventProfilingInfo");
+            cl_ulong execution_time_ns = end_time - start_time;
+
+            problem.getProfilingData()->getMeasurements()[kernelName].push_back(ProfilingMeasurement{
+                execution_time_ns,
+                {global[0], global[1], global[2]},
+                {local[0], local[1], local[2]}});
+        }
 
         err = clReleaseKernel(kernel);
         mgclCheckError(err, "Releasing update_ghosts_periodic kernel");
