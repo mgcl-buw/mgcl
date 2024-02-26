@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <iomanip>
+#include <memory>
 
 namespace mgcl
 {
@@ -29,7 +30,7 @@ namespace mgcl
                          int m, int n, int o,
                          int ghosts_m, int ghosts_n, int ghosts_o,
                          const cl_mem buf)
-        : context(context), buffer(buf), m(m), n(n), o(o),
+        : context(context), buffer(buf), flags(flags), m(m), n(n), o(o),
           ghosts_m(ghosts_m), ghosts_n(ghosts_n), ghosts_o(ghosts_o),
           mgh(m + 2 * ghosts_m), ngh(n + 2 * ghosts_n), ogh(o + 2 * ghosts_o),
           size(mgh * ngh * ogh)
@@ -82,7 +83,7 @@ namespace mgcl
      */
     CuboidGpu::CuboidGpu(cl_context context, cl_mem_flags flags,
                          const Cuboid& host_data)
-        : context(context), buffer(nullptr), m(host_data.getM()),
+        : context(context), buffer(nullptr), flags(flags), m(host_data.getM()),
           n(host_data.getN()), o(host_data.getO()),
           ghosts_m(host_data.getGhostsM()), ghosts_n(host_data.getGhostsN()), ghosts_o(host_data.getGhostsO()),
           mgh(m + 2 * ghosts_m), ngh(n + 2 * ghosts_n), ogh(o + 2 * ghosts_o),
@@ -227,6 +228,19 @@ namespace mgcl
         int err = clEnqueueCopyBuffer(commands, buffer, target.getBuffer(), 0, 0,
                                       sizeof(double) * mgh * ngh * ogh, 0, NULL, NULL);
         mgclCheckError(err, "clEnqueueCopyBuffer");
+    }
+
+    /**
+     * @brief Returns a shallow copy of this CuboidGpu instance, i.e. creating a new CuboidGpu with the same dimensions
+     * but without copying the data. The copy has the same read-write flags as the original.
+     *
+     * @return CuboidGpu
+     */
+    std::unique_ptr<CuboidGpu> CuboidGpu::copyShallow()
+    {
+        // filter flags to only forward r/w access to the copy
+        cl_mem_flags f = flags & (CL_MEM_READ_WRITE | CL_MEM_READ_ONLY | CL_MEM_WRITE_ONLY);
+        return std::make_unique<CuboidGpu>(context, f, m, n, o, ghosts_m, ghosts_n, ghosts_o);
     }
 
     void CuboidGpu::dumpToFile(cl_command_queue commands, const std::string& path, bool realCellsOnly) const

@@ -22,6 +22,7 @@ namespace mgcl
     private:
         cl_mem buffer;
         cl_context context;
+        cl_mem_flags flags;
         int m;
         int n;
         int o;
@@ -53,9 +54,12 @@ namespace mgcl
         int refCount();
         void copyTo(cl_command_queue commands, CuboidGpu& target);
 
+        std::unique_ptr<CuboidGpu> copyShallow();
+
         void dumpToFile(cl_command_queue commands, const std::string& path, bool realCellsOnly = false) const;
 
         cl_mem getBuffer() const;
+        cl_mem_flags getFlags() const { return flags; }
         int getM() const;
         int getN() const;
         int getO() const;

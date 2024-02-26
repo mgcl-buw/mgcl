@@ -257,3 +257,58 @@ TEST_CASE("CuboidGpu::swap")
         REQUIRE_THROWS(mgcl::CuboidGpu::swap(c1, c2));
     }
 }
+
+// Tests if CuboidGpu::cloneShallow works correctly.
+TEST_CASE("CuboidGpu::copyShallow")
+{
+    mgcl_test::TestUtility tu;
+
+    SECTION("success")
+    {
+        mgcl::Cuboid ch1(1, 2, 3, 0, 1, 2);
+        ch1[0][0][0] = 2.0;
+
+        mgcl::CuboidGpu c1(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, ch1);
+        auto c2ptr = c1.copyShallow();
+        auto& c2 = *c2ptr;
+
+        auto c_act1 = c1.read(tu.getCommands(), nullptr, false);
+        auto c_act2 = c2.read(tu.getCommands(), nullptr, true);
+
+        REQUIRE(c_act1->isEqual(ch1));
+        REQUIRE(c1.getM() == c2.getM());
+        REQUIRE(c1.getN() == c2.getN());
+        REQUIRE(c1.getO() == c2.getO());
+        REQUIRE(c1.getGhostsM() == c2.getGhostsM());
+        REQUIRE(c1.getGhostsN() == c2.getGhostsN());
+        REQUIRE(c1.getGhostsO() == c2.getGhostsO());
+        REQUIRE(c1.getBuffer() != c2.getBuffer());
+        REQUIRE(c2.getFlags() == CL_MEM_READ_WRITE);
+
+        // also check read-only and write-only buffers
+        mgcl::CuboidGpu c_ro(tu.getContext(), CL_MEM_READ_ONLY, 1, 2, 3, 1, 2, 3);
+        mgcl::CuboidGpu c_wo(tu.getContext(), CL_MEM_WRITE_ONLY, 1, 2, 3, 1, 2, 3);
+        auto c2_ro_ptr = c_ro.copyShallow();
+        auto& c2_ro = *c2_ro_ptr;
+        auto c2_wo_ptr = c_wo.copyShallow();
+        auto& c2_wo = *c2_wo_ptr;
+
+        REQUIRE(c_ro.getM() == c2_ro.getM());
+        REQUIRE(c_ro.getN() == c2_ro.getN());
+        REQUIRE(c_ro.getO() == c2_ro.getO());
+        REQUIRE(c_ro.getGhostsM() == c2_ro.getGhostsM());
+        REQUIRE(c_ro.getGhostsN() == c2_ro.getGhostsN());
+        REQUIRE(c_ro.getGhostsO() == c2_ro.getGhostsO());
+        REQUIRE(c_ro.getBuffer() != c2_ro.getBuffer());
+        REQUIRE(c2_ro.getFlags() == CL_MEM_READ_ONLY);
+
+        REQUIRE(c_wo.getM() == c2_wo.getM());
+        REQUIRE(c_wo.getN() == c2_wo.getN());
+        REQUIRE(c_wo.getO() == c2_wo.getO());
+        REQUIRE(c_wo.getGhostsM() == c2_wo.getGhostsM());
+        REQUIRE(c_wo.getGhostsN() == c2_wo.getGhostsN());
+        REQUIRE(c_wo.getGhostsO() == c2_wo.getGhostsO());
+        REQUIRE(c_wo.getBuffer() != c2_wo.getBuffer());
+        REQUIRE(c2_wo.getFlags() == CL_MEM_WRITE_ONLY);
+    }
+}
