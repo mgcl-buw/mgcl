@@ -5,6 +5,49 @@
 #include "test_utility.hpp"
 #include <memory>
 
+/**
+ * @brief Checks results for a single kernel.
+ *
+ * @param p Problem
+ * @param kernelName Name of the kernel as in mgcl.cl
+ * @param global work-item count that the kernel gets called with
+ * @param measurementCount number of measurements
+ */
+void checkResult(mgcl::Problem& p, std::string kernelName, std::array<int, 3> global, int measurementCount = 1)
+{
+    auto& conf = p.getKernelConfig();
+
+    // auto& lv0 = p.getLevelAt(0);
+
+    // int mgh = lv0.getMgh();
+    // int ngh = lv0.getNgh();
+    // int ogh = lv0.getOgh();
+
+    // get workgroup size from config for smallest problem size
+    auto& wg = conf[kernelName][0].second;
+
+    // calculate padded work-item count
+    // size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
+    for (int i = 0; i < 3; i++)
+        if (global[i] % wg[i] != 0)
+            global[i] += wg[i] - (global[i] % wg[i]);
+
+    // extract profiling data for this kernel
+    auto d = p.getProfilingData()->getMeasurements();
+    auto& measurements = d[kernelName];
+    REQUIRE(measurements.size() == measurementCount);
+    for (auto el : measurements)
+    {
+        REQUIRE(el.elapsed > 0);
+        REQUIRE(el.work_group[0] == wg[0]);
+        REQUIRE(el.work_group[1] == wg[1]);
+        REQUIRE(el.work_group[2] == wg[2]);
+        REQUIRE(el.work_items[0] == global[0]);
+        REQUIRE(el.work_items[1] == global[1]);
+        REQUIRE(el.work_items[2] == global[2]);
+    }
+}
+
 TEST_CASE("profiling_setup")
 {
     int m, n, o;
@@ -48,32 +91,8 @@ TEST_CASE("profiling_kernels")
     SECTION("jacobi")
     {
         int maxiter = 3;
-        std::string kernelName = "jacobi_iter_27point_varying_stencil_1d";
-
         mgcl::MultigridEngine::jacobi(p, lv0, maxiter, true);
-
-        // get workgroup size from config for smallest problem size
-        auto& wg = conf[kernelName][0].second;
-
-        // calculate padded work-item count
-        size_t global = static_cast<size_t>(mgh * ngh * ogh);
-        if (global % wg[0] != 0)
-            global += wg[0] - (global % wg[0]);
-
-        // extract profiling data for this kernel
-        auto d = p.getProfilingData()->getMeasurements();
-        auto& measurements = d[kernelName];
-        REQUIRE(measurements.size() == maxiter);
-        for (auto el : measurements)
-        {
-            REQUIRE(el.elapsed > 0);
-            REQUIRE(el.work_group[0] == wg[0]);
-            REQUIRE(el.work_group[1] == wg[1]);
-            REQUIRE(el.work_group[2] == wg[2]);
-            REQUIRE(el.work_items[0] == global);
-            REQUIRE(el.work_items[1] == 0);
-            REQUIRE(el.work_items[2] == 0);
-        }
+        checkResult(p, "jacobi_iter_27point_varying_stencil_1d", {mgh * ngh * ogh, 0, 0}, maxiter);
     }
 
     SECTION("residual")
@@ -81,60 +100,10 @@ TEST_CASE("profiling_kernels")
         mgcl::MultigridEngine::residual(p, lv0, true);
 
         // check residual itself
-        {
-            std::string kernelName = "residual_27point_varying_stencil";
-
-            // get workgroup size from config for smallest problem size
-            auto& wg = conf[kernelName][0].second;
-
-            // calculate padded work-item count
-            size_t global = static_cast<size_t>(mgh * ngh * ogh);
-            if (global % wg[0] != 0)
-                global += wg[0] - (global % wg[0]);
-
-            // extract profiling data for this kernel
-            auto d = p.getProfilingData()->getMeasurements();
-            auto& measurements = d[kernelName];
-            REQUIRE(measurements.size() == 1);
-            for (auto el : measurements)
-            {
-                REQUIRE(el.elapsed > 0);
-                REQUIRE(el.work_group[0] == wg[0]);
-                REQUIRE(el.work_group[1] == wg[1]);
-                REQUIRE(el.work_group[2] == wg[2]);
-                REQUIRE(el.work_items[0] == global);
-                REQUIRE(el.work_items[1] == 0);
-                REQUIRE(el.work_items[2] == 0);
-            }
-        }
+        checkResult(p, "residual_27point_varying_stencil", {mgh * ngh * ogh, 0, 0});
 
         // check residual_squared
-        {
-            std::string kernelName = "residual_squared";
-
-            // get workgroup size from config for smallest problem size
-            auto& wg = conf[kernelName][0].second;
-
-            // calculate padded work-item count
-            size_t global = static_cast<size_t>(mgh * ngh * ogh);
-            if (global % wg[0] != 0)
-                global += wg[0] - (global % wg[0]);
-
-            // extract profiling data for this kernel
-            auto d = p.getProfilingData()->getMeasurements();
-            auto& measurements = d[kernelName];
-            REQUIRE(measurements.size() == 1);
-            for (auto el : measurements)
-            {
-                REQUIRE(el.elapsed > 0);
-                REQUIRE(el.work_group[0] == wg[0]);
-                REQUIRE(el.work_group[1] == wg[1]);
-                REQUIRE(el.work_group[2] == wg[2]);
-                REQUIRE(el.work_items[0] == global);
-                REQUIRE(el.work_items[1] == 0);
-                REQUIRE(el.work_items[2] == 0);
-            }
-        }
+        checkResult(p, "residual_squared", {mgh * ngh * ogh, 0, 0});
     }
 
     SECTION("update_ghosts_cuboid")
@@ -142,40 +111,14 @@ TEST_CASE("profiling_kernels")
         // update ghosts is already called in Problem::init, so clear measurements first
         p.getProfilingData()->getMeasurements().clear();
 
-        std::string kernelName = "update_ghosts_periodic";
-
         auto& dbuf = lv0.getDVIn();
         mgcl::MultigridEngine::updateGhosts(p, dbuf, nullptr, true);
 
-        // get workgroup size from config for smallest problem size
-        auto& wg = conf[kernelName][0].second;
-
-        // calculate padded work-item count
-        size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-        for (int i = 0; i < 3; i++)
-            if (global[i] % wg[i] != 0)
-                global[i] += wg[i] - (global[i] % wg[i]);
-
-        // extract profiling data for this kernel
-        auto d = p.getProfilingData()->getMeasurements();
-        auto& measurements = d[kernelName];
-        REQUIRE(measurements.size() == 1);
-        for (auto el : measurements)
-        {
-            REQUIRE(el.elapsed > 0);
-            REQUIRE(el.work_group[0] == wg[0]);
-            REQUIRE(el.work_group[1] == wg[1]);
-            REQUIRE(el.work_group[2] == wg[2]);
-            REQUIRE(el.work_items[0] == global[0]);
-            REQUIRE(el.work_items[1] == global[1]);
-            REQUIRE(el.work_items[2] == global[2]);
-        }
+        checkResult(p, "update_ghosts_periodic", {mgh, ngh, ogh});
     }
 
     SECTION("copy_input_buffers")
     {
-        std::string kernelName = "copy_input_data";
-
         // create buffers manually, so they can be copied
         std::shared_ptr<mgcl::CuboidGpu> dv = lv0.getDVIn().copyShallow();
         std::shared_ptr<mgcl::CuboidGpu> df = lv0.getDVIn().copyShallow();
@@ -183,95 +126,23 @@ TEST_CASE("profiling_kernels")
         p.setDF(df);
 
         p.getOpenCLHelper().copyInputBuffers();
-
-        // get workgroup size from config for smallest problem size
-        auto& wg = conf[kernelName][0].second;
-
-        // calculate padded work-item count
-        size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-        for (int i = 0; i < 3; i++)
-            if (global[i] % wg[i] != 0)
-                global[i] += wg[i] - (global[i] % wg[i]);
-
-        // extract profiling data for this kernel
-        auto d = p.getProfilingData()->getMeasurements();
-        auto& measurements = d[kernelName];
-        REQUIRE(measurements.size() == 1);
-        for (auto el : measurements)
-        {
-            REQUIRE(el.elapsed > 0);
-            REQUIRE(el.work_group[0] == wg[0]);
-            REQUIRE(el.work_group[1] == wg[1]);
-            REQUIRE(el.work_group[2] == wg[2]);
-            REQUIRE(el.work_items[0] == global[0]);
-            REQUIRE(el.work_items[1] == global[1]);
-            REQUIRE(el.work_items[2] == global[2]);
-        }
+        checkResult(p, "copy_input_data", {mgh, ngh, ogh});
     }
 
     SECTION("copy_output_buffers")
     {
-        std::string kernelName = "copy_output_data";
-
         // create buffers manually, so they can be copied
         std::shared_ptr<mgcl::CuboidGpu> dv = lv0.getDVIn().copyShallow();
         p.setDV(dv);
 
         p.getOpenCLHelper().copyOutputBuffers();
 
-        // get workgroup size from config for smallest problem size
-        auto& wg = conf[kernelName][0].second;
-
-        // calculate padded work-item count
-        size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
-        for (int i = 0; i < 3; i++)
-            if (global[i] % wg[i] != 0)
-                global[i] += wg[i] - (global[i] % wg[i]);
-
-        // extract profiling data for this kernel
-        auto d = p.getProfilingData()->getMeasurements();
-        auto& measurements = d[kernelName];
-        REQUIRE(measurements.size() == 1);
-        for (auto el : measurements)
-        {
-            REQUIRE(el.elapsed > 0);
-            REQUIRE(el.work_group[0] == wg[0]);
-            REQUIRE(el.work_group[1] == wg[1]);
-            REQUIRE(el.work_group[2] == wg[2]);
-            REQUIRE(el.work_items[0] == global[0]);
-            REQUIRE(el.work_items[1] == global[1]);
-            REQUIRE(el.work_items[2] == global[2]);
-        }
+        checkResult(p, "copy_output_data", {m, n, o});
     }
 
     SECTION("correct_error")
     {
-        std::string kernelName = "correct_error";
-
         mgcl::MultigridEngine::correctError(lv0);
-
-        // get workgroup size from config for smallest problem size
-        auto& wg = conf[kernelName][0].second;
-
-        // calculate padded work-item count
-        size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
-        for (int i = 0; i < 3; i++)
-            if (global[i] % wg[i] != 0)
-                global[i] += wg[i] - (global[i] % wg[i]);
-
-        // extract profiling data for this kernel
-        auto d = p.getProfilingData()->getMeasurements();
-        auto& measurements = d[kernelName];
-        REQUIRE(measurements.size() == 1);
-        for (auto el : measurements)
-        {
-            REQUIRE(el.elapsed > 0);
-            REQUIRE(el.work_group[0] == wg[0]);
-            REQUIRE(el.work_group[1] == wg[1]);
-            REQUIRE(el.work_group[2] == wg[2]);
-            REQUIRE(el.work_items[0] == global[0]);
-            REQUIRE(el.work_items[1] == global[1]);
-            REQUIRE(el.work_items[2] == global[2]);
-        }
+        checkResult(p, "correct_error", {m, n, o});
     }
 }
