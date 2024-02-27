@@ -68,7 +68,7 @@ TEST_CASE("profiling_setup")
 TEST_CASE("profiling_kernels")
 {
     int m, n, o;
-    m = n = o = 4;
+    m = n = o = 8;
     double h = 1.0 / static_cast<double>(m);
     auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
     auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
@@ -144,5 +144,12 @@ TEST_CASE("profiling_kernels")
     {
         mgcl::MultigridEngine::correctError(lv0);
         checkResult(p, "correct_error", {m, n, o});
+    }
+
+    SECTION("restrict")
+    {
+        auto& lv1 = p.getLevelAt(1);
+        mgcl::MultigridEngine::restrict(lv0, lv1, lv0.getDVIn(), lv1.getDR());
+        checkResult(p, "restrict_to_coarse", {lv1.getM(), lv1.getN(), lv1.getO()});
     }
 }
