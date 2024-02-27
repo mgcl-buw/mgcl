@@ -777,7 +777,8 @@ namespace mgcl
                 if (global % local_sq != 0)
                     global += local_sq - (global % local_sq);
 
-                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 1, NULL, &global, &local_sq, 0, NULL, NULL);
+                cl_event ev;
+                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 1, NULL, &global, &local_sq, 0, NULL, &ev);
                 mgclCheckError(err, "Enqueueing residual squared kernel");
 
                 if (problem.isProfilingEnabled())
