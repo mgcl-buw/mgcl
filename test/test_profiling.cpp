@@ -152,4 +152,11 @@ TEST_CASE("profiling_kernels")
         mgcl::MultigridEngine::restrict(lv0, lv1, lv0.getDVIn(), lv1.getDR());
         checkResult(p, "restrict_to_coarse", {lv1.getM(), lv1.getN(), lv1.getO()});
     }
+
+    SECTION("prolongate")
+    {
+        auto& lv1 = p.getLevelAt(1);
+        mgcl::MultigridEngine::prolongate(lv0, lv1, lv0.getDVIn(), lv1.getDR());
+        checkResult(p, "prolongate_to_fine", {lv1.getMgh(), lv1.getNgh(), lv1.getOgh()});
+    }
 }

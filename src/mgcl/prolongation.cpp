@@ -100,20 +100,25 @@ namespace mgcl
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
-            {
-                // printf("padding global size %d from %ld to ", i, global[i]);
                 global[i] += local[i] - (global[i] % local[i]);
-                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
-            }
+
+        cl_event ev;
 
         // err = MultigridEngine::updateGhosts(*problem, d_coarse_values, coarse.mgh, coarse.ngh, coarse.ogh,
         //                                     problem->ghosts, problem->ghosts, problem->ghosts, coarse.getMpiDataPtr(),
         //                                     coarse.isCalculatedLocally());
         // mgclCheckError(err, "Updating ghosts coarse");
-        err = clEnqueueNDRangeKernel(problem->openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, NULL);
+        err = clEnqueueNDRangeKernel(problem->openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing kernel");
         // err = MultigridEngine::updateGhosts(conf, fine.d_r, fine.m, fine.n, fine.o, conf->ghosts, conf->ghosts, conf->ghosts);
         // mgclCheckError(err, "Updating ghosts fine");
+
+        if (problem->isProfilingEnabled())
+        {
+            problem->getProfilingData()->addMeasurement(problem->getCommands(), ev, kernelName,
+                                                        {global[0], global[1], global[2]},
+                                                        {local[0], local[1], local[2]});
+        }
 
         clReleaseKernel(kernel);
     }
