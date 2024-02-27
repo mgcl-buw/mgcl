@@ -11,9 +11,16 @@
  * @date 2024-02-21
  */
 
+#include <array>
 #include <map>
 #include <string>
 #include <vector>
+
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
+#include <CL/cl.h>
+#endif
 
 namespace mgcl
 {
@@ -44,6 +51,10 @@ namespace mgcl
         {
             return measurements;
         }
+
+        void addMeasurement(cl_command_queue commands, cl_event ev,
+                            std::string kernelName,
+                            std::array<size_t, 3> global, std::array<size_t, 3> local);
 
         friend std::ostream& operator<<(std::ostream& os, const ProfilingData& pd);
     };

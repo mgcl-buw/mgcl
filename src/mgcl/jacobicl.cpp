@@ -358,17 +358,9 @@ namespace mgcl
 
                 if (problem.isProfilingEnabled())
                 {
-                    clFinish(problem.getCommands());
-
-                    cl_ulong start_time, end_time;
-                    mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start_time, NULL), "clGetEventProfilingInfo");
-                    mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end_time, NULL), "clGetEventProfilingInfo");
-                    cl_ulong execution_time_ns = end_time - start_time;
-
-                    problem.getProfilingData()->getMeasurements()[kernelName].push_back(ProfilingMeasurement{
-                        execution_time_ns,
-                        {global[0], global[1], 0},
-                        {local[0], local[1], 1}});
+                    problem.getProfilingData()->addMeasurement(problem.getCommands(), ev, kernelName,
+                                                               {global[0], global[1], 0},
+                                                               {local[0], local[1], 1});
                 }
             }
         }
@@ -743,17 +735,9 @@ namespace mgcl
 
         if (problem.isProfilingEnabled())
         {
-            clFinish(problem.getCommands());
-
-            cl_ulong start_time, end_time;
-            mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start_time, NULL), "clGetEventProfilingInfo");
-            mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end_time, NULL), "clGetEventProfilingInfo");
-            cl_ulong execution_time_ns = end_time - start_time;
-
-            problem.getProfilingData()->getMeasurements()[kernelName].push_back(ProfilingMeasurement{
-                execution_time_ns,
-                {global, 0, 0},
-                {local, 1, 1}});
+            problem.getProfilingData()->addMeasurement(problem.getCommands(), ev, kernelName,
+                                                       {global, 0, 0},
+                                                       {local, 1, 1});
         }
 
         if (problem.isPeriodic())
@@ -798,17 +782,9 @@ namespace mgcl
 
                 if (problem.isProfilingEnabled())
                 {
-                    clFinish(problem.getCommands());
-
-                    cl_ulong start_time, end_time;
-                    mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start_time, NULL), "clGetEventProfilingInfo");
-                    mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end_time, NULL), "clGetEventProfilingInfo");
-                    cl_ulong execution_time_ns = end_time - start_time;
-
-                    problem.getProfilingData()->getMeasurements()[kernelName].push_back(ProfilingMeasurement{
-                        execution_time_ns,
-                        {global, 0, 0},
-                        {local_sq, 1, 1}});
+                    problem.getProfilingData()->addMeasurement(problem.getCommands(), ev, kernelName,
+                                                               {global, 0, 0},
+                                                               {local_sq, 1, 1});
                 }
 
                 // sum up residual squares
