@@ -2,7 +2,9 @@
 
 #include "../src/mgcl/multigrid_engine.hpp"
 #include "../src/mgcl/problem.hpp"
+#include "../src/mgcl/util.hpp"
 #include "test_utility.hpp"
+#include <cmath>
 #include <memory>
 
 /**
@@ -205,5 +207,62 @@ TEST_CASE("profiling_kernels")
         svgpu.cutFromW7ToW3(p.getProgram(), p.getCommands(), p.getContext(), 0, &conf, p.getProfilingData());
 
         checkResult(p, "cut_stencils_w7_to_w3", {2, 2, 2});
+    }
+
+    SECTION("sum_partial_global_eq_x_num_elements")
+    {
+        // get workgroup size from config for smallest problem size
+        auto& wg = conf["sum_partial_global_eq_x_num_elements"][0].second;
+        int localSize = wg[0];
+        int fractions = 4;
+        int global = ceil((1.0 / fractions) * lv0.getDVIn().getSize());
+
+        // Pad global work-item count to fit wg-size
+        if (global % localSize != 0)
+            global += localSize - (global % localSize);
+
+        // number of partial sums = num of work-groups
+        int num_partials = global / localSize;
+
+        mgcl::util::sum(lv0.getDVIn(), p.getProgram(), p.getCommands(), true, &conf, p.getProfilingData());
+        checkResult(p, "sum_partial_global_eq_x_num_elements", {num_partials, 0, 0});
+    }
+
+    SECTION("max_partial_global_eq_x_num_elements")
+    {
+        // get workgroup size from config for smallest problem size
+        auto& wg = conf["max_partial_global_eq_x_num_elements"][0].second;
+        int localSize = wg[0];
+        int fractions = 4;
+        int global = ceil((1.0 / fractions) * lv0.getDVIn().getSize());
+
+        // Pad global work-item count to fit wg-size
+        if (global % localSize != 0)
+            global += localSize - (global % localSize);
+
+        // number of partial sums = num of work-groups
+        int num_partials = global / localSize;
+
+        mgcl::util::max(lv0.getDVIn(), p.getProgram(), p.getCommands(), true, &conf, p.getProfilingData());
+        checkResult(p, "max_partial_global_eq_x_num_elements", {num_partials, 0, 0});
+    }
+
+    SECTION("max_abs_partial_global_eq_x_num_elements")
+    {
+        // get workgroup size from config for smallest problem size
+        auto& wg = conf["max_abs_partial_global_eq_x_num_elements"][0].second;
+        int localSize = wg[0];
+        int fractions = 4;
+        int global = ceil((1.0 / fractions) * lv0.getDVIn().getSize());
+
+        // Pad global work-item count to fit wg-size
+        if (global % localSize != 0)
+            global += localSize - (global % localSize);
+
+        // number of partial sums = num of work-groups
+        int num_partials = global / localSize;
+
+        mgcl::util::max_abs(lv0.getDVIn(), p.getProgram(), p.getCommands(), true, &conf, p.getProfilingData());
+        checkResult(p, "max_abs_partial_global_eq_x_num_elements", {num_partials, 0, 0});
     }
 }

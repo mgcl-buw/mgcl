@@ -14,6 +14,7 @@
 
 #include "cuboid_gpu.hpp"
 #include "kernel_config.hpp"
+#include "profiling_data.hpp"
 
 #ifdef __APPLE__
 #include <OpenCL/cl.h> // for clSetKernelArg, _cl_mem, cl_mem, clE...
@@ -24,19 +25,13 @@
 namespace mgcl::util
 {
     double sum(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-               bool return_sum, size_t localSize = 256);
-    double sum(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-               bool return_sum, mgcl::conf::KernelConfig& conf);
+               bool return_sum, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
     double max(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-               bool return_sum, size_t localSize = 256);
-    double max(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-               bool return_sum, mgcl::conf::KernelConfig& conf);
+               bool return_sum, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
     double max_abs(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-                   bool return_sum, size_t localSize = 256);
-    double max_abs(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-                   bool return_sum, mgcl::conf::KernelConfig& conf);
+                   bool return_sum, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
     namespace seq
     {

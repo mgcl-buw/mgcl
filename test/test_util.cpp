@@ -155,7 +155,6 @@ TEST_CASE("util::sum")
             mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
 
             // size_t local = GENERATE(8, 32, 43);
-            size_t local = 32;
             int m = 1;
             int n = 1;
             // int o = GENERATE(1, 2, range(5, 100, 7), 84848); // 1056; // GENERATE(1, 2, 32, 47);
@@ -182,7 +181,7 @@ TEST_CASE("util::sum")
             REQUIRE_THAT(sum_host, Catch::Matchers::WithinAbs(0, 1e-8));
 
             mgcl::CuboidGpu dData(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, data);
-            double sum_device = mgcl::util::sum(dData, tu.getProgram(), tu.getCommands(), true, local);
+            double sum_device = mgcl::util::sum(dData, tu.getProgram(), tu.getCommands(), true, nullptr, nullptr);
 
             // std::cout << std::scientific << std::setprecision(17) << "  host: " << sum_host << std::endl
             //           << "device: " << sum_device << std::endl;
@@ -219,7 +218,7 @@ TEST_CASE("util::sum")
                     }
 
             mgcl::CuboidGpu dData(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, data);
-            double sum_device = mgcl::util::sum(dData, tu.getProgram(), tu.getCommands(), true, local);
+            double sum_device = mgcl::util::sum(dData, tu.getProgram(), tu.getCommands(), true, nullptr, nullptr);
 
             // std::cout << std::scientific << std::setprecision(17) << "  host: " << sum_host << std::endl
             //           << "device: " << sum_device << std::endl;
@@ -261,7 +260,7 @@ TEST_CASE("util::max")
             }
 
     mgcl::CuboidGpu dData(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, data);
-    double max_device = mgcl::util::max(dData, tu.getProgram(), tu.getCommands(), true, local);
+    double max_device = mgcl::util::max(dData, tu.getProgram(), tu.getCommands(), true, nullptr, nullptr);
 
     // std::cout << std::scientific << std::setprecision(17) << "  host: " << sum_host << std::endl
     //           << "device: " << sum_device << std::endl;
@@ -289,7 +288,7 @@ TEST_CASE("util::max_abs")
     double max_abs_host = fabs(data[0][0][0]);
 
     mgcl::CuboidGpu dData(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, data);
-    double max_abs_device = mgcl::util::max_abs(dData, tu.getProgram(), tu.getCommands(), true, local);
+    double max_abs_device = mgcl::util::max_abs(dData, tu.getProgram(), tu.getCommands(), true, nullptr, nullptr);
 
     // std::cout << std::scientific << std::setprecision(17) << "  host: " << sum_host << std::endl
     //           << "device: " << sum_device << std::endl;

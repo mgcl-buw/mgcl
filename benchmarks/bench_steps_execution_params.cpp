@@ -438,7 +438,7 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
                           mgcl::mgclCheckError(err, "Enqueueing residual squared kernel");
 
                           // sum up residual squares
-                          ankerl::nanobench::doNotOptimizeAway(res = sqrt(mgcl::util::sum(dRsquares, problem.getProgram(), problem.getCommands(), true)));
+                          ankerl::nanobench::doNotOptimizeAway(res = sqrt(mgcl::util::sum(dRsquares, problem.getProgram(), problem.getCommands(), true, nullptr, nullptr)));
 
                           clReleaseKernel(kernel_square);
                       }

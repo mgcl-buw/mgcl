@@ -73,7 +73,7 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][seqVsOcl]")
         b.run(std::string("ocl, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
               {
                   ankerl::nanobench::doNotOptimizeAway(
-                      mgcl::util::sum(*dData, tu.getProgram(), tu.getCommands(), true, local)); //
+                      mgcl::util::sum(*dData, tu.getProgram(), tu.getCommands(), true, nullptr, nullptr)); //
               });
     }
 }
@@ -426,7 +426,7 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][locals]")
             b.run(std::string("ocl, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
                   {
                       ankerl::nanobench::doNotOptimizeAway(
-                          mgcl::util::sum(*dData, tu.getProgram(), tu.getCommands(), true, local)); //
+                          mgcl::util::sum(*dData, tu.getProgram(), tu.getCommands(), true, nullptr, nullptr)); //
                   });
         }
         std::cout << "=============" << std::endl;

@@ -2,6 +2,7 @@
 
 #include "kernel_config.hpp"
 #include "opencl_helper.hpp"
+#include "profiling_data.hpp"
 
 #include <cmath>
 
@@ -9,40 +10,24 @@ namespace mgcl::util
 {
 
     /**
-     * @brief Overload for sum that accepts localSize as parameter. This overload uses the localSize given
-     * in the kernel config.
-     *
-     * @param buf
-     * @param program
-     * @param commands
-     * @param return_sum
-     * @param conf
-     * @return double
-     */
-    double sum(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-               bool return_sum, mgcl::conf::KernelConfig& conf)
-    {
-        const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(
-            conf, "sum_partial_global_eq_x_num_elements", buf.getSize());
-        return sum(buf, program, commands, return_sum, c[0]);
-    }
-
-    /**
      * @brief Builds the sum of a buffer on device and returns it if return_sum is true.
      * First build partial sums, then build global sum so work-groups get synchronized.
      *
      * @param buf Buffer to build the sum of.
-     * @param num_elements
-     * @param context
      * @param program
      * @param commands
+     * @param return_sum
+     * @param conf
+     * @param pd
      */
     double sum(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-               bool return_sum, size_t localSize)
+               bool return_sum, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
         int err;
         size_t num_elements = buf.getSize();
         cl_context context = buf.getContext();
+
+        const char* kernelNamePartials = "sum_partial_global_eq_x_num_elements";
 
         // Determine number of work-items worked out in benchmarks manually.
         int fractions = 4;
@@ -55,6 +40,14 @@ namespace mgcl::util
 
         // One work-item per element in buf
         size_t global = ceil((1.0 / fractions) * num_elements);
+        size_t localSize = 256;
+
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelNamePartials, num_elements);
+            localSize = c[0];
+        }
 
         // Pad global work-item count to fit wg-size
         if (global % localSize != 0)
@@ -75,7 +68,7 @@ namespace mgcl::util
         mgclCheckError(err, "setting dPartialSums to 0");
 
         // Create the compute kernel from the program
-        cl_kernel kernel_sum_partial = clCreateKernel(program, "sum_partial_global_eq_x_num_elements", &err);
+        cl_kernel kernel_sum_partial = clCreateKernel(program, kernelNamePartials, &err);
         mgclCheckError(err, "Creating kernel sum_partial_global_eq_x_num_elements");
 
         cl_mem rawbuf = buf.getBuffer();
@@ -87,8 +80,16 @@ namespace mgcl::util
         err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(int), &fractions);
         mgclCheckError(err, "Setting kernel sum_partial arguments");
 
-        err = clEnqueueNDRangeKernel(commands, kernel_sum_partial, 1, NULL, &global, &localSize, 0, NULL, NULL);
+        cl_event ev;
+        err = clEnqueueNDRangeKernel(commands, kernel_sum_partial, 1, NULL, &global, &localSize, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing kernel sum_partial");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(commands, ev, kernelNamePartials,
+                               {global, 0, 0},
+                               {localSize, 1, 1});
+        }
 
         // Create the compute kernel from the program
         cl_kernel kernel_sum_finish = clCreateKernel(program, "sum_finish", &err);
@@ -130,25 +131,6 @@ namespace mgcl::util
     }
 
     /**
-     * @brief Overload for max that accepts localSize as parameter. This overload uses the localSize given
-     * in the kernel config.
-     *
-     * @param buf
-     * @param program
-     * @param commands
-     * @param return_sum
-     * @param conf
-     * @return double
-     */
-    double max(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-               bool return_sum, mgcl::conf::KernelConfig& conf)
-    {
-        const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(
-            conf, "max_partial_global_eq_x_num_elements", buf.getSize());
-        return max(buf, program, commands, return_sum, c[0]);
-    }
-
-    /**
      * @brief Finds the maximum value of a buffer on device and returns it if return_max is true.
      * First build partial maxima, then build global maximum so work-groups get synchronized.
      *
@@ -159,11 +141,13 @@ namespace mgcl::util
      * @param commands
      */
     double max(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-               bool return_max, size_t localSize)
+               bool return_max, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
         int err;
         size_t num_elements = buf.getSize();
         cl_context context = buf.getContext();
+
+        const char* kernelNamePartials = "max_partial_global_eq_x_num_elements";
 
         // Determine number of work-items worked out in benchmarks manually.
         int fractions = 4;
@@ -176,6 +160,14 @@ namespace mgcl::util
 
         // One work-item per element in buf
         size_t global = ceil((1.0 / fractions) * num_elements);
+        size_t localSize = 256;
+
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelNamePartials, num_elements);
+            localSize = c[0];
+        }
 
         // Pad global work-item count to fit wg-size
         if (global % localSize != 0)
@@ -196,7 +188,7 @@ namespace mgcl::util
         mgclCheckError(err, "setting dPartialMax to 0");
 
         // Create the compute kernel from the program
-        cl_kernel kernel_max_partial = clCreateKernel(program, "max_partial_global_eq_x_num_elements", &err);
+        cl_kernel kernel_max_partial = clCreateKernel(program, kernelNamePartials, &err);
         mgclCheckError(err, "Creating kernel max_partial_global_eq_x_num_elements");
 
         cl_mem rawbuf = buf.getBuffer();
@@ -208,8 +200,16 @@ namespace mgcl::util
         err |= clSetKernelArg(kernel_max_partial, ++pos, sizeof(int), &fractions);
         mgclCheckError(err, "Setting kernel max_partial arguments");
 
-        err = clEnqueueNDRangeKernel(commands, kernel_max_partial, 1, NULL, &global, &localSize, 0, NULL, NULL);
+        cl_event ev;
+        err = clEnqueueNDRangeKernel(commands, kernel_max_partial, 1, NULL, &global, &localSize, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing kernel max_partial");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(commands, ev, kernelNamePartials,
+                               {global, 0, 0},
+                               {localSize, 1, 1});
+        }
 
         // Create the compute kernel from the program
         cl_kernel kernel_max_finish = clCreateKernel(program, "max_finish", &err);
@@ -251,25 +251,6 @@ namespace mgcl::util
     }
 
     /**
-     * @brief Overload for max_abs that accepts localSize as parameter. This overload uses the localSize given
-     * in the kernel config.
-     *
-     * @param buf
-     * @param program
-     * @param commands
-     * @param return_sum
-     * @param conf
-     * @return double
-     */
-    double max_abs(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-                   bool return_sum, mgcl::conf::KernelConfig& conf)
-    {
-        const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(
-            conf, "max_abs_partial_global_eq_x_num_elements", buf.getSize());
-        return max_abs(buf, program, commands, return_sum, c[0]);
-    }
-
-    /**
      * @brief Finds the maximum absolute value of a buffer on device and returns it if return_max is true.
      * First build partial maxima, then build global maximum so work-groups get synchronized.
      *
@@ -280,11 +261,13 @@ namespace mgcl::util
      * @param commands
      */
     double max_abs(CuboidGpu& buf, cl_program program, cl_command_queue commands,
-                   bool return_max, size_t localSize)
+                   bool return_max, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
         int err;
         size_t num_elements = buf.getSize();
         cl_context context = buf.getContext();
+
+        const char* kernelNamePartials = "max_abs_partial_global_eq_x_num_elements";
 
         // Determine number of work-items worked out in benchmarks manually.
         int fractions = 4;
@@ -297,6 +280,14 @@ namespace mgcl::util
 
         // One work-item per element in buf
         size_t global = ceil((1.0 / fractions) * num_elements);
+        size_t localSize = 256;
+
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelNamePartials, num_elements);
+            localSize = c[0];
+        }
 
         // Pad global work-item count to fit wg-size
         if (global % localSize != 0)
@@ -317,7 +308,7 @@ namespace mgcl::util
         mgclCheckError(err, "setting dPartialMax to 0");
 
         // Create the compute kernel from the program
-        cl_kernel kernel_max_partial = clCreateKernel(program, "max_abs_partial_global_eq_x_num_elements", &err);
+        cl_kernel kernel_max_partial = clCreateKernel(program, kernelNamePartials, &err);
         mgclCheckError(err, "Creating kernel max_abs_partial_global_eq_x_num_elements");
 
         cl_mem rawbuf = buf.getBuffer();
@@ -329,8 +320,16 @@ namespace mgcl::util
         err |= clSetKernelArg(kernel_max_partial, ++pos, sizeof(int), &fractions);
         mgclCheckError(err, "Setting kernel max_partial arguments");
 
-        err = clEnqueueNDRangeKernel(commands, kernel_max_partial, 1, NULL, &global, &localSize, 0, NULL, NULL);
+        cl_event ev;
+        err = clEnqueueNDRangeKernel(commands, kernel_max_partial, 1, NULL, &global, &localSize, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing kernel max_partial");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(commands, ev, kernelNamePartials,
+                               {global, 0, 0},
+                               {localSize, 1, 1});
+        }
 
         // Create the compute kernel from the program
         cl_kernel kernel_max_finish = clCreateKernel(program, "max_finish", &err);
