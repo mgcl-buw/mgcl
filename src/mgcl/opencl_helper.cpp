@@ -363,6 +363,7 @@ namespace mgcl
                                                         {global[0], global[1], global[2]},
                                                         {local[0], local[1], local[2]});
         }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         clReleaseKernel(kernel);
         return err;
@@ -424,6 +425,7 @@ namespace mgcl
                                                         {global[0], global[1], global[2]},
                                                         {local[0], local[1], local[2]});
         }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         clReleaseKernel(kernel);
         return err;

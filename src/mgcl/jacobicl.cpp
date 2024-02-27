@@ -362,6 +362,7 @@ namespace mgcl
                                                                {global[0], global[1], 0},
                                                                {local[0], local[1], 1});
                 }
+                mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
             }
         }
 
@@ -739,6 +740,7 @@ namespace mgcl
                                                        {global, 0, 0},
                                                        {local, 1, 1});
         }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         if (problem.isPeriodic())
         {
@@ -787,6 +789,7 @@ namespace mgcl
                                                                {global, 0, 0},
                                                                {local_sq, 1, 1});
                 }
+                mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
                 // sum up residual squares
                 res = sqrt(util::sum(dRsquares, problem.getProgram(), problem.getCommands(), true, &problem.getKernelConfig(), problem.getProfilingData()));

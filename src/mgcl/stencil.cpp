@@ -690,6 +690,7 @@ namespace mgcl
                                {global[0], global[1], global[2]},
                                {local[0], local[1], local[2]});
         }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         err = clReleaseKernel(kernel);
         mgclCheckError(err, "Releasing update ghosts of varying stencil kernel");
@@ -781,6 +782,7 @@ namespace mgcl
                                {global[0], global[1], global[2]},
                                {local[0], local[1], local[2]});
         }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         // update ghosts of c
         if (ghc > 0)
@@ -873,6 +875,7 @@ namespace mgcl
                                {global[0], global[1], global[2]},
                                {local[0], local[1], local[2]});
         }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         // update ghosts of c
         if (ghc > 0)
@@ -977,6 +980,7 @@ namespace mgcl
                                {global[0], global[1], global[2]},
                                {local[0], local[1], local[2]});
         }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         clReleaseKernel(kernel);
 
@@ -1209,6 +1213,7 @@ namespace mgcl
                                {global[0], global[1], global[2]},
                                {local[0], local[1], local[2]});
         }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         // update ghosts of c
         if (ghc > 0)

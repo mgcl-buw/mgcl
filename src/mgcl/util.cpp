@@ -90,6 +90,7 @@ namespace mgcl::util
                                {global, 0, 0},
                                {localSize, 1, 1});
         }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         // Create the compute kernel from the program
         cl_kernel kernel_sum_finish = clCreateKernel(program, "sum_finish", &err);
@@ -210,6 +211,7 @@ namespace mgcl::util
                                {global, 0, 0},
                                {localSize, 1, 1});
         }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         // Create the compute kernel from the program
         cl_kernel kernel_max_finish = clCreateKernel(program, "max_finish", &err);
@@ -330,6 +332,7 @@ namespace mgcl::util
                                {global, 0, 0},
                                {localSize, 1, 1});
         }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         // Create the compute kernel from the program
         cl_kernel kernel_max_finish = clCreateKernel(program, "max_finish", &err);
