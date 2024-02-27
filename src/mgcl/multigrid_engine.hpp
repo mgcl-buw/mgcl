@@ -19,6 +19,7 @@
 #include "cuboid_gpu.hpp"
 #include "mgcl.hpp"
 #include "problem.hpp"
+#include "profiling_data.hpp"
 #include "stencil.hpp"
 
 namespace mgcl
@@ -75,7 +76,7 @@ namespace mgcl
                                           MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
                                           bool periodic, bool forceLocalFine, bool forceLocalCoarse,
                                           bool skipUpdateGhostsCoarse,
-                                          conf::KernelConfig* kernelConfig,
+                                          conf::KernelConfig* kernelConfig, ProfilingData* pd,
                                           int resm = 0, int resn = 0, int reso = 0);
 
         static void print7point(Cuboid& v, int i, int j, int k);

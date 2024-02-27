@@ -2,6 +2,7 @@
 #define MGCL_STENCIL_HPP
 
 #include "kernel_config.hpp"
+#include "profiling_data.hpp"
 #include <algorithm>
 #include <cstddef>
 #include <ostream>
@@ -120,19 +121,26 @@ namespace mgcl
         void fill(VaryingStencil& f, cl_command_queue queue, bool blocking);
         VaryingStencil read(cl_command_queue queue, bool blocking);
 
-        void updateGhosts(cl_program program, cl_command_queue queue, conf::KernelConfig* conf);
-        VaryingStencilGpu multiply(VaryingStencilGpu& b, int ghc,
-                                   cl_program program, cl_command_queue queue, cl_context context,
-                                   MPILevelData* mpiData, bool periodic, bool forceLocal,
-                                   conf::KernelConfig* conf);
-        VaryingStencilGpu multiply(FixedStencilGpu& b, int ghc,
-                                   cl_program program, cl_command_queue queue, cl_context context,
-                                   MPILevelData* mpiData, bool periodic, bool forceLocal,
-                                   conf::KernelConfig* conf);
+        void updateGhosts(
+            cl_program program, cl_command_queue queue,
+            conf::KernelConfig* conf, ProfilingData* pd);
 
-        VaryingStencilGpu cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context,
-                                        int ghout, mgcl::conf::KernelConfig* conf,
-                                        int resm = 0, int resn = 0, int reso = 0);
+        VaryingStencilGpu multiply(
+            VaryingStencilGpu& b, int ghc,
+            cl_program program, cl_command_queue queue, cl_context context,
+            MPILevelData* mpiData, bool periodic, bool forceLocal,
+            conf::KernelConfig* conf, ProfilingData* pd);
+
+        VaryingStencilGpu multiply(
+            FixedStencilGpu& b, int ghc,
+            cl_program program, cl_command_queue queue, cl_context context,
+            MPILevelData* mpiData, bool periodic, bool forceLocal,
+            conf::KernelConfig* conf, ProfilingData* pd);
+
+        VaryingStencilGpu cutFromW7ToW3(
+            cl_program program, cl_command_queue queue, cl_context context,
+            int ghout, mgcl::conf::KernelConfig* conf, ProfilingData* pd,
+            int resm = 0, int resn = 0, int reso = 0);
 
         int getM() const;
         int getN() const;
@@ -173,7 +181,7 @@ namespace mgcl
         VaryingStencilGpu multiply(VaryingStencilGpu& b, int ghc,
                                    cl_program program, cl_command_queue queue, cl_context context,
                                    MPILevelData* mpiData, bool periodic, bool forceLocal,
-                                   conf::KernelConfig* conf);
+                                   conf::KernelConfig* conf, ProfilingData* pd);
 
         int getWidth() const;
         cl_mem getBuf() const;

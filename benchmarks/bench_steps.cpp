@@ -4,16 +4,13 @@
 #include "catch2/generators/catch_generators.hpp"
 
 #include <chrono>
-#include <fstream>
 #include <iostream>
-#include <vector>
 using namespace std::chrono_literals;
 
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/multigrid_engine.hpp"
 #include "../src/mgcl/problem.hpp"
 #include "../test/test_utility.hpp"
-#include "bench_render_templates.hpp"
 
 /**
  * @brief Measures each step of vcycle and compares different steps once for seq and once for ocl.
@@ -242,7 +239,7 @@ TEST_CASE("mgcl_steps_galerkin_vs_solve")
               {
                   mgcl::MultigridEngine::galerkin(*fine.getStencilValuesGpu(), 2,
                                                   p.getProgram(), p.getCommands(), p.getContext(),
-                                                  nullptr, nullptr, periodic, true, true, false, nullptr);
+                                                  nullptr, nullptr, periodic, true, true, false, nullptr, nullptr);
                   clFinish(p.getCommands());
               });
 

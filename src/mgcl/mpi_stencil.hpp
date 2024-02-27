@@ -32,9 +32,11 @@ namespace mgcl
      * @param periodic
      * @param forceLocal
      */
-    void updateGhostsStencilOclMpi(cl_command_queue commands, cl_program program,
-                                   VaryingStencilGpu& s,
-                                   MPILevelData* mpiData, bool periodic, bool forceLocal, conf::KernelConfig* conf);
+    void updateGhostsStencilOclMpi(
+        cl_command_queue commands, cl_program program,
+        VaryingStencilGpu& s,
+        MPILevelData* mpiData, bool periodic, bool forceLocal,
+        conf::KernelConfig* conf, ProfilingData* pd);
 }
 
 #endif // MGCL_MPI_STENCIL_HPP

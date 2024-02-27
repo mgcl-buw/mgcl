@@ -4,16 +4,10 @@
 #include "catch2/generators/catch_generators.hpp"
 
 #include <chrono>
-#include <fstream>
-#include <iostream>
-#include <vector>
 using namespace std::chrono_literals;
 
-#include "../src/mgcl/cuboid.hpp"
-#include "../src/mgcl/problem.hpp"
 #include "../src/mgcl/stencil.hpp"
 #include "../test/test_utility.hpp"
-#include "bench_render_templates.hpp"
 
 // TODO implement + add to cmake
 TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
@@ -102,7 +96,7 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true, nullptr, nullptr)); 
                     tu->finish(); });
         }
 
@@ -124,7 +118,7 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true, nullptr, nullptr)); 
                     tu->finish(); });
         }
 
@@ -146,7 +140,7 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(fd.multiply(vd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(fd.multiply(vd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true, nullptr, nullptr)); 
                     tu->finish(); });
         }
     }

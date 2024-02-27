@@ -2,7 +2,7 @@
 #include <catch2/generators/catch_generators.hpp>
 
 #include <algorithm>
-#include <iostream>
+// #include <iostream>
 #include <memory>
 
 #include "../../src/mgcl/cuboid.hpp"
@@ -410,7 +410,7 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     tu.finish();
 
     // Update ghosts of expected result locally, i.e. not using MPI routines.
-    sgpu.updateGhosts(tu.getProgram(), tu.getCommands(), nullptr);
+    sgpu.updateGhosts(tu.getProgram(), tu.getCommands(), nullptr, nullptr);
 
     // Create local slice of global data
     auto clptr = sglob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
@@ -420,7 +420,7 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     tu.finish();
 
     // Update ghosts of test data
-    mgcl::updateGhostsStencilOclMpi(tu.getCommands(), tu.getProgram(), sgpuLocal, mpiData, true, false, nullptr);
+    mgcl::updateGhostsStencilOclMpi(tu.getCommands(), tu.getProgram(), sgpuLocal, mpiData, true, false, nullptr, nullptr);
 
     // Read results
     auto cg = sgpu.read(tu.getCommands(), true);

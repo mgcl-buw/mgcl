@@ -6,6 +6,7 @@
 #include "mpi_level_data.hpp"
 #include "mpi_util.hpp"
 #include "opencl_helper.hpp"
+#include "profiling_data.hpp"
 #include "stencil.hpp"
 
 #ifdef __APPLE__
@@ -192,14 +193,15 @@ namespace mgcl
      * @param forceLocal
      * @param conf Optional kernel config, if local ghost update is done.
      */
-    void updateGhostsStencilOclMpi(cl_command_queue commands, cl_program program,
-                                   VaryingStencilGpu& s,
-                                   MPILevelData* mpiData, bool periodic, bool forceLocal,
-                                   conf::KernelConfig* conf)
+    void updateGhostsStencilOclMpi(
+        cl_command_queue commands, cl_program program,
+        VaryingStencilGpu& s,
+        MPILevelData* mpiData, bool periodic, bool forceLocal,
+        conf::KernelConfig* conf, ProfilingData* pd)
     {
         if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
         {
-            s.updateGhosts(program, commands, conf);
+            s.updateGhosts(program, commands, conf, pd);
             return;
         }
 

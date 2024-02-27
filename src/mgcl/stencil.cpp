@@ -2,6 +2,7 @@
 #include "kernel_config.hpp"
 #include "mpi_stencil.hpp"
 #include "opencl_helper.hpp"
+#include "profiling_data.hpp"
 
 #include <algorithm>
 #include <utility> // for exchange
@@ -633,7 +634,9 @@ namespace mgcl
      * @param queue
      * @param conf Kernel Config, i.e. determines the work-group size. If null, a default value is used.
      */
-    void VaryingStencilGpu::updateGhosts(cl_program program, cl_command_queue queue, conf::KernelConfig* conf)
+    void VaryingStencilGpu::updateGhosts(
+        cl_program program, cl_command_queue queue,
+        conf::KernelConfig* conf, ProfilingData* pd)
     {
         int err;
 
@@ -673,15 +676,20 @@ namespace mgcl
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
-            {
-                // printf("padding global size %d from %ld to ", i, global[i]);
                 global[i] += local[i] - (global[i] % local[i]);
-                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
-            }
+
+        cl_event ev;
 
         // enqueue kernel
-        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, NULL);
+        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing update ghosts of varying stencil kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(queue, ev, kernelName,
+                               {global[0], global[1], global[2]},
+                               {local[0], local[1], local[2]});
+        }
 
         err = clReleaseKernel(kernel);
         mgclCheckError(err, "Releasing update ghosts of varying stencil kernel");
@@ -703,10 +711,11 @@ namespace mgcl
      * @param conf Kernel Config, i.e. determines the work-group size. If null, a default value is used.
      * @return VaryingStencilGpu
      */
-    VaryingStencilGpu VaryingStencilGpu::multiply(VaryingStencilGpu& b, int ghc,
-                                                  cl_program program, cl_command_queue queue, cl_context context,
-                                                  MPILevelData* mpiData, bool periodic, bool forceLocal,
-                                                  conf::KernelConfig* conf)
+    VaryingStencilGpu VaryingStencilGpu::multiply(
+        VaryingStencilGpu& b, int ghc,
+        cl_program program, cl_command_queue queue, cl_context context,
+        MPILevelData* mpiData, bool periodic, bool forceLocal,
+        conf::KernelConfig* conf, ProfilingData* pd)
     {
         int err;
 
@@ -755,22 +764,27 @@ namespace mgcl
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
-            {
-                // printf("padding global size %d from %ld to ", i, global[i]);
                 global[i] += local[i] - (global[i] % local[i]);
-                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
-            }
 
         // update ghosts of b first (maybe not needed if done earlier)
         // b.updateGhosts(program, queue);
 
+        cl_event ev;
+
         // enqueue multiplication kernel
-        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, NULL);
+        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing stencil multiplication kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(queue, ev, kernelName,
+                               {global[0], global[1], global[2]},
+                               {local[0], local[1], local[2]});
+        }
 
         // update ghosts of c
         if (ghc > 0)
-            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal, conf);
+            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal, conf, pd);
 
         clReleaseKernel(kernel);
         return c;
@@ -793,10 +807,11 @@ namespace mgcl
      * @param conf Kernel Config, i.e. determines the work-group size. If null, a default value is used.
      * @return VaryingStencilGpu
      */
-    VaryingStencilGpu VaryingStencilGpu::multiply(FixedStencilGpu& b, int ghc,
-                                                  cl_program program, cl_command_queue queue, cl_context context,
-                                                  MPILevelData* mpiData, bool periodic, bool forceLocal,
-                                                  conf::KernelConfig* conf)
+    VaryingStencilGpu VaryingStencilGpu::multiply(
+        FixedStencilGpu& b, int ghc,
+        cl_program program, cl_command_queue queue, cl_context context,
+        MPILevelData* mpiData, bool periodic, bool forceLocal,
+        conf::KernelConfig* conf, ProfilingData* pd)
     {
         int err;
 
@@ -844,19 +859,24 @@ namespace mgcl
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
-            {
-                // printf("padding global size %d from %ld to ", i, global[i]);
                 global[i] += local[i] - (global[i] % local[i]);
-                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
-            }
+
+        cl_event ev;
 
         // enqueue multiplication kernel
-        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, NULL);
+        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing stencil multiplication kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(queue, ev, kernelName,
+                               {global[0], global[1], global[2]},
+                               {local[0], local[1], local[2]});
+        }
 
         // update ghosts of c
         if (ghc > 0)
-            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal, conf);
+            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal, conf, pd);
 
         clReleaseKernel(kernel);
         return c;
@@ -876,9 +896,10 @@ namespace mgcl
      * @return VaryingStencilGpu
      */
 
-    VaryingStencilGpu VaryingStencilGpu::cutFromW7ToW3(cl_program program, cl_command_queue queue, cl_context context,
-                                                       int ghout, mgcl::conf::KernelConfig* conf,
-                                                       int resm, int resn, int reso)
+    VaryingStencilGpu VaryingStencilGpu::cutFromW7ToW3(
+        cl_program program, cl_command_queue queue, cl_context context,
+        int ghout, mgcl::conf::KernelConfig* conf, ProfilingData* pd,
+        int resm, int resn, int reso)
     {
         int err;
 
@@ -944,9 +965,18 @@ namespace mgcl
                 // printf("%ld (multiple of %ld)\n", global[i], local[i]);
             }
 
+        cl_event ev;
+
         // enqueue kernel
-        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, NULL);
+        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing stencil cut kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(queue, ev, kernelName,
+                               {global[0], global[1], global[2]},
+                               {local[0], local[1], local[2]});
+        }
 
         clReleaseKernel(kernel);
 
@@ -1109,7 +1139,7 @@ namespace mgcl
     VaryingStencilGpu FixedStencilGpu::multiply(VaryingStencilGpu& b, int ghc,
                                                 cl_program program, cl_command_queue queue, cl_context context,
                                                 MPILevelData* mpiData, bool periodic, bool forceLocal,
-                                                conf::KernelConfig* conf)
+                                                conf::KernelConfig* conf, ProfilingData* pd)
     {
         int err;
 
@@ -1162,22 +1192,27 @@ namespace mgcl
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
-            {
-                // printf("padding global size %d from %ld to ", i, global[i]);
                 global[i] += local[i] - (global[i] % local[i]);
-                // printf("%ld (multiple of %ld)\n", global[i], local[i]);
-            }
 
         // update ghosts of b first (maybe not needed if done earlier)
         // b.updateGhosts(program, queue);
 
+        cl_event ev;
+
         // enqueue multiplication kernel
-        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, NULL);
+        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing stencil multiplication kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(queue, ev, kernelName,
+                               {global[0], global[1], global[2]},
+                               {local[0], local[1], local[2]});
+        }
 
         // update ghosts of c
         if (ghc > 0)
-            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal, conf);
+            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal, conf, pd);
 
         clReleaseKernel(kernel);
         return c;

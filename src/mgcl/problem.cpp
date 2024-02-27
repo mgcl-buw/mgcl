@@ -403,7 +403,8 @@ namespace mgcl
                         mpi_util::gather(getMpiComm(), getCommands(), *lvFine.getStencilValuesGpu());
                         gathered = true;
                         updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvFine.getStencilValuesGpu(),
-                                                  lvFine.getMpiDataPtr(), isPeriodic(), true, &getKernelConfig());
+                                                  lvFine.getMpiDataPtr(), isPeriodic(), true, &getKernelConfig(),
+                                                  getProfilingData());
                     }
 
                     // Only calculate galerkin if
@@ -419,7 +420,7 @@ namespace mgcl
                                 lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
                                 isPeriodic(), gathered,
                                 lvCoarse.isCalculatedLocally(), !updateGhostsCoarse,
-                                &getKernelConfig(), svm, svn, svo));
+                                &getKernelConfig(), getProfilingData(), svm, svn, svo));
                 }
             }
         }

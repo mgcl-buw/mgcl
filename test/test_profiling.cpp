@@ -88,6 +88,9 @@ TEST_CASE("profiling_kernels")
 
     auto& conf = p.getKernelConfig();
 
+    // Clear measurements from Problem::init call
+    p.getProfilingData()->getMeasurements().clear();
+
     SECTION("jacobi")
     {
         int maxiter = 3;
@@ -108,9 +111,6 @@ TEST_CASE("profiling_kernels")
 
     SECTION("update_ghosts_cuboid")
     {
-        // update ghosts is already called in Problem::init, so clear measurements first
-        p.getProfilingData()->getMeasurements().clear();
-
         auto& dbuf = lv0.getDVIn();
         mgcl::MultigridEngine::updateGhosts(p, dbuf, nullptr, true);
 
@@ -158,5 +158,52 @@ TEST_CASE("profiling_kernels")
         auto& lv1 = p.getLevelAt(1);
         mgcl::MultigridEngine::prolongate(lv0, lv1, lv0.getDVIn(), lv1.getDR());
         checkResult(p, "prolongate_to_fine", {lv1.getMgh(), lv1.getNgh(), lv1.getOgh()});
+    }
+
+    SECTION("stencil_update_ghosts")
+    {
+        // update ghosts is already called in Problem::init, so clear measurements first
+        p.getProfilingData()->getMeasurements().clear();
+
+        auto svgpu = lv0.getStencilValuesGpu();
+        svgpu->updateGhosts(p.getProgram(), p.getCommands(), &conf, p.getProfilingData());
+        checkResult(p, "update_ghosts_varying_stencil", {mgh, ngh, ogh});
+    }
+
+    SECTION("mult_stencils_var_var")
+    {
+        auto svgpu = lv0.getStencilValuesGpu();
+        svgpu->multiply(*svgpu, 0, p.getProgram(), p.getCommands(), p.getContext(), nullptr,
+                        p.isPeriodic(), false, &conf, p.getProfilingData());
+
+        checkResult(p, "mult_stencils_var_var", {m, n, o});
+    }
+
+    SECTION("mult_stencils_var_fix")
+    {
+        auto svgpu = lv0.getStencilValuesGpu();
+        mgcl::FixedStencilGpu f(3, p.getContext(), p.getCommands());
+        svgpu->multiply(f, 0, p.getProgram(), p.getCommands(), p.getContext(), nullptr,
+                        p.isPeriodic(), false, &conf, p.getProfilingData());
+
+        checkResult(p, "mult_stencils_var_fix", {m, n, o * 5 * 5 * 5});
+    }
+
+    SECTION("mult_stencils_fix_var")
+    {
+        auto svgpu = lv0.getStencilValuesGpu();
+        mgcl::FixedStencilGpu f(3, p.getContext(), p.getCommands());
+        f.multiply(*svgpu, 0, p.getProgram(), p.getCommands(), p.getContext(), nullptr,
+                   p.isPeriodic(), false, &conf, p.getProfilingData());
+
+        checkResult(p, "mult_stencils_fix_var", {m, n, o * 5 * 5 * 5});
+    }
+
+    SECTION("cut_stencils_w7_to_w3")
+    {
+        mgcl::VaryingStencilGpu svgpu(4, 4, 4, 7, 0, p.getContext(), p.getCommands());
+        svgpu.cutFromW7ToW3(p.getProgram(), p.getCommands(), p.getContext(), 0, &conf, p.getProfilingData());
+
+        checkResult(p, "cut_stencils_w7_to_w3", {2, 2, 2});
     }
 }
