@@ -109,7 +109,7 @@ TEST_CASE("profiling_kernels")
         checkResult(p, "residual_27point_varying_stencil", {mgh * ngh * ogh, 0, 0});
 
         // check residual_squared
-        checkResult(p, "residual_squared", {mgh * ngh * ogh, 0, 0});
+        checkResult(p, "residual_squared", {m * n * o, 0, 0});
     }
 
     SECTION("update_ghosts_cuboid")

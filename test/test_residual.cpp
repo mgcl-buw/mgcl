@@ -67,11 +67,13 @@ TEST_CASE("residual")
         auto d_in_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_f);
         auto d_in_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_v);
         auto d_in_r = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_r);
+        auto d_in_rsq = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_WRITE_ONLY, m, n, o, 0, 0, 0);
 
         mgcl::Level level(p.get(), 0);
         level.setDF(d_in_f);
         level.setDVIn(d_in_v);
         level.setDR(d_in_r);
+        level.setDRsq(d_in_rsq);
 
         double res = mgcl::MultigridEngine::residual(*p, level, true);
         tu.finish();
@@ -449,11 +451,13 @@ TEST_CASE("residual gpu gh > 1")
         auto d_in_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_in);
         auto d_in_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_in);
         auto d_in_r = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_in);
+        auto d_in_rsq = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_READ_ONLY, m, n, o, 0, 0, 0);
 
         mgcl::Level level(p.get(), 0);
         level.setDF(d_in_f);
         level.setDVIn(d_in_v);
         level.setDR(d_in_r);
+        level.setDRsq(d_in_rsq);
 
         // init problem with ghosts = gh
         auto pgh = std::make_shared<mgcl::Problem>(m, n, o);
@@ -465,11 +469,13 @@ TEST_CASE("residual gpu gh > 1")
         auto d_in_f_gh = std::make_shared<mgcl::CuboidGpu>(tu_gh.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_in_gh);
         auto d_in_v_gh = std::make_shared<mgcl::CuboidGpu>(tu_gh.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_in_gh);
         auto d_in_r_gh = std::make_shared<mgcl::CuboidGpu>(tu_gh.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_in_gh);
+        auto d_in_rsq_gh = std::make_shared<mgcl::CuboidGpu>(tu_gh.getContext(), CL_MEM_WRITE_ONLY, m, n, o, 0, 0, 0);
 
         mgcl::Level level_gh(pgh.get(), 0);
         level_gh.setDF(d_in_f_gh);
         level_gh.setDVIn(d_in_v_gh);
         level_gh.setDR(d_in_r_gh);
+        level_gh.setDRsq(d_in_rsq_gh);
 
         // Make sure input is equal.
         REQUIRE(v_in.isEqual(v_in_gh));
@@ -843,11 +849,13 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
         auto d_f_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_exp);
         auto d_v_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_exp);
         auto d_r_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_exp);
+        auto d_rsq_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_READ_ONLY, m, n, o, 0, 0, 0);
 
         mgcl::Level level_exp(p_exp.get(), 0);
         level_exp.setDF(d_f_exp);
         level_exp.setDVIn(d_v_exp);
         level_exp.setDR(d_r_exp);
+        level_exp.setDRsq(d_rsq_exp);
 
         // init problem with ghosts = act_ghm
         auto p_act = std::make_shared<mgcl::Problem>(m, n, o);
@@ -859,11 +867,13 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
         auto d_f_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_act);
         auto d_v_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_act);
         auto d_r_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_act);
+        auto d_rsq_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_READ_ONLY, m, n, o, 0, 0, 0);
 
         mgcl::Level level_act(p_act.get(), 0);
         level_act.setDF(d_f_act);
         level_act.setDVIn(d_v_act);
         level_act.setDR(d_r_act);
+        level_act.setDRsq(d_rsq_act);
 
         // Make sure input is equal.
         REQUIRE(v_exp.isEqualAllCells(v_act));

@@ -755,9 +755,8 @@ namespace mgcl
             if (problem.residual_norm == MGCL_L2)
             {
                 // calculate 2-Norm
-                Cuboid rsq(mgh, ngh, ogh);
-                int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
-                CuboidGpu dRsquares(problem.getOpenCLHelper().getContext(), CL_MEM_WRITE_ONLY | pointer_flag, rsq);
+                auto& dRsquares = level.getDRsq();
+                dRsquares.fill(problem.getCommands(), 0.0, false); // reset to zero
 
                 // Create the compute kernel from the program
                 const char* kernelName = "residual_squared";
@@ -773,6 +772,7 @@ namespace mgcl
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &problem.ghosts);
                 mgclCheckError(err, "Setting residual squared kernel arguments");
 
+                size_t global = level.getM() * level.getN() * level.getO();
                 const auto& c_sq = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
                 size_t local_sq = c_sq[0];
 

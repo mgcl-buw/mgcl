@@ -172,7 +172,7 @@ namespace mgcl
         mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_MEM_ALLOC_SIZE)");
 
         // Buffers needed for each level, dependent on settings, are:
-        // Permanent: dVIn, dVOut, dF, dR, stencilValuesGpu
+        // Permanent: dVIn, dVOut, dF, dR, dRsq, stencilValuesGpu
         // Temporary galerkin results: sr, sp, sr * a_h, sas = sr * a_h * sp
         ulong sizeNeeded = 0;
         ulong maxBufferSizeNeeded = 0;
@@ -201,6 +201,7 @@ namespace mgcl
 
             upd(sizeof(double) * mgh * ngh * ogh); // dVOut
             upd(sizeof(double) * mgh * ngh * ogh); // dR
+            upd(sizeof(double) * ml * nl * ol);    // dRsq
 
             if (stencilType == MGCL_VARYING)
             {
@@ -213,7 +214,7 @@ namespace mgcl
                 upd(sizeof(double) * 3 * 3 * 3); // bilinear prolongation stencil
 
                 // intermediate result of sr * a_h, gh = 2
-                upd(sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * 5 * 5 * 5);
+                upd(sizeof(double) * (ml + 2 * gh) * (nl + 2 * gh) * (ol + 2 * gh) * 5 * 5 * 5);
 
                 // intermediate result of sas = sr * a_h * sp, gh = 0
                 upd(sizeof(double) * ml * nl * ol * 7 * 7 * 7);

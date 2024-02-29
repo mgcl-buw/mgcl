@@ -62,6 +62,7 @@ TEST_CASE("Level::initOpenCLBuffers")
         REQUIRE(level0.getDVOutPtr());
         REQUIRE(level0.getDFPtr());
         REQUIRE(level0.getDRPtr());
+        REQUIRE(level0.getDRsqPtr());
 
         // Check if size of buffers is correct
         int sizeNeeded = (level0.getMgh()) * (level0.getNgh()) * (level0.getOgh());
@@ -69,6 +70,7 @@ TEST_CASE("Level::initOpenCLBuffers")
         REQUIRE(sizeNeeded == level0.getDVOut().getSize());
         REQUIRE(sizeNeeded == level0.getDF().getSize());
         REQUIRE(sizeNeeded == level0.getDR().getSize());
+        REQUIRE(level0.getM() * level0.getN() * level0.getO() == level0.getDRsq().getSize());
 
         // Check if content of dVIn and dV is correct if levelNum = 0
         if (levelNum == 0)

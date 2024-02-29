@@ -224,9 +224,11 @@ namespace mgcl
                                             problem->getGhosts(), problem->getGhosts(), problem->getGhosts());
         dR = std::make_shared<CuboidGpu>(context, CL_MEM_READ_WRITE, m, n, o,
                                          problem->getGhosts(), problem->getGhosts(), problem->getGhosts());
+        dRsq = std::make_shared<CuboidGpu>(context, CL_MEM_WRITE_ONLY, m, n, o, 0, 0, 0);
 
-        dVOut->fill(problem->getCommands(), 0.0, true);
-        dR->fill(problem->getCommands(), 0.0, true);
+        dVOut->fill(problem->getCommands(), 0.0, false);
+        dR->fill(problem->getCommands(), 0.0, false);
+        dRsq->fill(problem->getCommands(), 0.0, true);
 
         err = MultigridEngine::updateGhosts(*problem, *dF, mpiData.get(), isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts of d_f");
@@ -678,6 +680,23 @@ namespace mgcl
         dR = dR_;
         // if (dR)
         //     dR->retain();
+    }
+
+    CuboidGpu& Level::getDRsq() const
+    {
+        if (!dRsq)
+            throw "dRsq is null.";
+        return *dRsq;
+    }
+
+    CuboidGpu* Level::getDRsqPtr() const
+    {
+        return dRsq.get();
+    }
+
+    void Level::setDRsq(std::shared_ptr<CuboidGpu> dR_)
+    {
+        dRsq = dR_;
     }
 
     MPILevelData* Level::getMpiDataPtr()

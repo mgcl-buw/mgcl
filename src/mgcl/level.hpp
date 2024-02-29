@@ -59,6 +59,7 @@ namespace mgcl
         std::shared_ptr<CuboidGpu> dVOut = nullptr;
         std::shared_ptr<CuboidGpu> dF = nullptr;
         std::shared_ptr<CuboidGpu> dR = nullptr;
+        std::shared_ptr<CuboidGpu> dRsq = nullptr; // temporary buffer for storing the squared residual
 
         /* MPI relevant data, e.g. neighbour process ranks. Null if Problem::useMpi is false. */
         std::unique_ptr<MPILevelData> mpiData = nullptr;
@@ -116,6 +117,10 @@ namespace mgcl
         CuboidGpu* getDRPtr() const;
         CuboidGpu& getDR() const;
         void setDR(const std::shared_ptr<CuboidGpu> dR_);
+
+        CuboidGpu* getDRsqPtr() const;
+        CuboidGpu& getDRsq() const;
+        void setDRsq(const std::shared_ptr<CuboidGpu> dR_);
 
         int getMgh() const;
 

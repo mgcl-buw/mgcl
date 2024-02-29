@@ -78,12 +78,14 @@ TEST_CASE("jacobi")
         auto d_in_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_v);
         auto d_in_v_out = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_v);
         auto d_in_r = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_in_r);
+        auto d_in_rsq = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_READ_ONLY, m, n, o, 0, 0, 0);
 
         mgcl::Level level(p.get(), 0);
         level.setDF(d_in_f);
         level.setDVIn(d_in_v);
         level.setDVOut(d_in_v_out);
         level.setDR(d_in_r);
+        level.setDRsq(d_in_rsq);
 
         double res = mgcl::MultigridEngine::jacobi(*p, level, maxiter, 1);
         tu.finish();
@@ -789,12 +791,14 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
         auto d_v_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_exp);
         auto d_v_out_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_exp);
         auto d_r_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_exp);
+        auto d_rsq_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_READ_ONLY, m, n, o, 0, 0, 0);
 
         mgcl::Level level_exp(p_exp.get(), 0);
         level_exp.setDF(d_f_exp);
         level_exp.setDVIn(d_v_exp);
         level_exp.setDVOut(d_v_out_exp);
         level_exp.setDR(d_r_exp);
+        level_exp.setDRsq(d_rsq_exp);
 
         // init problem with ghosts = act_ghm
         auto p_act = std::make_shared<mgcl::Problem>(m, n, o);
@@ -808,12 +812,14 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
         auto d_v_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_act);
         auto d_v_out_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_act);
         auto d_r_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_act);
+        auto d_rsq_act = std::make_shared<mgcl::CuboidGpu>(tu_act.getContext(), CL_MEM_READ_ONLY, m, n, o, 0, 0, 0);
 
         mgcl::Level level_act(p_act.get(), 0);
         level_act.setDF(d_f_act);
         level_act.setDVIn(d_v_act);
         level_act.setDVOut(d_v_out_act);
         level_act.setDR(d_r_act);
+        level_act.setDRsq(d_rsq_act);
 
         // Make sure input is equal (real cells only).
         REQUIRE(v_exp.isEqual(v_act));
