@@ -29,7 +29,8 @@ namespace mgcl
      */
     struct ProfilingMeasurement
     {
-        unsigned long elapsed; // Elapsed time from kernel begin to end in ns
+        cl_ulong elapsed; // Elapsed time from kernel begin to end in ns
+        cl_ulong inQueue; // Time spent from enqueuing to kernel start in ns
         size_t work_items[3];
         size_t work_group[3];
     };
