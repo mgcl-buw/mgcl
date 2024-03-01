@@ -18,9 +18,10 @@ namespace mgcl
             os << kernelName << std::endl;
             for (const auto& m : entry.second)
             {
-                os << "* time in ns: " << m.elapsed << std::endl;
-                os << "  work-items: " << m.work_items[0] << "," << m.work_items[1] << "," << m.work_items[2] << std::endl;
-                os << "  work-group: " << m.work_group[0] << "," << m.work_group[1] << "," << m.work_group[2] << std::endl;
+                os << "* kernel runtime in ns: " << m.elapsed << std::endl;
+                os << "   time in queue in ns: " << m.inQueue << std::endl;
+                os << "            work-items: " << m.work_items[0] << "," << m.work_items[1] << "," << m.work_items[2] << std::endl;
+                os << "            work-group: " << m.work_group[0] << "," << m.work_group[1] << "," << m.work_group[2] << std::endl;
             }
         }
         return os;
