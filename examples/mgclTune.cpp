@@ -58,6 +58,9 @@ struct BestKernelConf
 void checkResidual(
     mgcl::conf::KernelConfig& conf, int N, int iters, bool verbose, mgcl::Problem& p, mgcl::Level& level,
     std::vector<BestKernelConf>& bestKernelConfs);
+void checkJacobi(
+    mgcl::conf::KernelConfig& conf, int N, int iters, bool verbose, mgcl::Problem& p, mgcl::Level& level,
+    std::vector<BestKernelConf>& bestKernelConfs);
 
 // Arguments:
 // --grids <list>: Grids to be tested, e.g. --grids 4,8,16
@@ -124,8 +127,8 @@ int main(int argc, char** argv)
                       << "N: " << N << std::endl;
         }
 
-        // Check residual for different wg sizes
         checkResidual(conf, N, iters, verbose, p, level, bestKernelConfs);
+        checkJacobi(conf, N, iters, verbose, p, level, bestKernelConfs);
     }
 
     MPI_Finalize();
@@ -145,6 +148,53 @@ void checkResidual(
         for (int i = 0; i < iters; i++)
         {
             mgcl::MultigridEngine::residual(p, level, false);
+        }
+
+        auto pd = p.getProfilingData();
+        // find minimum elapsed time
+        auto mintime = std::min_element(pd->getMeasurements()[kernelName].begin(),
+                                        pd->getMeasurements()[kernelName].end(),
+                                        [](const auto& a, const auto& b)
+                                        { return a.elapsed < b.elapsed; })
+                           ->elapsed;
+        bestTimePerWg[wg] = mintime;
+
+        // reset profiling data for next wg
+        pd->getMeasurements().clear();
+    }
+
+    // iterate through bestTimePerWg and print
+    if (verbose)
+    {
+        std::cout << kernelName << std::endl;
+        for (const auto& n : bestTimePerWg)
+            std::cout << "  wg " << std::setw(4) << n.first << ": " << std::setw(10) << n.second << " ns" << std::endl;
+    }
+
+    // find minimum wg across all wgs
+    auto minwg = std::min_element(bestTimePerWg.begin(), bestTimePerWg.end(),
+                                  [](const auto& a, const auto& b)
+                                  { return a.second < b.second; })
+                     ->first;
+
+    // store in result
+    bestKernelConfs.push_back({kernelName, std::to_string(N), {minwg, 0, 0}});
+}
+
+void checkJacobi(
+    mgcl::conf::KernelConfig& conf, int N, int iters, bool verbose, mgcl::Problem& p, mgcl::Level& level,
+    std::vector<BestKernelConf>& bestKernelConfs)
+{
+    std::string kernelName = "jacobi_iter_27point_varying_stencil_1d";
+    std::vector<size_t> wgs{32, 64, 128, 256, 512};
+    std::map<size_t, unsigned long> bestTimePerWg;
+    for (auto wg : wgs)
+    {
+        conf[kernelName] = {{N * N * N, {wg, 1, 1}}};
+
+        for (int i = 0; i < iters; i++)
+        {
+            mgcl::MultigridEngine::jacobi(p, level, 3, false);
         }
 
         auto pd = p.getProfilingData();
