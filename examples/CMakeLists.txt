@@ -38,7 +38,20 @@ add_dependencies(example_mpi copy_kernels)
 # target_link_options(example_galerkin PRIVATE "-pg")
 
 # ==========================
+# example program that just prints all available devices
 add_executable(example_print_devices example_print_devices.cpp)
 target_link_libraries(example_print_devices PRIVATE mgcl MPI::MPI_CXX)
 add_dependencies(example_print_devices copy_kernels)
+
+# ==========================
+# mgclTune, tries to find the best work-group sizes for each kernel
+set(SOURCES_MGCL_TUNE mgclTune.cpp)
+
+add_executable(mgcl_tune ${SOURCES_MGCL_TUNE})
+target_link_libraries(mgcl_tune PRIVATE mgcl)
+add_dependencies(mgcl_tune copy_kernels)
+# target_compile_options(mgcl_tune PRIVATE "-pg")
+# target_link_options(mgcl_tune PRIVATE "-pg")
+target_link_libraries(mgcl_tune PRIVATE MPI::MPI_CXX)
+
 
