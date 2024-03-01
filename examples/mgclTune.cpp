@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -60,7 +61,7 @@ void checkResidual(
 
 // Arguments:
 // --grids <list>: Grids to be tested, e.g. --grids 4,8,16
-//
+//  --verbose, -v: Verbose output
 int main(int argc, char** argv)
 {
     MPI_Init(&argc, &argv);
@@ -104,6 +105,7 @@ int main(int argc, char** argv)
         p.setUseOpencl(true);
         p.setProfilingEnabled(true);
         p.setStencilType(mgcl::MGCL_VARYING);
+        p.setSilent(true);
 
         // Fill random coefficients
         auto svptr = p.getStencilValues();
@@ -115,6 +117,12 @@ int main(int argc, char** argv)
         auto& level = p.getLevelAt(0);
 
         auto& conf = p.getKernelConfig();
+
+        if (verbose)
+        {
+            std::cout << std::endl
+                      << "N: " << N << std::endl;
+        }
 
         // Check residual for different wg sizes
         checkResidual(conf, N, iters, verbose, p, level, bestKernelConfs);
@@ -154,8 +162,11 @@ void checkResidual(
 
     // iterate through bestTimePerWg and print
     if (verbose)
+    {
+        std::cout << kernelName << std::endl;
         for (const auto& n : bestTimePerWg)
-            std::cout << "wg " << n.first << ": " << n.second << " ns" << std::endl;
+            std::cout << "  wg " << std::setw(4) << n.first << ": " << std::setw(10) << n.second << " ns" << std::endl;
+    }
 
     // find minimum wg across all wgs
     auto minwg = std::min_element(bestTimePerWg.begin(), bestTimePerWg.end(),
