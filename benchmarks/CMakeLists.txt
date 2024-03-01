@@ -18,6 +18,7 @@ set(SOURCES_BENCH
     bench_jacobi_multiple_iters.cpp
     bench_vcycle_mpi.cpp
     bench_steps_execution_params.cpp
+    bench_ignore_tol.cpp
     cli_args.hpp
     catch2_main_benchs.cpp)
 
