@@ -5,7 +5,8 @@ namespace mgcl::conf
 {
     /**
      * @brief Create a KernelConfig object with default values. Note that this function does not set the
-     * attribute kernelConfig. If a customized KernelConfig shall be used, it must be set using setKernelConfig().
+     * attribute kernelConfig. If a customized KernelConfig shall be used, the current kernelConfig can be
+     * queried using Problem::getKernelConfig, which returns an editable reference.
      *
      * @return std::unique_ptr<KernelConfig>
      */
