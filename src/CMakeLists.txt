@@ -28,6 +28,7 @@ set(MGCL_PUBLIC_HEADERS
   mgcl/mpi_level_data.hpp
   mgcl/hypercube.hpp
   mgcl/kernel_config.hpp
+  mgcl/profiling_data.hpp
 )
 
 set(SOURCES_LIB
