@@ -492,10 +492,21 @@ namespace mgcl
     }
 
     /**
-     * @brief Solves problem using multigrid method on OpenCL, if use_opencl is true. Otherwise solveSeq is called.
+     * @brief Calls solve(false), i.e. calls Problem::init first.
      *
      */
     void Problem::solve()
+    {
+        solve(false);
+    }
+
+    /**
+     * @brief Solves problem using multigrid method on OpenCL, if use_opencl is true. Otherwise solveSeq is called.
+     *
+     * @param skipInit If true, skips initialization. Requires Problem::init to be called first. Mainly used for
+     * testing and benchmarking.
+     */
+    void Problem::solve(bool skipInit)
     {
         // run mgcl_seq if use_opencl is not set
         if (!use_opencl)
@@ -509,7 +520,7 @@ namespace mgcl
             printf("Starting mgcl using OpenCL\n");
 
         // set up data for each level TODO reuse device buffers in final code
-        if (!init())
+        if (!skipInit && !init())
             throw std::runtime_error("Failed to initialize mgcl data structures.");
 
         // Edge case: Do nothing if mpi is used but level threshold is 0 (i.e. all work is done on proc 0).

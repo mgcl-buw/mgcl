@@ -194,6 +194,7 @@ namespace mgcl
         int readResults();
 
         void solve();
+        void solve(bool skipInit);
         void solveSeq();
 
         Level& getLevelAt(int index) const;
