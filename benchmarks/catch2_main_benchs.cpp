@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
                ("minEpochIterations, 0 is auto, see nanobench doc") // description string for the help output
 
                | Opt(vCycleIterations, "vCycleIterations") // bind variable to a new option, with a hint string
-                     ["-vci"]["--vCycleIterations"]        // the option names it will respond to
+                     ["--vci"]["--vCycleIterations"]       // the option names it will respond to
                ("vCycleIterations, 10 is default")         // description string for the help output
 
                | Opt(outputPath, "outputPath")                                        // bind variable to a new option, with a hint string

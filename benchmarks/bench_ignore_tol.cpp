@@ -152,7 +152,7 @@ TEST_CASE("benchIgnoreTol")
                    .append("x")
                    .append(std::to_string(o));
         b.run(name.c_str(), [&] { //
-            p.solve();
+            p.solve(true);
             p.getOpenCLHelper().finish();
         });
 
@@ -164,7 +164,7 @@ TEST_CASE("benchIgnoreTol")
                    .append("x")
                    .append(std::to_string(o));
         b.run(name.c_str(), [&] { //
-            p.solve();
+            p.solve(true);
             p.getOpenCLHelper().finish();
         });
     }
