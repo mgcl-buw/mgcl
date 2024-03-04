@@ -20,6 +20,7 @@ set(SOURCES_BENCH
     bench_steps_execution_params.cpp
     bench_ignore_tol.cpp
     bench_utils.hpp
+    bench_various_ndim_kernels.cpp
     cli_args.hpp
     catch2_main_benchs.cpp)
 
