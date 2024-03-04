@@ -19,6 +19,7 @@ set(SOURCES_BENCH
     bench_vcycle_mpi.cpp
     bench_steps_execution_params.cpp
     bench_ignore_tol.cpp
+    bench_utils.hpp
     cli_args.hpp
     catch2_main_benchs.cpp)
 

@@ -12,11 +12,13 @@
 
 #include <chrono>
 #include <iostream>
+#include <sstream>
 #include <vector>
 using namespace std::chrono_literals;
 
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/problem.hpp"
+#include "bench_utils.hpp"
 
 #include "cli_args.hpp"
 
@@ -56,6 +58,9 @@ TEST_CASE("benchIgnoreTol")
               << "  nu2: " << nu2 << std::endl
               << "  omega: " << omega << std::endl
               << "  v-cycle iterations: " << maxIterVCycles << std::endl;
+
+    std::stringstream ss;
+    ss << "name;time in ms" << std::endl;
 
     // for each grid
     for (auto gr : gridsTBT)
@@ -155,6 +160,8 @@ TEST_CASE("benchIgnoreTol")
             p.solve(true);
             p.getOpenCLHelper().finish();
         });
+        ss << name << ";" << benchMinTime(b, 0) << std::endl;
+        int oldsize = b.results().size();
 
         p.setIgnoreTol(true);
         name = std::string("ignoreTrue__")
@@ -167,5 +174,10 @@ TEST_CASE("benchIgnoreTol")
             p.solve(true);
             p.getOpenCLHelper().finish();
         });
+        ss << name << ";" << benchMinTime(b, oldsize) << std::endl;
     }
+
+    std::string out = ss.str();
+    std::replace(out.begin(), out.end(), '.', ',');
+    std::cout << out << std::endl;
 }
