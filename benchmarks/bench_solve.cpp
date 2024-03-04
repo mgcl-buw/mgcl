@@ -701,7 +701,7 @@ TEST_CASE("mgcl benchmarks lineplot: solve", "[!benchmark][solve][plot]")
     }
 
     std::ofstream renderOut(std::string("benchresults_lineplot").append(".html"));
-    ankerl::nanobench::render(mgcl_test::htmlLineComparingN(), b, renderOut);
+    ankerl::nanobench::render(mgcl_bench::htmlLineComparingN(), b, renderOut);
 }
 
 /**
@@ -766,6 +766,6 @@ TEST_CASE("bench vcycle iterations lineplot: solve", "[!benchmark][solve][plot][
         }
 
         std::ofstream renderOut(std::string("benchresults_vcycleiters_").append(std::to_string(N)).append(".html"));
-        ankerl::nanobench::render(mgcl_test::htmlLineComparingVcycleIters(), b, renderOut);
+        ankerl::nanobench::render(mgcl_bench::htmlLineComparingVcycleIters(), b, renderOut);
     }
 }

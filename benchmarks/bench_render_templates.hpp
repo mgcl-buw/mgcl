@@ -3,8 +3,17 @@
 
 #include <string>
 
-namespace mgcl_test
+namespace mgcl_bench
 {
+    inline std::string customCsv()
+    {
+        return R"DELIM(
+"name";"time in seconds"
+{{#result}}"{{name}}";{{minimum(elapsed)}}
+{{/result}}
+)DELIM";
+    }
+
     /**
      * @brief Mustache template for generating a line plot of sequential vs. opencl. Heavily depends on the name of the
      * benchmark test, e.g. for N it tries to match 'N = \d+' and for differentiating between seq and ocl it tries to
