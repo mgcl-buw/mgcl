@@ -21,15 +21,6 @@
 - refactor benchmarks
 - refactor OCLWrapper?
 - benchmark OpenCLHelper::readKernelFile true or false
-- measure kernel timings using OpenCL built-in profiling
-  [ ] create struct ProfilingResults and pass a pointer to it into each kernel driver function
-    - should encapsulate a map with key=kernelName and value=Measurement
-    - Measurement has: time in ns, triple work-items, triple wg-size
-  [x] add Problem::profilingEnabled attribute (default is false)
-  [x] enable profiling in OpenCLHelper
-  [ ] in each kernel driver method, add instructions using if-directives. Kernel returning info:
-    - atomic kernel call: updateGhosts, restrict, prolongate, correct_error, 
-    - multiple kernel calls: residual (residual, residual_squared), jacobi (multiple iters), varstencil_multiply (update_ghosts, mult)
 - thoroughly test KernelConfig
 
 Done:
@@ -89,3 +80,12 @@ Done:
 - inline kernel source code, add CMake option MGCL_USE_EXTERNAL_KERNEL_FILE with false as default. Copy content of mgcl.cl into string at build time using CMake.
   -> runtime flag OpenCLHelper::readKernelFromFile added instead of CMake option. Kernel source is always copied into string, if mgcl.cl has changed.
 - add KernelConfig (configure work-group sizes of various kernels)
+- measure kernel timings using OpenCL built-in profiling
+  [x] create struct ProfilingResults and pass a pointer to it into each kernel driver function
+    - should encapsulate a map with key=kernelName and value=Measurement
+    - Measurement has: time in ns, triple work-items, triple wg-size
+  [x] add Problem::profilingEnabled attribute (default is false)
+  [x] enable profiling in OpenCLHelper
+  [x] in each kernel driver method, add instructions using if-directives. Kernel returning info:
+    - atomic kernel call: updateGhosts, restrict, prolongate, correct_error, 
+    - multiple kernel calls: residual (residual, residual_squared), jacobi (multiple iters), varstencil_multiply (update_ghosts, mult)

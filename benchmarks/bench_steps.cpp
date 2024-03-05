@@ -5,7 +5,6 @@
 #include "catch2/generators/catch_generators.hpp"
 
 #include <chrono>
-#include <iomanip>
 #include <iostream>
 using namespace std::chrono_literals;
 

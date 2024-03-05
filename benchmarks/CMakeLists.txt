@@ -7,7 +7,6 @@ set(SOURCES_BENCH
     ../test/ocl_wrapper.hpp
     ../test/ocl_wrapper.cpp
     bench_solve.cpp
-    bench_solve_catch2.cpp
     bench_init.cpp
     bench_steps.cpp
     bench_stencil.cpp
