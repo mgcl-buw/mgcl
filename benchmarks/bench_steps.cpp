@@ -1,9 +1,11 @@
+#include "cli_args.hpp"
 #include "nanobench.h"
 
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/generators/catch_generators.hpp"
 
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 using namespace std::chrono_literals;
 
@@ -515,5 +517,96 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
                   });
         }
         std::cout << "=============" << std::endl;
+    }
+}
+
+/**
+ * @brief Measures each step of vcycle using the profiler, i.e. prints kernel timings only.
+ *
+ */
+TEST_CASE("benchStepsProfile")
+{
+    if (CLI_ARGS::grids.size() == 0 && (CLI_ARGS::gridsMin.size() == 0 || CLI_ARGS::gridsMax.size() == 0))
+        throw "Need to specify at least one local grid size, e.g. using --grids 4,8,16 or --gridsMin 4,4,4 AND --gridsMax 32,32,32";
+
+    // build grids to be tested from CLI args
+    std::vector<std::vector<int>> gridsTBT;
+    for (auto N : CLI_ARGS::grids)
+        gridsTBT.push_back({N, N, N});
+    if (CLI_ARGS::gridsMin.size() > 0 && CLI_ARGS::gridsMax.size() > 0)
+        for (int m = CLI_ARGS::gridsMin[0]; m <= CLI_ARGS::gridsMax[0]; m *= 2)
+            for (int n = CLI_ARGS::gridsMin[1]; n <= CLI_ARGS::gridsMax[1]; n *= 2)
+                for (int o = CLI_ARGS::gridsMin[2]; o <= CLI_ARGS::gridsMax[2]; o *= 2)
+                    gridsTBT.push_back({m, n, o});
+
+    std::cout << "Testing the following grid sizes" << std::endl;
+    for (auto gr : gridsTBT)
+    {
+        int m = gr[0];
+        int n = gr[1];
+        int o = gr[2];
+        std::cout << "  " << m << "," << n << "," << o << std::endl;
+    }
+
+    for (auto Ns : gridsTBT)
+    {
+        int m = Ns[0];
+        int n = Ns[1];
+        int o = Ns[2];
+        int ghosts_m = 1;
+        int ghosts_n = 1;
+        int ghosts_o = 1;
+        double h = 1.0 / static_cast<double>(m);
+
+        mgcl::BC bc = mgcl::BC::PERIODIC;
+        bool periodic = bc == mgcl::BC::PERIODIC;
+        int maxiter = 1;
+        int benchiters = 10;
+
+        ankerl::nanobench::Bench b;
+        b.timeUnit(1us, "us")
+            // .epochs(1)
+            // .epochIterations(1)
+            .minEpochTime(100ms)
+            .maxEpochTime(5s)
+            .relative(true);
+
+        auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
+        auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+        f->fillRandom(0, 10);
+
+        mgcl::Problem p(m, n, o, f, v);
+        p.setUseOpencl(true);
+        if (mgcl_test::TestUtility::deviceAvailable("Quadro", CL_DEVICE_TYPE_GPU))
+            p.setDeviceName("Quadro");
+        p.setSilent(true);
+        p.setProfilingEnabled(true);
+        p.setStencilType(mgcl::MGCL_VARYING);
+        p.getStencilValues()->fillRandom();
+        p.init();
+
+        // Clear measurements from init
+        auto pd = p.getProfilingData();
+        pd->getMeasurements().clear();
+
+        auto& v0 = p.getLevelAt(0).getV();
+        auto& v0d = p.getLevelAt(0).getDVIn();
+        auto& fine = p.getLevelAt(0);
+        auto& coarse = p.getLevelAt(1);
+
+        for (int i = 0; i < benchiters; i++)
+        {
+            mgcl::MultigridEngine::jacobi(p, fine, maxiter, false);
+            mgcl::MultigridEngine::residual(p, fine, false);
+            mgcl::MultigridEngine::updateGhosts(p, v0d, nullptr, false);
+            mgcl::MultigridEngine::restrict(fine, coarse, fine.getDR(), coarse.getDF());
+            mgcl::MultigridEngine::prolongate(fine, coarse, fine.getDR(), coarse.getDVIn());
+        }
+        clFinish(p.getCommands());
+
+        // Print profiling measurements
+        std::cout << "m,n,o: " << m << "," << n << "," << o << std::endl;
+        pd->printBestTimingsPerKernel();
+        std::cout << "========" << std::endl;
     }
 }
