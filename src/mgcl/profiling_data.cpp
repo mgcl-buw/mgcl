@@ -1,7 +1,10 @@
 #include "profiling_data.hpp"
 #include "opencl_helper.hpp"
 
+#include <algorithm>
+#include <iomanip>
 #include <iostream>
+#include <string>
 
 namespace mgcl
 {
@@ -47,5 +50,54 @@ namespace mgcl
             queue_time_in_ns,
             {global[0], global[1], global[2]},
             {local[0], local[1], local[2]}});
+    }
+
+    /**
+     * @brief Finds and prints measurement with minimum elapsed time per kernel. Does not respect different
+     * work-group sizes or different work-item counts.
+     *
+     */
+    void ProfilingData::printBestTimingsPerKernel()
+    {
+        size_t maxKernelNameLength = 0;
+        size_t maxElapsedLength = std::string("time [ns]").length();
+        size_t maxQueueLength = std::string("queue [ns]").length();
+        size_t maxWiLength = std::string("work-items").length();
+        size_t maxWgLength = std::string("work-group").length();
+        for (const auto& entry : measurements)
+        {
+            maxKernelNameLength = std::max(maxKernelNameLength, entry.first.length());
+            for (const auto& m : entry.second)
+            {
+                maxElapsedLength = std::max(maxElapsedLength, std::to_string(m.elapsed).length());
+                maxQueueLength = std::max(maxQueueLength, std::to_string(m.inQueue).length());
+                maxWiLength = std::max(maxWiLength, std::to_string(m.work_items[0]).append(",").append(std::to_string(m.work_items[1]).append(",").append(std::to_string(m.work_items[2]))).length());
+                maxWgLength = std::max(maxWgLength, std::to_string(m.work_group[0]).append(",").append(std::to_string(m.work_group[1]).append(",").append(std::to_string(m.work_group[2]))).length());
+            }
+        }
+
+        std::cout << std::setw(maxKernelNameLength + 2) << "kernel"
+                  << std::setw(maxElapsedLength + 2) << "time [ns]"
+                  << std::setw(maxQueueLength + 2) << "queue [ns]"
+                  << std::setw(maxWiLength + 2) << "work-items"
+                  << std::setw(maxWgLength + 2) << "work-group" << std::endl;
+
+        for (const auto& entry : measurements)
+        {
+            auto it = std::min_element(
+                entry.second.begin(),
+                entry.second.end(),
+                [](const ProfilingMeasurement& a, const ProfilingMeasurement& b)
+                {
+                    return a.elapsed < b.elapsed;
+                });
+
+            std::cout << std::setw(maxKernelNameLength + 2) << entry.first
+                      << std::setw(maxElapsedLength + 2) << it->elapsed
+                      << std::setw(maxQueueLength + 2) << it->inQueue
+                      << std::setw(maxWiLength + 2) << std::to_string(it->work_items[0]).append(",").append(std::to_string(it->work_items[1])).append(",").append(std::to_string(it->work_items[2]))
+                      << std::setw(maxWgLength + 2) << std::to_string(it->work_group[0]).append(",").append(std::to_string(it->work_group[1])).append(",").append(std::to_string(it->work_group[2]))
+                      << std::endl;
+        }
     }
 } // namespace mgcl

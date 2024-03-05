@@ -57,6 +57,8 @@ namespace mgcl
                             std::string kernelName,
                             std::array<size_t, 3> global, std::array<size_t, 3> local);
 
+        void printBestTimingsPerKernel();
+
         friend std::ostream& operator<<(std::ostream& os, const ProfilingData& pd);
     };
 }
