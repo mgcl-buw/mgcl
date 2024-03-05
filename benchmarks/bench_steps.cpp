@@ -597,7 +597,7 @@ TEST_CASE("benchStepsProfile")
         for (int i = 0; i < benchiters; i++)
         {
             mgcl::MultigridEngine::jacobi(p, fine, maxiter, false);
-            mgcl::MultigridEngine::residual(p, fine, false);
+            mgcl::MultigridEngine::residual(p, fine, true);
             mgcl::MultigridEngine::updateGhosts(p, v0d, nullptr, false);
             mgcl::MultigridEngine::restrict(fine, coarse, fine.getDR(), coarse.getDF());
             mgcl::MultigridEngine::prolongate(fine, coarse, fine.getDR(), coarse.getDVIn());
