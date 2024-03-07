@@ -1393,6 +1393,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
 
     double h = 1.0 / static_cast<double>(m);
     mgcl_test::fill7pLaplace(sv, h, false);
+    // mgcl_test::fill27pLaplace(sv, h, false);
 
     p.solve();
 
