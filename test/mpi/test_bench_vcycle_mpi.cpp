@@ -87,7 +87,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_galerkin_thresholds")
             v->fillRandom();
             f->fillRandom();
 
-            mgcl::Problem pocl(N, N, N, v, f, mglob, nglob, oglob);
+            mgcl::Problem pocl(N, N, N, f, v, mglob, nglob, oglob);
             // pocl.setSilent(true);
             pocl.setMpiMinGridPoints(mgp);
             pocl.setOmega(omega);

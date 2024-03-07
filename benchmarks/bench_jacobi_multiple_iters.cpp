@@ -253,7 +253,7 @@ TEST_CASE("benchmark Jacobi MPI OCL multiple iters", "[console][jacobiMulti][mpi
                 v->fillRandom();
                 f->fillRandom();
 
-                auto p = std::make_shared<mgcl::Problem>(m, n, o, v, f, mglob, nglob, oglob);
+                auto p = std::make_shared<mgcl::Problem>(m, n, o, f, v, mglob, nglob, oglob);
                 p->setMpiComm(mpi_comm);
                 p->setGhosts(spi);
                 p->setJacobiIterationsPerKernel(spi);

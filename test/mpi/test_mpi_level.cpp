@@ -122,7 +122,7 @@ TEST_CASE("Level::initMpiData (2 processes)")
     v->fillRandom();
     f->fillRandom();
 
-    mgcl::Problem p(ml, nl, ol, v, f, m, n, o);
+    mgcl::Problem p(ml, nl, ol, f, v, m, n, o);
     p.setMpiComm(mpi_comm);
     p.setGhostsIn(1);
     p.init();
@@ -265,7 +265,7 @@ TEST_CASE("Level::initMpiData-2procs-levelThreshold0")
     v->fillRandom();
     f->fillRandom();
 
-    mgcl::Problem p(ml, nl, ol, v, f, m, n, o);
+    mgcl::Problem p(ml, nl, ol, f, v, m, n, o);
     p.setMpiComm(mpi_comm);
     p.setGhostsIn(1);
     p.setMpiMinGridPoints(m); // Ensures mpiLevelThreshold to be 0.
@@ -402,7 +402,7 @@ TEST_CASE("Level::initMpiData (8 processes)")
     v->fillRandom();
     f->fillRandom();
 
-    mgcl::Problem p(N, N, N, v, f, Ng, Ng, Ng);
+    mgcl::Problem p(N, N, N, f, v, Ng, Ng, Ng);
     p.setMpiComm(mpi_comm);
     p.setGhostsIn(1);
     p.setMpiMinGridPoints(2);
@@ -554,7 +554,7 @@ TEST_CASE("Level::initMpiData (24 processes)")
     v->fillRandom();
     f->fillRandom();
 
-    mgcl::Problem p(m, n, o, v, f, mg, ng, og);
+    mgcl::Problem p(m, n, o, f, v, mg, ng, og);
     p.setMpiComm(mpi_comm);
     p.setGhostsIn(1);
     p.setMpiMinGridPoints(2);

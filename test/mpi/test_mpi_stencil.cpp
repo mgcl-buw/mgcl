@@ -200,7 +200,7 @@ TEST_CASE("MPI-stencil-updateGhostsSeq-nprocs")
     int gh = GENERATE(1, 2);
 
     // Init Problem to create all needed structures
-    mgcl::Problem p(ml, nl, ol, v, f, m, n, o);
+    mgcl::Problem p(ml, nl, ol, f, v, m, n, o);
     p.setGhosts(1);
     p.setMpiComm(mpi_comm);
     p.init();
@@ -380,7 +380,7 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     int gh = 1;
 
     // Init Problem to create all needed structures
-    auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, v, f, m, n, o);
+    auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, f, v, m, n, o);
     auto& p = *pptr;
     p.setGhosts(1);
     p.setMpiComm(mpi_comm);
@@ -571,7 +571,7 @@ TEST_CASE("MPI_galerkin_different_thresholds")
     f->fillRandom();
 
     // Init Problem with threshold level 0
-    auto pptr_th0 = std::make_shared<mgcl::Problem>(ml, nl, ol, v, f, m, n, o);
+    auto pptr_th0 = std::make_shared<mgcl::Problem>(ml, nl, ol, f, v, m, n, o);
     auto& p_th0 = *pptr_th0;
     p_th0.setMpiComm(mpi_comm);
     p_th0.setMpiLevelThreshold(0);
@@ -583,7 +583,7 @@ TEST_CASE("MPI_galerkin_different_thresholds")
     p_th0.init();
 
     // Init Problem with threshold level 1
-    auto pptr_th1 = std::make_shared<mgcl::Problem>(ml, nl, ol, v, f, m, n, o);
+    auto pptr_th1 = std::make_shared<mgcl::Problem>(ml, nl, ol, f, v, m, n, o);
     auto& p_th1 = *pptr_th1;
     p_th1.setMpiComm(mpi_comm);
     p_th1.setMpiLevelThreshold(0);
@@ -595,7 +595,7 @@ TEST_CASE("MPI_galerkin_different_thresholds")
     p_th1.init();
 
     // Init Problem with threshold level 2
-    auto pptr_th2 = std::make_shared<mgcl::Problem>(ml, nl, ol, v, f, m, n, o);
+    auto pptr_th2 = std::make_shared<mgcl::Problem>(ml, nl, ol, f, v, m, n, o);
     auto& p_th2 = *pptr_th2;
     p_th2.setMpiComm(mpi_comm);
     p_th2.setMpiLevelThreshold(0);

@@ -151,7 +151,7 @@ int main(int argc, char* argv[])
     f->fillRandom();
 
     // Create problem, set mpi communicator (needed for topology information) and solve.
-    mgcl::Problem p(ml, nl, ol, v, f, m, n, o);
+    mgcl::Problem p(ml, nl, ol, f, v, m, n, o);
     p.setMpiComm(mpi_comm);
     p.solve();
 

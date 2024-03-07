@@ -125,7 +125,7 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_only_galerkin")
         v->fillRandom();
         f->fillRandom();
 
-        mgcl::Problem pseq(m, n, o, v, f, mglob, nglob, oglob);
+        mgcl::Problem pseq(m, n, o, f, v, mglob, nglob, oglob);
         pseq.setSilent(true);
         pseq.setOmega(omega);
         pseq.setNu1(nu1);
@@ -299,7 +299,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_only_galerkin")
         v->fillRandom();
         f->fillRandom();
 
-        mgcl::Problem p(m, n, o, v, f, mglob, nglob, oglob);
+        mgcl::Problem p(m, n, o, f, v, mglob, nglob, oglob);
         p.setSilent(true);
         p.setUseOpencl(true);
         p.setOmega(omega);
@@ -455,7 +455,7 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_vs_OCL_galerkin")
         v->fillRandom();
         f->fillRandom();
 
-        mgcl::Problem pseq(N, N, N, v, f, mglob, nglob, oglob);
+        mgcl::Problem pseq(N, N, N, f, v, mglob, nglob, oglob);
         pseq.setSilent(true);
         pseq.setOmega(omega);
         pseq.setNu1(nu1);
@@ -490,7 +490,7 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_vs_OCL_galerkin")
 
         v->fillRandom();
         f->fillRandom();
-        mgcl::Problem pocl(N, N, N, v, f, mglob, nglob, oglob);
+        mgcl::Problem pocl(N, N, N, f, v, mglob, nglob, oglob);
         pocl.setSilent(true);
         pocl.setOmega(omega);
         pocl.setNu1(nu1);
@@ -595,7 +595,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_galerkin_thresholds")
             v->fillRandom();
             f->fillRandom();
 
-            mgcl::Problem pocl(N, N, N, v, f, mglob, nglob, oglob);
+            mgcl::Problem pocl(N, N, N, f, v, mglob, nglob, oglob);
             pocl.setSilent(true);
             pocl.setMpiMinGridPoints(mgp);
             pocl.setOmega(omega);
@@ -708,7 +708,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_galerkin_jacobi_iters")
                 v->fillRandom();
                 f->fillRandom();
 
-                mgcl::Problem pocl(N, N, N, v, f, mglob, nglob, oglob);
+                mgcl::Problem pocl(N, N, N, f, v, mglob, nglob, oglob);
                 pocl.setSilent(true);
                 // pocl.setMpiMinGridPoints(mgp);
                 pocl.setOmega(omega);

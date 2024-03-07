@@ -188,7 +188,7 @@ TEST_CASE("MPI updateGhostsSeq (n processes)", "[mpiN]")
         int gh = 1;
 
         // Init Problem to create all needed structures
-        mgcl::Problem p(ml, nl, ol, v, f, m, n, o);
+        mgcl::Problem p(ml, nl, ol, f, v, m, n, o);
         p.setGhosts(1);
         p.setMpiComm(mpi_comm);
         p.init();
@@ -367,7 +367,7 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
     int gh = 1;
 
     // Init Problem to create all needed structures
-    auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, v, f, m, n, o);
+    auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, f, v, m, n, o);
     auto& p = *pptr;
     p.setGhosts(1);
     p.setMpiComm(mpi_comm);

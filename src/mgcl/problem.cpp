@@ -89,7 +89,7 @@ namespace mgcl
     }
 
     /**
-     * @brief Checks mandatory configuration fields: m, n, o, v, f, d_v, d_f, ghosts and ghosts_in.
+     * @brief Checks mandatory configuration fields: m, n, o, f, v, d_v, d_f, ghosts and ghosts_in.
      *
      * @return true All good.
      * @return false Something's wrong.
