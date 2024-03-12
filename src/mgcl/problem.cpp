@@ -584,8 +584,20 @@ namespace mgcl
      */
     void Problem::solveSeq()
     {
+        solveSeq(false);
+    }
+
+    /**
+     * @brief Solves problem sequentially using multigrid method.
+     *
+     * @param skipInit If true, skips initialization. Requires Problem::init to be called first. Mainly used for
+     * testing and benchmarking.
+     * @throws runtime_error When initializing data structures failed.
+     */
+    void Problem::solveSeq(bool skipInit)
+    {
         // set up data for each level
-        if (!init())
+        if (!skipInit && !init())
             throw std::runtime_error("Failed to initialize mgcl data structures.");
 
         // Edge case: Do nothing if mpi is used but level threshold is 0 (i.e. all work is done on proc 0).

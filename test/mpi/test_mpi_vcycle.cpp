@@ -1713,7 +1713,7 @@ TEST_CASE("MPI_vcycle_multiple_solve_calls")
     p_seq.solve();
     MPI_Barrier(mpi_comm);
     std::cout << "Seq Second call on rank " << mpi_rank << " ..." << std::endl;
-    p_seq.solve();
+    p_seq.solve(true);
     MPI_Barrier(mpi_comm);
     std::cout << "Seq Done on rank " << mpi_rank << std::endl;
 
@@ -1731,7 +1731,7 @@ TEST_CASE("MPI_vcycle_multiple_solve_calls")
     p.solve();
     MPI_Barrier(mpi_comm);
     std::cout << "OCL Second call on rank " << mpi_rank << " ..." << std::endl;
-    p.solve();
+    p.solve(true);
     MPI_Barrier(mpi_comm);
     std::cout << "OCL Done on rank " << mpi_rank << std::endl;
 }
