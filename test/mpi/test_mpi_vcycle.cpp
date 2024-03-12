@@ -1607,6 +1607,135 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters")
     }
 }
 
+// Tests if calling solve multiple times does not result in any MPI process to freeze.
+// This is not a problem on the Laptop but apparently on Pleiades as of 03-2024.
+// Checks both, sequential run and using OpenCL.
+// Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_multiple_solve_calls
+TEST_CASE("MPI_vcycle_multiple_solve_calls")
+{
+    using std::min;
+
+    // global grid sizes
+    int m = 16;
+    int n = 16;
+    int o = 16;
+    int periodic = 1;
+    int gh = 1;
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    // REQUIRE(mpi_size == 8);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    /* Initialize start and end for local grid */
+    int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+    int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+    int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+    int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+    int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+    int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+    int ml = (m_end - m_start) + 1;
+    int nl = (n_end - n_start) + 1;
+    int ol = (o_end - o_start) + 1;
+
+    CAPTURE(ml, nl, ol);
+
+    // print coords and boundaries per rank
+    // if (mpi_rank == 0)
+    //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (mpi_rank == i)
+    //     {
+    //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+    //                   << m_start << ";" << m_end << ";"
+    //                   << n_start << ";" << n_end << ";"
+    //                   << o_start << ";" << o_end << std::endl;
+    //     }
+    // }
+
+    REQUIRE(ml > 0);
+    REQUIRE(ml <= m);
+    REQUIRE(nl > 0);
+    REQUIRE(nl <= n);
+    REQUIRE(ol > 0);
+    REQUIRE(ol <= o);
+
+    int threshold = 1;
+    CAPTURE(threshold);
+
+    // Set up 4th order periodic problem
+    int ghin = 0; // TODO check with ghin > 0
+    auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+    auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+    auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+    mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+
+    // Create local slices
+    std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+    std::shared_ptr<mgcl::Cuboid> floc(f->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+    std::shared_ptr<mgcl::Cuboid> solutionloc(solution->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+
+    // Create local problem on host (not using OpenCL)
+    mgcl::Problem p_seq(ml, nl, ol, floc, vloc, m, n, o);
+    // p_seq.setMaxiterVcycles(1);
+    p_seq.setUseOpencl(false);
+    p_seq.setReadResults(true);
+    p_seq.setGhosts(gh);
+    p_seq.setGhostsIn(ghin);
+    p_seq.setMpiLevelThreshold(threshold);
+    p_seq.setMpiComm(mpi_comm);
+
+    std::cout << "Seq First call on rank " << mpi_rank << " ..." << std::endl;
+    p_seq.solve();
+    MPI_Barrier(mpi_comm);
+    std::cout << "Seq Second call on rank " << mpi_rank << " ..." << std::endl;
+    p_seq.solve();
+    MPI_Barrier(mpi_comm);
+    std::cout << "Seq Done on rank " << mpi_rank << std::endl;
+
+    // Create local problem using OpenCL
+    mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
+    // p.setMaxiterVcycles(1);
+    p.setUseOpencl(true);
+    p.setReadResults(true);
+    p.setGhosts(gh);
+    p.setGhostsIn(ghin);
+    p.setMpiLevelThreshold(threshold);
+    p.setMpiComm(mpi_comm);
+
+    std::cout << "OCL First call on rank " << mpi_rank << " ..." << std::endl;
+    p.solve();
+    MPI_Barrier(mpi_comm);
+    std::cout << "OCL Second call on rank " << mpi_rank << " ..." << std::endl;
+    p.solve();
+    MPI_Barrier(mpi_comm);
+    std::cout << "OCL Done on rank " << mpi_rank << std::endl;
+}
+
 /**
  * @brief Calculates error for each cell, e.g. difference between solution and approximation. Dimensions must match.
  *
