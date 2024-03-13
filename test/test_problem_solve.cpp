@@ -826,6 +826,127 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
 }
 
 /**
+ * @brief Tests if tolerance is ignored if ignoreTol is true, i.e. maximum amount of v-cycle iterations
+ * is done although the tolerance is low.
+ *
+ */
+TEST_CASE("Problem_ignore_tol")
+{
+    int N = 16;
+    double h = 1.0 / (double)N;
+
+    // Problem parameters
+    double tol = 1e-1; // will be reached really quick
+    int nu1 = 2;
+    int nu2 = 2;
+    double omega = 0.8;
+    int maxIterVCycles = 10;
+    int maxlevel = 10;
+
+    auto v = std::make_shared<mgcl::Cuboid>(N, N, N);
+    auto f = std::make_shared<mgcl::Cuboid>(N, N, N);
+    auto solution = mgcl::Cuboid(N, N, N);
+
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++)
+            for (int k = 0; k < N; k++)
+            {
+                double zs = i * h;
+                double ys = j * h;
+                double xs = k * h;
+                double xs2 = xs * xs;
+                double ys2 = ys * ys;
+                double zs2 = zs * zs;
+                double xsm1_2 = (xs - 1) * (xs - 1);
+                double ysm1_2 = (ys - 1) * (ys - 1);
+                double zsm1_2 = (zs - 1) * (zs - 1);
+                double xs3 = xs * xs * xs;
+                double ys3 = ys * ys * ys;
+                double zs3 = zs * zs * zs;
+                double xsm1_3 = (xs - 1) * (xs - 1) * (xs - 1);
+                double ysm1_3 = (ys - 1) * (ys - 1) * (ys - 1);
+                double zsm1_3 = (zs - 1) * (zs - 1) * (zs - 1);
+                double xs4 = xs * xs * xs * xs;
+                double ys4 = ys * ys * ys * ys;
+                double zs4 = zs * zs * zs * zs;
+                double xsm1_4 = (xs - 1) * (xs - 1) * (xs - 1) * (xs - 1);
+                double ysm1_4 = (ys - 1) * (ys - 1) * (ys - 1) * (ys - 1);
+                double zsm1_4 = (zs - 1) * (zs - 1) * (zs - 1) * (zs - 1);
+                (*v)[i][j][k] = 0;
+                solution[i][j][k] = 1000000 * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) *
+                                    (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) *
+                                    (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1));
+                (*f)[i][j][k] =
+                    -1000000 *
+                    (12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_2 + 12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_2 * zsm1_4 +
+                     12 * xs4 * ys4 * zs4 * xsm1_2 * ysm1_4 * zsm1_4 + 32 * xs4 * ys4 * zs3 * xsm1_4 * ysm1_4 * zsm1_3 +
+                     12 * xs4 * ys4 * zs2 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs4 * ys3 * zs4 * xsm1_4 * ysm1_3 * zsm1_4 +
+                     12 * xs4 * ys2 * zs4 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs3 * ys4 * zs4 * xsm1_3 * ysm1_4 * zsm1_4 +
+                     12 * xs2 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_4);
+            }
+
+    mgcl::Problem p(N, N, N, f, v);
+    p.setMaxiterVcycles(maxIterVCycles);
+    p.setTol(tol);
+    p.setNu1(nu1);
+    p.setNu2(nu2);
+    p.setOmega(omega);
+    p.setMaxlevel(maxlevel);
+
+    SECTION("Sequential")
+    {
+        SECTION("ignoreTolFalse")
+        {
+            p.setIgnoreTol(false);
+            p.solveSeq();
+
+            REQUIRE(p.getElapsedIterations() < maxIterVCycles);
+        }
+
+        SECTION("ignoreTolTrue")
+        {
+            p.setIgnoreTol(true);
+            p.solveSeq();
+
+            REQUIRE(p.getElapsedIterations() == maxIterVCycles);
+        }
+    }
+
+    SECTION("OpenCL")
+    {
+        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+
+        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
+        {
+            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
+            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
+            return;
+        }
+
+        std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
+
+        p.setUseOpencl(true);
+        p.setDeviceType(deviceType);
+
+        SECTION("ignoreTolFalse")
+        {
+            p.setIgnoreTol(false);
+            p.solve();
+
+            REQUIRE(p.getElapsedIterations() < maxIterVCycles);
+        }
+
+        SECTION("ignoreTolTrue")
+        {
+            p.setIgnoreTol(true);
+            p.solve();
+
+            REQUIRE(p.getElapsedIterations() == maxIterVCycles);
+        }
+    }
+}
+
+/**
  * @brief Calculates error for each cell, e.g. difference between solution and approximation. Dimensions must match.
  *
  * @param solution

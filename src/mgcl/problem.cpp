@@ -526,7 +526,6 @@ namespace mgcl
         // Edge case: Do nothing if mpi is used but level threshold is 0 (i.e. all work is done on proc 0).
         if (!(useMpi() && getMpiLevelThreshold() <= 0 && mpiRank() > 0))
         {
-
             // calculate initial residual
             double initres = MultigridEngine::residual(*this, *levels[0], !ignoreTol);
             if (!silent && !ignoreTol)
@@ -534,8 +533,10 @@ namespace mgcl
 
             // run vcycle maxiter_vcycles times
             double res, relres;
+            elapsedIterations = 0;
             for (int i = 0; i < maxiter_vcycles; i++)
             {
+                elapsedIterations++;
                 auto tstart = std::chrono::steady_clock::now();
                 res = MultigridEngine::vcycle(*this, *levels[0]);
                 auto tend = mgcl_since(tstart).count();
@@ -551,8 +552,31 @@ namespace mgcl
                         printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
                 }
 
-                if (!ignoreTol && relres < tol)
-                    break;
+                if (!ignoreTol)
+                {
+                    // If mpi is in use, gather tolerances from each processor and check if any of them is not
+                    // yet below tol. If so, continue.
+                    if (useMpi())
+                    {
+                        std::vector<double> vecRelres(mpiSize());
+                        bool continueVcycle = false;
+                        MPI_Allgather(&relres, 1, MPI_DOUBLE, vecRelres.data(), 1, MPI_DOUBLE, MPI_COMM_WORLD);
+                        for (int j = 0; j < mpiSize(); j++)
+                        {
+                            if (vecRelres[j] > tol)
+                            {
+                                continueVcycle = true;
+                                break;
+                            }
+                        }
+                        if (!continueVcycle)
+                            break;
+                    }
+                    else if (relres <= tol)
+                    {
+                        break;
+                    }
+                }
             }
         }
         else if (!silent)
@@ -619,8 +643,10 @@ namespace mgcl
 
             // run vcycle maxiter_vcycles times
             double res, relres;
+            elapsedIterations = 0;
             for (int i = 0; i < maxiter_vcycles; i++)
             {
+                elapsedIterations++;
                 auto tstart = std::chrono::steady_clock::now();
                 res = MultigridEngine::vcycleSeq(*this, *levels[0]);
                 auto tend = mgcl_since(tstart).count();
@@ -636,8 +662,31 @@ namespace mgcl
                         printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
                 }
 
-                if (!ignoreTol && relres < tol)
-                    break;
+                if (!ignoreTol)
+                {
+                    // If mpi is in use, gather tolerances from each processor and check if any of them is not
+                    // yet below tol. If so, continue.
+                    if (useMpi())
+                    {
+                        std::vector<double> vecRelres(mpiSize());
+                        bool continueVcycle = false;
+                        MPI_Allgather(&relres, 1, MPI_DOUBLE, vecRelres.data(), 1, MPI_DOUBLE, MPI_COMM_WORLD);
+                        for (int j = 0; j < mpiSize(); j++)
+                        {
+                            if (vecRelres[j] > tol)
+                            {
+                                continueVcycle = true;
+                                break;
+                            }
+                        }
+                        if (!continueVcycle)
+                            break;
+                    }
+                    else if (relres <= tol)
+                    {
+                        break;
+                    }
+                }
             }
         }
         else if (!silent)
