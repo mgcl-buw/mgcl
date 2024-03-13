@@ -200,6 +200,8 @@ if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -N1 -n1 --gpus=1 --gpus-per-task=1 mpiexec --mca pml cm "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p"
     run_test --oversubscribe -N1 -n4 --gpus=4 --gpus-per-task=1 mpiexec --mca pml cm "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p"
     run_test --oversubscribe -N1 -n4 --gpus=4 --gpus-per-task=1 mpiexec --mca pml cm "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters"
+    run_test --oversubscribe -N1 -n4 --gpus=4 --gpus-per-task=1 mpiexec --mca pml cm "$exe" "MPI_vcycle_multiple_solve_calls"
+    run_test --oversubscribe -N1 -n4 --gpus=4 --gpus-per-task=1 mpiexec --mca pml cm "$exe" "MPI_vcycle_different_relres"
 fi
 
 if [ "$TEST_STENCIL" = true ] || [ "$TEST_ALL" = true ] ; then

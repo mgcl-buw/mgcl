@@ -549,34 +549,20 @@ namespace mgcl
                     if (ignoreTol)
                         printf("iter = %d, elapsed time = %ld ms\n", i, tend);
                     else
+                    {
+                        // If mpi is in use, calculate global relres first
+                        if (useMpi() && getMpiLevelThreshold() > 0)
+                        {
+                            relres = relres * relres;
+                            MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                            relres = sqrt(relres);
+                        }
                         printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
+                    }
                 }
 
-                if (!ignoreTol)
-                {
-                    // If mpi is in use, gather tolerances from each processor and check if any of them is not
-                    // yet below tol. If so, continue.
-                    if (useMpi())
-                    {
-                        std::vector<double> vecRelres(mpiSize());
-                        bool continueVcycle = false;
-                        MPI_Allgather(&relres, 1, MPI_DOUBLE, vecRelres.data(), 1, MPI_DOUBLE, MPI_COMM_WORLD);
-                        for (int j = 0; j < mpiSize(); j++)
-                        {
-                            if (vecRelres[j] > tol)
-                            {
-                                continueVcycle = true;
-                                break;
-                            }
-                        }
-                        if (!continueVcycle)
-                            break;
-                    }
-                    else if (relres <= tol)
-                    {
-                        break;
-                    }
-                }
+                if (!ignoreTol && relres <= tol)
+                    break;
             }
         }
         else if (!silent)
@@ -659,34 +645,20 @@ namespace mgcl
                     if (ignoreTol)
                         printf("iter = %d, elapsed time = %ld ms\n", i, tend);
                     else
+                    {
+                        // If mpi is in use, calculate global relres first
+                        if (useMpi() && getMpiLevelThreshold() > 0)
+                        {
+                            relres = relres * relres;
+                            MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                            relres = sqrt(relres);
+                        }
                         printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
+                    }
                 }
 
-                if (!ignoreTol)
-                {
-                    // If mpi is in use, gather tolerances from each processor and check if any of them is not
-                    // yet below tol. If so, continue.
-                    if (useMpi())
-                    {
-                        std::vector<double> vecRelres(mpiSize());
-                        bool continueVcycle = false;
-                        MPI_Allgather(&relres, 1, MPI_DOUBLE, vecRelres.data(), 1, MPI_DOUBLE, MPI_COMM_WORLD);
-                        for (int j = 0; j < mpiSize(); j++)
-                        {
-                            if (vecRelres[j] > tol)
-                            {
-                                continueVcycle = true;
-                                break;
-                            }
-                        }
-                        if (!continueVcycle)
-                            break;
-                    }
-                    else if (relres <= tol)
-                    {
-                        break;
-                    }
-                }
+                if (!ignoreTol && relres <= tol)
+                    break;
             }
         }
         else if (!silent)

@@ -1736,9 +1736,10 @@ TEST_CASE("MPI_vcycle_multiple_solve_calls")
     std::cout << "OCL Done on rank " << mpi_rank << std::endl;
 }
 
-// Checks if no process will freeze if one is already below tolerance while another is not.
-// Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_different_tolerances
-TEST_CASE("MPI_vcycle_different_tolerances")
+// Checks if no process will freeze if one is already below tolerance while another is not, i.e.
+// if global relres the same for each process.
+// Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_different_relres
+TEST_CASE("MPI_vcycle_different_relres")
 {
     using std::min;
 
@@ -1749,7 +1750,7 @@ TEST_CASE("MPI_vcycle_different_tolerances")
     int periodic = 1;
     int gh = 1;
 
-    double tol = 1e-2;
+    double tol = 1e-1;
     int maxIterVCycles = 10;
 
     // check if mpi is initialized
@@ -1827,7 +1828,7 @@ TEST_CASE("MPI_vcycle_different_tolerances")
     std::shared_ptr<mgcl::Cuboid> floc(f->slice(m_start, m_end, n_start, n_end, o_start, o_end));
     std::shared_ptr<mgcl::Cuboid> solutionloc(solution->slice(m_start, m_end, n_start, n_end, o_start, o_end));
 
-    // Set rhs to zero, s.t. relres = 0 in the first v-cycle iteration on all non-root processes
+    // Set rhs to zero, s.t. local relres = 0 in the first v-cycle iteration on all non-root processes
     if (mpi_rank > 0)
     {
         for (int i = 0; i < floc->field1d().size(); i++)
@@ -1850,6 +1851,9 @@ TEST_CASE("MPI_vcycle_different_tolerances")
     p_seq.setSilent(false);
 
     p_seq.solve();
+
+    // make sure tolerance is just right, s.t. maxIterVCycles is not reached
+    REQUIRE(p_seq.getElapsedIterations() < maxIterVCycles);
 
     // Gather elapsed iterations from all processes and check if all are the same.
     std::vector<int> vecElapsedIters(mpi_size);
@@ -1887,6 +1891,9 @@ TEST_CASE("MPI_vcycle_different_tolerances")
     p.setSilent(false);
 
     p.solve();
+
+    // make sure tolerance is just right, s.t. maxIterVCycles is not reached
+    REQUIRE(p_seq.getElapsedIterations() < maxIterVCycles);
 
     // Gather elapsed iterations from all processes and check if all are the same.
     std::vector<int> vecElapsedIters2(mpi_size);

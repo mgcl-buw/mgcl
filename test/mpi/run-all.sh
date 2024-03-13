@@ -202,6 +202,7 @@ if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p"
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters"
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_multiple_solve_calls"
+    run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_different_relres"
 fi
 
 if [ "$TEST_STENCIL" = true ] || [ "$TEST_ALL" = true ] ; then
