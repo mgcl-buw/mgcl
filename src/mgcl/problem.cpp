@@ -542,7 +542,17 @@ namespace mgcl
                 auto tend = mgcl_since(tstart).count();
 
                 if (!ignoreTol)
+                {
                     relres = initres == 0 ? 0 : res / initres;
+
+                    // If mpi is in use, calculate global relres first
+                    if (useMpi() && getMpiLevelThreshold() > 0)
+                    {
+                        relres = relres * relres;
+                        MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                        relres = sqrt(relres);
+                    }
+                }
 
                 if (!silent)
                 {
@@ -550,13 +560,6 @@ namespace mgcl
                         printf("iter = %d, elapsed time = %ld ms\n", i, tend);
                     else
                     {
-                        // If mpi is in use, calculate global relres first
-                        if (useMpi() && getMpiLevelThreshold() > 0)
-                        {
-                            relres = relres * relres;
-                            MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                            relres = sqrt(relres);
-                        }
                         printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
                     }
                 }
@@ -638,7 +641,17 @@ namespace mgcl
                 auto tend = mgcl_since(tstart).count();
 
                 if (!ignoreTol)
+                {
                     relres = initres == 0 ? 0 : res / initres;
+
+                    // If mpi is in use, calculate global relres first
+                    if (useMpi() && getMpiLevelThreshold() > 0)
+                    {
+                        relres = relres * relres;
+                        MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                        relres = sqrt(relres);
+                    }
+                }
 
                 if (!silent)
                 {
@@ -646,13 +659,6 @@ namespace mgcl
                         printf("iter = %d, elapsed time = %ld ms\n", i, tend);
                     else
                     {
-                        // If mpi is in use, calculate global relres first
-                        if (useMpi() && getMpiLevelThreshold() > 0)
-                        {
-                            relres = relres * relres;
-                            MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                            relres = sqrt(relres);
-                        }
                         printf("iter = %d, elapsed time = %ld ms, rel. res = %e\n", i, tend, relres);
                     }
                 }
