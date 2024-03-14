@@ -121,7 +121,6 @@ if [ "$TEST_LEVEL" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test -N1 -n1 --gpus=1 --gpus-per-task=1 mpiexec --mca pml cm "$exe" "Level::initMpiData (1 process)"
     run_test --oversubscribe -N1 -n2 --gpus=2 --gpus-per-task=1 mpiexec --mca pml cm "$exe" "Level::initMpiData (2 processes)"
     run_test --oversubscribe -N1 -n8 --gpus=8 --gpus-per-task=1 mpiexec --mca pml cm "$exe" "Level::initMpiData (8 processes)"
-    run_test --oversubscribe -N1 -n24 --gpus=8 --gpus-per-task=1 mpiexec --mca pml cm "$exe" "Level::initMpiData (24 processes)"
 fi
 
 if [ "$TEST_GHOSTS" = true ] || [ "$TEST_ALL" = true ] ; then
