@@ -122,9 +122,9 @@ int main(int argc, char* argv[])
     int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
     int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
 
-    int ml = (m_start - m_end) + 1;
-    int nl = (n_start - n_end) + 1;
-    int ol = (o_start - o_end) + 1;
+    int ml = (m_end - m_start) + 1;
+    int nl = (n_end - n_start) + 1;
+    int ol = (o_end - o_start) + 1;
 
     if (mpi_rank == 0)
     {
@@ -153,6 +153,11 @@ int main(int argc, char* argv[])
     // Create problem, set mpi communicator (needed for topology information) and solve.
     mgcl::Problem p(ml, nl, ol, f, v, m, n, o);
     p.setMpiComm(mpi_comm);
+    p.setUseOpencl(true);
+    p.setStencilType(mgcl::MGCL_VARYING);
+    p.getStencilValues()->fillRandom();
+    p.setNu1(2);
+    p.setNu2(2);
     p.solve();
 
     MPI_Finalize();

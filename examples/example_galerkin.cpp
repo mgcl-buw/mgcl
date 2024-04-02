@@ -2,6 +2,8 @@
 #include <iostream>
 #include <memory>
 
+#include "mpi.h"
+
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/mgcl.hpp"
 #include "../src/mgcl/problem.hpp"
@@ -19,6 +21,8 @@ enum RUNS
 // 2. arg: string, determines if seq, ocl or both shall be called. Valid values: seq, ocl, seq+ocl. Default is seq
 int main(int argc, char** argv)
 {
+    MPI_Init(&argc, &argv);
+
     int N = 16;
     RUNS runs = SEQ;
 
@@ -143,8 +147,10 @@ int main(int argc, char** argv)
             p.setDeviceName("Quadro");
 
         p.init();
-        // p.solve();
+        p.solve();
     }
+
+    MPI_Finalize();
 
     return 0;
 }
