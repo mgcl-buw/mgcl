@@ -144,6 +144,8 @@ int main(int argc, char* argv[])
               << ml << ";" << nl << ";" << ol
               << std::endl;
 
+    std::cout << "Generating random data..." << std::endl;
+
     // Init some random data
     auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
     auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
@@ -159,9 +161,11 @@ int main(int argc, char* argv[])
     p.setNu1(2);
     p.setNu2(2);
 
+    std::cout << "Initializing problem..." << std::endl;
     p.init();
     MPI_Barrier(p.getMpiComm());
 
+    std::cout << "Solving..." << std::endl;
     p.solve(true);
 
     MPI_Finalize();
