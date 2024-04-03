@@ -158,7 +158,11 @@ int main(int argc, char* argv[])
     p.getStencilValues()->fillRandom();
     p.setNu1(2);
     p.setNu2(2);
-    p.solve();
+
+    p.init();
+    MPI_Barrier(p.getMpiComm());
+
+    p.solve(true);
 
     MPI_Finalize();
 
