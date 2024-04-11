@@ -29,9 +29,11 @@ endif()
 # set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
 
 # ==============================
-# Add CPM as dependency manager. Download it if not already present. see
+# Add CPM as dependency manager for tests and benchmarks. Download it if not already present. see
 # https://github.com/cpm-cmake/CPM.cmake/wiki/Downloading-CPM.cmake-in-CMake
-include(cmake/CPM.cmake)
+if(MGCL_BUILD_TESTS OR MGCL_BUILD_BENCHMARKS)
+  include(cmake/CPM.cmake)
+endif()
 # ==============================
 
 set(MGCL_catch2_version "v3.4.0")
