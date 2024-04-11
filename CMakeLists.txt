@@ -73,8 +73,5 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 
   if(MGCL_BUILD_EXAMPLES)
     add_subdirectory(examples)
-
-    add_dependencies(example_galerkin copy_kernels)
-    add_dependencies(example_main copy_kernels)
   endif()
 endif()
