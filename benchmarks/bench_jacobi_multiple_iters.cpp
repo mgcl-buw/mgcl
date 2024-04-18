@@ -287,9 +287,9 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
         for (auto iters : CLI_ARGS::jacobiIters)
         {
             ankerl::nanobench::Bench bench;
-            bench.timeUnit(1ns, "ns")
-                .epochs(11)
-                .epochIterations(1)
+            bench.timeUnit(1ms, "ms")
+                .epochs(CLI_ARGS::bench_epochs)
+                .epochIterations(CLI_ARGS::bench_iterations)
                 // .minEpochTime(100ms)
                 .relative(CLI_ARGS::jacobiIters.size() > 1);
 

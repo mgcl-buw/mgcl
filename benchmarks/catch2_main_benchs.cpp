@@ -8,6 +8,8 @@
 // cmd args as global variables
 std::vector<int> CLI_ARGS::grids;
 int CLI_ARGS::minEpochIterations = 0;
+int CLI_ARGS::bench_epochs = 11;
+int CLI_ARGS::bench_iterations = 1;
 int CLI_ARGS::vCycleIterations = 10;
 std::string CLI_ARGS::outputPath = ".";
 std::vector<int> CLI_ARGS::gridsMin; // e.g. {4,4,4}
@@ -32,6 +34,9 @@ int main(int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
 
+    int mpi_rank = -1;
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+
     Catch::Session session; // There must be exactly one instance
 
     std::string grids;
@@ -42,6 +47,9 @@ int main(int argc, char* argv[])
 
     std::string gridsMin;
     std::string gridsMax;
+
+    int bench_epochs = CLI_ARGS::bench_epochs;
+    int bench_iterations = CLI_ARGS::bench_iterations;
 
     int nu1 = 2;
     int nu2 = 2;
@@ -56,6 +64,14 @@ int main(int argc, char* argv[])
                | Opt(minEpochIterations, "minEpochIterations")      // bind variable to a new option, with a hint string
                      ["--minEpochIterations"]                       // the option names it will respond to
                ("minEpochIterations, 0 is auto, see nanobench doc") // description string for the help output
+
+               | Opt(bench_epochs, "bench_epochs")               // bind variable to a new option, with a hint string
+                     ["--benchEpochs"]                           // the option names it will respond to
+               ("benchEpochs, 11 is default, see nanobench doc") // description string for the help output
+
+               | Opt(bench_iterations, "bench_iterations")     // bind variable to a new option, with a hint string
+                     ["--benchIters"]                          // the option names it will respond to
+               ("benchIters, 1 is default, see nanobench doc") // description string for the help output
 
                | Opt(vCycleIterations, "vCycleIterations") // bind variable to a new option, with a hint string
                      ["--vci"]["--vCycleIterations"]       // the option names it will respond to
@@ -95,37 +111,57 @@ int main(int argc, char* argv[])
 
     if (!grids.empty())
     {
-        std::cout << "grids: " << grids << std::endl;
+        if (mpi_rank == 0)
+            std::cout << "grids: " << grids << std::endl;
         CLI_ARGS::grids = split_int(grids, ",");
     }
 
     if (!jacobiIters.empty())
     {
-        std::cout << "jacobiIters: " << jacobiIters << std::endl;
+        if (mpi_rank == 0)
+            std::cout << "jacobiIters: " << jacobiIters << std::endl;
         CLI_ARGS::jacobiIters = split_int(jacobiIters, ",");
     }
 
     if (minEpochIterations > 0)
     {
-        std::cout << "minEpochIterations: " << minEpochIterations << std::endl;
+        if (mpi_rank == 0)
+            std::cout << "minEpochIterations: " << minEpochIterations << std::endl;
         CLI_ARGS::minEpochIterations = minEpochIterations;
+    }
+
+    if (bench_epochs > 0)
+    {
+        if (mpi_rank == 0)
+            std::cout << "bench_epochs: " << bench_epochs << std::endl;
+        CLI_ARGS::bench_epochs = bench_epochs;
+    }
+
+    if (bench_iterations > 0)
+    {
+        if (mpi_rank == 0)
+            std::cout << "bench_iterations: " << bench_iterations << std::endl;
+        CLI_ARGS::bench_iterations = bench_iterations;
     }
 
     if (vCycleIterations != 10)
     {
-        std::cout << "vCycleIterations: " << vCycleIterations << std::endl;
+        if (mpi_rank == 0)
+            std::cout << "vCycleIterations: " << vCycleIterations << std::endl;
         CLI_ARGS::vCycleIterations = vCycleIterations;
     }
 
     if (nu1 != 2)
     {
-        std::cout << "nu1: " << nu1 << std::endl;
+        if (mpi_rank == 0)
+            std::cout << "nu1: " << nu1 << std::endl;
         CLI_ARGS::nu1 = nu1;
     }
 
     if (nu2 != 2)
     {
-        std::cout << "nu2: " << nu2 << std::endl;
+        if (mpi_rank == 0)
+            std::cout << "nu2: " << nu2 << std::endl;
         CLI_ARGS::nu2 = nu2;
     }
 
@@ -135,19 +171,22 @@ int main(int argc, char* argv[])
         if (outputPath.back() != '/')
             outputPath.append("/");
 
-        std::cout << "outputPath: " << outputPath << std::endl;
+        if (mpi_rank == 0)
+            std::cout << "outputPath: " << outputPath << std::endl;
         CLI_ARGS::outputPath = outputPath;
     }
 
     if (!gridsMin.empty())
     {
-        std::cout << "gridsMin: " << gridsMin << std::endl;
+        if (mpi_rank == 0)
+            std::cout << "gridsMin: " << gridsMin << std::endl;
         CLI_ARGS::gridsMin = split_int(gridsMin, ",");
     }
 
     if (!gridsMax.empty())
     {
-        std::cout << "gridsMax: " << gridsMax << std::endl;
+        if (mpi_rank == 0)
+            std::cout << "gridsMax: " << gridsMax << std::endl;
         CLI_ARGS::gridsMax = split_int(gridsMax, ",");
     }
 

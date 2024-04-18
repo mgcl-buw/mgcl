@@ -9,6 +9,8 @@ namespace CLI_ARGS
 {
     extern std::vector<int> grids;
     extern int minEpochIterations;
+    extern int bench_epochs;
+    extern int bench_iterations;
     extern int vCycleIterations;
     extern std::string outputPath;
 
