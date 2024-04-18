@@ -18,6 +18,8 @@ namespace CLI_ARGS
 
     extern int nu1;
     extern int nu2;
+
+    extern std::vector<int> jacobiIters;
 }
 
 // // Simple wrapper for command line args which are static variables.
