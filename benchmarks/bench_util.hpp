@@ -55,6 +55,22 @@ namespace bench_util
         int gpus; // GPU-count, equals mpi proc count
     };
 
+    struct ResultGhostUpdateMpi
+    {
+        std::string name;
+        double minTime;
+        double medianTime;
+        double avgTime;
+        double medianAbsolutePercentError;
+        int mloc;
+        int nloc;
+        int oloc;
+        int mglob;
+        int nglob;
+        int oglob;
+        int ghosts; // amount of ghost cells in one direction
+    };
+
     /**
      * @brief Get minimum time from measurements for a specific benchmark name in ms.
      *
@@ -186,6 +202,37 @@ namespace bench_util
             for (auto r : results)
             {
                 ss << r.gpus << ";" << r.spi << ";" << r.iters << ";"
+                   /* << r.name << ";" */
+                   << r.mloc << ";" << r.nloc << ";" << r.oloc << ";"
+                   << r.mglob << ";" << r.nglob << ";" << r.oglob
+                   << ";" << std::setprecision(17) << r.minTime
+                   << ";" << std::setprecision(17) << r.medianTime
+                   << ";" << std::setprecision(17) << r.avgTime
+                   << ";" << std::setprecision(4) << r.medianAbsolutePercentError << "%"
+                   << std::endl;
+            }
+            ss << "***DATAEND***" << std::endl;
+            std::string output = ss.str();
+            std::replace(output.begin(), output.end(), '.', ',');
+            std::cout << output;
+        }
+        MPI_Barrier(mpi_comm);
+    }
+
+    inline void printCsvFormat(std::vector<ResultGhostUpdateMpi> results, MPI_Comm mpi_comm, int mpi_rank)
+    {
+        // print min times
+        MPI_Barrier(mpi_comm);
+        if (mpi_rank == 0)
+        {
+            std::stringstream ss;
+            ss << std::endl;
+            ss << "***DATASTART***" << std::endl;
+            // ss << "gpus;spi;iters;name;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+            ss << "ghosts;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+            for (auto r : results)
+            {
+                ss << r.ghosts << ";"
                    /* << r.name << ";" */
                    << r.mloc << ";" << r.nloc << ";" << r.oloc << ";"
                    << r.mglob << ";" << r.nglob << ";" << r.oglob
