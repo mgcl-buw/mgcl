@@ -410,5 +410,5 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
     //                   << "  spi: 2: " << avgs[1] << " ns" << std::endl
     //                   << "  spi: 3: " << avgs[2] << " ns" << std::endl;
     // }
-    // MPI_Barrier(mpi_comm);
+    MPI_Barrier(mpi_comm);
 }
