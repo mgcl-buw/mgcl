@@ -69,6 +69,7 @@ namespace bench_util
         int nglob;
         int oglob;
         int ghosts; // amount of ghost cells in one direction
+        int gpus;   // GPU-count, equals mpi proc count
     };
 
     /**
@@ -229,10 +230,10 @@ namespace bench_util
             ss << std::endl;
             ss << "***DATASTART***" << std::endl;
             // ss << "gpus;spi;iters;name;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
-            ss << "ghosts;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+            ss << "gpus;ghosts;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
             for (auto r : results)
             {
-                ss << r.ghosts << ";"
+                ss << r.gpus << ";" << r.ghosts << ";"
                    /* << r.name << ";" */
                    << r.mloc << ";" << r.nloc << ";" << r.oloc << ";"
                    << r.mglob << ";" << r.nglob << ";" << r.oglob

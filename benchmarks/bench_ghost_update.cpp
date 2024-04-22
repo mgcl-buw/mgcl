@@ -168,6 +168,7 @@ TEST_CASE("bench_ghost_update_mpi_ocl")
             res.nglob = nglob;
             res.oglob = oglob;
             res.ghosts = ghosts;
+            res.gpus = mpi_size;
             results.push_back(res);
         }
     }
@@ -315,6 +316,7 @@ TEST_CASE("bench_ghost_update_mpi_seq")
             res.nglob = nglob;
             res.oglob = oglob;
             res.ghosts = ghosts;
+            res.gpus = mpi_size;
             results.push_back(res);
         }
     }
