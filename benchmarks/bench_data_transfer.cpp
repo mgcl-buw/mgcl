@@ -234,18 +234,8 @@ TEST_CASE("bench_data_transfer_MPI")
 {
     using std::min;
 
-    if (CLI_ARGS::grids.size() == 0 && (CLI_ARGS::gridsMin.size() == 0 || CLI_ARGS::gridsMax.size() == 0))
-        throw "Need to specify at least one local grid size, e.g. using --grids 4,8,16 or --gridsMin 4,4,4 AND --gridsMax 32,32,32";
-
-    // build grids to be tested from CLI args
-    std::vector<std::vector<int>> gridsTBT;
-    for (auto N : CLI_ARGS::grids)
-        gridsTBT.push_back({N, N, N});
-    if (CLI_ARGS::gridsMin.size() > 0 && CLI_ARGS::gridsMax.size() > 0)
-        for (int m = CLI_ARGS::gridsMin[0]; m <= CLI_ARGS::gridsMax[0]; m *= 2)
-            for (int n = CLI_ARGS::gridsMin[1]; n <= CLI_ARGS::gridsMax[1]; n *= 2)
-                for (int o = CLI_ARGS::gridsMin[2]; o <= CLI_ARGS::gridsMax[2]; o *= 2)
-                    gridsTBT.push_back({m, n, o});
+    if (CLI_ARGS::elements.size() == 0)
+        throw "Need to specify at least one element count, e.g. using --elements 16384,32768";
 
     // Check if mpi is initialized
     int isInitialized = 0;
@@ -270,31 +260,22 @@ TEST_CASE("bench_data_transfer_MPI")
 
     if (mpi_rank == 0)
     {
-        std::cout << "Testing the following grid sizes" << std::endl;
-        for (auto gr : gridsTBT)
+        std::cout << "Testing the following element counts" << std::endl
+                  << "  ";
+        for (auto e : CLI_ARGS::elements)
         {
-            int m = gr[0];
-            int n = gr[1];
-            int o = gr[2];
-            std::cout << "  " << m << "," << n << "," << o << std::endl;
+            std::cout << e << ", ";
         }
+        std::cout << std::endl;
     }
 
     std::vector<bench_util::ResultDataTransferMpi> results;
     int err;
-    for (auto gr : gridsTBT)
+    for (auto el : CLI_ARGS::elements)
     {
-        int m = gr[0];
-        int n = gr[1];
-        int o = gr[2];
-        int elements = m * n * o;
-        int faceElements = n * o; // element count of a single face, i.e. what is transferred in ghost update for gh=1
-
         // actual test buffers
-        mgcl::Cuboid c_full(m, n, o);
-        c_full.fillRandom();
-        mgcl::Cuboid c_face(1, n, o);
-        c_face.fillRandom();
+        double* sbuf = new double[el];
+        double* rbuf = new double[el];
 
         ankerl::nanobench::Bench bench;
         bench.timeUnit(1ms, "ms")
@@ -308,14 +289,13 @@ TEST_CASE("bench_data_transfer_MPI")
         MPI_Barrier(MPI_COMM_WORLD);
         if (mpi_rank <= 1)
         { // uses only two processes
-            double*** buf = c_full.getData();
-            std::string name = std::string("MPI_Send_full")
-                                   .append(std::to_string(elements));
+            std::string name = std::string("MPI_Send_")
+                                   .append(std::to_string(el));
 
             if (mpi_rank == 0)
             {
                 bench.run(std::string(name).c_str(), [&] { //
-                    err = MPI_Send(static_cast<void*>(buf[0][0]), elements, MPI_DOUBLE, 1, 0,
+                    err = MPI_Send(static_cast<void*>(sbuf), el, MPI_DOUBLE, 1, 0,
                                    MPI_COMM_WORLD);
                     mgcl::mpi_util::mgclCheckMpiError(MPI_COMM_WORLD, err, "MPI_Send");
                 });
@@ -323,7 +303,7 @@ TEST_CASE("bench_data_transfer_MPI")
             else if (mpi_rank == 1)
             {
                 bench.run(std::string(name).c_str(), [&] { //
-                    err = MPI_Recv(static_cast<void*>(buf[0][0]), elements, MPI_DOUBLE, 0, 0,
+                    err = MPI_Recv(static_cast<void*>(rbuf), el, MPI_DOUBLE, 0, 0,
                                    MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                     mgcl::mpi_util::mgclCheckMpiError(MPI_COMM_WORLD, err, "MPI_Recv");
                 });
@@ -335,42 +315,7 @@ TEST_CASE("bench_data_transfer_MPI")
             res.medianTime = bench_util::getMedianTime(bench, name);
             res.avgTime = bench_util::getAvgTime(bench, name);
             res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-            res.elements = elements;
-            res.gpus = mpi_size;
-            results.push_back(res);
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-
-        if (mpi_rank <= 1)
-        { // uses only two processes
-            double*** buf = c_face.getData();
-            std::string name = std::string("MPI_Send_face")
-                                   .append(std::to_string(faceElements));
-
-            if (mpi_rank == 0)
-            {
-                bench.run(std::string(name).c_str(), [&] { //
-                    err = MPI_Send(static_cast<void*>(buf[0][0]), faceElements, MPI_DOUBLE, 1, 0,
-                                   MPI_COMM_WORLD);
-                    mgcl::mpi_util::mgclCheckMpiError(MPI_COMM_WORLD, err, "MPI_Send");
-                });
-            }
-            else if (mpi_rank == 1)
-            {
-                bench.run(std::string(name).c_str(), [&] { //
-                    err = MPI_Recv(static_cast<void*>(buf[0][0]), faceElements, MPI_DOUBLE, 0, 0,
-                                   MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    mgcl::mpi_util::mgclCheckMpiError(MPI_COMM_WORLD, err, "MPI_Recv");
-                });
-            }
-
-            bench_util::ResultDataTransferMpi res;
-            res.name = name;
-            res.minTime = bench_util::getMinTime(bench, name);
-            res.medianTime = bench_util::getMedianTime(bench, name);
-            res.avgTime = bench_util::getAvgTime(bench, name);
-            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-            res.elements = elements;
+            res.elements = el;
             res.gpus = mpi_size;
             results.push_back(res);
         }
@@ -379,15 +324,12 @@ TEST_CASE("bench_data_transfer_MPI")
         { // uses three processes
             int idx_recipients[3] = {1, 2, 0};
             int idx_senders[3] = {2, 0, 1};
-            double*** sbuf = c_full.getData();
-            mgcl::Cuboid c_full_r(m, n, o);
-            double*** rbuf = c_full_r.getData();
-            std::string name = std::string("MPI_Sendrecv_full")
-                                   .append(std::to_string(elements));
+            std::string name = std::string("MPI_Sendrecv_")
+                                   .append(std::to_string(el));
 
             bench.run(std::string(name).c_str(), [&] { //
-                err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), elements, MPI_DOUBLE, idx_recipients[mpi_rank], 0,
-                                   static_cast<void*>(rbuf[0][0]), elements, MPI_DOUBLE, idx_senders[mpi_rank], 0,
+                err = MPI_Sendrecv(static_cast<void*>(sbuf), el, MPI_DOUBLE, idx_recipients[mpi_rank], 0,
+                                   static_cast<void*>(rbuf), el, MPI_DOUBLE, idx_senders[mpi_rank], 0,
                                    MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 mgcl::mpi_util::mgclCheckMpiError(MPI_COMM_WORLD, err, "MPI_Sendrecv");
             });
@@ -398,35 +340,7 @@ TEST_CASE("bench_data_transfer_MPI")
             res.medianTime = bench_util::getMedianTime(bench, name);
             res.avgTime = bench_util::getAvgTime(bench, name);
             res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-            res.elements = elements;
-            res.gpus = mpi_size;
-            results.push_back(res);
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-
-        { // uses three processes
-            int idx_recipients[3] = {1, 2, 0};
-            int idx_senders[3] = {2, 0, 1};
-            double*** sbuf = c_face.getData();
-            mgcl::Cuboid c_face_r(1, n, o);
-            double*** rbuf = c_face_r.getData();
-            std::string name = std::string("MPI_Sendrecv_face")
-                                   .append(std::to_string(faceElements));
-
-            bench.run(std::string(name).c_str(), [&] { //
-                err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), faceElements, MPI_DOUBLE, idx_recipients[mpi_rank], 0,
-                                   static_cast<void*>(rbuf[0][0]), faceElements, MPI_DOUBLE, idx_senders[mpi_rank], 0,
-                                   MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                mgcl::mpi_util::mgclCheckMpiError(MPI_COMM_WORLD, err, "MPI_Sendrecv");
-            });
-
-            bench_util::ResultDataTransferMpi res;
-            res.name = name;
-            res.minTime = bench_util::getMinTime(bench, name);
-            res.medianTime = bench_util::getMedianTime(bench, name);
-            res.avgTime = bench_util::getAvgTime(bench, name);
-            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-            res.elements = elements;
+            res.elements = el;
             res.gpus = mpi_size;
             results.push_back(res);
         }

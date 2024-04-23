@@ -18,6 +18,7 @@ int CLI_ARGS::nu1 = 2;
 int CLI_ARGS::nu2 = 2;
 std::vector<int> CLI_ARGS::jacobiIters;
 std::vector<int> CLI_ARGS::jacobiStepsPerIter;
+std::vector<int> CLI_ARGS::elements;
 
 // helper functions
 std::vector<int> split_int(std::string s, std::string delimiter);
@@ -46,6 +47,8 @@ int main(int argc, char* argv[])
     std::string outputPath = ".";
     std::string jacobiIters;        // only relevant for Jacobi multiple iters test
     std::string jacobiStepsPerIter; // only relevant for Jacobi multiple iters test
+
+    std::string elements; // only relevant for data transfer
 
     std::string gridsMin;
     std::string gridsMax;
@@ -98,6 +101,10 @@ int main(int argc, char* argv[])
                | Opt(jacobiStepsPerIter, "jacobiStepsPerIter")                                                                                          // bind variable to a new option, with a hint string
                      ["--jacobiStepsPerIter"]["--spi"]                                                                                                  // the option names it will respond to
                ("jacobi steps per iteration wihtout ghost update to test seperated by ',', i.e. 1,3,10. Only relevant for Jacobi multiple iters bench") // description string for the help output
+
+               | Opt(elements, "elements")                                                                              // bind variable to a new option, with a hint string
+                     ["--elements"]                                                                                     // the option names it will respond to
+               ("number of elements to send seperated by ',', i.e. 16384,32768. Only relevant for data transfer tests") // description string for the help output
 
                | Opt(gridsMin, "gridsMin")                                          // bind variable to a new option, with a hint string
                      ["--gridsMin"]                                                 // the option names it will respond to
@@ -155,6 +162,13 @@ int main(int argc, char* argv[])
         if (mpi_rank == 0)
             std::cout << "bench_iterations: " << bench_iterations << std::endl;
         CLI_ARGS::bench_iterations = bench_iterations;
+    }
+
+    if (!elements.empty())
+    {
+        if (mpi_rank == 0)
+            std::cout << "elements: " << elements << std::endl;
+        CLI_ARGS::elements = split_int(elements, ",");
     }
 
     if (vCycleIterations != 10)
