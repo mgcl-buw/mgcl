@@ -187,6 +187,9 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
     if (CLI_ARGS::jacobiIters.size() == 0)
         throw "Need to specify at least one jacobi iteration to test, e.g. using --jacobiIters 1,3,10";
 
+    if (CLI_ARGS::jacobiStepsPerIter.size() == 0)
+        throw "Need to specify at least one jacobi steps per iteration to test, e.g. using --jacobiStepsPerIter 1,2,3";
+
     // build grids to be tested from CLI args
     std::vector<std::vector<int>> gridsTBT;
     for (auto N : CLI_ARGS::grids)
@@ -238,22 +241,23 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
                       << m * mpi_dims[0] << "," << n * mpi_dims[1] << "," << o * mpi_dims[2] << std::endl;
         }
 
-        std::cout << "And the following jacobi iterations" << std::endl;
+        std::cout << "And the following jacobi iterations" << std::endl
+                  << "  ";
         for (auto it : CLI_ARGS::jacobiIters)
-            std::cout << "  " << it << std::endl;
+            std::cout << it << ", ";
+        std::cout << std::endl;
+
+        std::cout << "And the following steps per iteration" << std::endl
+                  << "  ";
+        for (auto it : CLI_ARGS::jacobiStepsPerIter)
+            std::cout << it << ", ";
+        std::cout << std::endl;
+
+        std::cout << "Tests with iters < stepsPerIter will be skipped!" << std::endl;
     }
     MPI_Barrier(mpi_comm);
 
-    int maxStepsPerIter = 1;
-    // std::stringstream ss;
-    // ss << "N;iters;spi;ns" << std::endl;
-
-    // // Vector to collect all minimum times per spi, in order to get avg results later.
-    // std::vector<std::vector<int>> mintimesPerSpi(maxStepsPerIter);
-
     std::vector<bench_util::ResultJacobiMpi> results;
-
-    // std::vector<int> itersAll = {3, 5, 10};
     bool printedGpu = false;
     for (auto gr : gridsTBT)
     {
@@ -272,18 +276,6 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
         mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
         mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
 
-        // /* Initialize start and end for local grid */
-        // int m_start = (mglob / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (mglob % mpi_dims[0]));
-        // int m_end = (mglob / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (mglob % mpi_dims[0])) - 1;
-        // int n_start = (nglob / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (nglob % mpi_dims[1]));
-        // int n_end = (nglob / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (nglob % mpi_dims[1])) - 1;
-        // int o_start = (oglob / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (oglob % mpi_dims[2]));
-        // int o_end = (oglob / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (oglob % mpi_dims[2])) - 1;
-
-        // int m = (m_end - m_start) + 1;
-        // int n = (n_end - n_start) + 1;
-        // int o = (o_end - o_start) + 1;
-
         for (auto iters : CLI_ARGS::jacobiIters)
         {
             ankerl::nanobench::Bench bench;
@@ -291,10 +283,17 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
                 .epochs(CLI_ARGS::bench_epochs)
                 .epochIterations(CLI_ARGS::bench_iterations)
                 // .minEpochTime(100ms)
-                .relative(CLI_ARGS::jacobiIters.size() > 1);
+                .relative(CLI_ARGS::jacobiStepsPerIter.size() > 1);
 
-            for (int spi = 1; spi <= maxStepsPerIter; spi++)
+            for (int spi : CLI_ARGS::jacobiStepsPerIter)
             {
+                if (iters < spi)
+                {
+                    if (mpi_rank == 0)
+                        std::cout << "skipping iter = " << iters << ", spi = " << spi << std::endl;
+                    continue;
+                }
+
                 auto v = std::make_shared<mgcl::Cuboid>(m, n, o, spi, spi, spi);
                 auto r = std::make_shared<mgcl::Cuboid>(m, n, o, spi, spi, spi);
                 auto f = std::make_shared<mgcl::Cuboid>(m, n, o, spi, spi, spi);
@@ -348,15 +347,6 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
                 // std::cout << "rank " << mpi_rank << " done" << std::endl;
                 MPI_Barrier(mpi_comm);
 
-                // // Get minimum of all epochs in ns
-                // double minTime = 1000000;
-                // for (auto r : bench.results())
-                //     if (r.minimum(ankerl::nanobench::Result::Measure::elapsed) < minTime)
-                //         minTime = r.minimum(ankerl::nanobench::Result::Measure::elapsed) * 1000.0 * 1000.0 * 1000.0;
-
-                // ss << m << ";" << iters << ";" << spi << ";" << minTime << std::endl;
-                // mintimesPerSpi[spi - 1].push_back(minTime);
-
                 bench_util::ResultJacobiMpi res;
                 res.name = name;
                 res.minTime = bench_util::getMinTime(bench, name);
@@ -373,42 +363,11 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
                 res.spi = spi;
                 res.iters = iters;
                 results.push_back(res);
-
-                // std::cout << "bench.results()[0].size(): " << bench.results()[0].size() << std::endl;
             }
-
-            // std::ofstream renderOutCsv(std::string("jacobiMultiIterOcl_")
-            //                                .append(std::to_string(N))
-            //                                .append("_")
-            //                                .append(".csv"));
-
-            // std::streambuf *old = std::cout.rdbuf(ss.rdbuf());
-            // bench.render(ankerl::nanobench::templates::csv(), std::cout);
-            // std::cout.rdbuf(old);
         }
     }
 
     bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
 
-    // std::cout << ss.str() << std::endl;
-
-    // std::vector<double> avgs = {0, 0, 0};
-    // for (int spi = 0; spi < maxStepsPerIter; spi++)
-    // {
-    //     for (int val : mintimesPerSpi[spi])
-    //         avgs[spi] += val;
-
-    //     avgs[spi] /= (double)mintimesPerSpi[spi].size();
-    // }
-
-    // for (int i = 0; i < mpi_size; i++)
-    // {
-    //     MPI_Barrier(mpi_comm);
-    //     if (i == mpi_rank)
-    //         std::cout << "rank " << i << " avgs:" << std::endl
-    //                   << "  spi: 1: " << avgs[0] << " ns" << std::endl
-    //                   << "  spi: 2: " << avgs[1] << " ns" << std::endl
-    //                   << "  spi: 3: " << avgs[2] << " ns" << std::endl;
-    // }
     MPI_Barrier(mpi_comm);
 }

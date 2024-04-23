@@ -17,6 +17,7 @@ std::vector<int> CLI_ARGS::gridsMax; // e.g. {64,64,32}
 int CLI_ARGS::nu1 = 2;
 int CLI_ARGS::nu2 = 2;
 std::vector<int> CLI_ARGS::jacobiIters;
+std::vector<int> CLI_ARGS::jacobiStepsPerIter;
 
 // helper functions
 std::vector<int> split_int(std::string s, std::string delimiter);
@@ -43,7 +44,8 @@ int main(int argc, char* argv[])
     int minEpochIterations = CLI_ARGS::minEpochIterations;
     int vCycleIterations = CLI_ARGS::vCycleIterations;
     std::string outputPath = ".";
-    std::string jacobiIters; // only relevant for Jacobi multiple iters test
+    std::string jacobiIters;        // only relevant for Jacobi multiple iters test
+    std::string jacobiStepsPerIter; // only relevant for Jacobi multiple iters test
 
     std::string gridsMin;
     std::string gridsMax;
@@ -93,6 +95,10 @@ int main(int argc, char* argv[])
                      ["--jacobiIters"]                                                                                    // the option names it will respond to
                ("jacobi iterations to test seperated by ',', i.e. 1,3,10. Only relevant for Jacobi multiple iters bench") // description string for the help output
 
+               | Opt(jacobiStepsPerIter, "jacobiStepsPerIter")                                                                                          // bind variable to a new option, with a hint string
+                     ["--jacobiStepsPerIter"]["--spi"]                                                                                                  // the option names it will respond to
+               ("jacobi steps per iteration wihtout ghost update to test seperated by ',', i.e. 1,3,10. Only relevant for Jacobi multiple iters bench") // description string for the help output
+
                | Opt(gridsMin, "gridsMin")                                          // bind variable to a new option, with a hint string
                      ["--gridsMin"]                                                 // the option names it will respond to
                ("minimum size of grids to be tested, seperated by ',', e.g. 4,4,4") // description string for the help output
@@ -121,6 +127,13 @@ int main(int argc, char* argv[])
         if (mpi_rank == 0)
             std::cout << "jacobiIters: " << jacobiIters << std::endl;
         CLI_ARGS::jacobiIters = split_int(jacobiIters, ",");
+    }
+
+    if (!jacobiStepsPerIter.empty())
+    {
+        if (mpi_rank == 0)
+            std::cout << "jacobiStepsPerIter: " << jacobiStepsPerIter << std::endl;
+        CLI_ARGS::jacobiStepsPerIter = split_int(jacobiStepsPerIter, ",");
     }
 
     if (minEpochIterations > 0)
