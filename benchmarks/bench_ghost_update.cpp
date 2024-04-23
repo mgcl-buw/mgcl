@@ -325,3 +325,138 @@ TEST_CASE("bench_ghost_update_mpi_seq")
 
     MPI_Barrier(mpi_comm);
 }
+
+// Tests the method mgcl::Cuboid::slice for all 3 directions, which is needed when updating ghosts.
+// This test can be run without MPI.
+// The argument --grids ... is required.
+TEST_CASE("bench_cuboid_slice")
+{
+    using std::min;
+
+    if (CLI_ARGS::grids.size() == 0 && (CLI_ARGS::gridsMin.size() == 0 || CLI_ARGS::gridsMax.size() == 0))
+        throw "Need to specify at least one local grid size, e.g. using --grids 4,8,16 or --gridsMin 4,4,4 AND --gridsMax 32,32,32";
+
+    // build grids to be tested from CLI args
+    std::vector<std::vector<int>> gridsTBT;
+    for (auto N : CLI_ARGS::grids)
+        gridsTBT.push_back({N, N, N});
+    if (CLI_ARGS::gridsMin.size() > 0 && CLI_ARGS::gridsMax.size() > 0)
+        for (int m = CLI_ARGS::gridsMin[0]; m <= CLI_ARGS::gridsMax[0]; m *= 2)
+            for (int n = CLI_ARGS::gridsMin[1]; n <= CLI_ARGS::gridsMax[1]; n *= 2)
+                for (int o = CLI_ARGS::gridsMin[2]; o <= CLI_ARGS::gridsMax[2]; o *= 2)
+                    gridsTBT.push_back({m, n, o});
+
+    // Check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    /* MPI variables */
+    int mpi_rank;
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+
+    if (mpi_rank == 0)
+    {
+        std::cout << "Testing the following grid sizes" << std::endl;
+        for (auto gr : gridsTBT)
+        {
+            int m = gr[0];
+            int n = gr[1];
+            int o = gr[2];
+            std::cout << "  " << m << "," << n << "," << o << std::endl;
+        }
+    }
+    else
+    {
+        return;
+    }
+
+    std::vector<bench_util::Result> results;
+
+    for (auto gr : gridsTBT)
+    {
+        int m = gr[0];
+        int n = gr[1];
+        int o = gr[2];
+
+        mgcl::Cuboid c(m, n, o);
+        int gh = 1;
+
+        ankerl::nanobench::Bench bench;
+        bench.timeUnit(1ms, "ms")
+            .epochs(CLI_ARGS::bench_epochs)
+            .epochIterations(CLI_ARGS::bench_iterations);
+
+        {
+            std::string name = std::string("slice_xdir_")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o));
+            bench.run(std::string(name).c_str(), [&] { //
+                ankerl::nanobench::doNotOptimizeAway(c.slice(gh, 2 * gh - 1, 0, n - 1, 0, o - 1));
+            });
+
+            bench_util::Result res;
+            res.name = name;
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            results.push_back(res);
+        }
+
+        {
+            std::string name = std::string("slice_ydir_")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o));
+            bench.run(std::string(name).c_str(), [&] { //
+                ankerl::nanobench::doNotOptimizeAway(c.slice(0, m - 1, gh, 2 * gh - 1, 0, o - 1));
+            });
+
+            bench_util::Result res;
+            res.name = name;
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            results.push_back(res);
+        }
+
+        {
+            std::string name = std::string("slice_zdir_")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o));
+            bench.run(std::string(name).c_str(), [&] { //
+                ankerl::nanobench::doNotOptimizeAway(c.slice(0, m - 1, 0, n - 1, gh, 2 * gh - 1));
+            });
+
+            bench_util::Result res;
+            res.name = name;
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            results.push_back(res);
+        }
+    }
+
+    bench_util::printCsvFormat(results);
+}

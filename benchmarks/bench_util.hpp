@@ -155,15 +155,22 @@ namespace bench_util
         return -1;
     }
 
-    inline void printCsvFormat(std::vector<Result> minTimes)
+    inline void printCsvFormat(std::vector<Result> results)
     {
+        // print min times
         std::stringstream ss;
         ss << std::endl;
         ss << "***DATASTART***" << std::endl;
-        ss << "name;m;n;o;minTimeInMs" << std::endl;
-        for (auto r : minTimes)
+        // ss << "gpus;spi;iters;name;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+        ss << "m;n;o;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+        for (auto r : results)
         {
-            ss << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";" << std::setprecision(17) << r.minTime << std::endl;
+            ss << r.m << ";" << r.n << ";" << r.o
+               << ";" << std::setprecision(17) << r.minTime
+               << ";" << std::setprecision(17) << r.medianTime
+               << ";" << std::setprecision(17) << r.avgTime
+               << ";" << std::setprecision(4) << r.medianAbsolutePercentError << "%"
+               << std::endl;
         }
         ss << "***DATAEND***" << std::endl;
         std::string output = ss.str();
