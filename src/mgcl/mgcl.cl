@@ -2240,3 +2240,63 @@ __kernel void max_abs_partial_global_eq_x_num_elements(
         }
     }
 }
+
+/**
+ * Extracts ghost cells from buf_cuboid and writes result into buf_ghosts.
+ * Data is stored consecutively in 3rd dimension, i.e. in 2d it would be
+ *
+ * 12345
+ * 6...7 -> 123456789abcde
+ * 8...9
+ * abcde
+ *
+ * where "." denote the inner nodes.
+ * This kernel must be called as a 1d kernel with mgh*ngh*ogh work-items. // TODO change this eventually
+ * Arguments:
+ * * buf_cuboid: CuboidGPU::buffer of size mgh*ngh*ogh
+ * * buf_ghosts: GhostBufferGPU of size 2*ghosts_m*2*ghosts_n*2*ghosts_o
+ * * m, n, o: Extents of buf_cuboid excluding ghost cells
+ * * mgh, ngh, ogh: Extents of buf_cuboid including ghost cells
+ * * ghosts_m, ghosts_n, ghosts_o: Ghost cell amount of buf_cuboid
+ */
+__kernel void extract_ghosts(
+    __global double* buf_cuboid,
+    __global double* buf_ghosts,
+    int m, int n, int o,
+    int mgh, int ngh, int ogh,
+    int ghosts_m, int ghosts_n, int ghosts_o)
+{
+    // Get buf_cuboid's 1d and 3d indices
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
+
+    // only for ghost cells
+    if ((i < ghosts_m || i > mgh - 1 - ghosts_m) || (j < ghosts_n || j > ngh - 1 - ghosts_n) || (k < ghosts_o || k > ogh - 1 - ghosts_o))
+    {
+        // Substract amount of grid points in x-direction, s.t. each yz-plane starts at index 0
+        idx -= i * ngh * ogh;
+        int idx_gh;
+
+        // Calculate ghost cell index in the yz-plane based on idx
+        if (j < ghosts_n || i < ghosts_m || i >= m + ghosts_m)
+            idx_gh = idx;
+        else if (j >= n + ghosts_n)
+            idx_gh = idx - n * o;
+        else
+            idx_gh = idx - o * (j - (ghosts_n + (k > ghosts_o)));
+
+        // Add missing offset to ghost cell index
+        if (i <= ghosts_m)
+            idx_gh += i * ngh * ogh;
+        else if (i > m + ghosts_m)
+            idx_gh += i * ngh * ogh - m * n * o;
+        else
+            idx_gh += i * ngh * ogh - (i - ghosts_m) * n * o;
+
+        // Copy actual value
+        buf_ghosts[idx_gh] = buf_cuboid[idx];
+    }
+}

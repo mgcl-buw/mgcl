@@ -20,6 +20,21 @@ namespace bench_util
         int o;
     };
 
+    struct ResultGhosts
+    {
+        std::string name;
+        double minTime;
+        double medianTime;
+        double avgTime;
+        double medianAbsolutePercentError;
+        int m;
+        int n;
+        int o;
+        int ghosts_m;
+        int ghosts_n;
+        int ghosts_o;
+    };
+
     struct ResultMpi
     {
         std::string name;
@@ -167,6 +182,31 @@ namespace bench_util
         {
             ss << r.name << ";"
                << r.m << ";" << r.n << ";" << r.o
+               << ";" << std::setprecision(17) << r.minTime
+               << ";" << std::setprecision(17) << r.medianTime
+               << ";" << std::setprecision(17) << r.avgTime
+               << ";" << std::setprecision(4) << r.medianAbsolutePercentError << "%"
+               << std::endl;
+        }
+        ss << "***DATAEND***" << std::endl;
+        std::string output = ss.str();
+        std::replace(output.begin(), output.end(), '.', ',');
+        std::cout << output;
+    }
+
+    inline void printCsvFormat(std::vector<ResultGhosts> results)
+    {
+        // print min times
+        std::stringstream ss;
+        ss << std::endl;
+        ss << "***DATASTART***" << std::endl;
+        // ss << "gpus;spi;iters;name;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+        ss << "name;m;n;o;ghm;ghn;gho;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+        for (auto r : results)
+        {
+            ss << r.name << ";"
+               << r.m << ";" << r.n << ";" << r.o << ";"
+               << r.ghosts_m << ";" << r.ghosts_n << ";" << r.ghosts_o
                << ";" << std::setprecision(17) << r.minTime
                << ";" << std::setprecision(17) << r.medianTime
                << ";" << std::setprecision(17) << r.avgTime
