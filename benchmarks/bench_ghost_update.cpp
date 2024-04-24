@@ -179,9 +179,8 @@ TEST_CASE("bench_ghost_update_mpi_ocl")
 }
 
 // Runs ghost update using MPI, as it happens between Jacobi iterations. I.e. when using MPI,
-// the gpu buffer is first read, then ghosts are updated sequentially, then the data is copied back to the gpu.
 // Timings will be collected per node and printed by rank at the end.
-// Run with e.g.: mpiexec -n 4 benchmarks bench_ghost_update_mpi_ocl
+// Run with e.g.: mpiexec -n 4 benchmarks bench_ghost_update_mpi_seq
 TEST_CASE("bench_ghost_update_mpi_seq")
 {
     using std::min;
