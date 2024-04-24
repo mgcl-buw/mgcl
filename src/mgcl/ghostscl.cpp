@@ -108,6 +108,7 @@ namespace mgcl
         int mgh = c.getMgh();
         int ngh = c.getNgh();
         int ogh = c.getOgh();
+        double*** cbuf = c.getData();
 
         // // Create subarray type for the ghost slices for each direction
         // MPI_Datatype ghostsSliceX;
@@ -211,7 +212,7 @@ namespace mgcl
             for (i = 0; i < ghosts_m; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ogh; k++)
-                        c[mgh - ghosts_m + i][j][k] = rbuf[i][j][k];
+                        cbuf[mgh - ghosts_m + i][j][k] = rbuf[i][j][k];
 
         /* Sending data to the back */
         sbuf_ptr = c.sliceIncGhosts(m, m + ghosts_m - 1, 0, ngh - 1, 0, ogh - 1); // TODO max when gh > m
@@ -228,7 +229,7 @@ namespace mgcl
             for (i = 0; i < ghosts_m; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ogh; k++)
-                        c[i][j][k] = rbuf[i][j][k];
+                        cbuf[i][j][k] = rbuf[i][j][k];
 
         /* Sending data downwards */
         sbuf_ptr = c.sliceIncGhosts(0, mgh - 1, ghosts_m, 2 * ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
@@ -245,7 +246,7 @@ namespace mgcl
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ghosts_n; j++)
                     for (k = 0; k < ogh; k++)
-                        c[i][ngh - ghosts_n + j][k] = rbuf[i][j][k];
+                        cbuf[i][ngh - ghosts_n + j][k] = rbuf[i][j][k];
 
         /* Sending data upwards */
         sbuf_ptr = c.sliceIncGhosts(0, mgh - 1, n, n + ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
@@ -262,7 +263,7 @@ namespace mgcl
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ghosts_n; j++)
                     for (k = 0; k < ogh; k++)
-                        c[i][j][k] = rbuf[i][j][k];
+                        cbuf[i][j][k] = rbuf[i][j][k];
 
         /* Sending data to the left */
         sbuf_ptr = c.sliceIncGhosts(0, mgh - 1, 0, ngh - 1, ghosts_o, 2 * ghosts_o - 1); // TODO max when gh > m
@@ -283,7 +284,7 @@ namespace mgcl
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ghosts_o; k++)
-                        c[i][j][ogh - ghosts_o + k] = rbuf[i][j][k];
+                        cbuf[i][j][ogh - ghosts_o + k] = rbuf[i][j][k];
 
         /* Sending data to the right */
         sbuf_ptr = c.sliceIncGhosts(0, mgh - 1, 0, ngh - 1, o, o + ghosts_o - 1); // TODO max when gh > m
@@ -300,7 +301,7 @@ namespace mgcl
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ghosts_o; k++)
-                        c[i][j][k] = rbuf[i][j][k];
+                        cbuf[i][j][k] = rbuf[i][j][k];
     }
 
     /* updates ghost cells on opencl device.
