@@ -359,7 +359,7 @@ TEST_CASE("bench_data_transfer_MPI")
 // 4. device_to_host_newbuf_els<elements>: data transfer from device to host creating a host new buffer
 // 5. device_to_host_to_device_els_<elements>: 4. + 1.
 // Run with e.g.: benchmarks bench_data_transfer_host_device
-TEST_CASE("bench_data_transfer_extract_ghosts")
+TEST_CASE("bench_extract_paste_ghosts")
 {
     using std::min;
 
@@ -515,6 +515,56 @@ TEST_CASE("bench_data_transfer_extract_ghosts")
             mgcl::mgclCheckError(err, "Releasing extract_ghosts kernel");
         };
 
+        auto pasteGhostsKernel = [&](cl_mem d_ghostcells)
+        {
+            // Create the compute kernel from the program
+            const char* kernelName = "paste_ghosts";
+            cl_kernel kernel = clCreateKernel(p.getOpenCLHelper().getProgram(), kernelName, &err);
+            mgcl::mgclCheckError(err, "clCreateKernel");
+
+            // assign kernel arguments
+            int pos = 0;
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &d_cuboid);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_ghostcells);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_n);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
+            mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+            // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
+            size_t global = mgh * ngh * ogh;
+            // const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
+            // size_t local = c[0];
+            size_t local = 32;
+
+            if (global % local != 0)
+                global += local - (global % local);
+
+            // cl_event ev;
+
+            // enqueue kernel
+            err = clEnqueueNDRangeKernel(p.getOpenCLHelper().getCommands(), kernel, 1, NULL, &global, &local, 0, NULL, NULL);
+            // err = clEnqueueNDRangeKernel(p.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, &ev);
+            mgcl::mgclCheckError(err, "Enqueueing extract_ghosts kernel");
+
+            // if (p.isProfilingEnabled())
+            // {
+            //     p.getProfilingData()->addMeasurement(p.getCommands(), ev, kernelName,
+            //                                          {global[0], global[1], global[2]},
+            //                                          {local[0], local[1], local[2]});
+            // }
+            // mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+            err = clReleaseKernel(kernel);
+            mgcl::mgclCheckError(err, "Releasing paste_ghosts kernel");
+        };
+
         {
             std::string name = std::string("extract_ghosts_N")
                                    .append(std::to_string(m))
@@ -585,6 +635,93 @@ TEST_CASE("bench_data_transfer_extract_ghosts")
             });
 
             delete[] h_buf;
+
+            bench_util::ResultGhosts res;
+            res.name = name;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            res.ghosts_m = ghosts_m;
+            res.ghosts_n = ghosts_n;
+            res.ghosts_o = ghosts_o;
+            results.push_back(res);
+        }
+
+        {
+            std::string name = std::string("paste_ghosts_N")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o))
+                                   .append("_gh")
+                                   .append(std::to_string(ghosts_m))
+                                   .append("_")
+                                   .append(std::to_string(ghosts_n))
+                                   .append("_")
+                                   .append(std::to_string(ghosts_o));
+
+            cl_mem d_ghostcells = clCreateBuffer(p.getContext(), CL_MEM_READ_WRITE, sizeof(double) * ghosts_m * ghosts_n * ghosts_o, nullptr, &err);
+            mgcl::mgclCheckError(err, "clCreateBuffer");
+
+            bench.run(std::string(name).c_str(), [&] { //
+                pasteGhostsKernel(d_ghostcells);
+                p.getOpenCLHelper().finish();
+            });
+
+            err = clReleaseMemObject(d_ghostcells);
+            mgcl::mgclCheckError(err, "Releasing d_ghostcells");
+
+            bench_util::ResultGhosts res;
+            res.name = name;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            res.ghosts_m = ghosts_m;
+            res.ghosts_n = ghosts_n;
+            res.ghosts_o = ghosts_o;
+            results.push_back(res);
+        }
+
+        {
+            std::string name = std::string("extract_read_paste_ghosts_N")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o))
+                                   .append("_gh")
+                                   .append(std::to_string(ghosts_m))
+                                   .append("_")
+                                   .append(std::to_string(ghosts_n))
+                                   .append("_")
+                                   .append(std::to_string(ghosts_o));
+
+            double* h_buf = new double[mgh * ngh * ogh - m * n * o]; // number of ghost cells
+
+            bench.run(std::string(name).c_str(), [&] { //
+                cl_mem d_ghostcells = clCreateBuffer(p.getContext(), CL_MEM_READ_WRITE, sizeof(double) * ghosts_m * ghosts_n * ghosts_o, nullptr, &err);
+                mgcl::mgclCheckError(err, "clCreateBuffer");
+
+                extractGhostsKernel(d_ghostcells);
+                p.getOpenCLHelper().finish();
+
+                err = clEnqueueReadBuffer(p.getOpenCLHelper().getCommands(), d_ghostcells, CL_TRUE, 0, sizeof(double) * (mgh * ngh * ogh - m * n * o), h_buf, 0, NULL, NULL);
+
+                pasteGhostsKernel(d_ghostcells);
+                p.getOpenCLHelper().finish();
+
+                err = clReleaseMemObject(d_ghostcells);
+                mgcl::mgclCheckError(err, "Releasing d_ghostcells");
+            });
 
             bench_util::ResultGhosts res;
             res.name = name;
