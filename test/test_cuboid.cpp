@@ -1,3 +1,4 @@
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -318,4 +319,185 @@ TEST_CASE("Cuboid::fill1dindex")
                 REQUIRE(c_gh[i][j][k] == cnt);
                 cnt++;
             }
+}
+
+// TEST_CASE("Cuboid::extract_ghosts")
+// {
+//     int m = 1;
+//     int n = 2;
+//     int o = 3;
+//     int ghm = 0;
+//     int ghn = 1;
+//     int gho = 2;
+
+//     mgcl::Cuboid c(m, n, o, ghm, ghn, gho);
+//     c.fill1dIndex(false);
+// }
+
+TEST_CASE("Cuboid::extract_border_planes")
+{
+    int m = 3;
+    int n = 4;
+    int o = 5;
+    int ghm = 1;
+    int ghn = 2;
+    int gho = 3;
+    int ngh = n + 2 * ghn;
+    int ogh = o + 2 * gho;
+
+    mgcl::Cuboid c(m, n, o, ghm, ghn, gho);
+    c.fill1dIndex(false);
+
+    // plane sizes
+    int yz = n * o; //* ghm;
+    int xz = m * o; //* ghn;
+    int xy = m * n; //* gho;
+
+    int ressize = 2 * yz * ghm + 2 * xz * ghn + 2 * xy * gho;
+    double* res = new double[ressize];
+
+    // if (e < yz)
+    // {
+    int cnt = 0;
+    // __kernel void extract_front_planes(__global const double* c, __global double* res, const int yz, const int xz, const int xy)
+    // {
+    //     int gid = get_global_id(0);
+    //     int i = gid / yz;
+    //     int j = gid % (yz / n) + ghn;
+    //     int k = gid % xy + gho;
+    //     res[gid] = c[i * yz * xz + j * xz + k];
+    // }
+
+    // res[e] = c[0][e / yz][e % yz];
+    // }
+
+    // front planes (yz)
+    for (int i = ghm; i < 2 * ghm; i++)         // ghm real planes in the front
+        for (int j = ghn; j < ghn + n; j++)     // all real cells in y-dir
+            for (int k = gho; k < gho + o; k++) // all real cells in z-dir
+            {
+                res[cnt++] = c[i][j][k];
+
+                int gid = cnt - 1; // -1 just becauce there was cnt++. Don't use it in kernel.
+                int i2 = gid / yz + ghm;
+                int j2 = (gid - (i2 - ghm) * yz) / o + ghn;
+                int k2 = gid % o + gho;
+
+                CAPTURE(i, j, k, i2, j2, k2, gid);
+                REQUIRE(i == i2);
+                REQUIRE(j == j2);
+                REQUIRE(k == k2);
+                REQUIRE(c[i][j][k] == c[0][0][i2 * ngh * ogh + j2 * ogh + k2]);
+
+                // write into cnt
+            }
+
+    // back planes (yz)
+    for (int i = m; i < m + ghm; i++)           // ghm real planes in the back
+        for (int j = ghn; j < ghn + n; j++)     // all real cells in y-dir
+            for (int k = gho; k < gho + o; k++) // all real cells in z-dir
+            {
+                res[cnt++] = c[i][j][k];
+
+                int gid = cnt - ghm * yz - 1; // -1 just becauce there was cnt++. Don't use it in kernel.
+                int i2 = gid / yz + m;
+                int j2 = (gid - (i2 - m) * yz) / o + ghn;
+                int k2 = gid % o + gho;
+
+                CAPTURE(i, j, k, i2, j2, k2, gid);
+                REQUIRE(i == i2);
+                REQUIRE(j == j2);
+                REQUIRE(k == k2);
+                REQUIRE(c[i][j][k] == c[0][0][i2 * ngh * ogh + j2 * ogh + k2]);
+
+                // write into cnt + ghm*yz
+            }
+
+    // top planes (xz)
+    for (int j = ghn; j < 2 * ghn; j++)
+        for (int i = ghm; i < ghm + m; i++)
+            for (int k = gho; k < gho + o; k++)
+            {
+                res[cnt++] = c[i][j][k];
+
+                int gid = cnt - 2 * ghm * yz - 1; // -1 just becauce there was cnt++. Don't use it in kernel.
+                int j2 = gid / xz + ghn;
+                int i2 = (gid - (j2 - ghn) * xz) / o + ghm;
+                int k2 = gid % o + gho;
+
+                CAPTURE(i, j, k, i2, j2, k2, gid, yz, xz, xy);
+                REQUIRE(i == i2);
+                REQUIRE(j == j2);
+                REQUIRE(k == k2);
+                REQUIRE(c[i][j][k] == c[0][0][i2 * ngh * ogh + j2 * ogh + k2]);
+
+                // write into cnt + 2*ghm*yz
+            }
+
+    // bottom planes (xz)
+    for (int j = n; j < n + ghn; j++)
+        for (int i = ghm; i < ghm + m; i++)
+            for (int k = gho; k < gho + o; k++)
+            {
+                res[cnt++] = c[i][j][k];
+
+                int gid = cnt - 2 * ghm * yz - ghn * xz - 1; // -1 just becauce there was cnt++. Don't use it in kernel.
+                int j2 = gid / xz + n;
+                int i2 = (gid - (j2 - n) * xz) / o + ghm;
+                int k2 = gid % o + gho;
+
+                CAPTURE(i, j, k, i2, j2, k2, gid, yz, xz, xy);
+                REQUIRE(i == i2);
+                REQUIRE(j == j2);
+                REQUIRE(k == k2);
+                REQUIRE(c[i][j][k] == c[0][0][i2 * ngh * ogh + j2 * ogh + k2]);
+
+                // write into cnt + 2*ghm*yz + ghn*xz
+            }
+
+    // left planes (xy)
+    for (int k = gho; k < 2 * gho; k++)
+        for (int i = ghm; i < ghm + m; i++)
+            for (int j = ghn; j < ghn + n; j++)
+            {
+                res[cnt++] = c[i][j][k];
+
+                int gid = cnt - 2 * ghm * yz - 2 * ghn * xz - 1; // -1 just becauce there was cnt++. Don't use it in kernel.
+                int k2 = gid / xy + gho;
+                int i2 = (gid - (k2 - gho) * xy) / n + ghm;
+                int j2 = gid % n + ghn;
+
+                CAPTURE(i, j, k, i2, j2, k2, gid, yz, xz, xy);
+                REQUIRE(i == i2);
+                REQUIRE(j == j2);
+                REQUIRE(k == k2);
+                REQUIRE(c[i][j][k] == c[0][0][i2 * ngh * ogh + j2 * ogh + k2]);
+
+                // write into cnt + 2*ghm*yz + 2*ghn*xz
+            }
+
+    // right planes (xy)
+    for (int k = o; k < o + gho; k++)
+        for (int i = ghm; i < ghm + m; i++)
+            for (int j = ghn; j < ghn + n; j++)
+            {
+                res[cnt++] = c[i][j][k];
+
+                int gid = cnt - 2 * ghm * yz - 2 * ghn * xz - gho * xy - 1; // -1 just becauce there was cnt++. Don't use it in kernel.
+                int k2 = gid / xy + o;
+                int i2 = (gid - (k2 - o) * xy) / n + ghm;
+                int j2 = gid % n + ghn;
+
+                CAPTURE(i, j, k, i2, j2, k2, gid, yz, xz, xy);
+                REQUIRE(i == i2);
+                REQUIRE(j == j2);
+                REQUIRE(k == k2);
+                REQUIRE(c[i][j][k] == c[0][0][i2 * ngh * ogh + j2 * ogh + k2]);
+
+                // write into cnt + 2*ghm*yz + 2*ghn*xz + gho*xy
+            }
+
+    REQUIRE(ressize == cnt);
+
+    delete[] res;
 }
