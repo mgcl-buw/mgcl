@@ -22,6 +22,17 @@
 - refactor OCLWrapper?
 - benchmark OpenCLHelper::readKernelFile true or false
 - thoroughly test KernelConfig
+- rework mpi ghost update
+  [ ] kernel extract border planes
+  [ ] add CuboidGpu::extractBorderPlanes and test
+  [ ] kernel paste border planes to ghosts
+  [ ] add CuboidGpu::pasteBorderPlanesIntoGhosts and test
+  [ ] update mpi ghost update:
+    1. call extract kernel
+    2. read buffer from gpu
+    3. send to neighbours
+    4. write buffer to gpu
+    5. call paste kernel
 
 Done:
 - aggregate residual norm on gpu
