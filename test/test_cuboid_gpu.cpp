@@ -1,3 +1,4 @@
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -338,6 +339,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
         mgcl::Cuboid h_res(1, 1, ressize);
         double* buf_res = h_res.field1d().data();
+        h_res.fill(-1, false);
 
         for (int cnt = 0; cnt < ressize; cnt++)
         {
@@ -390,7 +392,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
                 buf_res[idx + 2 * ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
             }
             // Bottom planes
-            else if (idx < 2 * yz + 2 * xz)
+            else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz)
             {
                 idx -= 2 * ghosts_m * yz + ghosts_n * xz; // reset to 0 for index calculation
 
@@ -406,7 +408,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
                 buf_res[idx + 2 * ghosts_m * yz + ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
             }
             // Left planes
-            else if (idx < 2 * yz + 2 * ghosts_n * xz + ghosts_o * xy)
+            else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy)
             {
                 idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz; // reset to 0 for index calculation
 
@@ -422,7 +424,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
                 buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
             }
             // Right planes
-            else if (idx < 2 * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy)
+            else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy)
             {
                 idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy; // reset to 0 for index calculation
 
@@ -438,6 +440,10 @@ TEST_CASE("CuboidGpu::extract_border_planes")
                 buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy] = buf_cuboid[i * ngh * ogh + j * ogh + k];
             }
         }
+
+        // Check that every index was written to
+        for (auto val : h_res.field1d())
+            REQUIRE(val >= 0);
 
         int cnt = 0;
         // front planes (yz)
