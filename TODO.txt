@@ -24,7 +24,7 @@
 - thoroughly test KernelConfig
 - rework mpi ghost update
   [x] kernel extract border planes
-  [ ] add CuboidGpu::extractBorderPlanes and test
+  [x] add CuboidGpu::extractBorderPlanes and test
   [ ] kernel paste border planes to ghosts
   [ ] add CuboidGpu::pasteBorderPlanesIntoGhosts and test
   [ ] update mpi ghost update:
