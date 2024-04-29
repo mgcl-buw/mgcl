@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <fstream>
 #include <iostream>
+#include <memory>
 
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/cuboid_gpu.hpp"
@@ -481,5 +482,27 @@ TEST_CASE("CuboidGpu::extract_border_planes")
             for (int i = ghosts_m; i < ghosts_m + m; i++)
                 for (int j = ghosts_n; j < ghosts_n + n; j++)
                     REQUIRE(buf_res[cnt++] == h_cuboid[i][j][k]);
+    }
+
+    SECTION("throwing")
+    {
+        auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        mgcl::Problem p(1, 1, 1, f, v);
+        p.setUseOpencl(true);
+        p.init();
+
+        {
+            mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 2, 1, 1);
+            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr));
+        }
+        {
+            mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 2, 1);
+            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr));
+        }
+        {
+            mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 1, 2);
+            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr));
+        }
     }
 }
