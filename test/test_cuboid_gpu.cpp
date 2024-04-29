@@ -486,6 +486,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
     SECTION("throwing")
     {
+        // Create dummy problem
         auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
         auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
         mgcl::Problem p(1, 1, 1, f, v);
@@ -503,6 +504,83 @@ TEST_CASE("CuboidGpu::extract_border_planes")
         {
             mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 1, 2);
             REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr));
+        }
+    }
+
+    SECTION("success")
+    {
+        // Create dummy problem
+        auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        mgcl::Problem p(1, 1, 1, f, v);
+        p.setUseOpencl(true);
+        p.init();
+
+        int m = 3;
+        int n = 5;
+        int o = 7;
+        int ghosts_m = 1;
+        int ghosts_n = 2;
+        int ghosts_o = 3;
+        int mgh = m + 2 * ghosts_m;
+        int ngh = n + 2 * ghosts_n;
+        int ogh = o + 2 * ghosts_o;
+        int yz = n * o;
+        int xz = m * o;
+        int xy = m * n;
+        int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
+
+        mgcl::Cuboid h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        h_cuboid.fill1dIndex(false);
+
+        mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_cuboid);
+
+        auto check = [&](mgcl::Cuboid& cuboid, mgcl::Cuboid& extractedBorders) { //
+            const double* data_borders = extractedBorders.field1d().data();
+
+            int cnt = 0;
+            // front planes (yz)
+            for (int i = ghosts_m; i < 2 * ghosts_m; i++)         // ghm real planes in the front
+                for (int j = ghosts_n; j < ghosts_n + n; j++)     // all real cells in y-dir
+                    for (int k = ghosts_o; k < ghosts_o + o; k++) // all real cells in z-dir
+                        REQUIRE(data_borders[cnt++] == cuboid[i][j][k]);
+
+            // back planes (yz)
+            for (int i = m; i < m + ghosts_m; i++)                // ghosts_m real planes in the back
+                for (int j = ghosts_n; j < ghosts_n + n; j++)     // all real cells in y-dir
+                    for (int k = ghosts_o; k < ghosts_o + o; k++) // all real cells in z-dir
+                        REQUIRE(data_borders[cnt++] == cuboid[i][j][k]);
+
+            // top planes (xz)
+            for (int j = ghosts_n; j < 2 * ghosts_n; j++)
+                for (int i = ghosts_m; i < ghosts_m + m; i++)
+                    for (int k = ghosts_o; k < ghosts_o + o; k++)
+                        REQUIRE(data_borders[cnt++] == cuboid[i][j][k]);
+
+            // bottom planes (xz)
+            for (int j = n; j < n + ghosts_n; j++)
+                for (int i = ghosts_m; i < ghosts_m + m; i++)
+                    for (int k = ghosts_o; k < ghosts_o + o; k++)
+                        REQUIRE(data_borders[cnt++] == cuboid[i][j][k]);
+
+            // left planes (xy)
+            for (int k = ghosts_o; k < 2 * ghosts_o; k++)
+                for (int i = ghosts_m; i < ghosts_m + m; i++)
+                    for (int j = ghosts_n; j < ghosts_n + n; j++)
+                        REQUIRE(data_borders[cnt++] == cuboid[i][j][k]);
+
+            // right planes (xy)
+            for (int k = o; k < o + ghosts_o; k++)
+                for (int i = ghosts_m; i < ghosts_m + m; i++)
+                    for (int j = ghosts_n; j < ghosts_n + n; j++)
+                        REQUIRE(data_borders[cnt++] == cuboid[i][j][k]);
+        };
+
+        SECTION("no_reuse")
+        {
+            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr);
+            REQUIRE(ret != nullptr);
+            check(h_cuboid, *ret);
         }
     }
 }

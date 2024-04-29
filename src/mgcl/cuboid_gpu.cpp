@@ -389,7 +389,7 @@ namespace mgcl
         bool createdDTarget = false;
         if (d_target == nullptr)
         {
-            d_target = new CuboidGpu(context, CL_MEM_READ_WRITE, *retraw);
+            d_target = new CuboidGpu(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *retraw);
             createdDTarget = true;
         }
 
@@ -438,6 +438,8 @@ namespace mgcl
         //                                          {local[0], local[1], local[2]});
         // }
         // mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        mgcl::mgclCheckError(clFinish(commands), "clFinish");
 
         err = clReleaseKernel(kernel);
         mgcl::mgclCheckError(err, "Releasing extract_border_planes kernel");
