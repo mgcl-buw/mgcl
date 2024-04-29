@@ -535,7 +535,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
         mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_cuboid);
 
-        auto check = [&](mgcl::Cuboid& cuboid, mgcl::Cuboid& extractedBorders) { //
+        auto check = [&](mgcl::Cuboid& extractedBorders) { //
             const double* data_borders = extractedBorders.field1d().data();
 
             int cnt = 0;
@@ -543,44 +543,76 @@ TEST_CASE("CuboidGpu::extract_border_planes")
             for (int i = ghosts_m; i < 2 * ghosts_m; i++)         // ghm real planes in the front
                 for (int j = ghosts_n; j < ghosts_n + n; j++)     // all real cells in y-dir
                     for (int k = ghosts_o; k < ghosts_o + o; k++) // all real cells in z-dir
-                        REQUIRE(data_borders[cnt++] == cuboid[i][j][k]);
+                    {
+                        CAPTURE(i, j, k, cnt);
+                        REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
+                    }
 
             // back planes (yz)
             for (int i = m; i < m + ghosts_m; i++)                // ghosts_m real planes in the back
                 for (int j = ghosts_n; j < ghosts_n + n; j++)     // all real cells in y-dir
                     for (int k = ghosts_o; k < ghosts_o + o; k++) // all real cells in z-dir
-                        REQUIRE(data_borders[cnt++] == cuboid[i][j][k]);
+                        REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
 
             // top planes (xz)
             for (int j = ghosts_n; j < 2 * ghosts_n; j++)
                 for (int i = ghosts_m; i < ghosts_m + m; i++)
                     for (int k = ghosts_o; k < ghosts_o + o; k++)
-                        REQUIRE(data_borders[cnt++] == cuboid[i][j][k]);
+                        REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
 
             // bottom planes (xz)
             for (int j = n; j < n + ghosts_n; j++)
                 for (int i = ghosts_m; i < ghosts_m + m; i++)
                     for (int k = ghosts_o; k < ghosts_o + o; k++)
-                        REQUIRE(data_borders[cnt++] == cuboid[i][j][k]);
+                        REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
 
             // left planes (xy)
             for (int k = ghosts_o; k < 2 * ghosts_o; k++)
                 for (int i = ghosts_m; i < ghosts_m + m; i++)
                     for (int j = ghosts_n; j < ghosts_n + n; j++)
-                        REQUIRE(data_borders[cnt++] == cuboid[i][j][k]);
+                        REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
 
             // right planes (xy)
             for (int k = o; k < o + ghosts_o; k++)
                 for (int i = ghosts_m; i < ghosts_m + m; i++)
                     for (int j = ghosts_n; j < ghosts_n + n; j++)
-                        REQUIRE(data_borders[cnt++] == cuboid[i][j][k]);
+                        REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
         };
 
         SECTION("no_reuse")
         {
             auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr);
             REQUIRE(ret != nullptr);
-            check(h_cuboid, *ret);
+            check(*ret);
+        }
+
+        SECTION("reuse_both")
+        {
+            mgcl::Cuboid h_ret(1, 1, ressize, 0, 0, 0);
+            h_ret.fill(-1, false);
+            mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_ret);
+
+            c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, &h_ret);
+            check(h_ret);
+        }
+
+        SECTION("reuse_return_buffer")
+        {
+            mgcl::Cuboid h_ret(1, 1, ressize, 0, 0, 0);
+            h_ret.fill(-1, false);
+
+            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, &h_ret);
+            REQUIRE(ret == nullptr);
+            check(h_ret);
+        }
+
+        SECTION("reuse_device_buffer")
+        {
+            mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, 1, 1, ressize, 0, 0, 0);
+            d_tmp.fill(p.getCommands(), -1, true);
+
+            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr);
+            check(*ret);
         }
     }
 }
