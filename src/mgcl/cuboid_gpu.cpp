@@ -355,4 +355,100 @@ namespace mgcl
         std::swap(a.buffer, b.buffer);
     }
 
+    /**
+     * @brief Extracts the border planes of the cuboid. If target is nullptr, a new Cuboid is created and returned.
+     *
+     * @param commands OpenCL command queue
+     * @param program OpenCL program
+     * @param d_target CuboidGpu that data gets extracted into. If nullptr, a new CuboidGpu is created temporarily.
+     * @param h_target Cuboid that data gets extracted into. If target is nullptr, a new Cuboid is created and returned.
+     * @return std::unique_ptr<Cuboid>
+     */
+    std::unique_ptr<Cuboid> CuboidGpu::extractBorderPlanes(cl_command_queue commands, cl_program program,
+                                                           CuboidGpu* d_target, Cuboid* h_target)
+    {
+        // Plane sizes
+        int yz = n * o;
+        int xz = m * o;
+        int xy = m * n;
+        int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
+
+        if (ghosts_m > m || ghosts_n > n || ghosts_o > o)
+            throw "CuboidGpu::extractBorderPlanes: Only defined for ghosts <= m, n, o";
+
+        // Create return buffer, if not provided
+        std::unique_ptr<Cuboid> ret = nullptr;
+        Cuboid* retraw = h_target;
+        if (h_target == nullptr)
+        {
+            ret = std::make_unique<Cuboid>(1, 1, ressize);
+            retraw = ret.get();
+        }
+
+        // Create device target buffer, if not provided
+        bool createdDTarget = false;
+        if (d_target == nullptr)
+        {
+            d_target = new CuboidGpu(context, CL_MEM_READ_WRITE, *retraw);
+            createdDTarget = true;
+        }
+
+        int err;
+
+        // Create the compute kernel from the program
+        const char* kernelName = "extract_border_planes";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
+        mgcl::mgclCheckError(err, "clCreateKernel");
+
+        // assign kernel arguments
+        cl_mem d_target_buffer = d_target->getBuffer();
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buffer);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_target_buffer);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
+        size_t global = ressize;
+        // const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
+        // size_t local = c[0];
+        size_t local = 32;
+
+        if (global % local != 0)
+            global += local - (global % local);
+
+        // cl_event ev;
+
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, NULL);
+        // err = clEnqueueNDRangeKernel(p.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing extract_border_planes kernel");
+
+        // if (p.isProfilingEnabled())
+        // {
+        //     p.getProfilingData()->addMeasurement(p.getCommands(), ev, kernelName,
+        //                                          {global[0], global[1], global[2]},
+        //                                          {local[0], local[1], local[2]});
+        // }
+        // mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        err = clReleaseKernel(kernel);
+        mgcl::mgclCheckError(err, "Releasing extract_border_planes kernel");
+
+        // Read into h_target
+        d_target->read(commands, h_target, true);
+
+        if (createdDTarget)
+            delete d_target;
+
+        return ret;
+    }
+
 } // namespace mgcl

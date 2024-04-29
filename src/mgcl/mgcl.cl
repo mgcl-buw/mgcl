@@ -2365,7 +2365,7 @@ __kernel void extract_border_planes(
     int idx = get_global_id(0);
 
     // Front planes
-    if (idx < yz)
+    if (idx < ghosts_m * yz)
     {
         int i = idx / yz + ghosts_m;
         int j = (idx - (i - ghosts_m) * yz) / o + ghosts_n;
@@ -2373,49 +2373,49 @@ __kernel void extract_border_planes(
         buf_res[idx] = buf_cuboid[i * ngh * ogh + j * ogh + k];
     }
     // Back planes
-    else if (idx < 2 * yz)
+    else if (idx < 2 * ghosts_m * yz)
     {
         idx -= ghosts_m * yz; // reset to 0 for index calculation
         int i = idx / yz + m;
         int j = (idx - (i - m) * yz) / o + ghosts_n;
         int k = idx % o + ghosts_o;
-        buf_res[idx - ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+        buf_res[idx + ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
     }
     // Top planes
-    else if (idx < 2 * yz + xz)
+    else if (idx < 2 * ghosts_m * yz + ghosts_n * xz)
     {
         idx -= 2 * ghosts_m * yz; // reset to 0 for index calculation
         int j = idx / xz + ghosts_n;
         int i = (idx - (j - ghosts_n) * xz) / o + ghosts_m;
         int k = idx % o + ghosts_o;
-        buf_res[idx - 2 * ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+        buf_res[idx + 2 * ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
     }
     // Bottom planes
     else if (idx < 2 * yz + 2 * xz)
     {
-        idx -= 2 * ghosts_m * yz - ghosts_n * xz; // reset to 0 for index calculation
+        idx -= 2 * ghosts_m * yz + ghosts_n * xz; // reset to 0 for index calculation
         int j = idx / xz + n;
         int i = (idx - (j - n) * xz) / o + ghosts_m;
         int k = idx % o + ghosts_o;
-        buf_res[idx - 2 * ghosts_m * yz - ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+        buf_res[idx + 2 * ghosts_m * yz + ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
     }
     // Left planes
-    else if (idx < 2 * yz + 2 * xz + xy)
+    else if (idx < 2 * yz + 2 * ghosts_n * xz + ghosts_o * xy)
     {
-        idx -= 2 * ghosts_m * yz - 2 * ghosts_n * xz; // reset to 0 for index calculation
+        idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz; // reset to 0 for index calculation
         int k = idx / xy + ghosts_o;
         int i = (idx - (k - ghosts_o) * xy) / n + ghosts_m;
         int j = idx % n + ghosts_n;
-        buf_res[idx - 2 * ghosts_m * yz - 2 * ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+        buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
     }
     // Right planes
-    else if (idx < 2 * yz + 2 * xz + 2 * xy)
+    else if (idx < 2 * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy)
     {
-        idx -= 2 * ghosts_m * yz - 2 * ghosts_n * xz - ghosts_o * xy; // reset to 0 for index calculation
+        idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy; // reset to 0 for index calculation
         int k = idx / xy + o;
         int i = (idx - (k - o) * xy) / n + ghosts_m;
         int j = idx % n + ghosts_n;
-        buf_res[idx - 2 * ghosts_m * yz - 2 * ghosts_n * xz - ghosts_o * xy] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+        buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy] = buf_cuboid[i * ngh * ogh + j * ogh + k];
     }
 }
 

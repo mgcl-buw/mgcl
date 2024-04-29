@@ -23,7 +23,7 @@
 - benchmark OpenCLHelper::readKernelFile true or false
 - thoroughly test KernelConfig
 - rework mpi ghost update
-  [ ] kernel extract border planes
+  [x] kernel extract border planes
   [ ] add CuboidGpu::extractBorderPlanes and test
   [ ] kernel paste border planes to ghosts
   [ ] add CuboidGpu::pasteBorderPlanesIntoGhosts and test

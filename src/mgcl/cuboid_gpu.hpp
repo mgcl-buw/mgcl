@@ -56,6 +56,9 @@ namespace mgcl
 
         std::unique_ptr<CuboidGpu> copyShallow();
 
+        std::unique_ptr<Cuboid> extractBorderPlanes(cl_command_queue commands, cl_program program,
+                                                    CuboidGpu* d_target, Cuboid* h_target);
+
         void dumpToFile(cl_command_queue commands, const std::string& path, bool realCellsOnly = false) const;
 
         cl_mem getBuffer() const;

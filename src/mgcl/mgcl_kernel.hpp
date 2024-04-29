@@ -2303,6 +2303,7 @@ int get_ghost_idx_for_cell_idx(
 }
 
 /**
+ * TODO unused? remove?
  * Extracts ghost cells from buf_cuboid and writes result into buf_ghosts.
  * Data is stored consecutively in 3rd dimension, i.e. in 2d it would be
  *
@@ -2338,6 +2339,96 @@ __kernel void extract_ghosts(
     if ((i < ghosts_m || i > mgh - 1 - ghosts_m) || (j < ghosts_n || j > ngh - 1 - ghosts_n) || (k < ghosts_o || k > ogh - 1 - ghosts_o))
     {
         buf_ghosts[get_ghost_idx_for_cell_idx(idx, i, j, k, m, n, o, mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o)] = buf_cuboid[idx];
+    }
+}
+
+/**
+ * Extracts border planes from buf_cuboid and writes result into buf_res.
+ * The planes are stored in the following order:
+ *   front (yz), back (yz), top (xz), bottom (xz), left (xy), right (xy)
+ * Hence, the borders of the planes are stored multiple times.
+ * The planes itself are stored as follows:
+ * - yz: j-major, i.e. forall j { forall k { ... } }
+ * - xz: i-major, i.e. forall i { forall k { ... } }
+ * - xy: i-major, i.e. forall i { forall k { ... } }
+ *
+ * This kernel must be called as a 1d kernel with
+ *   #borderCells = ghosts_m*n*o * ghosts_n*m*o * ghosts_o*n*m
+ * work-items.
+ * Arguments:
+ * * buf_cuboid: CuboidGPU::buffer of size mgh*ngh*ogh
+ * * buf_res: CuboidGPU::buffer of size 1*1*#borderCells
+ * * m, n, o: Extents of buf_cuboid excluding ghost cells
+ * * ngh, ogh: Extents of buf_cuboid including ghost cells
+ * * ghosts_m, ghosts_n, ghosts_o: Ghost cell amount of buf_cuboid
+ */
+__kernel void extract_border_planes(
+    __global double* buf_cuboid,
+    __global double* buf_res,
+    int m, int n, int o,
+    int ngh, int ogh,
+    int ghosts_m, int ghosts_n, int ghosts_o)
+{
+    // plane sizes
+    int yz = n * o;
+    int xz = m * o;
+    int xy = m * n;
+
+    // Get buf_cuboid's 1d and 3d indices
+    int idx = get_global_id(0);
+
+    // Front planes
+    if (idx < ghosts_m * yz)
+    {
+        int i = idx / yz + ghosts_m;
+        int j = (idx - (i - ghosts_m) * yz) / o + ghosts_n;
+        int k = idx % o + ghosts_o;
+        buf_res[idx] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+    }
+    // Back planes
+    else if (idx < 2 * ghosts_m * yz)
+    {
+        idx -= ghosts_m * yz; // reset to 0 for index calculation
+        int i = idx / yz + m;
+        int j = (idx - (i - m) * yz) / o + ghosts_n;
+        int k = idx % o + ghosts_o;
+        buf_res[idx + ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+    }
+    // Top planes
+    else if (idx < 2 * ghosts_m * yz + ghosts_n * xz)
+    {
+        idx -= 2 * ghosts_m * yz; // reset to 0 for index calculation
+        int j = idx / xz + ghosts_n;
+        int i = (idx - (j - ghosts_n) * xz) / o + ghosts_m;
+        int k = idx % o + ghosts_o;
+        buf_res[idx + 2 * ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+    }
+    // Bottom planes
+    else if (idx < 2 * yz + 2 * xz)
+    {
+        idx -= 2 * ghosts_m * yz + ghosts_n * xz; // reset to 0 for index calculation
+        int j = idx / xz + n;
+        int i = (idx - (j - n) * xz) / o + ghosts_m;
+        int k = idx % o + ghosts_o;
+        buf_res[idx + 2 * ghosts_m * yz + ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+    }
+    // Left planes
+    else if (idx < 2 * yz + 2 * ghosts_n * xz + ghosts_o * xy)
+    {
+        idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz; // reset to 0 for index calculation
+        int k = idx / xy + ghosts_o;
+        int i = (idx - (k - ghosts_o) * xy) / n + ghosts_m;
+        int j = idx % n + ghosts_n;
+        buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+    }
+    // Right planes
+    else if (idx < 2 * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy)
+    {
+        idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy; // reset to 0 for index calculation
+        int k = idx / xy + o;
+        int i = (idx - (k - o) * xy) / n + ghosts_m;
+        int j = idx % n + ghosts_n;
+        buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy] = buf_cuboid[i * ngh * ogh + j * ogh + k];
     }
 }
 

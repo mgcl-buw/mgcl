@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <fstream>
+#include <iostream>
 
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/cuboid_gpu.hpp"
@@ -310,5 +311,169 @@ TEST_CASE("CuboidGpu::copyShallow")
         REQUIRE(c_wo.getGhostsO() == c2_wo.getGhostsO());
         REQUIRE(c_wo.getBuffer() != c2_wo.getBuffer());
         REQUIRE(c2_wo.getFlags() == CL_MEM_WRITE_ONLY);
+    }
+}
+
+TEST_CASE("CuboidGpu::extract_border_planes")
+{
+    SECTION("indices")
+    {
+        int m = 3;
+        int n = 5;
+        int o = 7;
+        int ghosts_m = 1;
+        int ghosts_n = 2;
+        int ghosts_o = 3;
+        int mgh = m + 2 * ghosts_m;
+        int ngh = n + 2 * ghosts_n;
+        int ogh = o + 2 * ghosts_o;
+        int yz = n * o;
+        int xz = m * o;
+        int xy = m * n;
+        int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
+
+        mgcl::Cuboid h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        h_cuboid.fill1dIndex(false);
+        const double* buf_cuboid = h_cuboid.field1d().data();
+
+        mgcl::Cuboid h_res(1, 1, ressize);
+        double* buf_res = h_res.field1d().data();
+
+        for (int cnt = 0; cnt < ressize; cnt++)
+        {
+            int idx = cnt;
+            // plane sizes
+            // int yz = n * o;
+            // int xz = m * o;
+            // int xy = m * n;
+
+            // Front planes
+            if (idx < ghosts_m * yz)
+            {
+                REQUIRE(idx == cnt);
+
+                int i = idx / yz + ghosts_m;
+                int j = (idx - (i - ghosts_m) * yz) / o + ghosts_n;
+                int k = idx % o + ghosts_o;
+                buf_res[idx] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+            }
+            // Back planes
+            else if (idx < 2 * ghosts_m * yz)
+            {
+                idx -= ghosts_m * yz; // reset to 0 for index calculation
+
+                if (cnt == yz)
+                    REQUIRE(idx == 0);
+
+                int i = idx / yz + m;
+                int j = (idx - (i - m) * yz) / o + ghosts_n;
+                int k = idx % o + ghosts_o;
+
+                REQUIRE(idx + ghosts_m * yz == cnt);
+
+                buf_res[idx + ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+            }
+            // Top planes
+            else if (idx < 2 * ghosts_m * yz + ghosts_n * xz)
+            {
+                idx -= 2 * ghosts_m * yz; // reset to 0 for index calculation
+
+                if (cnt == 2 * ghosts_m * yz)
+                    REQUIRE(idx == 0);
+
+                int j = idx / xz + ghosts_n;
+                int i = (idx - (j - ghosts_n) * xz) / o + ghosts_m;
+                int k = idx % o + ghosts_o;
+
+                REQUIRE(idx + 2 * ghosts_m * yz == cnt);
+
+                buf_res[idx + 2 * ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+            }
+            // Bottom planes
+            else if (idx < 2 * yz + 2 * xz)
+            {
+                idx -= 2 * ghosts_m * yz + ghosts_n * xz; // reset to 0 for index calculation
+
+                if (cnt == 2 * ghosts_m * yz + ghosts_n * xz)
+                    REQUIRE(idx == 0);
+
+                int j = idx / xz + n;
+                int i = (idx - (j - n) * xz) / o + ghosts_m;
+                int k = idx % o + ghosts_o;
+
+                REQUIRE(idx + 2 * ghosts_m * yz + ghosts_n * xz == cnt);
+
+                buf_res[idx + 2 * ghosts_m * yz + ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+            }
+            // Left planes
+            else if (idx < 2 * yz + 2 * ghosts_n * xz + ghosts_o * xy)
+            {
+                idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz; // reset to 0 for index calculation
+
+                if (cnt == 2 * ghosts_m * yz + 2 * ghosts_n * xz)
+                    REQUIRE(idx == 0);
+
+                int k = idx / xy + ghosts_o;
+                int i = (idx - (k - ghosts_o) * xy) / n + ghosts_m;
+                int j = idx % n + ghosts_n;
+
+                REQUIRE(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz == cnt);
+
+                buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+            }
+            // Right planes
+            else if (idx < 2 * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy)
+            {
+                idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy; // reset to 0 for index calculation
+
+                if (cnt == 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy)
+                    REQUIRE(idx == 0);
+
+                int k = idx / xy + o;
+                int i = (idx - (k - o) * xy) / n + ghosts_m;
+                int j = idx % n + ghosts_n;
+
+                REQUIRE(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy == cnt);
+
+                buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+            }
+        }
+
+        int cnt = 0;
+        // front planes (yz)
+        for (int i = ghosts_m; i < 2 * ghosts_m; i++)         // ghm real planes in the front
+            for (int j = ghosts_n; j < ghosts_n + n; j++)     // all real cells in y-dir
+                for (int k = ghosts_o; k < ghosts_o + o; k++) // all real cells in z-dir
+                    REQUIRE(buf_res[cnt++] == h_cuboid[i][j][k]);
+
+        // back planes (yz)
+        for (int i = m; i < m + ghosts_m; i++)                // ghosts_m real planes in the back
+            for (int j = ghosts_n; j < ghosts_n + n; j++)     // all real cells in y-dir
+                for (int k = ghosts_o; k < ghosts_o + o; k++) // all real cells in z-dir
+                    REQUIRE(buf_res[cnt++] == h_cuboid[i][j][k]);
+
+        // top planes (xz)
+        for (int j = ghosts_n; j < 2 * ghosts_n; j++)
+            for (int i = ghosts_m; i < ghosts_m + m; i++)
+                for (int k = ghosts_o; k < ghosts_o + o; k++)
+                    REQUIRE(buf_res[cnt++] == h_cuboid[i][j][k]);
+
+        // bottom planes (xz)
+        for (int j = n; j < n + ghosts_n; j++)
+            for (int i = ghosts_m; i < ghosts_m + m; i++)
+                for (int k = ghosts_o; k < ghosts_o + o; k++)
+                    REQUIRE(buf_res[cnt++] == h_cuboid[i][j][k]);
+
+        // left planes (xy)
+        for (int k = ghosts_o; k < 2 * ghosts_o; k++)
+            for (int i = ghosts_m; i < ghosts_m + m; i++)
+                for (int j = ghosts_n; j < ghosts_n + n; j++)
+                    REQUIRE(buf_res[cnt++] == h_cuboid[i][j][k]);
+
+        // right planes (xy)
+        for (int k = o; k < o + ghosts_o; k++)
+            for (int i = ghosts_m; i < ghosts_m + m; i++)
+                for (int j = ghosts_n; j < ghosts_n + n; j++)
+                    REQUIRE(buf_res[cnt++] == h_cuboid[i][j][k]);
     }
 }
