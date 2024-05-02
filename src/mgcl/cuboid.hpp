@@ -47,6 +47,7 @@ namespace mgcl
                                       int ghm = -1, int ghn = -1, int gho = -1);
         std::unique_ptr<Cuboid> sliceIncGhosts(int m_start, int m_end, int n_start, int n_end,
                                                int o_start, int o_end);
+        std::unique_ptr<Cuboid> copyShallow();
 
         int getO() const;
         int getN() const;

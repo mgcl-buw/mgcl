@@ -531,4 +531,14 @@ namespace mgcl
 
         return ret;
     }
+
+    /**
+     * @brief Returns a new Cuboid with the same dimensions as this Cuboid but without data.
+     *
+     * @return std::unique_ptr<Cuboid>
+     */
+    std::unique_ptr<Cuboid> Cuboid::copyShallow()
+    {
+        return std::make_unique<Cuboid>(m, n, o, ghostsM, ghostsN, ghostsO);
+    }
 }
