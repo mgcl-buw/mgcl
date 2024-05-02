@@ -323,7 +323,7 @@ namespace mgcl
 
         if (!forceLocal && problem.useMpi() && mpiData)
         {
-            updateGhostsOclMpi(problem.getCommands(), dBuffer, *mpiData, problem.isPeriodic(), forceLocal);
+            updateGhostsOclMpi(problem.getCommands(), problem.getProgram(), dBuffer, *mpiData, problem.isPeriodic(), forceLocal);
             return CL_SUCCESS;
         }
 
@@ -403,12 +403,20 @@ namespace mgcl
      * @param periodic
      * @param forceLocal
      */
-    void MultigridEngine::updateGhostsOclMpi(cl_command_queue commands, CuboidGpu& d_buf, MPILevelData& mpiData,
+    void MultigridEngine::updateGhostsOclMpi(cl_command_queue commands, cl_program program,
+                                             CuboidGpu& d_buf, MPILevelData& mpiData,
                                              bool periodic, bool forceLocal)
     {
         // Read back from GPU and update ghosts on host in order to update neighbouring nodes, too.
-        auto tmp = d_buf.read(commands, nullptr, true);
-        MultigridEngine::updateGhostsSeq(*tmp, &mpiData, periodic, forceLocal);
-        d_buf.write(commands, *tmp, true);
+        // auto tmp = d_buf.read(commands, nullptr, true);
+        // MultigridEngine::updateGhostsSeq(*tmp, &mpiData, periodic, forceLocal);
+        // d_buf.write(commands, *tmp, true);
+
+        // Extract border planes from the buffer
+        auto tmp = d_buf.extractBorderPlanes(commands, program, nullptr, nullptr);
+
+        // Send planes to neighbors TODO
+
+        // Paste planes back into the buffer TODO
     }
 }
