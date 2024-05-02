@@ -616,18 +616,32 @@ TEST_CASE("CuboidGpu::extract_border_planes")
         }
     }
 }
+
+TEST_CASE("CuboidGpu::paste_border_planes")
+{
+    SECTION("indices")
+    {
+        int m = 3;
+        int n = 5;
+        int o = 7;
+        int ghosts_m = 1;
+        int ghosts_n = 2;
+        int ghosts_o = 3;
+        int mgh = m + 2 * ghosts_m;
+        int ngh = n + 2 * ghosts_n;
+        int ogh = o + 2 * ghosts_o;
         int yz = ngh * ogh;
         int xz = mgh * ogh;
         int xy = mgh * ngh;
         int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
 
         mgcl::Cuboid h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o);
-        h_cuboid.fill1dIndex(false);
-        const double* buf_cuboid = h_cuboid.field1d().data();
+        h_cuboid.fill(-1, false);
+        double* buf_cuboid = h_cuboid.field1d().data();
 
         mgcl::Cuboid h_res(1, 1, ressize);
+        h_res.fill1dIndex(false);
         double* buf_res = h_res.field1d().data();
-        h_res.fill(-1, false);
 
         for (int cnt = 0; cnt < ressize; cnt++)
         {
@@ -637,6 +651,8 @@ TEST_CASE("CuboidGpu::extract_border_planes")
             // int xz = mgh * ogh;
             // int xy = mgh * ngh;
 
+            // TODO get indices for ghost cells instead of real border cells
+
             // Front planes
             if (idx < ghosts_m * yz)
             {
@@ -645,7 +661,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
                 int i = idx / yz + ghosts_m;
                 int j = (idx - (i - ghosts_m) * yz) / ogh;
                 int k = idx % ogh;
-                buf_res[idx] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+                buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_res[idx];
             }
             // Back planes
             else if (idx < 2 * ghosts_m * yz)
@@ -661,7 +677,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
                 REQUIRE(idx + ghosts_m * yz == cnt);
 
-                buf_res[idx + ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+                buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_res[idx + ghosts_m * yz];
             }
             // Top planes
             else if (idx < 2 * ghosts_m * yz + ghosts_n * xz)
@@ -677,7 +693,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
                 REQUIRE(idx + 2 * ghosts_m * yz == cnt);
 
-                buf_res[idx + 2 * ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+                buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_res[idx + 2 * ghosts_m * yz];
             }
             // Bottom planes
             else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz)
@@ -693,7 +709,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
                 REQUIRE(idx + 2 * ghosts_m * yz + ghosts_n * xz == cnt);
 
-                buf_res[idx + 2 * ghosts_m * yz + ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+                buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_res[idx + 2 * ghosts_m * yz + ghosts_n * xz];
             }
             // Left planes
             else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy)
@@ -709,7 +725,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
                 REQUIRE(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz == cnt);
 
-                buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+                buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz];
             }
             // Right planes
             else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy)
@@ -725,7 +741,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
                 REQUIRE(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy == cnt);
 
-                buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy] = buf_cuboid[i * ngh * ogh + j * ogh + k];
+                buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy];
             }
         }
 

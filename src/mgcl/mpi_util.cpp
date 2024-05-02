@@ -653,21 +653,24 @@ namespace mgcl::mpi_util
      * @brief Sends border planes to neighbouring processes.
      * TODO maybe use MPI_Sendrecv_inplace instead
      *
+     * @param mgh Extend of cuboid, that the planes belong to, in z-direction
+     * @param ngh Extend of cuboid, that the planes belong to, in y-direction
+     * @param ogh Extend of cuboid, that the planes belong to, in x-direction
+     * @param ghosts_m Ghosts of cuboid, that the planes belong to, at one border in z-direction
+     * @param ghosts_n Ghosts of cuboid, that the planes belong to, at one border in y-direction
+     * @param ghosts_o Ghosts of cuboid, that the planes belong to, at one border in x-direction
      * @param sbuf Send buffer, must contain planes in the same order that CuboidGpu::extractBorderPlanes() returns.
      * @param rbuf Temporary receive buffer
      * @param mpiData Contains neighbouring processes' info
      */
-    void sendBorderPlanes(Cuboid& sbuf, Cuboid& rbuf, MPILevelData& mpiData)
+    void sendBorderPlanes(int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
+                          Cuboid& sbuf, Cuboid& rbuf, MPILevelData& mpiData)
     {
-        int ghosts_m = sbuf.getGhostsM();
-        int ghosts_n = sbuf.getGhostsN();
-        int ghosts_o = sbuf.getGhostsO();
-        int mgh = sbuf.getMgh();
-        int ngh = sbuf.getNgh();
-        int ogh = sbuf.getOgh();
         int yz = ngh * ogh;
         int xz = mgh * ogh;
         int xy = mgh * ngh;
+
+        // TODO update corners here?
 
         // Send planes to neighbors
         int myid, err;
@@ -684,6 +687,12 @@ namespace mgcl::mpi_util
                            static_cast<void*>(&(rbuf[0][0][ghosts_m * yz])), ghosts_m * yz, MPI_DOUBLE, mpiData.back, 0,
                            mpiData.comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
+
+        // Write received edges of cuboid to send buffer
+        for (int i = 0; i < ghosts_m; i++)
+            for (int j = 0; j < ngh; j++)
+                for (int k = 0; k < ogh; k++)
+                    sbuf[i][j][k] = rbuf[i][j][k];
 
         // Send top planes to the bottom
         err = MPI_Sendrecv(static_cast<void*>(&(sbuf[0][0][2 * ghosts_m * yz])), ghosts_n * xz, MPI_DOUBLE, mpiData.down, 0,

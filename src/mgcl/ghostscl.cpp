@@ -436,7 +436,9 @@ namespace mgcl
         auto& rbuf = *rbuf_ptr;
 
         // Send our planes to neighbours and receive their planes
-        mpi_util::sendBorderPlanes(sbuf, rbuf, mpiData);
+        mpi_util::sendBorderPlanes(d_buf.getMgh(), d_buf.getNgh(), d_buf.getOgh(),
+                                   d_buf.getGhostsM(), d_buf.getGhostsN(), d_buf.getGhostsO(),
+                                   sbuf, rbuf, mpiData);
 
         // Paste planes back into the buffer.
         d_buf.pasteBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), &d_tmp, rbuf_ptr.get());

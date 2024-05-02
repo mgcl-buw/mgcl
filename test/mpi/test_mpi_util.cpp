@@ -1257,8 +1257,13 @@ TEST_CASE("mpi_util::sendBorderPlanes")
     //     }
     // }
 
-    auto sbuf = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
-    auto rbuf = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+    int yz = ngh * ogh;
+    int xz = mgh * ogh;
+    int xy = mgh * ngh;
+    int ressize = 2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy;
+
+    auto sbuf = std::make_shared<mgcl::Cuboid>(1, 1, ressize);
+    auto rbuf = std::make_shared<mgcl::Cuboid>(1, 1, ressize);
 
     // fill sbuf with unique values on each rank
     // int val = sbuf->field1d().size() * mpi_rank;
@@ -1269,11 +1274,8 @@ TEST_CASE("mpi_util::sendBorderPlanes")
     }
     rbuf->fill(-1, false);
 
-    mgcl::mpi_util::sendBorderPlanes(*sbuf, *rbuf, mpiData);
-
-    int yz = ngh * ogh;
-    int xz = mgh * ogh;
-    int xy = mgh * ngh;
+    mgcl::mpi_util::sendBorderPlanes(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o,
+                                     *sbuf, *rbuf, mpiData);
 
     for (int idx = 0; idx < sbuf->field1d().size(); idx++)
     {
