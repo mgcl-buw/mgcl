@@ -411,6 +411,8 @@ namespace mgcl
         // MultigridEngine::updateGhostsSeq(*tmp, &mpiData, periodic, forceLocal);
         // d_buf.write(commands, *tmp, true);
 
+        // TODO write test for whole ghosts update, check corners!
+
         // TODO
         if (forceLocal)
         {
@@ -421,9 +423,9 @@ namespace mgcl
         // Create a temporary device buffer for extracting border planes intermediate storage for received data
         // TODO maybe do this in init and reuse
         // TODO update check gpu storage size in problem init
-        int yz = d_buf.getNgh() * d_buf.getOgh();
-        int xz = d_buf.getMgh() * d_buf.getOgh();
-        int xy = d_buf.getMgh() * d_buf.getNgh();
+        int yz = d_buf.getN() * d_buf.getO();
+        int xz = d_buf.getM() * d_buf.getO();
+        int xy = d_buf.getM() * d_buf.getN();
         int ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
         mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, 1, 1, ressize, 0, 0, 0);
 
