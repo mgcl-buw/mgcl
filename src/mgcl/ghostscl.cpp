@@ -323,7 +323,7 @@ namespace mgcl
 
         if (!forceLocal && problem.useMpi() && mpiData)
         {
-            updateGhostsOclMpi(problem.getCommands(), problem.getProgram(), dBuffer, *mpiData, problem.isPeriodic(), forceLocal);
+            updateGhostsOclMpi(problem, dBuffer, *mpiData, problem.isPeriodic(), forceLocal);
             return CL_SUCCESS;
         }
 
@@ -403,8 +403,7 @@ namespace mgcl
      * @param periodic
      * @param forceLocal
      */
-    void MultigridEngine::updateGhostsOclMpi(cl_command_queue commands, cl_program program,
-                                             CuboidGpu& d_buf, MPILevelData& mpiData,
+    void MultigridEngine::updateGhostsOclMpi(Problem& p, CuboidGpu& d_buf, MPILevelData& mpiData,
                                              bool periodic, bool forceLocal)
     {
         // Read back from GPU and update ghosts on host in order to update neighbouring nodes, too.
@@ -412,8 +411,24 @@ namespace mgcl
         // MultigridEngine::updateGhostsSeq(*tmp, &mpiData, periodic, forceLocal);
         // d_buf.write(commands, *tmp, true);
 
+        // TODO
+        if (forceLocal)
+        {
+            MultigridEngine::updateGhosts(p, d_buf, nullptr, true);
+            return;
+        }
+
+        // Create a temporary device buffer for extracting border planes intermediate storage for received data
+        // TODO maybe do this in init and reuse
+        // TODO update check gpu storage size in problem init
+        int yz = d_buf.getNgh() * d_buf.getOgh();
+        int xz = d_buf.getMgh() * d_buf.getOgh();
+        int xy = d_buf.getMgh() * d_buf.getNgh();
+        int ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
+        mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, 1, 1, ressize, 0, 0, 0);
+
         // Extract border planes from the buffer
-        auto sbuf_ptr = d_buf.extractBorderPlanes(commands, program, nullptr, nullptr);
+        auto sbuf_ptr = d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr);
         auto rbuf_ptr = sbuf_ptr->copyShallow();
         auto& sbuf = *sbuf_ptr;
         auto& rbuf = *rbuf_ptr;
@@ -421,6 +436,7 @@ namespace mgcl
         // Send our planes to neighbours and receive their planes
         mpi_util::sendBorderPlanes(sbuf, rbuf, mpiData);
 
-        // Paste planes back into the buffer TODO
+        // Paste planes back into the buffer.
+        d_buf.pasteBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), &d_tmp, rbuf_ptr.get());
     }
 }

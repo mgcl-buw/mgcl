@@ -49,8 +49,7 @@ namespace mgcl
 
         static void updateGhostsSeq(Cuboid& c, MPILevelData* mpiData, bool periodic, bool forceLocal);
         static int updateGhosts(Problem& problem, CuboidGpu& dBuffer, MPILevelData* mpiData, bool forceLocal);
-        static void updateGhostsOclMpi(cl_command_queue commands, cl_program program,
-                                       CuboidGpu& d_buf, MPILevelData& mpiData,
+        static void updateGhostsOclMpi(Problem& p, CuboidGpu& d_buf, MPILevelData& mpiData,
                                        bool periodic, bool forceLocal);
 
         static double residual(Problem& problem, Level& level, bool returnResidual,

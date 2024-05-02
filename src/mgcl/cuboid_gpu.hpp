@@ -58,6 +58,7 @@ namespace mgcl
 
         std::unique_ptr<Cuboid> extractBorderPlanes(cl_command_queue commands, cl_program program,
                                                     CuboidGpu* d_target, Cuboid* h_target);
+        void pasteBorderPlanes(cl_context context, cl_command_queue commands, cl_program program, CuboidGpu* d_source, Cuboid* h_source);
 
         void dumpToFile(cl_command_queue commands, const std::string& path, bool realCellsOnly = false) const;
 
