@@ -20,6 +20,8 @@ namespace mgcl::mpi_util
     void scatter_inplace_wgh(MPI_Comm comm, Cuboid& c);
     void scatter_inplace_wgh(MPI_Comm comm, cl_command_queue commands, CuboidGpu& c);
 
+    void sendBorderPlanes(Cuboid& sbuf, Cuboid& rbuf, MPILevelData& mpiData);
+
     void mgcl_check_mpi_error(MPI_Comm comm, int err, const char* operation, const char* filename, int line);
 }
 

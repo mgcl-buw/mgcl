@@ -2,6 +2,7 @@
 #include <catch2/generators/catch_generators.hpp>
 
 #include <algorithm>
+#include <csetjmp>
 #include <iostream>
 #include <memory>
 
@@ -1180,6 +1181,131 @@ TEST_CASE("mpi_util::gather-GPU-src-dest-same-stencil")
 
             // Check result
             REQUIRE(cglob.isEqual(result));
+        }
+    }
+}
+
+// Checks that sending border planes is correct.
+// Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::gather-GPU-src-dest-same-stencil"
+TEST_CASE("mpi_util::sendBorderPlanes")
+{
+    using std::min;
+
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    int ghosts_m = 1;
+    int ghosts_n = 2;
+    int ghosts_o = 3;
+    int mgh = m + 2 * ghosts_m;
+    int ngh = n + 2 * ghosts_n;
+    int ogh = o + 2 * ghosts_o;
+    int periodic = 1; // GENERATE(0,1);
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    REQUIRE(mpi_size > 1);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    // Calculate global sizes
+    int mglob = m * mpi_dims[0];
+    int nglob = n * mpi_dims[1];
+    int oglob = o * mpi_dims[2];
+
+    // Create dummy problem
+    auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+    auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
+    mgcl::Problem p(m, n, o, f, v, mglob, nglob, oglob);
+    p.setMpiComm(mpi_comm);
+    p.init();
+
+    auto& mpiData = p.getLevelAt(0).getMpiData();
+
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (i == mpi_rank)
+    //     {
+    //         std::cerr << i << ":" << std::endl;
+    //         std::cerr << "  coords: " << mpi_coords[0] << "," << mpi_coords[1] << "," << mpi_coords[2] << std::endl;
+    //         std::cerr << "  front: " << mpiData.front << std::endl;
+    //         std::cerr << "   back: " << mpiData.back << std::endl;
+    //         std::cerr << "     up: " << mpiData.up << std::endl;
+    //         std::cerr << "   down: " << mpiData.down << std::endl;
+    //         std::cerr << "   left: " << mpiData.left << std::endl;
+    //         std::cerr << "  right: " << mpiData.right << std::endl;
+    //     }
+    // }
+
+    auto sbuf = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+    auto rbuf = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+
+    // fill sbuf with unique values on each rank
+    // int val = sbuf->field1d().size() * mpi_rank;
+    for (int i = 0; i < sbuf->field1d().size(); i++)
+    {
+        // sbuf->field1d()[i] = val++;
+        sbuf->field1d()[i] = mpi_rank;
+    }
+    rbuf->fill(-1, false);
+
+    mgcl::mpi_util::sendBorderPlanes(*sbuf, *rbuf, mpiData);
+
+    int yz = ngh * ogh;
+    int xz = mgh * ogh;
+    int xy = mgh * ngh;
+
+    for (int idx = 0; idx < sbuf->field1d().size(); idx++)
+    {
+        // Front planes
+        if (idx < ghosts_m * yz)
+        {
+            REQUIRE((*rbuf)[0][0][idx] == mpiData.front);
+        }
+        // Back planes
+        else if (idx < 2 * ghosts_m * yz)
+        {
+            REQUIRE((*rbuf)[0][0][idx] == mpiData.back);
+        }
+        // Top planes
+        else if (idx < 2 * ghosts_m * yz + ghosts_n * xz)
+        {
+            REQUIRE((*rbuf)[0][0][idx] == mpiData.up);
+        }
+        // Bottom planes
+        else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz)
+        {
+            REQUIRE((*rbuf)[0][0][idx] == mpiData.down);
+        }
+        // Left planes
+        else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy)
+        {
+            REQUIRE((*rbuf)[0][0][idx] == mpiData.left);
+        }
+        // Right planes
+        else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy)
+        {
+            REQUIRE((*rbuf)[0][0][idx] == mpiData.right);
         }
     }
 }

@@ -413,9 +413,13 @@ namespace mgcl
         // d_buf.write(commands, *tmp, true);
 
         // Extract border planes from the buffer
-        auto tmp = d_buf.extractBorderPlanes(commands, program, nullptr, nullptr);
+        auto sbuf_ptr = d_buf.extractBorderPlanes(commands, program, nullptr, nullptr);
+        auto rbuf_ptr = sbuf_ptr->copyShallow();
+        auto& sbuf = *sbuf_ptr;
+        auto& rbuf = *rbuf_ptr;
 
-        // Send planes to neighbors TODO
+        // Send our planes to neighbours and receive their planes
+        mpi_util::sendBorderPlanes(sbuf, rbuf, mpiData);
 
         // Paste planes back into the buffer TODO
     }
