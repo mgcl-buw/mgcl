@@ -368,9 +368,9 @@ namespace mgcl
                                                            CuboidGpu* d_target, Cuboid* h_target)
     {
         // Plane sizes
-        int yz = n * o;
-        int xz = m * o;
-        int xy = m * n;
+        int yz = ngh * ogh;
+        int xz = mgh * ogh;
+        int xy = mgh * ngh;
         int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
 
         if (ghosts_m > m || ghosts_n > n || ghosts_o > o)
@@ -408,6 +408,7 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);

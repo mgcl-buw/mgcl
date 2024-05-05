@@ -2359,20 +2359,20 @@ __kernel void extract_ghosts(
  * * buf_cuboid: CuboidGPU::buffer of size mgh*ngh*ogh
  * * buf_res: CuboidGPU::buffer of size 1*1*#borderCells
  * * m, n, o: Extents of buf_cuboid excluding ghost cells
- * * ngh, ogh: Extents of buf_cuboid including ghost cells
+ * * mgh, ngh, ogh: Extents of buf_cuboid including ghost cells
  * * ghosts_m, ghosts_n, ghosts_o: Ghost cell amount of buf_cuboid
  */
 __kernel void extract_border_planes(
     __global double* buf_cuboid,
     __global double* buf_res,
     int m, int n, int o,
-    int ngh, int ogh,
+    int mgh, int ngh, int ogh,
     int ghosts_m, int ghosts_n, int ghosts_o)
 {
     // plane sizes
-    int yz = n * o;
-    int xz = m * o;
-    int xy = m * n;
+    int yz = ngh * ogh;
+    int xz = mgh * ogh;
+    int xy = mgh * ngh;
 
     // Get buf_cuboid's 1d and 3d indices
     int idx = get_global_id(0);
@@ -2381,8 +2381,8 @@ __kernel void extract_border_planes(
     if (idx < ghosts_m * yz)
     {
         int i = idx / yz + ghosts_m;
-        int j = (idx - (i - ghosts_m) * yz) / o + ghosts_n;
-        int k = idx % o + ghosts_o;
+        int j = (idx - (i - ghosts_m) * yz) / ogh;
+        int k = idx % ogh;
         buf_res[idx] = buf_cuboid[i * ngh * ogh + j * ogh + k];
     }
     // Back planes
@@ -2390,8 +2390,8 @@ __kernel void extract_border_planes(
     {
         idx -= ghosts_m * yz; // reset to 0 for index calculation
         int i = idx / yz + m;
-        int j = (idx - (i - m) * yz) / o + ghosts_n;
-        int k = idx % o + ghosts_o;
+        int j = (idx - (i - m) * yz) / ogh;
+        int k = idx % ogh;
         buf_res[idx + ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
     }
     // Top planes
@@ -2399,8 +2399,8 @@ __kernel void extract_border_planes(
     {
         idx -= 2 * ghosts_m * yz; // reset to 0 for index calculation
         int j = idx / xz + ghosts_n;
-        int i = (idx - (j - ghosts_n) * xz) / o + ghosts_m;
-        int k = idx % o + ghosts_o;
+        int i = (idx - (j - ghosts_n) * xz) / ogh;
+        int k = idx % ogh;
         buf_res[idx + 2 * ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
     }
     // Bottom planes
@@ -2408,8 +2408,8 @@ __kernel void extract_border_planes(
     {
         idx -= 2 * ghosts_m * yz + ghosts_n * xz; // reset to 0 for index calculation
         int j = idx / xz + n;
-        int i = (idx - (j - n) * xz) / o + ghosts_m;
-        int k = idx % o + ghosts_o;
+        int i = (idx - (j - n) * xz) / ogh;
+        int k = idx % ogh;
         buf_res[idx + 2 * ghosts_m * yz + ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
     }
     // Left planes
@@ -2417,8 +2417,8 @@ __kernel void extract_border_planes(
     {
         idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz; // reset to 0 for index calculation
         int k = idx / xy + ghosts_o;
-        int i = (idx - (k - ghosts_o) * xy) / n + ghosts_m;
-        int j = idx % n + ghosts_n;
+        int i = (idx - (k - ghosts_o) * xy) / ngh;
+        int j = idx % ngh;
         buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
     }
     // Right planes
@@ -2426,8 +2426,8 @@ __kernel void extract_border_planes(
     {
         idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy; // reset to 0 for index calculation
         int k = idx / xy + o;
-        int i = (idx - (k - o) * xy) / n + ghosts_m;
-        int j = idx % n + ghosts_n;
+        int i = (idx - (k - o) * xy) / ngh;
+        int j = idx % ngh;
         buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy] = buf_cuboid[i * ngh * ogh + j * ogh + k];
     }
 }
