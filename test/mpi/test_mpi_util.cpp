@@ -1310,4 +1310,6 @@ TEST_CASE("mpi_util::sendBorderPlanes")
             REQUIRE((*rbuf)[0][0][idx] == mpiData.right);
         }
     }
+
+    // TODO check copying of corner data between sends
 }
