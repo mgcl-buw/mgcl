@@ -441,6 +441,6 @@ namespace mgcl
                                    sbuf, rbuf, mpiData);
 
         // Paste planes back into the buffer.
-        d_buf.pasteBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), &d_tmp, rbuf_ptr.get());
+        d_buf.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), &d_tmp, rbuf_ptr.get());
     }
 }

@@ -617,7 +617,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
     }
 }
 
-TEST_CASE("CuboidGpu::paste_border_planes")
+TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes")
 {
     SECTION("indices")
     {

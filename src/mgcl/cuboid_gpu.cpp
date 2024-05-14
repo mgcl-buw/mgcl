@@ -455,7 +455,7 @@ namespace mgcl
     }
 
     /**
-     * @brief Pastes border planes from d_source or h_source into this device buffer. At least one source
+     * @brief Pastes into ghost cells of this cuboid from provided border planes (d_source or h_source). At least one source
      *  buffer must be given.
      *
      * @param commands
@@ -465,10 +465,10 @@ namespace mgcl
      * @param h_source Host buffer containing border planes in the same order as they get extracted by extractBorderPlanes.
      *   Ignored if d_source is not null. If d_source is null, a temporary device buffer is created.
      */
-    void CuboidGpu::pasteBorderPlanes(cl_context context, cl_command_queue commands, cl_program program, CuboidGpu* d_source, Cuboid* h_source)
+    void CuboidGpu::pasteGhostsFromBorderPlanes(cl_context context, cl_command_queue commands, cl_program program, CuboidGpu* d_source, Cuboid* h_source)
     {
         if (d_source == nullptr && h_source == nullptr)
-            throw "CuboidGpu::pasteBorderPlanes: At least one source buffer must be given.";
+            throw "CuboidGpu::pasteGhostsFromBorderPlanes: At least one source buffer must be given.";
 
         // Plane sizes
         int yz = ngh * ogh;
@@ -487,7 +487,7 @@ namespace mgcl
         int err;
 
         // Create the compute kernel from the program
-        const char* kernelName = "paste_border_planes";
+        const char* kernelName = "paste_ghosts_from_border_planes";
         cl_kernel kernel = clCreateKernel(program, kernelName, &err);
         mgcl::mgclCheckError(err, "clCreateKernel");
 
@@ -507,7 +507,7 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
         mgcl::mgclCheckError(err, "Setting kernel arguments");
 
-        // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
+        // one work-item for each border cell. Pad global sizes to fit to local sizes
         size_t global = ressize;
         // const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
         // size_t local = c[0];
@@ -521,7 +521,7 @@ namespace mgcl
         // enqueue kernel
         err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, NULL);
         // err = clEnqueueNDRangeKernel(p.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, &ev);
-        mgcl::mgclCheckError(err, "Enqueueing paste_border_planes kernel");
+        mgcl::mgclCheckError(err, "Enqueueing pasteGhostsFromBorderPlanes kernel");
 
         // if (p.isProfilingEnabled())
         // {
@@ -534,7 +534,7 @@ namespace mgcl
         mgcl::mgclCheckError(clFinish(commands), "clFinish");
 
         err = clReleaseKernel(kernel);
-        mgcl::mgclCheckError(err, "Releasing paste_border_planes kernel");
+        mgcl::mgclCheckError(err, "Releasing pasteGhostsFromBorderPlanes kernel");
 
         if (createdDTmp)
             delete d_tmp;
