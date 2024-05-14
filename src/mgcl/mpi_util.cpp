@@ -672,6 +672,7 @@ namespace mgcl::mpi_util
 
         int m = mgh - 2 * ghosts_m;
         int n = ngh - 2 * ghosts_n;
+        int o = ogh - 2 * ghosts_o;
 
         // int base_yz_front = 0;
         int base_yz_back = ghosts_m * yz;
@@ -734,6 +735,59 @@ namespace mgcl::mpi_util
                            static_cast<void*>(&(rbuf[0][0][base_xz_bottom])), ghosts_n * xz, MPI_DOUBLE, mpiData.down, 0,
                            mpiData.comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
+
+        // Write received left torus of cuboid to send buffer
+        // k0: k index of send buffers for xy planes (left and right)
+        // k1: k index of recv buffers for copy into left send buffer
+        // k2: k index of recv buffers for copy into right send buffer
+        for (int k0 = 0, k1 = ghosts_o, k2 = o;
+             k0 < ghosts_o;
+             k0++, k1++, k2++)
+        {
+
+            // Copying from yz planes (front back)
+            // i0: i index of recv buffers for yz plane (always all i indices)
+            // i1: i index of send buffers xz back ghosts
+            for (int i0 = 0, i1 = m + ghosts_m;
+                 i0 < ghosts_m;
+                 i0++, i1++)
+                for (int j = ghosts_n; j < ghosts_n + n; j++)
+                {
+                    // Left front face - Write ghosts in the send left buffer from recv back buffer
+                    sbuf[0][0][base_xy_left + k0 * xy + i0 * ngh + j] = rbuf[0][0][base_yz_back + i0 * yz + j * ogh + k1];
+
+                    // Left back face - Write ghosts in the send left buffer from recv front buffer
+                    sbuf[0][0][base_xy_left + k0 * xy + i1 * ngh + j] = rbuf[0][0][i0 * yz + j * ogh + k1];
+
+                    // TODO right
+                    // Right front face - Write ghosts in the send right buffer from recv back buffer
+                    sbuf[0][0][base_xy_right + k0 * xy + i0 * ngh + j] = rbuf[0][0][base_yz_back + i0 * yz + j * ogh + k2];
+
+                    // Right back face - Write ghosts in the send right buffer from recv front buffer
+                    sbuf[0][0][base_xy_right + k0 * xy + i1 * ngh + j] = rbuf[0][0][i0 * yz + j * ogh + k2];
+                }
+
+            // Copying from xz planes (top bottom)
+            // j0: j index of recv buffers yz bottom and send both left and right
+            // j1: j index of send buffers xy bottom ghosts (recv top)
+            for (int i = 0; i < mgh; i++)
+                for (int j0 = 0, j1 = n + ghosts_n;
+                     j0 < ghosts_n;
+                     j0++, j1++)
+                {
+                    // Left top edge - Write ghosts in the send left buffer from recv bottom buffer
+                    sbuf[0][0][base_xy_left + k0 * xy + i * ngh + j0] = rbuf[0][0][base_xz_bottom + j0 * xz + i * ogh + k1];
+
+                    // Left bottom edge - Write ghosts in the send left buffer from recv top buffer
+                    sbuf[0][0][base_xy_left + k0 * xy + i * ngh + j1] = rbuf[0][0][base_xz_top + j0 * xz + i * ogh + k1];
+
+                    // Right top edge - Write ghosts in the send left buffer from recv bottom buffer
+                    sbuf[0][0][base_xy_right + k0 * xy + i * ngh + j0] = rbuf[0][0][base_xz_bottom + j0 * xz + i * ogh + k2];
+
+                    // Right bottom face - Write ghosts in the send right buffer from recv top buffer
+                    sbuf[0][0][base_xy_right + k0 * xy + i * ngh + j1] = rbuf[0][0][base_xz_top + j0 * xz + i * ogh + k2];
+                }
+        }
 
         // Send left planes to the right
         err = MPI_Sendrecv(static_cast<void*>(&(sbuf[0][0][base_xy_left])), ghosts_o * xy, MPI_DOUBLE, mpiData.right, 0,
