@@ -1,3 +1,4 @@
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -1262,54 +1263,80 @@ TEST_CASE("mpi_util::sendBorderPlanes")
     int xy = mgh * ngh;
     int ressize = 2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy;
 
-    auto sbuf = std::make_shared<mgcl::Cuboid>(1, 1, ressize);
-    auto rbuf = std::make_shared<mgcl::Cuboid>(1, 1, ressize);
+    // int base_yz_front = 0;
+    int base_yz_back = ghosts_m * yz;
+    int base_xz_top = 2 * ghosts_m * yz;
+    int base_xz_bottom = 2 * ghosts_m * yz + ghosts_n * xz;
+    int base_xy_left = 2 * ghosts_m * yz + 2 * ghosts_n * xz;
+    int base_xy_right = 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy;
 
-    // fill sbuf with unique values on each rank
-    // int val = sbuf->field1d().size() * mpi_rank;
-    for (int i = 0; i < sbuf->field1d().size(); i++)
-    {
-        // sbuf->field1d()[i] = val++;
-        sbuf->field1d()[i] = mpi_rank;
-    }
-    rbuf->fill(-1, false);
+    mgcl::Cuboid sbuf(1, 1, ressize);
+    mgcl::Cuboid rbuf(1, 1, ressize);
+
+    mgcl::Cuboid c(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+    c.fill1dIndex(false);
+
+    // fill planes with 1d index from cuboid
+    for (int i = 0; i < ghosts_m; i++)
+        for (int j = 0; j < ngh; j++)
+            for (int k = 0; k < ogh; k++)
+            {
+                // front
+                sbuf[0][0][i * yz + j * ogh + k] = c[i + ghosts_m][j][k];
+
+                // back
+                sbuf[0][0][base_yz_back + i * yz + j * ogh + k] = c[i + m][j][k];
+            }
+    for (int i = 0; i < mgh; i++)
+        for (int j = 0; j < ghosts_n; j++)
+            for (int k = 0; k < ogh; k++)
+            {
+                // top
+                sbuf[0][0][base_xz_top + j * xz + i * ogh + k] = c[i][j + ghosts_n][k];
+
+                // bottom
+                sbuf[0][0][base_xz_bottom + j * xz + i * ogh + k] = c[i][j + n][k];
+            }
+    for (int i = 0; i < mgh; i++)
+        for (int j = 0; j < ngh; j++)
+            for (int k = 0; k < ghosts_o; k++)
+            {
+                // left
+                sbuf[0][0][base_xy_left + k * xy + i * ngh + j] = c[i][j][k + ghosts_o];
+
+                // right
+                sbuf[0][0][base_xy_right + k * xy + i * ngh + j] = c[i][j][k + o];
+            }
+
+    rbuf.fill(-1, false);
 
     mgcl::mpi_util::sendBorderPlanes(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o,
-                                     *sbuf, *rbuf, mpiData);
+                                     sbuf, rbuf, mpiData);
 
-    for (int idx = 0; idx < sbuf->field1d().size(); idx++)
-    {
-        // Front planes
-        if (idx < ghosts_m * yz)
-        {
-            REQUIRE((*rbuf)[0][0][idx] == mpiData.front);
-        }
-        // Back planes
-        else if (idx < 2 * ghosts_m * yz)
-        {
-            REQUIRE((*rbuf)[0][0][idx] == mpiData.back);
-        }
-        // Top planes
-        else if (idx < 2 * ghosts_m * yz + ghosts_n * xz)
-        {
-            REQUIRE((*rbuf)[0][0][idx] == mpiData.up);
-        }
-        // Bottom planes
-        else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz)
-        {
-            REQUIRE((*rbuf)[0][0][idx] == mpiData.down);
-        }
-        // Left planes
-        else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy)
-        {
-            REQUIRE((*rbuf)[0][0][idx] == mpiData.left);
-        }
-        // Right planes
-        else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy)
-        {
-            REQUIRE((*rbuf)[0][0][idx] == mpiData.right);
-        }
-    }
+    mgcl::MultigridEngine::updateGhostsSeq(c, nullptr, true, true);
 
-    // TODO check copying of corner data between sends
+    // Check against cuboid with updated ghosts
+    // Edges in send buffers for top and down after sending to front and back
+    for (int i = 0; i < ghosts_m; i++)
+        for (int j = 0; j < ghosts_n; j++)
+            for (int k = ghosts_o; k < ghosts_o + o; k++)
+            {
+                CAPTURE(i, j, k);
+                // top (bottom ghosts)
+                REQUIRE(rbuf[0][0][base_xz_top + j * xz + i * ogh + k] == c[i][j + ghosts_n + n][k]);
+
+                // bottom (top ghosts)
+                REQUIRE(rbuf[0][0][base_xz_bottom + j * xz + i * ogh + k] == c[i][j][k]);
+            }
+    // Toruses in send buffers for left and right after sending to top and bottom
+    for (int i = 0; i < mgh; i++)
+        for (int j = 0; j < ngh; j++)
+            for (int k = 0; k < ghosts_o; k++)
+            {
+                // left (right ghosts)
+                REQUIRE(rbuf[0][0][base_xy_left + k * xy + i * ngh + j] == c[i][j][k + ghosts_o + o]);
+
+                // right (left ghosts)
+                REQUIRE(rbuf[0][0][base_xy_right + k * xy + i * ngh + j] == c[i][j][k]);
+            }
 }
