@@ -2484,20 +2484,20 @@ __kernel void paste_ghosts_from_border_planes(
     else if (idx < 2 * ghosts_m * yz + ghosts_n * xz)
     {
         idx -= 2 * ghosts_m * yz; // reset to 0 for index calculation
-        int j = idx / xz + ghosts_n;
-        int i = (idx - (j - ghosts_n) * xz) / ogh;
+        int j = idx / xz + n + ghosts_n;
+        int i = (idx - (j - (n + ghosts_n)) * xz) / ogh;
         int k = idx % ogh;
 
         // Ignore left and right ghost cells, but include front and back ghosts
         if (k >= ghosts_o && k < o + ghosts_o)
             buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_planes[idx + 2 * ghosts_m * yz];
     }
-    // Bottom planes (top ghosts)
+    // // Bottom planes (top ghosts)
     else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz)
     {
         idx -= 2 * ghosts_m * yz + ghosts_n * xz; // reset to 0 for index calculation
-        int j = idx / xz + n;
-        int i = (idx - (j - n) * xz) / ogh;
+        int j = idx / xz;
+        int i = (idx - j * xz) / ogh;
         int k = idx % ogh;
 
         // Ignore left and right ghost cells, but include front and back ghosts
@@ -2508,8 +2508,8 @@ __kernel void paste_ghosts_from_border_planes(
     else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy)
     {
         idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz; // reset to 0 for index calculation
-        int k = idx / xy + ghosts_o;
-        int i = (idx - (k - ghosts_o) * xy) / ngh;
+        int k = idx / xy + o + ghosts_o;
+        int i = (idx - (k - (o + ghosts_o)) * xy) / ngh;
         int j = idx % ngh;
         buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_planes[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz];
     }
@@ -2517,8 +2517,8 @@ __kernel void paste_ghosts_from_border_planes(
     else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy)
     {
         idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy; // reset to 0 for index calculation
-        int k = idx / xy + o;
-        int i = (idx - (k - o) * xy) / ngh;
+        int k = idx / xy;
+        int i = (idx - k * xy) / ngh;
         int j = idx % ngh;
         buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_planes[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy];
     }

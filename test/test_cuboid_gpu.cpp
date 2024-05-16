@@ -620,6 +620,170 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
 TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes")
 {
+    SECTION("indices")
+    {
+        int m = 3;
+        int n = 5;
+        int o = 7;
+        int ghosts_m = 1;
+        int ghosts_n = 2;
+        int ghosts_o = 3;
+        int mgh = m + 2 * ghosts_m;
+        int ngh = n + 2 * ghosts_n;
+        int ogh = o + 2 * ghosts_o;
+        int yz = ngh * ogh;
+        int xz = mgh * ogh;
+        int xy = mgh * ngh;
+        int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
+
+        mgcl::Cuboid h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+        h_cuboid.fill(-1, false);
+        double* buf_cuboid = h_cuboid.field1d().data();
+
+        mgcl::Cuboid h_planes(1, 1, ressize);
+        h_planes.fill1dIndex(false);
+        double* buf_planes = h_planes.field1d().data();
+
+        // Simulate kernel call
+        for (int cnt = 0; cnt < ressize; cnt++)
+        {
+            int idx = cnt;
+            // plane sizes
+            // int yz = ngh * ogh;
+            // int xz = mgh * ogh;
+            // int xy = mgh * ngh;
+
+            // Front planes (back ghosts)
+            if (idx < ghosts_m * yz)
+            {
+                int i = idx / yz + m + ghosts_m;
+                int j = (idx - (i - (m + ghosts_m)) * yz) / ogh;
+                int k = idx % ogh;
+
+                REQUIRE(i >= m + ghosts_m);
+
+                // No corners or edges, only ghosts directly adjacent to real back face
+                if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
+                    buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_planes[idx];
+            }
+            // Back planes (front ghosts)
+            else if (idx < 2 * ghosts_m * yz)
+            {
+                idx -= ghosts_m * yz; // reset to 0 for index calculation
+                int i = idx / yz;
+                int j = (idx - i * yz) / ogh;
+                int k = idx % ogh;
+
+                REQUIRE(i < ghosts_m);
+
+                // No corners or edges, only ghosts directly adjacent to real front face
+                if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
+                    buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_planes[idx + ghosts_m * yz];
+            }
+            // Top planes (bottom ghosts)
+            else if (idx < 2 * ghosts_m * yz + ghosts_n * xz)
+            {
+                idx -= 2 * ghosts_m * yz; // reset to 0 for index calculation
+                int j = idx / xz + n + ghosts_n;
+                int i = (idx - (j - (n + ghosts_n)) * xz) / ogh;
+                int k = idx % ogh;
+
+                // Ignore left and right ghost cells, but include front and back ghosts
+                if (k >= ghosts_o && k < o + ghosts_o)
+                    buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_planes[idx + 2 * ghosts_m * yz];
+            }
+            // // Bottom planes (top ghosts)
+            else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz)
+            {
+                idx -= 2 * ghosts_m * yz + ghosts_n * xz; // reset to 0 for index calculation
+                int j = idx / xz;
+                int i = (idx - j * xz) / ogh;
+                int k = idx % ogh;
+
+                // Ignore left and right ghost cells, but include front and back ghosts
+                if (k >= ghosts_o && k < o + ghosts_o)
+                    buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_planes[idx + 2 * ghosts_m * yz + ghosts_n * xz];
+            }
+            // Left planes (right ghosts)
+            else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy)
+            {
+                idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz; // reset to 0 for index calculation
+                int k = idx / xy + o + ghosts_o;
+                int i = (idx - (k - (o + ghosts_o)) * xy) / ngh;
+                int j = idx % ngh;
+                buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_planes[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz];
+            }
+            // Right planes (left ghosts)
+            else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy)
+            {
+                idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy; // reset to 0 for index calculation
+                int k = idx / xy;
+                int i = (idx - k * xy) / ngh;
+                int j = idx % ngh;
+                buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_planes[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy];
+            }
+        }
+        // End kernel
+
+        // Check that all real cells were left untouched
+        for (int i = ghosts_m; i < m + ghosts_m; i++)
+            for (int j = ghosts_n; j < n + ghosts_n; j++)
+                for (int k = ghosts_o; k < o + ghosts_o; k++)
+                {
+                    CAPTURE(i, j, k);
+                    REQUIRE(h_cuboid[i][j][k] == -1);
+                }
+
+        // Check that all ghost cells were filled with correct values
+        for (int i = 0; i < mgh; i++)
+            for (int j = 0; j < ngh; j++)
+                for (int k = 0; k < ogh; k++)
+                {
+                    if ((i < ghosts_m || i >= m + ghosts_m) && (j < ghosts_n || j >= n + ghosts_n) && (k < ghosts_o || k >= o + ghosts_o))
+                    {
+                        CAPTURE(i, j, k);
+                        REQUIRE(h_cuboid[i][j][k] >= 0);
+                    }
+                }
+
+        // int cnt = 0;
+        // // front planes (yz)
+        // for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
+        //     for (int j = 0; j < ngh; j++)             // all real cells in y-dir
+        //         for (int k = 0; k < ogh; k++)         // all real cells in z-dir
+        //             REQUIRE(buf_planes[cnt++] == h_cuboid[i][j][k]);
+
+        // // back planes (yz)
+        // for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
+        //     for (int j = 0; j < ngh; j++)      // all real cells in y-dir
+        //         for (int k = 0; k < ogh; k++)  // all real cells in z-dir
+        //             REQUIRE(buf_planes[cnt++] == h_cuboid[i][j][k]);
+
+        // // top planes (xz)
+        // for (int j = ghosts_n; j < 2 * ghosts_n; j++)
+        //     for (int i = 0; i < mgh; i++)
+        //         for (int k = 0; k < ogh; k++)
+        //             REQUIRE(buf_planes[cnt++] == h_cuboid[i][j][k]);
+
+        // // bottom planes (xz)
+        // for (int j = n; j < n + ghosts_n; j++)
+        //     for (int i = 0; i < mgh; i++)
+        //         for (int k = 0; k < ogh; k++)
+        //             REQUIRE(buf_planes[cnt++] == h_cuboid[i][j][k]);
+
+        // // left planes (xy)
+        // for (int k = ghosts_o; k < 2 * ghosts_o; k++)
+        //     for (int i = 0; i < mgh; i++)
+        //         for (int j = 0; j < ngh; j++)
+        //             REQUIRE(buf_planes[cnt++] == h_cuboid[i][j][k]);
+
+        // // right planes (xy)
+        // for (int k = o; k < o + ghosts_o; k++)
+        //     for (int i = 0; i < mgh; i++)
+        //         for (int j = 0; j < ngh; j++)
+        //             REQUIRE(buf_planes[cnt++] == h_cuboid[i][j][k]);
+    }
+
     // SECTION("indices")
     // {
     //     int m = 3;
