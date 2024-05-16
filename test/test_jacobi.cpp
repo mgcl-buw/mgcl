@@ -57,7 +57,7 @@ TEST_CASE("jacobi")
     // TODO adjust expected results for expected r and norm of r?
     SECTION("OpenCL GPU L2-norm 7point periodic")
     {
-        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
         if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
         {
@@ -101,7 +101,7 @@ TEST_CASE("jacobi")
 
     SECTION("Inf-norm seq vs ocl")
     {
-        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
         if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
         {

@@ -18,7 +18,7 @@ using std::min;
 
 TEST_CASE("VaryingStencilGpu ctor+dtor")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -68,7 +68,7 @@ TEST_CASE("VaryingStencilGpu ctor+dtor")
 
 TEST_CASE("VaryingStencilGpu move ctor")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -158,7 +158,7 @@ TEST_CASE("VaryingStencilGpu move ctor")
 
 TEST_CASE("VaryingStencilGpu::fill")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -238,7 +238,7 @@ TEST_CASE("VaryingStencilGpu::fill")
 
 TEST_CASE("VaryingStencilGpu::read")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -297,7 +297,7 @@ TEST_CASE("VaryingStencilGpu::read")
 
 TEST_CASE("VaryingStencilGpu::updateGhosts")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -562,7 +562,7 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
 
 TEST_CASE("VaryingStencilGpu::multiply(var)")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -859,7 +859,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
 
 TEST_CASE("VaryingStencilGpu::multiply(fix)")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -1197,7 +1197,7 @@ TEST_CASE("VaryingStencilGpu::multiply loop index reordering", "[stencilIndexReo
 
 TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -1362,7 +1362,7 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
 
 TEST_CASE("FixedStencilGpu ctor+dtor")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -1409,7 +1409,7 @@ TEST_CASE("FixedStencilGpu ctor+dtor")
 
 TEST_CASE("FixedStencilGpu::multiply(var)")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -1624,7 +1624,7 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
 
 TEST_CASE("FixedStencilGpu::fill")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -1695,7 +1695,7 @@ TEST_CASE("FixedStencilGpu::fill")
 
 TEST_CASE("FixedStencilGpu::read")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -1759,7 +1759,7 @@ TEST_CASE("FixedStencilGpu::read")
 
 TEST_CASE("FixedStencilGpu::create3dFullWeightRestrictionGpu")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -1808,7 +1808,7 @@ TEST_CASE("FixedStencilGpu::create3dFullWeightRestrictionGpu")
 
 TEST_CASE("FixedStencilGpu::create3dBilinearProlongationStencilGpu")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {

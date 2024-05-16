@@ -441,6 +441,7 @@ TEST_CASE("MPI_jacobi_ocl_Laplace_n_processes", "[mpiN]")
     auto& p = *pptr;
     p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setGhosts(gh);
     p.setGhostsIn(gh);
     p.setMpiComm(mpi_comm);
@@ -636,6 +637,7 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_n_processes", "[mpiN]")
     auto& p = *pptr;
     p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setGhosts(gh);
     p.setGhostsIn(gh);
     p.setMpiComm(mpi_comm);

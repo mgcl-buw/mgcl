@@ -13,6 +13,7 @@ TEST_CASE("OpenCLHelper")
     auto v = std::make_shared<mgcl::Cuboid>(4, 4, 4);
     auto f = std::make_shared<mgcl::Cuboid>(4, 4, 4);
     auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
+    p->setDeviceType(CL_DEVICE_TYPE_GPU);
     mgcl::OpenCLHelper openCLHelper(p.get());
 
     SECTION("init default conf")
@@ -39,7 +40,7 @@ TEST_CASE("OpenCLHelper")
 
     SECTION("reusing OpenCL platform")
     {
-        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
         if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
         {

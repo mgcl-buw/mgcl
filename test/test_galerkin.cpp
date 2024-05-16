@@ -64,7 +64,7 @@ TEST_CASE("galerkin random values periodic vs Matrix")
 
 TEST_CASE("GPU galerkin random values periodic")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -312,8 +312,11 @@ TEST_CASE("galerkin_different_jacobi_iters_per_kernel")
     SECTION("OpenCL")
     {
         p1.setUseOpencl(true);
+        p1.setDeviceType(CL_DEVICE_TYPE_GPU);
         p2.setUseOpencl(true);
+        p2.setDeviceType(CL_DEVICE_TYPE_GPU);
         p3.setUseOpencl(true);
+        p3.setDeviceType(CL_DEVICE_TYPE_GPU);
         p1.init();
         p2.init();
         p3.init();

@@ -306,6 +306,7 @@ TEST_CASE("MPI_residual_ocl_VaryingStencil_n_processes", "[mpiN]")
     auto& p = *pptr;
     p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setGhosts(gh);
     p.setGhostsIn(gh);
     p.setMpiComm(mpi_comm);

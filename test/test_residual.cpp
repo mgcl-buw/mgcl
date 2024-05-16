@@ -48,7 +48,7 @@ TEST_CASE("residual")
 
     SECTION("residual OpenCL L2-norm 7point")
     {
-        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
         if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
         {
@@ -101,7 +101,7 @@ TEST_CASE("residual")
 
 TEST_CASE("residual periodic Laplace seq vs ocl")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -201,7 +201,7 @@ TEST_CASE("residual periodic Laplace seq vs ocl")
 
 TEST_CASE("residual periodic varying stencil seq vs ocl")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {

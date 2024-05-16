@@ -15,6 +15,7 @@ TEST_CASE("correct_error")
     mgcl::Problem p(m, n, o, f, v);
 
     p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.init();
 
     auto& lv = p.getLevelAt(0);

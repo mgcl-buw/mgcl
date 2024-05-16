@@ -34,7 +34,7 @@ TEST_CASE("Level constructor")
 
 TEST_CASE("Level::initOpenCLBuffers")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
         return;

@@ -60,6 +60,7 @@ TEST_CASE("profiling_setup")
     mgcl::Problem p(m, n, o, f, v);
 
     p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setProfilingEnabled(true);
 
     REQUIRE(p.getProfilingData() != nullptr);
@@ -78,6 +79,7 @@ TEST_CASE("profiling_kernels")
     mgcl::Problem p(m, n, o, f, v);
 
     p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setProfilingEnabled(true);
     p.setStencilType(mgcl::MGCL_VARYING);
     auto sv = p.getStencilValues();

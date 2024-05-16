@@ -492,6 +492,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
         auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
         mgcl::Problem p(1, 1, 1, f, v);
         p.setUseOpencl(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.init();
 
         {
@@ -515,6 +516,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
         auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
         mgcl::Problem p(1, 1, 1, f, v);
         p.setUseOpencl(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.init();
 
         int m = 3;
@@ -834,6 +836,7 @@ TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes")
     //     auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
     //     mgcl::Problem p(1, 1, 1, f, v);
     //     p.setUseOpencl(true);
+    // p.setDeviceType(CL_DEVICE_TYPE_GPU);
     //     p.init();
 
     //     {

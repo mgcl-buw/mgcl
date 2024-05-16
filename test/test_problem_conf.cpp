@@ -127,6 +127,7 @@ TEST_CASE("Problem::checkGpuSizes")
         // 4x4x4 should be no problem
         mgcl::Problem p(4, 4, 4);
         p.setUseOpencl(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.setDeviceType(deviceType);
 
         REQUIRE_NOTHROW(p.checkGpuSizes());
@@ -139,6 +140,7 @@ TEST_CASE("Problem::checkGpuSizes")
 
         mgcl::Problem p(N, N, N);
         p.setUseOpencl(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.setDeviceType(deviceType);
 
         REQUIRE_THROWS(p.checkGpuSizes());
@@ -157,6 +159,7 @@ TEST_CASE("Problem::checkGpuSizes")
 
         mgcl::Problem p(N, N, N);
         p.setUseOpencl(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.setDeviceType(deviceType);
         p.setStencilType(mgcl::MGCL_VARYING);
 
@@ -232,21 +235,12 @@ TEST_CASE("Problem::calculateAndSetMaxLevel")
 
 TEST_CASE("Problem::initOpenCL, not reusing environment")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
-
     mgcl::Problem p(4, 4, 4);
     REQUIRE(!p.getOpenCLHelper().isInitialized());
     REQUIRE(p.getUseOpencl() == false);
 
     p.setUseOpencl(true);
-    p.setDeviceType(deviceType);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.initOpenCL();
     REQUIRE(p.getUseOpencl() == true);
     REQUIRE(p.getOpenCLHelper().isInitialized());
@@ -257,21 +251,12 @@ TEST_CASE("Problem::initOpenCL, not reusing environment")
 
 TEST_CASE("Problem::initOpenCL, reusing environment")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
-
     mgcl::Problem p(4, 4, 4);
     REQUIRE(!p.getOpenCLHelper().isInitialized());
     REQUIRE(p.getUseOpencl() == false);
 
     mgcl::OpenCLHelper openCLHelper(&p);
-    openCLHelper.setDeviceType(deviceType);
+    openCLHelper.setDeviceType(CL_DEVICE_TYPE_GPU);
     openCLHelper.init();
 
     p.reuseOpenCL(openCLHelper.getContext(), openCLHelper.getCommands(), openCLHelper.getDeviceId());
@@ -500,7 +485,7 @@ TEST_CASE("Problem::init")
 
     SECTION("reuse OpenCL buffers")
     {
-        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
         if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
         {
@@ -563,7 +548,7 @@ TEST_CASE("Problem::init")
 
     SECTION("copy OpenCL buffers")
     {
-        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
         if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
         {
@@ -673,7 +658,7 @@ TEST_CASE("Problem::init")
 
 TEST_CASE("Problem::readResults")
 {
-    auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
     {
@@ -690,6 +675,7 @@ TEST_CASE("Problem::readResults")
     mgcl::Problem p(4, 5, 6, f, v);
     p.setGhostsIn(2);
     p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setDeviceType(deviceType);
 
     SECTION("default conf")

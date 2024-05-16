@@ -255,6 +255,7 @@ TEST_CASE("MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p")
         // p.setMaxiterVcycles(5);
         p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.setUseOpencl(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.setReadResults(true);
         p.setGhosts(gh);
         p.setGhostsIn(ghin);
@@ -714,6 +715,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_gt_0_Laplace7p")
     // p.setMaxiterVcycles(1);
     p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setReadResults(true);
     p.setGhosts(gh);
     p.setGhostsIn(ghin);
@@ -1205,6 +1207,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_1_Varying27p")
     p.setMaxiterVcycles(maxIterVCycles);
     p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setReadResults(true);
     p.setOmega(omega);
     p.setNu1(nu1);
@@ -1373,6 +1376,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
     p.setMaxiterVcycles(maxIterVCycles);
     p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setReadResults(true);
     p.setOmega(omega);
     p.setNu1(nu1);
@@ -1544,6 +1548,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters")
     p.setMaxiterVcycles(maxIterVCycles);
     p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setReadResults(true);
     p.setOmega(omega);
     p.setNu1(nu1);
@@ -1727,6 +1732,7 @@ TEST_CASE("MPI_vcycle_multiple_solve_calls")
     // p.setMaxiterVcycles(1);
     p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setReadResults(true);
     p.setGhosts(gh);
     p.setGhostsIn(ghin);
@@ -1890,6 +1896,7 @@ TEST_CASE("MPI_vcycle_different_relres")
     p.setTol(tol);
     p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setReadResults(true);
     p.setGhosts(gh);
     p.setGhostsIn(ghin);

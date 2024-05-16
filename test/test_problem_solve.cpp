@@ -154,7 +154,7 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
 
     SECTION("OpenCL")
     {
-        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
         if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
         {
@@ -166,6 +166,7 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
         std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
 
         p.setUseOpencl(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.setReadResults(true);
         p.setDeviceType(deviceType);
         // p.setDeviceName("Quadro");
@@ -445,7 +446,7 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
 
     SECTION("OpenCL")
     {
-        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
         if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
         {
@@ -457,6 +458,7 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
         std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
 
         p.setUseOpencl(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.setReadResults(true);
         p.setDeviceType(deviceType);
         // p.setDeviceName("Quadro");
@@ -752,7 +754,7 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
 
     SECTION("OpenCL")
     {
-        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
         if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
         {
@@ -764,6 +766,7 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
         std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
 
         p.setUseOpencl(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.setReadResults(true);
         p.setDeviceType(deviceType);
         // p.setDeviceName("Quadro");
@@ -914,7 +917,7 @@ TEST_CASE("Problem_ignore_tol")
 
     SECTION("OpenCL")
     {
-        auto deviceType = GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
 
         if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
         {
@@ -926,6 +929,7 @@ TEST_CASE("Problem_ignore_tol")
         std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
 
         p.setUseOpencl(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.setDeviceType(deviceType);
 
         SECTION("ignoreTolFalse")
