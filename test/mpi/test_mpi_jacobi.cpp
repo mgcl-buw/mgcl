@@ -426,6 +426,7 @@ TEST_CASE("MPI_jacobi_ocl_Laplace_n_processes", "[mpiN]")
     // Init global problem to create all needed structures
     auto pptr_glob = std::make_shared<mgcl::Problem>(m, n, o, f_glob_ptr, v_glob_ptr);
     auto& p_glob = *pptr_glob;
+    p_glob.setDeviceType(CL_DEVICE_TYPE_GPU);
     p_glob.setUseOpencl(true);
     p_glob.setGhosts(gh);
     p_glob.setGhostsIn(gh);
@@ -438,6 +439,7 @@ TEST_CASE("MPI_jacobi_ocl_Laplace_n_processes", "[mpiN]")
     // Init Problem to create all needed structures
     auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, flptr, vlptr, m, n, o);
     auto& p = *pptr;
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
     p.setGhosts(gh);
     p.setGhostsIn(gh);
@@ -611,6 +613,7 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_n_processes", "[mpiN]")
     // Init global problem to create all needed structures
     auto pptr_glob = std::make_shared<mgcl::Problem>(m, n, o, f_glob_ptr, v_glob_ptr);
     auto& p_glob = *pptr_glob;
+    p_glob.setDeviceType(CL_DEVICE_TYPE_GPU);
     p_glob.setUseOpencl(true);
     p_glob.setGhosts(gh);
     p_glob.setGhostsIn(gh);
@@ -631,6 +634,7 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_n_processes", "[mpiN]")
     // Init Problem to create all needed structures
     auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, flptr, vlptr, m, n, o);
     auto& p = *pptr;
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
     p.setGhosts(gh);
     p.setGhostsIn(gh);

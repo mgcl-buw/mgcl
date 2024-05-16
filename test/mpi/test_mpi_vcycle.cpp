@@ -253,6 +253,7 @@ TEST_CASE("MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p")
         // Create local problem
         mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
         // p.setMaxiterVcycles(5);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.setUseOpencl(true);
         p.setReadResults(true);
         p.setGhosts(gh);
@@ -711,6 +712,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_gt_0_Laplace7p")
     // Create local problem
     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
     // p.setMaxiterVcycles(1);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
     p.setReadResults(true);
     p.setGhosts(gh);
@@ -1201,6 +1203,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_1_Varying27p")
     // Create local problem
     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
     p.setMaxiterVcycles(maxIterVCycles);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
     p.setReadResults(true);
     p.setOmega(omega);
@@ -1368,6 +1371,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
     // Create local problem
     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
     p.setMaxiterVcycles(maxIterVCycles);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
     p.setReadResults(true);
     p.setOmega(omega);
@@ -1538,6 +1542,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters")
     // Create local problem
     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
     p.setMaxiterVcycles(maxIterVCycles);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
     p.setReadResults(true);
     p.setOmega(omega);
@@ -1720,6 +1725,7 @@ TEST_CASE("MPI_vcycle_multiple_solve_calls")
     // Create local problem using OpenCL
     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
     // p.setMaxiterVcycles(1);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
     p.setReadResults(true);
     p.setGhosts(gh);
@@ -1882,6 +1888,7 @@ TEST_CASE("MPI_vcycle_different_relres")
     // p.setMaxiterVcycles(1);
     p.setMaxiterVcycles(maxIterVCycles);
     p.setTol(tol);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
     p.setReadResults(true);
     p.setGhosts(gh);
