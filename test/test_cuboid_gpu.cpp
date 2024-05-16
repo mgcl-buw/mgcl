@@ -692,7 +692,7 @@ TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes")
                 if (k >= ghosts_o && k < o + ghosts_o)
                     buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_planes[idx + 2 * ghosts_m * yz];
             }
-            // // Bottom planes (top ghosts)
+            // Bottom planes (top ghosts)
             else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz)
             {
                 idx -= 2 * ghosts_m * yz + ghosts_n * xz; // reset to 0 for index calculation
@@ -734,7 +734,7 @@ TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes")
                     REQUIRE(h_cuboid[i][j][k] == -1);
                 }
 
-        // Check that all ghost cells were filled with correct values
+        // Check that all ghost cells were filled with any value
         for (int i = 0; i < mgh; i++)
             for (int j = 0; j < ngh; j++)
                 for (int k = 0; k < ogh; k++)
@@ -746,42 +746,85 @@ TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes")
                     }
                 }
 
-        // int cnt = 0;
-        // // front planes (yz)
-        // for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
-        //     for (int j = 0; j < ngh; j++)             // all real cells in y-dir
-        //         for (int k = 0; k < ogh; k++)         // all real cells in z-dir
-        //             REQUIRE(buf_planes[cnt++] == h_cuboid[i][j][k]);
+        // Check that ghost slices are equal to the planes
+        auto slice_front = h_cuboid.sliceIncGhosts(0, ghosts_m - 1, 0, ngh - 1, 0, ogh - 1);
+        auto slice_back = h_cuboid.sliceIncGhosts(ghosts_m + m, mgh - 1, 0, ngh - 1, 0, ogh - 1);
+        auto slice_top = h_cuboid.sliceIncGhosts(0, mgh - 1, 0, ghosts_n - 1, 0, ogh - 1);
+        auto slice_bottom = h_cuboid.sliceIncGhosts(0, mgh - 1, ghosts_n + n, ngh - 1, 0, ogh - 1);
+        auto slice_left = h_cuboid.sliceIncGhosts(0, mgh - 1, 0, ngh - 1, 0, ghosts_o - 1);
+        auto slice_right = h_cuboid.sliceIncGhosts(0, mgh - 1, 0, ngh - 1, o + ghosts_o, ogh - 1);
 
-        // // back planes (yz)
-        // for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
-        //     for (int j = 0; j < ngh; j++)      // all real cells in y-dir
-        //         for (int k = 0; k < ogh; k++)  // all real cells in z-dir
-        //             REQUIRE(buf_planes[cnt++] == h_cuboid[i][j][k]);
-
-        // // top planes (xz)
-        // for (int j = ghosts_n; j < 2 * ghosts_n; j++)
-        //     for (int i = 0; i < mgh; i++)
-        //         for (int k = 0; k < ogh; k++)
-        //             REQUIRE(buf_planes[cnt++] == h_cuboid[i][j][k]);
-
-        // // bottom planes (xz)
-        // for (int j = n; j < n + ghosts_n; j++)
-        //     for (int i = 0; i < mgh; i++)
-        //         for (int k = 0; k < ogh; k++)
-        //             REQUIRE(buf_planes[cnt++] == h_cuboid[i][j][k]);
-
-        // // left planes (xy)
-        // for (int k = ghosts_o; k < 2 * ghosts_o; k++)
-        //     for (int i = 0; i < mgh; i++)
-        //         for (int j = 0; j < ngh; j++)
-        //             REQUIRE(buf_planes[cnt++] == h_cuboid[i][j][k]);
-
-        // // right planes (xy)
-        // for (int k = o; k < o + ghosts_o; k++)
-        //     for (int i = 0; i < mgh; i++)
-        //         for (int j = 0; j < ngh; j++)
-        //             REQUIRE(buf_planes[cnt++] == h_cuboid[i][j][k]);
+        int idx = 0;
+        // Back ghosts
+        for (int i = 0; i < slice_back->getMgh(); i++)
+            for (int j = 0; j < slice_back->getNgh(); j++)
+                for (int k = 0; k < slice_back->getOgh(); k++)
+                {
+                    // No corners or edges, only ghosts directly adjacent to real back face
+                    if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
+                    {
+                        CAPTURE(i, j, k);
+                        REQUIRE((*slice_back)[i][j][k] == buf_planes[idx]);
+                    }
+                    idx++;
+                }
+        // Front ghosts
+        for (int i = 0; i < slice_front->getMgh(); i++)
+            for (int j = 0; j < slice_front->getNgh(); j++)
+                for (int k = 0; k < slice_front->getOgh(); k++)
+                {
+                    // No corners or edges, only ghosts directly adjacent to real back face
+                    if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
+                    {
+                        CAPTURE(i, j, k);
+                        REQUIRE((*slice_front)[i][j][k] == buf_planes[idx]);
+                    }
+                    idx++;
+                }
+        // Bottom ghosts
+        for (int j = 0; j < slice_bottom->getNgh(); j++)
+            for (int i = 0; i < slice_bottom->getMgh(); i++)
+                for (int k = 0; k < slice_bottom->getOgh(); k++)
+                {
+                    // Ignore left and right ghost cells, but include front and back ghosts
+                    if (k >= ghosts_o && k < o + ghosts_o)
+                    {
+                        CAPTURE(i, j, k);
+                        REQUIRE((*slice_bottom)[i][j][k] == buf_planes[idx]);
+                    }
+                    idx++;
+                }
+        // Top ghosts
+        for (int j = 0; j < slice_top->getNgh(); j++)
+            for (int i = 0; i < slice_top->getMgh(); i++)
+                for (int k = 0; k < slice_top->getOgh(); k++)
+                {
+                    // Ignore left and right ghost cells, but include front and back ghosts
+                    if (k >= ghosts_o && k < o + ghosts_o)
+                    {
+                        CAPTURE(i, j, k);
+                        REQUIRE((*slice_top)[i][j][k] == buf_planes[idx]);
+                    }
+                    idx++;
+                }
+        // Right ghosts
+        for (int k = 0; k < slice_right->getOgh(); k++)
+            for (int i = 0; i < slice_right->getMgh(); i++)
+                for (int j = 0; j < slice_right->getNgh(); j++)
+                {
+                    CAPTURE(i, j, k);
+                    REQUIRE((*slice_right)[i][j][k] == buf_planes[idx]);
+                    idx++;
+                }
+        // Left ghosts
+        for (int k = 0; k < slice_left->getOgh(); k++)
+            for (int i = 0; i < slice_left->getMgh(); i++)
+                for (int j = 0; j < slice_left->getNgh(); j++)
+                {
+                    CAPTURE(i, j, k);
+                    REQUIRE((*slice_left)[i][j][k] == buf_planes[idx]);
+                    idx++;
+                }
     }
 
     // SECTION("indices")
