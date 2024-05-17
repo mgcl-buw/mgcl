@@ -361,6 +361,7 @@ TEST_CASE("bench_data_transfer_MPI")
 // Run with e.g.: benchmarks bench_data_transfer_host_device
 TEST_CASE("bench_extract_paste_ghosts")
 {
+    throw "Update me! Old kernel in use!";
     using std::min;
 
     if (CLI_ARGS::grids.size() == 0 && (CLI_ARGS::gridsMin.size() == 0 || CLI_ARGS::gridsMax.size() == 0))
