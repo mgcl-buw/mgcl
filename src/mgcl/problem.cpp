@@ -335,6 +335,21 @@ namespace mgcl
         {
             initOpenCL();
             checkGpuSizes();
+
+            // If using MPI and OCL, create temporary planes buffer for ghost updates once and reuse on each level
+            // TODO change ghosts to ghosts_m etc?
+            if (useMpi() && mpiSize() > 1)
+            {
+                int mgh = m + 2 * ghosts;
+                int ngh = n + 2 * ghosts;
+                int ogh = o + 2 * ghosts;
+
+                int yz = ngh * ogh;
+                int xz = mgh * ogh;
+                int xy = mgh * ngh;
+                int ressize = 2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts;
+                dPlanesBuf = std::make_shared<CuboidGpu>(getContext(), CL_MEM_READ_WRITE, 1, 1, ressize, 0, 0, 0);
+            }
         }
 
         // check opencl components if device buffers should be reused
@@ -717,6 +732,23 @@ namespace mgcl
     void Problem::setF(std::shared_ptr<Cuboid> f_)
     {
         f = f_;
+    }
+
+    CuboidGpu& Problem::getDPlanesBuf() const
+    {
+        if (!dPlanesBuf)
+            throw "dPlanesBuf is null.";
+        return *dPlanesBuf;
+    }
+
+    CuboidGpu* Problem::getDPlanesBufPtr() const
+    {
+        return dPlanesBuf.get();
+    }
+
+    void Problem::setDPlanesBuf(std::shared_ptr<CuboidGpu> dPlanesBuf_)
+    {
+        dPlanesBuf = dPlanesBuf_;
     }
 
     int Problem::getO() const

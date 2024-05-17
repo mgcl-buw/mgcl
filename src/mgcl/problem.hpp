@@ -53,6 +53,11 @@ namespace mgcl
         std::shared_ptr<CuboidGpu> dF = nullptr;
         std::shared_ptr<CuboidGpu> dStencilValues = nullptr;
 
+        // Temporary buffer for storing cuboid planes for ghost update. Must be greater or equal to the amount
+        // of ghost cells of the cuboid that is being updated. It is initialized based on dVIn of level 0 and
+        // thus should be big enough for all cuboids.
+        std::shared_ptr<CuboidGpu> dPlanesBuf = nullptr;
+
         /* local grid dimensions (on one MPI process if MPI is used) */
         int m;
         int n;
@@ -219,6 +224,10 @@ namespace mgcl
         Cuboid& getF() const;
         std::shared_ptr<Cuboid> getFPtr() const;
         void setF(std::shared_ptr<Cuboid> f_);
+
+        CuboidGpu* getDPlanesBufPtr() const;
+        CuboidGpu& getDPlanesBuf() const;
+        void setDPlanesBuf(const std::shared_ptr<CuboidGpu> dPlanesBuf_);
 
         int getM() const;
 

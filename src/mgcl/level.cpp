@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cstddef> // for NULL
 #include <iostream>
+#include <memory>
 #include <stdexcept> // for invalid_argument
 #include <string>    // for to_string, allocator, basic_string
 

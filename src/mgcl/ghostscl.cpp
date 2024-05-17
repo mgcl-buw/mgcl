@@ -420,17 +420,23 @@ namespace mgcl
             return;
         }
 
-        // Create a temporary device buffer for extracting border planes intermediate storage for received data
-        // TODO maybe do this in init and reuse
+        if (p.getDPlanesBufPtr() == nullptr)
+            throw "MultigridEngine::updateGhostsOclMpi: dPlanesBufPtr is null";
+
+        // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
         // TODO update check gpu storage size in problem init
+        // TODO maybe disable check in UNSAFE mode
         int yz = d_buf.getNgh() * d_buf.getOgh();
         int xz = d_buf.getMgh() * d_buf.getOgh();
         int xy = d_buf.getMgh() * d_buf.getNgh();
         int ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
-        mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, 1, 1, ressize, 0, 0, 0);
+
+        auto dPlanesBuf = p.getDPlanesBufPtr();
+        if (dPlanesBuf->getSize() < ressize)
+            throw "MultigridEngine::updateGhostsOclMpi: planesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf->getSize());
 
         // Extract border planes from the buffer
-        auto sbuf_ptr = d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr);
+        auto sbuf_ptr = d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(), dPlanesBuf, nullptr);
         auto rbuf_ptr = sbuf_ptr->copyShallow();
         auto& sbuf = *sbuf_ptr;
         auto& rbuf = *rbuf_ptr;

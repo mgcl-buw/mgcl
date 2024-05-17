@@ -371,6 +371,8 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
     auto& p = *pptr;
     p.setGhosts(1);
     p.setMpiComm(mpi_comm);
+    p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.init();
 
     // Check on level 0
@@ -405,14 +407,13 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
     auto& cl = *clptr;
 
     // Create ocl buffer
-    mgcl_test::TestUtility tu(pptr);
-    auto d_cl = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, cl);
+    auto d_cl = std::make_shared<mgcl::CuboidGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, cl);
 
     // Update ghosts of test data
     mgcl::MultigridEngine::updateGhosts(p, *d_cl, mpiData, false);
-    tu.finish();
+    p.getOpenCLHelper().finish();
 
-    auto cl_res_ptr = d_cl->read(tu.getCommands(), nullptr, true);
+    auto cl_res_ptr = d_cl->read(p.getCommands(), nullptr, true);
     auto& cl_res = *cl_res_ptr;
 
     // cl.dumpToFile("cl" + std::to_string(mpi_rank) + ".txt");

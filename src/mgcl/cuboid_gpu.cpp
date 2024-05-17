@@ -479,7 +479,7 @@ namespace mgcl
         mgcl::mgclCheckError(err, "Releasing extract_border_planes kernel");
 
         // Read into h_target
-        d_target->read(commands, retraw, true);
+        d_target->read1d(commands, ressize, retraw, true);
 
         if (createdDTarget)
             delete d_target;
