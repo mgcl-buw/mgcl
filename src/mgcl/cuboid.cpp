@@ -541,4 +541,9 @@ namespace mgcl
     {
         return std::make_unique<Cuboid>(m, n, o, ghostsM, ghostsN, ghostsO);
     }
+
+    int Cuboid::getSize() const
+    {
+        return mgh * ngh * ogh;
+    }
 }

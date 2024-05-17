@@ -156,6 +156,39 @@ namespace mgcl
     }
 
     /**
+     * @brief Reads the buffer into host_ptr, if not null, or a new Cuboid otherwise. Dimensions of host_ptr must
+     *   *not* match, instead size elements are read but which must be less than the target size.
+     *   If a new cuboid is created, it has the size 1x1xsize and ghosts=0.
+     *
+     * @param size Number of elements to read
+     * @param host_ptr Cuboid that data gets read into.
+     * @param blocking Blocking read, if true.
+     * @return std::unique_ptr<Cuboid> New Cuboid that data gets read into, if host_ptr is null. If host_ptr is not
+     *   null, a nullptr will be returned.
+     * @throws string If Dimensions do not match.
+     */
+    std::unique_ptr<Cuboid> CuboidGpu::read1d(cl_command_queue commands, int _size, Cuboid* const host_ptr, bool blocking) const
+    {
+        if (host_ptr)
+        {
+            if (host_ptr->getSize() < _size)
+                throw "CuboidGpu::read1d: Target Cuboid is too small!";
+        }
+
+        if (size < _size)
+            throw "CuboidGpu::read1d: Source Cuboid is smaller than requested read size!";
+
+        auto ret = host_ptr ? nullptr : std::make_unique<Cuboid>(1, 1, _size);
+
+        auto ptr = host_ptr ? host_ptr : ret.get();
+        int err = clEnqueueReadBuffer(commands, buffer, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * _size,
+                                      ptr->getData()[0][0], 0, NULL, NULL);
+        mgcl::mgclCheckError(err, "clEnqueueReadBuffer");
+
+        return ret;
+    }
+
+    /**
      * @brief Writes data from host_data into the gpu buffer.
      *
      * @param commands OpenCL command queue

@@ -58,6 +58,7 @@ namespace mgcl
         int getOgh() const;
         int getNgh() const;
         int getMgh() const;
+        int getSize() const;
 
         static Cuboid copyFrom(Cuboid& c);
     };

@@ -47,6 +47,7 @@ namespace mgcl
         ~CuboidGpu();
 
         std::unique_ptr<Cuboid> read(cl_command_queue commands, Cuboid* const host_ptr, bool blocking) const;
+        std::unique_ptr<Cuboid> read1d(cl_command_queue commands, int size, Cuboid* const host_ptr, bool blocking) const;
         void write(cl_command_queue commands, const Cuboid& host_data, bool blocking);
         void fill(cl_command_queue commands, double data, bool blocking);
 
