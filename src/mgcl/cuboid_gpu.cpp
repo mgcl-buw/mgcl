@@ -1,5 +1,6 @@
 #include "cuboid_gpu.hpp"
 
+#include "kernel_config.hpp"
 #include "opencl_helper.hpp"
 
 #include <fstream>
@@ -419,7 +420,8 @@ namespace mgcl
      * @return std::unique_ptr<Cuboid>
      */
     std::unique_ptr<Cuboid> CuboidGpu::extractBorderPlanes(cl_command_queue commands, cl_program program,
-                                                           CuboidGpu* d_target, Cuboid* h_target)
+                                                           CuboidGpu* d_target, Cuboid* h_target,
+                                                           mgcl::conf::KernelConfig* conf)
     {
         // Plane sizes
         int yz = ngh * ogh;
@@ -472,9 +474,13 @@ namespace mgcl
 
         // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
         size_t global = ressize;
-        // const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
-        // size_t local = c[0];
         size_t local = 32;
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, global);
+            local = c[0];
+        }
 
         if (global % local != 0)
             global += local - (global % local);
@@ -519,7 +525,9 @@ namespace mgcl
      * @param h_source Host buffer containing border planes in the same order as they get extracted by extractBorderPlanes.
      *   Ignored if d_source is not null. If d_source is null, a temporary device buffer is created.
      */
-    void CuboidGpu::pasteGhostsFromBorderPlanes(cl_context context, cl_command_queue commands, cl_program program, CuboidGpu* d_source, Cuboid* h_source)
+    void CuboidGpu::pasteGhostsFromBorderPlanes(cl_context context, cl_command_queue commands, cl_program program,
+                                                CuboidGpu* d_source, Cuboid* h_source,
+                                                mgcl::conf::KernelConfig* conf)
     {
         if (d_source == nullptr && h_source == nullptr)
             throw "CuboidGpu::pasteGhostsFromBorderPlanes: At least one source buffer must be given.";
@@ -563,9 +571,13 @@ namespace mgcl
 
         // one work-item for each border cell. Pad global sizes to fit to local sizes
         size_t global = ressize;
-        // const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
-        // size_t local = c[0];
         size_t local = 32;
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, global);
+            local = c[0];
+        }
 
         if (global % local != 0)
             global += local - (global % local);

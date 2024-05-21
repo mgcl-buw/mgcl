@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "cuboid.hpp"
+#include "kernel_config.hpp"
 
 namespace mgcl
 {
@@ -59,8 +60,11 @@ namespace mgcl
         std::unique_ptr<CuboidGpu> copyShallow();
 
         std::unique_ptr<Cuboid> extractBorderPlanes(cl_command_queue commands, cl_program program,
-                                                    CuboidGpu* d_target, Cuboid* h_target);
-        void pasteGhostsFromBorderPlanes(cl_context context, cl_command_queue commands, cl_program program, CuboidGpu* d_source, Cuboid* h_source);
+                                                    CuboidGpu* d_target, Cuboid* h_target,
+                                                    mgcl::conf::KernelConfig* conf);
+        void pasteGhostsFromBorderPlanes(cl_context context, cl_command_queue commands, cl_program program,
+                                         CuboidGpu* d_source, Cuboid* h_source,
+                                         mgcl::conf::KernelConfig* conf);
 
         void dumpToFile(cl_command_queue commands, const std::string& path, bool realCellsOnly = false) const;
 

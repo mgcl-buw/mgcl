@@ -436,7 +436,8 @@ namespace mgcl
             throw "MultigridEngine::updateGhostsOclMpi: planesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf->getSize());
 
         // Extract border planes from the buffer
-        auto sbuf_ptr = d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(), dPlanesBuf, nullptr);
+        auto sbuf_ptr = d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(),
+                                                  dPlanesBuf, nullptr, &p.getKernelConfig());
         auto rbuf_ptr = sbuf_ptr->copyShallow();
         auto& sbuf = *sbuf_ptr;
         auto& rbuf = *rbuf_ptr;
@@ -448,7 +449,7 @@ namespace mgcl
 
         // Paste planes back into the buffer.
         dPlanesBuf->write1d(p.getCommands(), ressize, rbuf, false);
-        // d_buf.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), nullptr, rbuf_ptr.get());
-        d_buf.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), dPlanesBuf, nullptr);
+        d_buf.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(),
+                                          dPlanesBuf, nullptr, &p.getKernelConfig());
     }
 }
