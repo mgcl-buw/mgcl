@@ -1,6 +1,7 @@
 #ifndef MGCL_CUBOID_GPU_HPP
 #define MGCL_CUBOID_GPU_HPP
 
+#include "profiling_data.hpp"
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
@@ -61,10 +62,10 @@ namespace mgcl
 
         std::unique_ptr<Cuboid> extractBorderPlanes(cl_command_queue commands, cl_program program,
                                                     CuboidGpu* d_target, Cuboid* h_target,
-                                                    mgcl::conf::KernelConfig* conf);
+                                                    mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
         void pasteGhostsFromBorderPlanes(cl_context context, cl_command_queue commands, cl_program program,
                                          CuboidGpu* d_source, Cuboid* h_source,
-                                         mgcl::conf::KernelConfig* conf);
+                                         mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
         void dumpToFile(cl_command_queue commands, const std::string& path, bool realCellsOnly = false) const;
 

@@ -421,7 +421,7 @@ namespace mgcl
      */
     std::unique_ptr<Cuboid> CuboidGpu::extractBorderPlanes(cl_command_queue commands, cl_program program,
                                                            CuboidGpu* d_target, Cuboid* h_target,
-                                                           mgcl::conf::KernelConfig* conf)
+                                                           mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
         // Plane sizes
         int yz = ngh * ogh;
@@ -485,20 +485,19 @@ namespace mgcl
         if (global % local != 0)
             global += local - (global % local);
 
-        // cl_event ev;
+        cl_event ev;
 
         // enqueue kernel
-        err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, NULL);
-        // err = clEnqueueNDRangeKernel(p.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, &ev);
+        err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
         mgcl::mgclCheckError(err, "Enqueueing extract_border_planes kernel");
 
-        // if (p.isProfilingEnabled())
-        // {
-        //     p.getProfilingData()->addMeasurement(p.getCommands(), ev, kernelName,
-        //                                          {global[0], global[1], global[2]},
-        //                                          {local[0], local[1], local[2]});
-        // }
-        // mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(commands, ev, kernelName,
+                               {global, 0, 0},
+                               {local, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         mgcl::mgclCheckError(clFinish(commands), "clFinish");
 
@@ -527,7 +526,7 @@ namespace mgcl
      */
     void CuboidGpu::pasteGhostsFromBorderPlanes(cl_context context, cl_command_queue commands, cl_program program,
                                                 CuboidGpu* d_source, Cuboid* h_source,
-                                                mgcl::conf::KernelConfig* conf)
+                                                mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
         if (d_source == nullptr && h_source == nullptr)
             throw "CuboidGpu::pasteGhostsFromBorderPlanes: At least one source buffer must be given.";
@@ -582,20 +581,19 @@ namespace mgcl
         if (global % local != 0)
             global += local - (global % local);
 
-        // cl_event ev;
+        cl_event ev;
 
         // enqueue kernel
-        err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, NULL);
-        // err = clEnqueueNDRangeKernel(p.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, &ev);
+        err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
         mgcl::mgclCheckError(err, "Enqueueing pasteGhostsFromBorderPlanes kernel");
 
-        // if (p.isProfilingEnabled())
-        // {
-        //     p.getProfilingData()->addMeasurement(p.getCommands(), ev, kernelName,
-        //                                          {global[0], global[1], global[2]},
-        //                                          {local[0], local[1], local[2]});
-        // }
-        // mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(commands, ev, kernelName,
+                               {global, 0, 0},
+                               {local, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         mgcl::mgclCheckError(clFinish(commands), "clFinish");
 

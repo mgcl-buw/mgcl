@@ -437,7 +437,8 @@ namespace mgcl
 
         // Extract border planes from the buffer
         auto sbuf_ptr = d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(),
-                                                  dPlanesBuf, nullptr, &p.getKernelConfig());
+                                                  dPlanesBuf, nullptr,
+                                                  &p.getKernelConfig(), p.getProfilingData());
         auto rbuf_ptr = sbuf_ptr->copyShallow();
         auto& sbuf = *sbuf_ptr;
         auto& rbuf = *rbuf_ptr;
@@ -450,6 +451,7 @@ namespace mgcl
         // Paste planes back into the buffer.
         dPlanesBuf->write1d(p.getCommands(), ressize, rbuf, false);
         d_buf.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(),
-                                          dPlanesBuf, nullptr, &p.getKernelConfig());
+                                          dPlanesBuf, nullptr,
+                                          &p.getKernelConfig(), p.getProfilingData());
     }
 }

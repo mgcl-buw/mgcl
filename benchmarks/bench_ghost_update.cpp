@@ -598,7 +598,7 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
                                    .append(std::to_string(ghosts));
 
             bench.run(std::string(name).c_str(), [&] { //
-                auto sbuf_ptr = c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, nullptr, nullptr);
+                auto sbuf_ptr = c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, nullptr, nullptr, nullptr);
                 p.getOpenCLHelper().finish();
             });
 
@@ -631,7 +631,7 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
                                    .append(std::to_string(ghosts));
 
             bench.run(std::string(name).c_str(), [&] { //
-                c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, &h_planesbuf, nullptr);
+                c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, &h_planesbuf, nullptr, nullptr);
                 p.getOpenCLHelper().finish();
             });
 
@@ -817,7 +817,7 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
                                    .append(std::to_string(ghosts));
 
             bench.run(std::string(name).c_str(), [&] { //
-                c_d.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), nullptr, &rbuf, nullptr);
+                c_d.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), nullptr, &rbuf, nullptr, nullptr);
                 p.getOpenCLHelper().finish();
             });
 
@@ -849,7 +849,7 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
                                    .append(std::to_string(ghosts));
 
             bench.run(std::string(name).c_str(), [&] { //
-                c_d.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), &d_planesbuf, nullptr, nullptr);
+                c_d.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), &d_planesbuf, nullptr, nullptr, nullptr);
                 p.getOpenCLHelper().finish();
             });
 

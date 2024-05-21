@@ -497,15 +497,15 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
         {
             mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 2, 1, 1);
-            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr));
+            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
         }
         {
             mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 2, 1);
-            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr));
+            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
         }
         {
             mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 1, 2);
-            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr));
+            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
         }
     }
 
@@ -584,7 +584,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
         SECTION("no_reuse")
         {
-            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr);
+            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr);
             REQUIRE(ret != nullptr);
             check(*ret);
         }
@@ -595,7 +595,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
             h_ret.fill(-1, false);
             mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_ret);
 
-            c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, &h_ret, nullptr);
+            c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, &h_ret, nullptr, nullptr);
             check(h_ret);
         }
 
@@ -604,7 +604,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
             mgcl::Cuboid h_ret(1, 1, ressize, 0, 0, 0);
             h_ret.fill(-1, false);
 
-            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, &h_ret, nullptr);
+            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, &h_ret, nullptr, nullptr);
             REQUIRE(ret == nullptr);
             check(h_ret);
         }
@@ -614,7 +614,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
             mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, 1, 1, ressize, 0, 0, 0);
             d_tmp.fill(p.getCommands(), -1, true);
 
-            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr, nullptr);
+            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr, nullptr, nullptr);
             check(*ret);
         }
     }
@@ -888,7 +888,7 @@ TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes")
         mgcl::CuboidGpu d_planes(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_planes);
 
         // paste planes
-        d_cuboid.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), &d_planes, nullptr, nullptr);
+        d_cuboid.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), &d_planes, nullptr, nullptr, nullptr);
 
         // read result
         d_cuboid.read(p.getCommands(), &h_cuboid, true);

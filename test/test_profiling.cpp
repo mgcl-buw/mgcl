@@ -122,6 +122,36 @@ TEST_CASE("profiling_kernels")
         checkResult(p, "update_ghosts_periodic", {mgh, ngh, ogh});
     }
 
+    SECTION("extract_border_planes")
+    {
+        auto& d_buf = lv0.getDVIn();
+
+        int yz = d_buf.getNgh() * d_buf.getOgh();
+        int xz = d_buf.getMgh() * d_buf.getOgh();
+        int xy = d_buf.getMgh() * d_buf.getNgh();
+        int ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
+
+        auto tmp = d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, &conf, p.getProfilingData());
+
+        checkResult(p, "extract_border_planes", {ressize, 0, 0});
+    }
+
+    SECTION("paste_ghosts_from_border_planes")
+    {
+        auto& d_buf = lv0.getDVIn();
+
+        int yz = d_buf.getNgh() * d_buf.getOgh();
+        int xz = d_buf.getMgh() * d_buf.getOgh();
+        int xy = d_buf.getMgh() * d_buf.getNgh();
+        int ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
+
+        mgcl::CuboidGpu dBorderPlanes(p.getContext(), CL_MEM_READ_WRITE, ressize, 1, 1, 0, 0, 0);
+
+        d_buf.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), &dBorderPlanes, nullptr, &conf, p.getProfilingData());
+
+        checkResult(p, "paste_ghosts_from_border_planes", {ressize, 0, 0});
+    }
+
     SECTION("copy_input_buffers")
     {
         // create buffers manually, so they can be copied
