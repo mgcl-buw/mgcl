@@ -210,6 +210,27 @@ namespace mgcl
     }
 
     /**
+     * @brief Writes data from host_data into the gpu buffer.
+     *
+     * @param commands OpenCL command queue
+     * @param host_data Cuboid that the data gets written from
+     * @param blocking Blocking Write, if true.
+     * @throws string If Dimensions do not match.
+     */
+    void CuboidGpu::write1d(cl_command_queue commands, int _size, const Cuboid& host_data, bool blocking)
+    {
+        if (host_data.getSize() < _size)
+            throw "CuboidGpu::write1d: Source host cuboid is too small!";
+
+        if (size < _size)
+            throw "CuboidGpu::write1d: Target device cuboid is too small!";
+
+        int err = clEnqueueWriteBuffer(commands, buffer, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * _size,
+                                       host_data.getData()[0][0], 0, NULL, NULL);
+        mgcl::mgclCheckError(err, "clEnqueueReadBuffer");
+    }
+
+    /**
      * @brief Fills the buffer with the given value.
      *
      * @param commands OpenCL command queue
