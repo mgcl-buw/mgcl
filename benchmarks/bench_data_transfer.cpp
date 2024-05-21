@@ -28,22 +28,13 @@ using namespace std::chrono_literals;
 // 4. device_to_host_newbuf_els<elements>: data transfer from device to host creating a host new buffer
 // 5. device_to_host_to_device_els_<elements>: 4. + 1.
 // Run with e.g.: benchmarks bench_data_transfer_host_device
+// E.g. for the grid 128^3 and gh=1, ghost planes are 6*130^2 = 101,400 elements
 TEST_CASE("bench_data_transfer_host_device")
 {
     using std::min;
 
-    if (CLI_ARGS::grids.size() == 0 && (CLI_ARGS::gridsMin.size() == 0 || CLI_ARGS::gridsMax.size() == 0))
-        throw "Need to specify at least one local grid size, e.g. using --grids 4,8,16 or --gridsMin 4,4,4 AND --gridsMax 32,32,32";
-
-    // build grids to be tested from CLI args
-    std::vector<std::vector<int>> gridsTBT;
-    for (auto N : CLI_ARGS::grids)
-        gridsTBT.push_back({N, N, N});
-    if (CLI_ARGS::gridsMin.size() > 0 && CLI_ARGS::gridsMax.size() > 0)
-        for (int m = CLI_ARGS::gridsMin[0]; m <= CLI_ARGS::gridsMax[0]; m *= 2)
-            for (int n = CLI_ARGS::gridsMin[1]; n <= CLI_ARGS::gridsMax[1]; n *= 2)
-                for (int o = CLI_ARGS::gridsMin[2]; o <= CLI_ARGS::gridsMax[2]; o *= 2)
-                    gridsTBT.push_back({m, n, o});
+    if (CLI_ARGS::elements.size() == 0)
+        throw "Need to specify at least one element count, e.g. using --elements 16384,32768";
 
     // Check if mpi is initialized
     int isInitialized = 0;
@@ -68,30 +59,25 @@ TEST_CASE("bench_data_transfer_host_device")
 
     if (mpi_rank == 0)
     {
-        std::cout << "Testing the following grid sizes" << std::endl;
-        for (auto gr : gridsTBT)
+        std::cout << "Testing the following element counts" << std::endl
+                  << "  ";
+        for (auto e : CLI_ARGS::elements)
         {
-            int m = gr[0];
-            int n = gr[1];
-            int o = gr[2];
-            std::cout << "  " << m << "," << n << "," << o << std::endl;
+            std::cout << e << ", ";
         }
+        std::cout << std::endl;
     }
     else
     {
+        std::cout << "Doing nothing on rank " << mpi_rank << std::endl;
         return;
     }
 
     std::vector<bench_util::ResultDataTransferMpi> results;
-
+    int err;
     bool printedGpu = false;
-    for (auto gr : gridsTBT)
+    for (auto el : CLI_ARGS::elements)
     {
-        int m = gr[0];
-        int n = gr[1];
-        int o = gr[2];
-        int elements = m * n * o;
-
         // Create a dummy problem
         auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
         auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
@@ -116,7 +102,7 @@ TEST_CASE("bench_data_transfer_host_device")
         }
 
         // actual test buffers
-        mgcl::Cuboid c_h(m, n, o);
+        mgcl::Cuboid c_h(1, 1, el);
         c_h.fillRandom();
         mgcl::CuboidGpu c_d(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, c_h);
 
@@ -127,7 +113,7 @@ TEST_CASE("bench_data_transfer_host_device")
 
         {
             std::string name = std::string("host_to_device_reusing_els")
-                                   .append(std::to_string(elements));
+                                   .append(std::to_string(el));
             bench.run(std::string(name).c_str(), [&] { //
                 c_d.write(p.getCommands(), c_h, true);
                 p.getOpenCLHelper().finish();
@@ -139,14 +125,14 @@ TEST_CASE("bench_data_transfer_host_device")
             res.medianTime = bench_util::getMedianTime(bench, name);
             res.avgTime = bench_util::getAvgTime(bench, name);
             res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-            res.elements = elements;
+            res.elements = el;
             res.gpus = mpi_size;
             results.push_back(res);
         }
 
         {
             std::string name2 = std::string("device_to_host_reusing_els")
-                                    .append(std::to_string(elements));
+                                    .append(std::to_string(el));
             bench.run(std::string(name2).c_str(), [&] { //
                 c_d.read(p.getCommands(), &c_h, true);
                 p.getOpenCLHelper().finish();
@@ -158,14 +144,14 @@ TEST_CASE("bench_data_transfer_host_device")
             res2.medianTime = bench_util::getMedianTime(bench, name2);
             res2.avgTime = bench_util::getAvgTime(bench, name2);
             res2.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name2);
-            res2.elements = elements;
+            res2.elements = el;
             res2.gpus = mpi_size;
             results.push_back(res2);
         }
 
         {
             std::string name = std::string("host_to_device_newbuf_els")
-                                   .append(std::to_string(elements));
+                                   .append(std::to_string(el));
             bench.run(std::string(name).c_str(), [&] { //
                 ankerl::nanobench::doNotOptimizeAway(
                     mgcl::CuboidGpu(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, c_h));
@@ -178,14 +164,14 @@ TEST_CASE("bench_data_transfer_host_device")
             res.medianTime = bench_util::getMedianTime(bench, name);
             res.avgTime = bench_util::getAvgTime(bench, name);
             res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-            res.elements = elements;
+            res.elements = el;
             res.gpus = mpi_size;
             results.push_back(res);
         }
 
         {
             std::string name = std::string("device_to_host_newbuf_els")
-                                   .append(std::to_string(elements));
+                                   .append(std::to_string(el));
             bench.run(std::string(name).c_str(), [&] { //
                 ankerl::nanobench::doNotOptimizeAway(c_d.read(p.getCommands(), nullptr, true));
                 p.getOpenCLHelper().finish();
@@ -197,14 +183,14 @@ TEST_CASE("bench_data_transfer_host_device")
             res.medianTime = bench_util::getMedianTime(bench, name);
             res.avgTime = bench_util::getAvgTime(bench, name);
             res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-            res.elements = elements;
+            res.elements = el;
             res.gpus = mpi_size;
             results.push_back(res);
         }
 
         {
             std::string name = std::string("device_to_host_to_device_els")
-                                   .append(std::to_string(elements));
+                                   .append(std::to_string(el));
             bench.run(std::string(name).c_str(), [&] { //
                 auto tmp = c_d.read(p.getCommands(), nullptr, true);
                 c_d.write(p.getCommands(), *tmp, true);
@@ -217,7 +203,7 @@ TEST_CASE("bench_data_transfer_host_device")
             res.medianTime = bench_util::getMedianTime(bench, name);
             res.avgTime = bench_util::getAvgTime(bench, name);
             res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-            res.elements = elements;
+            res.elements = el;
             res.gpus = mpi_size;
             results.push_back(res);
         }
