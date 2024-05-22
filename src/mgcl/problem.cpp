@@ -349,6 +349,8 @@ namespace mgcl
                 int xy = mgh * ngh;
                 int ressize = 2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts;
                 dPlanesBuf = std::make_shared<CuboidGpu>(getContext(), CL_MEM_READ_WRITE, 1, 1, ressize, 0, 0, 0);
+                hPlanesBufSend = std::make_shared<Cuboid>(1, 1, ressize, 0, 0, 0);
+                hPlanesBufRecv = std::make_shared<Cuboid>(1, 1, ressize, 0, 0, 0);
             }
         }
 
@@ -749,6 +751,40 @@ namespace mgcl
     void Problem::setDPlanesBuf(std::shared_ptr<CuboidGpu> dPlanesBuf_)
     {
         dPlanesBuf = dPlanesBuf_;
+    }
+
+    Cuboid& Problem::getHPlanesBufSend() const
+    {
+        if (!hPlanesBufSend)
+            throw "hPlanesBuf is null.";
+        return *hPlanesBufSend;
+    }
+
+    Cuboid* Problem::getHPlanesBufSendPtr() const
+    {
+        return hPlanesBufSend.get();
+    }
+
+    void Problem::setHPlanesBufSend(std::shared_ptr<Cuboid> hPlanesBuf_)
+    {
+        hPlanesBufSend = hPlanesBuf_;
+    }
+
+    Cuboid& Problem::getHPlanesBufRecv() const
+    {
+        if (!hPlanesBufRecv)
+            throw "hPlanesBuf is null.";
+        return *hPlanesBufRecv;
+    }
+
+    Cuboid* Problem::getHPlanesBufRecvPtr() const
+    {
+        return hPlanesBufRecv.get();
+    }
+
+    void Problem::setHPlanesBufRecv(std::shared_ptr<Cuboid> hPlanesBuf_)
+    {
+        hPlanesBufRecv = hPlanesBuf_;
     }
 
     int Problem::getO() const

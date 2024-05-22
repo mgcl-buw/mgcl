@@ -57,6 +57,8 @@ namespace mgcl
         // of ghost cells of the cuboid that is being updated. It is initialized based on dVIn of level 0 and
         // thus should be big enough for all cuboids.
         std::shared_ptr<CuboidGpu> dPlanesBuf = nullptr;
+        std::shared_ptr<Cuboid> hPlanesBufSend = nullptr;
+        std::shared_ptr<Cuboid> hPlanesBufRecv = nullptr;
 
         /* local grid dimensions (on one MPI process if MPI is used) */
         int m;
@@ -228,6 +230,13 @@ namespace mgcl
         CuboidGpu* getDPlanesBufPtr() const;
         CuboidGpu& getDPlanesBuf() const;
         void setDPlanesBuf(const std::shared_ptr<CuboidGpu> dPlanesBuf_);
+
+        Cuboid* getHPlanesBufSendPtr() const;
+        Cuboid& getHPlanesBufSend() const;
+        void setHPlanesBufSend(const std::shared_ptr<Cuboid> hPlanesBuf_);
+        Cuboid* getHPlanesBufRecvPtr() const;
+        Cuboid& getHPlanesBufRecv() const;
+        void setHPlanesBufRecv(const std::shared_ptr<Cuboid> hPlanesBuf_);
 
         int getM() const;
 

@@ -433,15 +433,21 @@ namespace mgcl
 
         auto dPlanesBuf = p.getDPlanesBufPtr();
         if (dPlanesBuf->getSize() < ressize)
-            throw "MultigridEngine::updateGhostsOclMpi: planesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf->getSize());
+            throw "MultigridEngine::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf->getSize());
+
+        auto hPlanesBufSend = p.getHPlanesBufSendPtr();
+        auto hPlanesBufRecv = p.getHPlanesBufRecvPtr();
+        if (hPlanesBufSend->getSize() < ressize || hPlanesBufRecv->getSize() < ressize)
+            throw "MultigridEngine::updateGhostsOclMpi: hPlanesBufSend or hPlanesBufRecv is too small. Need at least " +
+                std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend->getSize()) +
+                " (send) and " + std::to_string(hPlanesBufRecv->getSize()) + " (recv)";
 
         // Extract border planes from the buffer
-        auto sbuf_ptr = d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(),
-                                                  dPlanesBuf, nullptr,
-                                                  &p.getKernelConfig(), p.getProfilingData());
-        auto rbuf_ptr = sbuf_ptr->copyShallow();
-        auto& sbuf = *sbuf_ptr;
-        auto& rbuf = *rbuf_ptr;
+        d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(),
+                                  dPlanesBuf, hPlanesBufSend,
+                                  &p.getKernelConfig(), p.getProfilingData());
+        auto& sbuf = *hPlanesBufSend;
+        auto& rbuf = *hPlanesBufRecv;
 
         // Send our planes to neighbours and receive their planes
         mpi_util::sendBorderPlanes(d_buf.getMgh(), d_buf.getNgh(), d_buf.getOgh(),
