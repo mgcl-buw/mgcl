@@ -335,3 +335,111 @@ TEST_CASE("bench_data_transfer_MPI")
 
     bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
 }
+
+/**
+ * @brief Measures read and write operations using opencl profiler.
+ * Note: Quiet unstable results, it seems...
+ *
+ */
+TEST_CASE("benchDataTransferProfile")
+{
+    using std::min;
+
+    if (CLI_ARGS::elements.size() == 0)
+        throw "Need to specify at least one element count, e.g. using --elements 16384,32768";
+
+    // Check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // Check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+
+    /* MPI variables */
+    int mpi_rank;
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+
+    if (mpi_rank == 0)
+    {
+        std::cout << "Testing the following element counts" << std::endl
+                  << "  ";
+        for (auto e : CLI_ARGS::elements)
+        {
+            std::cout << e << ", ";
+        }
+        std::cout << std::endl;
+    }
+    else
+    {
+        std::cout << "Doing nothing on rank " << mpi_rank << std::endl;
+        return;
+    }
+
+    bool printedGpu = false;
+    for (auto el : CLI_ARGS::elements)
+    {
+        // Create a dummy problem
+        auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        mgcl::Problem p(1, 1, 1, f, v);
+        p.setUseOpencl(true);
+        p.setSilent(true);
+        p.setProfilingEnabled(true);
+        // p.setMpiComm(mpi_comm);
+        p.init();
+
+        // Clear measurements from init
+        auto pd = p.getProfilingData();
+        REQUIRE(pd);
+        pd->getMeasurements().clear();
+
+        if (!printedGpu)
+        {
+            for (int i = 0; i < mpi_size; i++)
+            {
+                MPI_Barrier(mpi_comm);
+                if (i == mpi_rank)
+                {
+                    std::cout << "on rank " << mpi_rank << ", GPU info: ";
+                    p.getOpenCLHelper().outputDeviceInfo(p.getOpenCLHelper().getDeviceId());
+                }
+            }
+            printedGpu = true;
+        }
+
+        // actual test buffers
+        mgcl::Cuboid c_h(1, 1, el);
+        c_h.fillRandom();
+        mgcl::CuboidGpu c_d(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, c_h);
+        cl_mem d_buffer = c_d.getBuffer();
+
+        for (int i = 0; i < CLI_ARGS::bench_iterations; i++)
+        {
+            cl_event ev;
+
+            // Write to buffer
+            int err = clEnqueueWriteBuffer(p.getCommands(), d_buffer, CL_TRUE, 0, sizeof(double) * el,
+                                           c_h.getData()[0][0], 0, NULL, &ev);
+            mgcl::mgclCheckError(err, "clEnqueueWriteBuffer");
+            pd->addMeasurement(p.getCommands(), ev, "clEnqueueWriteBuffer", {1, 1, 1}, {1, 1, 1});
+
+            // Read from buffer
+            err = clEnqueueReadBuffer(p.getCommands(), d_buffer, CL_TRUE, 0, sizeof(double) * el,
+                                      c_h.getData()[0][0], 0, NULL, &ev);
+            mgcl::mgclCheckError(err, "clEnqueueReadBuffer");
+            pd->addMeasurement(p.getCommands(), ev, "clEnqueueReadBuffer", {1, 1, 1}, {1, 1, 1});
+        }
+
+        // Print profiling measurements
+        std::cout << "el: " << el << ", timings:" << std::endl;
+        pd->printBestTimingsPerKernel();
+        std::cout << "========" << std::endl;
+    }
+}
