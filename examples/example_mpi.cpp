@@ -65,6 +65,8 @@ using std::min;
  * -N <x>[,<y>,<z>], i.e. -N 32 for a grid of size 32^3 or -N 16,32,64 for a grid of size 16x32x64. Default is 16^3
  * -np, --non-periodic If set, the problem will not be periodic but Dirichlet bc's will be used.
  * --device-name <name> Name of the device to use. If not set, the first available device will be used.
+ * --stencil-type <l7|l19|l27|var> Stencil type that shall be used. l(7,19,27): Use Laplace stencil with given size.
+ *   var: Use varying stencil (default)
  */
 int main(int argc, char* argv[])
 {
@@ -73,6 +75,7 @@ int main(int argc, char* argv[])
     int o = 16;
     bool periodic = true;
     std::string deviceName = "";
+    mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
 
     // parse input
     InputParser input(argc, argv);
@@ -100,6 +103,17 @@ int main(int argc, char* argv[])
 
     if (input.cmdOptionExists("--device-name"))
         deviceName = input.getCmdOption("--device-name");
+
+    if (input.cmdOptionExists("--stencil-type"))
+    {
+        std::string st = input.getCmdOption("--stencil-type");
+        if (st == "l7")
+            stencilType = mgcl::MGCL_LAPLACE_7POINT;
+        else if (st == "l19")
+            stencilType = mgcl::MGCL_LAPLACE_19POINT;
+        else if (st == "l27")
+            stencilType = mgcl::MGCL_LAPLACE_27POINT;
+    }
 
     /* MPI variables */
     int mpi_size;
@@ -136,12 +150,13 @@ int main(int argc, char* argv[])
         std::cout << "Arguments:" << std::endl;
         std::cout << "  m,n,o: " << m << "," << n << "," << o << "," << std::endl;
         std::cout << "  periodic: " << periodic << std::endl;
-        std::cout << "rank;ms;me;ns;ne;os;oe;ml;nl;ol" << std::endl;
+        std::cout << "  stencilType: " << input.getCmdOption("--stencil-type") << std::endl;
+        std::cout << "  rank;ms;me;ns;ne;os;oe;ml;nl;ol" << std::endl;
     }
 
     MPI_Barrier(mpi_comm);
 
-    std::cout << mpi_rank << ";"
+    std::cout << "  " << mpi_rank << ";"
               << m_start << ";" << m_end << ";"
               << n_start << ";" << n_end << ";"
               << o_start << ";" << o_end << ";"
@@ -162,8 +177,9 @@ int main(int argc, char* argv[])
     p.setMpiComm(mpi_comm);
     p.setUseOpencl(true);
     p.setDeviceName(deviceName);
-    p.setStencilType(mgcl::MGCL_VARYING);
-    p.getStencilValues()->fillRandom();
+    p.setStencilType(stencilType);
+    if (stencilType == mgcl::MGCL_VARYING)
+        p.getStencilValues()->fillRandom();
     p.setNu1(2);
     p.setNu2(2);
 
