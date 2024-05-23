@@ -64,6 +64,7 @@ using std::min;
  * Arguments:
  * -N <x>[,<y>,<z>], i.e. -N 32 for a grid of size 32^3 or -N 16,32,64 for a grid of size 16x32x64. Default is 16^3
  * -np, --non-periodic If set, the problem will not be periodic but Dirichlet bc's will be used.
+ * --device-name <name> Name of the device to use. If not set, the first available device will be used.
  */
 int main(int argc, char* argv[])
 {
@@ -71,6 +72,7 @@ int main(int argc, char* argv[])
     int n = 16;
     int o = 16;
     bool periodic = true;
+    std::string deviceName = "";
 
     // parse input
     InputParser input(argc, argv);
@@ -95,6 +97,9 @@ int main(int argc, char* argv[])
 
     if (input.cmdOptionExists("-np") || input.cmdOptionExists("--non-periodic"))
         periodic = false;
+
+    if (input.cmdOptionExists("--device-name"))
+        deviceName = input.getCmdOption("--device-name");
 
     /* MPI variables */
     int mpi_size;
@@ -130,8 +135,7 @@ int main(int argc, char* argv[])
     {
         std::cout << "Arguments:" << std::endl;
         std::cout << "  m,n,o: " << m << "," << n << "," << o << "," << std::endl;
-        std::cout << "  periodic: " << periodic << std::endl
-                  << std::endl;
+        std::cout << "  periodic: " << periodic << std::endl;
         std::cout << "rank;ms;me;ns;ne;os;oe;ml;nl;ol" << std::endl;
     }
 
@@ -142,6 +146,7 @@ int main(int argc, char* argv[])
               << n_start << ";" << n_end << ";"
               << o_start << ";" << o_end << ";"
               << ml << ";" << nl << ";" << ol
+              << std::endl
               << std::endl;
 
     std::cout << "Generating random data..." << std::endl;
@@ -156,6 +161,7 @@ int main(int argc, char* argv[])
     mgcl::Problem p(ml, nl, ol, f, v, m, n, o);
     p.setMpiComm(mpi_comm);
     p.setUseOpencl(true);
+    p.setDeviceName(deviceName);
     p.setStencilType(mgcl::MGCL_VARYING);
     p.getStencilValues()->fillRandom();
     p.setNu1(2);
