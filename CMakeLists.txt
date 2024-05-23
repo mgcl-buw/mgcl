@@ -28,14 +28,6 @@ endif()
 
 # set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
 
-# ==============================
-# Add CPM as dependency manager for tests and benchmarks. Download it if not already present. see
-# https://github.com/cpm-cmake/CPM.cmake/wiki/Downloading-CPM.cmake-in-CMake
-if(MGCL_BUILD_TESTS OR MGCL_BUILD_BENCHMARKS)
-  include(cmake/CPM.cmake)
-endif()
-# ==============================
-
 set(MGCL_catch2_version "v3.4.0")
 set(MGCL_nanobench_version "v4.3.11")
 set(MGCL_backwardcpp_version "v1.6")
@@ -54,6 +46,14 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   option(MGCL_BUILD_TESTS "whether or not tests should be built" ON)
   option(MGCL_BUILD_BENCHMARKS "whether or not benchmarks should be built" ON)
   option(MGCL_BUILD_EXAMPLES "whether or not examples should be built" ON)
+
+  # ==============================
+  # Add CPM as dependency manager for tests and benchmarks. Download it if not already present. see
+  # https://github.com/cpm-cmake/CPM.cmake/wiki/Downloading-CPM.cmake-in-CMake
+  if(MGCL_BUILD_TESTS OR MGCL_BUILD_BENCHMARKS)
+    include(cmake/CPM.cmake)
+  endif()
+  # ==============================
 
   if(MGCL_BUILD_TESTS OR MGCL_BUILD_BENCHMARKS)
     add_subdirectory(thirdparty)
