@@ -338,7 +338,7 @@ TEST_CASE("bench_data_transfer_MPI")
 
 /**
  * @brief Measures read and write operations using opencl profiler.
- * Note: Quiet unstable results, it seems...
+ * Note: Quiet unstable results, it seems... Set --benchIters to at least 200
  *
  */
 TEST_CASE("benchDataTransferProfile")
@@ -430,11 +430,20 @@ TEST_CASE("benchDataTransferProfile")
             mgcl::mgclCheckError(err, "clEnqueueWriteBuffer");
             pd->addMeasurement(p.getCommands(), ev, "clEnqueueWriteBuffer", {1, 1, 1}, {1, 1, 1});
 
+            mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+        }
+
+        for (int i = 0; i < CLI_ARGS::bench_iterations; i++)
+        {
+            cl_event ev;
+
             // Read from buffer
-            err = clEnqueueReadBuffer(p.getCommands(), d_buffer, CL_TRUE, 0, sizeof(double) * el,
-                                      c_h.getData()[0][0], 0, NULL, &ev);
+            int err = clEnqueueReadBuffer(p.getCommands(), d_buffer, CL_TRUE, 0, sizeof(double) * el,
+                                          c_h.getData()[0][0], 0, NULL, &ev);
             mgcl::mgclCheckError(err, "clEnqueueReadBuffer");
             pd->addMeasurement(p.getCommands(), ev, "clEnqueueReadBuffer", {1, 1, 1}, {1, 1, 1});
+
+            mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
         }
 
         // Print profiling measurements
