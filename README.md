@@ -142,6 +142,15 @@ For a development build enabling switching between build types without recompili
 "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}"
 ```
 
+For only building examples:
+```
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release <options>
+cmake --build build --target example_galerkin example_mpi
+```
+
+
 ## Install
 
 Run the cmake install target in order to install mgcl. The install location can be adjusted by providing the `--prefix <path>` argument. For example:
