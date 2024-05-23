@@ -101,6 +101,7 @@ int main(int argc, char** argv)
         p.setMaxiterVcycles(maxIterVCycles);
         p.setIgnoreTol(false);
         p.setSilent(false);
+        p.setUseOpencl(false);
         p.setNu1(nu1);
         p.setNu2(nu2);
         p.setOmega(omega);
@@ -125,7 +126,7 @@ int main(int argc, char** argv)
 
         p.init();
 
-        p.solveSeq();
+        p.solve();
     }
 
     if ((runs == OCL || runs == SEQ_OCL) && mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
@@ -135,13 +136,31 @@ int main(int argc, char** argv)
 
         mgcl::Problem p(m, n, o, f, v);
         p.setMaxiterVcycles(maxIterVCycles);
-        p.setIgnoreTol(true);
+        // p.setIgnoreTol(true);
         p.setUseOpencl(true);
         p.setDeviceType(CL_DEVICE_TYPE_GPU);
-        p.setSilent(true);
+        // p.setSilent(true);
         p.setNu1(nu1);
         p.setNu2(nu2);
         p.setOmega(omega);
+
+        p.setStencilType(mgcl::MGCL_VARYING);
+        auto& s = *p.getStencilValues();
+
+        // fill with 7-point Laplace
+        for (int i = 0; i < s.getMgh(); i++)
+            for (int j = 0; j < s.getNgh(); j++)
+                for (int k = 0; k < s.getOgh(); k++)
+                {
+                    // 7-point Laplace
+                    s[0][1][1][i][j][k] = 1;
+                    s[1][0][1][i][j][k] = 1;
+                    s[1][1][0][i][j][k] = 1;
+                    s[1][1][1][i][j][k] = -6;
+                    s[1][1][2][i][j][k] = 1;
+                    s[1][2][1][i][j][k] = 1;
+                    s[2][1][1][i][j][k] = 1;
+                }
 
         if (mgcl_test::TestUtility::deviceAvailable("Quadro", p.getDeviceType()))
             p.setDeviceName("Quadro");
