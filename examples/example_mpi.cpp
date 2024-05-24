@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "../src/mgcl/cuboid.hpp"
+#include "../src/mgcl/kernel_config.hpp"
 #include "../src/mgcl/problem.hpp"
 
 // forward declarations
@@ -197,6 +198,53 @@ int main(int argc, char* argv[])
         p.getStencilValues()->fillRandom();
     p.setNu1(2);
     p.setNu2(2);
+
+    // Optional: Edit the kernel configuration, i.e. set work-group sizes for each kernel. Below are the default values,
+    // taken from kernel_config.cpp. Just fill in the desired work-group sizes. Make sure to not change the kernel names
+    // and respect the kernel dimensionality. E.g. the jacobi_iter_27point_varying_stencil_1d kernel is a 1d kernel
+    // where only the first dimension is used.
+    auto& conf = p.getKernelConfig();
+
+    // Jacobi kernels
+    conf["jacobi_iter_27point_varying_stencil_1d"] = mgcl::conf::KernelWorkgroupSizes{{1, {512, 1, 1}}};
+    // conf["jacobi_iter_7point"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
+    // conf["jacobi_iter_19point"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
+    // conf["jacobi_iter_27point"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
+
+    // // Residual kernels
+    // conf["residual_27point_varying_stencil"] = mgcl::conf::KernelWorkgroupSizes{{1, {512, 1, 1}}};
+    // conf["residual_7point"] = mgcl::conf::KernelWorkgroupSizes{{1, {512, 1, 1}}};
+    // conf["residual_19point"] = mgcl::conf::KernelWorkgroupSizes{{1, {512, 1, 1}}};
+    // conf["residual_27point"] = mgcl::conf::KernelWorkgroupSizes{{1, {512, 1, 1}}};
+    // conf["residual_squared"] = mgcl::conf::KernelWorkgroupSizes{{1, {512, 1, 1}}};
+
+    // // Ghost update kernels
+    // conf["update_ghosts_periodic"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 4}}};
+    // conf["extract_border_planes"] = mgcl::conf::KernelWorkgroupSizes{{1, {32, 1, 1}}};
+    // conf["paste_ghosts_from_border_planes"] = mgcl::conf::KernelWorkgroupSizes{{1, {32, 1, 1}}};
+
+    // // Copy buffer kernels
+    // conf["copy_input_data"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 4}}};
+    // conf["copy_output_data"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 4}}};
+
+    // // V-cycle kernels
+    // conf["correct_error"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 4}}};
+    // conf["restrict_to_coarse"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 4}}};
+    // conf["prolongate_to_fine"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 4}}};
+
+    // // Stencil kernels
+    // conf["update_ghosts_varying_stencil"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 4}}};
+    // conf["mult_stencils_var_var"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 4}}};
+    // conf["mult_stencils_var_fix"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 4}}};
+    // conf["mult_stencils_fix_var"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 4}}};
+    // conf["cut_stencils_w7_to_w3"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 4}}};
+
+    // // Utility kernels
+    // conf["sum_partial_global_eq_x_num_elements"] = mgcl::conf::KernelWorkgroupSizes{{1, {256, 1, 1}}};
+    // // c["sum_finish"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 4}}}; // Launches only 1 wi
+    // conf["max_partial_global_eq_x_num_elements"] = mgcl::conf::KernelWorkgroupSizes{{1, {256, 1, 1}}};
+    // // c["max_finish"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 4}}}; // Launches only 1 wi
+    // conf["max_abs_partial_global_eq_x_num_elements"] = mgcl::conf::KernelWorkgroupSizes{{1, {256, 1, 1}}};
 
     std::cout << "Initializing problem..." << std::endl;
     p.init();
