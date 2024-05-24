@@ -65,6 +65,7 @@ using std::min;
  * -N <x>[,<y>,<z>], i.e. -N 32 for a grid of size 32^3 or -N 16,32,64 for a grid of size 16x32x64. Default is 16^3
  * -np, --non-periodic If set, the problem will not be periodic but Dirichlet bc's will be used.
  * --device-name <name> Name of the device to use. If not set, the first available device will be used.
+ * --device-type <(cpu|gpu)> Type of OpenCL device to use. Optional.
  * --stencil-type <l7|l19|l27|var> Stencil type that shall be used. l(7,19,27): Use Laplace stencil with given size.
  *   var: Use varying stencil (default)
  */
@@ -75,6 +76,8 @@ int main(int argc, char* argv[])
     int o = 16;
     bool periodic = true;
     std::string deviceName = "";
+    std::string deviceTypeStr = "default";
+    cl_device_type deviceType = CL_DEVICE_TYPE_DEFAULT;
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
 
     // parse input
@@ -103,6 +106,17 @@ int main(int argc, char* argv[])
 
     if (input.cmdOptionExists("--device-name"))
         deviceName = input.getCmdOption("--device-name");
+
+    if (input.cmdOptionExists("--device-type"))
+    {
+        deviceTypeStr = input.getCmdOption("--device-type");
+        if (deviceTypeStr == "cpu")
+            deviceType = CL_DEVICE_TYPE_CPU;
+        else if (deviceTypeStr == "gpu")
+            deviceType = CL_DEVICE_TYPE_GPU;
+        else
+            throw "Invalid device type. Must be 'cpu' or 'gpu'";
+    }
 
     if (input.cmdOptionExists("--stencil-type"))
     {
@@ -177,6 +191,7 @@ int main(int argc, char* argv[])
     p.setMpiComm(mpi_comm);
     p.setUseOpencl(true);
     p.setDeviceName(deviceName);
+    p.setDeviceType(deviceType);
     p.setStencilType(stencilType);
     if (stencilType == mgcl::MGCL_VARYING)
         p.getStencilValues()->fillRandom();
