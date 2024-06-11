@@ -296,6 +296,23 @@ TEST_CASE("util::max_abs")
     // std::cout << std::to_string(m) << "," << std::to_string(n) << "," << std::to_string(o) << "...OK" << std::endl;
 }
 
+TEST_CASE("util::fill")
+{
+    mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+
+    mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
+    ch.fillRandom();
+
+    mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4);
+    c.write(tu.getCommands(), ch, true);
+
+    c.fill(tu.getProgram(), tu.getCommands(), 0.0, true, nullptr, nullptr);
+    auto ret = c.read(tu.getCommands(), nullptr, true);
+
+    ch.fill(0.0, false);
+    REQUIRE(ret->isEqualAllCells(ch));
+}
+
 // Builds sum on device using a naive kernel (only 1 work-item iterating over all elements).
 double sum_ocl_naive(cl_mem buf, int num_elements, cl_context context)
 {

@@ -373,6 +373,69 @@ namespace mgcl::util
         return ret;
     }
 
+    /**
+     * @brief Fills the device buffer with a given value.
+     *
+     * @param program
+     * @param commands
+     * @param buffer Device buffer to be filled
+     * @param value Value to fill the buffer with
+     * @param size Number of elements in the buffer
+     * @param blocking If true, the operation is blocking
+     * @param conf
+     * @param pd
+     */
+    void fill(cl_program program, cl_command_queue commands,
+              cl_mem buffer, double value, int size, bool blocking,
+              mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
+    {
+        // Create the compute kernel from the program
+        int err;
+        const char* kernelName = "fill_buffer";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
+        mgcl::mgclCheckError(err, "clCreateKernel");
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buffer);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(double), &value);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &size);
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
+        size_t global = size;
+        size_t local = 64;
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, global);
+            local = c[0];
+        }
+
+        if (global % local != 0)
+            global += local - (global % local);
+
+        cl_event ev;
+
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing fill_buffer kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(commands, ev, kernelName,
+                               {global, 0, 0},
+                               {local, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        if (blocking)
+            mgcl::mgclCheckError(clFinish(commands), "clFinish");
+
+        err = clReleaseKernel(kernel);
+        mgcl::mgclCheckError(err, "Releasing fill_buffer kernel");
+    }
+
     // Returns minimum of a, b and c
     int seq::min3(int a, int b, int c)
     {

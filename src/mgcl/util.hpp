@@ -33,6 +33,9 @@ namespace mgcl::util
     double max_abs(CuboidGpu& buf, cl_program program, cl_command_queue commands,
                    bool return_sum, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
+    void fill(cl_program program, cl_command_queue commands,
+              cl_mem buffer, double value, int size, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
+
     namespace seq
     {
         int min3(int a, int b, int c);
