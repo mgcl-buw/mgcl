@@ -3,6 +3,7 @@
 #include "mpi_stencil.hpp"
 #include "opencl_helper.hpp"
 #include "profiling_data.hpp"
+#include "util.hpp"
 
 #include <algorithm>
 #include <utility> // for exchange
@@ -531,7 +532,8 @@ namespace mgcl
      * VaryingStencilGpu
      *****************************************************/
 
-    VaryingStencilGpu::VaryingStencilGpu(int m_, int n_, int o_, int width_, int gh_, cl_context context, cl_command_queue queue)
+    VaryingStencilGpu::VaryingStencilGpu(int m_, int n_, int o_, int width_, int gh_,
+                                         cl_context context, cl_command_queue queue, cl_program program)
         : m(m_), n(n_), o(o_), width(width_), gh(gh_)
     {
         int err;
@@ -540,11 +542,9 @@ namespace mgcl
                              NULL, &err);
         mgclCheckError(err, "clCreateBuffer");
 
-        cl_double zero = 0;
-        err = clEnqueueFillBuffer(queue, buf, &zero, sizeof(cl_double), 0,
-                                  sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width,
-                                  0, NULL, NULL);
-        mgclCheckError(err, "clEnqueueFillBuffer");
+        mgcl::util::fill(program, queue, buf, 0,
+                         (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width,
+                         false, nullptr, nullptr);
     }
 
     VaryingStencilGpu::VaryingStencilGpu(VaryingStencilGpu&& s)
@@ -726,7 +726,7 @@ namespace mgcl
         mgclCheckError(err, "clCreateKernel");
 
         // create output buffer c
-        VaryingStencilGpu c(m, n, o, getWidth() + b.getWidth() - 1, ghc, context, queue);
+        VaryingStencilGpu c(m, n, o, getWidth() + b.getWidth() - 1, ghc, context, queue, program);
 
         auto bbuf = b.getBuf();
         auto cbuf = c.getBuf();
@@ -823,7 +823,7 @@ namespace mgcl
         mgclCheckError(err, "clCreateKernel");
 
         // create output buffer c
-        VaryingStencilGpu c(m, n, o, getWidth() + b.getWidth() - 1, ghc, context, queue);
+        VaryingStencilGpu c(m, n, o, getWidth() + b.getWidth() - 1, ghc, context, queue, program);
 
         auto bbuf = b.getBuf();
         auto cbuf = c.getBuf();
@@ -919,7 +919,7 @@ namespace mgcl
         if (m2 == 0 || n2 == 0 || o2 == 0)
             throw "Cannot cut down stencil of grid size 1!";
 
-        VaryingStencilGpu a_2h(resm, resn, reso, 3, ghout, context, queue);
+        VaryingStencilGpu a_2h(resm, resn, reso, 3, ghout, context, queue, program);
 
         // Create the compute kernel from the program
         const char* kernelName = "cut_stencils_w7_to_w3";
@@ -1048,17 +1048,14 @@ namespace mgcl
      * *********************************************
      */
 
-    FixedStencilGpu::FixedStencilGpu(int width_, cl_context context, cl_command_queue queue)
+    FixedStencilGpu::FixedStencilGpu(int width_, cl_context context, cl_command_queue queue, cl_program program)
         : width(width_)
     {
         int err;
         buf = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(double) * width * width * width, NULL, &err);
         mgclCheckError(err, "clCreateBuffer");
 
-        cl_double zero = 0;
-        err = clEnqueueFillBuffer(queue, buf, &zero, sizeof(cl_double), 0, sizeof(double) * width * width * width,
-                                  0, NULL, NULL);
-        mgclCheckError(err, "clEnqueueFillBuffer");
+        mgcl::util::fill(program, queue, buf, 0, width * width * width, false, nullptr, nullptr);
     }
 
     FixedStencilGpu::FixedStencilGpu(FixedStencilGpu&& s)
@@ -1105,7 +1102,7 @@ namespace mgcl
         int err = clEnqueueWriteBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0,
                                        sizeof(double) * width * width * width,
                                        f[0][0], 0, NULL, NULL);
-        mgclCheckError(err, "clEnqueueFillBuffer");
+        mgclCheckError(err, "clEnqueueWriteBuffer");
     }
 
     /**
@@ -1157,7 +1154,7 @@ namespace mgcl
         int o = b.getO();
 
         // create output buffer c
-        VaryingStencilGpu c(m, n, o, getWidth() + b.getWidth() - 1, ghc, context, queue);
+        VaryingStencilGpu c(m, n, o, getWidth() + b.getWidth() - 1, ghc, context, queue, program);
 
         auto bbuf = b.getBuf();
         auto cbuf = c.getBuf();
@@ -1233,9 +1230,9 @@ namespace mgcl
         return buf;
     }
 
-    FixedStencilGpu create3dFullWeightRestrictionStencilGpu(cl_context context, cl_command_queue queue)
+    FixedStencilGpu create3dFullWeightRestrictionStencilGpu(cl_context context, cl_command_queue queue, cl_program program)
     {
-        FixedStencilGpu ret(3, context, queue);
+        FixedStencilGpu ret(3, context, queue, program);
 
         auto s = create3dFullWeightRestrictionStencil();
         ret.fill(s, queue, true);
@@ -1243,9 +1240,9 @@ namespace mgcl
         return ret;
     }
 
-    FixedStencilGpu create3dBilinearProlongationStencilGpu(cl_context context, cl_command_queue queue)
+    FixedStencilGpu create3dBilinearProlongationStencilGpu(cl_context context, cl_command_queue queue, cl_program program)
     {
-        FixedStencilGpu ret(3, context, queue);
+        FixedStencilGpu ret(3, context, queue, program);
 
         auto s = create3dBilinearProlongationStencil();
         ret.fill(s, queue, true);

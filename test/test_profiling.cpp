@@ -217,7 +217,7 @@ TEST_CASE("profiling_kernels")
     SECTION("mult_stencils_var_fix")
     {
         auto svgpu = lv0.getStencilValuesGpu();
-        mgcl::FixedStencilGpu f(3, p.getContext(), p.getCommands());
+        mgcl::FixedStencilGpu f(3, p.getContext(), p.getCommands(), p.getProgram());
         svgpu->multiply(f, 0, p.getProgram(), p.getCommands(), p.getContext(), nullptr,
                         p.isPeriodic(), false, &conf, p.getProfilingData());
 
@@ -227,7 +227,7 @@ TEST_CASE("profiling_kernels")
     SECTION("mult_stencils_fix_var")
     {
         auto svgpu = lv0.getStencilValuesGpu();
-        mgcl::FixedStencilGpu f(3, p.getContext(), p.getCommands());
+        mgcl::FixedStencilGpu f(3, p.getContext(), p.getCommands(), p.getProgram());
         f.multiply(*svgpu, 0, p.getProgram(), p.getCommands(), p.getContext(), nullptr,
                    p.isPeriodic(), false, &conf, p.getProfilingData());
 
@@ -236,7 +236,7 @@ TEST_CASE("profiling_kernels")
 
     SECTION("cut_stencils_w7_to_w3")
     {
-        mgcl::VaryingStencilGpu svgpu(4, 4, 4, 7, 0, p.getContext(), p.getCommands());
+        mgcl::VaryingStencilGpu svgpu(4, 4, 4, 7, 0, p.getContext(), p.getCommands(), p.getProgram());
         svgpu.cutFromW7ToW3(p.getProgram(), p.getCommands(), p.getContext(), 0, &conf, p.getProfilingData());
 
         checkResult(p, "cut_stencils_w7_to_w3", {2, 2, 2});

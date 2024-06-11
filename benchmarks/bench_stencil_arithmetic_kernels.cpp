@@ -76,9 +76,9 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarkernelopt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -143,9 +143,9 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarkernelopt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -210,9 +210,9 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarkernelopt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -277,9 +277,9 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarkernelopt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -345,9 +345,9 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarkernelopt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -422,9 +422,9 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarkernelopt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -490,9 +490,9 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarkernelopt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -609,9 +609,9 @@ TEST_CASE("benchmark var*var stencils optimizations", "[console][varvarWorkGroup
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -734,9 +734,9 @@ TEST_CASE("benchmark var*fix stencils optimizations", "[console][VarFixKernelOpt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -800,9 +800,9 @@ TEST_CASE("benchmark var*fix stencils optimizations", "[console][VarFixKernelOpt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -867,9 +867,9 @@ TEST_CASE("benchmark var*fix stencils optimizations", "[console][VarFixKernelOpt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -935,9 +935,9 @@ TEST_CASE("benchmark var*fix stencils optimizations", "[console][VarFixKernelOpt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -1002,9 +1002,9 @@ TEST_CASE("benchmark var*fix stencils optimizations", "[console][VarFixKernelOpt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -1067,9 +1067,9 @@ TEST_CASE("benchmark var*fix stencils optimizations", "[console][VarFixKernelOpt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -1134,9 +1134,9 @@ TEST_CASE("benchmark var*fix stencils optimizations", "[console][VarFixKernelOpt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands);
-        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::VaryingStencilGpu a(m, n, o, wa, gha, oclw.context, oclw.commands, oclw.program);
+        mgcl::FixedStencilGpu b(wb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -1250,9 +1250,9 @@ TEST_CASE("benchmark fix*var stencils optimizations", "[console][FixVarKernelOpt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::FixedStencilGpu a(wa, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::FixedStencilGpu a(wa, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -1316,9 +1316,9 @@ TEST_CASE("benchmark fix*var stencils optimizations", "[console][FixVarKernelOpt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::FixedStencilGpu a(wa, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::FixedStencilGpu a(wa, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();
@@ -1383,9 +1383,9 @@ TEST_CASE("benchmark fix*var stencils optimizations", "[console][FixVarKernelOpt
         // create output buffer c
         // mgcl::VaryingStencilGpu c(m, n, o, width + b.getWidth() - 1, ghc, context, queue);
 
-        mgcl::FixedStencilGpu a(wa, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands);
-        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands);
+        mgcl::FixedStencilGpu a(wa, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu b(m, n, o, wb, ghb, oclw.context, oclw.commands, oclw.program);
+        mgcl::VaryingStencilGpu c(m, n, o, wa + wb - 1, ghc, oclw.context, oclw.commands, oclw.program);
 
         auto abuf = a.getBuf();
         auto bbuf = b.getBuf();

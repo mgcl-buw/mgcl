@@ -405,7 +405,7 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     // Create global test data. No random data so values will be the same for all processes. Fill with 1d index.
     mgcl::VaryingStencil sglob(m, n, o, 3, gh, gh, gh);
     sglob.fill1dIndex(true);
-    mgcl::VaryingStencilGpu sgpu(m, n, o, 3, gh, tu.getContext(), tu.getCommands());
+    mgcl::VaryingStencilGpu sgpu(m, n, o, 3, gh, tu.getContext(), tu.getCommands(), tu.getProgram());
     sgpu.fill(sglob, tu.getCommands(), true);
     tu.finish();
 
@@ -415,7 +415,7 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     // Create local slice of global data
     auto clptr = sglob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
     auto& sloc = *clptr;
-    mgcl::VaryingStencilGpu sgpuLocal(sloc.getM(), sloc.getN(), sloc.getO(), 3, gh, tu.getContext(), tu.getCommands());
+    mgcl::VaryingStencilGpu sgpuLocal(sloc.getM(), sloc.getN(), sloc.getO(), 3, gh, tu.getContext(), tu.getCommands(), tu.getProgram());
     sgpuLocal.fill(sloc, tu.getCommands(), true);
     tu.finish();
 

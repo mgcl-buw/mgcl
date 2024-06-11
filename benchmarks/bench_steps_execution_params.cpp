@@ -309,7 +309,7 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
             mgcl::CuboidGpu dVIn_cuboid(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *v);
             mgcl::CuboidGpu dF_cuboid(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *f);
             mgcl::CuboidGpu dR_cuboid(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *r);
-            mgcl::VaryingStencilGpu dsv = mgcl::VaryingStencilGpu(m, n, o, 3, 2, context, commands);
+            mgcl::VaryingStencilGpu dsv = mgcl::VaryingStencilGpu(m, n, o, 3, 2, context, commands, program);
             dsv.fill(sv, commands, true);
 
             int moff = 0;
@@ -534,7 +534,7 @@ std::shared_ptr<mgcl::Cuboid> runJacobiBench(std::vector<std::vector<int>> grids
             mgcl::CuboidGpu dVOut_cuboid(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *v);
             mgcl::CuboidGpu dF_cuboid(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *f);
             mgcl::CuboidGpu dR_cuboid(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *r);
-            mgcl::VaryingStencilGpu dsv = mgcl::VaryingStencilGpu(m, n, o, 3, 2, context, commands);
+            mgcl::VaryingStencilGpu dsv = mgcl::VaryingStencilGpu(m, n, o, 3, 2, context, commands, program);
             dsv.fill(sv, commands, true);
 
             int moff = 0;

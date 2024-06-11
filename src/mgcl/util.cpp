@@ -62,10 +62,7 @@ namespace mgcl::util
         mgclCheckError(err, "Creating dPartialSums buffer");
 
         // fill buffer with zeros
-        double zero = 0;
-        err = clEnqueueFillBuffer(commands, dPartialSums, &zero, sizeof(double), 0,
-                                  sizeof(double) * num_partials, 0, NULL, NULL);
-        mgclCheckError(err, "setting dPartialSums to 0");
+        fill(program, commands, dPartialSums, 0.0, num_partials, false, conf, pd);
 
         // Create the compute kernel from the program
         cl_kernel kernel_sum_partial = clCreateKernel(program, kernelNamePartials, &err);
@@ -183,10 +180,7 @@ namespace mgcl::util
         mgclCheckError(err, "Creating dPartialMax buffer");
 
         // fill buffer with zeros
-        double zero = 0;
-        err = clEnqueueFillBuffer(commands, dPartialMax, &zero, sizeof(double), 0,
-                                  sizeof(double) * num_partials, 0, NULL, NULL);
-        mgclCheckError(err, "setting dPartialMax to 0");
+        fill(program, commands, dPartialMax, 0.0, num_partials, false, conf, pd);
 
         // Create the compute kernel from the program
         cl_kernel kernel_max_partial = clCreateKernel(program, kernelNamePartials, &err);
@@ -304,10 +298,7 @@ namespace mgcl::util
         mgclCheckError(err, "Creating dPartialMax buffer");
 
         // fill buffer with zeros
-        double zero = 0;
-        err = clEnqueueFillBuffer(commands, dPartialMax, &zero, sizeof(double), 0,
-                                  sizeof(double) * num_partials, 0, NULL, NULL);
-        mgclCheckError(err, "setting dPartialMax to 0");
+        fill(program, commands, dPartialMax, 0.0, num_partials, false, conf, pd);
 
         // Create the compute kernel from the program
         cl_kernel kernel_max_partial = clCreateKernel(program, kernelNamePartials, &err);

@@ -337,8 +337,8 @@ namespace mgcl
 
         // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
         // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
-        auto sr = create3dFullWeightRestrictionStencilGpu(context, queue);
-        auto sp = create3dBilinearProlongationStencilGpu(context, queue);
+        auto sr = create3dFullWeightRestrictionStencilGpu(context, queue, program);
+        auto sp = create3dBilinearProlongationStencilGpu(context, queue, program);
 
         // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
         // S * A_h * S and cut out later manually.

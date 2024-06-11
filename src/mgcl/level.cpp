@@ -176,11 +176,11 @@ namespace mgcl
                     stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
                         problem->mGlobal, problem->nGlobal, problem->oGlobal, 3,
                         std::max(2, problem->getJacobiIterationsPerKernel()),
-                        problem->getContext(), problem->getCommands());
+                        problem->getContext(), problem->getCommands(), problem->getProgram());
                 else
                     stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
                         m, n, o, 3, std::max(2, problem->getJacobiIterationsPerKernel()),
-                        problem->getContext(), problem->getCommands());
+                        problem->getContext(), problem->getCommands(), problem->getProgram());
 
                 // Fill stencil values on gpu on level 0 from input stencil
                 stencilValuesGpu->fill(*stencilValues, problem->getCommands(), true);

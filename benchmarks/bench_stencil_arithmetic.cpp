@@ -85,8 +85,8 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 
-            mgcl::VaryingStencilGpu vd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
-            mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
+            mgcl::VaryingStencilGpu vd(m, n, o, 3, gh, tu->getContext(), tu->getCommands(), tu->getProgram());
+            mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands(), tu->getProgram());
             vd.fill(v, tu->getCommands(), true);
             fd.fill(f, tu->getCommands(), true);
             tu->finish();
@@ -107,8 +107,8 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 
-            mgcl::FixedStencilGpu vd(3, tu->getContext(), tu->getCommands());
-            mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
+            mgcl::FixedStencilGpu vd(3, tu->getContext(), tu->getCommands(), tu->getProgram());
+            mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands(), tu->getProgram());
             vd.fill(v, tu->getCommands(), true);
             fd.fill(f, tu->getCommands(), true);
             tu->finish();
@@ -129,8 +129,8 @@ TEST_CASE("stencil arithmetic", "[console][fixedVsVarying]")
             v.fillRandom(0, 10);
             f.fillRandom(0, 10);
 
-            mgcl::FixedStencilGpu vd(3, tu->getContext(), tu->getCommands());
-            mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands());
+            mgcl::FixedStencilGpu vd(3, tu->getContext(), tu->getCommands(), tu->getProgram());
+            mgcl::VaryingStencilGpu fd(m, n, o, 3, gh, tu->getContext(), tu->getCommands(), tu->getProgram());
             vd.fill(v, tu->getCommands(), true);
             fd.fill(f, tu->getCommands(), true);
             tu->finish();

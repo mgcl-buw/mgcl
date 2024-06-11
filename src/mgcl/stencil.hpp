@@ -110,7 +110,8 @@ namespace mgcl
         cl_mem buf = nullptr;
 
     public:
-        VaryingStencilGpu(int m_, int n_, int o_, int width_, int gh_, cl_context context, cl_command_queue queue);
+        VaryingStencilGpu(int m_, int n_, int o_, int width_, int gh_,
+                          cl_context context, cl_command_queue queue, cl_program program);
         VaryingStencilGpu(VaryingStencilGpu&&);
         VaryingStencilGpu& operator=(VaryingStencilGpu&&);
         ~VaryingStencilGpu();
@@ -167,7 +168,7 @@ namespace mgcl
         cl_mem buf = nullptr;
 
     public:
-        FixedStencilGpu(int width_, cl_context context, cl_command_queue queue);
+        FixedStencilGpu(int width_, cl_context context, cl_command_queue queue, cl_program program);
         FixedStencilGpu(FixedStencilGpu&&);
         FixedStencilGpu& operator=(FixedStencilGpu&&);
         ~FixedStencilGpu();
@@ -187,8 +188,8 @@ namespace mgcl
         cl_mem getBuf() const;
     };
 
-    FixedStencilGpu create3dFullWeightRestrictionStencilGpu(cl_context context, cl_command_queue queue);
-    FixedStencilGpu create3dBilinearProlongationStencilGpu(cl_context context, cl_command_queue queue);
+    FixedStencilGpu create3dFullWeightRestrictionStencilGpu(cl_context context, cl_command_queue queue, cl_program program);
+    FixedStencilGpu create3dBilinearProlongationStencilGpu(cl_context context, cl_command_queue queue, cl_program program);
 }
 
 #endif // MGCL_STENCIL_HPP

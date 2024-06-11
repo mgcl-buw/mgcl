@@ -178,10 +178,7 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][parts]")
             mgcl::mgclCheckError(err, "Creating dPartialSums buffer");
 
             // fill buffer with zeros
-            double zero = 0;
-            err = clEnqueueFillBuffer(commands, dPartialSums, &zero, sizeof(double), 0,
-                                      sizeof(double) * num_partials, 0, NULL, NULL);
-            mgcl::mgclCheckError(err, "setting dPartialSums to 0");
+            mgcl::util::fill(program, commands, dPartialSums, 0, num_partials, false, nullptr, nullptr);
 
             // Create the compute kernel from the program
             cl_kernel kernel_sum_partial = clCreateKernel(program, kernelName.c_str(), &err);
@@ -233,10 +230,7 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][parts]")
             mgcl::mgclCheckError(err, "Creating dPartialSums buffer");
 
             // fill buffer with zeros
-            double zero = 0;
-            err = clEnqueueFillBuffer(commands, dPartialSums, &zero, sizeof(double), 0,
-                                      sizeof(double) * num_partials, 0, NULL, NULL);
-            mgcl::mgclCheckError(err, "setting dPartialSums to 0");
+            mgcl::util::fill(program, commands, dPartialSums, 0, num_partials, false, nullptr, nullptr);
 
             // Create the compute kernel from the program
             cl_kernel kernel_sum_partial = clCreateKernel(program, kernelName.c_str(), &err);
@@ -291,10 +285,7 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][parts]")
             mgcl::mgclCheckError(err, "Creating dPartialSums buffer");
 
             // fill buffer with zeros
-            double zero = 0;
-            err = clEnqueueFillBuffer(commands, dPartialSums, &zero, sizeof(double), 0,
-                                      sizeof(double) * num_partials, 0, NULL, NULL);
-            mgcl::mgclCheckError(err, "setting dPartialSums to 0");
+            mgcl::util::fill(program, commands, dPartialSums, 0, num_partials, false, nullptr, nullptr);
 
             // Create the compute kernel from the program
             cl_kernel kernel_sum_partial = clCreateKernel(program, kernelName.c_str(), &err);
@@ -651,10 +642,7 @@ double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program progr
     mgcl::mgclCheckError(err, "Creating dPartialSums buffer");
 
     // fill buffer with zeros
-    double zero = 0;
-    err = clEnqueueFillBuffer(commands, dPartialSums, &zero, sizeof(double), 0,
-                              sizeof(double) * num_partials, 0, NULL, NULL);
-    mgcl::mgclCheckError(err, "setting dPartialSums to 0");
+    mgcl::util::fill(program, commands, dPartialSums, 0, num_partials, false, nullptr, nullptr);
 
     // Create the compute kernel from the program
     cl_kernel kernel_sum_partial = clCreateKernel(program, kernelName.c_str(), &err);
@@ -739,10 +727,7 @@ double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl
     mgcl::mgclCheckError(err, "Creating dPartialSums buffer");
 
     // fill buffer with zeros
-    double zero = 0;
-    err = clEnqueueFillBuffer(commands, dPartialSums, &zero, sizeof(double), 0,
-                              sizeof(double) * num_partials, 0, NULL, NULL);
-    mgcl::mgclCheckError(err, "setting dPartialSums to 0");
+    mgcl::util::fill(program, commands, dPartialSums, 0, num_partials, false, nullptr, nullptr);
 
     // Create the compute kernel from the program
     cl_kernel kernel_sum_partial = clCreateKernel(program, kernelName.c_str(), &err);

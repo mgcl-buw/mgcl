@@ -83,7 +83,7 @@ TEST_CASE("GPU galerkin random values periodic")
     int gh = 2;
 
     // Fill varying stencil on fine grid with 27p random values
-    mgcl::VaryingStencilGpu a_h_gpu(m, n, o, 3, gh, t.getContext(), t.getCommands());
+    mgcl::VaryingStencilGpu a_h_gpu(m, n, o, 3, gh, t.getContext(), t.getCommands(), t.getProgram());
     mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
     a_h.fillRandom(-10, 10);
     a_h.updateGhosts();

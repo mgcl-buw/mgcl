@@ -34,7 +34,8 @@ namespace mgcl::util
                    bool return_sum, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
     void fill(cl_program program, cl_command_queue commands,
-              cl_mem buffer, double value, int size, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
+              cl_mem buffer, double value, int size, bool blocking,
+              mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
     namespace seq
     {

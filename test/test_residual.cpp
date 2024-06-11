@@ -561,9 +561,9 @@ TEST_CASE("residual gpu gh > 1")
             sv->updateGhosts();
 
             auto d_in_sv = std::make_shared<mgcl::VaryingStencilGpu>(sv->getM(), sv->getN(), sv->getO(), 3, sv->getGhostsM(),
-                                                                     tu.getContext(), tu.getCommands());
+                                                                     tu.getContext(), tu.getCommands(), tu.getProgram());
             auto d_in_sv_gh = std::make_shared<mgcl::VaryingStencilGpu>(sv->getM(), sv->getN(), sv->getO(), 3, sv->getGhostsM(),
-                                                                        tu_gh.getContext(), tu_gh.getCommands());
+                                                                        tu_gh.getContext(), tu_gh.getCommands(), tu_gh.getProgram());
 
             d_in_sv->fill(*sv, tu.getCommands(), true);
             d_in_sv_gh->fill(*sv, tu_gh.getCommands(), true);
@@ -956,10 +956,10 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
 
             auto d_sv_exp = std::make_shared<mgcl::VaryingStencilGpu>(sv_exp->getM(), sv_exp->getN(), sv_exp->getO(), 3,
                                                                       sv_exp->getGhostsM(),
-                                                                      tu_exp.getContext(), tu_exp.getCommands());
+                                                                      tu_exp.getContext(), tu_exp.getCommands(), tu_exp.getProgram());
             auto d_sv_act = std::make_shared<mgcl::VaryingStencilGpu>(sv_act->getM(), sv_act->getN(), sv_act->getO(), 3,
                                                                       sv_act->getGhostsM(),
-                                                                      tu_act.getContext(), tu_act.getCommands());
+                                                                      tu_act.getContext(), tu_act.getCommands(), tu_act.getProgram());
 
             d_sv_exp->fill(*sv_exp, tu_exp.getCommands(), true);
             d_sv_act->fill(*sv_act, tu_act.getCommands(), true);

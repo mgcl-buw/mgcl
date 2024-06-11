@@ -34,7 +34,7 @@ TEST_CASE("VaryingStencilGpu ctor+dtor")
     int o = 4;
     int width = 3;
     int gh = 2;
-    auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
+    auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands(), t.getProgram());
     t.finish();
 
     REQUIRE(s->getBuf());
@@ -85,7 +85,7 @@ TEST_CASE("VaryingStencilGpu move ctor")
 
     mgcl::VaryingStencil h(m, n, o, 3, 0, 0, 0);
     h.fillRandom();
-    auto hgpu = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, 0, t.getContext(), t.getCommands());
+    auto hgpu = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, 0, t.getContext(), t.getCommands(), t.getProgram());
     hgpu->fill(h, t.getCommands(), true);
 
     // copy manually for checking results
@@ -177,7 +177,7 @@ TEST_CASE("VaryingStencilGpu::fill")
     SECTION("VaryingStencil3x3x3")
     {
         int width = 3;
-        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
+        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         int sizeNeeded = (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width;
@@ -200,7 +200,7 @@ TEST_CASE("VaryingStencilGpu::fill")
     SECTION("VaryingStencil5x5x5")
     {
         int width = 5;
-        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
+        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         int sizeNeeded = (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width;
@@ -223,7 +223,7 @@ TEST_CASE("VaryingStencilGpu::fill")
     SECTION("throwing")
     {
         int width = 3;
-        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
+        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // widths do not match
@@ -257,7 +257,7 @@ TEST_CASE("VaryingStencilGpu::read")
     SECTION("VaryingStencil3x3x3")
     {
         int width = 3;
-        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
+        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -277,7 +277,7 @@ TEST_CASE("VaryingStencilGpu::read")
     SECTION("VaryingStencil5x5x5")
     {
         int width = 5;
-        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
+        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -512,7 +512,7 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
     SECTION("VaryingStencil3x3x3")
     {
         int width = 3;
-        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
+        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -537,7 +537,7 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
     SECTION("VaryingStencil5x5x5")
     {
         int width = 5;
-        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands());
+        auto s = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, width, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -662,8 +662,8 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
 
     SECTION("widths 3 * 3")
     {
-        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands());
-        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands());
+        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands(), t.getProgram());
+        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -711,8 +711,8 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
 
     SECTION("widths 3 * 5")
     {
-        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands());
-        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands());
+        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands(), t.getProgram());
+        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -760,8 +760,8 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
 
     SECTION("widths 5 * 3")
     {
-        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands());
-        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands());
+        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands(), t.getProgram());
+        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -809,8 +809,8 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
 
     SECTION("widths 5 * 5")
     {
-        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands());
-        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands());
+        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands(), t.getProgram());
+        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -877,8 +877,8 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
 
     SECTION("widths 3 * 3")
     {
-        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands());
-        auto b = std::make_unique<mgcl::FixedStencilGpu>(3, t.getContext(), t.getCommands());
+        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands(), t.getProgram());
+        auto b = std::make_unique<mgcl::FixedStencilGpu>(3, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -924,8 +924,8 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
 
     SECTION("widths 3 * 5")
     {
-        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands());
-        auto b = std::make_unique<mgcl::FixedStencilGpu>(5, t.getContext(), t.getCommands());
+        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands(), t.getProgram());
+        auto b = std::make_unique<mgcl::FixedStencilGpu>(5, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -971,8 +971,8 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
 
     SECTION("widths 5 * 3")
     {
-        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands());
-        auto b = std::make_unique<mgcl::FixedStencilGpu>(3, t.getContext(), t.getCommands());
+        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands(), t.getProgram());
+        auto b = std::make_unique<mgcl::FixedStencilGpu>(3, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -1018,8 +1018,8 @@ TEST_CASE("VaryingStencilGpu::multiply(fix)")
 
     SECTION("widths 5 * 5")
     {
-        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands());
-        auto b = std::make_unique<mgcl::FixedStencilGpu>(5, t.getContext(), t.getCommands());
+        auto a = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands(), t.getProgram());
+        auto b = std::make_unique<mgcl::FixedStencilGpu>(5, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -1270,7 +1270,7 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
     // This section checks if the actual calculation is correct by checking results vs the sequential version.
     SECTION("vs seq")
     {
-        mgcl::VaryingStencilGpu a_gpu(m, n, o, 7, gh, t.getContext(), t.getCommands());
+        mgcl::VaryingStencilGpu a_gpu(m, n, o, 7, gh, t.getContext(), t.getCommands(), t.getProgram());
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil a_h(m, n, o, 7, gh, gh, gh);
@@ -1319,7 +1319,7 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
         int resn = n;
         int reso = o;
 
-        mgcl::VaryingStencilGpu a_gpu(m, n, o, 7, gh, t.getContext(), t.getCommands());
+        mgcl::VaryingStencilGpu a_gpu(m, n, o, 7, gh, t.getContext(), t.getCommands(), t.getProgram());
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
         mgcl::VaryingStencil a_h(m, n, o, 7, gh, gh, gh);
@@ -1375,7 +1375,7 @@ TEST_CASE("FixedStencilGpu ctor+dtor")
 
     int width = 3;
     int gh = 2;
-    auto s = std::make_unique<mgcl::FixedStencilGpu>(width, t.getContext(), t.getCommands());
+    auto s = std::make_unique<mgcl::FixedStencilGpu>(width, t.getContext(), t.getCommands(), t.getProgram());
     t.finish();
 
     REQUIRE(s->getBuf());
@@ -1427,8 +1427,8 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
 
     SECTION("widths 3 * 3")
     {
-        auto a = std::make_unique<mgcl::FixedStencilGpu>(3, t.getContext(), t.getCommands());
-        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands());
+        auto a = std::make_unique<mgcl::FixedStencilGpu>(3, t.getContext(), t.getCommands(), t.getProgram());
+        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -1476,8 +1476,8 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
 
     SECTION("widths 3 * 5")
     {
-        auto a = std::make_unique<mgcl::FixedStencilGpu>(3, t.getContext(), t.getCommands());
-        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands());
+        auto a = std::make_unique<mgcl::FixedStencilGpu>(3, t.getContext(), t.getCommands(), t.getProgram());
+        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -1525,8 +1525,8 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
 
     SECTION("widths 5 * 3")
     {
-        auto a = std::make_unique<mgcl::FixedStencilGpu>(5, t.getContext(), t.getCommands());
-        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands());
+        auto a = std::make_unique<mgcl::FixedStencilGpu>(5, t.getContext(), t.getCommands(), t.getProgram());
+        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 3, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -1574,8 +1574,8 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
 
     SECTION("widths 5 * 5")
     {
-        auto a = std::make_unique<mgcl::FixedStencilGpu>(5, t.getContext(), t.getCommands());
-        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands());
+        auto a = std::make_unique<mgcl::FixedStencilGpu>(5, t.getContext(), t.getCommands(), t.getProgram());
+        auto b = std::make_unique<mgcl::VaryingStencilGpu>(m, n, o, 5, gh, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create VaryingStencil, fill with random values and copy to gpu buffer
@@ -1638,7 +1638,7 @@ TEST_CASE("FixedStencilGpu::fill")
     SECTION("FixedStencil3x3x3")
     {
         int width = 3;
-        auto s = std::make_unique<mgcl::FixedStencilGpu>(width, t.getContext(), t.getCommands());
+        auto s = std::make_unique<mgcl::FixedStencilGpu>(width, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         int sizeNeeded = width * width * width;
@@ -1661,7 +1661,7 @@ TEST_CASE("FixedStencilGpu::fill")
     SECTION("FixedStencil5x5x5")
     {
         int width = 5;
-        auto s = std::make_unique<mgcl::FixedStencilGpu>(width, t.getContext(), t.getCommands());
+        auto s = std::make_unique<mgcl::FixedStencilGpu>(width, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         int sizeNeeded = width * width * width;
@@ -1684,7 +1684,7 @@ TEST_CASE("FixedStencilGpu::fill")
     SECTION("throwing")
     {
         int width = 3;
-        auto s = std::make_unique<mgcl::FixedStencilGpu>(width, t.getContext(), t.getCommands());
+        auto s = std::make_unique<mgcl::FixedStencilGpu>(width, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // widths do not match
@@ -1709,7 +1709,7 @@ TEST_CASE("FixedStencilGpu::read")
     SECTION("FixedStencil3x3x3")
     {
         int width = 3;
-        auto s = std::make_unique<mgcl::FixedStencilGpu>(width, t.getContext(), t.getCommands());
+        auto s = std::make_unique<mgcl::FixedStencilGpu>(width, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create FixedStencil, fill with random values and copy to gpu buffer
@@ -1734,7 +1734,7 @@ TEST_CASE("FixedStencilGpu::read")
     SECTION("FixedStencil5x5x5")
     {
         int width = 5;
-        mgcl::FixedStencilGpu s(width, t.getContext(), t.getCommands());
+        mgcl::FixedStencilGpu s(width, t.getContext(), t.getCommands(), t.getProgram());
         t.finish();
 
         // create FixedStencil, fill with random values and copy to gpu buffer
@@ -1770,7 +1770,7 @@ TEST_CASE("FixedStencilGpu::create3dFullWeightRestrictionGpu")
 
     mgcl_test::TestUtility t(deviceType);
 
-    auto rgpu = mgcl::create3dFullWeightRestrictionStencilGpu(t.getContext(), t.getCommands());
+    auto rgpu = mgcl::create3dFullWeightRestrictionStencilGpu(t.getContext(), t.getCommands(), t.getProgram());
     auto r = rgpu.read(t.getCommands(), true);
     t.finish();
 
@@ -1819,7 +1819,7 @@ TEST_CASE("FixedStencilGpu::create3dBilinearProlongationStencilGpu")
 
     mgcl_test::TestUtility t(deviceType);
 
-    auto rgpu = mgcl::create3dBilinearProlongationStencilGpu(t.getContext(), t.getCommands());
+    auto rgpu = mgcl::create3dBilinearProlongationStencilGpu(t.getContext(), t.getCommands(), t.getProgram());
     auto r = rgpu.read(t.getCommands(), true);
     t.finish();
 

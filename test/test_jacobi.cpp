@@ -962,10 +962,10 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
 
             auto d_sv_exp = std::make_shared<mgcl::VaryingStencilGpu>(sv_exp->getM(), sv_exp->getN(), sv_exp->getO(), 3,
                                                                       sv_exp->getGhostsM(),
-                                                                      tu_exp.getContext(), tu_exp.getCommands());
+                                                                      tu_exp.getContext(), tu_exp.getCommands(), tu_exp.getProgram());
             auto d_sv_act = std::make_shared<mgcl::VaryingStencilGpu>(sv_act->getM(), sv_act->getN(), sv_act->getO(), 3,
                                                                       sv_act->getGhostsM(),
-                                                                      tu_act.getContext(), tu_act.getCommands());
+                                                                      tu_act.getContext(), tu_act.getCommands(), tu_act.getProgram());
 
             d_sv_exp->fill(*sv_exp, tu_exp.getCommands(), true);
             d_sv_act->fill(*sv_act, tu_act.getCommands(), true);
