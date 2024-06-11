@@ -190,6 +190,22 @@ TEST_CASE("CuboidGpu::write")
     REQUIRE(ret->isEqualAllCells(ch));
 }
 
+TEST_CASE("CuboidGpu::fill")
+{
+    mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
+    ch.fillRandom();
+
+    mgcl_test::TestUtility tu;
+    mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4);
+    c.write(tu.getCommands(), ch, true);
+
+    c.fill(tu.getProgram(), tu.getCommands(), 0.0, true, nullptr, nullptr);
+    auto ret = c.read(tu.getCommands(), nullptr, true);
+
+    ch.fill(0.0, false);
+    REQUIRE(ret->isEqualAllCells(ch));
+}
+
 // Tests if CuboidGpu::copyTo works correctly.
 TEST_CASE("CuboidGpu::copyTo")
 {
@@ -612,7 +628,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
         SECTION("reuse_device_buffer")
         {
             mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, 1, 1, ressize, 0, 0, 0);
-            d_tmp.fill(p.getCommands(), -1, true);
+            d_tmp.fill(p.getProgram(), p.getCommands(), -1, false, &p.getKernelConfig(), p.getProfilingData());
 
             auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr, nullptr, nullptr);
             check(*ret);

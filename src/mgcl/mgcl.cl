@@ -2435,3 +2435,17 @@ __kernel void paste_ghosts_from_border_planes(
         buf_cuboid[i * ngh * ogh + j * ogh + k] = buf_planes[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy];
     }
 }
+
+/**
+ * Fill buffer with value, equivalent to clEnqueueFillBuffer.
+ * size is the number of elements in the buffer.
+ */
+__kernel void fill_buffer(
+    __global double* buf,
+    double value,
+    int size)
+{
+    int idx = get_global_id(0);
+    if (idx < size)
+        buf[idx] = value;
+}

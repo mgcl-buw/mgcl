@@ -756,7 +756,7 @@ namespace mgcl
             {
                 // calculate 2-Norm
                 auto& dRsquares = level.getDRsq();
-                dRsquares.fill(problem.getCommands(), 0.0, false); // reset to zero
+                dRsquares.fill(problem.getProgram(), problem.getCommands(), 0.0, false, &problem.getKernelConfig(), problem.getProfilingData()); // reset to zero
 
                 // Create the compute kernel from the program
                 const char* kernelName = "residual_squared";

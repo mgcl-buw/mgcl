@@ -684,7 +684,7 @@ TEST_CASE("Problem::readResults")
         REQUIRE(p.getVPtr() == v);
 
         // alter values of dVIn on lowest level
-        p.getLevelAt(0).getDVIn().fill(p.getCommands(), 1.0, true);
+        p.getLevelAt(0).getDVIn().fill(p.getProgram(), p.getCommands(), 1.0, false, &p.getKernelConfig(), p.getProfilingData());
 
         // read back and check if values were copied successfully
         REQUIRE(p.readResults() == CL_SUCCESS);

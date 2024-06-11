@@ -54,6 +54,7 @@ namespace mgcl::conf
         ret["max_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {256, 1, 1}}};
         // c["max_finish"] = KernelWorkgroupSizes{{1, {4, 4, 4}}}; // Launches only 1 wi
         ret["max_abs_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {256, 1, 1}}};
+        ret["fill_buffer"] = KernelWorkgroupSizes{{1, {64, 1, 1}}};
 
         return ret;
     }

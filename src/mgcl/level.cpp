@@ -227,9 +227,9 @@ namespace mgcl
                                          problem->getGhosts(), problem->getGhosts(), problem->getGhosts());
         dRsq = std::make_shared<CuboidGpu>(context, CL_MEM_WRITE_ONLY, m, n, o, 0, 0, 0);
 
-        dVOut->fill(problem->getCommands(), 0.0, false);
-        dR->fill(problem->getCommands(), 0.0, false);
-        dRsq->fill(problem->getCommands(), 0.0, true);
+        dVOut->fill(problem->getProgram(), problem->getCommands(), 0.0, false, &problem->getKernelConfig(), problem->getProfilingData());
+        dR->fill(problem->getProgram(), problem->getCommands(), 0.0, false, &problem->getKernelConfig(), problem->getProfilingData());
+        dRsq->fill(problem->getProgram(), problem->getCommands(), 0.0, false, &problem->getKernelConfig(), problem->getProfilingData());
 
         err = MultigridEngine::updateGhosts(*problem, *dF, mpiData.get(), isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts of d_f");

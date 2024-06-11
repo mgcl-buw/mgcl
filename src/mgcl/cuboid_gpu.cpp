@@ -2,6 +2,7 @@
 
 #include "kernel_config.hpp"
 #include "opencl_helper.hpp"
+#include "profiling_data.hpp"
 
 #include <fstream>
 #include <iomanip>
@@ -238,13 +239,61 @@ namespace mgcl
      * @param value Value to fill the buffer with.
      * @param blocking If true, the write will be blocking.
      */
-    void CuboidGpu::fill(cl_command_queue commands, double value, bool blocking)
+    void CuboidGpu::fill(cl_program program, cl_command_queue commands,
+                         double value, bool blocking,
+                         conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
-        int err = clEnqueueFillBuffer(commands, buffer, &value, sizeof(double), 0, sizeof(double) * size,
-                                      0, nullptr, nullptr);
-        mgcl::mgclCheckError(err, "clEnqueueFillBuffer");
+        // int err = clEnqueueFillBuffer(commands, buffer, &value, sizeof(double), 0, sizeof(double) * size,
+        //                               0, nullptr, nullptr);
+        // mgcl::mgclCheckError(err, "clEnqueueFillBuffer");
+        // if (blocking)
+        //     mgcl::mgclCheckError(clFinish(commands), "clFinish");
+
+        // Create the compute kernel from the program
+        int err;
+        const char* kernelName = "fill_buffer";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
+        mgcl::mgclCheckError(err, "clCreateKernel");
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buffer);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(double), &value);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &size);
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
+        size_t global = size;
+        size_t local = 64;
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, global);
+            local = c[0];
+        }
+
+        if (global % local != 0)
+            global += local - (global % local);
+
+        cl_event ev;
+
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing fill_buffer kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(commands, ev, kernelName,
+                               {global, 0, 0},
+                               {local, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
         if (blocking)
             mgcl::mgclCheckError(clFinish(commands), "clFinish");
+
+        err = clReleaseKernel(kernel);
+        mgcl::mgclCheckError(err, "Releasing fill_buffer kernel");
     }
 
     /**

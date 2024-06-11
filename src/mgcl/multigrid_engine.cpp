@@ -124,7 +124,7 @@ namespace mgcl
         if (level.getNum() < problem.maxlevel) // if not at highest level
         {
             // reset v to zero for coarser grids (for another possible v-cycle)
-            levelAbove.getDVIn().fill(problem.getCommands(), 0.0, false);
+            levelAbove.getDVIn().fill(problem.getProgram(), problem.getCommands(), 0.0, false, &problem.getKernelConfig(), problem.getProfilingData());
         }
 
         // relax nu1 times
