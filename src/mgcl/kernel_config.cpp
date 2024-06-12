@@ -15,17 +15,17 @@ namespace mgcl::conf
         KernelConfig ret;
 
         // Jacobi kernels
-        ret["jacobi_iter_27point_varying_stencil_1d"] = KernelWorkgroupSizes{{1, {512, 1, 1}}};
+        ret["jacobi_iter_27point_varying_stencil_1d"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         ret["jacobi_iter_7point"] = KernelWorkgroupSizes{{1, {1, 64, 1}}};
         ret["jacobi_iter_19point"] = KernelWorkgroupSizes{{1, {1, 64, 1}}};
         ret["jacobi_iter_27point"] = KernelWorkgroupSizes{{1, {1, 64, 1}}};
 
         // Residual kernels
-        ret["residual_27point_varying_stencil"] = KernelWorkgroupSizes{{1, {512, 1, 1}}};
-        ret["residual_7point"] = KernelWorkgroupSizes{{1, {512, 1, 1}}};
-        ret["residual_19point"] = KernelWorkgroupSizes{{1, {512, 1, 1}}};
-        ret["residual_27point"] = KernelWorkgroupSizes{{1, {512, 1, 1}}};
-        ret["residual_squared"] = KernelWorkgroupSizes{{1, {512, 1, 1}}};
+        ret["residual_27point_varying_stencil"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
+        ret["residual_7point"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
+        ret["residual_19point"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
+        ret["residual_27point"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
+        ret["residual_squared"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
 
         // Ghost update kernels
         ret["update_ghosts_periodic"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
@@ -49,11 +49,11 @@ namespace mgcl::conf
         ret["cut_stencils_w7_to_w3"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
 
         // Utility kernels
-        ret["sum_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {256, 1, 1}}};
+        ret["sum_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         // c["sum_finish"] = KernelWorkgroupSizes{{1, {4, 4, 4}}}; // Launches only 1 wi
-        ret["max_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {256, 1, 1}}};
+        ret["max_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         // c["max_finish"] = KernelWorkgroupSizes{{1, {4, 4, 4}}}; // Launches only 1 wi
-        ret["max_abs_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {256, 1, 1}}};
+        ret["max_abs_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         ret["fill_buffer"] = KernelWorkgroupSizes{{1, {64, 1, 1}}};
 
         return ret;
