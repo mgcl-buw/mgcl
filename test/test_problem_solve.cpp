@@ -274,7 +274,7 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
 
             // run with a tolerance that will never be reached thus all vcycle iters are executed
             mg_with_maxlv(v->getData(), f->getData(), maxIterVCycles, tol, N, N, N, 0, N - 1, 0, N - 1, 0, N - 1,
-                          1, nu1, nu2, omega, size, values, xoff, yoff, zoff, mpi_comm_cart, 1, maxlevel + 1);
+                          1, nu1, nu2, omega, size, values, xoff, yoff, zoff, mpi_comm_cart, 0, maxlevel + 1);
 
             // check if solution is good
             auto err = calculateError(solution, *v);
