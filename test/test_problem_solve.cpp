@@ -26,11 +26,11 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
     double h = 1.0 / (double)N;
 
     // Problem parameters
-    double tol = 1e-7;
+    double tol = 1e-14;
     int nu1 = 2;
     int nu2 = 2;
     double omega = 0.8;
-    int maxIterVCycles = 20;
+    int maxIterVCycles = 10;
     int maxlevel = 10;
 
     auto v = std::make_shared<mgcl::Cuboid>(N, N, N);
