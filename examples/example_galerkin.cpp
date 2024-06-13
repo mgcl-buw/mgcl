@@ -110,18 +110,19 @@ int main(int argc, char** argv)
         auto& s = *p.getStencilValues();
 
         // fill with 7-point Laplace
+        double h2inv = m * m;
         for (int i = 0; i < s.getMgh(); i++)
             for (int j = 0; j < s.getNgh(); j++)
                 for (int k = 0; k < s.getOgh(); k++)
                 {
                     // 7-point Laplace
-                    s[0][1][1][i][j][k] = 1;
-                    s[1][0][1][i][j][k] = 1;
-                    s[1][1][0][i][j][k] = 1;
-                    s[1][1][1][i][j][k] = -6;
-                    s[1][1][2][i][j][k] = 1;
-                    s[1][2][1][i][j][k] = 1;
-                    s[2][1][1][i][j][k] = 1;
+                    s[0][1][1][i][j][k] = -h2inv;
+                    s[1][0][1][i][j][k] = -h2inv;
+                    s[1][1][0][i][j][k] = -h2inv;
+                    s[1][1][1][i][j][k] = 6 * h2inv;
+                    s[1][1][2][i][j][k] = -h2inv;
+                    s[1][2][1][i][j][k] = -h2inv;
+                    s[2][1][1][i][j][k] = -h2inv;
                 }
 
         p.init();
@@ -148,18 +149,19 @@ int main(int argc, char** argv)
         auto& s = *p.getStencilValues();
 
         // fill with 7-point Laplace
+        double h2inv = m * m;
         for (int i = 0; i < s.getMgh(); i++)
             for (int j = 0; j < s.getNgh(); j++)
                 for (int k = 0; k < s.getOgh(); k++)
                 {
                     // 7-point Laplace
-                    s[0][1][1][i][j][k] = 1;
-                    s[1][0][1][i][j][k] = 1;
-                    s[1][1][0][i][j][k] = 1;
-                    s[1][1][1][i][j][k] = -6;
-                    s[1][1][2][i][j][k] = 1;
-                    s[1][2][1][i][j][k] = 1;
-                    s[2][1][1][i][j][k] = 1;
+                    s[0][1][1][i][j][k] = -h2inv;
+                    s[1][0][1][i][j][k] = -h2inv;
+                    s[1][1][0][i][j][k] = -h2inv;
+                    s[1][1][1][i][j][k] = 6 * h2inv;
+                    s[1][1][2][i][j][k] = -h2inv;
+                    s[1][2][1][i][j][k] = -h2inv;
+                    s[2][1][1][i][j][k] = -h2inv;
                 }
 
         if (mgcl_test::TestUtility::deviceAvailable("Quadro", p.getDeviceType()))
