@@ -60,7 +60,7 @@ TEST_CASE("bench_fill_custom_vs_api")
             std::string name = std::string("api_")
                                    .append(std::to_string(el));
             bench.run(std::string(name).c_str(), [&] { //
-                clEnqueueFillBuffer(p.getCommands(), buf, &one, sizeof(double), 0, el, 0, NULL, NULL);
+                clEnqueueFillBuffer(p.getCommands(), buf, &one, sizeof(double), 0, sizeof(double) * el, 0, NULL, NULL);
                 p.getOpenCLHelper().finish();
             });
 
