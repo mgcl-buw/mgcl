@@ -73,6 +73,9 @@ namespace mgcl
         /* Holds level-dependent data for each level */
         std::vector<std::unique_ptr<Level>> levels;
 
+        // Vector for holding the relative residuals for each iteration. Can be queried after solve.
+        std::vector<double> residuals;
+
         // TODO check what happens when reuse_buffer and ghosts != ghosts_in
         /* Amount of ghost cells surrounding v and f. If optimized jacobi shall be used it must be greater or equal than
          * max(nu1, nu2). Must fit to buffers ghosts size if reuse_opencl_buffers is set. Defaults to 1. */
@@ -368,6 +371,8 @@ namespace mgcl
         conf::KernelConfig& getKernelConfig() { return kernelConfig; }
 
         inline int getElapsedIterations() const { return elapsedIterations; }
+
+        std::vector<double>& getResiduals();
 
         friend std::ostream& operator<<(std::ostream& os, const Problem& lv);
     };

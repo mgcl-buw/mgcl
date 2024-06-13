@@ -1,6 +1,7 @@
 #include "problem.hpp"
 #include "cuboid.hpp" // for Cuboid
 #include "level.hpp"  // for Level
+#include "mgcl.hpp"
 #include "mpi_global_data.hpp"
 #include "mpi_stencil.hpp"
 #include "mpi_util.hpp"
@@ -543,6 +544,8 @@ namespace mgcl
         // Edge case: Do nothing if mpi is used but level threshold is 0 (i.e. all work is done on proc 0).
         if (!(useMpi() && getMpiLevelThreshold() <= 0 && mpiRank() > 0))
         {
+            residuals.clear();
+
             // calculate initial residual
             double initres = MultigridEngine::residual(*this, *levels[0], !ignoreTol);
             if (!silent && !ignoreTol)
@@ -565,10 +568,19 @@ namespace mgcl
                     // If mpi is in use, calculate global relres first
                     if (useMpi() && getMpiLevelThreshold() > 0)
                     {
-                        relres = relres * relres;
-                        MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                        relres = sqrt(relres);
+                        if (residual_norm == MGCL_RESIDUAL_NORM::MGCL_L2)
+                        {
+                            relres = relres * relres;
+                            MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                            relres = sqrt(relres);
+                        }
+                        else
+                        {
+                            MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                        }
                     }
+
+                    residuals.push_back(relres);
                 }
 
                 if (!silent)
@@ -650,6 +662,7 @@ namespace mgcl
             // run vcycle maxiter_vcycles times
             double res, relres;
             elapsedIterations = 0;
+            residuals.clear();
             for (int i = 0; i < maxiter_vcycles; i++)
             {
                 elapsedIterations++;
@@ -664,10 +677,19 @@ namespace mgcl
                     // If mpi is in use, calculate global relres first
                     if (useMpi() && getMpiLevelThreshold() > 0)
                     {
-                        relres = relres * relres;
-                        MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                        relres = sqrt(relres);
+                        if (residual_norm == MGCL_RESIDUAL_NORM::MGCL_L2)
+                        {
+                            relres = relres * relres;
+                            MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                            relres = sqrt(relres);
+                        }
+                        else
+                        {
+                            MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                        }
                     }
+
+                    residuals.push_back(res);
                 }
 
                 if (!silent)
@@ -1176,6 +1198,11 @@ namespace mgcl
             profilingData = std::make_unique<mgcl::ProfilingData>();
         else
             profilingData = nullptr;
+    }
+
+    std::vector<double>& Problem::getResiduals()
+    {
+        return residuals;
     }
 
     // Sets MPI communicator and checks that cartesian topology is attached to it.
