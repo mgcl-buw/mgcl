@@ -5,6 +5,7 @@
 #include "catch2/generators/catch_generators.hpp"
 
 #include <chrono>
+#include <iostream>
 using namespace std::chrono_literals;
 
 #include "../src/mgcl/stencil.hpp"
@@ -174,11 +175,14 @@ TEST_CASE("stencil_arithmetic_ocl_only")
             .minEpochTime(100ms)
             .relative(false);
 
-        auto tu = std::make_shared<mgcl_test::TestUtility>();
+        auto tu = std::make_shared<mgcl_test::TestUtility>(CL_DEVICE_TYPE_GPU);
         bool gpuAvailable = tu->deviceAvailable("Quadro", CL_DEVICE_TYPE_GPU);
 
         if (!gpuAvailable)
             throw "No GPU found!";
+
+        std::cout << "GPU info:" << std::endl;
+        tu->getProblem().getOpenCLHelper().outputDeviceInfo(tu->getProblem().getOpenCLHelper().getDeviceId());
 
         std::string name_grid = std::to_string(m)
                                     .append("_")
