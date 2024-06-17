@@ -218,6 +218,8 @@ namespace mgcl
 
         int mpiSize();
 
+        void printDeviceInfo();
+
         /********************************
          * Getters and Setters
          ********************************/

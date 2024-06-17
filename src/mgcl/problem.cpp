@@ -6,6 +6,7 @@
 #include "mpi_stencil.hpp"
 #include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
+#include "opencl_helper.hpp"
 #include "profiling_data.hpp"
 #include "util.hpp"
 #include <memory>
@@ -737,6 +738,18 @@ namespace mgcl
     int Problem::getLevelsSize() const
     {
         return levels.size();
+    }
+
+    void Problem::printDeviceInfo()
+    {
+        if (openCLHelper.isInitialized())
+        {
+            openCLHelper.outputDeviceInfo(openCLHelper.getDeviceId());
+        }
+        else
+        {
+            std::cout << "No Device information available. Initialize OpenCL Helper first by calling Problem::init()" << std::endl;
+        }
     }
 
     /********************************
