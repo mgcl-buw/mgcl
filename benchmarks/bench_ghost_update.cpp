@@ -119,6 +119,7 @@ TEST_CASE("bench_ghost_update_mpi_ocl")
             p->setGhosts(ghosts);
             p->setGhostsIn(ghosts);
             p->setUseOpencl(true);
+            p->setDeviceType(CL_DEVICE_TYPE_GPU);
             p->setSilent(true);
             if (p->getStencilType() == mgcl::MGCL_VARYING)
                 p->getStencilValues()->fillRandom();
@@ -281,6 +282,7 @@ TEST_CASE("bench_ghost_update_mpi_seq")
             p->setGhosts(ghosts);
             p->setGhostsIn(ghosts);
             p->setUseOpencl(false);
+            p->setDeviceType(CL_DEVICE_TYPE_GPU);
             p->setSilent(true);
             if (p->getStencilType() == mgcl::MGCL_VARYING)
                 p->getStencilValues()->fillRandom();
@@ -545,6 +547,7 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
         auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
         mgcl::Problem p(m, n, o, f, v, mglob, nglob, oglob);
         p.setUseOpencl(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.setGhosts(ghosts);
         p.setSilent(true);
         p.setMpiComm(mpi_comm);
