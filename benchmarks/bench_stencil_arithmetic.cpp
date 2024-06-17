@@ -181,9 +181,6 @@ TEST_CASE("stencil_arithmetic_ocl_only")
         if (!gpuAvailable)
             throw "No GPU found!";
 
-        std::cout << "GPU info:" << std::endl;
-        tu->getProblem().getOpenCLHelper().outputDeviceInfo(tu->getProblem().getOpenCLHelper().getDeviceId());
-
         std::string name_grid = std::to_string(m)
                                     .append("_")
                                     .append(std::to_string(n))

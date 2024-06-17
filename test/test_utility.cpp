@@ -10,6 +10,7 @@ mgcl_test::TestUtility::TestUtility()
     problem = std::make_shared<mgcl::Problem>(2, 2, 2);
     problem->setSilent(true);
     problem->initOpenCL();
+    problem->printDeviceInfo();
 }
 
 mgcl_test::TestUtility::TestUtility(std::string deviceName)
@@ -21,6 +22,7 @@ mgcl_test::TestUtility::TestUtility(std::string deviceName)
     problem->setSilent(true);
     problem->setDeviceName(deviceName);
     problem->initOpenCL();
+    problem->printDeviceInfo();
 }
 
 mgcl_test::TestUtility::TestUtility(cl_device_type deviceType)
@@ -41,6 +43,7 @@ mgcl_test::TestUtility::TestUtility(cl_device_type deviceType)
     problem->setSilent(true);
     problem->setDeviceType(deviceType);
     problem->initOpenCL();
+    problem->printDeviceInfo();
 }
 
 mgcl_test::TestUtility::TestUtility(std::shared_ptr<mgcl::Problem> problem_)
@@ -48,6 +51,7 @@ mgcl_test::TestUtility::TestUtility(std::shared_ptr<mgcl::Problem> problem_)
 {
     problem->setSilent(true);
     problem->initOpenCL();
+    problem->printDeviceInfo();
 }
 
 mgcl_test::TestUtility::~TestUtility()
