@@ -744,7 +744,7 @@ namespace mgcl
     {
         if (openCLHelper.isInitialized())
         {
-            openCLHelper.outputDeviceInfo(openCLHelper.getDeviceId());
+            openCLHelper.outputDeviceInfo();
         }
         else
         {

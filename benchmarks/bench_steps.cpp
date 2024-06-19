@@ -716,7 +716,7 @@ TEST_CASE("benchStepsProfileMpi")
                 if (i == mpi_rank)
                 {
                     std::cout << "on rank " << mpi_rank << ", GPU info: ";
-                    p.getOpenCLHelper().outputDeviceInfo(p.getOpenCLHelper().getDeviceId());
+                    p.getOpenCLHelper().outputDeviceInfo();
                 }
             }
             printedGpu = true;

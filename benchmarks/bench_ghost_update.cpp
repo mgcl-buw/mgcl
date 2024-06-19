@@ -136,7 +136,7 @@ TEST_CASE("bench_ghost_update_mpi_ocl")
                     if (i == mpi_rank)
                     {
                         std::cout << "on rank " << mpi_rank << ", GPU info: ";
-                        p->getOpenCLHelper().outputDeviceInfo(p->getOpenCLHelper().getDeviceId());
+                        p->getOpenCLHelper().outputDeviceInfo();
                     }
                 }
                 printedGpu = true;
@@ -563,7 +563,7 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
                 if (i == mpi_rank)
                 {
                     std::cout << "on rank " << mpi_rank << ", GPU info: ";
-                    p.getOpenCLHelper().outputDeviceInfo(p.getOpenCLHelper().getDeviceId());
+                    p.getOpenCLHelper().outputDeviceInfo();
                 }
             }
             printedGpu = true;

@@ -31,6 +31,8 @@ public:
     OCLWrapper& operator=(OCLWrapper&&) = delete;
     ~OCLWrapper();
 
+    int outputDeviceInfo();
+
     std::string kernelString = "";
     std::string kernelDir = "./";
     std::string deviceName = "";
@@ -39,6 +41,7 @@ public:
     cl_context context = nullptr;
     cl_command_queue commands = nullptr;
     cl_program program = nullptr;
+    cl_platform_id platformId = nullptr;
 
     int err;
 };

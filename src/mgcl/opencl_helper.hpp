@@ -36,6 +36,7 @@ namespace mgcl
         cl_context context = nullptr;                       /* must be set if a specific context/device/buffers should be reused */
         cl_command_queue commands = nullptr;                /* must be set if a specific context/device/buffers should be reused */
         cl_program program = nullptr;                       /* compute program, only for internal purposes */
+        cl_platform_id platformId = nullptr;                /* Cannot be set from outside, just to print platform name */
 
         /* If true, kernel code is read from separate file, which is denoted by kernelFile. This allows
          * us to use a different kernel file for e.g. benchmarking. */
@@ -63,7 +64,7 @@ namespace mgcl
         void finish();
 
         static std::string loadKernelSource(std::string file);
-        static int outputDeviceInfo(cl_device_id device_id);
+        int outputDeviceInfo();
 
         std::string getKernelFile() const;
         void setKernelFile(const std::string& kernelFile_);

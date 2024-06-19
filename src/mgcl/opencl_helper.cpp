@@ -47,14 +47,12 @@ namespace mgcl
             mgclCheckError(err, "Finding platforms");
             if (numPlatforms == 0)
             {
-                if (!problem->silent)
-                    printf("Found 0 platforms!\n");
-                throw "Found 0 platforms!";
+                throw "No OpenCL platform was found!";
             }
 
             // Get all platforms
-            cl_platform_id Platform[numPlatforms];
-            err = clGetPlatformIDs(numPlatforms, Platform, nullptr);
+            cl_platform_id platforms[numPlatforms];
+            err = clGetPlatformIDs(numPlatforms, platforms, nullptr);
             mgclCheckError(err, "Getting platforms");
 
             char device_name_available[1024] = {0}; // string to hold name of compute device
@@ -63,14 +61,14 @@ namespace mgcl
             for (cl_uint i = 0; i < numPlatforms; i++)
             {
                 // Find number of devices for a platform
-                err = clGetDeviceIDs(Platform[i], deviceType, 0, nullptr, &numDevices);
+                err = clGetDeviceIDs(platforms[i], deviceType, 0, nullptr, &numDevices);
                 if (err == CL_DEVICE_NOT_FOUND)
                 {
                     continue; // no device with given type found in current platform
                 }
                 mgcl::mgclCheckError(err, "Finding devices using clGetDeviceIDs");
                 device_ids = new cl_device_id[numDevices];
-                err = clGetDeviceIDs(Platform[i], deviceType, numDevices, device_ids, nullptr);
+                err = clGetDeviceIDs(platforms[i], deviceType, numDevices, device_ids, nullptr);
                 mgclCheckError(err, "clGetDeviceIDs");
 
                 // Loop over all devices for a given plattform
@@ -102,6 +100,7 @@ namespace mgcl
                     }
 
                     deviceId = device_ids[j];
+                    platformId = platforms[i];
                     break;
                 }
 
@@ -113,7 +112,7 @@ namespace mgcl
 
             if (!problem->silent)
             {
-                err = outputDeviceInfo(deviceId);
+                err = outputDeviceInfo();
                 mgclCheckError(err, "Printing device output");
             }
 
@@ -503,24 +502,27 @@ namespace mgcl
     }
 
     /**
-     * @brief Prints various OpenCL device information.
+     * @brief Prints details of the selected OpenCL platform and device.
      *
-     * @param device_id ID of device.
      * @return int OpenCL error code.
      */
-    int OpenCLHelper::outputDeviceInfo(cl_device_id device_id)
+    int OpenCLHelper::outputDeviceInfo()
     {
-        int err;                         // error code returned from OpenCL calls
-        cl_device_type device_type;      // Parameter defining the type of the compute device
-        cl_uint comp_units;              // the max number of compute units on a device
-        cl_char vendor_name[1024] = {0}; // string to hold vendor name for compute device
-        cl_char device_name[1024] = {0}; // string to hold name of compute device
+        int err;                           // error code returned from OpenCL calls
+        cl_device_type device_type;        // Parameter defining the type of the compute device
+        cl_uint comp_units;                // the max number of compute units on a device
+        cl_char vendor_name[1024] = {0};   // string to hold vendor name for compute device
+        cl_char device_name[1024] = {0};   // string to hold name of compute device
+        cl_char platform_name[1024] = {0}; // string to hold name of compute device
 
-        err = clGetDeviceInfo(device_id, CL_DEVICE_NAME, sizeof(device_name), &device_name, NULL);
+        err = clGetPlatformInfo(platformId, CL_PLATFORM_NAME, sizeof(platform_name), &platform_name, NULL);
+        mgclCheckError(err, "clGetPlatformInfo(CL_PLATFORM_NAME)");
+
+        err = clGetDeviceInfo(deviceId, CL_DEVICE_NAME, sizeof(device_name), &device_name, NULL);
         mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
-        printf("Using OpenCL device %s ", device_name);
+        printf("Using OpenCL platform %s with device %s ", platform_name, device_name);
 
-        err = clGetDeviceInfo(device_id, CL_DEVICE_TYPE, sizeof(device_type), &device_type, NULL);
+        err = clGetDeviceInfo(deviceId, CL_DEVICE_TYPE, sizeof(device_type), &device_type, NULL);
         mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_TYPE)");
 
         if (device_type == CL_DEVICE_TYPE_GPU)
@@ -532,18 +534,18 @@ namespace mgcl
         else
             printf("\n non CPU or GPU processor from ");
 
-        err = clGetDeviceInfo(device_id, CL_DEVICE_VENDOR, sizeof(vendor_name), &vendor_name, NULL);
+        err = clGetDeviceInfo(deviceId, CL_DEVICE_VENDOR, sizeof(vendor_name), &vendor_name, NULL);
         mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_VENDOR)");
         printf("%s", vendor_name);
 
-        err = clGetDeviceInfo(device_id, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &comp_units, NULL);
+        err = clGetDeviceInfo(deviceId, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &comp_units, NULL);
         mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_COMPUTE_UNITS)");
         printf(" with a max of %d compute units", comp_units);
 
 #ifdef CL_DEVICE_UUID_KHR
         cl_uchar uuid[CL_UUID_SIZE_KHR];
         bool uuid_available = false;
-        err = clGetDeviceInfo(device_id, CL_DEVICE_UUID_KHR, sizeof(cl_uchar) * CL_UUID_SIZE_KHR,
+        err = clGetDeviceInfo(deviceId, CL_DEVICE_UUID_KHR, sizeof(cl_uchar) * CL_UUID_SIZE_KHR,
                               &uuid, nullptr);
         uuid_available = err == CL_SUCCESS;
         if (uuid_available)

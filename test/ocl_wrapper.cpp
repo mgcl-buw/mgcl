@@ -1,9 +1,10 @@
 #include "ocl_wrapper.hpp"
 #include "../src/mgcl/opencl_helper.hpp"
+#include <CL/cl.h>
 
 OCLWrapper::OCLWrapper(cl_device_type deviceType, std::string deviceName, std::string kernelString,
                        std::string kernelFilePath, cl_context _context)
-    : context(_context)
+    : context(_context), err(CL_SUCCESS)
 {
     int i;
     cl_uint numPlatforms;
@@ -61,6 +62,7 @@ OCLWrapper::OCLWrapper(cl_device_type deviceType, std::string deviceName, std::s
                 }
 
                 deviceId = device_id_;
+                platformId = Platform[i];
                 break;
             }
         }
@@ -68,7 +70,7 @@ OCLWrapper::OCLWrapper(cl_device_type deviceType, std::string deviceName, std::s
         if (deviceId == nullptr)
             mgcl::mgclCheckError(-1, "Finding a device");
 
-        err = mgcl::OpenCLHelper::outputDeviceInfo(deviceId);
+        err = outputDeviceInfo();
         mgcl::mgclCheckError(err, "Printing device output");
 
         // Create a compute context
@@ -118,8 +120,8 @@ OCLWrapper::OCLWrapper(cl_device_type deviceType, std::string deviceName, std::s
 
 OCLWrapper::OCLWrapper(cl_device_type deviceType, std::string deviceName, std::string kernelString,
                        std::string kernelFilePath)
+    : OCLWrapper(deviceType, deviceName, kernelString, kernelFilePath, nullptr)
 {
-    OCLWrapper(deviceType, deviceName, kernelString, kernelFilePath, nullptr);
 }
 
 OCLWrapper::~OCLWrapper()
@@ -153,4 +155,75 @@ OCLWrapper::~OCLWrapper()
         mgcl::mgclCheckError(err, "clReleaseDevice");
         deviceId = nullptr;
     }
+}
+
+/**
+ * @brief Prints details of the selected OpenCL platform and device.
+ *
+ * @return int OpenCL error code.
+ */
+int OCLWrapper::outputDeviceInfo()
+{
+    cl_device_type device_type;        // Parameter defining the type of the compute device
+    cl_uint comp_units;                // the max number of compute units on a device
+    cl_char vendor_name[1024] = {0};   // string to hold vendor name for compute device
+    cl_char device_name[1024] = {0};   // string to hold name of compute device
+    cl_char platform_name[1024] = {0}; // string to hold name of compute device
+
+    err = clGetPlatformInfo(platformId, CL_PLATFORM_NAME, sizeof(platform_name), &platform_name, NULL);
+    mgcl::mgclCheckError(err, "clGetPlatformInfo(CL_PLATFORM_NAME)");
+
+    err = clGetDeviceInfo(deviceId, CL_DEVICE_NAME, sizeof(device_name), &device_name, NULL);
+    mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
+    printf("Using OpenCL platform %s with device %s ", platform_name, device_name);
+
+    err = clGetDeviceInfo(deviceId, CL_DEVICE_TYPE, sizeof(device_type), &device_type, NULL);
+    mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_TYPE)");
+
+    if (device_type == CL_DEVICE_TYPE_GPU)
+        printf("GPU from ");
+
+    else if (device_type == CL_DEVICE_TYPE_CPU)
+        printf("\n CPU from ");
+
+    else
+        printf("\n non CPU or GPU processor from ");
+
+    err = clGetDeviceInfo(deviceId, CL_DEVICE_VENDOR, sizeof(vendor_name), &vendor_name, NULL);
+    mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_VENDOR)");
+    printf("%s", vendor_name);
+
+    err = clGetDeviceInfo(deviceId, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &comp_units, NULL);
+    mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_COMPUTE_UNITS)");
+    printf(" with a max of %d compute units", comp_units);
+
+#ifdef CL_DEVICE_UUID_KHR
+    cl_uchar uuid[CL_UUID_SIZE_KHR];
+    bool uuid_available = false;
+    err = clGetDeviceInfo(deviceId, CL_DEVICE_UUID_KHR, sizeof(cl_uchar) * CL_UUID_SIZE_KHR,
+                          &uuid, nullptr);
+    uuid_available = err == CL_SUCCESS;
+    if (uuid_available)
+    {
+        printf(", uuid: %02x%02x%02x%02x-"
+               "%02x%02x-"
+               "%02x%02x-"
+               "%02x%02x-"
+               "%02x%02x%02x%02x%02x%02x\n",
+               uuid[0], uuid[1], uuid[2], uuid[3], uuid[4],
+               uuid[5], uuid[6],
+               uuid[7], uuid[8],
+               uuid[9], uuid[10],
+               uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
+    }
+    else
+    {
+        err = CL_SUCCESS;
+        printf("\n");
+    }
+#else
+    printf("\n");
+#endif
+
+    return err;
 }

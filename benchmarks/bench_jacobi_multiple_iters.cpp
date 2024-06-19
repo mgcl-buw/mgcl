@@ -321,7 +321,7 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
                         if (i == mpi_rank)
                         {
                             std::cout << "on rank " << mpi_rank << ", GPU info: ";
-                            p->getOpenCLHelper().outputDeviceInfo(p->getOpenCLHelper().getDeviceId());
+                            p->getOpenCLHelper().outputDeviceInfo();
                         }
                     }
                     printedGpu = true;

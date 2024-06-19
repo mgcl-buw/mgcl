@@ -95,7 +95,7 @@ TEST_CASE("bench_data_transfer_host_device")
                 if (i == mpi_rank)
                 {
                     std::cout << "on rank " << mpi_rank << ", GPU info: ";
-                    p.getOpenCLHelper().outputDeviceInfo(p.getOpenCLHelper().getDeviceId());
+                    p.getOpenCLHelper().outputDeviceInfo();
                 }
             }
             printedGpu = true;
@@ -408,7 +408,7 @@ TEST_CASE("benchDataTransferProfile")
                 if (i == mpi_rank)
                 {
                     std::cout << "on rank " << mpi_rank << ", GPU info: ";
-                    p.getOpenCLHelper().outputDeviceInfo(p.getOpenCLHelper().getDeviceId());
+                    p.getOpenCLHelper().outputDeviceInfo();
                 }
             }
             printedGpu = true;
