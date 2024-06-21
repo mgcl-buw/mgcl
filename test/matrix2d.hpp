@@ -57,6 +57,7 @@ namespace mgcl_test
 
         void dumpToFile(std::string path) const;
         void dumpToFileWithIndices(std::string path) const;
+        void dumpToFileDecimalFormat(std::string path, int precision) const;
 
         int getM() const;
         int getN() const;

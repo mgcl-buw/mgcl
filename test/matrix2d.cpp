@@ -204,6 +204,30 @@ namespace mgcl_test
         }
     }
 
+    void Matrix2d::dumpToFileDecimalFormat(std::string path, int precision) const
+
+    {
+        std::ofstream myfile;
+        myfile.open(path, std::ios::out | std::ios::trunc);
+
+        if (myfile.is_open())
+        {
+            for (int d1 = 0; d1 < m; d1++)
+            {
+                for (int d2 = 0; d2 < n; d2++)
+                {
+                    myfile << std::fixed << std::setprecision(precision) << values[d1][d2] << "\t";
+                }
+                myfile << std::endl;
+            }
+            myfile.close();
+        }
+        else
+        {
+            throw "Couldn't open file for writing given by: " + path;
+        }
+    }
+
     int Matrix2d::getM() const
     {
         return m;
