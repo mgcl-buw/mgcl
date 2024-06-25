@@ -91,7 +91,7 @@ TEST_CASE("MatrixGalerkinTrace")
             std::stringstream ss;
             ss << "(";
             bool nnzfound = false;
-            for (int idx = 0; idx < r_ah.getN(); idx++)
+            for (int idx = 0; idx < r.getN(); idx++)
             {
                 // if (ci == 0 && cj == 0)
                 //     std::cout << "r_ah[" << ci << "][" << cj << "] += "
@@ -135,7 +135,7 @@ TEST_CASE("MatrixGalerkinTrace")
             std::stringstream ss;
             ss << "(";
             bool nnzfound = false;
-            for (int idx = 0; idx < r_ah_p.getN(); idx++)
+            for (int idx = 0; idx < r_ah.getN(); idx++)
                 if (r_ah[ci][idx] != 0 && p[idx][cj] != 0)
                 {
                     ss << (!nnzfound ? "" : " + ") << trace_nnz[ci][idx] << " * p[" << idx << "][" << cj << "]";
