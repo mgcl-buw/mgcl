@@ -83,6 +83,7 @@ TEST_CASE("MatrixGalerkinTrace")
     using Trace = std::vector<std::vector<std::string>>;
     // Non-zero trace
     Trace trace_nnz(N, std::vector<std::string>(N));
+    Trace trace_nnz_tmp(N, std::vector<std::string>(N));
 
     // r * a_h
     for (int ci = 0; ci < r_ah.getM(); ci++)
@@ -104,10 +105,10 @@ TEST_CASE("MatrixGalerkinTrace")
             }
             ss << ")";
 
-            trace_nnz[ci][cj] = ss.str();
+            trace_nnz_tmp[ci][cj] = ss.str();
         }
 
-    // print trace for r*a
+    // // print trace for r*a
     // {
     //     int nnz = 0;
     //     for (int ci = 0; ci < r_ah.getM(); ci++)
@@ -132,17 +133,24 @@ TEST_CASE("MatrixGalerkinTrace")
         for (int cj = 0; cj < r_ah_p.getN(); cj++)
         {
 
+            // if (trace_nnz[ci][cj] == "()" && r_ah[ci][cj] != 0) {
+
+            // }
+
             std::stringstream ss;
             ss << "(";
             bool nnzfound = false;
             for (int idx = 0; idx < r_ah.getN(); idx++)
                 if (r_ah[ci][idx] != 0 && p[idx][cj] != 0)
                 {
-                    ss << (!nnzfound ? "" : " + ") << trace_nnz[ci][idx] << " * p[" << idx << "][" << cj << "]";
+                    ss << (!nnzfound ? "" : " + ") << trace_nnz_tmp[ci][idx] << " * p[" << idx << "][" << cj << "]";
                     nnzfound = true;
                 }
 
             trace_nnz[ci][cj] = ss.str() + ")";
+
+            CAPTURE(ci, cj, r_ah_p[ci][cj], trace_nnz[ci][cj]);
+            REQUIRE((r_ah_p[ci][cj] == 0 || (r_ah_p[ci][cj] != 0 && trace_nnz[ci][cj].find("()") == std::string::npos)));
         }
 
     std::cout << "==========" << std::endl;
@@ -157,10 +165,20 @@ TEST_CASE("MatrixGalerkinTrace")
             if (r_ah_p[ci][cj] != 0)
             {
                 nnz++;
-                std::cout << "rap[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << trace_nnz[ci][cj] << std::endl;
+                std::cout << "rap[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << trace_nnz[ci][cj] << std::endl
+                          << std::endl;
             }
     }
     std::cout << "non-zero values:" << nnz << std::endl;
+
+    // Convert matrix trace to stencil trace
+    // for (int ci = 0; ci < r_ah_p.getM(); ci++)
+    //     for (int cj = 0; cj < r_ah_p.getN(); cj++)
+    //         if (r_ah_p[ci][cj] != 0)
+    //         {
+    //             auto vst = mgcl::VaryingStencil::fromString(trace_nnz[ci][cj]);
+    //             auto ah = mgcl_test::Matrix2d::fromVaryingStencil(*vst, true);
+    //         }
 }
 
 TEST_CASE("Matrix2d::constructor")
