@@ -1,5 +1,6 @@
 #include "matrix2d.hpp"
 
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -7,8 +8,194 @@
 #include <cstdio>
 #include <fstream>
 #include <iostream>
+#include <ostream>
 
 #include "test_results.hpp"
+
+TEST_CASE("tmp_GalerkinOptimization")
+{
+    int m = 4;
+    int n = 4;
+    int o = 4;
+    int N = m * n * o;
+
+    std::vector<std::tuple<double, int>> vals{{1, 0}, {0.5, -1}, {0.5, 1}};
+    auto SP = mgcl_test::Matrix2d::diag(vals, N, N);
+    auto A = mgcl_test::Matrix2d::laplace7p3d(4, 4, 4, true);
+    auto SR = mgcl_test::Matrix2d::diag(vals, N, N);
+
+    auto A_SP = A * SP;
+    auto SR_A_SP = SR * A_SP;
+
+    // SP.dumpToFileDecimalFormat("SP.csv", 2);
+    // A.dumpToFileDecimalFormat("A.csv", 2);
+    // A_SP.dumpToFileDecimalFormat("A_SP.csv", 2);
+    // SR.dumpToFileDecimalFormat("SR.csv", 2);
+    // SR_A_SP.dumpToFileDecimalFormat("SR_A_SP.csv", 2);
+
+    // cutting only in the 3rd dimension
+    auto K = mgcl_test::Matrix2d::cuttingMatrix3d(m, n, o / 2); // TODO create only for 3rd dimension
+    std::cout << "K: " << K.getM() << " x " << K.getN() << std::endl;
+    auto R = mgcl_test::Matrix2d::cuttingMatrix3d(m, n, o / 2) * SR;
+    // auto P = SP * mgcl_test::Matrix2d::cuttingMatrix3d(m, n, o / 2).transposed();
+    // auto RAP = R * A * P;
+    // R.dumpToFileDecimalFormat("R.csv", 2);
+    // P.dumpToFileDecimalFormat("P.csv", 2);
+    // RAP.dumpToFileDecimalFormat("RAP.csv", 2);
+}
+
+TEST_CASE("MatrixGalerkinTrace")
+{
+
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    int N = m * n * o;
+    double h2inv = static_cast<double>(N * N);
+
+    std::cout << "mxnxo = " << m << "x" << n << "x" << o << std::endl;
+
+    auto ah = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * h2inv;
+    auto r = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
+    auto p = mgcl_test::Matrix2d::prolongationBilinear(m, n, o);
+    auto r_ah = r * ah;
+    auto r_ah_p = r_ah * p;
+
+    std::cout << "ah rows x cols = " << ah.getM() << "x" << ah.getN() << std::endl;
+    std::cout << "r rows x cols = " << r.getM() << "x" << r.getN() << std::endl;
+    std::cout << "p rows x cols = " << p.getM() << "x" << p.getN() << std::endl;
+    std::cout << "r_ah rows x cols = " << r_ah.getM() << "x" << r_ah.getN() << std::endl;
+    std::cout << "r_ah_p rows x cols = " << r_ah_p.getM() << "x" << r_ah_p.getN() << std::endl;
+
+    /* r.dumpToFileWithIndices("r.csv"); */
+    /* ah.dumpToFileWithIndices("ah.csv"); */
+    /* r_ah.dumpToFileWithIndices("r_ah.csv"); */
+    /* p.dumpToFileWithIndices("p.csv"); */
+    /* r_ah_p.dumpToFileWithIndices("r_ah_p.csv"); */
+
+    using Trace = std::vector<std::vector<std::string>>;
+    /* Trace trace(N, std::vector<std::string>(N)); */
+    /**/
+    /* // r * a_h */
+    /* for (int ci = 0; ci < r.getM(); ci++) */
+    /*     for (int cj = 0; cj < ah.getN(); cj++) */
+    /*     { */
+    /*         std::stringstream ss; */
+    /*         ss << "("; */
+    /*         for (int idx = 0; idx < n; idx++) */
+    /*             ss << (idx == 0 ? "" : " + ") << "r[" << ci << "][" << idx << "] * a[" << idx << "][" << cj << "]"; */
+    /*         ss << ")"; */
+    /**/
+    /*         trace[ci][cj] = ss.str(); */
+    /*     } */
+    /**/
+    /* // (r * a_h) * p */
+    /* for (int ci = 0; ci < r_ah.getM(); ci++) */
+    /*     for (int cj = 0; cj < p.getN(); cj++) */
+    /*     { */
+    /**/
+    /*         std::stringstream ss; */
+    /*         ss << "("; */
+    /*         for (int idx = 0; idx < n; idx++) */
+    /*             ss << (idx == 0 ? "" : " + ") << trace[ci][idx] << " * p[" << idx << "][" << cj << "]"; */
+    /**/
+    /*         trace[ci][cj] = ss.str() + ")"; */
+    /*     } */
+    /**/
+    /* std::cout << "==========" << std::endl; */
+    /* std::cout << "Full Trace:" << std::endl; */
+    /* std::cout << "RAP rows x cols = " << r_ah_p.getM() << "x" << r_ah_p.getN() << std::endl; */
+    /**/
+    /* // print trace */
+    /* for (int ci = 0; ci < r_ah_p.getM(); ci++) */
+    /* { */
+    /*     for (int cj = 0; cj < r_ah_p.getN(); cj++) */
+    /*         // std::cout << "rap[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << trace[ci][cj] << "\t"; */
+    /*         std::cout << "rap[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << trace[ci][cj] << std::endl; */
+    /*     // std::cout << std::endl; */
+    /* } */
+
+    // Non-zero trace
+    Trace trace_nnz(N, std::vector<std::string>(N));
+
+    // r * a_h
+    for (int ci = 0; ci < r_ah.getM(); ci++)
+        for (int cj = 0; cj < r_ah.getN(); cj++)
+        {
+            std::stringstream ss;
+            ss << "(";
+            bool nnzfound = false;
+            for (int idx = 0; idx < r_ah.getN(); idx++)
+            {
+                // if (ci == 0 && cj == 0)
+                //     std::cout << "r_ah[" << ci << "][" << cj << "] += "
+                //               << "r[" << ci << "][" << idx << "] * a[" << idx << "][" << cj << "] = " << r[ci][idx] << " * " << ah[idx][cj] << std::endl;
+                if (r[ci][idx] != 0 && ah[idx][cj] != 0)
+                {
+                    ss << (!nnzfound ? "" : " + ") << "r[" << ci << "][" << idx << "] * a[" << idx << "][" << cj << "]";
+                    nnzfound = true;
+                }
+            }
+            ss << ")";
+
+            trace_nnz[ci][cj] = ss.str();
+        }
+
+    // print trace for r*a
+    {
+        int nnz = 0;
+        for (int ci = 0; ci < r_ah.getM(); ci++)
+        {
+            for (int cj = 0; cj < r_ah.getN(); cj++)
+            {
+                // check that only one non-zero entries are in the trace
+                CAPTURE(ci, cj, r_ah[ci][cj], trace_nnz[ci][cj]);
+                CAPTURE(r[0][0], ah[0][0], r[0][1], ah[1][0]);
+                REQUIRE(((r_ah[ci][cj] == 0 && trace_nnz[ci][cj] == "()") || (trace_nnz[ci][cj] != "()")));
+                if (r_ah[ci][cj] != 0)
+                {
+                    nnz++;
+                    std::cout << "ra[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << trace_nnz[ci][cj] << std::endl;
+                }
+            }
+        }
+    }
+
+    // (r * a_h) * p
+    for (int ci = 0; ci < r_ah_p.getM(); ci++)
+        for (int cj = 0; cj < r_ah_p.getN(); cj++)
+        {
+
+            std::stringstream ss;
+            ss << "(";
+            bool nnzfound = false;
+            for (int idx = 0; idx < r_ah_p.getN(); idx++)
+                if (r_ah[ci][idx] != 0 && p[idx][cj] != 0)
+                {
+                    ss << (!nnzfound ? "" : " + ") << trace_nnz[ci][idx] << " * p[" << idx << "][" << cj << "]";
+                    nnzfound = true;
+                }
+
+            trace_nnz[ci][cj] = ss.str() + ")";
+        }
+
+    std::cout << "==========" << std::endl;
+    std::cout << "Non-Zero Trace:" << std::endl;
+    std::cout << "RAP rows x cols = " << r_ah_p.getM() << "x" << r_ah_p.getN() << std::endl;
+
+    // print trace
+    int nnz = 0;
+    for (int ci = 0; ci < r_ah_p.getM(); ci++)
+    {
+        for (int cj = 0; cj < r_ah_p.getN(); cj++)
+            if (r_ah_p[ci][cj] != 0)
+            {
+                nnz++;
+                std::cout << "rap[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << trace_nnz[ci][cj] << std::endl;
+            }
+    }
+    std::cout << "non-zero values:" << nnz << std::endl;
+}
 
 TEST_CASE("Matrix2d::constructor")
 {
