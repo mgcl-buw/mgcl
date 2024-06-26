@@ -33,6 +33,12 @@
     3. send to neighbours
     4. write buffer to gpu
     5. call paste kernel
+- optimize Galerkin (RAP)
+  [x] trace matrix mult
+  [ ] matrix entry to stencil indices function
+  [ ] convert trace to stencil notation
+  [ ] find pattern in trace
+  [ ] test against galerkin with full stencil mult
 
 Done:
 - aggregate residual norm on gpu
