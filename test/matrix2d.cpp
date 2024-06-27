@@ -239,6 +239,225 @@ namespace mgcl_test
     }
 
     /**
+     * @brief Calculates the equivalent indices for the varying stencil for a specific entry. Returns -1 if
+     *   the matrix entry does not map to a stencil entry. Only works for square matrices.
+     *
+     * @param row Index of the row of the entry, i.e. the grid point the stencil belongs to.
+     * @param col Index of the column of the entry, i.e. the grid point the stencil entry is applied to.
+     * @param m Size of the grid in the x-direction
+     * @param n Size of the grid in the y-direction
+     * @param o Size of the grid in the z-direction
+     * @param periodic Whether the matrix (and the grid) is periodic
+     * @return std::array<int, 6> Indices of the stencil of the form {i, j, k, ii, jj, kk}, where i,j,k is the index
+     *   of the grid point and ii,jj,kk is the index of the stencil entry.
+     */
+    std::array<int, 6> Matrix2d::getStencilIndicesForEntry(int row, int col,
+                                                           int m, int n, int o,
+                                                           int stencilWidth, bool periodic) const
+    {
+        if (m * n * o != getM())
+            throw "Matrix2d::getStencilIndicesForEntry: m * n * o != getM(). Only works for square matrices";
+        if (m * n * o != getN())
+            throw "Matrix2d::getStencilIndicesForEntry: m * n * o != getN(). Only works for square matrices";
+
+        // Grid point mapped to by current matrix row (row number equals 1d index of grid point)
+        int no_rows = n * o;
+        int i = row / no_rows;
+        int j = (row - i * no_rows) / o;
+        int k = row % o;
+
+        // Grid point the current stencil entry maps to (column number equals 1d index of grid point)
+        int no = n * o;
+        int gpi = col / no;
+        int gpj = (col - gpi * no) / o;
+        int gpk = col % o;
+
+        if (periodic)
+        {
+            gpi = gpi % m;
+            gpj = gpj % n;
+            gpk = gpk % o;
+
+            // shift mod result into positive range
+            if (gpi < 0)
+                gpi += m;
+
+            if (gpj < 0)
+                gpj += n;
+
+            if (gpk < 0)
+                gpk += o;
+        }
+
+        // Stencil entry
+        int ii = gpi + (stencilWidth / 2) - i;
+        int jj = gpj + (stencilWidth / 2) - j;
+        int kk = gpk + (stencilWidth / 2) - k;
+
+        // check if matrix entry is actually part of a stencil
+        if (ii < 0 || ii >= stencilWidth || jj < 0 || jj >= stencilWidth || kk < 0 || kk >= stencilWidth)
+            return {-1, -1, -1, -1, -1, -1};
+        else
+            return {i, j, k, ii, jj, kk};
+    }
+
+    /**
+     * @brief Calculates the stencil entry indices for a given matrix entry. Returns -1 if
+     *   the matrix entry does not map to a stencil entry. Specialized for restriction matrix, e.g. of size 8x64.
+     *
+     * The restriction matrix has e.g. the size 8x64, where the rows denote the coarse grid points while
+     * the columns denote the fine grid points. Thus we need some special handling regarding the row index compared
+     * to the index acquisition of a square matrix.
+     * It is assumed, that m,n,o is the size of the fine grid, i.e. m*n*o = cols, and m/2,n/2,o/2 is the size of the
+     * coarse grid, i.e. m/2*n/2*o/2 = rows.
+     *
+     * @param row Index of the row of the entry, i.e. the grid point the stencil belongs to.
+     * @param col Index of the column of the entry, i.e. the grid point the stencil entry is applied to.
+     * @param m Size of the fine grid in the x-direction
+     * @param n Size of the fine grid in the y-direction
+     * @param o Size of the fine grid in the z-direction
+     * @param periodic Whether the matrix (and the grid) is periodic
+     * @return std::array<int, 3> Indices of the stencil of the form {ii, jj, kk}, where ii,jj,kk is
+     *   the index of the stencil entry.
+     */
+    std::array<int, 3> Matrix2d::getStencilEntryOfRestrictionMatrix(int row, int col,
+                                                                    int m, int n, int o,
+                                                                    int stencilWidth, bool periodic) const
+    {
+        int m2 = m >> 1;
+        int n2 = n >> 1;
+        int o2 = o >> 1;
+
+        if (m2 * n2 * o2 != getM())
+            throw "Matrix2d::getStencilIndicesForEntry: m/2 * n/2 * o/2 != getM().";
+        if (m * n * o != getN())
+            throw "Matrix2d::getStencilIndicesForEntry: m * n * o != getN().";
+
+        // Coarse grid point mapped to by current matrix row.
+        int no_rows = n2 * o2;
+        int i = row / no_rows;
+        int j = (row - i * no_rows) / o2;
+        int k = row % o2;
+
+        // Correct for fine grid
+        i = i * 2 + 1;
+        j = j * 2 + 1;
+        k = k * 2 + 1;
+
+        // Grid point the current stencil entry maps to (column number equals 1d index of grid point)
+        int no_cols = n * o;
+        int gpi = col / no_cols;
+        int gpj = (col - gpi * no_cols) / o;
+        int gpk = col % o;
+
+        if (periodic)
+        {
+            gpi = gpi % m;
+            gpj = gpj % n;
+            gpk = gpk % o;
+
+            // shift mod result into positive range
+            if (gpi < 0)
+                gpi += m;
+
+            if (gpj < 0)
+                gpj += n;
+
+            if (gpk < 0)
+                gpk += o;
+        }
+
+        // Stencil entry
+        int ii = gpi + (stencilWidth / 2) - i;
+        int jj = gpj + (stencilWidth / 2) - j;
+        int kk = gpk + (stencilWidth / 2) - k;
+
+        // check if matrix entry is actually part of a stencil
+        if (ii < 0 || ii >= stencilWidth || jj < 0 || jj >= stencilWidth || kk < 0 || kk >= stencilWidth)
+            return {-1, -1, -1};
+        else
+            return {ii, jj, kk};
+    }
+
+    /**
+     * @brief Calculates the stencil entry indices for a given matrix entry. Returns -1 if
+     *   the matrix entry does not map to a stencil entry. Specialized for prolongation matrix, e.g. of size 64x8.
+     *
+     * The prolongation matrix has e.g. the size 64x8, where the rows denote the fine grid points while
+     * the columns denote the coarse grid points. Thus we need some special handling regarding the column index compared
+     * to the index acquisition of a square matrix.
+     * It is assumed, that m,n,o is the size of the fine grid, i.e. m*n*o = rows, and m/2,n/2,o/2 is the size of the
+     * coarse grid, i.e. m/2*n/2*o/2 = cols.
+     *
+     * @param row Index of the row of the entry, i.e. the grid point the stencil belongs to.
+     * @param col Index of the column of the entry, i.e. the grid point the stencil entry is applied to.
+     * @param m Size of the fine grid in the x-direction
+     * @param n Size of the fine grid in the y-direction
+     * @param o Size of the fine grid in the z-direction
+     * @param periodic Whether the matrix (and the grid) is periodic
+     * @return std::array<int, 3> Indices of the stencil of the form {ii, jj, kk}, where ii,jj,kk is
+     *   the index of the stencil entry.
+     */
+    std::array<int, 3> Matrix2d::getStencilEntryOfProlongationMatrix(int row, int col,
+                                                                     int m, int n, int o,
+                                                                     int stencilWidth, bool periodic) const
+    {
+        int m2 = m >> 1;
+        int n2 = n >> 1;
+        int o2 = o >> 1;
+
+        if (m2 * n2 * o2 != getN())
+            throw "Matrix2d::getStencilIndicesForEntry: m/2 * n/2 * o/2 != getN().";
+        if (m * n * o != getM())
+            throw "Matrix2d::getStencilIndicesForEntry: m * n * o != getM().";
+
+        // Coarse grid point mapped to by current matrix row.
+        int no_rows = n * o;
+        int i = row / no_rows;
+        int j = (row - i * no_rows) / o;
+        int k = row % o;
+
+        // Coarse grid point the current stencil entry maps to
+        int no_cols = n2 * o2;
+        int gpi = col / no_cols;
+        int gpj = (col - gpi * no_cols) / o2;
+        int gpk = col % o2;
+
+        // Correct for fine grid
+        gpi = gpi * 2 + 1;
+        gpj = gpj * 2 + 1;
+        gpk = gpk * 2 + 1;
+
+        if (periodic)
+        {
+            gpi = gpi % m;
+            gpj = gpj % n;
+            gpk = gpk % o;
+
+            // shift mod result into positive range
+            if (gpi < 0)
+                gpi += m;
+
+            if (gpj < 0)
+                gpj += n;
+
+            if (gpk < 0)
+                gpk += o;
+        }
+
+        // Stencil entry
+        int ii = gpi + (stencilWidth / 2) - i;
+        int jj = gpj + (stencilWidth / 2) - j;
+        int kk = gpk + (stencilWidth / 2) - k;
+
+        // check if matrix entry is actually part of a stencil
+        if (ii < 0 || ii >= stencilWidth || jj < 0 || jj >= stencilWidth || kk < 0 || kk >= stencilWidth)
+            return {-1, -1, -1};
+        else
+            return {ii, jj, kk};
+    }
+
+    /**
      * @brief Shortcut for Matrix2d::eye(m, m)
      *
      * @param m

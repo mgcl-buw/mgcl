@@ -2,6 +2,7 @@
 #define MATRIX2D_HPP
 
 #include <algorithm>
+#include <array>
 #include <iomanip>
 #include <iostream>
 #include <vector>
@@ -61,6 +62,16 @@ namespace mgcl_test
 
         int getM() const;
         int getN() const;
+
+        std::array<int, 6> getStencilIndicesForEntry(int row, int col,
+                                                     int m, int n, int o,
+                                                     int stencilWidth, bool periodic) const;
+        std::array<int, 3> getStencilEntryOfRestrictionMatrix(int row, int col,
+                                                              int m, int n, int o,
+                                                              int stencilWidth, bool periodic) const;
+        std::array<int, 3> getStencilEntryOfProlongationMatrix(int row, int col,
+                                                               int m, int n, int o,
+                                                               int stencilWidth, bool periodic) const;
 
         static Matrix2d eye(int m);
         static Matrix2d eye(int m, int n);

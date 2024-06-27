@@ -935,3 +935,104 @@ TEST_CASE("Matrix2d::transposed")
             CHECK(a[i][j] == b[j][i]);
         }
 }
+
+TEST_CASE("Matrix2d::getStencilIndicesForEntry")
+{
+    int m = 4; // GENERATE(2, 4);
+    int n = 4; // GENERATE(2, 4);
+    int o = 4; // GENERATE(2, 4);
+    int m2 = m / 2;
+    int n2 = n / 2;
+    int o2 = o / 2;
+    bool periodic = true;
+    int width = 3;
+
+    CAPTURE(m, n, o, m2, n2, o2, periodic, width);
+
+    // square matrix
+    {
+        mgcl::VaryingStencil st(m, n, o, width, 0, 0, 0);
+        st.fill1dIndex(false);
+        auto a = mgcl_test::Matrix2d::fromVaryingStencil(st, periodic);
+
+        // fill a with 1d index
+        for (int i = 0; i < a.getM(); i++)
+            for (int j = 0; j < a.getN(); j++)
+            {
+                CAPTURE(i, j);
+                auto s = a.getStencilIndicesForEntry(i, j, m, n, o, width, periodic);
+                CAPTURE(s[0], s[1], s[2], s[3], s[4], s[5]);
+                if (s[0] != -1)
+                {
+                    CAPTURE(a[i][j], st[s[3]][s[4]][s[5]][s[0]][s[1]][s[2]]);
+                    REQUIRE((a[i][j] == st[s[3]][s[4]][s[5]][s[0]][s[1]][s[2]]));
+                }
+            }
+    }
+}
+
+TEST_CASE("Matrix2d::getStencilEntryOfRestrictionMatrix")
+{
+    int m = 4; // GENERATE(2, 4);
+    int n = 4; // GENERATE(2, 4);
+    int o = 4; // GENERATE(2, 4);
+    int m2 = m / 2;
+    int n2 = n / 2;
+    int o2 = o / 2;
+    bool periodic = true;
+    int width = 3;
+
+    CAPTURE(m, n, o, m2, n2, o2, periodic, width);
+
+    auto st = mgcl::create3dFullWeightRestrictionStencil();
+    auto a = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
+
+    CAPTURE(a.getM(), a.getN());
+
+    // fill a with 1d index
+    for (int i = 0; i < a.getM(); i++)
+        for (int j = 0; j < a.getN(); j++)
+        {
+            CAPTURE(i, j);
+            auto s = a.getStencilEntryOfRestrictionMatrix(i, j, m, n, o, width, periodic);
+            CAPTURE(s[0], s[1], s[2]);
+            if (s[0] != -1) // stencil entry exists
+            {
+                CAPTURE(a[i][j], st[s[0]][s[1]][s[2]]);
+                REQUIRE((a[i][j] == st[s[0]][s[1]][s[2]]));
+            }
+        }
+}
+
+TEST_CASE("Matrix2d::getStencilEntryOfProlongationMatrix")
+{
+    int m = 4; // GENERATE(2, 4);
+    int n = 4; // GENERATE(2, 4);
+    int o = 4; // GENERATE(2, 4);
+    int m2 = m / 2;
+    int n2 = n / 2;
+    int o2 = o / 2;
+    bool periodic = true;
+    int width = 3;
+
+    CAPTURE(m, n, o, m2, n2, o2, periodic, width);
+
+    auto st = mgcl::create3dBilinearProlongationStencil();
+    auto a = mgcl_test::Matrix2d::prolongationBilinear(m, n, o);
+
+    CAPTURE(a.getM(), a.getN());
+
+    // fill a with 1d index
+    for (int i = 0; i < a.getM(); i++)
+        for (int j = 0; j < a.getN(); j++)
+        {
+            CAPTURE(i, j);
+            auto s = a.getStencilEntryOfProlongationMatrix(i, j, m, n, o, width, periodic);
+            CAPTURE(s[0], s[1], s[2]);
+            if (s[0] != -1) // stencil entry exists
+            {
+                CAPTURE(a[i][j], st[s[0]][s[1]][s[2]]);
+                REQUIRE((a[i][j] == st[s[0]][s[1]][s[2]]));
+            }
+        }
+}
