@@ -962,6 +962,9 @@ TEST_CASE("Matrix2d::getStencilIndicesForEntry")
                 CAPTURE(i, j);
                 auto s = a.getStencilIndicesForEntry(i, j, m, n, o, width, periodic);
                 CAPTURE(s[0], s[1], s[2], s[3], s[4], s[5]);
+
+                // stencil entry exists
+                REQUIRE((a[i][j] == 0 || (a[i][j] > 0 && s[0] != -1)));
                 if (s[0] != -1)
                 {
                     CAPTURE(a[i][j], st[s[3]][s[4]][s[5]][s[0]][s[1]][s[2]]);
@@ -996,7 +999,10 @@ TEST_CASE("Matrix2d::getStencilEntryOfRestrictionMatrix")
             CAPTURE(i, j);
             auto s = a.getStencilEntryOfRestrictionMatrix(i, j, m, n, o, width, periodic);
             CAPTURE(s[0], s[1], s[2]);
-            if (s[0] != -1) // stencil entry exists
+
+            // stencil entry exists
+            REQUIRE((a[i][j] == 0 || (a[i][j] > 0 && s[0] != -1)));
+            if (s[0] != -1)
             {
                 CAPTURE(a[i][j], st[s[0]][s[1]][s[2]]);
                 REQUIRE((a[i][j] == st[s[0]][s[1]][s[2]]));
@@ -1029,7 +1035,10 @@ TEST_CASE("Matrix2d::getStencilEntryOfProlongationMatrix")
             CAPTURE(i, j);
             auto s = a.getStencilEntryOfProlongationMatrix(i, j, m, n, o, width, periodic);
             CAPTURE(s[0], s[1], s[2]);
-            if (s[0] != -1) // stencil entry exists
+
+            // stencil entry exists
+            REQUIRE((a[i][j] == 0 || (a[i][j] > 0 && s[0] != -1)));
+            if (s[0] != -1)
             {
                 CAPTURE(a[i][j], st[s[0]][s[1]][s[2]]);
                 REQUIRE((a[i][j] == st[s[0]][s[1]][s[2]]));

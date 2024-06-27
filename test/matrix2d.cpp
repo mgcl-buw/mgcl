@@ -259,6 +259,10 @@ namespace mgcl_test
             throw "Matrix2d::getStencilIndicesForEntry: m * n * o != getM(). Only works for square matrices";
         if (m * n * o != getN())
             throw "Matrix2d::getStencilIndicesForEntry: m * n * o != getN(). Only works for square matrices";
+        if (row < 0 || row >= getM() || col < 0 || col >= getN())
+            throw "Matrix2d::getStencilIndicesForEntry: row or col out of bounds.";
+        if (stencilWidth < 0 || stencilWidth % 2 != 1)
+            throw "Matrix2d::getStencilIndicesForEntry: stencilWidth must be a positive odd number.";
 
         // Grid point mapped to by current matrix row (row number equals 1d index of grid point)
         int no_rows = n * o;
@@ -272,27 +276,27 @@ namespace mgcl_test
         int gpj = (col - gpi * no) / o;
         int gpk = col % o;
 
-        if (periodic)
-        {
-            gpi = gpi % m;
-            gpj = gpj % n;
-            gpk = gpk % o;
-
-            // shift mod result into positive range
-            if (gpi < 0)
-                gpi += m;
-
-            if (gpj < 0)
-                gpj += n;
-
-            if (gpk < 0)
-                gpk += o;
-        }
-
         // Stencil entry
         int ii = gpi + (stencilWidth / 2) - i;
         int jj = gpj + (stencilWidth / 2) - j;
         int kk = gpk + (stencilWidth / 2) - k;
+
+        if (periodic)
+        {
+            ii = ii % m;
+            jj = jj % n;
+            kk = kk % o;
+
+            // shift mod result into positive range
+            if (ii < 0)
+                ii += m;
+
+            if (jj < 0)
+                jj += n;
+
+            if (kk < 0)
+                kk += o;
+        }
 
         // check if matrix entry is actually part of a stencil
         if (ii < 0 || ii >= stencilWidth || jj < 0 || jj >= stencilWidth || kk < 0 || kk >= stencilWidth)
@@ -350,27 +354,27 @@ namespace mgcl_test
         int gpj = (col - gpi * no_cols) / o;
         int gpk = col % o;
 
-        if (periodic)
-        {
-            gpi = gpi % m;
-            gpj = gpj % n;
-            gpk = gpk % o;
-
-            // shift mod result into positive range
-            if (gpi < 0)
-                gpi += m;
-
-            if (gpj < 0)
-                gpj += n;
-
-            if (gpk < 0)
-                gpk += o;
-        }
-
         // Stencil entry
         int ii = gpi + (stencilWidth / 2) - i;
         int jj = gpj + (stencilWidth / 2) - j;
         int kk = gpk + (stencilWidth / 2) - k;
+
+        if (periodic)
+        {
+            ii = ii % m;
+            jj = jj % n;
+            kk = kk % o;
+
+            // shift mod result into positive range
+            if (ii < 0)
+                ii += m;
+
+            if (jj < 0)
+                jj += n;
+
+            if (kk < 0)
+                kk += o;
+        }
 
         // check if matrix entry is actually part of a stencil
         if (ii < 0 || ii >= stencilWidth || jj < 0 || jj >= stencilWidth || kk < 0 || kk >= stencilWidth)
@@ -428,27 +432,27 @@ namespace mgcl_test
         gpj = gpj * 2 + 1;
         gpk = gpk * 2 + 1;
 
-        if (periodic)
-        {
-            gpi = gpi % m;
-            gpj = gpj % n;
-            gpk = gpk % o;
-
-            // shift mod result into positive range
-            if (gpi < 0)
-                gpi += m;
-
-            if (gpj < 0)
-                gpj += n;
-
-            if (gpk < 0)
-                gpk += o;
-        }
-
         // Stencil entry
         int ii = gpi + (stencilWidth / 2) - i;
         int jj = gpj + (stencilWidth / 2) - j;
         int kk = gpk + (stencilWidth / 2) - k;
+
+        if (periodic)
+        {
+            ii = ii % m;
+            jj = jj % n;
+            kk = kk % o;
+
+            // shift mod result into positive range
+            if (ii < 0)
+                ii += m;
+
+            if (jj < 0)
+                jj += n;
+
+            if (kk < 0)
+                kk += o;
+        }
 
         // check if matrix entry is actually part of a stencil
         if (ii < 0 || ii >= stencilWidth || jj < 0 || jj >= stencilWidth || kk < 0 || kk >= stencilWidth)
