@@ -66,13 +66,6 @@ namespace mgcl_test
         std::array<int, 6> getStencilIndicesForEntry(int row, int col,
                                                      int m, int n, int o,
                                                      int stencilWidth, bool periodic) const;
-        std::array<int, 3> getStencilEntryOfRestrictionMatrix(int row, int col,
-                                                              int m, int n, int o,
-                                                              int stencilWidth, bool periodic) const;
-        std::array<int, 3> getStencilEntryOfProlongationMatrix(int row, int col,
-                                                               int m, int n, int o,
-                                                               int stencilWidth, bool periodic) const;
-
         static Matrix2d eye(int m);
         static Matrix2d eye(int m, int n);
         static Matrix2d diag(std::vector<std::tuple<double, int>> valuesAndOffsets, int m, int n);
