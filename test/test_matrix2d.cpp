@@ -195,7 +195,7 @@ TEST_CASE("MatrixGalerkinTrace")
                     // REQUIRE(ind_r_ah[0] != -1);
                     REQUIRE(ind_p[0] != -1);
 
-                    ssst << (!nnzfound ? "" : " + ") << stencil_trace_nnz_tmp[ci][idx] << "] * p["
+                    ssst << (!nnzfound ? "" : " + ") << stencil_trace_nnz_tmp[ci][idx] << " * p["
                          << ind_p[3] << "][" << ind_p[4] << "][" << ind_p[5] << "]";
 
                     nnzfound = true;
@@ -238,8 +238,15 @@ TEST_CASE("MatrixGalerkinTrace")
             // check that only one non-zero entries are in the trace
             if (r_ah_p[ci][cj] != 0)
             {
+                auto ind = r_ah_p.getStencilIndicesForEntry(ci, cj, m2, n2, o2, stencilWidth, periodic);
                 nnz++;
-                std::cout << "rap[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << stencil_trace_nnz[ci][cj] << std::endl
+                std::cout << "rap[" + std::to_string(ind[3]) + "][" +
+                                 std::to_string(ind[4]) + "][" +
+                                 std::to_string(ind[5]) + "][" +
+                                 std::to_string(ind[0]) + "][" +
+                                 std::to_string(ind[1]) + "][" +
+                                 std::to_string(ind[2]) + "] = "
+                          << stencil_trace_nnz[ci][cj] << std::endl
                           << std::endl;
             }
         }
