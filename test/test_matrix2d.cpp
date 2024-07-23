@@ -12,38 +12,6 @@
 
 #include "test_results.hpp"
 
-TEST_CASE("tmp_GalerkinOptimization")
-{
-    int m = 4;
-    int n = 4;
-    int o = 4;
-    int N = m * n * o;
-
-    std::vector<std::tuple<double, int>> vals{{1, 0}, {0.5, -1}, {0.5, 1}};
-    auto SP = mgcl_test::Matrix2d::diag(vals, N, N);
-    auto A = mgcl_test::Matrix2d::laplace7p3d(4, 4, 4, true);
-    auto SR = mgcl_test::Matrix2d::diag(vals, N, N);
-
-    auto A_SP = A * SP;
-    auto SR_A_SP = SR * A_SP;
-
-    // SP.dumpToFileDecimalFormat("SP.csv", 2);
-    // A.dumpToFileDecimalFormat("A.csv", 2);
-    // A_SP.dumpToFileDecimalFormat("A_SP.csv", 2);
-    // SR.dumpToFileDecimalFormat("SR.csv", 2);
-    // SR_A_SP.dumpToFileDecimalFormat("SR_A_SP.csv", 2);
-
-    // cutting only in the 3rd dimension
-    auto K = mgcl_test::Matrix2d::cuttingMatrix3d(m, n, o / 2); // TODO create only for 3rd dimension
-    std::cout << "K: " << K.getM() << " x " << K.getN() << std::endl;
-    auto R = mgcl_test::Matrix2d::cuttingMatrix3d(m, n, o / 2) * SR;
-    // auto P = SP * mgcl_test::Matrix2d::cuttingMatrix3d(m, n, o / 2).transposed();
-    // auto RAP = R * A * P;
-    // R.dumpToFileDecimalFormat("R.csv", 2);
-    // P.dumpToFileDecimalFormat("P.csv", 2);
-    // RAP.dumpToFileDecimalFormat("RAP.csv", 2);
-}
-
 TEST_CASE("MatrixGalerkinTrace")
 {
 
@@ -152,6 +120,8 @@ TEST_CASE("MatrixGalerkinTrace")
     //             }
     //         }
     //     }
+    //     return;
+    // }
 
     //     // print stencil trace for r*a
     //     std::cout << std::endl;
@@ -220,12 +190,12 @@ TEST_CASE("MatrixGalerkinTrace")
     for (int ci = 0; ci < r_ah_p.getM(); ci++)
     {
         for (int cj = 0; cj < r_ah_p.getN(); cj++)
-            if (r_ah_p[ci][cj] != 0)
-            {
-                nnz++;
-                std::cout << "rap[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << trace_nnz[ci][cj] << std::endl
-                          << std::endl;
-            }
+        // if (r_ah_p[ci][cj] != 0)
+        {
+            nnz++;
+            std::cout << "rap[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << trace_nnz[ci][cj] << std::endl
+                      << std::endl;
+        }
     }
     std::cout << "non-zero values:" << nnz << std::endl;
 
