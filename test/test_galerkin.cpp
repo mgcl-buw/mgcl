@@ -1,6 +1,7 @@
 #include "matrix2d.hpp"
 
 #include <cmath>
+#include <memory>
 
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/generators/catch_generators.hpp"
@@ -19,12 +20,12 @@ TEST_CASE("galerkin Laplace vs Matrix")
     double h2inv = static_cast<double>(m) * static_cast<double>(m);
 
     // Fill varying stencil on fine grid with 7p Laplace
-    mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
+    mgcl::VaryingStencil a_h(m, n, o, 3, 1, 1, 1);
     double h = 1.0 / static_cast<double>(m);
     mgcl_test::fill7pLaplace(a_h, h, true);
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
-    auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
+    auto a_2h = mgcl::MultigridEngine::galerkinOptimized(a_h, 1, nullptr, nullptr, true, true, true, false);
+    auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(*a_2h, true);
 
     // calculate results with Matrices to check
     auto ah = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * h2inv;
@@ -45,12 +46,12 @@ TEST_CASE("galerkin random values periodic vs Matrix")
     double tol = 1e-12;
 
     // Fill varying stencil on fine grid with 27p random values
-    mgcl::VaryingStencil a_h(m, n, o, 3, 2, 2, 2);
+    mgcl::VaryingStencil a_h(m, n, o, 3, 1, 1, 1);
     a_h.fillRandom(-10, 10);
     a_h.updateGhosts();
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
-    auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
+    auto a_2h = mgcl::MultigridEngine::galerkinOptimized(a_h, 1, nullptr, nullptr, true, true, true, false);
+    auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(*a_2h, true);
 
     // calculate results with Matrices to check
     auto ah = mgcl_test::Matrix2d::fromVaryingStencil(a_h, true);
@@ -146,7 +147,7 @@ TEST_CASE("galerkin multiple levels random values periodic")
     std::cout << "Testing for m,n,o with maxlv: " << m << "," << n << "," << o << ", " << maxlv << std::endl;
 
     // Fill varying stencil on fine grid with 27p random values initially
-    auto a_h = std::make_unique<mgcl::VaryingStencil>(m, n, o, 3, 2, 2, 2);
+    auto a_h = std::make_unique<mgcl::VaryingStencil>(m, n, o, 3, 1, 1, 1);
     a_h->fillRandom(-10, 10);
     a_h->updateGhosts();
 
@@ -154,7 +155,7 @@ TEST_CASE("galerkin multiple levels random values periodic")
 
     for (int lv = 0; lv < maxlv; lv++)
     {
-        a_2h = std::make_unique<mgcl::VaryingStencil>(mgcl::MultigridEngine::galerkin(*a_h, 2, nullptr, nullptr, true, true, true, false));
+        a_2h = mgcl::MultigridEngine::galerkinOptimized(*a_h, 1, nullptr, nullptr, true, true, true, false);
         auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(*a_2h, true);
 
         // calculate results with Matrices to check
@@ -183,8 +184,8 @@ TEST_CASE("galerkin symmetric")
     double h = 1.0 / static_cast<double>(m);
     mgcl_test::fill7pLaplace(a_h, h, true);
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
-    auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(a_2h, true);
+    auto a_2h = mgcl::MultigridEngine::galerkinOptimized(a_h, 2, nullptr, nullptr, true, true, true, false);
+    auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(*a_2h, true);
 
     for (int i = 0; i < a2hm.getM(); i++)
         for (int j = 0; j < a2hm.getN(); j++)
@@ -239,7 +240,8 @@ TEST_CASE("galerkin Laplace rediscretized")
     double h = 1.0 / static_cast<double>(m);
     mgcl_test::fill7pLaplace(a_h, h, true);
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
+    auto a_2h_ptr = mgcl::MultigridEngine::galerkinOptimized(a_h, 2, nullptr, nullptr, true, true, true, false);
+    auto& a_2h = *a_2h_ptr;
 
     // Test with fine h (result from Matlab's Symbolic Toolbox)
     double factor1 = h2inv * (3.0 / 256.0);  // corners

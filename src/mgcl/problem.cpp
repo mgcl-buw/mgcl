@@ -408,12 +408,12 @@ namespace mgcl
                     // 3. this level is calculated locally and rank is 0.
                     // Otherwise we would run into neighbour issues when trying to update ghosts.
                     if (!useMpi() || !lvCoarse.isCalculatedLocally() || mpiRank() == 0)
-                        lvCoarse.stencilValues = std::make_shared<VaryingStencil>(
-                            MultigridEngine::galerkin(*lvFine.getStencilValues(), gh_sv,
-                                                      lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
-                                                      isPeriodic(), gathered,
-                                                      lvCoarse.isCalculatedLocally(), !updateGhostsCoarse,
-                                                      svm, svn, svo));
+                        lvCoarse.stencilValues = MultigridEngine::galerkinOptimized(
+                            *lvFine.getStencilValues(), gh_sv,
+                            lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
+                            isPeriodic(), gathered,
+                            lvCoarse.isCalculatedLocally(), !updateGhostsCoarse,
+                            svm, svn, svo);
                 }
                 else
                 {
