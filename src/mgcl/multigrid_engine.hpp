@@ -79,6 +79,12 @@ namespace mgcl
                                           conf::KernelConfig* kernelConfig, ProfilingData* pd,
                                           int resm = 0, int resn = 0, int reso = 0);
 
+        static std::unique_ptr<VaryingStencil> galerkinOptimized(VaryingStencil& a_h, int gh_a2h,
+                                                                 MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
+                                                                 bool periodic, bool forceLocalFine, bool forceLocalCoarse,
+                                                                 bool skipUpdateGhostsCoarse,
+                                                                 int resm = 0, int resn = 0, int reso = 0);
+
         static void print7point(Cuboid& v, int i, int j, int k);
         static void print19point(Cuboid& v, int i, int j, int k);
         static void print27point(Cuboid& v, int i, int j, int k);

@@ -315,6 +315,174 @@ namespace mgcl
     /**
      * @brief Calculates and sets the stencil (i.e. the matrix A) for the current level by applying the
      * Galerkin operator, which is defined as A_2h = R * A_h * P with R being restriction and P being prolongation
+     * operators. Optimized version that calculated the end result directly, without intermediate stencils.
+     *
+     * @param a_h The stencil of the finer grid.
+     * @param gh_a2h Amount of ghost cells to apply to the output stencil a_2h. Must be max(2, jacobiItersPerKernel).
+     * @param resm Size of resulting stencil's grid. Per default halve of a_h's size.
+     * @param resn Size of resulting stencil's grid. Per default halve of a_h's size.
+     * @param reso Size of resulting stencil's grid. Per default halve of a_h's size.
+     * @returns VaryingStencil The stencil to be applied on the coarser grid
+     */
+    std::unique_ptr<VaryingStencil> MultigridEngine::galerkinOptimized(VaryingStencil& a_h, int gh_a2h,
+                                                                       MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
+                                                                       bool periodic, bool forceLocalFine, bool forceLocalCoarse,
+                                                                       bool skipUpdateGhostsCoarse,
+                                                                       int resm, int resn, int reso)
+    {
+        // TODO respect problem::ghosts maybe
+
+        // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
+        // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
+        auto sr = create3dFullWeightRestrictionStencil();
+        auto sp = create3dBilinearProlongationStencil();
+
+        if (resm <= 0)
+            resm = a_h.getM() >> 1;
+        if (resn <= 0)
+            resn = a_h.getN() >> 1;
+        if (reso <= 0)
+            reso = a_h.getO() >> 1;
+
+        auto a_2h = std::make_unique<VaryingStencil>(resm, resn, reso, 3, gh_a2h, gh_a2h, gh_a2h);
+
+        struct Interval
+        {
+            int start;
+            int end;
+        };
+
+        // Returns the intersection of two intervals or [-1,-1] if they don't overlap
+        auto intersect = [](Interval a, Interval b) -> Interval
+        {
+            // Check if intervals overlap
+            if (a.start <= b.end && b.start <= a.end)
+            {
+                // Calculate start and end points of intersection
+                int start = (a.start > b.start) ? a.start : b.start;
+                int end = (a.end < b.end) ? a.end : b.end;
+                return Interval{start, end};
+            }
+            else
+            {
+                // Intervals do not overlap
+                return Interval{-1, -1};
+            }
+        };
+
+        struct Point
+        {
+            int x;
+            int y;
+            int z;
+        };
+
+        // Returns the stencil entry indices of the stencil sitting at locationOfStencil that maps to mapsTo.
+        // No check is done, if the mapping is possible, i.e. the returned value might be outside of range [0,2].
+        // The result is just the difference of the indices plus one, since the stencil entry indices start at 0
+        // and not at -1.
+        auto stencilEntryThatMapsTo = [](Point locationOfStencil, Point mapsTo) -> Point
+        {
+            return {mapsTo.x - locationOfStencil.x + 1,
+                    mapsTo.y - locationOfStencil.y + 1,
+                    mapsTo.z - locationOfStencil.z + 1};
+        };
+
+        // Returns the grid point indices that is mapped to by the stencil entry of another point.
+        // stencilEntry must be 0-based.
+        auto pointMappedToByStencilEntry = [](Point locationOfStencil, Point stencilEntry) -> Point
+        {
+            return {locationOfStencil.x + (stencilEntry.x - 1),
+                    locationOfStencil.y + (stencilEntry.y - 1),
+                    locationOfStencil.z + (stencilEntry.z - 1)};
+        };
+
+        // Returns the point on the fine grid that is related to the coarse grid point, respecting ghost cells.
+        auto coarseToFine = [](Point p, int ghc, int ghf) -> Point
+        {
+            return {(p.x - ghc) * 2 + 1 + ghf, (p.y - ghc) * 2 + 1 + ghf, (p.z - ghc) * 2 + 1 + ghf};
+        };
+
+        // for each real resulting stencil and stencil entry...
+        for (int i = a_2h->getGhostsM(); i < a_2h->getM() + a_2h->getGhostsM(); i++)
+            for (int j = a_2h->getGhostsN(); j < a_2h->getN() + a_2h->getGhostsN(); j++)
+                for (int k = a_2h->getGhostsO(); k < a_2h->getO() + a_2h->getGhostsO(); k++)
+                    for (int ii = 0; ii < a_2h->getWidth(); ii++)
+                        for (int jj = 0; jj < a_2h->getWidth(); jj++)
+                            for (int kk = 0; kk < a_2h->getWidth(); kk++)
+                            {
+                                // calculate fine grid point indices
+                                Point gp_c = {i, j, k};
+                                Point gp_f = coarseToFine(gp_c, a_h.getGhostsM(), a_2h->getGhostsM());
+                                Point entry_gpf = coarseToFine(
+                                    pointMappedToByStencilEntry(gp_c, {ii, jj, kk}),
+                                    a_h.getGhostsM(), a_2h->getGhostsM());
+
+                                // find intersection S_P of neighbouring points for entry_gpf with reach=1 and gp_f with reach=2
+                                Interval S_P[3] = {
+                                    intersect(Interval{gp_f.x - 2, gp_f.x + 2}, Interval{entry_gpf.x - 1, entry_gpf.x + 1}),
+                                    intersect(Interval{gp_f.y - 2, gp_f.y + 2}, Interval{entry_gpf.y - 1, entry_gpf.y + 1}),
+                                    intersect(Interval{gp_f.z - 2, gp_f.z + 2}, Interval{entry_gpf.z - 1, entry_gpf.z + 1}),
+                                };
+
+                                // Start calc (R*A)*P
+                                double res = 0;
+
+                                // for each fine grid point gp_sp in S_P:
+                                for (int spi = S_P[0].start; spi <= S_P[0].end; spi++)
+                                    for (int spj = S_P[1].start; spj <= S_P[1].end; spj++)
+                                        for (int spk = S_P[2].start; spk <= S_P[2].end; spk++)
+                                        {
+                                            Point gp_sp = {spi, spj, spk};
+                                            // tmp_p <- in stencil P located at gp_sp: Find stencil entry entry_p that maps to entry_gpf. Since
+                                            // gp_sp is in S_P, it is ensured that the stencil has a stencil entry that maps to entry_gpf.
+                                            Point tmp_p_indices = stencilEntryThatMapsTo(gp_sp, entry_gpf);
+                                            double tmp_p = sp[tmp_p_indices.x][tmp_p_indices.y][tmp_p_indices.z];
+
+                                            // Start calc R*A
+                                            // find intersection S_R of neighbouring points for gp_f and gp_sp, both with reach=1
+                                            Interval S_R[3] = {
+                                                intersect(Interval{gp_f.x - 1, gp_f.x + 1}, Interval{spi - 1, spi + 1}),
+                                                intersect(Interval{gp_f.y - 1, gp_f.y + 1}, Interval{spj - 1, spj + 1}),
+                                                intersect(Interval{gp_f.z - 1, gp_f.z + 1}, Interval{spk - 1, spk + 1}),
+                                            };
+
+                                            double sum = 0;
+                                            // for each fine grid point gp_sr in S_R:
+                                            for (int sri = S_R[0].start; sri <= S_R[0].end; sri++)
+                                                for (int srj = S_R[1].start; srj <= S_R[1].end; srj++)
+                                                    for (int srk = S_R[2].start; srk <= S_R[2].end; srk++)
+                                                    {
+                                                        Point gp_sr = {sri, srj, srk};
+                                                        // tmp_r <- in stencil R located at gp_f: Find stencil entry entry_r that maps to gp_sr
+                                                        Point tmp_r_indices = stencilEntryThatMapsTo(gp_f, gp_sr);
+                                                        double tmp_r = sr[tmp_r_indices.x][tmp_r_indices.y][tmp_r_indices.z];
+                                                        // tmp_a <- in stencil A located at gp_sr: Find stencil entry that maps to gp_sp
+                                                        Point tmp_a_indices = stencilEntryThatMapsTo(gp_sr, gp_sp);
+                                                        double tmp_a = a_h[tmp_a_indices.x][tmp_a_indices.y][tmp_a_indices.z][gp_sr.x][gp_sr.y][gp_sr.z];
+                                                        // sum <- sum + tmp_r * tmp_a
+                                                        sum += tmp_r * tmp_a;
+                                                        // End calc R*A
+                                                    }
+
+                                            //   res <- res + sum * tmp_p
+                                            res += sum * tmp_p;
+                                            // End calc (R*A)*P
+                                        }
+
+                                // store res in rap
+                                (*a_2h)[ii][jj][kk][i][j][k] = res;
+                            }
+
+        if (!skipUpdateGhostsCoarse)
+            updateGhostsStencilMpi(*a_2h, mpiDataCoarse, periodic, forceLocalCoarse);
+
+        return a_2h;
+    }
+
+    /**
+     * @brief Calculates and sets the stencil (i.e. the matrix A) for the current level by applying the
+     * Galerkin operator, which is defined as A_2h = R * A_h * P with R being restriction and P being prolongation
      * operators on GPU.
      *
      * @param a_h The stencil of the finer grid.

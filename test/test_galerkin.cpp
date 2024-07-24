@@ -62,6 +62,38 @@ TEST_CASE("galerkin random values periodic vs Matrix")
     CHECK(a2hm.isEqual(a2h, tol));
 }
 
+TEST_CASE("seq_galerkin_optimized_random_values_periodic_vs_matrix")
+{
+    int m = GENERATE(2, 4, 8);
+    int n = GENERATE(2, 4, 8);
+    int o = GENERATE(2, 4, 8);
+
+    double tol = 1e-12;
+
+    // Fill varying stencil on fine grid with 27p random values
+    mgcl::VaryingStencil a_h(m, n, o, 3, 1, 1, 1);
+    a_h.fill1dIndex(true);
+    a_h[0][0][0][0][0][0] = 0.5; // fill with non zero value
+    a_h.updateGhosts();
+
+    auto a_2h = mgcl::MultigridEngine::galerkinOptimized(a_h, 1, nullptr, nullptr, true, true, true, false);
+    auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(*a_2h, true);
+
+    // calculate results with Matrices to check
+    auto ah = mgcl_test::Matrix2d::fromVaryingStencil(a_h, true);
+    auto r = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
+    auto p = mgcl_test::Matrix2d::prolongationBilinear(m, n, o);
+
+    auto a2h = r * ah * p;
+
+    // a_h.dumpToFile("a_h.txt", false);
+    // ah.dumpToFileWithIndices("ah_matrix.txt");
+    // a2hm.dumpToFile("a2hm.txt");
+    // a2h.dumpToFile("a2h.txt");
+
+    CHECK(a2hm.isEqual(a2h, tol));
+}
+
 TEST_CASE("GPU galerkin random values periodic")
 {
     auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
