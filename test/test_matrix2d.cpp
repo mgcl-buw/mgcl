@@ -25,7 +25,7 @@ TEST_CASE("MatrixGalerkinTrace")
     std::cout << "mxnxo = " << m << "x" << n << "x" << o << std::endl;
 
     // Create 27p stencil and generate matrix from it
-    mgcl::VaryingStencil* vst = new mgcl::VaryingStencil(m, n, o, 3, 0, 0, 0);
+    mgcl::VaryingStencil* vst = new mgcl::VaryingStencil(m, n, o, 3, 2, 2, 2);
     vst->fill1dIndex(false);
     (*vst)[0][0][0][0][0][0] = 0.5; // fill with non zero value
     auto ah = mgcl_test::Matrix2d::fromVaryingStencil(*vst, periodic);
