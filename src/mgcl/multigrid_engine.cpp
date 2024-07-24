@@ -332,6 +332,13 @@ namespace mgcl
     {
         // TODO respect problem::ghosts maybe
 
+        // Make sure a_h has two ghosts at each border for periodic bc.
+        if (a_h.getGhostsM() < 1 || a_h.getGhostsN() < 1 || a_h.getGhostsO() < 1)
+            throw "galerkin: a_h needs to have at least 1 ghosts at each border for periodic bc!";
+
+        if (gh_a2h < 1)
+            throw "galerkin: gh_a2h must be at least 1.";
+
         // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
         // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
         auto sr = create3dFullWeightRestrictionStencil();
