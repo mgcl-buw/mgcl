@@ -365,6 +365,8 @@ namespace mgcl
         bool getIgnoreMpi() const { return ignoreMpi; }
         void setIgnoreMpi(bool ignoreMpi_) { ignoreMpi = ignoreMpi_; }
 
+        MPIGlobalData& getMPIGlobalData() { return *mpiGlobalData; }
+
         bool isProfilingEnabled() const { return profilingEnabled; }
         void setProfilingEnabled(bool profilingEnabled_);
 
