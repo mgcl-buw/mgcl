@@ -78,6 +78,7 @@ set(SOURCES_TEST_MPI
     mpi/test_mpi_residual.cpp
     mpi/test_mpi_util.cpp
     mpi/test_mpi_vcycle.cpp
+    mpi/test_mpi_galerkin.cpp
     mpi/test_mpi_stencil.cpp
     mpi/test_bench_vcycle_mpi.cpp
     mpi/catch2_main_mpi.cpp)
