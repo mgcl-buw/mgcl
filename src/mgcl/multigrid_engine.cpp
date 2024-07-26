@@ -422,10 +422,10 @@ namespace mgcl
                             {
                                 // calculate fine grid point indices
                                 Point gp_c = {i, j, k};
-                                Point gp_f = coarseToFine(gp_c, a_h.getGhostsM(), a_2h->getGhostsM());
+                                Point gp_f = coarseToFine(gp_c, a_2h->getGhostsM(), a_h.getGhostsM());
                                 Point entry_gpf = coarseToFine(
                                     pointMappedToByStencilEntry(gp_c, {ii, jj, kk}),
-                                    a_h.getGhostsM(), a_2h->getGhostsM());
+                                    a_2h->getGhostsM(), a_h.getGhostsM());
 
                                 // find intersection S_P of neighbouring points for entry_gpf with reach=1 and gp_f with reach=2
                                 Interval S_P[3] = {
