@@ -30,6 +30,7 @@ print_help() {
   echo "-u,--util: Run Utility specific tests (e.g. gather and scatter)"
   echo "-v,--vcycle: Run Vcycle specific tests (i.e. solving a problem)"
   echo "-s,--stencil: Run Stencil specific tests (mult, ghost update, etc.)"
+  echo "-a,--galerkin: Run Galerkin specific tests (galerkinOptimized, Problem::init)"
   echo "If no option is given, all tests will be run."
 }
 
@@ -42,6 +43,7 @@ TEST_RESIDUAL=false
 TEST_UTIL=false
 TEST_VCYCLE=false
 TEST_STENCIL=false
+TEST_GALERKIN=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -86,6 +88,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     -s|--stencil)
       TEST_STENCIL=true
+      TEST_ALL=false
+      shift # past argument
+      ;;
+    -a|--galerkin)
+      TEST_GALERKIN=true
       TEST_ALL=false
       shift # past argument
       ;;
@@ -221,6 +228,15 @@ if [ "$TEST_STENCIL" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 4 "$exe" "MPI-updateGhostsStencilOclMpi-nprocs"
     run_test --oversubscribe -n 1 "$exe" MPI_galerkin_different_thresholds
     run_test --oversubscribe -n 4 "$exe" MPI_galerkin_different_thresholds
+fi
+
+if [ "$TEST_GALERKIN" = true ] || [ "$TEST_ALL" = true ] ; then
+    echo "#######################"
+    echo "Run Tests from test_galerkin.cpp ..."
+    echo "#######################"
+
+    run_test --oversubscribe -n 1 "$exe" "MPI_seq_galerkinOptimized_nprocs"
+    run_test --oversubscribe -n 4 "$exe" "MPI_seq_galerkinOptimized_nprocs"
 fi
 
 echo "Done. All good!"

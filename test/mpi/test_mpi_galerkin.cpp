@@ -11,7 +11,6 @@
 #include "../../src/mgcl/mpi_util.hpp"
 #include "../../src/mgcl/multigrid_engine.hpp"
 #include "../../src/mgcl/problem.hpp"
-#include "../test_utility.hpp"
 
 #include "mpi.h"
 
@@ -358,12 +357,32 @@ TEST_CASE("MPI_seq_galerkinOptimized_nprocs")
 
     // Create locally sized varying stencil on each MPI process
     mgcl::VaryingStencil a_h_loc(ml, nl, ol, 3, 1, 1, 1);
-    a_h_loc.fill1dIndex(false);
+    // fill with 1d global index, depending on this process' coordinates, in order to get the same values as in the
+    // global stencil values
+    // clang-format off
+    for (int i = a_h_loc.getGhostsM(); i < a_h_loc.getGhostsM() + a_h_loc.getM(); i++)
+    for (int j = a_h_loc.getGhostsN(); j < a_h_loc.getGhostsN() + a_h_loc.getN(); j++)
+    for (int k = a_h_loc.getGhostsO(); k < a_h_loc.getGhostsO() + a_h_loc.getO(); k++)
+        for (int ii = 0; ii < 3; ii++)
+        for (int jj = 0; jj < 3; jj++)
+        for (int kk = 0; kk < 3; kk++)
+        {
+            int mgh = m + 2 * a_h_loc.getGhostsM();
+            int ngh = n + 2 * a_h_loc.getGhostsN();
+            int ogh = o + 2 * a_h_loc.getGhostsO();
+            int itarget = ml * mpi_coords[0] + i;
+            int jtarget = nl * mpi_coords[1] + j;
+            int ktarget = ol * mpi_coords[2] + k;
+            a_h_loc[ii][jj][kk][i][j][k] = ktarget + jtarget * ogh + itarget * ogh * ngh + kk * ogh * ngh * mgh + jj * ogh * ngh * mgh * 3 + ii * ogh * ngh * mgh * 3 * 3;
+        }
+    // clang-format on
     mgcl::updateGhostsStencilMpi(a_h_loc, &mpiDataFine, periodic, false);
 
     auto a_2h_loc = mgcl::MultigridEngine::galerkinOptimized(
         a_h_loc, 1, &mpiDataFine, &mpiDataCoarse,
         true, false, false, false);
+
+    // a_2h_loc->dumpToFile(std::to_string(mpi_rank) + "_a_2h_loc.txt");
 
     MPI_Barrier(mpi_comm);
 
@@ -372,12 +391,28 @@ TEST_CASE("MPI_seq_galerkinOptimized_nprocs")
     if (mpi_rank == 0)
     {
         mgcl::VaryingStencil a_h_glob(m, n, o, 3, 1, 1, 1);
-        a_h_glob.fill1dIndex(false);
+        a_h_glob.fill1dIndex(true);
         a_h_glob.updateGhosts();
+
+        // Check that local and global stencil values on fine grid (i.e. the input) are the same (at least for root)
+        // clang-format off
+        for (int i = a_h_loc.getGhostsM(); i < a_h_loc.getGhostsM() + a_h_loc.getM(); i++)
+        for (int j = a_h_loc.getGhostsN(); j < a_h_loc.getGhostsN() + a_h_loc.getN(); j++)
+        for (int k = a_h_loc.getGhostsO(); k < a_h_loc.getGhostsO() + a_h_loc.getO(); k++)
+            for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+            for (int kk = 0; kk < 3; kk++)
+                {
+                    CAPTURE(mpi_rank, i,j,k,ii,jj,kk, mpi_coords[0], mpi_coords[1], mpi_coords[2]);                
+                    REQUIRE(a_h_loc[ii][jj][kk][i][j][k] == a_h_glob[ii][jj][kk][i][j][k]);
+                }
+        // clang-format on
 
         a_2h_glob = mgcl::MultigridEngine::galerkinOptimized(
             a_h_glob, 1, nullptr, nullptr,
             true, true, true, false);
+
+        // a_2h_glob->dumpToFile(std::to_string(mpi_rank) + "_a_2h_glob.txt");
     }
 
     // Gather local approximations on rank 0 for checking.
