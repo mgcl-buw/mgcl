@@ -357,6 +357,7 @@ namespace mgcl
         {
             int start;
             int end;
+            std::string toString() { return "[" + std::to_string(start) + "," + std::to_string(end) + "]"; }
         };
 
         // Returns the intersection of two intervals or [-1,-1] if they don't overlap
@@ -382,6 +383,7 @@ namespace mgcl
             int x;
             int y;
             int z;
+            std::string toString() { return "(" + std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z) + ")"; }
         };
 
         // Returns the stencil entry indices of the stencil sitting at locationOfStencil that maps to mapsTo.
