@@ -405,14 +405,6 @@ namespace mgcl
             return {(p.x - ghc) * 2 + 1 + ghf, (p.y - ghc) * 2 + 1 + ghf, (p.z - ghc) * 2 + 1 + ghf};
         };
 
-        // if (!mpiDataCoarse || mpiDataCoarse->rank == 0)
-        // {
-        //     std::cout << "Iterating over a_2h:" << std::endl;
-        //     std::cout << "  i: [" << a_2h->getGhostsM() << "," << a_2h->getM() + a_2h->getGhostsM() << "]" << std::endl;
-        //     std::cout << "  j: [" << a_2h->getGhostsN() << "," << a_2h->getN() + a_2h->getGhostsN() << "]" << std::endl;
-        //     std::cout << "  k: [" << a_2h->getGhostsO() << "," << a_2h->getO() + a_2h->getGhostsO() << "]" << std::endl;
-        // }
-
         // for each real resulting stencil and stencil entry...
         // (only until a_h >> 1, since on root and on threshold level, a_2h has global size, but only local part can be filled.)
         for (int i = a_2h->getGhostsM(); i < (a_h.getM() >> 1) + a_2h->getGhostsM(); i++)
@@ -470,35 +462,6 @@ namespace mgcl
                                                         double tmp_r = sr[tmp_r_indices.x][tmp_r_indices.y][tmp_r_indices.z];
                                                         // tmp_a <- in stencil A located at gp_sr: Find stencil entry that maps to gp_sp
                                                         Point tmp_a_indices = stencilEntryThatMapsTo(gp_sr, gp_sp);
-
-                                                        // if ((!mpiDataCoarse || mpiDataCoarse->rank == 0) &&
-                                                        //     (tmp_a_indices.x < 0 ||
-                                                        //      tmp_a_indices.y < 0 || tmp_a_indices.z < 0 ||
-                                                        //      tmp_a_indices.x > 2 || tmp_a_indices.y > 2 || tmp_a_indices.z > 2 ||
-                                                        //      gp_sr.x < 0 || gp_sr.y < 0 || gp_sr.z < 0 ||
-                                                        //      gp_sr.x >= a_h.getMgh() || gp_sr.y >= a_h.getNgh() || gp_sr.z >= a_h.getOgh()))
-                                                        // {
-                                                        //     std::cout << "i,j,k,ii,jj,kk: " << i << " " << j << " " << k << " " << ii << " " << jj << " " << kk << std::endl;
-                                                        //     std::cout << "Writing into a[" << tmp_a_indices.x << "][" << tmp_a_indices.y << "]["
-                                                        //               << tmp_a_indices.z << "]["
-                                                        //               << gp_sr.x << "][" << gp_sr.y << "][" << gp_sr.z << "]"
-                                                        //               << std::endl;
-                                                        //     std::cout << "but boundaries are: [" << a_h.getWidth() << "][" << a_h.getWidth() << "][" << a_h.getWidth() << "][" << a_h.getMgh() << "][" << a_h.getNgh() << "][" << a_h.getOgh() << "]" << std::endl;
-                                                        //     std::cout << "S_P i,j,k: " << S_P[0].toString() << "," << S_P[1].toString() << "," << S_P[2].toString() << std::endl;
-                                                        //     std::cout << "S_R i,j,k: " << S_R[0].toString() << "," << S_R[1].toString() << "," << S_R[2].toString() << std::endl;
-                                                        //     std::cout << "gp_sp: " << gp_sp.toString() << std::endl;
-                                                        //     std::cout << "gp_sr: " << gp_sr.toString() << std::endl;
-                                                        //     std::cout << "gp_c: " << gp_c.toString() << std::endl;
-                                                        //     std::cout << "gp_f: " << gp_f.toString() << std::endl;
-                                                        //     std::cout << "entry_gpf: " << entry_gpf.toString() << std::endl;
-                                                        //     std::cout << "a_h.gh: " << a_h.getGhostsM() << std::endl;
-                                                        //     std::cout << "a_2h.gh: " << a_2h->getGhostsM() << std::endl;
-                                                        //     std::cout << "a_h m,n,o: " << a_h.getM() << "," << a_h.getN() << "," << a_h.getO() << std::endl;
-                                                        //     std::cout << "a_2h m,n,o: " << a_2h->getM() << "," << a_2h->getN() << "," << a_2h->getO() << std::endl;
-
-                                                        //     MPI_Abort(MPI_COMM_WORLD, 1);
-                                                        //     throw "Out of bounds";
-                                                        // }
 
                                                         double tmp_a = a_h[tmp_a_indices.x][tmp_a_indices.y][tmp_a_indices.z][gp_sr.x][gp_sr.y][gp_sr.z];
                                                         // sum <- sum + tmp_r * tmp_a

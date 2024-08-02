@@ -376,12 +376,6 @@ namespace mgcl
                 levels.back()->init();
             }
 
-            // if (1 == mpiRank())
-            // {
-            //     std::cout << *levels.back() << std::endl;
-            // }
-            // MPI_Barrier(getMpiComm());
-
             // Apply Galerkin operator if stencil is varying and we're not on level 0.
             if (level >= 1 && levels[level - 1]->getStencilValues() &&
                 levels.back()->getM() > 0 && levels.back()->getN() > 0 && levels.back()->getO() > 0)
