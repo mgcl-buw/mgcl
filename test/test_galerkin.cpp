@@ -122,14 +122,14 @@ TEST_CASE("GPU galerkin random values periodic")
     a_h.updateGhosts();
     a_h_gpu.fill(a_h, t.getCommands(), true);
 
-    auto a_2h = mgcl::MultigridEngine::galerkin(a_h, 2, nullptr, nullptr, true, true, true, false);
+    auto a_2h = mgcl::MultigridEngine::galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1);
     auto a_2h_gpu = mgcl::MultigridEngine::galerkin(a_h_gpu, 2, t.getProgram(), t.getCommands(), t.getContext(),
                                                     nullptr, nullptr, true, true, true, false, nullptr, nullptr);
     t.finish();
 
     auto ret = a_2h_gpu.read(t.getCommands(), true);
 
-    REQUIRE(a_2h.isEqual(ret, tol));
+    REQUIRE(a_2h->isEqual(ret, tol));
 }
 
 TEST_CASE("galerkin multiple levels random values periodic")

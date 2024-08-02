@@ -66,11 +66,6 @@ namespace mgcl
         static double jacobi(Problem& problem, Level& level, int maxiter, bool returnResidual, int stepsPerIter = 1);
         static double jacobiLocalMem(Problem& problem, Level& level, int maxiter, int returnResidual);
 
-        static VaryingStencil galerkin(VaryingStencil& a_h, int gh_a2h,
-                                       MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
-                                       bool periodic, bool forceLocalFine, bool forceLocalCoarse,
-                                       bool skipUpdateGhostsCoarse,
-                                       int resm = 0, int resn = 0, int reso = 0);
         static VaryingStencilGpu galerkin(VaryingStencilGpu& a_h, int gh_a2h,
                                           cl_program program, cl_command_queue queue, cl_context context,
                                           MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
