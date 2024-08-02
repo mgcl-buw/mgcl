@@ -316,18 +316,16 @@ namespace mgcl
      * @brief Calculates and sets the stencil (i.e. the matrix A) for the current level by applying the
      * Galerkin operator, which is defined as A_2h = R * A_h * P with R being restriction and P being prolongation
      * operators. Optimized version that calculated the end result directly, without intermediate stencils.
+     * a_h must have up-to-date ghosts.
      *
      * @param a_h The stencil of the finer grid.
-     * @param gh_a2h Amount of ghost cells to apply to the output stencil a_2h. Must be max(2, jacobiItersPerKernel).
+     * @param gh_a2h Amount of ghost cells to apply to the output stencil a_2h. Must be max(1, jacobiItersPerKernel).
      * @param resm Size of resulting stencil's grid. Per default halve of a_h's size.
      * @param resn Size of resulting stencil's grid. Per default halve of a_h's size.
      * @param reso Size of resulting stencil's grid. Per default halve of a_h's size.
      * @returns VaryingStencil The stencil to be applied on the coarser grid
      */
     std::unique_ptr<VaryingStencil> MultigridEngine::galerkinOptimized(VaryingStencil& a_h, int gh_a2h,
-                                                                       MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
-                                                                       bool periodic, bool forceLocalFine, bool forceLocalCoarse,
-                                                                       bool skipUpdateGhostsCoarse,
                                                                        int resm, int resn, int reso)
     {
         // TODO respect problem::ghosts maybe
@@ -339,17 +337,12 @@ namespace mgcl
         if (gh_a2h < 1)
             throw "galerkin: gh_a2h must be at least 1.";
 
+        // TODO sanity checks on resm, resn, reso?
+
         // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
         // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
         auto sr = create3dFullWeightRestrictionStencil();
         auto sp = create3dBilinearProlongationStencil();
-
-        if (resm <= 0)
-            resm = a_h.getM() >> 1;
-        if (resn <= 0)
-            resn = a_h.getN() >> 1;
-        if (reso <= 0)
-            reso = a_h.getO() >> 1;
 
         auto a_2h = std::make_unique<VaryingStencil>(resm, resn, reso, 3, gh_a2h, gh_a2h, gh_a2h);
 
@@ -412,10 +405,19 @@ namespace mgcl
             return {(p.x - ghc) * 2 + 1 + ghf, (p.y - ghc) * 2 + 1 + ghf, (p.z - ghc) * 2 + 1 + ghf};
         };
 
+        // if (!mpiDataCoarse || mpiDataCoarse->rank == 0)
+        // {
+        //     std::cout << "Iterating over a_2h:" << std::endl;
+        //     std::cout << "  i: [" << a_2h->getGhostsM() << "," << a_2h->getM() + a_2h->getGhostsM() << "]" << std::endl;
+        //     std::cout << "  j: [" << a_2h->getGhostsN() << "," << a_2h->getN() + a_2h->getGhostsN() << "]" << std::endl;
+        //     std::cout << "  k: [" << a_2h->getGhostsO() << "," << a_2h->getO() + a_2h->getGhostsO() << "]" << std::endl;
+        // }
+
         // for each real resulting stencil and stencil entry...
-        for (int i = a_2h->getGhostsM(); i < a_2h->getM() + a_2h->getGhostsM(); i++)
-            for (int j = a_2h->getGhostsN(); j < a_2h->getN() + a_2h->getGhostsN(); j++)
-                for (int k = a_2h->getGhostsO(); k < a_2h->getO() + a_2h->getGhostsO(); k++)
+        // (only until a_h >> 1, since on root and on threshold level, a_2h has global size, but only local part can be filled.)
+        for (int i = a_2h->getGhostsM(); i < (a_h.getM() >> 1) + a_2h->getGhostsM(); i++)
+            for (int j = a_2h->getGhostsN(); j < (a_h.getN() >> 1) + a_2h->getGhostsN(); j++)
+                for (int k = a_2h->getGhostsO(); k < (a_h.getO() >> 1) + a_2h->getGhostsO(); k++)
                     for (int ii = 0; ii < a_2h->getWidth(); ii++)
                         for (int jj = 0; jj < a_2h->getWidth(); jj++)
                             for (int kk = 0; kk < a_2h->getWidth(); kk++)
@@ -468,6 +470,36 @@ namespace mgcl
                                                         double tmp_r = sr[tmp_r_indices.x][tmp_r_indices.y][tmp_r_indices.z];
                                                         // tmp_a <- in stencil A located at gp_sr: Find stencil entry that maps to gp_sp
                                                         Point tmp_a_indices = stencilEntryThatMapsTo(gp_sr, gp_sp);
+
+                                                        // if ((!mpiDataCoarse || mpiDataCoarse->rank == 0) &&
+                                                        //     (tmp_a_indices.x < 0 ||
+                                                        //      tmp_a_indices.y < 0 || tmp_a_indices.z < 0 ||
+                                                        //      tmp_a_indices.x > 2 || tmp_a_indices.y > 2 || tmp_a_indices.z > 2 ||
+                                                        //      gp_sr.x < 0 || gp_sr.y < 0 || gp_sr.z < 0 ||
+                                                        //      gp_sr.x >= a_h.getMgh() || gp_sr.y >= a_h.getNgh() || gp_sr.z >= a_h.getOgh()))
+                                                        // {
+                                                        //     std::cout << "i,j,k,ii,jj,kk: " << i << " " << j << " " << k << " " << ii << " " << jj << " " << kk << std::endl;
+                                                        //     std::cout << "Writing into a[" << tmp_a_indices.x << "][" << tmp_a_indices.y << "]["
+                                                        //               << tmp_a_indices.z << "]["
+                                                        //               << gp_sr.x << "][" << gp_sr.y << "][" << gp_sr.z << "]"
+                                                        //               << std::endl;
+                                                        //     std::cout << "but boundaries are: [" << a_h.getWidth() << "][" << a_h.getWidth() << "][" << a_h.getWidth() << "][" << a_h.getMgh() << "][" << a_h.getNgh() << "][" << a_h.getOgh() << "]" << std::endl;
+                                                        //     std::cout << "S_P i,j,k: " << S_P[0].toString() << "," << S_P[1].toString() << "," << S_P[2].toString() << std::endl;
+                                                        //     std::cout << "S_R i,j,k: " << S_R[0].toString() << "," << S_R[1].toString() << "," << S_R[2].toString() << std::endl;
+                                                        //     std::cout << "gp_sp: " << gp_sp.toString() << std::endl;
+                                                        //     std::cout << "gp_sr: " << gp_sr.toString() << std::endl;
+                                                        //     std::cout << "gp_c: " << gp_c.toString() << std::endl;
+                                                        //     std::cout << "gp_f: " << gp_f.toString() << std::endl;
+                                                        //     std::cout << "entry_gpf: " << entry_gpf.toString() << std::endl;
+                                                        //     std::cout << "a_h.gh: " << a_h.getGhostsM() << std::endl;
+                                                        //     std::cout << "a_2h.gh: " << a_2h->getGhostsM() << std::endl;
+                                                        //     std::cout << "a_h m,n,o: " << a_h.getM() << "," << a_h.getN() << "," << a_h.getO() << std::endl;
+                                                        //     std::cout << "a_2h m,n,o: " << a_2h->getM() << "," << a_2h->getN() << "," << a_2h->getO() << std::endl;
+
+                                                        //     MPI_Abort(MPI_COMM_WORLD, 1);
+                                                        //     throw "Out of bounds";
+                                                        // }
+
                                                         double tmp_a = a_h[tmp_a_indices.x][tmp_a_indices.y][tmp_a_indices.z][gp_sr.x][gp_sr.y][gp_sr.z];
                                                         // sum <- sum + tmp_r * tmp_a
                                                         sum += tmp_r * tmp_a;
@@ -482,9 +514,6 @@ namespace mgcl
                                 // store res in rap
                                 (*a_2h)[ii][jj][kk][i][j][k] = res;
                             }
-
-        if (!skipUpdateGhostsCoarse)
-            updateGhostsStencilMpi(*a_2h, mpiDataCoarse, periodic, forceLocalCoarse);
 
         return a_2h;
     }

@@ -12,7 +12,7 @@
 
 #include "mpi.h"
 
-// Checks ghost update for any number of processes that is allowed by mgcl, e.g. 1, 2, 4, 8, 24.
+// Checks sequential Jacobi using MPI with a fixed Laplace stencil.
 // Run with: mpiexec -n 8 tests_mpi MPI_jacobiSeq_Laplace_n_processes
 // TODO non-periodic
 TEST_CASE("MPI_jacobiSeq_Laplace_n_processes", "[mpiN]")
@@ -136,10 +136,11 @@ TEST_CASE("MPI_jacobiSeq_Laplace_n_processes", "[mpiN]")
     //                   << mpiData->back << "," << mpiData->front << std::endl;
     // }
 
-    // Update ghosts of expected result locally, i.e. not using MPI routines.
+    // Run Jacobi on global problem
     mgcl::MultigridEngine::jacobiSeq(v_glob, f_glob, r_glob, omega, h * h, maxiter, resnorm, stencilType,
                                      stencilFactor, nullptr, true, true, false, 1, nullptr);
 
+    // Run Jacobi on local problem
     mgcl::MultigridEngine::jacobiSeq(v_loc, f_loc, r_loc, omega, h * h, maxiter, resnorm, stencilType,
                                      stencilFactor, nullptr, true, true, false, 1, mpiData);
 
@@ -153,8 +154,8 @@ TEST_CASE("MPI_jacobiSeq_Laplace_n_processes", "[mpiN]")
             }
 }
 
-// Checks ghost update for any number of processes that is allowed by mgcl, e.g. 1, 2, 4, 8, 24.
-// Run with: mpiexec -n 8 tests_mpi MPI_jacobiSeq_Laplace_n_processes
+// Checks sequential Jacobi using MPI with a varying stencil.
+// Run with: mpiexec -n 8 tests_mpi MPI_jacobiSeq_VaryingStencil_n_processes
 // TODO non-periodic
 TEST_CASE("MPI_jacobiSeq_VaryingStencil_n_processes", "[mpiN]")
 {
@@ -239,7 +240,7 @@ TEST_CASE("MPI_jacobiSeq_VaryingStencil_n_processes", "[mpiN]")
     mgcl::Cuboid v_glob(m, n, o, gh, gh, gh);
     mgcl::Cuboid r_glob(m, n, o, gh, gh, gh);
     mgcl::Cuboid f_glob(m, n, o, gh, gh, gh);
-    mgcl::VaryingStencil sv_glob(m, n, o, 3, 2, 2, 2);
+    mgcl::VaryingStencil sv_glob(m, n, o, 3, gh, gh, gh);
     for (int i = 0; i < sv_glob.field1d().size(); i++)
         sv_glob.field1d()[i] = i;
 
@@ -297,10 +298,11 @@ TEST_CASE("MPI_jacobiSeq_VaryingStencil_n_processes", "[mpiN]")
     //                   << mpiData->back << "," << mpiData->front << std::endl;
     // }
 
-    // Update ghosts of expected result locally, i.e. not using MPI routines.
+    // Run Jacobi on global problem
     mgcl::MultigridEngine::jacobiSeq(v_glob, f_glob, r_glob, omega, h * h, maxiter, resnorm, stencilType,
                                      stencilFactor, &sv_glob, true, true, true, 1, nullptr);
 
+    // Run Jacobi on local problem
     mgcl::MultigridEngine::jacobiSeq(v_loc, f_loc, r_loc, omega, h * h, maxiter, resnorm, stencilType,
                                      stencilFactor, svptr.get(), true, true, false, 1, mpiData);
 

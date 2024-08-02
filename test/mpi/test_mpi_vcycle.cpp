@@ -876,11 +876,11 @@ TEST_CASE("MPI_vcycle_threshold_eq_1_Varying27p")
 
     if (mpi_rank == 0)
     {
-        // For threshold level 0 or 1, stencilValues must have global sizes.
+        // For threshold level 0, stencilValues must have global sizes, else local sizes.
         REQUIRE(p.getMpiLevelThreshold() == 1);
-        REQUIRE(sv.getM() == m);
-        REQUIRE(sv.getN() == n);
-        REQUIRE(sv.getO() == o);
+        REQUIRE(sv.getM() == ml);
+        REQUIRE(sv.getN() == nl);
+        REQUIRE(sv.getO() == ol);
     }
 
     double h = 1.0 / static_cast<double>(m);
@@ -1055,7 +1055,7 @@ TEST_CASE("MPI_vcycle_threshold_eq_2_Varying27p")
 
     if (mpi_rank == 0)
     {
-        // For threshold level 0 or 1, stencilValues must have global sizes, else local sizes.
+        // For threshold level 0, stencilValues must have global sizes, else local sizes.
         REQUIRE(p.getMpiLevelThreshold() == 2);
         REQUIRE(sv.getM() == ml);
         REQUIRE(sv.getN() == nl);

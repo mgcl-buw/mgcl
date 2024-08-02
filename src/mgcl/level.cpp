@@ -80,13 +80,9 @@ namespace mgcl
             {
                 stencilValues = problem->stencilValues;
 
-                // Only update ghosts of stencilValues if the threshold is not 1, because when applying Galerkin,
-                // the values of level 0 are gathered anyways. Plus the sizes are different, so this would result
-                // in a MPI error when trying to update ghosts.
-                // Update ghosts locally if the threshold is 0, i.e. everything is done locally.
-                if (problem->getMpiLevelThreshold() != 1)
-                    updateGhostsStencilMpi(*stencilValues, mpiData.get(), problem->isPeriodic(),
-                                           problem->getMpiLevelThreshold() == 0);
+                // TODO refactor updateGhosts local?
+                updateGhostsStencilMpi(*stencilValues, mpiData.get(), problem->isPeriodic(),
+                                       problem->getMpiLevelThreshold() == 0);
             }
 
             // create ghosted arrays for v and f on host if device buffer should not be reused
@@ -175,11 +171,11 @@ namespace mgcl
                 if (problem->getMpiLevelThreshold() <= 1 && problem->mpiRank() == 0)
                     stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
                         problem->mGlobal, problem->nGlobal, problem->oGlobal, 3,
-                        std::max(2, problem->getJacobiIterationsPerKernel()),
+                        std::max(1, problem->getJacobiIterationsPerKernel()),
                         problem->getContext(), problem->getCommands(), problem->getProgram());
                 else
                     stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
-                        m, n, o, 3, std::max(2, problem->getJacobiIterationsPerKernel()),
+                        m, n, o, 3, std::max(1, problem->getJacobiIterationsPerKernel()),
                         problem->getContext(), problem->getCommands(), problem->getProgram());
 
                 // Fill stencil values on gpu on level 0 from input stencil

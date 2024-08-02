@@ -24,7 +24,7 @@ TEST_CASE("galerkin Laplace vs Matrix")
     double h = 1.0 / static_cast<double>(m);
     mgcl_test::fill7pLaplace(a_h, h, true);
 
-    auto a_2h = mgcl::MultigridEngine::galerkinOptimized(a_h, 1, nullptr, nullptr, true, true, true, false);
+    auto a_2h = mgcl::MultigridEngine::galerkinOptimized(a_h, 1, m >> 1, n >> 1, o >> 1);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(*a_2h, true);
 
     // calculate results with Matrices to check
@@ -50,7 +50,7 @@ TEST_CASE("galerkin random values periodic vs Matrix")
     a_h.fillRandom(-10, 10);
     a_h.updateGhosts();
 
-    auto a_2h = mgcl::MultigridEngine::galerkinOptimized(a_h, 1, nullptr, nullptr, true, true, true, false);
+    auto a_2h = mgcl::MultigridEngine::galerkinOptimized(a_h, 1, m >> 1, n >> 1, o >> 1);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(*a_2h, true);
 
     // calculate results with Matrices to check
@@ -77,7 +77,7 @@ TEST_CASE("seq_galerkin_optimized_random_values_periodic_vs_matrix")
     a_h[0][0][0][0][0][0] = 0.5; // fill with non zero value
     a_h.updateGhosts();
 
-    auto a_2h = mgcl::MultigridEngine::galerkinOptimized(a_h, 1, nullptr, nullptr, true, true, true, false);
+    auto a_2h = mgcl::MultigridEngine::galerkinOptimized(a_h, 1, m >> 1, n >> 1, o >> 1);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(*a_2h, true);
 
     // calculate results with Matrices to check
@@ -155,7 +155,8 @@ TEST_CASE("galerkin multiple levels random values periodic")
 
     for (int lv = 0; lv < maxlv; lv++)
     {
-        a_2h = mgcl::MultigridEngine::galerkinOptimized(*a_h, 1, nullptr, nullptr, true, true, true, false);
+        a_2h = mgcl::MultigridEngine::galerkinOptimized(*a_h, 1, a_h->getM() >> 1, a_h->getN() >> 1, a_h->getO() >> 1);
+        a_2h->updateGhosts();
         auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(*a_2h, true);
 
         // calculate results with Matrices to check
@@ -184,7 +185,7 @@ TEST_CASE("galerkin symmetric")
     double h = 1.0 / static_cast<double>(m);
     mgcl_test::fill7pLaplace(a_h, h, true);
 
-    auto a_2h = mgcl::MultigridEngine::galerkinOptimized(a_h, 2, nullptr, nullptr, true, true, true, false);
+    auto a_2h = mgcl::MultigridEngine::galerkinOptimized(a_h, 1, m >> 1, n >> 1, o >> 1);
     auto a2hm = mgcl_test::Matrix2d::fromVaryingStencil(*a_2h, true);
 
     for (int i = 0; i < a2hm.getM(); i++)
@@ -240,8 +241,9 @@ TEST_CASE("galerkin Laplace rediscretized")
     double h = 1.0 / static_cast<double>(m);
     mgcl_test::fill7pLaplace(a_h, h, true);
 
-    auto a_2h_ptr = mgcl::MultigridEngine::galerkinOptimized(a_h, 2, nullptr, nullptr, true, true, true, false);
+    auto a_2h_ptr = mgcl::MultigridEngine::galerkinOptimized(a_h, 1, m >> 1, n >> 1, o >> 1);
     auto& a_2h = *a_2h_ptr;
+    a_2h.updateGhosts();
 
     // Test with fine h (result from Matlab's Symbolic Toolbox)
     double factor1 = h2inv * (3.0 / 256.0);  // corners
@@ -328,9 +330,9 @@ TEST_CASE("galerkin_different_jacobi_iters_per_kernel")
         for (int i = 0; i < p1.getMaxlevel(); i++)
         {
             CAPTURE(i);
-            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsM() == 2);
-            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsN() == 2);
-            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsO() == 2);
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsM() == 1);
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsN() == 1);
+            REQUIRE(p1.getLevelAt(i).getStencilValues()->getGhostsO() == 1);
             REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsM() == 2);
             REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsN() == 2);
             REQUIRE(p2.getLevelAt(i).getStencilValues()->getGhostsO() == 2);
@@ -359,7 +361,7 @@ TEST_CASE("galerkin_different_jacobi_iters_per_kernel")
         for (int i = 0; i < p1.getMaxlevel(); i++)
         {
             CAPTURE(i);
-            REQUIRE(p1.getLevelAt(i).getStencilValuesGpu()->getGh() == 2);
+            REQUIRE(p1.getLevelAt(i).getStencilValuesGpu()->getGh() == 1);
             REQUIRE(p2.getLevelAt(i).getStencilValuesGpu()->getGh() == 2);
             REQUIRE(p3.getLevelAt(i).getStencilValuesGpu()->getGh() == 3);
 

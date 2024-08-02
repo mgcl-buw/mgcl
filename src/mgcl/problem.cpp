@@ -376,44 +376,47 @@ namespace mgcl
                 levels.back()->init();
             }
 
+            // if (1 == mpiRank())
+            // {
+            //     std::cout << *levels.back() << std::endl;
+            // }
+            // MPI_Barrier(getMpiComm());
+
             // Apply Galerkin operator if stencil is varying and we're not on level 0.
-            if (levels[0]->getStencilValues() && level >= 1 &&
+            if (level >= 1 && levels[level - 1]->getStencilValues() &&
                 levels.back()->getM() > 0 && levels.back()->getN() > 0 && levels.back()->getO() > 0)
             {
                 auto& lvFine = *levels[level - 1];
                 auto& lvCoarse = *levels[level];
-                bool isJustAboveThreshold = level == getMpiLevelThreshold() - 1;
-                bool updateGhostsCoarse = !useMpi() || mpiSize() == 1 || !isJustAboveThreshold;
 
-                // stencilValues of this level must be of global size on rank 0, if this level is just above
+                // stencilValues of this level must be of global size on rank 0, if this level is at
                 // the threshold, since it is getting gathered into.
-                int svm = (mpiRank() == 0 && isJustAboveThreshold ? (mGlobal >> level) : lvCoarse.getM());
-                int svn = (mpiRank() == 0 && isJustAboveThreshold ? (nGlobal >> level) : lvCoarse.getN());
-                int svo = (mpiRank() == 0 && isJustAboveThreshold ? (oGlobal >> level) : lvCoarse.getO());
+                int svm = (mpiRank() == 0 && lvCoarse.getNum() >= getMpiLevelThreshold() ? (mGlobal >> level) : lvCoarse.getM());
+                int svn = (mpiRank() == 0 && lvCoarse.getNum() >= getMpiLevelThreshold() ? (nGlobal >> level) : lvCoarse.getN());
+                int svo = (mpiRank() == 0 && lvCoarse.getNum() >= getMpiLevelThreshold() ? (oGlobal >> level) : lvCoarse.getO());
+
+                bool updateGhostsLocally = !useMpi() || lvCoarse.getNum() >= getMpiLevelThreshold();
 
                 if (!use_opencl)
                 {
-                    // Gather partial stencil values of the previous level
-                    if (useMpi() && getMpiLevelThreshold() == lvCoarse.getNum())
-                    {
-
-                        mpi_util::gather(getMpiComm(), *lvFine.getStencilValues());
-                        gathered = true;
-                        updateGhostsStencilMpi(*lvFine.getStencilValues(), lvFine.getMpiDataPtr(), isPeriodic(), true);
-                    }
-
-                    // Only calculate galerkin if
-                    // 1. MPI is not used at all, or
-                    // 2. this level is calculated distributively, or
-                    // 3. this level is calculated locally and rank is 0.
-                    // Otherwise we would run into neighbour issues when trying to update ghosts.
-                    if (!useMpi() || !lvCoarse.isCalculatedLocally() || mpiRank() == 0)
+                    // Call Galerkin on each rank, if not above threshold, or else only on root.
+                    if (lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
                         lvCoarse.stencilValues = MultigridEngine::galerkinOptimized(
                             *lvFine.getStencilValues(), gh_sv,
-                            lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
-                            isPeriodic(), gathered,
-                            lvCoarse.isCalculatedLocally(), !updateGhostsCoarse,
                             svm, svn, svo);
+
+                    // Gather stencil values onto root if threshold is reached
+                    if (useMpi() && lvCoarse.getNum() == getMpiLevelThreshold())
+                        mpi_util::gather(getMpiComm(), *lvCoarse.getStencilValues());
+
+                    // update ghosts of stencil values depending on threshold is reached or not
+                    if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
+                    {
+                        if (updateGhostsLocally)
+                            lvCoarse.getStencilValues()->updateGhosts();
+                        else
+                            updateGhostsStencilMpi(*lvCoarse.getStencilValues(), lvCoarse.getMpiDataPtr(), isPeriodic(), false);
+                    }
                 }
                 else
                 {
@@ -433,6 +436,8 @@ namespace mgcl
                     // 3. this level is calculated locally and rank is 0.
                     // Otherwise we would run into neighbour issues when trying to update ghosts.
                     if (!useMpi() || !lvCoarse.isCalculatedLocally() || mpiRank() == 0)
+                    {
+                        bool updateGhostsCoarse = false; // TODO just a dummy for now
                         levels.back()->stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
                             MultigridEngine::galerkin(
                                 *lvFine.getStencilValuesGpu(), gh_sv,
@@ -441,6 +446,7 @@ namespace mgcl
                                 isPeriodic(), gathered,
                                 lvCoarse.isCalculatedLocally(), !updateGhostsCoarse,
                                 &getKernelConfig(), getProfilingData(), svm, svn, svo));
+                    }
                 }
             }
         }
@@ -1164,8 +1170,8 @@ namespace mgcl
         if (stencilType == MGCL_VARYING)
         {
             calculateAndSetMpiLevelThreshold();
-            int gh = std::max(2, jacobi_iterations_per_kernel);
-            if (getMpiLevelThreshold() <= 1 && mpiRank() == 0)
+            int gh = std::max(1, jacobi_iterations_per_kernel);
+            if (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) // TODO check
                 stencilValues = std::make_shared<VaryingStencil>(mGlobal, nGlobal, oGlobal, 3, gh, gh, gh);
             else
                 stencilValues = std::make_shared<VaryingStencil>(m, n, o, 3, gh, gh, gh);

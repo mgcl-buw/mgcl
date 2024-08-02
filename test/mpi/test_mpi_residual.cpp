@@ -98,7 +98,7 @@ TEST_CASE("MPI_residual_seq_VaryingStencil_n_processes", "[mpiN]")
     mgcl::Cuboid v_glob(m, n, o, gh, gh, gh);
     mgcl::Cuboid r_glob(m, n, o, gh, gh, gh);
     mgcl::Cuboid f_glob(m, n, o, gh, gh, gh);
-    mgcl::VaryingStencil sv_glob(m, n, o, 3, 2, 2, 2);
+    mgcl::VaryingStencil sv_glob(m, n, o, 3, gh, gh, gh);
     for (int i = 0; i < sv_glob.field1d().size(); i++)
         sv_glob.field1d()[i] = i;
 

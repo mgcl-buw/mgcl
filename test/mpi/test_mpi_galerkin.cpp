@@ -379,8 +379,7 @@ TEST_CASE("MPI_seq_galerkinOptimized_nprocs")
     mgcl::updateGhostsStencilMpi(a_h_loc, &mpiDataFine, periodic, false);
 
     auto a_2h_loc = mgcl::MultigridEngine::galerkinOptimized(
-        a_h_loc, 1, &mpiDataFine, &mpiDataCoarse,
-        true, false, false, false);
+        a_h_loc, 1, a_h_loc.getM() >> 1, a_h_loc.getN() >> 1, a_h_loc.getO() >> 1);
 
     // a_2h_loc->dumpToFile(std::to_string(mpi_rank) + "_a_2h_loc.txt");
 
@@ -409,8 +408,7 @@ TEST_CASE("MPI_seq_galerkinOptimized_nprocs")
         // clang-format on
 
         a_2h_glob = mgcl::MultigridEngine::galerkinOptimized(
-            a_h_glob, 1, nullptr, nullptr,
-            true, true, true, false);
+            a_h_glob, 1, a_h_glob.getM() >> 1, a_h_glob.getN() >> 1, a_h_glob.getO() >> 1);
 
         // a_2h_glob->dumpToFile(std::to_string(mpi_rank) + "_a_2h_glob.txt");
     }
