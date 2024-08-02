@@ -273,8 +273,8 @@ namespace mgcl
 
         // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
         // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
-        auto sr = create3dFullWeightRestrictionStencil();
-        auto sp = create3dBilinearProlongationStencil();
+        auto r = create3dFullWeightRestrictionStencil();
+        auto p = create3dBilinearProlongationStencil();
 
         auto a_2h = std::make_unique<VaryingStencil>(resm, resn, reso, 3, gh_a2h, gh_a2h, gh_a2h);
 
@@ -372,7 +372,7 @@ namespace mgcl
                                             // tmp_p <- in stencil P located at gp_sp: Find stencil entry entry_p that maps to entry_gpf. Since
                                             // gp_sp is in S_P, it is ensured that the stencil has a stencil entry that maps to entry_gpf.
                                             Point tmp_p_indices = stencilEntryThatMapsTo(gp_sp, entry_gpf);
-                                            double tmp_p = sp[tmp_p_indices.x][tmp_p_indices.y][tmp_p_indices.z];
+                                            double tmp_p = p[tmp_p_indices.x][tmp_p_indices.y][tmp_p_indices.z];
 
                                             // Start calc R*A
                                             // find intersection S_R of neighbouring points for gp_f and gp_sp, both with reach=1
@@ -391,7 +391,7 @@ namespace mgcl
                                                         Point gp_sr = {sri, srj, srk};
                                                         // tmp_r <- in stencil R located at gp_f: Find stencil entry entry_r that maps to gp_sr
                                                         Point tmp_r_indices = stencilEntryThatMapsTo(gp_f, gp_sr);
-                                                        double tmp_r = sr[tmp_r_indices.x][tmp_r_indices.y][tmp_r_indices.z];
+                                                        double tmp_r = r[tmp_r_indices.x][tmp_r_indices.y][tmp_r_indices.z];
                                                         // tmp_a <- in stencil A located at gp_sr: Find stencil entry that maps to gp_sp
                                                         Point tmp_a_indices = stencilEntryThatMapsTo(gp_sr, gp_sp);
 
