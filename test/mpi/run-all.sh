@@ -44,6 +44,7 @@ TEST_UTIL=false
 TEST_VCYCLE=false
 TEST_STENCIL=false
 TEST_GALERKIN=false
+NO_GPU=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -96,13 +97,22 @@ while [[ $# -gt 0 ]]; do
       TEST_ALL=false
       shift # past argument
       ;;
+    --no-gpu)
+      NO_GPU=true
+      shift # past argument
+      ;;
   esac
 done
 
 if [ "$TEST_ALL" = true ] ; then
     echo "Running all tests..."
-    echo ""
 fi
+
+if [ "$NO_GPU" = true ] ; then
+    echo "but skipping GPU tests..."
+fi
+
+echo ""
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 exe="$SCRIPT_DIR/tests_mpi"
@@ -139,7 +149,9 @@ if [ "$TEST_GHOSTS" = true ] || [ "$TEST_ALL" = true ] ; then
 
     run_test -n 1 "$exe" "MPI updateGhostsSeq (1 process)"
     run_test --oversubscribe -n 8 "$exe" "MPI updateGhostsSeq (n processes)"
-    run_test --oversubscribe -n 8 "$exe" "MPI updateGhosts ocl (n processes)"
+    if [ "$NO_GPU" = false ] ; then
+        run_test --oversubscribe -n 8 "$exe" "MPI updateGhosts ocl (n processes)"
+    fi
 fi
 
 if [ "$TEST_JACOBI" = true ] || [ "$TEST_ALL" = true ] ; then
@@ -151,10 +163,12 @@ if [ "$TEST_JACOBI" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 8 "$exe" "MPI_jacobiSeq_Laplace_n_processes"
     run_test --oversubscribe -n 1 "$exe" "MPI_jacobiSeq_VaryingStencil_n_processes"
     run_test --oversubscribe -n 8 "$exe" "MPI_jacobiSeq_VaryingStencil_n_processes"
-    run_test --oversubscribe -n 1 "$exe" "MPI_jacobi_ocl_Laplace_n_processes"
-    run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_Laplace_n_processes"
-    run_test --oversubscribe -n 1 "$exe" "MPI_jacobi_ocl_VaryingStencil_n_processes"
-    run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_VaryingStencil_n_processes"
+    if [ "$NO_GPU" = false ] ; then
+      run_test --oversubscribe -n 1 "$exe" "MPI_jacobi_ocl_Laplace_n_processes"
+      run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_Laplace_n_processes"
+      run_test --oversubscribe -n 1 "$exe" "MPI_jacobi_ocl_VaryingStencil_n_processes"
+      run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_VaryingStencil_n_processes"
+    fi
 fi
 
 if [ "$TEST_RESIDUAL" = true ] || [ "$TEST_ALL" = true ] ; then
@@ -164,8 +178,10 @@ if [ "$TEST_RESIDUAL" = true ] || [ "$TEST_ALL" = true ] ; then
 
     run_test --oversubscribe -n 1 "$exe" "MPI_residual_seq_VaryingStencil_n_processes"
     run_test --oversubscribe -n 8 "$exe" "MPI_residual_seq_VaryingStencil_n_processes"
-    run_test --oversubscribe -n 1 "$exe" "MPI_residual_ocl_VaryingStencil_n_processes"
-    run_test --oversubscribe -n 8 "$exe" "MPI_residual_ocl_VaryingStencil_n_processes"
+    if [ "$NO_GPU" = false ] ; then
+      run_test --oversubscribe -n 1 "$exe" "MPI_residual_ocl_VaryingStencil_n_processes"
+      run_test --oversubscribe -n 8 "$exe" "MPI_residual_ocl_VaryingStencil_n_processes"
+    fi
 fi
 
 if [ "$TEST_UTIL" = true ] || [ "$TEST_ALL" = true ] ; then
@@ -176,17 +192,20 @@ if [ "$TEST_UTIL" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 17 "$exe" "mpi_util::gather-src-dest-different"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::gather-src-dest-same"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::gather-src-dest-same-different-gh"
-    run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-GPU-src-dest-same-different-gh"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::scatter-src-dest-same"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::scatter-src-dest-different"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::scatter-src-dest-same-with-ghosts"
-    run_test --oversubscribe -n 17 "$exe" "mpi_util::scatter-GPU-src-dest-same-with-ghosts"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::gather-src-dest-same-stencil"
-    run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-GPU-src-dest-same-stencil"
 
     run_test --oversubscribe -n 2 "$exe" "mpi_util::sendBorderPlanes"
     run_test --oversubscribe -n 8 "$exe" "mpi_util::sendBorderPlanes"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::sendBorderPlanes"
+
+    if [ "$NO_GPU" = false ] ; then
+      run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-GPU-src-dest-same-different-gh"
+      run_test --oversubscribe -n 17 "$exe" "mpi_util::scatter-GPU-src-dest-same-with-ghosts"
+      run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-GPU-src-dest-same-stencil"
+    fi
 fi
 
 if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
@@ -203,15 +222,17 @@ if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_threshold_eq_1_Varying27p"
     run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_threshold_eq_2_Varying27p"
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_threshold_eq_2_Varying27p"
-    run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p"
-    run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p"
-    run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_gt_0_Laplace7p"
-    run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_gt_0_Laplace7p"
-    run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_eq_1_Varying27p"
-    run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_1_Varying27p"
-    run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p"
-    run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p"
-    run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters"
+    if [ "$NO_GPU" = false ] ; then
+      run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p"
+      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p"
+      run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_gt_0_Laplace7p"
+      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_gt_0_Laplace7p"
+      run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_eq_1_Varying27p"
+      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_1_Varying27p"
+      run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p"
+      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p"
+      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters"
+    fi
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_multiple_solve_calls"
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_different_relres"
 fi
@@ -224,8 +245,11 @@ if [ "$TEST_STENCIL" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 1 "$exe" "MPI-stencil-updateGhostsSeq-1proc"
     run_test --oversubscribe -n 2 "$exe" "MPI-stencil-updateGhostsSeq-nprocs"
     run_test --oversubscribe -n 4 "$exe" "MPI-stencil-updateGhostsSeq-nprocs"
-    run_test --oversubscribe -n 2 "$exe" "MPI-updateGhostsStencilOclMpi-nprocs"
-    run_test --oversubscribe -n 4 "$exe" "MPI-updateGhostsStencilOclMpi-nprocs"
+
+    if [ "$NO_GPU" = false ] ; then
+      run_test --oversubscribe -n 2 "$exe" "MPI-updateGhostsStencilOclMpi-nprocs"
+      run_test --oversubscribe -n 4 "$exe" "MPI-updateGhostsStencilOclMpi-nprocs"
+    fi
 fi
 
 if [ "$TEST_GALERKIN" = true ] || [ "$TEST_ALL" = true ] ; then
