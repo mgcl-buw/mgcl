@@ -2053,18 +2053,21 @@ typedef struct Interval
 // Returns the intersection of two intervals or [-1,-1] if they don't overlap
 Interval intersect(Interval a, Interval b)
 {
+    Interval ret;
     // Check if intervals overlap
     if (a.start <= b.end && b.start <= a.end)
     {
         // Calculate start and end points of intersection
-        int start = (a.start > b.start) ? a.start : b.start;
-        int end = (a.end < b.end) ? a.end : b.end;
-        return Interval{start, end};
+        ret.start = (a.start > b.start) ? a.start : b.start;
+        ret.end = (a.end < b.end) ? a.end : b.end;
+        return ret;
     }
     else
     {
         // Intervals do not overlap
-        return Interval{-1, -1};
+        ret.start = -1;
+        ret.end = -1;
+        return ret;
     }
 };
 
@@ -2082,24 +2085,32 @@ typedef struct Point
 // and not at -1.
 Point stencilEntryThatMapsTo(Point locationOfStencil, Point mapsTo)
 {
-    return {mapsTo.x - locationOfStencil.x + 1,
-            mapsTo.y - locationOfStencil.y + 1,
-            mapsTo.z - locationOfStencil.z + 1};
+    Point ret;
+    ret.x = mapsTo.x - locationOfStencil.x + 1;
+    ret.y = mapsTo.y - locationOfStencil.y + 1;
+    ret.z = mapsTo.z - locationOfStencil.z + 1;
+    return ret;
 };
 
 // Returns the grid point indices that is mapped to by the stencil entry of another point.
 // stencilEntry must be 0-based, hence the substraction by 1.
 Point pointMappedToByStencilEntry(Point locationOfStencil, Point stencilEntry)
 {
-    return {locationOfStencil.x + (stencilEntry.x - 1),
-            locationOfStencil.y + (stencilEntry.y - 1),
-            locationOfStencil.z + (stencilEntry.z - 1)};
+    Point ret;
+    ret.x = locationOfStencil.x + (stencilEntry.x - 1);
+    ret.y = locationOfStencil.y + (stencilEntry.y - 1);
+    ret.z = locationOfStencil.z + (stencilEntry.z - 1);
+    return ret;
 };
 
 // Returns the point on the fine grid that is related to the coarse grid point, respecting ghost cells.
 Point coarseToFine(Point p, int ghc, int ghf)
 {
-    return {(p.x - ghc) * 2 + 1 + ghf, (p.y - ghc) * 2 + 1 + ghf, (p.z - ghc) * 2 + 1 + ghf};
+    Point ret;
+    ret.x = (p.x - ghc) * 2 + 1 + ghf;
+    ret.y = (p.y - ghc) * 2 + 1 + ghf;
+    ret.z = (p.z - ghc) * 2 + 1 + ghf;
+    return ret;
 };
 
 /**
@@ -2111,7 +2122,7 @@ Point coarseToFine(Point p, int ghc, int ghf)
  *
  * Parameters:
  * a_h: Varying 3x3x3 stencil on fine grid. Has size a_h_m * a_h_n * a_h_o.
- * a_2h: Varying 3x3x3 stencil on coarse grid. Has size (a_h_m / 2) * (a_h_n / 2) * (a_h_o / 2).
+ * a_2h: Varying 3x3x3 stencil on coarse grid. Size depends on level and mpiLevelThreshold (equals resm, resn, reso in host code).
  * r: Fixed 3x3x3 restriction stencil.
  * p: Fixed 3x3x3 prolongation stencil.
  * mgh_f, ngh_f, ogh_f: Extends of the fine grid with ghosts.
@@ -2161,15 +2172,23 @@ __kernel void galerkin(
                     // calculate fine grid point indices
                     Point gp_c = {i, j, k};
                     Point gp_f = coarseToFine(gp_c, gh_c, gh_f);
+                    Point entry_gpc = {ii, jj, kk};
                     Point entry_gpf = coarseToFine(
-                        pointMappedToByStencilEntry(gp_c, {ii, jj, kk}),
+                        pointMappedToByStencilEntry(gp_c, entry_gpc),
                         gh_c, gh_f);
 
                     // find intersection S_P of neighbouring points for entry_gpf with reach=1 and gp_f with reach=2
+                    Interval xa = {.start = gp_f.x - 2, .end = gp_f.x + 2};
+                    Interval ya = {.start = gp_f.y - 2, .end = gp_f.y + 2};
+                    Interval za = {.start = gp_f.z - 2, .end = gp_f.z + 2};
+                    Interval xb = {.start = entry_gpf.x - 1, .end = entry_gpf.x + 1};
+                    Interval yb = {.start = entry_gpf.y - 1, .end = entry_gpf.y + 1};
+                    Interval zb = {.start = entry_gpf.z - 1, .end = entry_gpf.z + 1};
+
                     Interval S_P[3] = {
-                        intersect(Interval{gp_f.x - 2, gp_f.x + 2}, Interval{entry_gpf.x - 1, entry_gpf.x + 1}),
-                        intersect(Interval{gp_f.y - 2, gp_f.y + 2}, Interval{entry_gpf.y - 1, entry_gpf.y + 1}),
-                        intersect(Interval{gp_f.z - 2, gp_f.z + 2}, Interval{entry_gpf.z - 1, entry_gpf.z + 1}),
+                        intersect(xa, xb),
+                        intersect(ya, yb),
+                        intersect(za, zb),
                     };
 
                     // Start calc (R*A)*P
@@ -2188,10 +2207,23 @@ __kernel void galerkin(
 
                                 // Start calc R*A
                                 // find intersection S_R of neighbouring points for gp_f and gp_sp, both with reach=1
+                                xa.start = gp_f.x - 1;
+                                xa.end = gp_f.x + 1;
+                                ya.start = gp_f.y - 1;
+                                ya.end = gp_f.y + 1;
+                                za.start = gp_f.z - 1;
+                                za.end = gp_f.z + 1;
+                                xb.start = spi - 1;
+                                xb.end = spi + 1;
+                                yb.start = spj - 1;
+                                yb.end = spj + 1;
+                                zb.start = spk - 1;
+                                zb.end = spk + 1;
+
                                 Interval S_R[3] = {
-                                    intersect(Interval{gp_f.x - 1, gp_f.x + 1}, Interval{spi - 1, spi + 1}),
-                                    intersect(Interval{gp_f.y - 1, gp_f.y + 1}, Interval{spj - 1, spj + 1}),
-                                    intersect(Interval{gp_f.z - 1, gp_f.z + 1}, Interval{spk - 1, spk + 1}),
+                                    intersect(xa, xb),
+                                    intersect(ya, yb),
+                                    intersect(za, zb),
                                 };
 
                                 double sum = 0;
