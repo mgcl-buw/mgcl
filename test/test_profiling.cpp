@@ -254,11 +254,8 @@ TEST_CASE("profiling_kernels")
         if (global % localSize != 0)
             global += localSize - (global % localSize);
 
-        // number of partial sums = num of work-groups
-        int num_partials = global / localSize;
-
         mgcl::util::sum(lv0.getDVIn(), p.getProgram(), p.getCommands(), true, &conf, p.getProfilingData());
-        checkResult(p, "sum_partial_global_eq_x_num_elements", {num_partials, 0, 0});
+        checkResult(p, "sum_partial_global_eq_x_num_elements", {global, 0, 0});
     }
 
     SECTION("max_partial_global_eq_x_num_elements")
@@ -273,11 +270,8 @@ TEST_CASE("profiling_kernels")
         if (global % localSize != 0)
             global += localSize - (global % localSize);
 
-        // number of partial sums = num of work-groups
-        int num_partials = global / localSize;
-
         mgcl::util::max(lv0.getDVIn(), p.getProgram(), p.getCommands(), true, &conf, p.getProfilingData());
-        checkResult(p, "max_partial_global_eq_x_num_elements", {num_partials, 0, 0});
+        checkResult(p, "max_partial_global_eq_x_num_elements", {global, 0, 0});
     }
 
     SECTION("max_abs_partial_global_eq_x_num_elements")
@@ -292,10 +286,7 @@ TEST_CASE("profiling_kernels")
         if (global % localSize != 0)
             global += localSize - (global % localSize);
 
-        // number of partial sums = num of work-groups
-        int num_partials = global / localSize;
-
         mgcl::util::max_abs(lv0.getDVIn(), p.getProgram(), p.getCommands(), true, &conf, p.getProfilingData());
-        checkResult(p, "max_abs_partial_global_eq_x_num_elements", {num_partials, 0, 0});
+        checkResult(p, "max_abs_partial_global_eq_x_num_elements", {global, 0, 0});
     }
 }

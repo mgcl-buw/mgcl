@@ -721,27 +721,27 @@ TEST_CASE("Problem::setStencilType")
     CHECK(p.getStencilValues()->getM() == p.getM());
     CHECK(p.getStencilValues()->getN() == p.getN());
     CHECK(p.getStencilValues()->getO() == p.getO());
-    CHECK(p.getStencilValues()->getMgh() == p.getM() + 4);
-    CHECK(p.getStencilValues()->getNgh() == p.getN() + 4);
-    CHECK(p.getStencilValues()->getOgh() == p.getO() + 4);
+    CHECK(p.getStencilValues()->getMgh() == p.getM() + 2);
+    CHECK(p.getStencilValues()->getNgh() == p.getN() + 2);
+    CHECK(p.getStencilValues()->getOgh() == p.getO() + 2);
 
     p.setStencilType(mgcl::MGCL_VARYING);
     REQUIRE(p.getStencilValues() != nullptr);
     CHECK(p.getStencilValues()->getM() == p.getM());
     CHECK(p.getStencilValues()->getN() == p.getN());
     CHECK(p.getStencilValues()->getO() == p.getO());
-    CHECK(p.getStencilValues()->getMgh() == p.getM() + 4);
-    CHECK(p.getStencilValues()->getNgh() == p.getN() + 4);
-    CHECK(p.getStencilValues()->getOgh() == p.getO() + 4);
+    CHECK(p.getStencilValues()->getMgh() == p.getM() + 2);
+    CHECK(p.getStencilValues()->getNgh() == p.getN() + 2);
+    CHECK(p.getStencilValues()->getOgh() == p.getO() + 2);
 
     p.setStencilType(mgcl::MGCL_VARYING);
     REQUIRE(p.getStencilValues() != nullptr);
     CHECK(p.getStencilValues()->getM() == p.getM());
     CHECK(p.getStencilValues()->getN() == p.getN());
     CHECK(p.getStencilValues()->getO() == p.getO());
-    CHECK(p.getStencilValues()->getMgh() == p.getM() + 4);
-    CHECK(p.getStencilValues()->getNgh() == p.getN() + 4);
-    CHECK(p.getStencilValues()->getOgh() == p.getO() + 4);
+    CHECK(p.getStencilValues()->getMgh() == p.getM() + 2);
+    CHECK(p.getStencilValues()->getNgh() == p.getN() + 2);
+    CHECK(p.getStencilValues()->getOgh() == p.getO() + 2);
 }
 
 /**

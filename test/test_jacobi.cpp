@@ -953,12 +953,12 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             sv_act->copyRealFrom(*sv_exp);
             sv_act->updateGhosts();
 
-            REQUIRE(sv_exp->getGhostsM() == 2);
-            REQUIRE(sv_exp->getGhostsN() == 2);
-            REQUIRE(sv_exp->getGhostsO() == 2);
-            REQUIRE(sv_act->getGhostsM() == std::max(2, stepsPerIter));
-            REQUIRE(sv_act->getGhostsN() == std::max(2, stepsPerIter));
-            REQUIRE(sv_act->getGhostsO() == std::max(2, stepsPerIter));
+            REQUIRE(sv_exp->getGhostsM() == 1);
+            REQUIRE(sv_exp->getGhostsN() == 1);
+            REQUIRE(sv_exp->getGhostsO() == 1);
+            REQUIRE(sv_act->getGhostsM() == std::max(1, stepsPerIter));
+            REQUIRE(sv_act->getGhostsN() == std::max(1, stepsPerIter));
+            REQUIRE(sv_act->getGhostsO() == std::max(1, stepsPerIter));
 
             auto d_sv_exp = std::make_shared<mgcl::VaryingStencilGpu>(sv_exp->getM(), sv_exp->getN(), sv_exp->getO(), 3,
                                                                       sv_exp->getGhostsM(),
