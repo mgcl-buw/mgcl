@@ -2155,8 +2155,8 @@ __kernel void galerkin(
     int mnogh_f = mgh_f * nogh_f;
 
     // plane and grid size of ghosted coarse grid
-    int nogh_c = (n_c + 2 * gh_c) * (ogh_c + 2 * gh_c);
-    int mnogh_c = (mgh_c + 2 * gh_c) * nogh_c;
+    int nogh_c = (n_c + 2 * gh_c) * (o_c + 2 * gh_c);
+    int mnogh_c = (m_c + 2 * gh_c) * nogh_c;
 
     // Calculate only for real cells of coarse grid
     if (i < m_c + gh_c && j < n_c + gh_c && k < o_c + gh_c)
@@ -2253,7 +2253,7 @@ __kernel void galerkin(
 
                     // store res in rap
                     // (*a_2h)[ii][jj][kk][i][j][k] = res;
-                    a_2h[ii * 9 * mnogh_c + jj * 3 * mnogh_c + kk * mnogh_c + i * nogh_c + j * ogh_c + k] = res;
+                    a_2h[ii * 9 * mnogh_c + jj * 3 * mnogh_c + kk * mnogh_c + i * nogh_c + j * (o_c + 2 * gh_c) + k] = res;
                 }
     }
 }

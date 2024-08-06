@@ -2052,6 +2052,225 @@ __kernel void cut_stencils_w7_to_w3(
     }
 }
 
+/*******************************************
+ * Helper structs and functions for galerkin
+ *******************************************/
+
+// Helper struct for galerkin. Defines an interval with integer start and end.
+typedef struct Interval
+{
+    int start;
+    int end;
+} Interval;
+
+// Returns the intersection of two intervals or [-1,-1] if they don't overlap
+Interval intersect(Interval a, Interval b)
+{
+    Interval ret;
+    // Check if intervals overlap
+    if (a.start <= b.end && b.start <= a.end)
+    {
+        // Calculate start and end points of intersection
+        ret.start = (a.start > b.start) ? a.start : b.start;
+        ret.end = (a.end < b.end) ? a.end : b.end;
+        return ret;
+    }
+    else
+    {
+        // Intervals do not overlap
+        ret.start = -1;
+        ret.end = -1;
+        return ret;
+    }
+};
+
+// Helper struct for galerkin. Defines a grid point with integer 3d coordinates.
+typedef struct Point
+{
+    int x;
+    int y;
+    int z;
+} Point;
+
+// Returns the stencil entry indices of the stencil sitting at locationOfStencil that maps to mapsTo.
+// No check is done, if the mapping is possible, i.e. the returned value might be outside of range [0,2].
+// The result is just the difference of the indices plus one, since the stencil entry indices start at 0
+// and not at -1.
+Point stencilEntryThatMapsTo(Point locationOfStencil, Point mapsTo)
+{
+    Point ret;
+    ret.x = mapsTo.x - locationOfStencil.x + 1;
+    ret.y = mapsTo.y - locationOfStencil.y + 1;
+    ret.z = mapsTo.z - locationOfStencil.z + 1;
+    return ret;
+};
+
+// Returns the grid point indices that is mapped to by the stencil entry of another point.
+// stencilEntry must be 0-based, hence the substraction by 1.
+Point pointMappedToByStencilEntry(Point locationOfStencil, Point stencilEntry)
+{
+    Point ret;
+    ret.x = locationOfStencil.x + (stencilEntry.x - 1);
+    ret.y = locationOfStencil.y + (stencilEntry.y - 1);
+    ret.z = locationOfStencil.z + (stencilEntry.z - 1);
+    return ret;
+};
+
+// Returns the point on the fine grid that is related to the coarse grid point, respecting ghost cells.
+Point coarseToFine(Point p, int ghc, int ghf)
+{
+    Point ret;
+    ret.x = (p.x - ghc) * 2 + 1 + ghf;
+    ret.y = (p.y - ghc) * 2 + 1 + ghf;
+    ret.z = (p.z - ghc) * 2 + 1 + ghf;
+    return ret;
+};
+
+/**
+ * Applies the Galerkin operator, calculating the stencils a_2h for the coarser grid, based on the stencils a_h on the fine grid.
+ * Optimized version that does not need full stencil multiplication, but instead directly writes to the resulting stencils.
+ *
+ * Parallelizes the outermost 3 loops, thus must be called as 1d kernel with
+ *   (a_h_m / 2) * (a_h_n / 2) * (a_h_o / 2) work-items (real grid size).
+ *
+ * Parameters:
+ * a_h: Varying 3x3x3 stencil on fine grid. Has size a_h_m * a_h_n * a_h_o.
+ * a_2h: Varying 3x3x3 stencil on coarse grid. Size depends on level and mpiLevelThreshold (equals resm, resn, reso in host code).
+ * r: Fixed 3x3x3 restriction stencil.
+ * p: Fixed 3x3x3 prolongation stencil.
+ * mgh_f, ngh_f, ogh_f: Extends of the fine grid with ghosts.
+ * m_c, n_c, o_c: Extends of the coarse grid without ghosts.
+ * gh_f: Amount of ghosts of the stencil on the fine grid in one direction.
+ * gh_c: Amount of ghosts of the stencil on the coarse grid in one direction.
+ */
+__kernel void galerkin(
+    __global double* restrict a_h,
+    __global double* restrict a_2h,
+    __global double* restrict r,
+    __global double* restrict p,
+    const int mgh_f, const int ngh_f, const int ogh_f,
+    const int m_c, const int n_c, const int o_c,
+    const int gh_f, const int gh_c)
+{
+    int idx = get_global_id(0);
+    int no = n_c * o_c;
+    int i = idx / no;
+    int j = (idx - i * no) / o_c;
+    int k = idx % o_c;
+
+    // only for real cells of coarse grid
+    i += gh_c;
+    j += gh_c;
+    k += gh_c;
+
+    // plane and grid size of ghosted fine grid
+    int nogh_f = ngh_f * ogh_f;
+    int mnogh_f = mgh_f * nogh_f;
+
+    // plane and grid size of ghosted coarse grid
+    int nogh_c = (n_c + 2 * gh_c) * (o_c + 2 * gh_c);
+    int mnogh_c = (m_c + 2 * gh_c) * nogh_c;
+
+    // Calculate only for real cells of coarse grid
+    if (i < m_c + gh_c && j < n_c + gh_c && k < o_c + gh_c)
+    {
+        // for (int i = a_2h->getGhostsM(); i < (a_h.getM() >> 1) + a_2h->getGhostsM(); i++)
+        //     for (int j = a_2h->getGhostsN(); j < (a_h.getN() >> 1) + a_2h->getGhostsN(); j++)
+        //         for (int k = a_2h->getGhostsO(); k < (a_h.getO() >> 1) + a_2h->getGhostsO(); k++)
+        // for each stencil entry of the coarse grid poiint this work-item maps to
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                {
+                    // calculate fine grid point indices
+                    Point gp_c = {i, j, k};
+                    Point gp_f = coarseToFine(gp_c, gh_c, gh_f);
+                    Point entry_gpc = {ii, jj, kk};
+                    Point entry_gpf = coarseToFine(
+                        pointMappedToByStencilEntry(gp_c, entry_gpc),
+                        gh_c, gh_f);
+
+                    // find intersection S_P of neighbouring points for entry_gpf with reach=1 and gp_f with reach=2
+                    Interval xa = {.start = gp_f.x - 2, .end = gp_f.x + 2};
+                    Interval ya = {.start = gp_f.y - 2, .end = gp_f.y + 2};
+                    Interval za = {.start = gp_f.z - 2, .end = gp_f.z + 2};
+                    Interval xb = {.start = entry_gpf.x - 1, .end = entry_gpf.x + 1};
+                    Interval yb = {.start = entry_gpf.y - 1, .end = entry_gpf.y + 1};
+                    Interval zb = {.start = entry_gpf.z - 1, .end = entry_gpf.z + 1};
+
+                    Interval S_P[3] = {
+                        intersect(xa, xb),
+                        intersect(ya, yb),
+                        intersect(za, zb),
+                    };
+
+                    // Start calc (R*A)*P
+                    double res = 0;
+
+                    // for each fine grid point gp_sp in S_P:
+                    for (int spi = S_P[0].start; spi <= S_P[0].end; spi++)
+                        for (int spj = S_P[1].start; spj <= S_P[1].end; spj++)
+                            for (int spk = S_P[2].start; spk <= S_P[2].end; spk++)
+                            {
+                                Point gp_sp = {spi, spj, spk};
+                                // tmp_p <- in stencil P located at gp_sp: Find stencil entry entry_p that maps to entry_gpf. Since
+                                // gp_sp is in S_P, it is ensured that the stencil has a stencil entry that maps to entry_gpf.
+                                Point tmp_p_indices = stencilEntryThatMapsTo(gp_sp, entry_gpf);
+                                double tmp_p = p[tmp_p_indices.x * 9 + tmp_p_indices.y * 3 + tmp_p_indices.z];
+
+                                // Start calc R*A
+                                // find intersection S_R of neighbouring points for gp_f and gp_sp, both with reach=1
+                                xa.start = gp_f.x - 1;
+                                xa.end = gp_f.x + 1;
+                                ya.start = gp_f.y - 1;
+                                ya.end = gp_f.y + 1;
+                                za.start = gp_f.z - 1;
+                                za.end = gp_f.z + 1;
+                                xb.start = spi - 1;
+                                xb.end = spi + 1;
+                                yb.start = spj - 1;
+                                yb.end = spj + 1;
+                                zb.start = spk - 1;
+                                zb.end = spk + 1;
+
+                                Interval S_R[3] = {
+                                    intersect(xa, xb),
+                                    intersect(ya, yb),
+                                    intersect(za, zb),
+                                };
+
+                                double sum = 0;
+                                // for each fine grid point gp_sr in S_R:
+                                for (int sri = S_R[0].start; sri <= S_R[0].end; sri++)
+                                    for (int srj = S_R[1].start; srj <= S_R[1].end; srj++)
+                                        for (int srk = S_R[2].start; srk <= S_R[2].end; srk++)
+                                        {
+                                            Point gp_sr = {sri, srj, srk};
+                                            // tmp_r <- in stencil R located at gp_f: Find stencil entry entry_r that maps to gp_sr
+                                            Point tmp_r_indices = stencilEntryThatMapsTo(gp_f, gp_sr);
+                                            double tmp_r = r[tmp_r_indices.x * 9 + tmp_r_indices.y * 3 + tmp_r_indices.z];
+                                            // tmp_a <- in stencil A located at gp_sr: Find stencil entry that maps to gp_sp
+                                            Point tmp_a_indices = stencilEntryThatMapsTo(gp_sr, gp_sp);
+
+                                            // double tmp_a = a_h[tmp_a_indices.x][tmp_a_indices.y][tmp_a_indices.z][gp_sr.x][gp_sr.y][gp_sr.z];
+                                            double tmp_a = a_h[tmp_a_indices.x * 9 * mnogh_f + tmp_a_indices.y * 3 * mnogh_f + tmp_a_indices.z * mnogh_f + gp_sr.x * nogh_f + gp_sr.y * ogh_f + gp_sr.z];
+                                            // sum <- sum + tmp_r * tmp_a
+                                            sum += tmp_r * tmp_a;
+                                            // End calc R*A
+                                        }
+
+                                //   res <- res + sum * tmp_p
+                                res += sum * tmp_p;
+                                // End calc (R*A)*P
+                            }
+
+                    // store res in rap
+                    // (*a_2h)[ii][jj][kk][i][j][k] = res;
+                    a_2h[ii * 9 * mnogh_c + jj * 3 * mnogh_c + kk * mnogh_c + i * nogh_c + j * (o_c + 2 * gh_c) + k] = res;
+                }
+    }
+}
+
 /*********************************************************
  ******************** Utility kernels ********************
  *********************************************************/

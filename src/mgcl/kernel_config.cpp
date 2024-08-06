@@ -48,6 +48,9 @@ namespace mgcl::conf
         ret["mult_stencils_fix_var"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
         ret["cut_stencils_w7_to_w3"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
 
+        // Galerkin kernels
+        ret["galerkin"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
+
         // Utility kernels
         ret["sum_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         // c["sum_finish"] = KernelWorkgroupSizes{{1, {4, 4, 4}}}; // Launches only 1 wi
