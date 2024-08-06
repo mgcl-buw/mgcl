@@ -366,7 +366,6 @@ namespace mgcl
         // initialize levels
         // gathered flag needed for enforcing local ghost update after stencil values were gathered. If threshold is 0,
         // no gathering happens at all.
-        bool gathered = getMpiLevelThreshold() == 0;
         int gh_sv = stencilValues ? stencilValues->getGhostsM() : 0;
         for (int level = 0; level <= maxlevel; level++)
         {
@@ -377,7 +376,7 @@ namespace mgcl
             }
 
             // Apply Galerkin operator if stencil is varying and we're not on level 0.
-            if (level >= 1 && levels[level - 1]->getStencilValues() &&
+            if (level >= 1 && getStencilType() == MGCL_VARYING &&
                 levels.back()->getM() > 0 && levels.back()->getN() > 0 && levels.back()->getO() > 0)
             {
                 auto& lvFine = *levels[level - 1];
@@ -394,7 +393,7 @@ namespace mgcl
                 if (!use_opencl)
                 {
                     // Call Galerkin on each rank, if not above threshold, or else only on root.
-                    if (lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
+                    if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
                         lvCoarse.stencilValues = MultigridEngine::galerkinOptimized(
                             *lvFine.getStencilValues(), gh_sv,
                             svm, svn, svo);
@@ -414,32 +413,27 @@ namespace mgcl
                 }
                 else
                 {
-                    // Gather partial stencil values of the previous level
-                    if (useMpi() && getMpiLevelThreshold() == lvCoarse.getNum())
-                    {
-                        mpi_util::gather(getMpiComm(), getCommands(), *lvFine.getStencilValuesGpu());
-                        gathered = true;
-                        updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvFine.getStencilValuesGpu(),
-                                                  lvFine.getMpiDataPtr(), isPeriodic(), true, &getKernelConfig(),
-                                                  getProfilingData());
-                    }
+                    // Call Galerkin on each rank, if not above threshold, or else only on root.
+                    if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
+                        lvCoarse.stencilValuesGpu = MultigridEngine::galerkinOptimized(
+                            *lvFine.getStencilValuesGpu(), gh_sv,
+                            svm, svn, svo,
+                            getProgram(), getCommands(), getContext(),
+                            &getKernelConfig(), getProfilingData());
 
-                    // Only calculate galerkin if
-                    // 1. MPI is not used at all, or
-                    // 2. this level is calculated distributively, or
-                    // 3. this level is calculated locally and rank is 0.
-                    // Otherwise we would run into neighbour issues when trying to update ghosts.
-                    if (!useMpi() || !lvCoarse.isCalculatedLocally() || mpiRank() == 0)
+                    // Gather stencil values onto root if threshold is reached
+                    if (useMpi() && lvCoarse.getNum() == getMpiLevelThreshold())
+                        mpi_util::gather(getMpiComm(), getCommands(), *lvCoarse.getStencilValuesGpu());
+
+                    // update ghosts of stencil values depending on threshold is reached or not
+                    if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
                     {
-                        bool updateGhostsCoarse = false; // TODO just a dummy for now
-                        levels.back()->stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
-                            MultigridEngine::galerkin(
-                                *lvFine.getStencilValuesGpu(), gh_sv,
-                                getProgram(), getCommands(), getContext(),
-                                lvFine.getMpiDataPtr(), lvCoarse.getMpiDataPtr(),
-                                isPeriodic(), gathered,
-                                lvCoarse.isCalculatedLocally(), !updateGhostsCoarse,
-                                &getKernelConfig(), getProfilingData(), svm, svn, svo));
+                        if (updateGhostsLocally)
+                            lvCoarse.getStencilValuesGpu()->updateGhosts(getProgram(), getCommands(), &getKernelConfig(), getProfilingData());
+                        else
+                            updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvCoarse.getStencilValuesGpu(),
+                                                      lvCoarse.getMpiDataPtr(), isPeriodic(), false,
+                                                      &getKernelConfig(), getProfilingData());
                     }
                 }
             }

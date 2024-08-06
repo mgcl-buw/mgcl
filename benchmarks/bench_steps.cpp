@@ -240,9 +240,10 @@ TEST_CASE("mgcl_steps_galerkin_vs_solve")
         b.run(std::string("gpu_galerkinN").append(std::to_string(N)).c_str(),
               [&]
               {
-                  mgcl::MultigridEngine::galerkin(*fine.getStencilValuesGpu(), 2,
-                                                  p.getProgram(), p.getCommands(), p.getContext(),
-                                                  nullptr, nullptr, periodic, true, true, false, nullptr, nullptr);
+                  auto& fsv = *fine.getStencilValuesGpu();
+                  mgcl::MultigridEngine::galerkinOptimized(fsv, 2, fsv.getM() >> 1, fsv.getN() >> 1, fsv.getO() >> 1,
+                                                           p.getProgram(), p.getCommands(), p.getContext(),
+                                                           nullptr, nullptr);
                   clFinish(p.getCommands());
               });
 

@@ -1,5 +1,6 @@
 #include "matrix2d.hpp"
 
+#include <catch2/catch_message.hpp>
 #include <cmath>
 #include <memory>
 
@@ -123,11 +124,12 @@ TEST_CASE("GPU galerkin random values periodic")
     a_h_gpu.fill(a_h, t.getCommands(), true);
 
     auto a_2h = mgcl::MultigridEngine::galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1);
-    auto a_2h_gpu = mgcl::MultigridEngine::galerkin(a_h_gpu, 2, t.getProgram(), t.getCommands(), t.getContext(),
-                                                    nullptr, nullptr, true, true, true, false, nullptr, nullptr);
+    auto a_2h_gpu = mgcl::MultigridEngine::galerkinOptimized(a_h_gpu, 1, m >> 1, n >> 1, o >> 1,
+                                                             t.getProgram(), t.getCommands(), t.getContext(),
+                                                             nullptr, nullptr);
     t.finish();
 
-    auto ret = a_2h_gpu.read(t.getCommands(), true);
+    auto ret = a_2h_gpu->read(t.getCommands(), true);
 
     REQUIRE(a_2h->isEqual(ret, tol));
 }
@@ -357,10 +359,15 @@ TEST_CASE("galerkin_different_jacobi_iters_per_kernel")
         p2.init();
         p3.init();
 
+        CAPTURE(p1.getMaxlevel());
+
         // check stencil values for each level
         for (int i = 0; i < p1.getMaxlevel(); i++)
         {
             CAPTURE(i);
+            REQUIRE(p1.getLevelAt(i).getStencilValuesGpu());
+            REQUIRE(p2.getLevelAt(i).getStencilValuesGpu());
+            REQUIRE(p3.getLevelAt(i).getStencilValuesGpu());
             REQUIRE(p1.getLevelAt(i).getStencilValuesGpu()->getGh() == 1);
             REQUIRE(p2.getLevelAt(i).getStencilValuesGpu()->getGh() == 2);
             REQUIRE(p3.getLevelAt(i).getStencilValuesGpu()->getGh() == 3);

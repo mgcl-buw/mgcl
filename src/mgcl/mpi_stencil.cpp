@@ -205,6 +205,7 @@ namespace mgcl
             return;
         }
 
+        // TODO optimize, like for cuboids
         auto tmp = s.read(commands, true);
         updateGhostsStencilMpi(tmp, mpiData, periodic, forceLocal);
         s.fill(tmp, commands, true);

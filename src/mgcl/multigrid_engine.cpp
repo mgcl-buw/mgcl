@@ -413,52 +413,10 @@ namespace mgcl
         return a_2h;
     }
 
-    /**
-     * @brief Calculates and sets the stencil (i.e. the matrix A) for the current level by applying the
-     * Galerkin operator, which is defined as A_2h = R * A_h * P with R being restriction and P being prolongation
-     * operators on GPU.
-     *
-     * @param a_h The stencil of the finer grid.
-     * @returns VaryingStencilGpu The stencil to be applied on the coarser grid
-     */
-    VaryingStencilGpu MultigridEngine::galerkin(VaryingStencilGpu& a_h, int gh_a2h,
-                                                cl_program program, cl_command_queue queue, cl_context context,
-                                                MPILevelData* mpiDataFine, MPILevelData* mpiDataCoarse,
-                                                bool periodic, bool forceLocalFine, bool forceLocalCoarse,
-                                                bool skipUpdateGhostsCoarse,
-                                                conf::KernelConfig* kernelConfig, ProfilingData* pd,
-                                                int resm, int resn, int reso)
-    {
-        // Make sure a_h has two ghosts at each border for periodic bc.
-        if (a_h.getGh() < 2)
-            throw "galerkin: a_h needs to have 2 ghosts at each border for periodic bc!";
-
-        if (gh_a2h < 2)
-            throw "galerkin: gh_a2h must be at least 2.";
-
-        // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
-        // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
-        auto sr = create3dFullWeightRestrictionStencilGpu(context, queue, program);
-        auto sp = create3dBilinearProlongationStencilGpu(context, queue, program);
-
-        // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
-        // S * A_h * S and cut out later manually.
-        auto sas = sr.multiply(a_h, 2, program, queue, context, mpiDataFine, periodic, forceLocalFine, kernelConfig, pd)
-                       .multiply(sp, 0, program, queue, context, mpiDataFine, periodic, forceLocalFine, kernelConfig, pd);
-
-        // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
-        auto a_2h = sas.cutFromW7ToW3(program, queue, context, gh_a2h, kernelConfig, pd, resm, resn, reso);
-
-        if (!skipUpdateGhostsCoarse)
-            updateGhostsStencilOclMpi(queue, program, a_2h, mpiDataCoarse, periodic, forceLocalCoarse, kernelConfig, pd);
-
-        return a_2h;
-    }
-
-    static std::unique_ptr<VaryingStencilGpu> galerkinOptimized(VaryingStencilGpu& a_h, int gh_a2h,
-                                                                int resm, int resn, int reso,
-                                                                cl_program program, cl_command_queue queue, cl_context context,
-                                                                conf::KernelConfig* kernelConfig, ProfilingData* pd)
+    std::unique_ptr<VaryingStencilGpu> MultigridEngine::galerkinOptimized(VaryingStencilGpu& a_h, int gh_a2h,
+                                                                          int resm, int resn, int reso,
+                                                                          cl_program program, cl_command_queue queue, cl_context context,
+                                                                          conf::KernelConfig* kernelConfig, ProfilingData* pd)
     {
         // Make sure a_h has two ghosts at each border for periodic bc.
         if (a_h.getGh() < 1 || a_h.getGh() < 1 || a_h.getGh() < 1)
