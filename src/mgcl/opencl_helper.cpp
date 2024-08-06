@@ -174,8 +174,7 @@ namespace mgcl
             clGetProgramBuildInfo(program, deviceId, CL_PROGRAM_BUILD_LOG, log_size, log, nullptr);
 
             // Print the log
-            if (!problem->silent)
-                printf("%s\n", log);
+            printf("%s\n", log);
 
             free(log);
 
