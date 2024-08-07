@@ -620,6 +620,7 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_n_processes", "[mpiN]")
     p_glob.setUseOpencl(true);
     p_glob.setGhosts(gh);
     p_glob.setGhostsIn(gh);
+    p_glob.setJacobiIterationsPerKernel(stepsPerIter);
     // p_glob.setMpiComm(mpi_comm);
     p_glob.setStencilType(stencilType);
     p_glob.setResidualNorm(resnorm);
@@ -642,6 +643,7 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_n_processes", "[mpiN]")
     p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setGhosts(gh);
     p.setGhostsIn(gh);
+    p.setJacobiIterationsPerKernel(stepsPerIter);
     p.setMpiComm(mpi_comm);
     p.setStencilType(stencilType);
     p.setResidualNorm(resnorm);

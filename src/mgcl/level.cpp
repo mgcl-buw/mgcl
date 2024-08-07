@@ -168,8 +168,8 @@ namespace mgcl
             // create gpu buffer for varying stencil if needed
             if (stencilType == MGCL_VARYING)
             {
-                // If level threshold is 0 or 1, stencilValues must have global sizes.
-                if (problem->getMpiLevelThreshold() <= 1 && problem->mpiRank() == 0)
+                // If level threshold is 0, stencilValues must have global sizes.
+                if (problem->getMpiLevelThreshold() == 0 && problem->mpiRank() == 0)
                     stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
                         problem->mGlobal, problem->nGlobal, problem->oGlobal, 3,
                         std::max(1, problem->getJacobiIterationsPerKernel()),
