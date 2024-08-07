@@ -81,13 +81,13 @@ namespace mgcl
     void Problem::checkGlobalDimensions()
     {
         if (mGlobal <= 0 || mGlobal % m != 0)
-            throw "mGlobal must be a multiple of m!";
+            error("mGlobal must be a multiple of m!");
 
         if (nGlobal <= 0 || nGlobal % n != 0)
-            throw "nGlobal must be a multiple of n!";
+            error("nGlobal must be a multiple of n!");
 
         if (oGlobal <= 0 || oGlobal % o != 0)
-            throw "oGlobal must be a multiple of o!";
+            error("oGlobal must be a multiple of o!");
     }
 
     /**
@@ -101,27 +101,27 @@ namespace mgcl
         //  check mandatory config fields
         if ((v == nullptr || f == nullptr) && (dV == nullptr || dF == nullptr))
         {
-            throw "mgcl: supplied v or f and d_v or d_f is nullptr. Aborting.\n";
+            error("mgcl: supplied v or f and d_v or d_f is nullptr. Aborting.\n");
         }
 
         if (m < 1 || n < 1 || o < 1)
         {
-            throw "mgcl: m, n or o not supplied, zero or negative. Aborting.\n";
+            error("mgcl: m, n or o not supplied, zero or negative. Aborting.\n");
         }
 
         if (ghosts < 1)
         {
-            throw "mgcl: ghosts must be >= 1. Aborting.\n";
+            error("mgcl: ghosts must be >= 1. Aborting.\n");
         }
 
         if (ghosts_in < 0)
         {
-            throw "mgcl: ghosts_in must be >= 0. Aborting.\n";
+            error("mgcl: ghosts_in must be >= 0. Aborting.\n");
         }
 
         if (ghosts_in <= 0 && bc != BC::PERIODIC)
         {
-            throw "mgcl: ghosts_in must be > 0 if boundary conditions are not periodic. Aborting.\n";
+            error("mgcl: ghosts_in must be > 0 if boundary conditions are not periodic. Aborting.\n");
         }
 
         // clang-format off
@@ -130,20 +130,20 @@ namespace mgcl
             ghosts_in != f->getGhostsM() || ghosts_in != f->getGhostsN() || ghosts_in != f->getGhostsO()
             ))
             // clang-format on
-            throw "ghosts_in is different than ghosts of v and/or f!";
+            error("ghosts_in is different than ghosts of v and/or f!");
 
         if (mpiRank() == 0 && getMpiLevelThreshold() == 0 && stencilValues &&
             (stencilValues->getM() < mGlobal || stencilValues->getN() < nGlobal || stencilValues->getO() < oGlobal))
-            throw "Mpi threshold level is 0 but stencilValues has local size. Please use setMpiMinGridPoints before setStencilType!";
+            error("Mpi threshold level is 0 but stencilValues has local size. Please use setMpiMinGridPoints before setStencilType!");
 
         if (mpiRank() == 0 && getMpiLevelThreshold() > 1 && stencilValues &&
             (stencilValues->getM() > m || stencilValues->getN() > n || stencilValues->getO() > o))
-            throw "Mpi threshold level is not 0 but stencilValues has global size. Please use setMpiMinGridPoints before setStencilType!";
+            error("Mpi threshold level is not 0 but stencilValues has global size. Please use setMpiMinGridPoints before setStencilType!");
 
         if (stencilValues && (stencilValues->getGhostsM() < ghosts ||
                               stencilValues->getGhostsN() < ghosts ||
                               stencilValues->getGhostsO() < ghosts))
-            throw "Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!";
+            error("Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!");
 
         return true;
     }
@@ -242,7 +242,7 @@ namespace mgcl
                 .append(std::to_string(maxBufferSizeNeeded / 1024 / 1024))
                 .append(" MiB");
 
-            throw msg;
+            error(msg);
         }
     }
 
@@ -294,7 +294,7 @@ namespace mgcl
             return;
 
         if (mpiMinGridPoints <= 1)
-            throw "mpiMinGridPoints must be at least 2!";
+            error("mpiMinGridPoints must be at least 2!");
 
         // Threshold was already set (automatically or by user).
         if (mpiLevelThreshold >= 0)
@@ -304,10 +304,11 @@ namespace mgcl
                             (static_cast<int>(log2(mpiMinGridPoints)) - 1);
 
         if (mpiLevelThreshold < 0)
-            throw "mpiMinGridPoints is too high! It must be less than or equal to local min(m,n,o).";
+            error("mpiMinGridPoints is too high! It must be less than or equal to local min(m,n,o).");
 
         if (!silent)
-            std::cout << "mpiLevelThreshold automatically set to " << mpiLevelThreshold << std::endl;
+            std::cout
+                << "mpiLevelThreshold automatically set to " << mpiLevelThreshold << std::endl;
     }
 
     /**
@@ -534,7 +535,7 @@ namespace mgcl
 
         // set up data for each level TODO reuse device buffers in final code
         if (!skipInit && !init())
-            throw std::runtime_error("Failed to initialize mgcl data structures.");
+            error(std::runtime_error("Failed to initialize mgcl data structures."));
 
         // Edge case: Do nothing if mpi is used but level threshold is 0 (i.e. all work is done on proc 0).
         if (!(useMpi() && getMpiLevelThreshold() <= 0 && mpiRank() > 0))
@@ -635,7 +636,7 @@ namespace mgcl
     {
         // set up data for each level
         if (!skipInit && !init())
-            throw std::runtime_error("Failed to initialize mgcl data structures.");
+            error(std::runtime_error("Failed to initialize mgcl data structures."));
 
         // Edge case: Do nothing if mpi is used but level threshold is 0 (i.e. all work is done on proc 0).
         if (!(useMpi() && getMpiLevelThreshold() <= 0 && mpiRank() > 0))
@@ -768,7 +769,7 @@ namespace mgcl
     CuboidGpu& Problem::getDPlanesBuf() const
     {
         if (!dPlanesBuf)
-            throw "dPlanesBuf is null.";
+            error("dPlanesBuf is null.");
         return *dPlanesBuf;
     }
 
@@ -785,7 +786,7 @@ namespace mgcl
     Cuboid& Problem::getHPlanesBufSend() const
     {
         if (!hPlanesBufSend)
-            throw "hPlanesBuf is null.";
+            error("hPlanesBuf is null.");
         return *hPlanesBufSend;
     }
 
@@ -802,7 +803,7 @@ namespace mgcl
     Cuboid& Problem::getHPlanesBufRecv() const
     {
         if (!hPlanesBufRecv)
-            throw "hPlanesBuf is null.";
+            error("hPlanesBuf is null.");
         return *hPlanesBufRecv;
     }
 
@@ -901,7 +902,7 @@ namespace mgcl
         if (stencilValues && (stencilValues->getGhostsM() < jacobiIterationsPerKernel ||
                               stencilValues->getGhostsN() < jacobiIterationsPerKernel ||
                               stencilValues->getGhostsO() < jacobiIterationsPerKernel))
-            throw "Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!";
+            error("Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!");
 
         jacobi_iterations_per_kernel = jacobiIterationsPerKernel;
     }
@@ -909,7 +910,7 @@ namespace mgcl
     CuboidGpu& Problem::getDStencilValues() const
     {
         if (!dStencilValues)
-            throw "dStencilValues is null!";
+            error("dStencilValues is null!");
         return *dStencilValues;
     }
 
@@ -926,7 +927,7 @@ namespace mgcl
     CuboidGpu& Problem::getDV() const
     {
         if (!dV)
-            throw "dStencilValues is null!";
+            error("dStencilValues is null!");
         return *dV;
     }
 
@@ -943,7 +944,7 @@ namespace mgcl
     CuboidGpu& Problem::getDF() const
     {
         if (!dF)
-            throw "dF is null!";
+            error("dF is null!");
         return *dF;
     }
 
@@ -977,7 +978,7 @@ namespace mgcl
         if (stencilValues && (stencilValues->getGhostsM() < ghosts_ ||
                               stencilValues->getGhostsN() < ghosts_ ||
                               stencilValues->getGhostsO() < ghosts_))
-            throw "Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!";
+            error("Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!");
 
         ghosts = ghosts_;
     }
@@ -1243,9 +1244,9 @@ namespace mgcl
     void Problem::setMpiLevelThreshold(int mpiLevelThreshold_)
     {
         if (mpiLevelThreshold_ < 0)
-            throw "MpiLevelThreshold cannot be negative";
+            error("MpiLevelThreshold cannot be negative");
         if (mpiLevelThreshold_ > maxlevel)
-            throw "MpiLevelThreshold cannot be larger than maxlevel (" + std::to_string(maxlevel) + ")";
+            error("MpiLevelThreshold cannot be larger than maxlevel (" + std::to_string(maxlevel) + ")");
         mpiLevelThreshold = mpiLevelThreshold_;
 
         // update mpiMinGridPoints

@@ -328,7 +328,7 @@ namespace mgcl
         }
 
         if (problem.useMpi() && !mpiData)
-            throw "Problem uses MPI but mpiData is null!";
+            error("Problem uses MPI but mpiData is null!");
 
         if (!problem.isPeriodic())
             return CL_SUCCESS;
@@ -421,7 +421,7 @@ namespace mgcl
         }
 
         if (p.getDPlanesBufPtr() == nullptr)
-            throw "MultigridEngine::updateGhostsOclMpi: dPlanesBufPtr is null";
+            error("MultigridEngine::updateGhostsOclMpi: dPlanesBufPtr is null");
 
         // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
         // TODO update check gpu storage size in problem init
@@ -433,7 +433,7 @@ namespace mgcl
 
         auto dPlanesBuf = p.getDPlanesBufPtr();
         if (dPlanesBuf->getSize() < ressize)
-            throw "MultigridEngine::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf->getSize());
+            error("MultigridEngine::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf->getSize()));
 
         auto hPlanesBufSend = p.getHPlanesBufSendPtr();
         auto hPlanesBufRecv = p.getHPlanesBufRecvPtr();

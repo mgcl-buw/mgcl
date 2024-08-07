@@ -2,6 +2,7 @@
 #include "cuboid.hpp"    // for Cuboid
 #include "hypercube.hpp" // for Hypercube6d
 #include "level.hpp"     // for Level
+#include "mgcl.hpp"
 #include "mpi_stencil.hpp"
 #include "mpi_util.hpp"
 #include "opencl_helper.hpp" // for mgclCheckError, OpenCLHelper
@@ -264,10 +265,10 @@ namespace mgcl
 
         // Make sure a_h has two ghosts at each border for periodic bc.
         if (a_h.getGhostsM() < 1 || a_h.getGhostsN() < 1 || a_h.getGhostsO() < 1)
-            throw "galerkin: a_h needs to have at least 1 ghosts at each border for periodic bc!";
+            error("galerkin: a_h needs to have at least 1 ghosts at each border for periodic bc!");
 
         if (gh_a2h < 1)
-            throw "galerkin: gh_a2h must be at least 1.";
+            error("galerkin: gh_a2h must be at least 1.");
 
         // TODO sanity checks on resm, resn, reso?
 
@@ -420,10 +421,10 @@ namespace mgcl
     {
         // Make sure a_h has two ghosts at each border for periodic bc.
         if (a_h.getGh() < 1 || a_h.getGh() < 1 || a_h.getGh() < 1)
-            throw "galerkin: a_h needs to have at least 1 ghosts at each border for periodic bc!";
+            error("galerkin: a_h needs to have at least 1 ghosts at each border for periodic bc!");
 
         if (gh_a2h < 1)
-            throw "galerkin: gh_a2h must be at least 1.";
+            error("galerkin: gh_a2h must be at least 1.");
 
         // TODO sanity checks on resm, resn, reso?
 

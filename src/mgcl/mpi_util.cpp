@@ -1,6 +1,7 @@
 #include "mpi_util.hpp"
 
 #include "cuboid.hpp"
+#include "mgcl.hpp"
 #include "mpi_level_data.hpp"
 #include "stencil.hpp"
 
@@ -29,7 +30,7 @@ namespace mgcl::mpi_util
         mgclCheckMpiError(comm, err, "MPI_Comm_size");
 
         if (mpi_size <= 1)
-            throw "Gather is only supported for at least 2 processes.";
+            error("Gather is only supported for at least 2 processes.");
 
         // Get local grid size from another process
         MPI_Status stats[2];
@@ -153,7 +154,7 @@ namespace mgcl::mpi_util
         mgclCheckMpiError(comm, err, "MPI_Comm_size");
 
         if (mpi_size <= 1)
-            throw "Gather is only supported for at least 2 processes.";
+            error("Gather is only supported for at least 2 processes.");
 
         // Get local grid size from another process
         MPI_Status stats[2];
@@ -312,10 +313,10 @@ namespace mgcl::mpi_util
         mgclCheckMpiError(comm, err, "MPI_Comm_size");
 
         if (mpi_size <= 1)
-            throw "Scatter is only supported for at least 2 processes.";
+            error("Scatter is only supported for at least 2 processes.");
 
         if (rank == 0 && src == nullptr)
-            throw "src must not be null for root process!";
+            error("src must not be null for root process!");
 
         int mloc = dest.getM();
         int nloc = dest.getN();
@@ -406,7 +407,7 @@ namespace mgcl::mpi_util
         mgclCheckMpiError(comm, err, "MPI_Comm_size");
 
         if (mpi_size <= 1)
-            throw "Scatter is only supported for at least 2 processes.";
+            error("Scatter is only supported for at least 2 processes.");
 
         // Get local grid size from another process
         MPI_Status stats[2];
@@ -520,7 +521,7 @@ namespace mgcl::mpi_util
         mgclCheckMpiError(comm, err, "MPI_Comm_size");
 
         if (mpi_size <= 1)
-            throw "Scatter is only supported for at least 2 processes.";
+            error("Scatter is only supported for at least 2 processes.");
 
         // Get local grid size from another process
         MPI_Status stats[2];

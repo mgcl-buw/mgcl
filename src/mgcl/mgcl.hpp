@@ -2,6 +2,10 @@
 
 #include <chrono>
 
+#ifdef MGCL_PRINT_TRACE
+#include <cpptrace/cpptrace.hpp>
+#endif
+
 namespace mgcl
 {
 // define mgcl_debug for debugging output. Compile with -D MGCL_DEBUG to enable, e.g. run: make CPPFLAGS="-D MGCL_DEBUG"
@@ -13,6 +17,19 @@ namespace mgcl
     do                       \
     {                        \
     } while (0)
+#endif
+
+// Define the function mgcl::error(msg) for throwing an exception in case of an error. If stack tracing is
+// enabled, the stack trace is printed.
+#ifdef MGCL_PRINT_TRACE
+#define error(msg)                                        \
+    do                                                    \
+    {                                                     \
+        cpptrace::generate_trace().print_with_snippets(); \
+        throw msg;                                        \
+    } while (0)
+#else
+#define error(msg) throw msg
 #endif
 
     template <

@@ -3,17 +3,10 @@ find_package(MPI REQUIRED)
 
 # ============================================
 
-# # Add cpptrace for debug builds for easier stacktrace printing.
-# cpmaddpackage("gh:jeremy-rifkin/cpptrace#${MGCL_cpptrace_version}")
-
-# # On windows copy cpptrace.dll to the same directory as the executable for mgcl
-# if(WIN32)
-# add_custom_command(
-#   TARGET mgcl POST_BUILD
-#   COMMAND ${CMAKE_COMMAND} -E copy_if_different
-#   $<TARGET_FILE:cpptrace> $<TARGET_FILE_DIR:mgcl>
-# )
-# endif()
+# Add cpptrace for debug builds for easier stacktrace printing.
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+  cpmaddpackage("gh:jeremy-rifkin/cpptrace#${MGCL_cpptrace_version}")
+endif()
 
 # ============================================
 set(MGCL_PUBLIC_HEADERS
@@ -62,6 +55,22 @@ add_library(mgcl ${MGCL_PUBLIC_HEADERS} ${SOURCES_LIB})
 add_library(mgcl::mgcl ALIAS mgcl)
 
 target_link_libraries(mgcl PUBLIC OpenCL::OpenCL MPI::MPI_CXX)
+if(CMAKE_BUILD_TYPE MATCHES Debug AND cpptrace_ADDED)
+  # Add -DMGCL_PRINT_TRACE to compile options and link against cpptrace, if available.
+  target_compile_definitions(mgcl PRIVATE MGCL_PRINT_TRACE)
+  target_link_libraries(mgcl PRIVATE cpptrace::cpptrace)
+
+  # Copy the cpptrace.dll on windows to the same directory as the executable for your_target.
+  # Not required if static linking.
+  if(WIN32)
+    add_custom_command(
+      TARGET mgcl POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      $<TARGET_FILE:cpptrace::cpptrace>
+      $<TARGET_FILE_DIR:mgcl>
+    )
+  endif()
+endif()
 
 # Set PUBLIC_HEADER property so they get installed.
 set_target_properties(mgcl PROPERTIES PUBLIC_HEADER "${MGCL_PUBLIC_HEADERS}")

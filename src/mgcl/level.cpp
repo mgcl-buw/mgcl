@@ -1,5 +1,6 @@
 #include "level.hpp"
 #include "cuboid.hpp" // for Cuboid
+#include "mgcl.hpp"
 #include "mpi_stencil.hpp"
 #include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
@@ -591,7 +592,7 @@ namespace mgcl
     CuboidGpu& Level::getDVIn() const
     {
         if (!dVIn)
-            throw "dVIn is null.";
+            error("dVIn is null.");
         return *dVIn;
     }
 
@@ -610,7 +611,7 @@ namespace mgcl
     CuboidGpu& Level::getDF() const
     {
         if (!dF)
-            throw "dF is null.";
+            error("dF is null.");
         return *dF;
     }
 
@@ -644,7 +645,7 @@ namespace mgcl
     CuboidGpu& Level::getDVOut() const
     {
         if (!dVOut)
-            throw "dVOut is null.";
+            error("dVOut is null.");
         return *dVOut;
     }
 
@@ -663,7 +664,7 @@ namespace mgcl
     CuboidGpu& Level::getDR() const
     {
         if (!dR)
-            throw "dR is null.";
+            error("dR is null.");
         return *dR;
     }
 
@@ -682,7 +683,7 @@ namespace mgcl
     CuboidGpu& Level::getDRsq() const
     {
         if (!dRsq)
-            throw "dRsq is null.";
+            error("dRsq is null.");
         return *dRsq;
     }
 
@@ -706,7 +707,7 @@ namespace mgcl
         if (mpiData != nullptr)
             return *mpiData;
         else
-            throw "mpiData is null.";
+            error("mpiData is null.");
     }
 
     /**

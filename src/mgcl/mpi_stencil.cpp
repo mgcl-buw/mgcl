@@ -3,6 +3,7 @@
 
 #include "mpi_stencil.hpp"
 #include "kernel_config.hpp"
+#include "mgcl.hpp"
 #include "mpi_level_data.hpp"
 #include "mpi_util.hpp"
 #include "opencl_helper.hpp"
@@ -45,7 +46,7 @@ namespace mgcl
         int ogh = s.getOgh();
 
         if (m < ghosts_m || n < ghosts_n || o < ghosts_o)
-            throw "Ghost-update using MPI is only allowed for gh <= m,n,o.";
+            error("Ghost-update using MPI is only allowed for gh <= m,n,o.");
 
         /* Loop variables */
         int i, j, k;

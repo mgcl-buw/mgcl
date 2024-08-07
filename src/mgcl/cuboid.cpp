@@ -1,5 +1,7 @@
 #include "cuboid.hpp"
 
+#include "mgcl.hpp"
+
 #include <algorithm> // for fill
 #include <cmath>     // for fabs
 #include <fstream>   // IWYU pragma: keep
@@ -293,7 +295,7 @@ namespace mgcl
             n != c.getN() ||
             o != c.getO())
         {
-            throw std::invalid_argument("Cannot check equality for Cuboids. Dimensions differ.");
+            error(std::invalid_argument("Cannot check equality for Cuboids. Dimensions differ."));
         }
 
         std::vector<std::tuple<int, int, int, double, double, double>> diffs;
@@ -352,7 +354,7 @@ namespace mgcl
             ngh != c.getNgh() ||
             ogh != c.getOgh())
         {
-            throw std::invalid_argument("Cannot check equality for Cuboids. Dimensions differ.");
+            error(std::invalid_argument("Cannot check equality for Cuboids. Dimensions differ."));
         }
 
         double diff;
@@ -409,7 +411,7 @@ namespace mgcl
         }
         else
         {
-            throw std::runtime_error("Couldn't open file for writing given by: " + path);
+            error(std::runtime_error("Couldn't open file for writing given by: " + path));
         }
     }
 
@@ -441,7 +443,7 @@ namespace mgcl
     void Cuboid::fillRealFrom(Cuboid& c)
     {
         if (m != c.getM() || n != c.getN() || o != c.getO())
-            throw "Dimensions do not match!";
+            error("Dimensions do not match!");
 
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)
@@ -460,7 +462,7 @@ namespace mgcl
     void Cuboid::fillAllFrom(Cuboid& c)
     {
         if (mgh != c.getMgh() || ngh != c.getNgh() || ogh != c.getOgh())
-            throw "Dimensions do not match!";
+            error("Dimensions do not match!");
 
         for (int i = 0; i < mgh; i++)
             for (int j = 0; j < ngh; j++)
@@ -483,7 +485,7 @@ namespace mgcl
     {
         if (m_start < 0 || n_start < 0 || o_start < 0 ||
             m_end >= m || n_end >= n || o_end >= o)
-            throw "Boundaries out of range!";
+            error("Boundaries out of range!");
 
         if (ghm < 0)
             ghm = ghostsM;
@@ -517,7 +519,7 @@ namespace mgcl
     {
         if (m_start < 0 || n_start < 0 || o_start < 0 ||
             m_end >= mgh || n_end >= ngh || o_end >= ogh)
-            throw "Boundaries out of range!";
+            error("Boundaries out of range!");
 
         auto ret = std::make_unique<Cuboid>((m_end - m_start) + 1, (n_end - n_start) + 1, (o_end - o_start) + 1,
                                             0, 0, 0);

@@ -1,5 +1,6 @@
 #include "stencil.hpp"
 #include "kernel_config.hpp"
+#include "mgcl.hpp"
 #include "mpi_stencil.hpp"
 #include "opencl_helper.hpp"
 #include "profiling_data.hpp"
@@ -28,7 +29,7 @@ namespace mgcl
     FixedStencil::FixedStencil(int _width) : Cuboid(_width, _width, _width, 0, 0, 0)
     {
         if (_width % 2 == 0 || _width < 3)
-            throw "FixedStencil is only defined for odd width >= 3!";
+            error("FixedStencil is only defined for odd width >= 3!");
     }
 
     /**
@@ -47,12 +48,12 @@ namespace mgcl
     {
         if (b.getGhostsM() != b.getGhostsN() ||
             b.getGhostsM() != b.getGhostsO())
-            throw "Ghosts of b must be equal in each dimension!";
+            error("Ghosts of b must be equal in each dimension!");
 
         int N = getWidth();
 
         if (b.getGhostsM() < N >> 1)
-            throw std::string("Ghosts of b be must be >= ").append(std::to_string(N >> 1));
+            error(std::string("Ghosts of b be must be >= ").append(std::to_string(N >> 1)));
 
         int NB = b.getWidth();
         int N2 = N >> 1;
@@ -108,7 +109,7 @@ namespace mgcl
         : Hypercube6d(_width, _width, _width, m, n, o, 0, 0, 0, ghosts_m, ghosts_n, ghosts_o)
     {
         if (_width % 2 == 0 || _width < 3)
-            throw "VaryingStencil is only defined for odd width >= 3!";
+            error("VaryingStencil is only defined for odd width >= 3!");
     }
 
     // updates ghost cells, respects periodic ghosts, i.e. when gh > m
@@ -197,7 +198,7 @@ namespace mgcl
     {
         if (getGhostsM() != getGhostsN() ||
             getGhostsM() != getGhostsO())
-            throw "Ghosts of a must be equal in each dimension!";
+            error("Ghosts of a must be equal in each dimension!");
 
         int m = getM();
         int n = getN();
@@ -260,20 +261,20 @@ namespace mgcl
         if (getM() != b.getM() ||
             getN() != b.getN() ||
             getO() != b.getO())
-            throw "Stencils map to different amount of grid cells!";
+            error("Stencils map to different amount of grid cells!");
 
         if (b.getGhostsM() != b.getGhostsN() ||
             b.getGhostsM() != b.getGhostsO())
-            throw "Ghosts of b must be equal in each dimension!";
+            error("Ghosts of b must be equal in each dimension!");
 
         if (getGhostsM() != getGhostsN() ||
             getGhostsM() != getGhostsO())
-            throw "Ghosts of a must be equal in each dimension!";
+            error("Ghosts of a must be equal in each dimension!");
 
         int N = getWidth();
 
         if (b.getGhostsM() < N >> 1)
-            throw std::string("Ghosts of b be must be >= ").append(std::to_string(N >> 1));
+            error(std::string("Ghosts of b be must be >= ").append(std::to_string(N >> 1)));
 
         int NB = b.getWidth();
 
@@ -360,7 +361,7 @@ namespace mgcl
     {
         if (m_start < 0 || n_start < 0 || o_start < 0 ||
             m_end >= getM() || n_end >= getN() || o_end >= getO())
-            throw "Boundaries out of range!";
+            error("Boundaries out of range!");
 
         if (ghm < 0)
             ghm = getGhostsM();
@@ -399,7 +400,7 @@ namespace mgcl
     {
         if (m_start < 0 || n_start < 0 || o_start < 0 ||
             m_end >= getMgh() || n_end >= getNgh() || o_end >= getOgh())
-            throw "Boundaries out of range!";
+            error("Boundaries out of range!");
 
         auto ret = std::make_unique<VaryingStencil>((m_end - m_start) + 1, (n_end - n_start) + 1,
                                                     (o_end - o_start) + 1, getWidth(), 0, 0, 0);
@@ -597,14 +598,16 @@ namespace mgcl
     void VaryingStencilGpu::fill(VaryingStencil& f, cl_command_queue queue, bool blocking)
     {
         if (f.getWidth() != width)
-            throw "Widths are not equal!";
+            error("Widths are not equal!");
 
         if (m != f.getM() || n != f.getN() || o != f.getO() ||
             gh != f.getGhostsM() || gh != f.getGhostsN() || gh != f.getGhostsO())
-            throw "VaryingStencilGpu::fill: Dimensions are not equal. this.m,n,o = " +
-                std::to_string(m) + "," + std::to_string(n) + "," + std::to_string(o) +
-                ", f.m,n,o = " + std::to_string(f.getM()) + "," + std::to_string(f.getN()) +
-                "," + std::to_string(f.getO());
+        {
+            error("VaryingStencilGpu::fill: Dimensions are not equal. this.m,n,o = " +
+                      std::to_string(m) + "," + std::to_string(n) + "," + std::to_string(o) +
+                      ", f.m,n,o = " + std::to_string(f.getM()) + "," + std::to_string(f.getN()) +
+                      "," + std::to_string(f.getO()););
+        }
 
         int err = clEnqueueWriteBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0,
                                        sizeof(double) * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width,
@@ -907,7 +910,7 @@ namespace mgcl
         int err;
 
         if (width != 7)
-            throw "Width is not 7!";
+            error("Width is not 7!");
 
         int m2 = m >> 1;
         int n2 = n >> 1;
@@ -917,7 +920,7 @@ namespace mgcl
         reso = reso == 0 ? o2 : reso;
 
         if (m2 == 0 || n2 == 0 || o2 == 0)
-            throw "Cannot cut down stencil of grid size 1!";
+            error("Cannot cut down stencil of grid size 1!");
 
         VaryingStencilGpu a_2h(resm, resn, reso, 3, ghout, context, queue, program);
 
@@ -1097,7 +1100,7 @@ namespace mgcl
     void FixedStencilGpu::fill(FixedStencil& f, cl_command_queue queue, bool blocking)
     {
         if (f.getWidth() != width)
-            throw "Widths are not equal!";
+            error("Widths are not equal!");
 
         int err = clEnqueueWriteBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0,
                                        sizeof(double) * width * width * width,

@@ -57,22 +57,22 @@ namespace mgcl
         // Check if amount of ghost cells is large enough
         if (util::seq::min3(v.getGhostsM(), v.getGhostsN(), v.getGhostsO()) < stepsPerIter)
         {
-            throw "#ghosts of v must be >= stepsPerIter!";
+            error("#ghosts of v must be >= stepsPerIter!");
         }
 
         if (util::seq::min3(r.getGhostsM(), r.getGhostsN(), r.getGhostsO()) < stepsPerIter - 1)
         {
-            throw "#ghosts of r must be >= stepsPerIter - 1!";
+            error("#ghosts of r must be >= stepsPerIter - 1!");
         }
 
         if (util::seq::min3(f.getGhostsM(), f.getGhostsN(), f.getGhostsO()) < stepsPerIter - 1)
         {
-            throw "#ghosts of f must be >= stepsPerIter - 1!";
+            error("#ghosts of f must be >= stepsPerIter - 1!");
         }
 
         // check that stencilValues is not null if stencil type is varying
         if (stencilType == MGCL_VARYING && stencilValues == nullptr)
-            throw "stencilType is varying but stencilValues is null!";
+            error("stencilType is varying but stencilValues is null!");
 
         for (int iter = 0; iter < maxiter; iter += stepsPerIter)
         {
@@ -196,7 +196,7 @@ namespace mgcl
         // Check if amount of ghost cells is large enough
         if (problem.ghosts < stepsPerIter)
         {
-            throw "#ghosts must be >= stepsPerIter!";
+            error("#ghosts must be >= stepsPerIter!");
         }
 
         cl_event ev;
@@ -643,11 +643,11 @@ namespace mgcl
         // check if off is too small (i.e. start < 0)
         // TODO refactor to use GPUCuboid and check against v.getGhosts
         if (moff <= -problem.ghosts || noff <= -problem.ghosts || ooff <= -problem.ghosts)
-            throw "moff, noff and ooff must not be <= -ghosts";
+            error("moff, noff and ooff must not be <= -ghosts");
 
         // check if off is too large (i.e. start > end)
         if (moff * 2 >= level.m || noff * 2 >= level.n || ooff * 2 >= level.o)
-            throw "2*moff, 2*noff and 2*ooff must not be >= m, n or o";
+            error("2*moff, 2*noff and 2*ooff must not be >= m, n or o");
 
         // Create the compute kernel from the program
         const char* kernelName;
@@ -827,15 +827,15 @@ namespace mgcl
 
         // check if off is too small (i.e. start < 0)
         if (moff <= -v.getGhostsM() || noff <= -v.getGhostsN() || ooff <= -v.getGhostsO())
-            throw "moff, noff and ooff must not be <= -ghosts";
+            error("moff, noff and ooff must not be <= -ghosts");
 
         // check if off is too large (i.e. start > end)
         if (moff * 2 >= v.getM() || noff * 2 >= v.getN() || ooff * 2 >= v.getO())
-            throw "2*moff, 2*noff and 2*ooff must not be >= m, n or o";
+            error("2*moff, 2*noff and 2*ooff must not be >= m, n or o");
 
         // check that stencilValues is not null if stencil type is varying
         if (stencilType == MGCL_VARYING && stencilValuesCuboid == nullptr)
-            throw "stencilType is varying but stencilValues is null!";
+            error("stencilType is varying but stencilValues is null!");
 
         if (stencilType == MGCL_VARYING)
             stencilValues = stencilValuesCuboid->getData();

@@ -31,7 +31,11 @@ endif()
 set(MGCL_catch2_version "v3.4.0")
 set(MGCL_nanobench_version "v4.3.11")
 set(MGCL_backwardcpp_version "v1.6")
-set(MGCL_cpptrace_version "v0.2.0-alpha")
+set(MGCL_cpptrace_version "v0.6.3")
+
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+  include(cmake/CPM.cmake)
+endif()
 
 add_subdirectory(src)
 

@@ -1,5 +1,7 @@
 #include "mpi_global_data.hpp"
 
+#include "mgcl.hpp"
+
 #include "mpi_util.hpp"
 
 /**
@@ -69,5 +71,5 @@ void mgcl::MPIGlobalData::setComm(const MPI_Comm& comm_)
     mpi_util::mgclCheckMpiError(comm_, err, "MPI_Topo_test");
 
     if (type != MPI_CART)
-        throw "MPI Comm must have a cartesian topology attached!";
+        error("MPI Comm must have a cartesian topology attached!");
 }

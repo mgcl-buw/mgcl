@@ -4,6 +4,8 @@
 #include "opencl_helper.hpp"
 #include "profiling_data.hpp"
 
+#include "mgcl.hpp"
+
 #include <fstream>
 #include <iomanip>
 #include <memory>
@@ -38,10 +40,10 @@ namespace mgcl
           size(mgh * ngh * ogh)
     {
         if (m <= 0 || n <= 0 || o <= 0)
-            throw "m, n and o must be > 0.";
+            error("m, n and o must be > 0.");
 
         if (ghosts_m < 0 || ghosts_n < 0 || ghosts_o < 0)
-            throw "ghosts must be >= 0.";
+            error("ghosts must be >= 0.");
 
         if (buf)
             retain();
@@ -53,10 +55,10 @@ namespace mgcl
 
             // Check that flags contains one and only one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY
             if (!containsReadWrite && !containsWriteOnly && !containsReadOnly)
-                throw "flags must contain one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.";
+                error("flags must contain one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.");
 
             if ((containsReadWrite && containsReadOnly) || (containsReadWrite && containsWriteOnly) || (containsReadOnly && containsWriteOnly))
-                throw "flags must contain one and only one of CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY or CL_MEM_READ_WRITE.";
+                error("flags must contain one and only one of CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY or CL_MEM_READ_WRITE.");
 
             bool containsCopyHostPtr = (flags & CL_MEM_COPY_HOST_PTR) == CL_MEM_COPY_HOST_PTR;
             bool containsUseHostPtr = (flags & CL_MEM_USE_HOST_PTR) == CL_MEM_USE_HOST_PTR;
@@ -64,7 +66,7 @@ namespace mgcl
 
             // Check that flags does not contain one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR
             if ((containsAllocHostPtr || containsUseHostPtr || containsCopyHostPtr))
-                throw "host_ptr is null, but flags contains CL_MEM_ALLOC_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_COPY_HOST_PTR.";
+                error("host_ptr is null, but flags contains CL_MEM_ALLOC_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_COPY_HOST_PTR.");
 
             cl_int err;
             buffer = clCreateBuffer(context, flags, sizeof(double) * size, nullptr, &err);
@@ -97,10 +99,10 @@ namespace mgcl
 
         // Check that flags contains one and only one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY
         if (!containsReadWrite && !containsWriteOnly && !containsReadOnly)
-            throw "flags must contain one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.";
+            error("flags must contain one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.");
 
         if ((containsReadWrite && containsReadOnly) || (containsReadWrite && containsWriteOnly) || (containsReadOnly && containsWriteOnly))
-            throw "flags must contain one and only one of CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY or CL_MEM_READ_WRITE.";
+            error("flags must contain one and only one of CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY or CL_MEM_READ_WRITE.");
 
         bool containsCopyHostPtr = (flags & CL_MEM_COPY_HOST_PTR) == CL_MEM_COPY_HOST_PTR;
         bool containsUseHostPtr = (flags & CL_MEM_USE_HOST_PTR) == CL_MEM_USE_HOST_PTR;
@@ -109,11 +111,11 @@ namespace mgcl
         // Check that flags contains one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR if
         // host_ptr is given.
         if (!(containsAllocHostPtr || containsCopyHostPtr || containsUseHostPtr))
-            throw "host_ptr not null, but flags does not contain CL_MEM_ALLOC_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_COPY_HOST_PTR.";
+            error("host_ptr not null, but flags does not contain CL_MEM_ALLOC_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_COPY_HOST_PTR.");
 
         // Check that flags contains one and only one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR.
         if ((containsCopyHostPtr && containsAllocHostPtr) || (containsCopyHostPtr && containsUseHostPtr) || (containsUseHostPtr && containsAllocHostPtr))
-            throw "flags must contain one and only one of CL_MEM_COPY_HOST_PTR, CL_MEM_ALLOC_HOST_PTR, or CL_MEM_USE_HOST_PTR";
+            error("flags must contain one and only one of CL_MEM_COPY_HOST_PTR, CL_MEM_ALLOC_HOST_PTR, or CL_MEM_USE_HOST_PTR");
 
         cl_int err;
         buffer = clCreateBuffer(context, flags, sizeof(double) * size, host_data.getData()[0][0], &err);
@@ -144,7 +146,7 @@ namespace mgcl
                 host_ptr->getGhostsM() != ghosts_m ||
                 host_ptr->getGhostsN() != ghosts_n ||
                 host_ptr->getGhostsO() != ghosts_o)
-                throw "Dimensions do not match!";
+                error("Dimensions do not match!");
         }
 
         auto ret = host_ptr ? nullptr : std::make_unique<Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
@@ -174,11 +176,11 @@ namespace mgcl
         if (host_ptr)
         {
             if (host_ptr->getSize() < _size)
-                throw "CuboidGpu::read1d: Target Cuboid is too small!";
+                error("CuboidGpu::read1d: Target Cuboid is too small!");
         }
 
         if (size < _size)
-            throw "CuboidGpu::read1d: Source Cuboid is smaller than requested read size!";
+            error("CuboidGpu::read1d: Source Cuboid is smaller than requested read size!");
 
         auto ret = host_ptr ? nullptr : std::make_unique<Cuboid>(1, 1, _size);
 
@@ -204,7 +206,7 @@ namespace mgcl
             host_data.getGhostsM() != ghosts_m ||
             host_data.getGhostsN() != ghosts_n ||
             host_data.getGhostsO() != ghosts_o)
-            throw "Dimensions do not match!";
+            error("Dimensions do not match!");
 
         int err = clEnqueueWriteBuffer(commands, buffer, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * size,
                                        host_data.getData()[0][0], 0, NULL, NULL);
@@ -222,10 +224,10 @@ namespace mgcl
     void CuboidGpu::write1d(cl_command_queue commands, int _size, const Cuboid& host_data, bool blocking)
     {
         if (host_data.getSize() < _size)
-            throw "CuboidGpu::write1d: Source host cuboid is too small!";
+            error("CuboidGpu::write1d: Source host cuboid is too small!");
 
         if (size < _size)
-            throw "CuboidGpu::write1d: Target device cuboid is too small!";
+            error("CuboidGpu::write1d: Target device cuboid is too small!");
 
         int err = clEnqueueWriteBuffer(commands, buffer, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * _size,
                                        host_data.getData()[0][0], 0, NULL, NULL);
@@ -327,7 +329,7 @@ namespace mgcl
     void CuboidGpu::copyTo(cl_command_queue commands, CuboidGpu& target)
     {
         if (mgh != target.getMgh() || ngh != target.getNgh() || ogh != target.getOgh())
-            throw "Dimensions do not match!";
+            error("Dimensions do not match!");
 
         int err = clEnqueueCopyBuffer(commands, buffer, target.getBuffer(), 0, 0,
                                       sizeof(double) * mgh * ngh * ogh, 0, NULL, NULL);
@@ -379,7 +381,7 @@ namespace mgcl
         }
         else
         {
-            throw "Couldn't open file for writing given by: " + path;
+            error("Couldn't open file for writing given by: " + path);
         }
     }
 
@@ -454,7 +456,7 @@ namespace mgcl
     {
         if (a.getM() != b.getM() || a.getN() != b.getN() || a.getO() != b.getO() ||
             a.getGhostsM() != b.getGhostsM() || a.getGhostsN() != b.getGhostsN() || a.getGhostsO() != b.getGhostsO())
-            throw "Dimensions do not match!";
+            error("Dimensions do not match!");
 
         std::swap(a.buffer, b.buffer);
     }
@@ -479,10 +481,11 @@ namespace mgcl
         int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
 
         if (ghosts_m > m || ghosts_n > n || ghosts_o > o)
-            throw "CuboidGpu::extractBorderPlanes: Only defined for ghosts <= m, n, o";
+            error("CuboidGpu::extractBorderPlanes: Only defined for ghosts <= m, n, o");
 
         // Create return buffer, if not provided
-        std::unique_ptr<Cuboid> ret = nullptr;
+        std::unique_ptr<Cuboid>
+            ret = nullptr;
         Cuboid* retraw = h_target;
         if (h_target == nullptr)
         {
@@ -578,7 +581,7 @@ namespace mgcl
                                                 mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
         if (d_source == nullptr && h_source == nullptr)
-            throw "CuboidGpu::pasteGhostsFromBorderPlanes: At least one source buffer must be given.";
+            error("CuboidGpu::pasteGhostsFromBorderPlanes: At least one source buffer must be given.");
 
         // Plane sizes
         int yz = ngh * ogh;

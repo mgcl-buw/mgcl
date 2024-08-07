@@ -1,5 +1,7 @@
 #include "hypercube.hpp"
 
+#include "mgcl.hpp"
+
 #include <cmath>
 #include <fstream> // IWYU pragma: keep
 #include <iomanip>
@@ -195,7 +197,7 @@ namespace mgcl
             dim3 != c.getDim3() ||
             dim4 != c.getDim4())
         {
-            throw std::invalid_argument("Cannot check equality for Hypercube4d. Dimensions differ.");
+            error(std::invalid_argument("Cannot check equality for Hypercube4d. Dimensions differ."));
         }
 
         std::vector<std::tuple<int, int, int, int, double, double, double>> diffs;
@@ -264,7 +266,7 @@ namespace mgcl
         }
         else
         {
-            throw std::runtime_error("Couldn't open file for writing given by: " + path);
+            error(std::runtime_error("Couldn't open file for writing given by: " + path));
         }
     }
 
@@ -661,7 +663,7 @@ namespace mgcl
             dim5 != c.getDim5() ||
             dim6 != c.getDim6())
         {
-            throw std::invalid_argument("Cannot check equality for Hypercube6d. Dimensions differ.");
+            error(std::invalid_argument("Cannot check equality for Hypercube6d. Dimensions differ."));
         }
 
         std::vector<std::tuple<int, int, int, int, int, int, double, double, double>> diffs;
@@ -752,7 +754,7 @@ namespace mgcl
         }
         else
         {
-            throw std::runtime_error("Couldn't open file for writing given by: " + path);
+            error(std::runtime_error("Couldn't open file for writing given by: " + path));
         }
     }
 
@@ -805,7 +807,7 @@ namespace mgcl
         }
         else
         {
-            throw std::runtime_error("Couldn't open file for writing given by: " + path);
+            error(std::runtime_error("Couldn't open file for writing given by: " + path));
         }
     }
 
@@ -819,7 +821,7 @@ namespace mgcl
         // TODO check ranges
         if (dim1 != o.dim1 || dim2 != o.dim2 || dim3 != o.dim3 ||
             dim4 != o.dim4 || dim5 != o.dim5 || dim6 != o.dim6)
-            throw "Dimensions must match!";
+            error("Dimensions must match!");
 
         // clang-format off
         for (int i = ghostsDim1, id = o.ghostsDim1; i < dim1 + ghostsDim1; i++, id++)

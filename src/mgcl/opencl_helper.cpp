@@ -1,6 +1,7 @@
 #include "opencl_helper.hpp"
 #include "cuboid.hpp" // for
 #include "level.hpp"  // for Level
+#include "mgcl.hpp"
 #include "mgcl_kernel.hpp"
 #include "problem.hpp" // for Problem
 
@@ -47,7 +48,7 @@ namespace mgcl
             mgclCheckError(err, "Finding platforms");
             if (numPlatforms == 0)
             {
-                throw "No OpenCL platform was found!";
+                error("No OpenCL platform was found!");
             }
 
             // Get all platforms
@@ -483,7 +484,7 @@ namespace mgcl
         if (commands)
             mgclCheckError(clFinish(commands), "clFinish");
         else
-            throw "Command queue is not initialized!";
+            error("Command queue is not initialized!");
     }
 
     /**
@@ -733,7 +734,7 @@ namespace mgcl
         std::ifstream f;
         f.open(kernelFile_);
         if (f.fail())
-            throw std::string("Kernel file '").append(kernelFile_).append("' does not exist.");
+            error(std::string("Kernel file '").append(kernelFile_).append("' does not exist."));
         f.close();
 
         kernelFile = kernelFile_;
