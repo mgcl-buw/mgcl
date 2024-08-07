@@ -254,13 +254,18 @@ fi
 
 if [ "$TEST_GALERKIN" = true ] || [ "$TEST_ALL" = true ] ; then
     echo "#######################"
-    echo "Run Tests from test_galerkin.cpp ..."
+    echo "Run Tests from test_mpi_galerkin.cpp ..."
     echo "#######################"
 
     run_test --oversubscribe -n 1 "$exe" "MPI_seq_galerkinOptimized_nprocs"
     run_test --oversubscribe -n 4 "$exe" "MPI_seq_galerkinOptimized_nprocs"
     run_test --oversubscribe -n 1 "$exe" MPI_seq_galerkin_different_thresholds
     run_test --oversubscribe -n 4 "$exe" MPI_seq_galerkin_different_thresholds
+
+    if [ "$NO_GPU" = false ] ; then
+      run_test --oversubscribe -n 1 "$exe" "MPI_GPU_galerkinOptimized_nprocs"
+      run_test --oversubscribe -n 4 "$exe" "MPI_GPU_galerkinOptimized_nprocs"
+    fi
 fi
 
 echo "Done. All good!"

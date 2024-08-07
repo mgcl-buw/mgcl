@@ -12,6 +12,8 @@
 #include "../../src/mgcl/multigrid_engine.hpp"
 #include "../../src/mgcl/problem.hpp"
 
+#include "../test_utility.hpp"
+
 #include "mpi.h"
 
 // Extracted from Level::initMpiData
@@ -437,6 +439,211 @@ TEST_CASE("MPI_seq_galerkinOptimized_nprocs")
             mgcl::mpi_util::gather(p.getMpiComm(), a_2h_glob_check); // TODO check with different ghost amounts
 
         REQUIRE(a_2h_glob_check.isEqual(*a_2h_glob));
+    }
+}
+
+// Checks if optimized galerkin calculation works distributively using multiple MPI processes and OpenCL.
+TEST_CASE("MPI_GPU_galerkinOptimized_nprocs")
+{
+    using std::min;
+
+    // global grid sizes
+    int m = 16;
+    int n = 16;
+    int o = 16;
+    int periodic = 1;
+    int gh = 1;
+
+    // Problem parameters
+    double tol = 1e-7;
+    int nu1 = 2;
+    int nu2 = 2;
+    double omega = 0.8;
+    int maxIterVCycles = 5;
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    // REQUIRE(mpi_size == 8);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    /* Initialize start and end for local grid */
+    int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+    int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+    int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+    int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+    int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+    int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+    int ml = (m_end - m_start) + 1;
+    int nl = (n_end - n_start) + 1;
+    int ol = (o_end - o_start) + 1;
+
+    CAPTURE(ml, nl, ol);
+
+    // print coords and boundaries per rank
+    // if (mpi_rank == 0)
+    //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (mpi_rank == i)
+    //     {
+    //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+    //                   << m_start << ";" << m_end << ";"
+    //                   << n_start << ";" << n_end << ";"
+    //                   << o_start << ";" << o_end << std::endl;
+    //     }
+    // }
+
+    REQUIRE(ml > 0);
+    REQUIRE(ml <= m);
+    REQUIRE(nl > 0);
+    REQUIRE(nl <= n);
+    REQUIRE(ol > 0);
+    REQUIRE(ol <= o);
+
+    // Init some random data
+    auto vloc = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    auto floc = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    vloc->fillRandom();
+    floc->fillRandom();
+
+    // Create Problem to init all the MPI stuff
+    auto p = std::make_shared<typename mgcl::Problem>(ml, nl, ol, floc, vloc, m, n, o);
+    p->setMpiLevelThreshold(3);
+    p->setMpiComm(mpi_comm);
+
+    // p.setStencilType(mgcl::MGCL_VARYING);
+    // auto& s = *p.getStencilValues();
+    // s.fill1dIndex(true);
+
+    // Initialize Problem partially, without calculating the Galerkin operator.
+    // from Problem::init
+    // Create cartesian process grid if none was set and more than one processes are used.
+    p->getMPIGlobalData().createCartGrid(periodic);
+    p->calculateAndSetMpiLevelThreshold();
+
+    mgcl::MPILevelData mpiDataFine(mpi_comm);
+    initMpiDataLevel(&mpiDataFine, nullptr, p.get(), 0, ml, nl, ol);
+    mgcl::MPILevelData mpiDataCoarse(mpi_comm);
+    initMpiDataLevel(&mpiDataCoarse, &mpiDataFine, p.get(), 1, ml >> 1, nl >> 1, ol >> 1);
+
+    mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+
+    // Create locally sized varying stencil on each MPI process
+    mgcl::VaryingStencil a_h_loc(ml, nl, ol, 3, 1, 1, 1);
+    // fill with 1d global index, depending on this process' coordinates, in order to get the same values as in the
+    // global stencil values
+    // clang-format off
+    for (int i = a_h_loc.getGhostsM(); i < a_h_loc.getGhostsM() + a_h_loc.getM(); i++)
+    for (int j = a_h_loc.getGhostsN(); j < a_h_loc.getGhostsN() + a_h_loc.getN(); j++)
+    for (int k = a_h_loc.getGhostsO(); k < a_h_loc.getGhostsO() + a_h_loc.getO(); k++)
+        for (int ii = 0; ii < 3; ii++)
+        for (int jj = 0; jj < 3; jj++)
+        for (int kk = 0; kk < 3; kk++)
+        {
+            int mgh = m + 2 * a_h_loc.getGhostsM();
+            int ngh = n + 2 * a_h_loc.getGhostsN();
+            int ogh = o + 2 * a_h_loc.getGhostsO();
+            int itarget = ml * mpi_coords[0] + i;
+            int jtarget = nl * mpi_coords[1] + j;
+            int ktarget = ol * mpi_coords[2] + k;
+            a_h_loc[ii][jj][kk][i][j][k] = ktarget + jtarget * ogh + itarget * ogh * ngh + kk * ogh * ngh * mgh + jj * ogh * ngh * mgh * 3 + ii * ogh * ngh * mgh * 3 * 3;
+        }
+    // clang-format on
+    mgcl::updateGhostsStencilMpi(a_h_loc, &mpiDataFine, periodic, false);
+
+    mgcl::VaryingStencilGpu a_h_loc_gpu(ml, nl, ol, 3, 1, tu.getContext(), tu.getCommands(), tu.getProgram());
+    a_h_loc_gpu.fill(a_h_loc, tu.getCommands(), true);
+
+    auto a_2h_loc_gpu = mgcl::MultigridEngine::galerkinOptimized(
+        a_h_loc_gpu, 1, a_h_loc.getM() >> 1, a_h_loc.getN() >> 1, a_h_loc.getO() >> 1,
+        tu.getProgram(), tu.getCommands(), tu.getContext(), nullptr, nullptr);
+
+    // a_2h_loc->dumpToFile(std::to_string(mpi_rank) + "_a_2h_loc.txt");
+
+    MPI_Barrier(mpi_comm);
+
+    // Create globally sized varying stencil only on root and calculate Galerkin operator locally
+    std::unique_ptr<mgcl::VaryingStencilGpu> a_2h_glob_gpu;
+    if (mpi_rank == 0)
+    {
+        mgcl::VaryingStencil a_h_glob(m, n, o, 3, 1, 1, 1);
+        a_h_glob.fill1dIndex(true);
+        a_h_glob.updateGhosts();
+
+        // Check that local and global stencil values on fine grid (i.e. the input) are the same (at least for root)
+        // clang-format off
+        for (int i = a_h_loc.getGhostsM(); i < a_h_loc.getGhostsM() + a_h_loc.getM(); i++)
+        for (int j = a_h_loc.getGhostsN(); j < a_h_loc.getGhostsN() + a_h_loc.getN(); j++)
+        for (int k = a_h_loc.getGhostsO(); k < a_h_loc.getGhostsO() + a_h_loc.getO(); k++)
+            for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+            for (int kk = 0; kk < 3; kk++)
+                {
+                    CAPTURE(mpi_rank, i,j,k,ii,jj,kk, mpi_coords[0], mpi_coords[1], mpi_coords[2]);                
+                    REQUIRE(a_h_loc[ii][jj][kk][i][j][k] == a_h_glob[ii][jj][kk][i][j][k]);
+                }
+        // clang-format on
+
+        mgcl::VaryingStencilGpu a_h_glob_gpu(m, n, o, 3, 1, tu.getContext(), tu.getCommands(), tu.getProgram());
+        a_h_glob_gpu.fill(a_h_glob, tu.getCommands(), true);
+
+        a_2h_glob_gpu = mgcl::MultigridEngine::galerkinOptimized(
+            a_h_glob_gpu, 1, a_h_glob.getM() >> 1, a_h_glob.getN() >> 1, a_h_glob.getO() >> 1,
+            tu.getProgram(), tu.getCommands(), tu.getContext(), nullptr, nullptr);
+
+        // a_2h_glob->dumpToFile(std::to_string(mpi_rank) + "_a_2h_glob.txt");
+    }
+
+    auto a_2h_loc = a_2h_loc_gpu->read(tu.getCommands(), true);
+
+    // Gather local approximations on rank 0 for checking.
+    if (mpi_rank > 0)
+        mgcl::mpi_util::gather(p->getMpiComm(), a_2h_loc);
+    else
+    {
+        mgcl::VaryingStencil a_2h_glob_check(m >> 1, n >> 1, o >> 1, 3, 1, 1, 1);
+
+        // copy from a_2h_loc to a_2h_glob first
+        for (int i = a_2h_loc.getGhostsM(); i < a_2h_loc.getM() + a_2h_loc.getGhostsM(); i++)
+            for (int j = a_2h_loc.getGhostsN(); j < a_2h_loc.getN() + a_2h_loc.getGhostsN(); j++)
+                for (int k = a_2h_loc.getGhostsO(); k < a_2h_loc.getO() + a_2h_loc.getGhostsO(); k++)
+                    for (int ii = 0; ii < a_2h_loc.getWidth(); ii++)
+                        for (int jj = 0; jj < a_2h_loc.getWidth(); jj++)
+                            for (int kk = 0; kk < a_2h_loc.getWidth(); kk++)
+                            {
+                                CAPTURE(i, j, k, ii, jj, kk);
+                                a_2h_glob_check[ii][jj][kk][i][j][k] = a_2h_loc[ii][jj][kk][i][j][k];
+                            }
+
+        // Gather into a_h_glob_check from other processes
+        if (mpi_size > 1)
+            mgcl::mpi_util::gather(p->getMpiComm(), a_2h_glob_check); // TODO check with different ghost amounts
+
+        auto a_2h_glob = a_2h_glob_gpu->read(tu.getCommands(), true);
+        REQUIRE(a_2h_glob_check.isEqual(a_2h_glob));
     }
 }
 
