@@ -11,6 +11,7 @@ set(SOURCES_BENCH
     bench_steps.cpp
     bench_stencil.cpp
     bench_galerkin.cpp
+    bench_galerkin_optimized.cpp
     bench_stencil_arithmetic.cpp
     bench_stencil_arithmetic_kernels.cpp
     bench_sum.cpp
