@@ -2126,7 +2126,9 @@ Point coarseToFine(Point p, int ghc, int ghf)
  * r: Fixed 3x3x3 restriction stencil.
  * p: Fixed 3x3x3 prolongation stencil.
  * mgh_f, ngh_f, ogh_f: Extends of the fine grid with ghosts.
- * m_c, n_c, o_c: Extends of the coarse grid without ghosts.
+ * m_c_loc, n_c_loc, o_c_loc: Extends of the local coarse grid without ghosts, i.e. the points that get written into.
+ * m_c_buf, n_c_buf, o_c_buf: Extends of the coarse grid buffer without ghosts. Only for calculation of the indices.
+ *   This is only different from m_c_loc etc. when using MPI and on rank 0 and on the threshold level.
  * gh_f: Amount of ghosts of the stencil on the fine grid in one direction.
  * gh_c: Amount of ghosts of the stencil on the coarse grid in one direction.
  */
@@ -2136,14 +2138,15 @@ __kernel void galerkin(
     __global double* restrict r,
     __global double* restrict p,
     const int mgh_f, const int ngh_f, const int ogh_f,
-    const int m_c, const int n_c, const int o_c,
+    const int m_c_loc, const int n_c_loc, const int o_c_loc,
+    const int m_c_buf, const int n_c_buf, const int o_c_buf,
     const int gh_f, const int gh_c)
 {
     int idx = get_global_id(0);
-    int no = n_c * o_c;
+    int no = n_c_loc * o_c_loc;
     int i = idx / no;
-    int j = (idx - i * no) / o_c;
-    int k = idx % o_c;
+    int j = (idx - i * no) / o_c_loc;
+    int k = idx % o_c_loc;
 
     // only for real cells of coarse grid
     i += gh_c;
@@ -2155,11 +2158,11 @@ __kernel void galerkin(
     int mnogh_f = mgh_f * nogh_f;
 
     // plane and grid size of ghosted coarse grid
-    int nogh_c = (n_c + 2 * gh_c) * (o_c + 2 * gh_c);
-    int mnogh_c = (m_c + 2 * gh_c) * nogh_c;
+    int nogh_c = (n_c_buf + 2 * gh_c) * (o_c_buf + 2 * gh_c);
+    int mnogh_c = (m_c_buf + 2 * gh_c) * nogh_c;
 
     // Calculate only for real cells of coarse grid
-    if (i < m_c + gh_c && j < n_c + gh_c && k < o_c + gh_c)
+    if (i < m_c_loc + gh_c && n_c_loc + gh_c && o_c_loc + gh_c)
     {
         // for (int i = a_2h->getGhostsM(); i < (a_h.getM() >> 1) + a_2h->getGhostsM(); i++)
         //     for (int j = a_2h->getGhostsN(); j < (a_h.getN() >> 1) + a_2h->getGhostsN(); j++)
@@ -2253,7 +2256,7 @@ __kernel void galerkin(
 
                     // store res in rap
                     // (*a_2h)[ii][jj][kk][i][j][k] = res;
-                    a_2h[ii * 9 * mnogh_c + jj * 3 * mnogh_c + kk * mnogh_c + i * nogh_c + j * (o_c + 2 * gh_c) + k] = res;
+                    a_2h[ii * 9 * mnogh_c + jj * 3 * mnogh_c + kk * mnogh_c + i * nogh_c + j * (o_c_buf + 2 * gh_c) + k] = res;
                 }
     }
 }

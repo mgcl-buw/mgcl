@@ -450,6 +450,9 @@ namespace mgcl
         int mgh_f = a_h.getMgh();
         int ngh_f = a_h.getNgh();
         int ogh_f = a_h.getOgh();
+        int m_c_loc = a_h.getM() >> 1;
+        int n_c_loc = a_h.getN() >> 1;
+        int o_c_loc = a_h.getO() >> 1;
         int gh_f = a_h.getGh();
         int gh_c = a_2h->getGh();
 
@@ -462,6 +465,9 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh_f);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh_f);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh_f);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m_c_loc);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n_c_loc);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o_c_loc);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &resm);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &resn);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &reso);

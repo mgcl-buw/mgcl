@@ -580,3 +580,42 @@ TEST_CASE("GalerkinC99")
 
     REQUIRE(a_2h_cpp->isEqual(*a_2h_c99));
 }
+
+// This is a regression test.
+// Checks if Galerkin is correct, if resm, resn, reso is different from the actual buffer size.
+// This happens when using MPI on the threshold level (but this test does NOT use MPI).
+TEST_CASE("galerkinOpimizedGpuCoarseGridSizeDifferentFromBufferSize")
+{
+    int m = 4;
+    int n = 4;
+    int o = 4;
+    int gh = 1;
+
+    mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+
+    mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
+    a_h.fill1dIndex(false);
+    a_h.updateGhosts();
+
+    mgcl::VaryingStencilGpu a_h_gpu(m, n, o, 3, gh, tu.getContext(), tu.getCommands(), tu.getProgram());
+    a_h_gpu.fill(a_h, tu.getCommands(), true);
+
+    auto a_2h_same_sizes_gpu = mgcl::MultigridEngine::galerkinOptimized(a_h_gpu, gh, m >> 1, n >> 1, o >> 1, tu.getProgram(), tu.getCommands(), tu.getContext(), nullptr, nullptr);
+    auto a_2h_different_sizes_gpu = mgcl::MultigridEngine::galerkinOptimized(a_h_gpu, gh, m, n, o, tu.getProgram(), tu.getCommands(), tu.getContext(), nullptr, nullptr);
+
+    auto a_2h_same_sizes = a_2h_same_sizes_gpu->read(tu.getCommands(), true);
+    auto a_2h_different_sizes = a_2h_different_sizes_gpu->read(tu.getCommands(), true);
+
+    // Check that the local portions of results are equal
+    // clang-format off
+    for (int i = gh; i < a_2h_same_sizes.getM() + gh; i++)
+    for (int j = gh; j < a_2h_same_sizes.getN() + gh; j++)
+    for (int k = gh; k < a_2h_same_sizes.getO() + gh; k++)
+        for (int ii = 0; ii < 3; ii++)
+        for (int jj = 0; jj < 3; jj++)
+        for (int kk = 0; kk < 3; kk++)
+        {
+            REQUIRE(a_2h_same_sizes[ii][jj][kk][i][j][k] == a_2h_different_sizes[ii][jj][kk][i][j][k]);
+        }
+    // clang-format on
+}
