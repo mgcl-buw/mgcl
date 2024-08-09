@@ -411,9 +411,6 @@ namespace mgcl
         // MultigridEngine::updateGhostsSeq(*tmp, &mpiData, periodic, forceLocal);
         // d_buf.write(commands, *tmp, true);
 
-        // TODO write test for whole ghosts update, check corners!
-
-        // TODO
         if (forceLocal)
         {
             MultigridEngine::updateGhosts(p, d_buf, nullptr, true);
@@ -424,7 +421,6 @@ namespace mgcl
             error("MultigridEngine::updateGhostsOclMpi: dPlanesBufPtr is null");
 
         // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
-        // TODO update check gpu storage size in problem init
         // TODO maybe disable check in UNSAFE mode
         int yz = d_buf.getNgh() * d_buf.getOgh();
         int xz = d_buf.getMgh() * d_buf.getOgh();
