@@ -175,7 +175,7 @@ namespace mgcl
         mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_MEM_ALLOC_SIZE)");
 
         // Buffers needed for each level, dependent on settings, are:
-        // Permanent: dVIn, dVOut, dF, dR, dRsq, stencilValuesGpu
+        // Permanent: dVIn, dVOut, dF, dR, dRsq, stencilValuesGpu, dPlanesBuf (if MPI is in use)
         // Temporary galerkin stencils: sr, sp
         ulong sizeNeeded = 0;
         ulong maxBufferSizeNeeded = 0;
@@ -205,6 +205,15 @@ namespace mgcl
             upd(sizeof(double) * mgh * ngh * ogh); // dVOut
             upd(sizeof(double) * mgh * ngh * ogh); // dR
             upd(sizeof(double) * ml * nl * ol);    // dRsq
+
+            // dPlanesBuf if MPI is in use
+            if (useMpi() && mpiSize() > 1)
+            {
+                int yz = ngh * ogh;
+                int xz = mgh * ogh;
+                int xy = mgh * ngh;
+                upd(sizeof(double) * 2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts);
+            }
 
             if (stencilType == MGCL_VARYING)
             {
