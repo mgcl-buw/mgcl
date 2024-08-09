@@ -9,6 +9,7 @@
 #include "opencl_helper.hpp"
 #include "profiling_data.hpp"
 #include "util.hpp"
+#include <CL/cl.h>
 #include <memory>
 
 #ifdef __APPLE__
@@ -497,6 +498,15 @@ namespace mgcl
                 }
 
         return err;
+    }
+
+    /**
+     * @brief Waits for all running OpenCL kernels to finish.
+     */
+    void Problem::finish()
+    {
+        if (openCLHelper.isInitialized())
+            mgclCheckError(clFinish(getCommands()), "clFinish");
     }
 
     /**

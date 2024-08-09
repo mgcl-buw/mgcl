@@ -205,6 +205,7 @@ namespace mgcl
         void reuseOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
         void initOpenCL();
         int readResults();
+        void finish();
 
         void solve();
         void solve(bool skipInit);
