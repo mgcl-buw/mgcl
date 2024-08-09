@@ -20,6 +20,7 @@ set(SOURCES_BENCH
     bench_steps_execution_params.cpp
     bench_ignore_tol.cpp
     bench_ghost_update.cpp
+    bench_ghost_update_galerkin.cpp
     bench_data_transfer.cpp
     bench_fill_buffer.cpp
     bench_utils.hpp # TODO refactor this
