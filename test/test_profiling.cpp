@@ -289,4 +289,21 @@ TEST_CASE("profiling_kernels")
         mgcl::util::max_abs(lv0.getDVIn(), p.getProgram(), p.getCommands(), true, &conf, p.getProfilingData());
         checkResult(p, "max_abs_partial_global_eq_x_num_elements", {global, 0, 0});
     }
+
+    SECTION("galerkinOptimized")
+    {
+        auto& lv0 = p.getLevelAt(0);
+        int resm = lv0.getM() >> 1;
+        int resn = lv0.getN() >> 1;
+        int reso = lv0.getO() >> 1;
+
+        // Change conf for kernel since problem is too small (8x8x8 would result in a wg size of 64x1x1, since
+        // the coarser grid has size 4x4x4).
+        conf["galerkin"] = mgcl::conf::KernelWorkgroupSizes{{1, {64, 1, 1}}};
+
+        mgcl::MultigridEngine::galerkinOptimized(*lv0.getStencilValuesGpu(),
+                                                 1, resm, resn, reso,
+                                                 p.getProgram(), p.getCommands(), p.getContext(), &conf, p.getProfilingData());
+        checkResult(p, "galerkin", {resm * resn * reso, 0, 0});
+    }
 }
