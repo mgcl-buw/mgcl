@@ -1,12 +1,5 @@
 /**
- * @file example_mpi.cpp
- * @author Simon Hoffmann
- * @brief This example illustrates the usage of mgcl with MPI, especially setting up the domain.
- * @version 0.1
- * @date 2023-07-24
- *
- * @copyright Copyright (c) 2023
- *
+ * This example illustrates the usage of mgcl with MPI, especially setting up the domain.
  */
 
 #include "mpi.h"

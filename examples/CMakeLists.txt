@@ -36,4 +36,13 @@ target_link_libraries(mgcl_tune PRIVATE mgcl)
 # target_link_options(mgcl_tune PRIVATE "-pg")
 target_link_libraries(mgcl_tune PRIVATE MPI::MPI_CXX)
 
+# ==========================
+# example_profile, demonstrates mgcl's kernel profiling feature
+set(SOURCES_EXAMPLE_PROFILE example_profile.cpp)
+
+add_executable(example_profile ${SOURCES_EXAMPLE_PROFILE})
+target_link_libraries(example_profile PRIVATE mgcl)
+# target_compile_options(mgcl_tune PRIVATE "-pg")
+# target_link_options(mgcl_tune PRIVATE "-pg")
+
 
