@@ -187,6 +187,18 @@ namespace mgcl
             maxBufferSizeNeeded = std::max(maxBufferSizeNeeded, inc);
         };
 
+        // dPlanesBuf if MPI is in use
+        if (useMpi() && mpiSize() > 1)
+        {
+            int mgh = m + 2 * ghosts;
+            int ngh = n + 2 * ghosts;
+            int ogh = o + 2 * ghosts;
+            int yz = ngh * ogh;
+            int xz = mgh * ogh;
+            int xy = mgh * ngh;
+            upd(sizeof(double) * 2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts);
+        }
+
         for (int l = 0; l <= maxlevel; l++)
         {
             int ml = (m >> l);
@@ -205,15 +217,6 @@ namespace mgcl
             upd(sizeof(double) * mgh * ngh * ogh); // dVOut
             upd(sizeof(double) * mgh * ngh * ogh); // dR
             upd(sizeof(double) * ml * nl * ol);    // dRsq
-
-            // dPlanesBuf if MPI is in use
-            if (useMpi() && mpiSize() > 1)
-            {
-                int yz = ngh * ogh;
-                int xz = mgh * ogh;
-                int xy = mgh * ngh;
-                upd(sizeof(double) * 2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts);
-            }
 
             if (stencilType == MGCL_VARYING)
             {
