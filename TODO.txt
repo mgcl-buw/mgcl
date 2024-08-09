@@ -22,23 +22,9 @@
 - refactor OCLWrapper?
 - benchmark OpenCLHelper::readKernelFile true or false
 - thoroughly test KernelConfig
-- rework mpi ghost update
-  [x] kernel extract border planes
-  [x] add CuboidGpu::extractBorderPlanes and test
-  [ ] kernel paste border planes to ghosts
-  [ ] add CuboidGpu::pasteBorderPlanesIntoGhosts and test
-  [ ] update mpi ghost update:
-    1. call extract kernel
-    2. read buffer from gpu
-    3. send to neighbours
-    4. write buffer to gpu
-    5. call paste kernel
-- optimize Galerkin (RAP)
-  [x] trace matrix mult
-  [ ] matrix entry to stencil indices function
-  [ ] convert trace to stencil notation
-  [ ] find pattern in trace
-  [ ] test against galerkin with full stencil mult
+- rework ocl mpi ghost update for stencilValues (like for Cuboid)
+- optimize kernel layout of optimized galerkin kernel
+- remove stencil multiplication stuff
 
 Done:
 - aggregate residual norm on gpu
@@ -106,3 +92,20 @@ Done:
   [x] in each kernel driver method, add instructions using if-directives. Kernel returning info:
     - atomic kernel call: updateGhosts, restrict, prolongate, correct_error, 
     - multiple kernel calls: residual (residual, residual_squared), jacobi (multiple iters), varstencil_multiply (update_ghosts, mult)
+- rework mpi ghost update
+  [x] kernel extract border planes
+  [x] add CuboidGpu::extractBorderPlanes and test
+  [x] kernel paste border planes to ghosts
+  [x] add CuboidGpu::pasteBorderPlanesIntoGhosts and test
+  [x] update mpi ghost update:
+    1. call extract kernel
+    2. read buffer from gpu
+    3. send to neighbours
+    4. write buffer to gpu
+    5. call paste kernel
+- (08-2024) optimize Galerkin (RAP)
+  [x] trace matrix mult
+  [x] matrix entry to stencil indices function
+  [x] convert trace to stencil notation
+  [x] find pattern in trace
+  [x] test against galerkin with full stencil mult
