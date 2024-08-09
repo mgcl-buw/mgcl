@@ -149,7 +149,7 @@ TEST_CASE("Problem::checkGpuSizes")
     SECTION("not enough space available (on Quadro, varying stencil)")
     {
         // Quadro can't handle 128^3 AND varying stencil
-        int N = 128;
+        int N = 256;
 
         if (!mgcl_test::TestUtility::deviceAvailable("Quadro", CL_DEVICE_TYPE_GPU))
         {
