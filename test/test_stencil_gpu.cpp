@@ -1922,9 +1922,9 @@ TEST_CASE("VaryingStencilGpu::extract_border_planes")
                 if (cnt == ghosts_m * yz * 27)
                     REQUIRE(idx == 0);
 
-                int i = idx / yz + m;
-                int j = (idx - (i - m) * yz) / ogh;
-                int k = idx % ogh;
+                int i = idx_grid / yz + m;
+                int j = (idx_grid - (i - m) * yz) / ogh;
+                int k = idx_grid % ogh;
 
                 REQUIRE(idx_resbuf == cnt);
 
@@ -1941,9 +1941,9 @@ TEST_CASE("VaryingStencilGpu::extract_border_planes")
                 if (cnt == 2 * ghosts_m * yz * 27)
                     REQUIRE(idx == 0);
 
-                int j = idx / xz + ghosts_n;
-                int i = (idx - (j - ghosts_n) * xz) / ogh;
-                int k = idx % ogh;
+                int j = idx_grid / xz + ghosts_n;
+                int i = (idx_grid - (j - ghosts_n) * xz) / ogh;
+                int k = idx_grid % ogh;
 
                 REQUIRE(idx_resbuf == cnt);
 
@@ -1960,9 +1960,9 @@ TEST_CASE("VaryingStencilGpu::extract_border_planes")
                 if (cnt == (2 * ghosts_m * yz + ghosts_n * xz) * 27)
                     REQUIRE(idx == 0);
 
-                int j = idx / xz + n;
-                int i = (idx - (j - n) * xz) / ogh;
-                int k = idx % ogh;
+                int j = idx_grid / xz + n;
+                int i = (idx_grid - (j - n) * xz) / ogh;
+                int k = idx_grid % ogh;
 
                 REQUIRE(idx_resbuf == cnt);
 
@@ -1979,9 +1979,9 @@ TEST_CASE("VaryingStencilGpu::extract_border_planes")
                 if (cnt == (2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27)
                     REQUIRE(idx == 0);
 
-                int k = idx / xy + ghosts_o;
-                int i = (idx - (k - ghosts_o) * xy) / ngh;
-                int j = idx % ngh;
+                int k = idx_grid / xy + ghosts_o;
+                int i = (idx_grid - (k - ghosts_o) * xy) / ngh;
+                int j = idx_grid % ngh;
 
                 REQUIRE(idx_resbuf == cnt);
 
@@ -1998,9 +1998,9 @@ TEST_CASE("VaryingStencilGpu::extract_border_planes")
                 if (cnt == (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27)
                     REQUIRE(idx == 0);
 
-                int k = idx / xy + o;
-                int i = (idx - (k - o) * xy) / ngh;
-                int j = idx % ngh;
+                int k = idx_grid / xy + o;
+                int i = (idx_grid - (k - o) * xy) / ngh;
+                int j = idx_grid % ngh;
 
                 REQUIRE(idx_resbuf == cnt);
 
@@ -2017,58 +2017,76 @@ TEST_CASE("VaryingStencilGpu::extract_border_planes")
 
         int cnt = 0;
         // front planes (yz)
-        for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
-            for (int j = 0; j < ngh; j++)             // all real cells in y-dir
-                for (int k = 0; k < ogh; k++)         // all real cells in z-dir
-                    for (int ii = 0; ii < 3; ii++)
-                        for (int jj = 0; jj < 3; jj++)
-                            for (int kk = 0; kk < 3; kk++)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
+                        for (int j = 0; j < ngh; j++)             // all real cells in y-dir
+                            for (int k = 0; k < ogh; k++)         // all real cells in z-dir
+                            {
+                                CAPTURE(cnt, ii, jj, kk, i, j, k);
                                 REQUIRE(buf_res[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+                            }
 
         // back planes (yz)
-        for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
-            for (int j = 0; j < ngh; j++)      // all real cells in y-dir
-                for (int k = 0; k < ogh; k++)  // all real cells in z-dir
-                    for (int ii = 0; ii < 3; ii++)
-                        for (int jj = 0; jj < 3; jj++)
-                            for (int kk = 0; kk < 3; kk++)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
+                        for (int j = 0; j < ngh; j++)      // all real cells in y-dir
+                            for (int k = 0; k < ogh; k++)  // all real cells in z-dir
+                            {
+                                CAPTURE(cnt, ii, jj, kk, i, j, k);
                                 REQUIRE(buf_res[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+                            }
 
         // top planes (xz)
-        for (int j = ghosts_n; j < 2 * ghosts_n; j++)
-            for (int i = 0; i < mgh; i++)
-                for (int k = 0; k < ogh; k++)
-                    for (int ii = 0; ii < 3; ii++)
-                        for (int jj = 0; jj < 3; jj++)
-                            for (int kk = 0; kk < 3; kk++)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int j = ghosts_n; j < 2 * ghosts_n; j++)
+                        for (int i = 0; i < mgh; i++)
+                            for (int k = 0; k < ogh; k++)
+                            {
+                                CAPTURE(cnt, ii, jj, kk, i, j, k);
                                 REQUIRE(buf_res[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+                            }
 
         // bottom planes (xz)
-        for (int j = n; j < n + ghosts_n; j++)
-            for (int i = 0; i < mgh; i++)
-                for (int k = 0; k < ogh; k++)
-                    for (int ii = 0; ii < 3; ii++)
-                        for (int jj = 0; jj < 3; jj++)
-                            for (int kk = 0; kk < 3; kk++)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int j = n; j < n + ghosts_n; j++)
+                        for (int i = 0; i < mgh; i++)
+                            for (int k = 0; k < ogh; k++)
+                            {
+                                CAPTURE(cnt, ii, jj, kk, i, j, k);
                                 REQUIRE(buf_res[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+                            }
 
         // left planes (xy)
-        for (int k = ghosts_o; k < 2 * ghosts_o; k++)
-            for (int i = 0; i < mgh; i++)
-                for (int j = 0; j < ngh; j++)
-                    for (int ii = 0; ii < 3; ii++)
-                        for (int jj = 0; jj < 3; jj++)
-                            for (int kk = 0; kk < 3; kk++)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int k = ghosts_o; k < 2 * ghosts_o; k++)
+                        for (int i = 0; i < mgh; i++)
+                            for (int j = 0; j < ngh; j++)
+                            {
+                                CAPTURE(cnt, ii, jj, kk, i, j, k);
                                 REQUIRE(buf_res[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+                            }
 
         // right planes (xy)
-        for (int k = o; k < o + ghosts_o; k++)
-            for (int i = 0; i < mgh; i++)
-                for (int j = 0; j < ngh; j++)
-                    for (int ii = 0; ii < 3; ii++)
-                        for (int jj = 0; jj < 3; jj++)
-                            for (int kk = 0; kk < 3; kk++)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int k = o; k < o + ghosts_o; k++)
+                        for (int i = 0; i < mgh; i++)
+                            for (int j = 0; j < ngh; j++)
+                            {
+                                CAPTURE(cnt, ii, jj, kk, i, j, k);
                                 REQUIRE(buf_res[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+                            }
     }
 
     // SECTION("throwing")
