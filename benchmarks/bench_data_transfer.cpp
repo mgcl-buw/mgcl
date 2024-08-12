@@ -84,6 +84,7 @@ TEST_CASE("bench_data_transfer_host_device")
         mgcl::Problem p(1, 1, 1, f, v);
         p.setUseOpencl(true);
         p.setSilent(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         // p.setMpiComm(mpi_comm);
         p.init();
 
