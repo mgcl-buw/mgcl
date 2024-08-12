@@ -1889,8 +1889,6 @@ TEST_CASE("VaryingStencilGpu::extract_border_planes")
         for (int cnt = 0; cnt < ressize; cnt++)
         {
             int idx = cnt; // global output buffer index
-            // int idx_coeff = idx / gridsize; // index of the coefficient, i.e. 0,0,0 = 0, 0,0,1 = 1 etc. (acts like an offset)
-            // int idx_grid = idx - idx_coeff; // local index of the grid point inside the grid of one coefficient
             // plane sizes
             // int yz = 27 * ngh * ogh;
             // int xz = 27 * mgh * ogh;

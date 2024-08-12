@@ -31,6 +31,8 @@ namespace mgcl::conf
         ret["update_ghosts_periodic"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
         ret["extract_border_planes"] = KernelWorkgroupSizes{{1, {32, 1, 1}}};
         ret["paste_ghosts_from_border_planes"] = KernelWorkgroupSizes{{1, {32, 1, 1}}};
+        ret["extract_border_planes_varying_stencil"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
+        ret["paste_ghosts_from_border_planes_varying_stencil"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
 
         // Copy buffer kernels
         ret["copy_input_data"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};

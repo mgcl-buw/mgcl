@@ -990,6 +990,95 @@ namespace mgcl
         return a_2h;
     }
 
+    /**
+     * @brief Extracts the border planes of the varying stencil.
+     *
+     * @param commands OpenCL command queue
+     * @param program OpenCL program
+     * @param d_target VaryingStencilGpu that data gets extracted into.
+     * @param h_target std::vector<double> that data gets extracted into.
+     */
+    void VaryingStencilGpu::extractBorderPlanes(cl_command_queue commands, cl_program program,
+                                                VaryingStencilGpu& d_target, std::vector<double>& h_target,
+                                                mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
+    {
+        // Plane sizes
+        int yz = getNgh() * getOgh();
+        int xz = getMgh() * getOgh();
+        int xy = getMgh() * getNgh();
+        int ghosts_m = getGh();
+        int ghosts_n = getGh();
+        int ghosts_o = getGh();
+        int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
+
+        if (ghosts_m > m || ghosts_n > n || ghosts_o > o)
+            error("CuboidGpu::extractBorderPlanes: Only defined for ghosts <= m, n, o");
+
+        int err;
+
+        // Create the compute kernel from the program
+        const char* kernelName = "extract_border_planes_varying_stencil";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
+        mgcl::mgclCheckError(err, "clCreateKernel");
+
+        int mgh = getMgh();
+        int ngh = getNgh();
+        int ogh = getOgh();
+
+        // assign kernel arguments
+        cl_mem d_target_buffer = d_target.getBuf();
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_target_buffer);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
+        size_t global = ressize;
+        size_t local = 32;
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, global);
+            local = c[0];
+        }
+
+        if (global % local != 0)
+            global += local - (global % local);
+
+        cl_event ev;
+
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing extract_border_planes_varying_stencil kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(commands, ev, kernelName,
+                               {global, 0, 0},
+                               {local, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        mgcl::mgclCheckError(clFinish(commands), "clFinish");
+
+        err = clReleaseKernel(kernel);
+        mgcl::mgclCheckError(err, "Releasing extract_border_planes_varying_stencil kernel");
+
+        // Read into h_target
+        err = clEnqueueReadBuffer(commands, buf, CL_FALSE, 0, sizeof(double) * ressize,
+                                  h_target.data(), 0, NULL, NULL);
+        mgcl::mgclCheckError(err, "clEnqueueReadBuffer");
+    }
+
     int VaryingStencilGpu::getM() const
     {
         return m;

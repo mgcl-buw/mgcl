@@ -143,6 +143,10 @@ namespace mgcl
             int ghout, mgcl::conf::KernelConfig* conf, ProfilingData* pd,
             int resm = 0, int resn = 0, int reso = 0);
 
+        void extractBorderPlanes(cl_command_queue commands, cl_program program,
+                                 VaryingStencilGpu& d_target, std::vector<double>& h_target,
+                                 mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
+
         int getM() const;
         int getN() const;
         int getO() const;
