@@ -1,4 +1,5 @@
 #include <catch2/catch_approx.hpp>
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -1853,4 +1854,354 @@ TEST_CASE("FixedStencilGpu::create3dBilinearProlongationStencilGpu")
     REQUIRE(r[2][2][0] == 1 * factor);
     REQUIRE(r[2][2][1] == 2 * factor);
     REQUIRE(r[2][2][2] == 1 * factor);
+}
+
+TEST_CASE("VaryingStencilGpu::extract_border_planes")
+{
+    SECTION("indices")
+    {
+        int m = 3;
+        int n = 5;
+        int o = 7;
+        int ghosts_m = 1;
+        int ghosts_n = 2;
+        int ghosts_o = 3;
+        int mgh = m + 2 * ghosts_m;
+        int ngh = n + 2 * ghosts_n;
+        int ogh = o + 2 * ghosts_o;
+        int yz = ngh * ogh;
+        int xz = mgh * ogh;
+        int xy = mgh * ngh;
+        int gridsize = mgh * ngh * ogh;
+        int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27;
+
+        mgcl::VaryingStencil h_stencil(m, n, o, 3, ghosts_m, ghosts_n, ghosts_o);
+        h_stencil.fill1dIndex(false);
+        const double* buf_stencil = h_stencil.field1d().data();
+
+        // 1d result buffer
+        double buf_res[ressize];
+        for (size_t i = 0; i < ressize; i++)
+        {
+            buf_res[i] = -1;
+        }
+
+        for (int cnt = 0; cnt < ressize; cnt++)
+        {
+            int idx = cnt; // global output buffer index
+            // int idx_coeff = idx / gridsize; // index of the coefficient, i.e. 0,0,0 = 0, 0,0,1 = 1 etc. (acts like an offset)
+            // int idx_grid = idx - idx_coeff; // local index of the grid point inside the grid of one coefficient
+            // plane sizes
+            // int yz = 27 * ngh * ogh;
+            // int xz = 27 * mgh * ogh;
+            // int xy = 27 * mgh * ngh;
+
+            // TODO
+
+            // Front planes (for each coefficient)
+            if (idx < ghosts_m * yz * 27)
+            {
+                REQUIRE(idx == cnt);
+
+                int idx_coeff = idx / (ghosts_m * yz);            // 1d index of the current coefficient
+                int idx_grid = idx - idx_coeff * (ghosts_m * yz); // local index of the grid point inside the grid of one coefficient
+
+                int i = idx_grid / yz + ghosts_m;
+                int j = (idx_grid - (i - ghosts_m) * yz) / ogh;
+                int k = idx_grid % ogh;
+                buf_res[idx] = buf_stencil[idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
+            }
+            // Back planes
+            else if (idx < 2 * ghosts_m * yz * 27)
+            {
+                int idx_resbuf = idx;
+                idx -= ghosts_m * yz * 27;                        // reset to 0 for index calculation
+                int idx_coeff = idx / (ghosts_m * yz);            // 1d index of the current coefficient
+                int idx_grid = idx - idx_coeff * (ghosts_m * yz); // local index of the grid point inside the grid of one coefficient
+
+                if (cnt == ghosts_m * yz * 27)
+                    REQUIRE(idx == 0);
+
+                int i = idx / yz + m;
+                int j = (idx - (i - m) * yz) / ogh;
+                int k = idx % ogh;
+
+                REQUIRE(idx_resbuf == cnt);
+
+                buf_res[idx_resbuf] = buf_stencil[idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
+            }
+            // Top planes
+            else if (idx < (2 * ghosts_m * yz + ghosts_n * xz) * 27)
+            {
+                int idx_resbuf = idx;
+                idx -= 2 * ghosts_m * yz * 27;                    // reset to 0 for index calculation
+                int idx_coeff = idx / (ghosts_n * xz);            // 1d index of the current coefficient
+                int idx_grid = idx - idx_coeff * (ghosts_n * xz); // local index of the grid point inside the grid of one coefficient
+
+                if (cnt == 2 * ghosts_m * yz * 27)
+                    REQUIRE(idx == 0);
+
+                int j = idx / xz + ghosts_n;
+                int i = (idx - (j - ghosts_n) * xz) / ogh;
+                int k = idx % ogh;
+
+                REQUIRE(idx_resbuf == cnt);
+
+                buf_res[idx_resbuf] = buf_stencil[idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
+            }
+            // Bottom planes
+            else if (idx < (2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27)
+            {
+                int idx_resbuf = idx;
+                idx -= (2 * ghosts_m * yz + ghosts_n * xz) * 27;  // reset to 0 for index calculation
+                int idx_coeff = idx / (ghosts_n * xz);            // 1d index of the current coefficient
+                int idx_grid = idx - idx_coeff * (ghosts_n * xz); // local index of the grid point inside the grid of one coefficient
+
+                if (cnt == (2 * ghosts_m * yz + ghosts_n * xz) * 27)
+                    REQUIRE(idx == 0);
+
+                int j = idx / xz + n;
+                int i = (idx - (j - n) * xz) / ogh;
+                int k = idx % ogh;
+
+                REQUIRE(idx_resbuf == cnt);
+
+                buf_res[idx_resbuf] = buf_stencil[idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
+            }
+            // Left planes
+            else if (idx < (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27)
+            {
+                int idx_resbuf = idx;
+                idx -= (2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27; // reset to 0 for index calculation
+                int idx_coeff = idx / (ghosts_o * xy);               // 1d index of the current coefficient
+                int idx_grid = idx - idx_coeff * (ghosts_o * xy);    // local index of the grid point inside the grid of one coefficient
+
+                if (cnt == (2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27)
+                    REQUIRE(idx == 0);
+
+                int k = idx / xy + ghosts_o;
+                int i = (idx - (k - ghosts_o) * xy) / ngh;
+                int j = idx % ngh;
+
+                REQUIRE(idx_resbuf == cnt);
+
+                buf_res[idx_resbuf] = buf_stencil[idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
+            }
+            // Right planes
+            else if (idx < (2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy) * 27)
+            {
+                int idx_resbuf = idx;
+                idx -= (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27; // reset to 0 for index calculation
+                int idx_coeff = idx / (ghosts_o * xy);                               // 1d index of the current coefficient
+                int idx_grid = idx - idx_coeff * (ghosts_o * xy);                    // local index of the grid point inside the grid of one coefficient
+
+                if (cnt == (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27)
+                    REQUIRE(idx == 0);
+
+                int k = idx / xy + o;
+                int i = (idx - (k - o) * xy) / ngh;
+                int j = idx % ngh;
+
+                REQUIRE(idx_resbuf == cnt);
+
+                buf_res[idx_resbuf] = buf_stencil[idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
+            }
+        }
+
+        // Check that every index was written to
+        for (size_t i = 0; i < ressize; i++)
+        {
+            CAPTURE(i, ressize);
+            REQUIRE(buf_res[i] >= 0);
+        }
+
+        int cnt = 0;
+        // front planes (yz)
+        for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
+            for (int j = 0; j < ngh; j++)             // all real cells in y-dir
+                for (int k = 0; k < ogh; k++)         // all real cells in z-dir
+                    for (int ii = 0; ii < 3; ii++)
+                        for (int jj = 0; jj < 3; jj++)
+                            for (int kk = 0; kk < 3; kk++)
+                                REQUIRE(buf_res[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+
+        // back planes (yz)
+        for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
+            for (int j = 0; j < ngh; j++)      // all real cells in y-dir
+                for (int k = 0; k < ogh; k++)  // all real cells in z-dir
+                    for (int ii = 0; ii < 3; ii++)
+                        for (int jj = 0; jj < 3; jj++)
+                            for (int kk = 0; kk < 3; kk++)
+                                REQUIRE(buf_res[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+
+        // top planes (xz)
+        for (int j = ghosts_n; j < 2 * ghosts_n; j++)
+            for (int i = 0; i < mgh; i++)
+                for (int k = 0; k < ogh; k++)
+                    for (int ii = 0; ii < 3; ii++)
+                        for (int jj = 0; jj < 3; jj++)
+                            for (int kk = 0; kk < 3; kk++)
+                                REQUIRE(buf_res[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+
+        // bottom planes (xz)
+        for (int j = n; j < n + ghosts_n; j++)
+            for (int i = 0; i < mgh; i++)
+                for (int k = 0; k < ogh; k++)
+                    for (int ii = 0; ii < 3; ii++)
+                        for (int jj = 0; jj < 3; jj++)
+                            for (int kk = 0; kk < 3; kk++)
+                                REQUIRE(buf_res[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+
+        // left planes (xy)
+        for (int k = ghosts_o; k < 2 * ghosts_o; k++)
+            for (int i = 0; i < mgh; i++)
+                for (int j = 0; j < ngh; j++)
+                    for (int ii = 0; ii < 3; ii++)
+                        for (int jj = 0; jj < 3; jj++)
+                            for (int kk = 0; kk < 3; kk++)
+                                REQUIRE(buf_res[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+
+        // right planes (xy)
+        for (int k = o; k < o + ghosts_o; k++)
+            for (int i = 0; i < mgh; i++)
+                for (int j = 0; j < ngh; j++)
+                    for (int ii = 0; ii < 3; ii++)
+                        for (int jj = 0; jj < 3; jj++)
+                            for (int kk = 0; kk < 3; kk++)
+                                REQUIRE(buf_res[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+    }
+
+    // SECTION("throwing")
+    // {
+    //     // Create dummy problem
+    //     auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    //     auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    //     mgcl::Problem p(1, 1, 1, f, v);
+    //     p.setUseOpencl(true);
+    //     p.setDeviceType(CL_DEVICE_TYPE_GPU);
+    //     p.init();
+
+    //     {
+    //         mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 2, 1, 1);
+    //         REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
+    //     }
+    //     {
+    //         mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 2, 1);
+    //         REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
+    //     }
+    //     {
+    //         mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 1, 2);
+    //         REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
+    //     }
+    // }
+
+    // SECTION("success")
+    // {
+    //     // Create dummy problem
+    //     auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    //     auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    //     mgcl::Problem p(1, 1, 1, f, v);
+    //     p.setUseOpencl(true);
+    //     p.setDeviceType(CL_DEVICE_TYPE_GPU);
+    //     p.init();
+
+    //     int m = 3;
+    //     int n = 5;
+    //     int o = 7;
+    //     int ghosts_m = 1;
+    //     int ghosts_n = 2;
+    //     int ghosts_o = 3;
+    //     int mgh = m + 2 * ghosts_m;
+    //     int ngh = n + 2 * ghosts_n;
+    //     int ogh = o + 2 * ghosts_o;
+    //     int yz = ngh * ogh;
+    //     int xz = mgh * ogh;
+    //     int xy = mgh * ngh;
+    //     int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
+
+    //     mgcl::Cuboid h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+    //     h_cuboid.fill1dIndex(false);
+
+    //     mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_cuboid);
+
+    //     auto check = [&](mgcl::Cuboid& extractedBorders) { //
+    //         const double* data_borders = extractedBorders.field1d().data();
+
+    //         int cnt = 0;
+    //         // front planes (yz)
+    //         for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
+    //             for (int j = 0; j < ngh; j++)             // all cells in y-dir
+    //                 for (int k = 0; k < ogh; k++)         // all cells in z-dir
+    //                 {
+    //                     CAPTURE(i, j, k, cnt);
+    //                     REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
+    //                 }
+
+    //         // back planes (yz)
+    //         for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
+    //             for (int j = 0; j < ngh; j++)      // all cells in y-dir
+    //                 for (int k = 0; k < ogh; k++)  // all cells in z-dir
+    //                     REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
+
+    //         // top planes (xz)
+    //         for (int j = ghosts_n; j < 2 * ghosts_n; j++)
+    //             for (int i = 0; i < mgh; i++)
+    //                 for (int k = 0; k < ogh; k++)
+    //                     REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
+
+    //         // bottom planes (xz)
+    //         for (int j = n; j < n + ghosts_n; j++)
+    //             for (int i = 0; i < mgh; i++)
+    //                 for (int k = 0; k < ogh; k++)
+    //                     REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
+
+    //         // left planes (xy)
+    //         for (int k = ghosts_o; k < 2 * ghosts_o; k++)
+    //             for (int i = 0; i < mgh; i++)
+    //                 for (int j = 0; j < ngh; j++)
+    //                     REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
+
+    //         // right planes (xy)
+    //         for (int k = o; k < o + ghosts_o; k++)
+    //             for (int i = 0; i < mgh; i++)
+    //                 for (int j = 0; j < ngh; j++)
+    //                     REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
+    //     };
+
+    //     SECTION("no_reuse")
+    //     {
+    //         auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr);
+    //         REQUIRE(ret != nullptr);
+    //         check(*ret);
+    //     }
+
+    //     SECTION("reuse_both")
+    //     {
+    //         mgcl::Cuboid h_ret(1, 1, ressize, 0, 0, 0);
+    //         h_ret.fill(-1, false);
+    //         mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_ret);
+
+    //         c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, &h_ret, nullptr, nullptr);
+    //         check(h_ret);
+    //     }
+
+    //     SECTION("reuse_return_buffer")
+    //     {
+    //         mgcl::Cuboid h_ret(1, 1, ressize, 0, 0, 0);
+    //         h_ret.fill(-1, false);
+
+    //         auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, &h_ret, nullptr, nullptr);
+    //         REQUIRE(ret == nullptr);
+    //         check(h_ret);
+    //     }
+
+    //     SECTION("reuse_device_buffer")
+    //     {
+    //         mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, 1, 1, ressize, 0, 0, 0);
+    //         d_tmp.fill(p.getProgram(), p.getCommands(), -1, false, &p.getKernelConfig(), p.getProfilingData());
+
+    //         auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr, nullptr, nullptr);
+    //         check(*ret);
+    //     }
+    // }
 }
