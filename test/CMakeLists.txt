@@ -33,7 +33,9 @@ set(SOURCES_TEST
     test_correct_error.cpp
     ocl_wrapper.hpp
     ocl_wrapper.cpp
-    mpi/catch2_main_mpi.cpp)
+    mpi/catch2_main_mpi.cpp
+    test_buffer_gpu.cpp    
+)
 
 add_executable(tests ${SOURCES_TEST} ${BACKWARD_ENABLE})
 add_backward(tests)
