@@ -1,6 +1,7 @@
 #ifndef MGCL_STENCIL_HPP
 #define MGCL_STENCIL_HPP
 
+#include "buffer_gpu.hpp"
 #include "kernel_config.hpp"
 #include "profiling_data.hpp"
 #include <algorithm>
@@ -144,7 +145,7 @@ namespace mgcl
             int resm = 0, int resn = 0, int reso = 0);
 
         void extractBorderPlanes(cl_command_queue commands, cl_program program,
-                                 VaryingStencilGpu& d_target, std::vector<double>& h_target,
+                                 BufferGpu& d_target, std::vector<double>& h_target,
                                  mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
         int getM() const;

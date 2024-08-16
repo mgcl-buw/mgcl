@@ -2707,13 +2707,12 @@ __kernel void extract_border_planes_varying_stencil(
     // size of the ghosted grid
     int gridsize = mgh * ngh * ogh;
 
-    // Get buf_sv's 1d and 3d indices
+    // wi-index = index in output buffer buf_res
     int idx = get_global_id(0);
 
     // Front planes (for each coefficient)
     if (idx < ghosts_m * yz * 27)
     {
-
         int idx_coeff = idx / (ghosts_m * yz);            // 1d index of the current coefficient
         int idx_grid = idx - idx_coeff * (ghosts_m * yz); // local index of the grid point inside the grid of one coefficient
 

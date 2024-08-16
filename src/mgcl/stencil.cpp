@@ -1,4 +1,5 @@
 #include "stencil.hpp"
+#include "buffer_gpu.hpp"
 #include "kernel_config.hpp"
 #include "mgcl.hpp"
 #include "mpi_stencil.hpp"
@@ -999,7 +1000,7 @@ namespace mgcl
      * @param h_target std::vector<double> that data gets extracted into.
      */
     void VaryingStencilGpu::extractBorderPlanes(cl_command_queue commands, cl_program program,
-                                                VaryingStencilGpu& d_target, std::vector<double>& h_target,
+                                                BufferGpu& d_target, std::vector<double>& h_target,
                                                 mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
         // Plane sizes
@@ -1009,10 +1010,10 @@ namespace mgcl
         int ghosts_m = getGh();
         int ghosts_n = getGh();
         int ghosts_o = getGh();
-        int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
+        int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27;
 
         if (ghosts_m > m || ghosts_n > n || ghosts_o > o)
-            error("CuboidGpu::extractBorderPlanes: Only defined for ghosts <= m, n, o");
+            error("VaryingStencilGpu::extractBorderPlanes: Only defined for ghosts <= m, n, o");
 
         int err;
 
@@ -1068,15 +1069,11 @@ namespace mgcl
         }
         mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
-        mgcl::mgclCheckError(clFinish(commands), "clFinish");
-
         err = clReleaseKernel(kernel);
         mgcl::mgclCheckError(err, "Releasing extract_border_planes_varying_stencil kernel");
 
         // Read into h_target
-        err = clEnqueueReadBuffer(commands, buf, CL_FALSE, 0, sizeof(double) * ressize,
-                                  h_target.data(), 0, NULL, NULL);
-        mgcl::mgclCheckError(err, "clEnqueueReadBuffer");
+        d_target.read(commands, h_target.data(), false);
     }
 
     int VaryingStencilGpu::getM() const

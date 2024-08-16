@@ -1,3 +1,4 @@
+#include <CL/cl.h>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -7,6 +8,7 @@
 #include <ctgmath>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/multigrid_engine.hpp"
@@ -1864,8 +1866,8 @@ TEST_CASE("VaryingStencilGpu::extract_border_planes")
         int n = 5;
         int o = 7;
         int ghosts_m = 1;
-        int ghosts_n = 2;
-        int ghosts_o = 3;
+        int ghosts_n = 1; // 2;
+        int ghosts_o = 1; // 3;
         int mgh = m + 2 * ghosts_m;
         int ngh = n + 2 * ghosts_n;
         int ogh = o + 2 * ghosts_o;
@@ -1893,8 +1895,6 @@ TEST_CASE("VaryingStencilGpu::extract_border_planes")
             // int yz = 27 * ngh * ogh;
             // int xz = 27 * mgh * ogh;
             // int xy = 27 * mgh * ngh;
-
-            // TODO
 
             // Front planes (for each coefficient)
             if (idx < ghosts_m * yz * 27)
@@ -2087,137 +2087,107 @@ TEST_CASE("VaryingStencilGpu::extract_border_planes")
                             }
     }
 
-    // SECTION("throwing")
-    // {
-    //     // Create dummy problem
-    //     auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-    //     auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-    //     mgcl::Problem p(1, 1, 1, f, v);
-    //     p.setUseOpencl(true);
-    //     p.setDeviceType(CL_DEVICE_TYPE_GPU);
-    //     p.init();
+    SECTION("success")
+    {
+        // Create dummy problem
+        auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        mgcl::Problem p(1, 1, 1, f, v);
+        p.setUseOpencl(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setProfilingEnabled(true);
+        p.init();
 
-    //     {
-    //         mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 2, 1, 1);
-    //         REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
-    //     }
-    //     {
-    //         mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 2, 1);
-    //         REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
-    //     }
-    //     {
-    //         mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 1, 2);
-    //         REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
-    //     }
-    // }
+        int m = 3;
+        int n = 5;
+        int o = 7;
+        int ghosts_m = 1;
+        int ghosts_n = 1; // VaryingStencilGpu currently does not support different ghosts per dimension
+        int ghosts_o = 1;
+        int mgh = m + 2 * ghosts_m;
+        int ngh = n + 2 * ghosts_n;
+        int ogh = o + 2 * ghosts_o;
+        int yz = ngh * ogh;
+        int xz = mgh * ogh;
+        int xy = mgh * ngh;
+        int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27;
 
-    // SECTION("success")
-    // {
-    //     // Create dummy problem
-    //     auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-    //     auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-    //     mgcl::Problem p(1, 1, 1, f, v);
-    //     p.setUseOpencl(true);
-    //     p.setDeviceType(CL_DEVICE_TYPE_GPU);
-    //     p.init();
+        mgcl::VaryingStencil h_stencil(m, n, o, 3, ghosts_m, ghosts_n, ghosts_o);
+        h_stencil.fill1dIndex(false);
+        const double* buf_stencil = h_stencil.field1d().data();
 
-    //     int m = 3;
-    //     int n = 5;
-    //     int o = 7;
-    //     int ghosts_m = 1;
-    //     int ghosts_n = 2;
-    //     int ghosts_o = 3;
-    //     int mgh = m + 2 * ghosts_m;
-    //     int ngh = n + 2 * ghosts_n;
-    //     int ogh = o + 2 * ghosts_o;
-    //     int yz = ngh * ogh;
-    //     int xz = mgh * ogh;
-    //     int xy = mgh * ngh;
-    //     int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
+        mgcl::VaryingStencilGpu d_stencil(m, n, o, 3, ghosts_m, p.getContext(), p.getCommands(), p.getProgram());
+        d_stencil.fill(h_stencil, p.getCommands(), true);
 
-    //     mgcl::Cuboid h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o);
-    //     h_cuboid.fill1dIndex(false);
+        std::vector<double> h_ret(ressize, -1);
+        mgcl::BufferGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, ressize);
 
-    //     mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_cuboid);
+        d_stencil.extractBorderPlanes(p.getCommands(), p.getProgram(), d_tmp, h_ret, &p.getKernelConfig(), p.getProfilingData());
+        p.finish();
 
-    //     auto check = [&](mgcl::Cuboid& extractedBorders) { //
-    //         const double* data_borders = extractedBorders.field1d().data();
+        // Check that every index was written to
+        for (size_t i = 0; i < ressize; i++)
+        {
+            CAPTURE(i, ressize);
+            REQUIRE(h_ret[i] >= 0);
+        }
 
-    //         int cnt = 0;
-    //         // front planes (yz)
-    //         for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
-    //             for (int j = 0; j < ngh; j++)             // all cells in y-dir
-    //                 for (int k = 0; k < ogh; k++)         // all cells in z-dir
-    //                 {
-    //                     CAPTURE(i, j, k, cnt);
-    //                     REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-    //                 }
+        int cnt = 0;
+        // front planes (yz)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
+                        for (int j = 0; j < ngh; j++)             // all cells in y-dir
+                            for (int k = 0; k < ogh; k++)         // all cells in z-dir
+                            {
+                                CAPTURE(i, j, k, ii, jj, kk, cnt);
+                                REQUIRE(h_ret[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+                            }
 
-    //         // back planes (yz)
-    //         for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
-    //             for (int j = 0; j < ngh; j++)      // all cells in y-dir
-    //                 for (int k = 0; k < ogh; k++)  // all cells in z-dir
-    //                     REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
+        // back planes (yz)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
+                        for (int j = 0; j < ngh; j++)      // all cells in y-dir
+                            for (int k = 0; k < ogh; k++)  // all cells in z-dir
+                                REQUIRE(h_ret[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
 
-    //         // top planes (xz)
-    //         for (int j = ghosts_n; j < 2 * ghosts_n; j++)
-    //             for (int i = 0; i < mgh; i++)
-    //                 for (int k = 0; k < ogh; k++)
-    //                     REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
+        // top planes (xz)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int j = ghosts_n; j < 2 * ghosts_n; j++)
+                        for (int i = 0; i < mgh; i++)
+                            for (int k = 0; k < ogh; k++)
+                                REQUIRE(h_ret[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
 
-    //         // bottom planes (xz)
-    //         for (int j = n; j < n + ghosts_n; j++)
-    //             for (int i = 0; i < mgh; i++)
-    //                 for (int k = 0; k < ogh; k++)
-    //                     REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
+        // bottom planes (xz)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int j = n; j < n + ghosts_n; j++)
+                        for (int i = 0; i < mgh; i++)
+                            for (int k = 0; k < ogh; k++)
+                                REQUIRE(h_ret[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
 
-    //         // left planes (xy)
-    //         for (int k = ghosts_o; k < 2 * ghosts_o; k++)
-    //             for (int i = 0; i < mgh; i++)
-    //                 for (int j = 0; j < ngh; j++)
-    //                     REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
+        // left planes (xy)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int k = ghosts_o; k < 2 * ghosts_o; k++)
+                        for (int i = 0; i < mgh; i++)
+                            for (int j = 0; j < ngh; j++)
+                                REQUIRE(h_ret[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
 
-    //         // right planes (xy)
-    //         for (int k = o; k < o + ghosts_o; k++)
-    //             for (int i = 0; i < mgh; i++)
-    //                 for (int j = 0; j < ngh; j++)
-    //                     REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-    //     };
-
-    //     SECTION("no_reuse")
-    //     {
-    //         auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr);
-    //         REQUIRE(ret != nullptr);
-    //         check(*ret);
-    //     }
-
-    //     SECTION("reuse_both")
-    //     {
-    //         mgcl::Cuboid h_ret(1, 1, ressize, 0, 0, 0);
-    //         h_ret.fill(-1, false);
-    //         mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_ret);
-
-    //         c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, &h_ret, nullptr, nullptr);
-    //         check(h_ret);
-    //     }
-
-    //     SECTION("reuse_return_buffer")
-    //     {
-    //         mgcl::Cuboid h_ret(1, 1, ressize, 0, 0, 0);
-    //         h_ret.fill(-1, false);
-
-    //         auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, &h_ret, nullptr, nullptr);
-    //         REQUIRE(ret == nullptr);
-    //         check(h_ret);
-    //     }
-
-    //     SECTION("reuse_device_buffer")
-    //     {
-    //         mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, 1, 1, ressize, 0, 0, 0);
-    //         d_tmp.fill(p.getProgram(), p.getCommands(), -1, false, &p.getKernelConfig(), p.getProfilingData());
-
-    //         auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr, nullptr, nullptr);
-    //         check(*ret);
-    //     }
-    // }
+        // right planes (xy)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int k = o; k < o + ghosts_o; k++)
+                        for (int i = 0; i < mgh; i++)
+                            for (int j = 0; j < ngh; j++)
+                                REQUIRE(h_ret[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+    }
 }
