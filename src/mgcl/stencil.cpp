@@ -632,6 +632,20 @@ namespace mgcl
     }
 
     /**
+     * Reads the gpu buffer into the supplied VaryingStencil h_stencil.
+     */
+    void VaryingStencilGpu::read(cl_command_queue queue, bool blocking, VaryingStencil& h_stencil)
+    {
+        if (h_stencil.field1d().size() != static_cast<size_t>((m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width))
+            error("Size of h_stencil does not match gpu stencil size");
+
+        int err = clEnqueueReadBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0,
+                                      h_stencil.field1d().size() * sizeof(double),
+                                      h_stencil.field1d().data(), 0, NULL, NULL);
+        mgclCheckError(err, "clEnqueueReadBuffer");
+    }
+
+    /**
      * @brief Updates ghost cells, respects periodic ghosts, i.e. when gh > m
      *
      * @param program

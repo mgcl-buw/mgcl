@@ -122,6 +122,7 @@ namespace mgcl
 
         void fill(VaryingStencil& f, cl_command_queue queue, bool blocking);
         VaryingStencil read(cl_command_queue queue, bool blocking);
+        void read(cl_command_queue queue, bool blocking, VaryingStencil& h_stencil);
 
         void updateGhosts(
             cl_program program, cl_command_queue queue,
