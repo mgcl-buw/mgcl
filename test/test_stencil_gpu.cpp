@@ -5,6 +5,8 @@
 #include <catch2/generators/catch_generators.hpp>
 
 #include <algorithm>
+#include <catch2/matchers/catch_matchers.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <ctgmath>
 #include <iostream>
 #include <memory>
@@ -2235,6 +2237,7 @@ TEST_CASE("VaryingStencilGpu::pasteGhostsFromBorderPlanes")
                                 {
                                     CAPTURE(i, j, k);
                                     REQUIRE(h_stencil[ii][jj][kk][i][j][k] >= 0);
+                                    REQUIRE(!std::isnan(h_stencil[ii][jj][kk][i][j][k]));
                                 }
                             }
 
@@ -2251,7 +2254,7 @@ TEST_CASE("VaryingStencilGpu::pasteGhostsFromBorderPlanes")
                                 if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
                                 {
                                     CAPTURE(i, j, k, ii, jj, kk, cnt);
-                                    REQUIRE(buf_ghosts[cnt] == h_stencil[ii][jj][kk][i][j][k]);
+                                    REQUIRE_THAT(buf_ghosts[cnt], Catch::Matchers::WithinAbs(h_stencil[ii][jj][kk][i][j][k], 1e-15));
                                 }
                                 cnt++;
                             }
@@ -2267,7 +2270,7 @@ TEST_CASE("VaryingStencilGpu::pasteGhostsFromBorderPlanes")
                                 if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
                                 {
                                     CAPTURE(i, j, k, ii, jj, kk, cnt);
-                                    REQUIRE(buf_ghosts[cnt] == h_stencil[ii][jj][kk][i][j][k]);
+                                    REQUIRE_THAT(buf_ghosts[cnt], Catch::Matchers::WithinAbs(h_stencil[ii][jj][kk][i][j][k], 1e-15));
                                 }
                                 cnt++;
                             }
@@ -2284,7 +2287,7 @@ TEST_CASE("VaryingStencilGpu::pasteGhostsFromBorderPlanes")
                                 if (k >= ghosts_o && k < o + ghosts_o)
                                 {
                                     CAPTURE(i, j, k, ii, jj, kk, cnt);
-                                    REQUIRE(buf_ghosts[cnt] == h_stencil[ii][jj][kk][i][j][k]);
+                                    REQUIRE_THAT(buf_ghosts[cnt], Catch::Matchers::WithinAbs(h_stencil[ii][jj][kk][i][j][k], 1e-15));
                                 }
                                 cnt++;
                             }
@@ -2301,7 +2304,7 @@ TEST_CASE("VaryingStencilGpu::pasteGhostsFromBorderPlanes")
                                 if (k >= ghosts_o && k < o + ghosts_o)
                                 {
                                     CAPTURE(i, j, k, ii, jj, kk, cnt);
-                                    REQUIRE(buf_ghosts[cnt] == h_stencil[ii][jj][kk][i][j][k]);
+                                    REQUIRE_THAT(buf_ghosts[cnt], Catch::Matchers::WithinAbs(h_stencil[ii][jj][kk][i][j][k], 1e-15));
                                 }
                                 cnt++;
                             }
@@ -2315,7 +2318,7 @@ TEST_CASE("VaryingStencilGpu::pasteGhostsFromBorderPlanes")
                             for (int j = 0; j < ngh; j++)
                             {
                                 CAPTURE(i, j, k, ii, jj, kk, cnt);
-                                REQUIRE(buf_ghosts[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+                                REQUIRE_THAT(buf_ghosts[cnt++], Catch::Matchers::WithinAbs(h_stencil[ii][jj][kk][i][j][k], 1e-15));
                             }
 
         // left ghosts (xy)
@@ -2327,7 +2330,7 @@ TEST_CASE("VaryingStencilGpu::pasteGhostsFromBorderPlanes")
                             for (int j = 0; j < ngh; j++)
                             {
                                 CAPTURE(i, j, k, ii, jj, kk, cnt);
-                                REQUIRE(buf_ghosts[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+                                REQUIRE_THAT(buf_ghosts[cnt++], Catch::Matchers::WithinAbs(h_stencil[ii][jj][kk][i][j][k], 1e-15));
                             }
     };
 
@@ -2447,224 +2450,38 @@ TEST_CASE("VaryingStencilGpu::pasteGhostsFromBorderPlanes")
         checkResult(h_stencil, buf_ghosts);
     }
 
-    // SECTION("success")
-    // {
-    //     // Create dummy problem
-    //     auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-    //     auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-    //     mgcl::Problem p(1, 1, 1, f, v);
-    //     p.setUseOpencl(true);
-    //     p.setDeviceType(CL_DEVICE_TYPE_GPU);
-    //     p.init();
+    SECTION("success")
+    {
+        // Create dummy problem
+        auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        mgcl::Problem p(1, 1, 1, f, v);
+        p.setUseOpencl(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.init();
 
-    //     int m = 3;
-    //     int n = 5;
-    //     int o = 7;
-    //     int ghosts_m = 1;
-    //     int ghosts_n = 2;
-    //     int ghosts_o = 3;
-    //     int mgh = m + 2 * ghosts_m;
-    //     int ngh = n + 2 * ghosts_n;
-    //     int ogh = o + 2 * ghosts_o;
-    //     int yz = ngh * ogh;
-    //     int xz = mgh * ogh;
-    //     int xy = mgh * ngh;
-    //     int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
+        mgcl::VaryingStencil h_stencil(m, n, o, 3, ghosts_m, ghosts_n, ghosts_o);
+        h_stencil.fill(-1, false);
 
-    //     mgcl::Cuboid h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o);
-    //     h_cuboid.fill(-1, false);
+        // 1d ghosts buffer, filled with 1d index
+        std::vector<double> h_planes(ressize);
+        for (size_t i = 0; i < ressize; i++)
+        {
+            h_planes[i] = i;
+        }
 
-    //     mgcl::Cuboid h_planes(1, 1, ressize);
-    //     h_planes.fill1dIndex(false);
-    //     double* buf_planes = h_planes.field1d().data();
+        mgcl::VaryingStencilGpu d_stencil(m, n, o, 3, ghosts_m, p.getContext(), p.getCommands(), p.getProgram());
+        d_stencil.fill(h_stencil, p.getCommands(), true);
+        mgcl::BufferGpu d_planes(p.getContext(), CL_MEM_READ_WRITE, ressize);
+        d_planes.write(p.getCommands(), h_planes, true);
 
-    //     mgcl::CuboidGpu d_cuboid(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_cuboid);
-    //     mgcl::CuboidGpu d_planes(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_planes);
+        // paste planes
+        d_stencil.pasteGhostsFromBorderPlanes(p.getCommands(), p.getProgram(), d_planes, nullptr, nullptr);
+        p.finish();
 
-    //     // paste planes
-    //     d_cuboid.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), &d_planes, nullptr, nullptr, nullptr);
+        // read result
+        d_stencil.read(p.getCommands(), true, h_stencil);
 
-    //     // read result
-    //     d_cuboid.read(p.getCommands(), &h_cuboid, true);
-
-    //     // Check that ghost slices are equal to the planes
-    //     auto slice_front = h_cuboid.sliceIncGhosts(0, ghosts_m - 1, 0, ngh - 1, 0, ogh - 1);
-    //     auto slice_back = h_cuboid.sliceIncGhosts(ghosts_m + m, mgh - 1, 0, ngh - 1, 0, ogh - 1);
-    //     auto slice_top = h_cuboid.sliceIncGhosts(0, mgh - 1, 0, ghosts_n - 1, 0, ogh - 1);
-    //     auto slice_bottom = h_cuboid.sliceIncGhosts(0, mgh - 1, ghosts_n + n, ngh - 1, 0, ogh - 1);
-    //     auto slice_left = h_cuboid.sliceIncGhosts(0, mgh - 1, 0, ngh - 1, 0, ghosts_o - 1);
-    //     auto slice_right = h_cuboid.sliceIncGhosts(0, mgh - 1, 0, ngh - 1, o + ghosts_o, ogh - 1);
-
-    //     int idx = 0;
-    //     // Back ghosts
-    //     for (int i = 0; i < slice_back->getMgh(); i++)
-    //         for (int j = 0; j < slice_back->getNgh(); j++)
-    //             for (int k = 0; k < slice_back->getOgh(); k++)
-    //             {
-    //                 // No corners or edges, only ghosts directly adjacent to real back face
-    //                 if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
-    //                 {
-    //                     CAPTURE(i, j, k);
-    //                     REQUIRE((*slice_back)[i][j][k] == buf_planes[idx]);
-    //                 }
-    //                 idx++;
-    //             }
-    //     // Front ghosts
-    //     for (int i = 0; i < slice_front->getMgh(); i++)
-    //         for (int j = 0; j < slice_front->getNgh(); j++)
-    //             for (int k = 0; k < slice_front->getOgh(); k++)
-    //             {
-    //                 // No corners or edges, only ghosts directly adjacent to real back face
-    //                 if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
-    //                 {
-    //                     CAPTURE(i, j, k);
-    //                     REQUIRE((*slice_front)[i][j][k] == buf_planes[idx]);
-    //                 }
-    //                 idx++;
-    //             }
-    //     // Bottom ghosts
-    //     for (int j = 0; j < slice_bottom->getNgh(); j++)
-    //         for (int i = 0; i < slice_bottom->getMgh(); i++)
-    //             for (int k = 0; k < slice_bottom->getOgh(); k++)
-    //             {
-    //                 // Ignore left and right ghost cells, but include front and back ghosts
-    //                 if (k >= ghosts_o && k < o + ghosts_o)
-    //                 {
-    //                     CAPTURE(i, j, k);
-    //                     REQUIRE((*slice_bottom)[i][j][k] == buf_planes[idx]);
-    //                 }
-    //                 idx++;
-    //             }
-    //     // Top ghosts
-    //     for (int j = 0; j < slice_top->getNgh(); j++)
-    //         for (int i = 0; i < slice_top->getMgh(); i++)
-    //             for (int k = 0; k < slice_top->getOgh(); k++)
-    //             {
-    //                 // Ignore left and right ghost cells, but include front and back ghosts
-    //                 if (k >= ghosts_o && k < o + ghosts_o)
-    //                 {
-    //                     CAPTURE(i, j, k);
-    //                     REQUIRE((*slice_top)[i][j][k] == buf_planes[idx]);
-    //                 }
-    //                 idx++;
-    //             }
-    //     // Right ghosts
-    //     for (int k = 0; k < slice_right->getOgh(); k++)
-    //         for (int i = 0; i < slice_right->getMgh(); i++)
-    //             for (int j = 0; j < slice_right->getNgh(); j++)
-    //             {
-    //                 CAPTURE(i, j, k);
-    //                 REQUIRE((*slice_right)[i][j][k] == buf_planes[idx]);
-    //                 idx++;
-    //             }
-    //     // Left ghosts
-    //     for (int k = 0; k < slice_left->getOgh(); k++)
-    //         for (int i = 0; i < slice_left->getMgh(); i++)
-    //             for (int j = 0; j < slice_left->getNgh(); j++)
-    //             {
-    //                 CAPTURE(i, j, k);
-    //                 REQUIRE((*slice_left)[i][j][k] == buf_planes[idx]);
-    //                 idx++;
-    //             }
-
-    //     // mgcl::Cuboid h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o);
-    //     // h_cuboid.fill1dIndex(false);
-
-    //     // // Create gpu buffer equal to h_cuboid, without up-to-date ghosts
-    //     // mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_cuboid);
-
-    //     // // Update ghosts of h_cuboid
-    //     // mgcl::MultigridEngine::updateGhostsSeq(h_cuboid, nullptr, true, true);
-
-    //     // // Extract border planes from h_cuboid with now up-to-date ghosts
-    //     // auto h_extractedBorders = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr);
-
-    //     // // Paste ghosts from extracted Borders to device cuboid c
-    //     // c.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), nullptr, h_extractedBorders.get());
-
-    //     // // Cuboids should now be equal
-    //     // auto h_act = c.read(p.getCommands(), nullptr, true);
-
-    //     // REQUIRE(h_act->isEqualAllCells(h_cuboid));
-
-    //     // auto check = [&](mgcl::Cuboid& extractedBorders) { //
-    //     //     const double* data_borders = extractedBorders.field1d().data();
-
-    //     //     int cnt = 0;
-    //     //     // front planes (yz)
-    //     //     for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
-    //     //         for (int j = 0; j < ngh; j++)             // all cells in y-dir
-    //     //             for (int k = 0; k < ogh; k++)         // all cells in z-dir
-    //     //             {
-    //     //                 CAPTURE(i, j, k, cnt);
-    //     //                 REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-    //     //             }
-
-    //     //     // back planes (yz)
-    //     //     for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
-    //     //         for (int j = 0; j < ngh; j++)      // all cells in y-dir
-    //     //             for (int k = 0; k < ogh; k++)  // all cells in z-dir
-    //     //                 REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-
-    //     //     // top planes (xz)
-    //     //     for (int j = ghosts_n; j < 2 * ghosts_n; j++)
-    //     //         for (int i = 0; i < mgh; i++)
-    //     //             for (int k = 0; k < ogh; k++)
-    //     //                 REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-
-    //     //     // bottom planes (xz)
-    //     //     for (int j = n; j < n + ghosts_n; j++)
-    //     //         for (int i = 0; i < mgh; i++)
-    //     //             for (int k = 0; k < ogh; k++)
-    //     //                 REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-
-    //     //     // left planes (xy)
-    //     //     for (int k = ghosts_o; k < 2 * ghosts_o; k++)
-    //     //         for (int i = 0; i < mgh; i++)
-    //     //             for (int j = 0; j < ngh; j++)
-    //     //                 REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-
-    //     //     // right planes (xy)
-    //     //     for (int k = o; k < o + ghosts_o; k++)
-    //     //         for (int i = 0; i < mgh; i++)
-    //     //             for (int j = 0; j < ngh; j++)
-    //     //                 REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-    //     // };
-
-    //     // SECTION("no_reuse")
-    //     // {
-    //     //     auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr);
-    //     //     REQUIRE(ret != nullptr);
-    //     //     check(*ret);
-    //     // }
-
-    //     // SECTION("reuse_both")
-    //     // {
-    //     //     mgcl::Cuboid h_ret(1, 1, ressize, 0, 0, 0);
-    //     //     h_ret.fill(-1, false);
-    //     //     mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_ret);
-
-    //     //     c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, &h_ret);
-    //     //     check(h_ret);
-    //     // }
-
-    //     // SECTION("reuse_return_buffer")
-    //     // {
-    //     //     mgcl::Cuboid h_ret(1, 1, ressize, 0, 0, 0);
-    //     //     h_ret.fill(-1, false);
-
-    //     //     auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, &h_ret);
-    //     //     REQUIRE(ret == nullptr);
-    //     //     check(h_ret);
-    //     // }
-
-    //     // SECTION("reuse_device_buffer")
-    //     // {
-    //     //     mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, 1, 1, ressize, 0, 0, 0);
-    //     //     d_tmp.fill(p.getCommands(), -1, true);
-
-    //     //     auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr);
-    //     //     check(*ret);
-    //     // }
-    // }
+        checkResult(h_stencil, h_planes.data());
+    }
 }

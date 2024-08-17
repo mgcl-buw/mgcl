@@ -148,6 +148,9 @@ namespace mgcl
         void extractBorderPlanes(cl_command_queue commands, cl_program program,
                                  BufferGpu& d_target, std::vector<double>& h_target,
                                  mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
+        void pasteGhostsFromBorderPlanes(cl_command_queue commands, cl_program program,
+                                         BufferGpu& d_ghosts,
+                                         mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
         int getM() const;
         int getN() const;
