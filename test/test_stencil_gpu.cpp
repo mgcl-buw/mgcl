@@ -2194,23 +2194,145 @@ TEST_CASE("VaryingStencilGpu::extract_border_planes")
 
 TEST_CASE("VaryingStencilGpu::pasteGhostsFromBorderPlanes")
 {
+    int m = 3;
+    int n = 5;
+    int o = 7;
+    int ghosts_m = 1;
+    int ghosts_n = 1; // 2;
+    int ghosts_o = 1; // 3;
+    int mgh = m + 2 * ghosts_m;
+    int ngh = n + 2 * ghosts_n;
+    int ogh = o + 2 * ghosts_o;
+    int yz = ngh * ogh;
+    int xz = mgh * ogh;
+    int xy = mgh * ngh;
+    int gridsize = mgh * ngh * ogh;
+    int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27;
+
+    auto checkResult = [&](mgcl::VaryingStencil& h_stencil, double* buf_ghosts)
+    {
+        // Check that all real cells were left untouched
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int i = ghosts_m; i < m + ghosts_m; i++)
+                        for (int j = ghosts_n; j < n + ghosts_n; j++)
+                            for (int k = ghosts_o; k < o + ghosts_o; k++)
+                            {
+                                CAPTURE(i, j, k);
+                                REQUIRE(h_stencil[ii][jj][kk][i][j][k] == -1);
+                            }
+
+        // Check that all ghost cells were filled with any value
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int i = 0; i < mgh; i++)
+                        for (int j = 0; j < ngh; j++)
+                            for (int k = 0; k < ogh; k++)
+                            {
+                                if ((i < ghosts_m || i >= m + ghosts_m) && (j < ghosts_n || j >= n + ghosts_n) && (k < ghosts_o || k >= o + ghosts_o))
+                                {
+                                    CAPTURE(i, j, k);
+                                    REQUIRE(h_stencil[ii][jj][kk][i][j][k] >= 0);
+                                }
+                            }
+
+        int cnt = 0;
+        // back ghosts (yz)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int i = m + ghosts_m; i < mgh; i++) // ghosts_m real planes in the back
+                        for (int j = 0; j < ngh; j++)        // all cells in y-dir
+                            for (int k = 0; k < ogh; k++)    // all cells in z-dir
+                            {
+                                // No corners or edges, only ghosts directly adjacent to real back face
+                                if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
+                                {
+                                    CAPTURE(i, j, k, ii, jj, kk, cnt);
+                                    REQUIRE(buf_ghosts[cnt] == h_stencil[ii][jj][kk][i][j][k]);
+                                }
+                                cnt++;
+                            }
+
+        // front ghosts (yz)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int i = 0; i < ghosts_m; i++)    // ghm ghost planes in the front
+                        for (int j = 0; j < ngh; j++)     // all cells in y-dir
+                            for (int k = 0; k < ogh; k++) // all cells in z-dir
+                            {                             // No corners or edges, only ghosts directly adjacent to real back face
+                                if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
+                                {
+                                    CAPTURE(i, j, k, ii, jj, kk, cnt);
+                                    REQUIRE(buf_ghosts[cnt] == h_stencil[ii][jj][kk][i][j][k]);
+                                }
+                                cnt++;
+                            }
+
+        // bottom ghosts (xz)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int j = n + ghosts_n; j < ngh; j++)
+                        for (int i = 0; i < mgh; i++)
+                            for (int k = 0; k < ogh; k++)
+                            {
+                                // Ignore left and right ghost cells, but include front and back ghosts
+                                if (k >= ghosts_o && k < o + ghosts_o)
+                                {
+                                    CAPTURE(i, j, k, ii, jj, kk, cnt);
+                                    REQUIRE(buf_ghosts[cnt] == h_stencil[ii][jj][kk][i][j][k]);
+                                }
+                                cnt++;
+                            }
+
+        // top ghosts (xz)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int j = 0; j < ghosts_n; j++)
+                        for (int i = 0; i < mgh; i++)
+                            for (int k = 0; k < ogh; k++)
+                            {
+                                // Ignore left and right ghost cells, but include front and back ghosts
+                                if (k >= ghosts_o && k < o + ghosts_o)
+                                {
+                                    CAPTURE(i, j, k, ii, jj, kk, cnt);
+                                    REQUIRE(buf_ghosts[cnt] == h_stencil[ii][jj][kk][i][j][k]);
+                                }
+                                cnt++;
+                            }
+
+        // right ghosts (xy)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int k = o + ghosts_o; k < ogh; k++)
+                        for (int i = 0; i < mgh; i++)
+                            for (int j = 0; j < ngh; j++)
+                            {
+                                CAPTURE(i, j, k, ii, jj, kk, cnt);
+                                REQUIRE(buf_ghosts[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+                            }
+
+        // left ghosts (xy)
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                    for (int k = 0; k < ghosts_o; k++)
+                        for (int i = 0; i < mgh; i++)
+                            for (int j = 0; j < ngh; j++)
+                            {
+                                CAPTURE(i, j, k, ii, jj, kk, cnt);
+                                REQUIRE(buf_ghosts[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
+                            }
+    };
+
     SECTION("indices")
     {
-        int m = 3;
-        int n = 5;
-        int o = 7;
-        int ghosts_m = 1;
-        int ghosts_n = 1; // 2;
-        int ghosts_o = 1; // 3;
-        int mgh = m + 2 * ghosts_m;
-        int ngh = n + 2 * ghosts_n;
-        int ogh = o + 2 * ghosts_o;
-        int yz = ngh * ogh;
-        int xz = mgh * ogh;
-        int xy = mgh * ngh;
-        int gridsize = mgh * ngh * ogh;
-        int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27;
-
         mgcl::VaryingStencil h_stencil(m, n, o, 3, ghosts_m, ghosts_n, ghosts_o);
         h_stencil.fill(-1, false);
         double* buf_stencil = h_stencil.field1d().data();
@@ -2322,124 +2444,7 @@ TEST_CASE("VaryingStencilGpu::pasteGhostsFromBorderPlanes")
         }
         // End kernel
 
-        // Check that all real cells were left untouched
-        for (int ii = 0; ii < 3; ii++)
-            for (int jj = 0; jj < 3; jj++)
-                for (int kk = 0; kk < 3; kk++)
-                    for (int i = ghosts_m; i < m + ghosts_m; i++)
-                        for (int j = ghosts_n; j < n + ghosts_n; j++)
-                            for (int k = ghosts_o; k < o + ghosts_o; k++)
-                            {
-                                CAPTURE(i, j, k);
-                                REQUIRE(h_stencil[ii][jj][kk][i][j][k] == -1);
-                            }
-
-        // Check that all ghost cells were filled with any value
-        for (int ii = 0; ii < 3; ii++)
-            for (int jj = 0; jj < 3; jj++)
-                for (int kk = 0; kk < 3; kk++)
-                    for (int i = 0; i < mgh; i++)
-                        for (int j = 0; j < ngh; j++)
-                            for (int k = 0; k < ogh; k++)
-                            {
-                                if ((i < ghosts_m || i >= m + ghosts_m) && (j < ghosts_n || j >= n + ghosts_n) && (k < ghosts_o || k >= o + ghosts_o))
-                                {
-                                    CAPTURE(i, j, k);
-                                    REQUIRE(h_stencil[ii][jj][kk][i][j][k] >= 0);
-                                }
-                            }
-
-        int cnt = 0;
-        // front planes (yz)
-        for (int ii = 0; ii < 3; ii++)
-            for (int jj = 0; jj < 3; jj++)
-                for (int kk = 0; kk < 3; kk++)
-                    for (int i = m + ghosts_m; i < mgh; i++) // ghosts_m real planes in the back
-                        for (int j = 0; j < ngh; j++)        // all cells in y-dir
-                            for (int k = 0; k < ogh; k++)    // all cells in z-dir
-                            {
-                                // No corners or edges, only ghosts directly adjacent to real back face
-                                if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
-                                {
-                                    CAPTURE(i, j, k, ii, jj, kk, cnt);
-                                    REQUIRE(buf_ghosts[cnt] == h_stencil[ii][jj][kk][i][j][k]);
-                                }
-                                cnt++;
-                            }
-
-        // back planes (yz)
-        for (int ii = 0; ii < 3; ii++)
-            for (int jj = 0; jj < 3; jj++)
-                for (int kk = 0; kk < 3; kk++)
-                    for (int i = 0; i < ghosts_m; i++)    // ghm ghost planes in the front
-                        for (int j = 0; j < ngh; j++)     // all cells in y-dir
-                            for (int k = 0; k < ogh; k++) // all cells in z-dir
-                            {                             // No corners or edges, only ghosts directly adjacent to real back face
-                                if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
-                                {
-                                    CAPTURE(i, j, k, ii, jj, kk, cnt);
-                                    REQUIRE(buf_ghosts[cnt] == h_stencil[ii][jj][kk][i][j][k]);
-                                }
-                                cnt++;
-                            }
-
-        // top planes (xz)
-        for (int ii = 0; ii < 3; ii++)
-            for (int jj = 0; jj < 3; jj++)
-                for (int kk = 0; kk < 3; kk++)
-                    for (int j = n + ghosts_n; j < ngh; j++)
-                        for (int i = 0; i < mgh; i++)
-                            for (int k = 0; k < ogh; k++)
-                            {
-                                // Ignore left and right ghost cells, but include front and back ghosts
-                                if (k >= ghosts_o && k < o + ghosts_o)
-                                {
-                                    CAPTURE(i, j, k, ii, jj, kk, cnt);
-                                    REQUIRE(buf_ghosts[cnt] == h_stencil[ii][jj][kk][i][j][k]);
-                                }
-                                cnt++;
-                            }
-
-        // bottom planes (xz)
-        for (int ii = 0; ii < 3; ii++)
-            for (int jj = 0; jj < 3; jj++)
-                for (int kk = 0; kk < 3; kk++)
-                    for (int j = 0; j < ghosts_n; j++)
-                        for (int i = 0; i < mgh; i++)
-                            for (int k = 0; k < ogh; k++)
-                            {
-                                // Ignore left and right ghost cells, but include front and back ghosts
-                                if (k >= ghosts_o && k < o + ghosts_o)
-                                {
-                                    CAPTURE(i, j, k, ii, jj, kk, cnt);
-                                    REQUIRE(buf_ghosts[cnt] == h_stencil[ii][jj][kk][i][j][k]);
-                                }
-                                cnt++;
-                            }
-
-        // left planes (xy)
-        for (int ii = 0; ii < 3; ii++)
-            for (int jj = 0; jj < 3; jj++)
-                for (int kk = 0; kk < 3; kk++)
-                    for (int k = o + ghosts_o; k < ogh; k++)
-                        for (int i = 0; i < mgh; i++)
-                            for (int j = 0; j < ngh; j++)
-                            {
-                                CAPTURE(i, j, k, ii, jj, kk, cnt);
-                                REQUIRE(buf_ghosts[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
-                            }
-
-        // right planes (xy)
-        for (int ii = 0; ii < 3; ii++)
-            for (int jj = 0; jj < 3; jj++)
-                for (int kk = 0; kk < 3; kk++)
-                    for (int k = 0; k < ghosts_o; k++)
-                        for (int i = 0; i < mgh; i++)
-                            for (int j = 0; j < ngh; j++)
-                            {
-                                CAPTURE(i, j, k, ii, jj, kk, cnt);
-                                REQUIRE(buf_ghosts[cnt++] == h_stencil[ii][jj][kk][i][j][k]);
-                            }
+        checkResult(h_stencil, buf_ghosts);
     }
 
     // SECTION("success")
