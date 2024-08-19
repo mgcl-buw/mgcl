@@ -1186,7 +1186,7 @@ TEST_CASE("mpi_util::gather-GPU-src-dest-same-stencil")
     }
 }
 
-// Checks that sending border planes is correct.
+// Checks that sending border planes of a cuboid is correct.
 // Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::sendBorderPlanes_cuboid"
 TEST_CASE("mpi_util::sendBorderPlanes_cuboid")
 {
@@ -1339,4 +1339,184 @@ TEST_CASE("mpi_util::sendBorderPlanes_cuboid")
                 // right (left ghosts)
                 REQUIRE(rbuf[0][0][base_xy_right + k * xy + i * ngh + j] == c[i][j][k]);
             }
+}
+
+// Checks that sending border planes of a varying stencil is correct.
+// Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::sendBorderPlanes_stencil"
+TEST_CASE("mpi_util::sendBorderPlanes_stencil")
+{
+    using std::min;
+
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    int ghosts_m = 1;
+    int ghosts_n = 2;
+    int ghosts_o = 3;
+    int mgh = m + 2 * ghosts_m;
+    int ngh = n + 2 * ghosts_n;
+    int ogh = o + 2 * ghosts_o;
+    int periodic = 1;     // GENERATE(0,1);
+    int stencilWidth = 3; // GENERATE(3, 5);
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    REQUIRE(mpi_size > 1);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    // Calculate global sizes
+    int mglob = m * mpi_dims[0];
+    int nglob = n * mpi_dims[1];
+    int oglob = o * mpi_dims[2];
+
+    // Create dummy problem
+    auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+    auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
+    mgcl::Problem p(m, n, o, f, v, mglob, nglob, oglob);
+    p.setMpiComm(mpi_comm);
+    p.init();
+
+    auto& mpiData = p.getLevelAt(0).getMpiData();
+
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (i == mpi_rank)
+    //     {
+    //         std::cerr << i << ":" << std::endl;
+    //         std::cerr << "  coords: " << mpi_coords[0] << "," << mpi_coords[1] << "," << mpi_coords[2] << std::endl;
+    //         std::cerr << "  front: " << mpiData.front << std::endl;
+    //         std::cerr << "   back: " << mpiData.back << std::endl;
+    //         std::cerr << "     up: " << mpiData.up << std::endl;
+    //         std::cerr << "   down: " << mpiData.down << std::endl;
+    //         std::cerr << "   left: " << mpiData.left << std::endl;
+    //         std::cerr << "  right: " << mpiData.right << std::endl;
+    //     }
+    // }
+
+    // Sizes of planes
+    int yz = ngh * ogh;
+    int xz = mgh * ogh;
+    int xy = mgh * ngh;
+
+    // Size of planes times amount of ghosts in that direction, i.e. number of grid points that are sent in that
+    // direction
+    int yzgh = yz * ghosts_m;
+    int xzgh = xz * ghosts_n;
+    int xygh = xy * ghosts_o;
+
+    int stencilSize = stencilWidth * stencilWidth * stencilWidth;
+    int ressize = (2 * yzgh + 2 * xzgh + 2 * xygh) * stencilSize;
+
+    // int base_yz_front = 0;
+    int base_yz_back = (yzgh)*stencilSize;
+    int base_xz_top = (2 * yzgh) * stencilSize;
+    int base_xz_bottom = (2 * yzgh + xzgh) * stencilSize;
+    int base_xy_left = (2 * yzgh + 2 * xzgh) * stencilSize;
+    int base_xy_right = (2 * yzgh + 2 * xzgh + xygh) * stencilSize;
+
+    mgcl::Cuboid sbuf(1, 1, ressize);
+    mgcl::Cuboid rbuf(1, 1, ressize);
+
+    mgcl::VaryingStencil c(m, n, o, stencilWidth, ghosts_m, ghosts_n, ghosts_o);
+    c.fill1dIndex(false);
+
+    // fill planes with 1d index from cuboid
+    for (int ii = 0; ii < stencilWidth; ii++)
+        for (int jj = 0; jj < stencilWidth; jj++)
+            for (int kk = 0; kk < stencilWidth; kk++)
+                for (int i = 0; i < ghosts_m; i++)
+                    for (int j = 0; j < ngh; j++)
+                        for (int k = 0; k < ogh; k++)
+                        {
+                            // front
+                            sbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * yzgh + i * yz + j * ogh + k] = c[ii][jj][kk][i + ghosts_m][j][k];
+
+                            // back
+                            sbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * yzgh + base_yz_back + i * yz + j * ogh + k] = c[ii][jj][kk][i + m][j][k];
+                        }
+    for (int ii = 0; ii < stencilWidth; ii++)
+        for (int jj = 0; jj < stencilWidth; jj++)
+            for (int kk = 0; kk < stencilWidth; kk++)
+                for (int i = 0; i < mgh; i++)
+                    for (int j = 0; j < ghosts_n; j++)
+                        for (int k = 0; k < ogh; k++)
+                        {
+                            // top
+                            sbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xzgh + base_xz_top + j * xz + i * ogh + k] = c[ii][jj][kk][i][j + ghosts_n][k];
+
+                            // bottom
+                            sbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xzgh + base_xz_bottom + j * xz + i * ogh + k] = c[ii][jj][kk][i][j + n][k];
+                        }
+    for (int ii = 0; ii < stencilWidth; ii++)
+        for (int jj = 0; jj < stencilWidth; jj++)
+            for (int kk = 0; kk < stencilWidth; kk++)
+                for (int i = 0; i < mgh; i++)
+                    for (int j = 0; j < ngh; j++)
+                        for (int k = 0; k < ghosts_o; k++)
+                        {
+                            // left
+                            sbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xygh + base_xy_left + k * xy + i * ngh + j] = c[ii][jj][kk][i][j][k + ghosts_o];
+
+                            // right
+                            sbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xygh + base_xy_right + k * xy + i * ngh + j] = c[ii][jj][kk][i][j][k + o];
+                        }
+
+    rbuf.fill(-1, false);
+
+    mgcl::mpi_util::sendBorderPlanes(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, stencilWidth,
+                                     sbuf, rbuf, mpiData);
+
+    c.updateGhosts();
+
+    // Check against cuboid with updated ghosts
+    // Edges in send buffers for top and down after sending to front and back
+    for (int ii = 0; ii < stencilWidth; ii++)
+        for (int jj = 0; jj < stencilWidth; jj++)
+            for (int kk = 0; kk < stencilWidth; kk++)
+                for (int i = 0; i < ghosts_m; i++)
+                    for (int j = 0; j < ghosts_n; j++)
+                        for (int k = ghosts_o; k < ghosts_o + o; k++)
+                        {
+                            CAPTURE(i, j, k);
+                            // top (bottom ghosts)
+                            REQUIRE(rbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xzgh + base_xz_top + j * xz + i * ogh + k] == c[ii][jj][kk][i][j + ghosts_n + n][k]);
+
+                            // bottom (top ghosts)
+                            REQUIRE(rbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xzgh + base_xz_bottom + j * xz + i * ogh + k] == c[ii][jj][kk][i][j][k]);
+                        }
+    // Toruses in send buffers for left and right after sending to top and bottom
+    for (int ii = 0; ii < stencilWidth; ii++)
+        for (int jj = 0; jj < stencilWidth; jj++)
+            for (int kk = 0; kk < stencilWidth; kk++)
+                for (int i = 0; i < mgh; i++)
+                    for (int j = 0; j < ngh; j++)
+                        for (int k = 0; k < ghosts_o; k++)
+                        {
+                            // left (right ghosts)
+                            REQUIRE(rbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xygh + base_xy_left + k * xy + i * ngh + j] == c[ii][jj][kk][i][j][k + ghosts_o + o]);
+
+                            // right (left ghosts)
+                            REQUIRE(rbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xygh + base_xy_right + k * xy + i * ngh + j] == c[ii][jj][kk][i][j][k]);
+                        }
 }
