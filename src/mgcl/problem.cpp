@@ -358,9 +358,9 @@ namespace mgcl
                 int xz = mgh * ogh;
                 int xy = mgh * ngh;
                 int ressize = 2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts;
-                dPlanesBuf = std::make_shared<CuboidGpu>(getContext(), CL_MEM_READ_WRITE, 1, 1, ressize, 0, 0, 0);
-                hPlanesBufSend = std::make_shared<Cuboid>(1, 1, ressize, 0, 0, 0);
-                hPlanesBufRecv = std::make_shared<Cuboid>(1, 1, ressize, 0, 0, 0);
+                dPlanesBuf = std::make_shared<BufferGpu>(getContext(), CL_MEM_READ_WRITE, ressize);
+                hPlanesBufSend = std::make_shared<std::vector<double>>(ressize);
+                hPlanesBufRecv = std::make_shared<std::vector<double>>(ressize);
             }
         }
 
@@ -782,53 +782,53 @@ namespace mgcl
         f = f_;
     }
 
-    CuboidGpu& Problem::getDPlanesBuf() const
+    BufferGpu& Problem::getDPlanesBuf() const
     {
         if (!dPlanesBuf)
             error("dPlanesBuf is null.");
         return *dPlanesBuf;
     }
 
-    CuboidGpu* Problem::getDPlanesBufPtr() const
+    BufferGpu* Problem::getDPlanesBufPtr() const
     {
         return dPlanesBuf.get();
     }
 
-    void Problem::setDPlanesBuf(std::shared_ptr<CuboidGpu> dPlanesBuf_)
+    void Problem::setDPlanesBuf(const std::shared_ptr<BufferGpu> dPlanesBuf_)
     {
         dPlanesBuf = dPlanesBuf_;
     }
 
-    Cuboid& Problem::getHPlanesBufSend() const
+    std::vector<double>& Problem::getHPlanesBufSend() const
     {
         if (!hPlanesBufSend)
             error("hPlanesBuf is null.");
         return *hPlanesBufSend;
     }
 
-    Cuboid* Problem::getHPlanesBufSendPtr() const
+    std::vector<double>* Problem::getHPlanesBufSendPtr() const
     {
         return hPlanesBufSend.get();
     }
 
-    void Problem::setHPlanesBufSend(std::shared_ptr<Cuboid> hPlanesBuf_)
+    void Problem::setHPlanesBufSend(std::shared_ptr<std::vector<double>> hPlanesBuf_)
     {
         hPlanesBufSend = hPlanesBuf_;
     }
 
-    Cuboid& Problem::getHPlanesBufRecv() const
+    std::vector<double>& Problem::getHPlanesBufRecv() const
     {
         if (!hPlanesBufRecv)
             error("hPlanesBuf is null.");
         return *hPlanesBufRecv;
     }
 
-    Cuboid* Problem::getHPlanesBufRecvPtr() const
+    std::vector<double>* Problem::getHPlanesBufRecvPtr() const
     {
         return hPlanesBufRecv.get();
     }
 
-    void Problem::setHPlanesBufRecv(std::shared_ptr<Cuboid> hPlanesBuf_)
+    void Problem::setHPlanesBufRecv(const std::shared_ptr<std::vector<double>> hPlanesBuf_)
     {
         hPlanesBufRecv = hPlanesBuf_;
     }

@@ -623,7 +623,7 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
         }
 
         {
-            mgcl::Cuboid h_planesbuf(1, 1, ressize);
+            std::vector<double> h_planesbuf(ressize);
             std::string name = std::string("extractBorderPlanes_reuseret_")
                                    .append(std::to_string(m))
                                    .append("_")
@@ -656,8 +656,8 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
         }
 
         {
-            mgcl::Cuboid sbuf(1, 1, ressize);
-            mgcl::Cuboid rbuf(1, 1, ressize);
+            std::vector<double> sbuf(ressize);
+            std::vector<double> rbuf(ressize);
             std::string name = std::string("sendBorderPlanes")
                                    .append(std::to_string(m))
                                    .append("_")
@@ -691,8 +691,8 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
         }
 
         {
-            mgcl::Cuboid sbuf(1, 1, ressize);
-            mgcl::Cuboid rbuf(1, 1, ressize);
+            std::vector<double> sbuf(ressize);
+            std::vector<double> rbuf(ressize);
             std::string name = std::string("sendBorderPlanes_copyedges")
                                    .append(std::to_string(m))
                                    .append("_")
@@ -725,16 +725,16 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
                         for (int k = 0; k < ogh; k++)
                         {
                             // Upper front edge - Write ghosts in the front (from back recv buffer) to xz top send buffer
-                            sbuf[0][0][base_xz_top + j0 * xz + i0 * ogh + k] = rbuf[0][0][base_yz_back + i0 * yz + j1 * ogh + k];
+                            sbuf[base_xz_top + j0 * xz + i0 * ogh + k] = rbuf[base_yz_back + i0 * yz + j1 * ogh + k];
 
                             // Lower front edge - Write ghosts in the front (from back recv buffer) to xz bottom send buffer
-                            sbuf[0][0][base_xz_bottom + j0 * xz + i0 * ogh + k] = rbuf[0][0][base_yz_back + i0 * yz + j2 * ogh + k];
+                            sbuf[base_xz_bottom + j0 * xz + i0 * ogh + k] = rbuf[base_yz_back + i0 * yz + j2 * ogh + k];
 
                             // Upper back edge - Write ghosts in the back (from front recv buffer, base 0) to xz top send buffer
-                            sbuf[0][0][base_xz_top + j0 * xz + i1 * ogh + k] = rbuf[0][0][i0 * yz + j1 * ogh + k];
+                            sbuf[base_xz_top + j0 * xz + i1 * ogh + k] = rbuf[i0 * yz + j1 * ogh + k];
 
                             // Lower back edge - Write ghosts in the back (from front recv buffer, base 0) to xz bottom send buffer
-                            sbuf[0][0][base_xz_bottom + j0 * xz + i1 * ogh + k] = rbuf[0][0][i0 * yz + j2 * ogh + k];
+                            sbuf[base_xz_bottom + j0 * xz + i1 * ogh + k] = rbuf[i0 * yz + j2 * ogh + k];
                         }
 
                 // Write received left torus of cuboid to send buffer
@@ -755,17 +755,17 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
                         for (int j = ghosts; j < ghosts + n; j++)
                         {
                             // Left front face - Write ghosts in the send left buffer from recv back buffer
-                            sbuf[0][0][base_xy_left + k0 * xy + i0 * ngh + j] = rbuf[0][0][base_yz_back + i0 * yz + j * ogh + k1];
+                            sbuf[base_xy_left + k0 * xy + i0 * ngh + j] = rbuf[base_yz_back + i0 * yz + j * ogh + k1];
 
                             // Left back face - Write ghosts in the send left buffer from recv front buffer
-                            sbuf[0][0][base_xy_left + k0 * xy + i1 * ngh + j] = rbuf[0][0][i0 * yz + j * ogh + k1];
+                            sbuf[base_xy_left + k0 * xy + i1 * ngh + j] = rbuf[i0 * yz + j * ogh + k1];
 
                             // TODO right
                             // Right front face - Write ghosts in the send right buffer from recv back buffer
-                            sbuf[0][0][base_xy_right + k0 * xy + i0 * ngh + j] = rbuf[0][0][base_yz_back + i0 * yz + j * ogh + k2];
+                            sbuf[base_xy_right + k0 * xy + i0 * ngh + j] = rbuf[base_yz_back + i0 * yz + j * ogh + k2];
 
                             // Right back face - Write ghosts in the send right buffer from recv front buffer
-                            sbuf[0][0][base_xy_right + k0 * xy + i1 * ngh + j] = rbuf[0][0][i0 * yz + j * ogh + k2];
+                            sbuf[base_xy_right + k0 * xy + i1 * ngh + j] = rbuf[i0 * yz + j * ogh + k2];
                         }
 
                     // Copying from xz planes (top bottom)
@@ -777,16 +777,16 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
                              j0++, j1++)
                         {
                             // Left top edge - Write ghosts in the send left buffer from recv bottom buffer
-                            sbuf[0][0][base_xy_left + k0 * xy + i * ngh + j0] = rbuf[0][0][base_xz_bottom + j0 * xz + i * ogh + k1];
+                            sbuf[base_xy_left + k0 * xy + i * ngh + j0] = rbuf[base_xz_bottom + j0 * xz + i * ogh + k1];
 
                             // Left bottom edge - Write ghosts in the send left buffer from recv top buffer
-                            sbuf[0][0][base_xy_left + k0 * xy + i * ngh + j1] = rbuf[0][0][base_xz_top + j0 * xz + i * ogh + k1];
+                            sbuf[base_xy_left + k0 * xy + i * ngh + j1] = rbuf[base_xz_top + j0 * xz + i * ogh + k1];
 
                             // Right top edge - Write ghosts in the send left buffer from recv bottom buffer
-                            sbuf[0][0][base_xy_right + k0 * xy + i * ngh + j0] = rbuf[0][0][base_xz_bottom + j0 * xz + i * ogh + k2];
+                            sbuf[base_xy_right + k0 * xy + i * ngh + j0] = rbuf[base_xz_bottom + j0 * xz + i * ogh + k2];
 
                             // Right bottom face - Write ghosts in the send right buffer from recv top buffer
-                            sbuf[0][0][base_xy_right + k0 * xy + i * ngh + j1] = rbuf[0][0][base_xz_top + j0 * xz + i * ogh + k2];
+                            sbuf[base_xy_right + k0 * xy + i * ngh + j1] = rbuf[base_xz_top + j0 * xz + i * ogh + k2];
                         }
                 }
             });
@@ -809,7 +809,7 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
         }
 
         {
-            mgcl::Cuboid rbuf(1, 1, ressize);
+            std::vector<double> rbuf(ressize);
             std::string name = std::string("pasteGhostsFromBorderPlanes_newdevicebuf_N")
                                    .append(std::to_string(m))
                                    .append("_")

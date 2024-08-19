@@ -1270,8 +1270,8 @@ TEST_CASE("mpi_util::sendBorderPlanes_cuboid")
     int base_xy_left = 2 * ghosts_m * yz + 2 * ghosts_n * xz;
     int base_xy_right = 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy;
 
-    mgcl::Cuboid sbuf(1, 1, ressize);
-    mgcl::Cuboid rbuf(1, 1, ressize);
+    std::vector<double> sbuf(ressize);
+    std::vector<double> rbuf(ressize);
 
     mgcl::Cuboid c(m, n, o, ghosts_m, ghosts_n, ghosts_o);
     c.fill1dIndex(false);
@@ -1282,33 +1282,36 @@ TEST_CASE("mpi_util::sendBorderPlanes_cuboid")
             for (int k = 0; k < ogh; k++)
             {
                 // front
-                sbuf[0][0][i * yz + j * ogh + k] = c[i + ghosts_m][j][k];
+                sbuf[i * yz + j * ogh + k] = c[i + ghosts_m][j][k];
 
                 // back
-                sbuf[0][0][base_yz_back + i * yz + j * ogh + k] = c[i + m][j][k];
+                sbuf[base_yz_back + i * yz + j * ogh + k] = c[i + m][j][k];
             }
     for (int i = 0; i < mgh; i++)
         for (int j = 0; j < ghosts_n; j++)
             for (int k = 0; k < ogh; k++)
             {
                 // top
-                sbuf[0][0][base_xz_top + j * xz + i * ogh + k] = c[i][j + ghosts_n][k];
+                sbuf[base_xz_top + j * xz + i * ogh + k] = c[i][j + ghosts_n][k];
 
                 // bottom
-                sbuf[0][0][base_xz_bottom + j * xz + i * ogh + k] = c[i][j + n][k];
+                sbuf[base_xz_bottom + j * xz + i * ogh + k] = c[i][j + n][k];
             }
     for (int i = 0; i < mgh; i++)
         for (int j = 0; j < ngh; j++)
             for (int k = 0; k < ghosts_o; k++)
             {
                 // left
-                sbuf[0][0][base_xy_left + k * xy + i * ngh + j] = c[i][j][k + ghosts_o];
+                sbuf[base_xy_left + k * xy + i * ngh + j] = c[i][j][k + ghosts_o];
 
                 // right
-                sbuf[0][0][base_xy_right + k * xy + i * ngh + j] = c[i][j][k + o];
+                sbuf[base_xy_right + k * xy + i * ngh + j] = c[i][j][k + o];
             }
 
-    rbuf.fill(-1, false);
+    for (size_t i = 0; i < rbuf.size(); i++)
+    {
+        rbuf[i] = -1;
+    }
 
     mgcl::mpi_util::sendBorderPlanes(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, 1,
                                      sbuf, rbuf, mpiData);
@@ -1323,10 +1326,10 @@ TEST_CASE("mpi_util::sendBorderPlanes_cuboid")
             {
                 CAPTURE(i, j, k);
                 // top (bottom ghosts)
-                REQUIRE(rbuf[0][0][base_xz_top + j * xz + i * ogh + k] == c[i][j + ghosts_n + n][k]);
+                REQUIRE(rbuf[base_xz_top + j * xz + i * ogh + k] == c[i][j + ghosts_n + n][k]);
 
                 // bottom (top ghosts)
-                REQUIRE(rbuf[0][0][base_xz_bottom + j * xz + i * ogh + k] == c[i][j][k]);
+                REQUIRE(rbuf[base_xz_bottom + j * xz + i * ogh + k] == c[i][j][k]);
             }
     // Toruses in send buffers for left and right after sending to top and bottom
     for (int i = 0; i < mgh; i++)
@@ -1334,10 +1337,10 @@ TEST_CASE("mpi_util::sendBorderPlanes_cuboid")
             for (int k = 0; k < ghosts_o; k++)
             {
                 // left (right ghosts)
-                REQUIRE(rbuf[0][0][base_xy_left + k * xy + i * ngh + j] == c[i][j][k + ghosts_o + o]);
+                REQUIRE(rbuf[base_xy_left + k * xy + i * ngh + j] == c[i][j][k + ghosts_o + o]);
 
                 // right (left ghosts)
-                REQUIRE(rbuf[0][0][base_xy_right + k * xy + i * ngh + j] == c[i][j][k]);
+                REQUIRE(rbuf[base_xy_right + k * xy + i * ngh + j] == c[i][j][k]);
             }
 }
 
@@ -1435,8 +1438,8 @@ TEST_CASE("mpi_util::sendBorderPlanes_stencil")
     int base_xy_left = (2 * yzgh + 2 * xzgh) * stencilSize;
     int base_xy_right = (2 * yzgh + 2 * xzgh + xygh) * stencilSize;
 
-    mgcl::Cuboid sbuf(1, 1, ressize);
-    mgcl::Cuboid rbuf(1, 1, ressize);
+    std::vector<double> sbuf(ressize);
+    std::vector<double> rbuf(ressize);
 
     mgcl::VaryingStencil c(m, n, o, stencilWidth, ghosts_m, ghosts_n, ghosts_o);
     c.fill1dIndex(false);
@@ -1450,10 +1453,10 @@ TEST_CASE("mpi_util::sendBorderPlanes_stencil")
                         for (int k = 0; k < ogh; k++)
                         {
                             // front
-                            sbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * yzgh + i * yz + j * ogh + k] = c[ii][jj][kk][i + ghosts_m][j][k];
+                            sbuf[(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * yzgh + i * yz + j * ogh + k] = c[ii][jj][kk][i + ghosts_m][j][k];
 
                             // back
-                            sbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * yzgh + base_yz_back + i * yz + j * ogh + k] = c[ii][jj][kk][i + m][j][k];
+                            sbuf[(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * yzgh + base_yz_back + i * yz + j * ogh + k] = c[ii][jj][kk][i + m][j][k];
                         }
     for (int ii = 0; ii < stencilWidth; ii++)
         for (int jj = 0; jj < stencilWidth; jj++)
@@ -1463,10 +1466,10 @@ TEST_CASE("mpi_util::sendBorderPlanes_stencil")
                         for (int k = 0; k < ogh; k++)
                         {
                             // top
-                            sbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xzgh + base_xz_top + j * xz + i * ogh + k] = c[ii][jj][kk][i][j + ghosts_n][k];
+                            sbuf[(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xzgh + base_xz_top + j * xz + i * ogh + k] = c[ii][jj][kk][i][j + ghosts_n][k];
 
                             // bottom
-                            sbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xzgh + base_xz_bottom + j * xz + i * ogh + k] = c[ii][jj][kk][i][j + n][k];
+                            sbuf[(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xzgh + base_xz_bottom + j * xz + i * ogh + k] = c[ii][jj][kk][i][j + n][k];
                         }
     for (int ii = 0; ii < stencilWidth; ii++)
         for (int jj = 0; jj < stencilWidth; jj++)
@@ -1476,13 +1479,16 @@ TEST_CASE("mpi_util::sendBorderPlanes_stencil")
                         for (int k = 0; k < ghosts_o; k++)
                         {
                             // left
-                            sbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xygh + base_xy_left + k * xy + i * ngh + j] = c[ii][jj][kk][i][j][k + ghosts_o];
+                            sbuf[(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xygh + base_xy_left + k * xy + i * ngh + j] = c[ii][jj][kk][i][j][k + ghosts_o];
 
                             // right
-                            sbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xygh + base_xy_right + k * xy + i * ngh + j] = c[ii][jj][kk][i][j][k + o];
+                            sbuf[(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xygh + base_xy_right + k * xy + i * ngh + j] = c[ii][jj][kk][i][j][k + o];
                         }
 
-    rbuf.fill(-1, false);
+    for (size_t i = 0; i < rbuf.size(); i++)
+    {
+        rbuf[i] = -1;
+    }
 
     mgcl::mpi_util::sendBorderPlanes(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, stencilWidth,
                                      sbuf, rbuf, mpiData);
@@ -1500,10 +1506,10 @@ TEST_CASE("mpi_util::sendBorderPlanes_stencil")
                         {
                             CAPTURE(i, j, k);
                             // top (bottom ghosts)
-                            REQUIRE(rbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xzgh + base_xz_top + j * xz + i * ogh + k] == c[ii][jj][kk][i][j + ghosts_n + n][k]);
+                            REQUIRE(rbuf[(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xzgh + base_xz_top + j * xz + i * ogh + k] == c[ii][jj][kk][i][j + ghosts_n + n][k]);
 
                             // bottom (top ghosts)
-                            REQUIRE(rbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xzgh + base_xz_bottom + j * xz + i * ogh + k] == c[ii][jj][kk][i][j][k]);
+                            REQUIRE(rbuf[(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xzgh + base_xz_bottom + j * xz + i * ogh + k] == c[ii][jj][kk][i][j][k]);
                         }
     // Toruses in send buffers for left and right after sending to top and bottom
     for (int ii = 0; ii < stencilWidth; ii++)
@@ -1514,9 +1520,9 @@ TEST_CASE("mpi_util::sendBorderPlanes_stencil")
                         for (int k = 0; k < ghosts_o; k++)
                         {
                             // left (right ghosts)
-                            REQUIRE(rbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xygh + base_xy_left + k * xy + i * ngh + j] == c[ii][jj][kk][i][j][k + ghosts_o + o]);
+                            REQUIRE(rbuf[(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xygh + base_xy_left + k * xy + i * ngh + j] == c[ii][jj][kk][i][j][k + ghosts_o + o]);
 
                             // right (left ghosts)
-                            REQUIRE(rbuf[0][0][(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xygh + base_xy_right + k * xy + i * ngh + j] == c[ii][jj][kk][i][j][k]);
+                            REQUIRE(rbuf[(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xygh + base_xy_right + k * xy + i * ngh + j] == c[ii][jj][kk][i][j][k]);
                         }
 }

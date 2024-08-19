@@ -36,6 +36,39 @@ namespace mgcl
         mgclCheckError(err, "clCreateBuffer");
     }
 
+    /**
+     * @brief Creates a device buffer and copies data from h_data.
+     *
+     * @param context
+     * @param flags
+     * @param size
+     */
+    BufferGpu::BufferGpu(cl_context context, cl_mem_flags flags, std::vector<double>& h_data)
+        : context(context), size(h_data.size())
+    {
+        bool containsReadWrite = (flags & CL_MEM_READ_WRITE) == CL_MEM_READ_WRITE;
+        bool containsWriteOnly = (flags & CL_MEM_WRITE_ONLY) == CL_MEM_WRITE_ONLY;
+        bool containsReadOnly = (flags & CL_MEM_READ_ONLY) == CL_MEM_READ_ONLY;
+
+        // Check that flags contains one and only one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY
+        if (!containsReadWrite && !containsWriteOnly && !containsReadOnly)
+            error("flags must contain one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.");
+
+        if ((containsReadWrite && containsReadOnly) || (containsReadWrite && containsWriteOnly) || (containsReadOnly && containsWriteOnly))
+            error("flags must contain one and only one of CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY or CL_MEM_READ_WRITE.");
+
+        bool containsCopyHostPtr = (flags & CL_MEM_COPY_HOST_PTR) == CL_MEM_COPY_HOST_PTR;
+        bool containsUseHostPtr = (flags & CL_MEM_USE_HOST_PTR) == CL_MEM_USE_HOST_PTR;
+        bool containsAllocHostPtr = (flags & CL_MEM_ALLOC_HOST_PTR) == CL_MEM_ALLOC_HOST_PTR;
+
+        if ((containsAllocHostPtr && containsUseHostPtr) || (containsAllocHostPtr && containsCopyHostPtr) || (containsUseHostPtr && containsCopyHostPtr))
+            error("flags must contain one and only one of CL_MEM_ALLOC_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_COPY_HOST_PTR.");
+
+        cl_int err;
+        buf = clCreateBuffer(context, flags, sizeof(double) * size, h_data.data(), &err);
+        mgclCheckError(err, "clCreateBuffer");
+    }
+
     BufferGpu::~BufferGpu()
     {
         if (buf != nullptr)

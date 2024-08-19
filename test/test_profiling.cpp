@@ -145,7 +145,7 @@ TEST_CASE("profiling_kernels")
         int xy = d_buf.getMgh() * d_buf.getNgh();
         int ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
 
-        mgcl::CuboidGpu dBorderPlanes(p.getContext(), CL_MEM_READ_WRITE, ressize, 1, 1, 0, 0, 0);
+        mgcl::BufferGpu dBorderPlanes(p.getContext(), CL_MEM_READ_WRITE, ressize);
 
         d_buf.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), &dBorderPlanes, nullptr, &conf, p.getProfilingData());
 

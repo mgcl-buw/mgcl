@@ -2,6 +2,7 @@
 #define MGCL_MPIUTIL_HPP
 
 #include <memory>
+#include <vector>
 
 #include "mpi.h"
 
@@ -22,7 +23,7 @@ namespace mgcl::mpi_util
 
     void sendBorderPlanes(int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
                           int stencilWidth,
-                          Cuboid& sbuf, Cuboid& rbuf, MPILevelData& mpiData);
+                          std::vector<double>& sbuf, std::vector<double>& rbuf, MPILevelData& mpiData);
 
     void mgcl_check_mpi_error(MPI_Comm comm, int err, const char* operation, const char* filename, int line);
 }

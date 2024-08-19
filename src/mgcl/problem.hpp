@@ -56,9 +56,9 @@ namespace mgcl
         // Temporary buffer for storing cuboid planes for ghost update. Must be greater or equal to the amount
         // of ghost cells of the cuboid that is being updated. It is initialized based on dVIn of level 0 and
         // thus should be big enough for all cuboids.
-        std::shared_ptr<CuboidGpu> dPlanesBuf = nullptr;
-        std::shared_ptr<Cuboid> hPlanesBufSend = nullptr;
-        std::shared_ptr<Cuboid> hPlanesBufRecv = nullptr;
+        std::shared_ptr<BufferGpu> dPlanesBuf = nullptr;
+        std::shared_ptr<std::vector<double>> hPlanesBufSend = nullptr;
+        std::shared_ptr<std::vector<double>> hPlanesBufRecv = nullptr;
 
         /* local grid dimensions (on one MPI process if MPI is used) */
         int m;
@@ -233,16 +233,16 @@ namespace mgcl
         std::shared_ptr<Cuboid> getFPtr() const;
         void setF(std::shared_ptr<Cuboid> f_);
 
-        CuboidGpu* getDPlanesBufPtr() const;
-        CuboidGpu& getDPlanesBuf() const;
-        void setDPlanesBuf(const std::shared_ptr<CuboidGpu> dPlanesBuf_);
+        BufferGpu* getDPlanesBufPtr() const;
+        BufferGpu& getDPlanesBuf() const;
+        void setDPlanesBuf(const std::shared_ptr<BufferGpu> dPlanesBuf_);
 
-        Cuboid* getHPlanesBufSendPtr() const;
-        Cuboid& getHPlanesBufSend() const;
-        void setHPlanesBufSend(const std::shared_ptr<Cuboid> hPlanesBuf_);
-        Cuboid* getHPlanesBufRecvPtr() const;
-        Cuboid& getHPlanesBufRecv() const;
-        void setHPlanesBufRecv(const std::shared_ptr<Cuboid> hPlanesBuf_);
+        std::vector<double>* getHPlanesBufSendPtr() const;
+        std::vector<double>& getHPlanesBufSend() const;
+        void setHPlanesBufSend(const std::shared_ptr<std::vector<double>> hPlanesBuf_);
+        std::vector<double>* getHPlanesBufRecvPtr() const;
+        std::vector<double>& getHPlanesBufRecv() const;
+        void setHPlanesBufRecv(const std::shared_ptr<std::vector<double>> hPlanesBuf_);
 
         int getM() const;
 

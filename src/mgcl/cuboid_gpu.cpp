@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iomanip>
 #include <memory>
+#include <vector>
 
 namespace mgcl
 {
@@ -470,9 +471,9 @@ namespace mgcl
      * @param h_target Cuboid that data gets extracted into. If target is nullptr, a new Cuboid is created and returned.
      * @return std::unique_ptr<Cuboid>
      */
-    std::unique_ptr<Cuboid> CuboidGpu::extractBorderPlanes(cl_command_queue commands, cl_program program,
-                                                           CuboidGpu* d_target, Cuboid* h_target,
-                                                           mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
+    std::unique_ptr<std::vector<double>> CuboidGpu::extractBorderPlanes(cl_command_queue commands, cl_program program,
+                                                                        BufferGpu* d_target, std::vector<double>* h_target,
+                                                                        mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
         // Plane sizes
         int yz = ngh * ogh;
@@ -484,12 +485,11 @@ namespace mgcl
             error("CuboidGpu::extractBorderPlanes: Only defined for ghosts <= m, n, o");
 
         // Create return buffer, if not provided
-        std::unique_ptr<Cuboid>
-            ret = nullptr;
-        Cuboid* retraw = h_target;
+        std::unique_ptr<std::vector<double>> ret = nullptr;
+        std::vector<double>* retraw = h_target;
         if (h_target == nullptr)
         {
-            ret = std::make_unique<Cuboid>(1, 1, ressize);
+            ret = std::make_unique<std::vector<double>>(ressize);
             retraw = ret.get();
         }
 
@@ -497,7 +497,8 @@ namespace mgcl
         bool createdDTarget = false;
         if (d_target == nullptr)
         {
-            d_target = new CuboidGpu(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *retraw);
+            d_target = new BufferGpu(context, CL_MEM_READ_WRITE, ressize);
+            d_target->write(commands, *retraw, true);
             createdDTarget = true;
         }
 
@@ -509,7 +510,7 @@ namespace mgcl
         mgcl::mgclCheckError(err, "clCreateKernel");
 
         // assign kernel arguments
-        cl_mem d_target_buffer = d_target->getBuffer();
+        cl_mem d_target_buffer = d_target->getBuf();
         int pos = 0;
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buffer);
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_target_buffer);
@@ -557,7 +558,7 @@ namespace mgcl
         mgcl::mgclCheckError(err, "Releasing extract_border_planes kernel");
 
         // Read into h_target
-        d_target->read1d(commands, ressize, retraw, true);
+        d_target->read(commands, retraw->data(), true);
 
         if (createdDTarget)
             delete d_target;
@@ -577,7 +578,7 @@ namespace mgcl
      *   Ignored if d_source is not null. If d_source is null, a temporary device buffer is created.
      */
     void CuboidGpu::pasteGhostsFromBorderPlanes(cl_context context, cl_command_queue commands, cl_program program,
-                                                CuboidGpu* d_source, Cuboid* h_source,
+                                                BufferGpu* d_source, std::vector<double>* h_source,
                                                 mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
         if (d_source == nullptr && h_source == nullptr)
@@ -589,11 +590,12 @@ namespace mgcl
         int xy = mgh * ngh;
         int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
 
-        CuboidGpu* d_tmp = d_source;
+        BufferGpu* d_tmp = d_source;
         bool createdDTmp = false;
         if (d_tmp == nullptr)
         {
-            d_tmp = new CuboidGpu(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *h_source);
+            d_tmp = new BufferGpu(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, ressize);
+            d_tmp->write(commands, *h_source, true);
             createdDTmp = true;
         }
 
@@ -605,7 +607,7 @@ namespace mgcl
         mgcl::mgclCheckError(err, "clCreateKernel");
 
         // assign kernel arguments
-        cl_mem d_target_buffer = d_tmp->getBuffer();
+        cl_mem d_target_buffer = d_tmp->getBuf();
         int pos = 0;
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buffer);
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_target_buffer);

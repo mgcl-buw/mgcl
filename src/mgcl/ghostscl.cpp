@@ -433,10 +433,10 @@ namespace mgcl
 
         auto hPlanesBufSend = p.getHPlanesBufSendPtr();
         auto hPlanesBufRecv = p.getHPlanesBufRecvPtr();
-        if (hPlanesBufSend->getSize() < ressize || hPlanesBufRecv->getSize() < ressize)
+        if (hPlanesBufSend->size() < ressize || hPlanesBufRecv->size() < ressize)
             throw "MultigridEngine::updateGhostsOclMpi: hPlanesBufSend or hPlanesBufRecv is too small. Need at least " +
-                std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend->getSize()) +
-                " (send) and " + std::to_string(hPlanesBufRecv->getSize()) + " (recv)";
+                std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend->size()) +
+                " (send) and " + std::to_string(hPlanesBufRecv->size()) + " (recv)";
 
         // Extract border planes from the buffer
         d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(),
@@ -451,7 +451,7 @@ namespace mgcl
                                    sbuf, rbuf, mpiData);
 
         // Paste planes back into the buffer.
-        dPlanesBuf->write1d(p.getCommands(), ressize, rbuf, false);
+        dPlanesBuf->write(p.getCommands(), rbuf, false);
         d_buf.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(),
                                           dPlanesBuf, nullptr,
                                           &p.getKernelConfig(), p.getProfilingData());

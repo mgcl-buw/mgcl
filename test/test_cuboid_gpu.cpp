@@ -554,8 +554,8 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
         mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_cuboid);
 
-        auto check = [&](mgcl::Cuboid& extractedBorders) { //
-            const double* data_borders = extractedBorders.field1d().data();
+        auto check = [&](std::vector<double>& extractedBorders) { //
+            const double* data_borders = extractedBorders.data();
 
             int cnt = 0;
             // front planes (yz)
@@ -607,9 +607,9 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
         SECTION("reuse_both")
         {
-            mgcl::Cuboid h_ret(1, 1, ressize, 0, 0, 0);
-            h_ret.fill(-1, false);
-            mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_ret);
+            std::vector<double> h_ret(ressize);
+            std::fill(h_ret.begin(), h_ret.end(), -1);
+            mgcl::BufferGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_ret);
 
             c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, &h_ret, nullptr, nullptr);
             check(h_ret);
@@ -617,8 +617,8 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
         SECTION("reuse_return_buffer")
         {
-            mgcl::Cuboid h_ret(1, 1, ressize, 0, 0, 0);
-            h_ret.fill(-1, false);
+            std::vector<double> h_ret(ressize);
+            std::fill(h_ret.begin(), h_ret.end(), -1);
 
             auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, &h_ret, nullptr, nullptr);
             REQUIRE(ret == nullptr);
@@ -627,8 +627,8 @@ TEST_CASE("CuboidGpu::extract_border_planes")
 
         SECTION("reuse_device_buffer")
         {
-            mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, 1, 1, ressize, 0, 0, 0);
-            d_tmp.fill(p.getProgram(), p.getCommands(), -1, false, &p.getKernelConfig(), p.getProfilingData());
+            mgcl::BufferGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, ressize);
+            d_tmp.fill(p.getProgram(), p.getCommands(), -1, true, &p.getKernelConfig(), p.getProfilingData());
 
             auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr, nullptr, nullptr);
             check(*ret);
@@ -896,12 +896,15 @@ TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes")
         mgcl::Cuboid h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o);
         h_cuboid.fill(-1, false);
 
-        mgcl::Cuboid h_planes(1, 1, ressize);
-        h_planes.fill1dIndex(false);
-        double* buf_planes = h_planes.field1d().data();
+        std::vector<double> h_planes(ressize);
+        for (size_t i = 0; i < h_planes.size(); i++)
+        {
+            h_planes[i] = i;
+        }
+        double* buf_planes = h_planes.data();
 
         mgcl::CuboidGpu d_cuboid(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_cuboid);
-        mgcl::CuboidGpu d_planes(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_planes);
+        mgcl::BufferGpu d_planes(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_planes);
 
         // paste planes
         d_cuboid.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), &d_planes, nullptr, nullptr, nullptr);

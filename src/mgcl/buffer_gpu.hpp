@@ -29,6 +29,7 @@ namespace mgcl
 
     public:
         BufferGpu(cl_context context, cl_mem_flags flags, size_t size);
+        BufferGpu(cl_context context, cl_mem_flags flags, std::vector<double>& h_data);
 
         BufferGpu(const BufferGpu& s) = delete;
         BufferGpu(BufferGpu&& s) = delete;
