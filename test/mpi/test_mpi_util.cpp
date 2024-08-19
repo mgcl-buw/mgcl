@@ -1187,8 +1187,8 @@ TEST_CASE("mpi_util::gather-GPU-src-dest-same-stencil")
 }
 
 // Checks that sending border planes is correct.
-// Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::gather-GPU-src-dest-same-stencil"
-TEST_CASE("mpi_util::sendBorderPlanes")
+// Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::sendBorderPlanes_cuboid"
+TEST_CASE("mpi_util::sendBorderPlanes_cuboid")
 {
     using std::min;
 
@@ -1310,7 +1310,7 @@ TEST_CASE("mpi_util::sendBorderPlanes")
 
     rbuf.fill(-1, false);
 
-    mgcl::mpi_util::sendBorderPlanes(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o,
+    mgcl::mpi_util::sendBorderPlanes(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, 1,
                                      sbuf, rbuf, mpiData);
 
     mgcl::MultigridEngine::updateGhostsSeq(c, nullptr, true, true);

@@ -447,7 +447,7 @@ namespace mgcl
 
         // Send our planes to neighbours and receive their planes
         mpi_util::sendBorderPlanes(d_buf.getMgh(), d_buf.getNgh(), d_buf.getOgh(),
-                                   d_buf.getGhostsM(), d_buf.getGhostsN(), d_buf.getGhostsO(),
+                                   d_buf.getGhostsM(), d_buf.getGhostsN(), d_buf.getGhostsO(), 1,
                                    sbuf, rbuf, mpiData);
 
         // Paste planes back into the buffer.

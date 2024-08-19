@@ -660,41 +660,47 @@ namespace mgcl::mpi_util
      * @param ghosts_m Ghosts of cuboid, that the planes belong to, at one border in z-direction
      * @param ghosts_n Ghosts of cuboid, that the planes belong to, at one border in y-direction
      * @param ghosts_o Ghosts of cuboid, that the planes belong to, at one border in x-direction
+     * @param stencilWidth Width of stencil, e.g. 3 for 3x3x3. Can be 1, when border planes of a cuboid shall be sent.
      * @param sbuf Send buffer, must contain planes in the same order that CuboidGpu::extractBorderPlanes() returns.
      * @param rbuf Temporary receive buffer
      * @param mpiData Contains neighbouring processes' info
      */
-    void sendBorderPlanes(int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
+    void sendBorderPlanes(int mgh, int ngh, int ogh,
+                          int ghosts_m, int ghosts_n, int ghosts_o,
+                          int stencilWidth,
                           Cuboid& sbuf, Cuboid& rbuf, MPILevelData& mpiData)
     {
         int yz = ngh * ogh;
         int xz = mgh * ogh;
         int xy = mgh * ngh;
 
+        int stencilSize = stencilWidth * stencilWidth * stencilWidth;
+        int gridsize = mgh * ngh * ogh;
+
         int m = mgh - 2 * ghosts_m;
         int n = ngh - 2 * ghosts_n;
         int o = ogh - 2 * ghosts_o;
 
         // int base_yz_front = 0;
-        int base_yz_back = ghosts_m * yz;
-        int base_xz_top = 2 * ghosts_m * yz;
-        int base_xz_bottom = 2 * ghosts_m * yz + ghosts_n * xz;
-        int base_xy_left = 2 * ghosts_m * yz + 2 * ghosts_n * xz;
-        int base_xy_right = 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy;
+        int base_yz_back = (ghosts_m * yz) * stencilSize;
+        int base_xz_top = (2 * ghosts_m * yz) * stencilSize;
+        int base_xz_bottom = (2 * ghosts_m * yz + ghosts_n * xz) * stencilSize;
+        int base_xy_left = (2 * ghosts_m * yz + 2 * ghosts_n * xz) * stencilSize;
+        int base_xy_right = (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * stencilSize;
 
         // Send planes to neighbors
         int myid, err;
         MPI_Comm_rank(mpiData.comm, &myid);
 
         // Send front planes to the back
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), ghosts_m * yz, MPI_DOUBLE, mpiData.back, 0,
-                           static_cast<void*>(rbuf[0][0]), ghosts_m * yz, MPI_DOUBLE, mpiData.front, 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), (ghosts_m * yz) * stencilSize, MPI_DOUBLE, mpiData.back, 0,
+                           static_cast<void*>(rbuf[0][0]), (ghosts_m * yz) * stencilSize, MPI_DOUBLE, mpiData.front, 0,
                            mpiData.comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
 
         // Send back planes to the front
-        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[0][0][base_yz_back])), ghosts_m * yz, MPI_DOUBLE, mpiData.front, 0,
-                           static_cast<void*>(&(rbuf[0][0][base_yz_back])), ghosts_m * yz, MPI_DOUBLE, mpiData.back, 0,
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[0][0][base_yz_back])), (ghosts_m * yz) * stencilSize, MPI_DOUBLE, mpiData.front, 0,
+                           static_cast<void*>(&(rbuf[0][0][base_yz_back])), (ghosts_m * yz) * stencilSize, MPI_DOUBLE, mpiData.back, 0,
                            mpiData.comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
 
@@ -704,36 +710,37 @@ namespace mgcl::mpi_util
         // j0: j index of send buffers for xz plane (always all j indices)
         // j1: j index of recv buffer yz top edge
         // j2: j index of recv buffer yz bottom edge
-        for (int i0 = 0, i1 = m + ghosts_m;
-             i0 < ghosts_m;
-             i0++, i1++)
-            for (int j0 = 0, j1 = ghosts_n, j2 = n;
-                 j0 < ghosts_n;
-                 j0++, j1++, j2++)
-                for (int k = 0; k < ogh; k++)
-                {
-                    // Upper front edge - Write ghosts in the front (from back recv buffer) to xz top send buffer
-                    sbuf[0][0][base_xz_top + j0 * xz + i0 * ogh + k] = rbuf[0][0][base_yz_back + i0 * yz + j1 * ogh + k];
+        for (int st = 0; st < stencilSize; st++)
+            for (int i0 = 0, i1 = m + ghosts_m;
+                 i0 < ghosts_m;
+                 i0++, i1++)
+                for (int j0 = 0, j1 = ghosts_n, j2 = n;
+                     j0 < ghosts_n;
+                     j0++, j1++, j2++)
+                    for (int k = 0; k < ogh; k++)
+                    {
+                        // Upper front edge - Write ghosts in the front (from back recv buffer) to xz top send buffer
+                        sbuf[0][0][st * gridsize + base_xz_top + j0 * xz + i0 * ogh + k] = rbuf[0][0][st * gridsize + base_yz_back + i0 * yz + j1 * ogh + k];
 
-                    // Lower front edge - Write ghosts in the front (from back recv buffer) to xz bottom send buffer
-                    sbuf[0][0][base_xz_bottom + j0 * xz + i0 * ogh + k] = rbuf[0][0][base_yz_back + i0 * yz + j2 * ogh + k];
+                        // Lower front edge - Write ghosts in the front (from back recv buffer) to xz bottom send buffer
+                        sbuf[0][0][st * gridsize + base_xz_bottom + j0 * xz + i0 * ogh + k] = rbuf[0][0][st * gridsize + base_yz_back + i0 * yz + j2 * ogh + k];
 
-                    // Upper back edge - Write ghosts in the back (from front recv buffer, base 0) to xz top send buffer
-                    sbuf[0][0][base_xz_top + j0 * xz + i1 * ogh + k] = rbuf[0][0][i0 * yz + j1 * ogh + k];
+                        // Upper back edge - Write ghosts in the back (from front recv buffer, base 0) to xz top send buffer
+                        sbuf[0][0][st * gridsize + base_xz_top + j0 * xz + i1 * ogh + k] = rbuf[0][0][st * gridsize + i0 * yz + j1 * ogh + k];
 
-                    // Lower back edge - Write ghosts in the back (from front recv buffer, base 0) to xz bottom send buffer
-                    sbuf[0][0][base_xz_bottom + j0 * xz + i1 * ogh + k] = rbuf[0][0][i0 * yz + j2 * ogh + k];
-                }
+                        // Lower back edge - Write ghosts in the back (from front recv buffer, base 0) to xz bottom send buffer
+                        sbuf[0][0][st * gridsize + base_xz_bottom + j0 * xz + i1 * ogh + k] = rbuf[0][0][st * gridsize + i0 * yz + j2 * ogh + k];
+                    }
 
         // Send top planes to the bottom
-        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[0][0][base_xz_top])), ghosts_n * xz, MPI_DOUBLE, mpiData.down, 0,
-                           static_cast<void*>(&(rbuf[0][0][base_xz_top])), ghosts_n * xz, MPI_DOUBLE, mpiData.up, 0,
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[0][0][base_xz_top])), (ghosts_n * xz) * stencilSize, MPI_DOUBLE, mpiData.down, 0,
+                           static_cast<void*>(&(rbuf[0][0][base_xz_top])), (ghosts_n * xz) * stencilSize, MPI_DOUBLE, mpiData.up, 0,
                            mpiData.comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
 
         // Send bottom planes to the top
-        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[0][0][base_xz_bottom])), ghosts_n * xz, MPI_DOUBLE, mpiData.up, 0,
-                           static_cast<void*>(&(rbuf[0][0][base_xz_bottom])), ghosts_n * xz, MPI_DOUBLE, mpiData.down, 0,
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[0][0][base_xz_bottom])), (ghosts_n * xz) * stencilSize, MPI_DOUBLE, mpiData.up, 0,
+                           static_cast<void*>(&(rbuf[0][0][base_xz_bottom])), (ghosts_n * xz) * stencilSize, MPI_DOUBLE, mpiData.down, 0,
                            mpiData.comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
 
@@ -741,64 +748,64 @@ namespace mgcl::mpi_util
         // k0: k index of send buffers for xy planes (left and right)
         // k1: k index of recv buffers for copy into left send buffer
         // k2: k index of recv buffers for copy into right send buffer
-        for (int k0 = 0, k1 = ghosts_o, k2 = o;
-             k0 < ghosts_o;
-             k0++, k1++, k2++)
-        {
+        for (int st = 0; st < stencilSize; st++)
+            for (int k0 = 0, k1 = ghosts_o, k2 = o;
+                 k0 < ghosts_o;
+                 k0++, k1++, k2++)
+            {
 
-            // Copying from yz planes (front back)
-            // i0: i index of recv buffers for yz plane (always all i indices)
-            // i1: i index of send buffers xz back ghosts
-            for (int i0 = 0, i1 = m + ghosts_m;
-                 i0 < ghosts_m;
-                 i0++, i1++)
-                for (int j = ghosts_n; j < ghosts_n + n; j++)
-                {
-                    // Left front face - Write ghosts in the send left buffer from recv back buffer
-                    sbuf[0][0][base_xy_left + k0 * xy + i0 * ngh + j] = rbuf[0][0][base_yz_back + i0 * yz + j * ogh + k1];
+                // Copying from yz planes (front back)
+                // i0: i index of recv buffers for yz plane (always all i indices)
+                // i1: i index of send buffers xz back ghosts
+                for (int i0 = 0, i1 = m + ghosts_m;
+                     i0 < ghosts_m;
+                     i0++, i1++)
+                    for (int j = ghosts_n; j < ghosts_n + n; j++)
+                    {
+                        // Left front face - Write ghosts in the send left buffer from recv back buffer
+                        sbuf[0][0][st * gridsize + base_xy_left + k0 * xy + i0 * ngh + j] = rbuf[0][0][st * gridsize + base_yz_back + i0 * yz + j * ogh + k1];
 
-                    // Left back face - Write ghosts in the send left buffer from recv front buffer
-                    sbuf[0][0][base_xy_left + k0 * xy + i1 * ngh + j] = rbuf[0][0][i0 * yz + j * ogh + k1];
+                        // Left back face - Write ghosts in the send left buffer from recv front buffer
+                        sbuf[0][0][st * gridsize + base_xy_left + k0 * xy + i1 * ngh + j] = rbuf[0][0][st * gridsize + i0 * yz + j * ogh + k1];
 
-                    // TODO right
-                    // Right front face - Write ghosts in the send right buffer from recv back buffer
-                    sbuf[0][0][base_xy_right + k0 * xy + i0 * ngh + j] = rbuf[0][0][base_yz_back + i0 * yz + j * ogh + k2];
+                        // Right front face - Write ghosts in the send right buffer from recv back buffer
+                        sbuf[0][0][st * gridsize + base_xy_right + k0 * xy + i0 * ngh + j] = rbuf[0][0][st * gridsize + base_yz_back + i0 * yz + j * ogh + k2];
 
-                    // Right back face - Write ghosts in the send right buffer from recv front buffer
-                    sbuf[0][0][base_xy_right + k0 * xy + i1 * ngh + j] = rbuf[0][0][i0 * yz + j * ogh + k2];
-                }
+                        // Right back face - Write ghosts in the send right buffer from recv front buffer
+                        sbuf[0][0][st * gridsize + base_xy_right + k0 * xy + i1 * ngh + j] = rbuf[0][0][st * gridsize + i0 * yz + j * ogh + k2];
+                    }
 
-            // Copying from xz planes (top bottom)
-            // j0: j index of recv buffers yz bottom and send both left and right
-            // j1: j index of send buffers xy bottom ghosts (recv top)
-            for (int i = 0; i < mgh; i++)
-                for (int j0 = 0, j1 = n + ghosts_n;
-                     j0 < ghosts_n;
-                     j0++, j1++)
-                {
-                    // Left top edge - Write ghosts in the send left buffer from recv bottom buffer
-                    sbuf[0][0][base_xy_left + k0 * xy + i * ngh + j0] = rbuf[0][0][base_xz_bottom + j0 * xz + i * ogh + k1];
+                // Copying from xz planes (top bottom)
+                // j0: j index of recv buffers yz bottom and send both left and right
+                // j1: j index of send buffers xy bottom ghosts (recv top)
+                for (int i = 0; i < mgh; i++)
+                    for (int j0 = 0, j1 = n + ghosts_n;
+                         j0 < ghosts_n;
+                         j0++, j1++)
+                    {
+                        // Left top edge - Write ghosts in the send left buffer from recv bottom buffer
+                        sbuf[0][0][st * gridsize + base_xy_left + k0 * xy + i * ngh + j0] = rbuf[0][0][st * gridsize + base_xz_bottom + j0 * xz + i * ogh + k1];
 
-                    // Left bottom edge - Write ghosts in the send left buffer from recv top buffer
-                    sbuf[0][0][base_xy_left + k0 * xy + i * ngh + j1] = rbuf[0][0][base_xz_top + j0 * xz + i * ogh + k1];
+                        // Left bottom edge - Write ghosts in the send left buffer from recv top buffer
+                        sbuf[0][0][st * gridsize + base_xy_left + k0 * xy + i * ngh + j1] = rbuf[0][0][st * gridsize + base_xz_top + j0 * xz + i * ogh + k1];
 
-                    // Right top edge - Write ghosts in the send left buffer from recv bottom buffer
-                    sbuf[0][0][base_xy_right + k0 * xy + i * ngh + j0] = rbuf[0][0][base_xz_bottom + j0 * xz + i * ogh + k2];
+                        // Right top edge - Write ghosts in the send left buffer from recv bottom buffer
+                        sbuf[0][0][st * gridsize + base_xy_right + k0 * xy + i * ngh + j0] = rbuf[0][0][st * gridsize + base_xz_bottom + j0 * xz + i * ogh + k2];
 
-                    // Right bottom face - Write ghosts in the send right buffer from recv top buffer
-                    sbuf[0][0][base_xy_right + k0 * xy + i * ngh + j1] = rbuf[0][0][base_xz_top + j0 * xz + i * ogh + k2];
-                }
-        }
+                        // Right bottom face - Write ghosts in the send right buffer from recv top buffer
+                        sbuf[0][0][st * gridsize + base_xy_right + k0 * xy + i * ngh + j1] = rbuf[0][0][st * gridsize + base_xz_top + j0 * xz + i * ogh + k2];
+                    }
+            }
 
         // Send left planes to the right
-        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[0][0][base_xy_left])), ghosts_o * xy, MPI_DOUBLE, mpiData.right, 0,
-                           static_cast<void*>(&(rbuf[0][0][base_xy_left])), ghosts_o * xy, MPI_DOUBLE, mpiData.left, 0,
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[0][0][base_xy_left])), (ghosts_o * xy) * stencilSize, MPI_DOUBLE, mpiData.right, 0,
+                           static_cast<void*>(&(rbuf[0][0][base_xy_left])), (ghosts_o * xy) * stencilSize, MPI_DOUBLE, mpiData.left, 0,
                            mpiData.comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
 
         // Send right planes to the left
-        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[0][0][base_xy_right])), ghosts_o * xy, MPI_DOUBLE, mpiData.left, 0,
-                           static_cast<void*>(&(rbuf[0][0][base_xy_right])), ghosts_o * xy, MPI_DOUBLE, mpiData.right, 0,
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[0][0][base_xy_right])), (ghosts_o * xy) * stencilSize, MPI_DOUBLE, mpiData.left, 0,
+                           static_cast<void*>(&(rbuf[0][0][base_xy_right])), (ghosts_o * xy) * stencilSize, MPI_DOUBLE, mpiData.right, 0,
                            mpiData.comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
     }
