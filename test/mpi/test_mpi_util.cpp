@@ -14,6 +14,7 @@
 #include "../../src/mgcl/multigrid_engine.hpp"
 #include "../../src/mgcl/problem.hpp"
 #include "../../src/mgcl/stencil.hpp"
+#include "../cli_args.hpp"
 #include "../test_utility.hpp"
 
 #include "mpi.h"
@@ -405,7 +406,7 @@ TEST_CASE("mpi_util::gather-src-dest-same-different-gh")
 // Run with e.g. mpiexec -n 8 tests_mpi mpi_util::gather-GPU-src-dest-same-different-gh
 TEST_CASE("mpi_util::gather-GPU-src-dest-same-different-gh")
 {
-    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+    for (auto deviceType : CLI_ARGS::deviceTypes)
     {
         using std::min;
 
@@ -492,7 +493,7 @@ TEST_CASE("mpi_util::gather-GPU-src-dest-same-different-gh")
         }
 
         // Create gpu buffer from cglob_recv.
-        mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+        mgcl_test::TestUtility tu(deviceType);
         mgcl::CuboidGpu d_cglob_recv(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *cglob_recv);
 
         mgcl::mpi_util::gather(mpi_comm, tu.getCommands(), d_cglob_recv);
@@ -838,7 +839,7 @@ TEST_CASE("mpi_util::scatter-src-dest-same-with-ghosts")
 // Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::scatter-GPU-src-dest-same-with-ghosts"
 TEST_CASE("mpi_util::scatter-GPU-src-dest-same-with-ghosts")
 {
-    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+    for (auto deviceType : CLI_ARGS::deviceTypes)
     {
         using std::min;
 
@@ -927,7 +928,7 @@ TEST_CASE("mpi_util::scatter-GPU-src-dest-same-with-ghosts")
         auto cloc_act = mgcl::Cuboid::copyFrom(cloc_exp);
         cloc_act.fill(0);
 
-        mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+        mgcl_test::TestUtility tu(deviceType);
 
         if (mpi_rank == 0)
         {
@@ -1075,7 +1076,7 @@ TEST_CASE("mpi_util::gather-src-dest-same-stencil")
 // Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::gather-GPU-src-dest-same-stencil"
 TEST_CASE("mpi_util::gather-GPU-src-dest-same-stencil")
 {
-    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+    for (auto deviceType : CLI_ARGS::deviceTypes)
     {
         using std::min;
 
@@ -1164,7 +1165,7 @@ TEST_CASE("mpi_util::gather-GPU-src-dest-same-stencil")
         }
 
         // Create gpu buffer from cglob_recv.
-        mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+        mgcl_test::TestUtility tu(deviceType);
         mgcl::VaryingStencilGpu d_cglob_recv(cglob_recv->getM(), cglob_recv->getN(), cglob_recv->getO(),
                                              3, gh, tu.getContext(), tu.getCommands(), tu.getProgram());
         d_cglob_recv.fill(*cglob_recv, tu.getCommands(), true);

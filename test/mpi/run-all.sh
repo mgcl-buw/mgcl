@@ -31,6 +31,8 @@ print_help() {
   echo "-v,--vcycle: Run Vcycle specific tests (i.e. solving a problem)"
   echo "-s,--stencil: Run Stencil specific tests (mult, ghost update, etc.)"
   echo "-a,--galerkin: Run Galerkin specific tests (galerkinOptimized, Problem::init)"
+  echo "--no-ocl: Skip OpenCL tests"
+  echo "--ocl-device-types: Specify OpenCL device types to use, separated by comma. Allowed are: gpu,cpu. Default: gpu."
   echo "If no option is given, all tests will be run."
 }
 
@@ -44,7 +46,8 @@ TEST_UTIL=false
 TEST_VCYCLE=false
 TEST_STENCIL=false
 TEST_GALERKIN=false
-NO_GPU=false
+NO_OCL=false
+OCL_DEVICE_TYPES=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -97,10 +100,23 @@ while [[ $# -gt 0 ]]; do
       TEST_ALL=false
       shift # past argument
       ;;
-    --no-gpu)
-      NO_GPU=true
+    --no-ocl)
+      NO_OCL=true
       shift # past argument
       ;;
+    --ocl-device-types)
+      shift # past argument
+      if [[ "$1" =~ .*gpu.* ]] && [[ "$1" =~ .*cpu.* ]]; then
+        echo "Running OpenCL tests on GPU and CPU"
+        OCL_DEVICE_TYPES="gpu,cpu"
+      elif [[ "$1" =~ .*cpu.* ]] ; then
+        echo "Running OpenCL tests only on CPU"
+        OCL_DEVICE_TYPES="cpu"
+      else
+        echo "Running OpenCL tests only on GPU"
+        OCL_DEVICE_TYPES="gpu"
+      fi
+      shift # past argument
   esac
 done
 
@@ -108,7 +124,7 @@ if [ "$TEST_ALL" = true ] ; then
     echo "Running all tests..."
 fi
 
-if [ "$NO_GPU" = true ] ; then
+if [ "$NO_OCL" = true ] ; then
     echo "but skipping GPU tests..."
 fi
 
@@ -149,8 +165,8 @@ if [ "$TEST_GHOSTS" = true ] || [ "$TEST_ALL" = true ] ; then
 
     run_test -n 1 "$exe" "MPI updateGhostsSeq (1 process)"
     run_test --oversubscribe -n 8 "$exe" "MPI updateGhostsSeq (n processes)"
-    if [ "$NO_GPU" = false ] ; then
-        run_test --oversubscribe -n 8 "$exe" "MPI updateGhosts ocl (n processes)"
+    if [ "$NO_OCL" = false ] ; then
+        run_test --oversubscribe -n 8 "$exe" "MPI updateGhosts ocl (n processes)" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
 fi
 
@@ -163,11 +179,11 @@ if [ "$TEST_JACOBI" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 8 "$exe" "MPI_jacobiSeq_Laplace_n_processes"
     run_test --oversubscribe -n 1 "$exe" "MPI_jacobiSeq_VaryingStencil_n_processes"
     run_test --oversubscribe -n 8 "$exe" "MPI_jacobiSeq_VaryingStencil_n_processes"
-    if [ "$NO_GPU" = false ] ; then
-      run_test --oversubscribe -n 1 "$exe" "MPI_jacobi_ocl_Laplace_n_processes"
-      run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_Laplace_n_processes"
-      run_test --oversubscribe -n 1 "$exe" "MPI_jacobi_ocl_VaryingStencil_n_processes"
-      run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_VaryingStencil_n_processes"
+    if [ "$NO_OCL" = false ] ; then
+      run_test --oversubscribe -n 1 "$exe" "MPI_jacobi_ocl_Laplace_n_processes" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_Laplace_n_processes" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 1 "$exe" "MPI_jacobi_ocl_VaryingStencil_n_processes" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_VaryingStencil_n_processes" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
 fi
 
@@ -178,9 +194,9 @@ if [ "$TEST_RESIDUAL" = true ] || [ "$TEST_ALL" = true ] ; then
 
     run_test --oversubscribe -n 1 "$exe" "MPI_residual_seq_VaryingStencil_n_processes"
     run_test --oversubscribe -n 8 "$exe" "MPI_residual_seq_VaryingStencil_n_processes"
-    if [ "$NO_GPU" = false ] ; then
-      run_test --oversubscribe -n 1 "$exe" "MPI_residual_ocl_VaryingStencil_n_processes"
-      run_test --oversubscribe -n 8 "$exe" "MPI_residual_ocl_VaryingStencil_n_processes"
+    if [ "$NO_OCL" = false ] ; then
+      run_test --oversubscribe -n 1 "$exe" "MPI_residual_ocl_VaryingStencil_n_processes" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 8 "$exe" "MPI_residual_ocl_VaryingStencil_n_processes" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
 fi
 
@@ -204,10 +220,10 @@ if [ "$TEST_UTIL" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 8 "$exe" "mpi_util::sendBorderPlanes_stencil"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::sendBorderPlanes_stencil"
 
-    if [ "$NO_GPU" = false ] ; then
-      run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-GPU-src-dest-same-different-gh"
-      run_test --oversubscribe -n 17 "$exe" "mpi_util::scatter-GPU-src-dest-same-with-ghosts"
-      run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-GPU-src-dest-same-stencil"
+    if [ "$NO_OCL" = false ] ; then
+      run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-GPU-src-dest-same-different-gh" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 17 "$exe" "mpi_util::scatter-GPU-src-dest-same-with-ghosts" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-GPU-src-dest-same-stencil" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
 fi
 
@@ -225,16 +241,16 @@ if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_threshold_eq_1_Varying27p"
     run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_threshold_eq_2_Varying27p"
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_threshold_eq_2_Varying27p"
-    if [ "$NO_GPU" = false ] ; then
-      run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p"
-      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p"
-      run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_gt_0_Laplace7p"
-      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_gt_0_Laplace7p"
-      run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_eq_1_Varying27p"
-      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_1_Varying27p"
-      run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p"
-      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p"
-      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters"
+    if [ "$NO_OCL" = false ] ; then
+      run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_gt_0_Laplace7p" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_gt_0_Laplace7p" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_eq_1_Varying27p" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_1_Varying27p" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_multiple_solve_calls"
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_different_relres"
@@ -249,9 +265,9 @@ if [ "$TEST_STENCIL" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 2 "$exe" "MPI-stencil-updateGhostsSeq-nprocs"
     run_test --oversubscribe -n 4 "$exe" "MPI-stencil-updateGhostsSeq-nprocs"
 
-    if [ "$NO_GPU" = false ] ; then
-      run_test --oversubscribe -n 2 "$exe" "MPI-updateGhostsStencilOclMpi-nprocs"
-      run_test --oversubscribe -n 4 "$exe" "MPI-updateGhostsStencilOclMpi-nprocs"
+    if [ "$NO_OCL" = false ] ; then
+      run_test --oversubscribe -n 2 "$exe" "MPI-updateGhostsStencilOclMpi-nprocs" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 4 "$exe" "MPI-updateGhostsStencilOclMpi-nprocs" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
 fi
 
@@ -265,9 +281,9 @@ if [ "$TEST_GALERKIN" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 1 "$exe" MPI_seq_galerkin_different_thresholds
     run_test --oversubscribe -n 4 "$exe" MPI_seq_galerkin_different_thresholds
 
-    if [ "$NO_GPU" = false ] ; then
-      run_test --oversubscribe -n 1 "$exe" "MPI_GPU_galerkinOptimized_nprocs"
-      run_test --oversubscribe -n 4 "$exe" "MPI_GPU_galerkinOptimized_nprocs"
+    if [ "$NO_OCL" = false ] ; then
+      run_test --oversubscribe -n 1 "$exe" "MPI_GPU_galerkinOptimized_nprocs" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 4 "$exe" "MPI_GPU_galerkinOptimized_nprocs" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
 fi
 
