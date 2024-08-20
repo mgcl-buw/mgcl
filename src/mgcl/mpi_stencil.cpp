@@ -9,6 +9,7 @@
 #include "opencl_helper.hpp"
 #include "profiling_data.hpp"
 #include "stencil.hpp"
+#include <CL/cl.h>
 
 #ifdef __APPLE__
 #include <OpenCL/cl_platform.h>
@@ -197,7 +198,9 @@ namespace mgcl
     void updateGhostsStencilOclMpi(
         cl_command_queue commands, cl_program program,
         VaryingStencilGpu& s,
-        MPILevelData* mpiData, bool periodic, bool forceLocal,
+        BufferGpu& d_planes_buf,
+        std::vector<double>& sbuf, std::vector<double>& rbuf,
+        MPILevelData* mpiData, bool forceLocal,
         conf::KernelConfig* conf, ProfilingData* pd)
     {
         if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
@@ -207,9 +210,41 @@ namespace mgcl
         }
 
         // TODO optimize, like for cuboids
-        auto tmp = s.read(commands, true);
-        updateGhostsStencilMpi(tmp, mpiData, periodic, forceLocal);
-        s.fill(tmp, commands, true);
+        // auto tmp = s.read(commands, true);
+        // updateGhostsStencilMpi(tmp, mpiData, periodic, forceLocal);
+        // s.fill(tmp, commands, true);
+
+        // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
+        // TODO maybe disable check in UNSAFE mode
+        int yz = s.getNgh() * s.getOgh();
+        int xz = s.getMgh() * s.getOgh();
+        int xy = s.getMgh() * s.getNgh();
+        size_t ressize = (2 * yz * s.getGh() + 2 * xz * s.getGh() + 2 * xy * s.getGh()) * s.getWidth() * s.getWidth() * s.getWidth();
+
+        if (d_planes_buf.getSize() < ressize)
+            error("MultigridEngine::updateGhostsOclMpi: d_planes_buf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(d_planes_buf.getSize()));
+
+        if (sbuf.size() < ressize || rbuf.size() < ressize)
+            throw "MultigridEngine::updateGhostsOclMpi: sbuf or rbuf is too small. Need at least " +
+                std::to_string(ressize) + ", but is " + std::to_string(sbuf.size()) +
+                " (send) and " + std::to_string(rbuf.size()) + " (recv)";
+
+        // Extract border planes from the buffer
+        s.extractBorderPlanes(commands, program,
+                              d_planes_buf, sbuf,
+                              conf, pd);
+        mgclCheckError(clFinish(commands), "clFinish");
+
+        // Send our planes to neighbours and receive their planes
+        mpi_util::sendBorderPlanes(s.getMgh(), s.getNgh(), s.getOgh(),
+                                   s.getGh(), s.getGh(), s.getGh(), s.getWidth(),
+                                   sbuf, rbuf, *mpiData);
+
+        // Paste planes back into the buffer.
+        d_planes_buf.write(commands, rbuf, false);
+        s.pasteGhostsFromBorderPlanes(commands, program,
+                                      d_planes_buf,
+                                      conf, pd);
     }
 }
 

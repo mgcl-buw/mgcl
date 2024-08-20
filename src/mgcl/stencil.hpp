@@ -129,15 +129,19 @@ namespace mgcl
             conf::KernelConfig* conf, ProfilingData* pd);
 
         VaryingStencilGpu multiply(
-            VaryingStencilGpu& b, int ghc,
+            FixedStencilGpu& b, int ghc,
+            BufferGpu* d_planes_buf,
+            std::vector<double>* sbuf, std::vector<double>* rbuf,
             cl_program program, cl_command_queue queue, cl_context context,
-            MPILevelData* mpiData, bool periodic, bool forceLocal,
+            MPILevelData* mpiData, bool forceLocal,
             conf::KernelConfig* conf, ProfilingData* pd);
 
         VaryingStencilGpu multiply(
-            FixedStencilGpu& b, int ghc,
+            VaryingStencilGpu& b, int ghc,
+            BufferGpu* d_planes_buf,
+            std::vector<double>* sbuf, std::vector<double>* rbuf,
             cl_program program, cl_command_queue queue, cl_context context,
-            MPILevelData* mpiData, bool periodic, bool forceLocal,
+            MPILevelData* mpiData, bool forceLocal,
             conf::KernelConfig* conf, ProfilingData* pd);
 
         VaryingStencilGpu cutFromW7ToW3(
@@ -189,8 +193,10 @@ namespace mgcl
         FixedStencil read(cl_command_queue queue, bool blockin);
 
         VaryingStencilGpu multiply(VaryingStencilGpu& b, int ghc,
+                                   BufferGpu* d_planes_buf,
+                                   std::vector<double>* sbuf, std::vector<double>* rbuf,
                                    cl_program program, cl_command_queue queue, cl_context context,
-                                   MPILevelData* mpiData, bool periodic, bool forceLocal,
+                                   MPILevelData* mpiData, bool forceLocal,
                                    conf::KernelConfig* conf, ProfilingData* pd);
 
         int getWidth() const;

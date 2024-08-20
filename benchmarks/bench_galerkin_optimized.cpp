@@ -39,8 +39,8 @@ mgcl::VaryingStencilGpu galerkinStencilMult(mgcl::VaryingStencilGpu& a_h, int gh
 
     // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
     // S * A_h * S and cut out later manually.
-    auto sas = sr.multiply(a_h, 2, program, queue, context, nullptr, true, true, nullptr, nullptr)
-                   .multiply(sp, 0, program, queue, context, nullptr, true, true, nullptr, nullptr);
+    auto sas = sr.multiply(a_h, 2, nullptr, nullptr, nullptr, program, queue, context, nullptr, true, nullptr, nullptr)
+                   .multiply(sp, 0, nullptr, nullptr, nullptr, program, queue, context, nullptr, true, nullptr, nullptr);
 
     // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
     auto a_2h = sas.cutFromW7ToW3(program, queue, context, gh_a2h, nullptr, nullptr, resm, resn, reso);

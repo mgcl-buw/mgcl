@@ -97,7 +97,7 @@ TEST_CASE("stencil_arithmetic")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true, nullptr, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true, nullptr, nullptr)); 
                     tu->finish(); });
         }
 
@@ -119,7 +119,7 @@ TEST_CASE("stencil_arithmetic")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true, nullptr, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true, nullptr, nullptr)); 
                     tu->finish(); });
         }
 
@@ -141,7 +141,7 @@ TEST_CASE("stencil_arithmetic")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(fd.multiply(vd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true, nullptr, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true, nullptr, nullptr)); 
                     tu->finish(); });
         }
     }
@@ -205,7 +205,7 @@ TEST_CASE("stencil_arithmetic_ocl_only")
             std::string name = std::string("gpu var*var_").append(name_grid);
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true, nullptr, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true, nullptr, nullptr)); 
                     tu->finish(); });
         }
 
@@ -224,7 +224,7 @@ TEST_CASE("stencil_arithmetic_ocl_only")
             std::string name = std::string("gpu fix*var_").append(name_grid);
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true, nullptr, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true, nullptr, nullptr)); 
                     tu->finish(); });
         }
 
@@ -243,7 +243,7 @@ TEST_CASE("stencil_arithmetic_ocl_only")
             std::string name = std::string("gpu var*fix_").append(name_grid);
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(fd.multiply(vd, 0, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr, true, true, nullptr, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true, nullptr, nullptr)); 
                     tu->finish(); });
         }
     }

@@ -384,6 +384,8 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     auto& p = *pptr;
     p.setGhosts(1);
     p.setMpiComm(mpi_comm);
+    p.setUseOpencl(true);
+    p.setStencilType(mgcl::MGCL_VARYING);
     p.init();
 
     // Check on level 0
@@ -419,8 +421,14 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     sgpuLocal.fill(sloc, tu.getCommands(), true);
     tu.finish();
 
+    REQUIRE(p.getDPlanesBufPtr());
+    REQUIRE(p.getHPlanesBufSendPtr());
+    REQUIRE(p.getHPlanesBufRecvPtr());
+
     // Update ghosts of test data
-    mgcl::updateGhostsStencilOclMpi(tu.getCommands(), tu.getProgram(), sgpuLocal, mpiData, true, false, nullptr, nullptr);
+    mgcl::updateGhostsStencilOclMpi(tu.getCommands(), tu.getProgram(), sgpuLocal,
+                                    p.getDPlanesBuf(), p.getHPlanesBufSend(), p.getHPlanesBufRecv(),
+                                    mpiData, false, nullptr, nullptr);
 
     // Read results
     auto cg = sgpu.read(tu.getCommands(), true);

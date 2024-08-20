@@ -35,7 +35,9 @@ namespace mgcl
     void updateGhostsStencilOclMpi(
         cl_command_queue commands, cl_program program,
         VaryingStencilGpu& s,
-        MPILevelData* mpiData, bool periodic, bool forceLocal,
+        BufferGpu& d_planes_buf,
+        std::vector<double>& sbuf, std::vector<double>& rbuf,
+        MPILevelData* mpiData, bool forceLocal,
         conf::KernelConfig* conf, ProfilingData* pd);
 }
 

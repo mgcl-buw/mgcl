@@ -8,6 +8,7 @@
 #include "util.hpp"
 
 #include <algorithm>
+#include <cassert>
 #include <utility> // for exchange
 
 #ifdef __APPLE__
@@ -732,8 +733,10 @@ namespace mgcl
      */
     VaryingStencilGpu VaryingStencilGpu::multiply(
         VaryingStencilGpu& b, int ghc,
+        BufferGpu* d_planes_buf,
+        std::vector<double>* sbuf, std::vector<double>* rbuf,
         cl_program program, cl_command_queue queue, cl_context context,
-        MPILevelData* mpiData, bool periodic, bool forceLocal,
+        MPILevelData* mpiData, bool forceLocal,
         conf::KernelConfig* conf, ProfilingData* pd)
     {
         int err;
@@ -804,7 +807,31 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal, conf, pd);
+        {
+            if (mpiData)
+            {
+                assert(d_planes_buf != nullptr && sbuf != nullptr && rbuf != nullptr && "Planes buffer and send/recv buffer must not be null, when MPI is in use.");
+                int yz = c.getNgh() * c.getOgh();
+                int xz = c.getMgh() * c.getOgh();
+                int xy = c.getMgh() * c.getNgh();
+                size_t ressize = (2 * yz * c.getGh() + 2 * xz * c.getGh() + 2 * xy * c.getGh()) * c.getWidth() * c.getWidth() * c.getWidth();
+
+                if (d_planes_buf->getSize() < ressize)
+                    error("Not enough memory for planes buffer. Need " + std::to_string(ressize) + " bytes, but only " + std::to_string(d_planes_buf->getSize()) + " bytes available.");
+
+                if (sbuf->size() < static_cast<size_t>((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()))
+                    error("Not enough memory for send buffer. Need " + std::to_string((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()) + " bytes, but only " + std::to_string(sbuf->size()) + " bytes available.");
+
+                if (rbuf->size() < static_cast<size_t>((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()))
+                    error("Not enough memory for recv buffer. Need " + std::to_string((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()) + " bytes, but only " + std::to_string(rbuf->size()) + " bytes available.");
+
+                updateGhostsStencilOclMpi(queue, program, c, *d_planes_buf, *sbuf, *rbuf, mpiData, forceLocal, conf, pd);
+            }
+            else
+            {
+                c.updateGhosts(program, queue, conf, pd);
+            }
+        }
 
         clReleaseKernel(kernel);
         return c;
@@ -829,8 +856,10 @@ namespace mgcl
      */
     VaryingStencilGpu VaryingStencilGpu::multiply(
         FixedStencilGpu& b, int ghc,
+        BufferGpu* d_planes_buf,
+        std::vector<double>* sbuf, std::vector<double>* rbuf,
         cl_program program, cl_command_queue queue, cl_context context,
-        MPILevelData* mpiData, bool periodic, bool forceLocal,
+        MPILevelData* mpiData, bool forceLocal,
         conf::KernelConfig* conf, ProfilingData* pd)
     {
         int err;
@@ -897,7 +926,31 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal, conf, pd);
+        {
+            if (mpiData)
+            {
+                assert(d_planes_buf != nullptr && sbuf != nullptr && rbuf != nullptr && "Planes buffer and send/recv buffer must not be null, when MPI is in use.");
+                int yz = c.getNgh() * c.getOgh();
+                int xz = c.getMgh() * c.getOgh();
+                int xy = c.getMgh() * c.getNgh();
+                size_t ressize = (2 * yz * c.getGh() + 2 * xz * c.getGh() + 2 * xy * c.getGh()) * c.getWidth() * c.getWidth() * c.getWidth();
+
+                if (d_planes_buf->getSize() < ressize)
+                    error("Not enough memory for planes buffer. Need " + std::to_string(ressize) + " bytes, but only " + std::to_string(d_planes_buf->getSize()) + " bytes available.");
+
+                if (sbuf->size() < static_cast<size_t>((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()))
+                    error("Not enough memory for send buffer. Need " + std::to_string((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()) + " bytes, but only " + std::to_string(sbuf->size()) + " bytes available.");
+
+                if (rbuf->size() < static_cast<size_t>((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()))
+                    error("Not enough memory for recv buffer. Need " + std::to_string((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()) + " bytes, but only " + std::to_string(rbuf->size()) + " bytes available.");
+
+                updateGhostsStencilOclMpi(queue, program, c, *d_planes_buf, *sbuf, *rbuf, mpiData, forceLocal, conf, pd);
+            }
+            else
+            {
+                c.updateGhosts(program, queue, conf, pd);
+            }
+        }
 
         clReleaseKernel(kernel);
         return c;
@@ -1322,8 +1375,10 @@ namespace mgcl
      * @return VaryingStencilGpu
      */
     VaryingStencilGpu FixedStencilGpu::multiply(VaryingStencilGpu& b, int ghc,
+                                                BufferGpu* d_planes_buf,
+                                                std::vector<double>* sbuf, std::vector<double>* rbuf,
                                                 cl_program program, cl_command_queue queue, cl_context context,
-                                                MPILevelData* mpiData, bool periodic, bool forceLocal,
+                                                MPILevelData* mpiData, bool forceLocal,
                                                 conf::KernelConfig* conf, ProfilingData* pd)
     {
         int err;
@@ -1398,7 +1453,31 @@ namespace mgcl
 
         // update ghosts of c
         if (ghc > 0)
-            updateGhostsStencilOclMpi(queue, program, c, mpiData, periodic, forceLocal, conf, pd);
+        {
+            if (mpiData)
+            {
+                assert(d_planes_buf != nullptr && sbuf != nullptr && rbuf != nullptr && "Planes buffer and send/recv buffer must not be null, when MPI is in use.");
+                int yz = c.getNgh() * c.getOgh();
+                int xz = c.getMgh() * c.getOgh();
+                int xy = c.getMgh() * c.getNgh();
+                size_t ressize = (2 * yz * c.getGh() + 2 * xz * c.getGh() + 2 * xy * c.getGh()) * c.getWidth() * c.getWidth() * c.getWidth();
+
+                if (d_planes_buf->getSize() < ressize)
+                    error("Not enough memory for planes buffer. Need " + std::to_string(ressize) + " bytes, but only " + std::to_string(d_planes_buf->getSize()) + " bytes available.");
+
+                if (sbuf->size() < static_cast<size_t>((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()))
+                    error("Not enough memory for send buffer. Need " + std::to_string((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()) + " bytes, but only " + std::to_string(sbuf->size()) + " bytes available.");
+
+                if (rbuf->size() < static_cast<size_t>((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()))
+                    error("Not enough memory for recv buffer. Need " + std::to_string((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()) + " bytes, but only " + std::to_string(rbuf->size()) + " bytes available.");
+
+                updateGhostsStencilOclMpi(queue, program, c, *d_planes_buf, *sbuf, *rbuf, mpiData, forceLocal, conf, pd);
+            }
+            else
+            {
+                c.updateGhosts(program, queue, conf, pd);
+            }
+        }
 
         clReleaseKernel(kernel);
         return c;

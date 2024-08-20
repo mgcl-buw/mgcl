@@ -357,8 +357,13 @@ namespace mgcl
                 int yz = ngh * ogh;
                 int xz = mgh * ogh;
                 int xy = mgh * ngh;
-                int ressize = 2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts;
+                int ressize = (2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts) *
+                              (stencilType == MGCL_VARYING
+                                   ? stencilValues->getWidth() * stencilValues->getWidth() * stencilValues->getWidth()
+                                   : 1);
                 dPlanesBuf = std::make_shared<BufferGpu>(getContext(), CL_MEM_READ_WRITE, ressize);
+
+                // TODO not needing this much memory for these?
                 hPlanesBufSend = std::make_shared<std::vector<double>>(ressize);
                 hPlanesBufRecv = std::make_shared<std::vector<double>>(ressize);
             }
@@ -440,7 +445,8 @@ namespace mgcl
                             lvCoarse.getStencilValuesGpu()->updateGhosts(getProgram(), getCommands(), &getKernelConfig(), getProfilingData());
                         else
                             updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvCoarse.getStencilValuesGpu(),
-                                                      lvCoarse.getMpiDataPtr(), isPeriodic(), false,
+                                                      getDPlanesBuf(), getHPlanesBufSend(), getHPlanesBufRecv(),
+                                                      lvCoarse.getMpiDataPtr(), false,
                                                       &getKernelConfig(), getProfilingData());
                     }
                 }

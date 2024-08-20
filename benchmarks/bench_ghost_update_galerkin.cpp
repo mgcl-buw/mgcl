@@ -210,7 +210,8 @@ TEST_CASE("bench_ghost_update_mpi_ocl_galerkin")
                     MPI_Barrier(mpi_comm);
 
                     updateGhostsStencilOclMpi(p->getCommands(), p->getProgram(), sv,
-                                              mpiData, p->isPeriodic(), false,
+                                              p->getDPlanesBuf(), p->getHPlanesBufSend(), p->getHPlanesBufRecv(),
+                                              mpiData, false,
                                               nullptr, nullptr);
                     p->finish();
 
