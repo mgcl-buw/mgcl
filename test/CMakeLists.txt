@@ -85,6 +85,7 @@ set(SOURCES_TEST_MPI
     mpi/test_mpi_galerkin.cpp
     mpi/test_mpi_stencil.cpp
     mpi/test_bench_vcycle_mpi.cpp
+    device_type_generator.cpp
     mpi/catch2_main_mpi.cpp)
 
 add_executable(tests_mpi ${SOURCES_TEST_MPI} ${BACKWARD_ENABLE})
