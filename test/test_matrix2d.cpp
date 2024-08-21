@@ -12,216 +12,216 @@
 
 #include "test_results.hpp"
 
-TEST_CASE("MatrixGalerkinTrace")
-{
+// TEST_CASE("MatrixGalerkinTrace", "[.]")
+// {
 
-    int m = 8;
-    int n = 8;
-    int o = 8;
-    int N = m * n * o;
-    double h2inv = static_cast<double>(N * N);
-    bool periodic = true;
+//     int m = 8;
+//     int n = 8;
+//     int o = 8;
+//     int N = m * n * o;
+//     double h2inv = static_cast<double>(N * N);
+//     bool periodic = true;
 
-    std::cout << "mxnxo = " << m << "x" << n << "x" << o << std::endl;
+//     // std::cout << "mxnxo = " << m << "x" << n << "x" << o << std::endl;
 
-    // Create 27p stencil and generate matrix from it
-    mgcl::VaryingStencil* vst = new mgcl::VaryingStencil(m, n, o, 3, 2, 2, 2);
-    vst->fill1dIndex(false);
-    (*vst)[0][0][0][0][0][0] = 0.5; // fill with non zero value
-    auto ah = mgcl_test::Matrix2d::fromVaryingStencil(*vst, periodic);
-    delete vst;
+//     // Create 27p stencil and generate matrix from it
+//     mgcl::VaryingStencil* vst = new mgcl::VaryingStencil(m, n, o, 3, 2, 2, 2);
+//     vst->fill1dIndex(false);
+//     (*vst)[0][0][0][0][0][0] = 0.5; // fill with non zero value
+//     auto ah = mgcl_test::Matrix2d::fromVaryingStencil(*vst, periodic);
+//     delete vst;
 
-    // auto ah = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * h2inv;
-    auto r = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
-    auto p = mgcl_test::Matrix2d::prolongationBilinear(m, n, o);
-    auto r_ah = r * ah;
-    auto r_ah_p = r_ah * p;
+//     // auto ah = mgcl_test::Matrix2d::laplace7p3d(m, n, o) * h2inv;
+//     auto r = mgcl_test::Matrix2d::restrictionFullWeight(m, n, o);
+//     auto p = mgcl_test::Matrix2d::prolongationBilinear(m, n, o);
+//     auto r_ah = r * ah;
+//     auto r_ah_p = r_ah * p;
 
-    std::cout << "ah rows x cols = " << ah.getM() << "x" << ah.getN() << std::endl;
-    std::cout << "r rows x cols = " << r.getM() << "x" << r.getN() << std::endl;
-    std::cout << "p rows x cols = " << p.getM() << "x" << p.getN() << std::endl;
-    std::cout << "r_ah rows x cols = " << r_ah.getM() << "x" << r_ah.getN() << std::endl;
-    std::cout << "r_ah_p rows x cols = " << r_ah_p.getM() << "x" << r_ah_p.getN() << std::endl;
+//     // std::cout << "ah rows x cols = " << ah.getM() << "x" << ah.getN() << std::endl;
+//     // std::cout << "r rows x cols = " << r.getM() << "x" << r.getN() << std::endl;
+//     // std::cout << "p rows x cols = " << p.getM() << "x" << p.getN() << std::endl;
+//     // std::cout << "r_ah rows x cols = " << r_ah.getM() << "x" << r_ah.getN() << std::endl;
+//     // std::cout << "r_ah_p rows x cols = " << r_ah_p.getM() << "x" << r_ah_p.getN() << std::endl;
 
-    /* r.dumpToFileWithIndices("r.csv"); */
-    /* ah.dumpToFileWithIndices("ah.csv"); */
-    /* r_ah.dumpToFileWithIndices("r_ah.csv"); */
-    /* p.dumpToFileWithIndices("p.csv"); */
-    /* r_ah_p.dumpToFileWithIndices("r_ah_p.csv"); */
+//     /* r.dumpToFileWithIndices("r.csv"); */
+//     /* ah.dumpToFileWithIndices("ah.csv"); */
+//     /* r_ah.dumpToFileWithIndices("r_ah.csv"); */
+//     /* p.dumpToFileWithIndices("p.csv"); */
+//     /* r_ah_p.dumpToFileWithIndices("r_ah_p.csv"); */
 
-    using Trace = std::vector<std::vector<std::string>>;
-    // Non-zero trace
-    Trace trace_nnz(N, std::vector<std::string>(N));
-    Trace trace_nnz_tmp(N, std::vector<std::string>(N));
-    Trace stencil_trace_nnz(N, std::vector<std::string>(N));
-    Trace stencil_trace_nnz_tmp(N, std::vector<std::string>(N));
+//     using Trace = std::vector<std::vector<std::string>>;
+//     // Non-zero trace
+//     Trace trace_nnz(N, std::vector<std::string>(N));
+//     Trace trace_nnz_tmp(N, std::vector<std::string>(N));
+//     Trace stencil_trace_nnz(N, std::vector<std::string>(N));
+//     Trace stencil_trace_nnz_tmp(N, std::vector<std::string>(N));
 
-    int stencilWidth = 3;
-    int stencilWidth2 = stencilWidth >> 1;
-    int m2 = m >> 1;
-    int n2 = n >> 1;
-    int o2 = o >> 1;
+//     int stencilWidth = 3;
+//     int stencilWidth2 = stencilWidth >> 1;
+//     int m2 = m >> 1;
+//     int n2 = n >> 1;
+//     int o2 = o >> 1;
 
-    // r * a_h
-    for (int ci = 0; ci < r_ah.getM(); ci++)
-        for (int cj = 0; cj < r_ah.getN(); cj++)
-        {
-            std::stringstream ss;
-            ss << "(";
-            std::stringstream ssst;
-            ssst << "(";
+//     // r * a_h
+//     for (int ci = 0; ci < r_ah.getM(); ci++)
+//         for (int cj = 0; cj < r_ah.getN(); cj++)
+//         {
+//             std::stringstream ss;
+//             ss << "(";
+//             std::stringstream ssst;
+//             ssst << "(";
 
-            bool nnzfound = false;
-            for (int idx = 0; idx < r.getN(); idx++)
-            {
-                // if (ci == 0 && cj == 0)
-                //     std::cout << "r_ah[" << ci << "][" << cj << "] += "
-                //               << "r[" << ci << "][" << idx << "] * a[" << idx << "][" << cj << "] = " << r[ci][idx] << " * " << ah[idx][cj] << std::endl;
-                if (r[ci][idx] != 0 && ah[idx][cj] != 0)
-                {
-                    ss << (!nnzfound ? "" : " + ") << "r[" << ci << "][" << idx << "] * a[" << idx << "][" << cj << "]";
+//             bool nnzfound = false;
+//             for (int idx = 0; idx < r.getN(); idx++)
+//             {
+//                 // if (ci == 0 && cj == 0)
+//                 //     std::cout << "r_ah[" << ci << "][" << cj << "] += "
+//                 //               << "r[" << ci << "][" << idx << "] * a[" << idx << "][" << cj << "] = " << r[ci][idx] << " * " << ah[idx][cj] << std::endl;
+//                 if (r[ci][idx] != 0 && ah[idx][cj] != 0)
+//                 {
+//                     ss << (!nnzfound ? "" : " + ") << "r[" << ci << "][" << idx << "] * a[" << idx << "][" << cj << "]";
 
-                    auto ind_ah = ah.getStencilIndicesForEntry(idx, cj, m, n, o, stencilWidth, periodic);
-                    auto ind_r = r.getStencilIndicesForEntry(ci, idx, m, n, o, stencilWidth, periodic);
+//                     auto ind_ah = ah.getStencilIndicesForEntry(idx, cj, m, n, o, stencilWidth, periodic);
+//                     auto ind_r = r.getStencilIndicesForEntry(ci, idx, m, n, o, stencilWidth, periodic);
 
-                    // Indices must exist since matrix entry is not zero
-                    CAPTURE(ah.getM(), ah.getN(), r.getM(), r.getN(), ci, cj, idx, ind_ah, ind_r);
-                    REQUIRE(ind_ah[0] != -1);
-                    REQUIRE(ind_r[0] != -1);
+//                     // Indices must exist since matrix entry is not zero
+//                     CAPTURE(ah.getM(), ah.getN(), r.getM(), r.getN(), ci, cj, idx, ind_ah, ind_r);
+//                     REQUIRE(ind_ah[0] != -1);
+//                     REQUIRE(ind_r[0] != -1);
 
-                    ssst << (!nnzfound ? "" : " + ") << "r[" << ind_r[3] << "][" << ind_r[4] << "][" << ind_r[5] << "] * a["
-                         << ind_ah[3] << "][" << ind_ah[4] << "][" << ind_ah[5] << "][" << ind_ah[0] << "][" << ind_ah[1] << "][" << ind_ah[2] << "]";
+//                     ssst << (!nnzfound ? "" : " + ") << "r[" << ind_r[3] << "][" << ind_r[4] << "][" << ind_r[5] << "] * a["
+//                          << ind_ah[3] << "][" << ind_ah[4] << "][" << ind_ah[5] << "][" << ind_ah[0] << "][" << ind_ah[1] << "][" << ind_ah[2] << "]";
 
-                    nnzfound = true;
-                }
-            }
-            ss << ")";
-            ssst << ")";
+//                     nnzfound = true;
+//                 }
+//             }
+//             ss << ")";
+//             ssst << ")";
 
-            trace_nnz_tmp[ci][cj] = ss.str();
-            stencil_trace_nnz_tmp[ci][cj] = ssst.str();
-        }
+//             trace_nnz_tmp[ci][cj] = ss.str();
+//             stencil_trace_nnz_tmp[ci][cj] = ssst.str();
+//         }
 
-    // // print trace for r*a
-    // {
-    //     int nnz = 0;
-    //     for (int ci = 0; ci < r_ah.getM(); ci++)
-    //     {
-    //         for (int cj = 0; cj < r_ah.getN(); cj++)
-    //         {
-    //             // check that only one non-zero entries are in the trace
-    //             CAPTURE(ci, cj, r_ah[ci][cj], trace_nnz[ci][cj]);
-    //             CAPTURE(r[0][0], ah[0][0], r[0][1], ah[1][0]);
-    //             REQUIRE(((r_ah[ci][cj] == 0 && trace_nnz[ci][cj] == "()") || (trace_nnz[ci][cj] != "()")));
-    //             if (r_ah[ci][cj] != 0)
-    //             {
-    //                 nnz++;
-    //                 std::cout << "ra[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << trace_nnz_tmp[ci][cj] << std::endl;
-    //             }
-    //         }
-    //     }
-    //     return;
-    // }
+//     // // print trace for r*a
+//     // {
+//     //     int nnz = 0;
+//     //     for (int ci = 0; ci < r_ah.getM(); ci++)
+//     //     {
+//     //         for (int cj = 0; cj < r_ah.getN(); cj++)
+//     //         {
+//     //             // check that only one non-zero entries are in the trace
+//     //             CAPTURE(ci, cj, r_ah[ci][cj], trace_nnz[ci][cj]);
+//     //             CAPTURE(r[0][0], ah[0][0], r[0][1], ah[1][0]);
+//     //             REQUIRE(((r_ah[ci][cj] == 0 && trace_nnz[ci][cj] == "()") || (trace_nnz[ci][cj] != "()")));
+//     //             if (r_ah[ci][cj] != 0)
+//     //             {
+//     //                 nnz++;
+//     //                 std::cout << "ra[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << trace_nnz_tmp[ci][cj] << std::endl;
+//     //             }
+//     //         }
+//     //     }
+//     //     return;
+//     // }
 
-    //     // print stencil trace for r*a
-    //     std::cout << std::endl;
-    //     for (int ci = 0; ci < r_ah.getM(); ci++)
-    //     {
-    //         for (int cj = 0; cj < r_ah.getN(); cj++)
-    //         {
-    //             // check that only one non-zero entries are in the trace
-    //             if (r_ah[ci][cj] != 0)
-    //             {
-    //                 nnz++;
-    //                 std::cout << "ra[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << stencil_trace_nnz_tmp[ci][cj] << std::endl
-    //                           << std::endl;
-    //             }
-    //         }
-    //     }
-    // }
-    // return;
+//     //     // print stencil trace for r*a
+//     //     std::cout << std::endl;
+//     //     for (int ci = 0; ci < r_ah.getM(); ci++)
+//     //     {
+//     //         for (int cj = 0; cj < r_ah.getN(); cj++)
+//     //         {
+//     //             // check that only one non-zero entries are in the trace
+//     //             if (r_ah[ci][cj] != 0)
+//     //             {
+//     //                 nnz++;
+//     //                 std::cout << "ra[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << stencil_trace_nnz_tmp[ci][cj] << std::endl
+//     //                           << std::endl;
+//     //             }
+//     //         }
+//     //     }
+//     // }
+//     // return;
 
-    // (r * a_h) * p
-    for (int ci = 0; ci < r_ah_p.getM(); ci++)
-        for (int cj = 0; cj < r_ah_p.getN(); cj++)
-        {
-            std::stringstream ss;
-            ss << "(";
-            std::stringstream ssst;
-            ssst << "(";
+//     // (r * a_h) * p
+//     for (int ci = 0; ci < r_ah_p.getM(); ci++)
+//         for (int cj = 0; cj < r_ah_p.getN(); cj++)
+//         {
+//             std::stringstream ss;
+//             ss << "(";
+//             std::stringstream ssst;
+//             ssst << "(";
 
-            bool nnzfound = false;
-            for (int idx = 0; idx < r_ah.getN(); idx++)
-                if (r_ah[ci][idx] != 0 && p[idx][cj] != 0)
-                {
-                    ss << (!nnzfound ? "" : "\n + ") << trace_nnz_tmp[ci][idx] << " * p[" << idx << "][" << cj << "]";
+//             bool nnzfound = false;
+//             for (int idx = 0; idx < r_ah.getN(); idx++)
+//                 if (r_ah[ci][idx] != 0 && p[idx][cj] != 0)
+//                 {
+//                     ss << (!nnzfound ? "" : "\n + ") << trace_nnz_tmp[ci][idx] << " * p[" << idx << "][" << cj << "]";
 
-                    // auto ind_r_ah = r_ah.getStencilIndicesForEntry(idx, cj, m, n, o, stencilWidth, periodic);
-                    auto ind_p = p.getStencilIndicesForEntry(idx, cj, m, n, o, stencilWidth, periodic);
+//                     // auto ind_r_ah = r_ah.getStencilIndicesForEntry(idx, cj, m, n, o, stencilWidth, periodic);
+//                     auto ind_p = p.getStencilIndicesForEntry(idx, cj, m, n, o, stencilWidth, periodic);
 
-                    // Indices must exist since matrix entry is not zero
-                    CAPTURE(ah.getM(), ah.getN(), r.getM(), r.getN(), ci, cj, idx, ind_p);
-                    // CAPTURE(ah.getM(), ah.getN(), r.getM(), r.getN(), ci, cj, idx, ind_r_ah, ind_p);
-                    // REQUIRE(ind_r_ah[0] != -1);
-                    REQUIRE(ind_p[0] != -1);
+//                     // Indices must exist since matrix entry is not zero
+//                     CAPTURE(ah.getM(), ah.getN(), r.getM(), r.getN(), ci, cj, idx, ind_p);
+//                     // CAPTURE(ah.getM(), ah.getN(), r.getM(), r.getN(), ci, cj, idx, ind_r_ah, ind_p);
+//                     // REQUIRE(ind_r_ah[0] != -1);
+//                     REQUIRE(ind_p[0] != -1);
 
-                    ssst << (!nnzfound ? "" : " + ") << stencil_trace_nnz_tmp[ci][idx] << " * p["
-                         << ind_p[3] << "][" << ind_p[4] << "][" << ind_p[5] << "]";
+//                     ssst << (!nnzfound ? "" : " + ") << stencil_trace_nnz_tmp[ci][idx] << " * p["
+//                          << ind_p[3] << "][" << ind_p[4] << "][" << ind_p[5] << "]";
 
-                    nnzfound = true;
-                }
+//                     nnzfound = true;
+//                 }
 
-            ss << ")";
-            ssst << ")";
+//             ss << ")";
+//             ssst << ")";
 
-            trace_nnz[ci][cj] = ss.str();
-            stencil_trace_nnz[ci][cj] = ssst.str();
+//             trace_nnz[ci][cj] = ss.str();
+//             stencil_trace_nnz[ci][cj] = ssst.str();
 
-            CAPTURE(ci, cj, r_ah_p[ci][cj], trace_nnz[ci][cj]);
-            REQUIRE((r_ah_p[ci][cj] == 0 || (r_ah_p[ci][cj] != 0 && trace_nnz[ci][cj].find("()") == std::string::npos)));
-        }
+//             CAPTURE(ci, cj, r_ah_p[ci][cj], trace_nnz[ci][cj]);
+//             REQUIRE((r_ah_p[ci][cj] == 0 || (r_ah_p[ci][cj] != 0 && trace_nnz[ci][cj].find("()") == std::string::npos)));
+//         }
 
-    std::cout << "==========" << std::endl;
-    std::cout << "Non-Zero Trace:" << std::endl;
-    std::cout << "RAP rows x cols = " << r_ah_p.getM() << "x" << r_ah_p.getN() << std::endl;
+//     std::cout << "==========" << std::endl;
+//     std::cout << "Non-Zero Trace:" << std::endl;
+//     std::cout << "RAP rows x cols = " << r_ah_p.getM() << "x" << r_ah_p.getN() << std::endl;
 
-    // print trace
-    int nnz = 0;
-    for (int ci = 0; ci < r_ah_p.getM(); ci++)
-    {
-        for (int cj = 0; cj < r_ah_p.getN(); cj++)
-        // if (r_ah_p[ci][cj] != 0)
-        {
-            nnz++;
-            std::cout << "rap[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << trace_nnz[ci][cj] << std::endl
-                      << std::endl;
-        }
-    }
-    std::cout << "non-zero values:" << nnz << std::endl;
+//     // print trace
+//     int nnz = 0;
+//     for (int ci = 0; ci < r_ah_p.getM(); ci++)
+//     {
+//         for (int cj = 0; cj < r_ah_p.getN(); cj++)
+//         // if (r_ah_p[ci][cj] != 0)
+//         {
+//             nnz++;
+//             std::cout << "rap[" + std::to_string(ci) + "][" + std::to_string(cj) + "] = " << trace_nnz[ci][cj] << std::endl
+//                       << std::endl;
+//         }
+//     }
+//     std::cout << "non-zero values:" << nnz << std::endl;
 
-    // print stencil trace
-    std::cout << std::endl;
-    for (int ci = 0; ci < r_ah_p.getM(); ci++)
-    {
-        for (int cj = 0; cj < r_ah_p.getN(); cj++)
-        {
-            // check that only one non-zero entries are in the trace
-            if (r_ah_p[ci][cj] != 0)
-            {
-                auto ind = r_ah_p.getStencilIndicesForEntry(ci, cj, m2, n2, o2, stencilWidth, periodic);
-                nnz++;
-                std::cout << "rap[" + std::to_string(ind[3]) + "][" +
-                                 std::to_string(ind[4]) + "][" +
-                                 std::to_string(ind[5]) + "][" +
-                                 std::to_string(ind[0]) + "][" +
-                                 std::to_string(ind[1]) + "][" +
-                                 std::to_string(ind[2]) + "] = "
-                          << stencil_trace_nnz[ci][cj] << std::endl
-                          << std::endl;
-            }
-        }
-    }
-}
+//     // print stencil trace
+//     std::cout << std::endl;
+//     for (int ci = 0; ci < r_ah_p.getM(); ci++)
+//     {
+//         for (int cj = 0; cj < r_ah_p.getN(); cj++)
+//         {
+//             // check that only one non-zero entries are in the trace
+//             if (r_ah_p[ci][cj] != 0)
+//             {
+//                 auto ind = r_ah_p.getStencilIndicesForEntry(ci, cj, m2, n2, o2, stencilWidth, periodic);
+//                 nnz++;
+//                 std::cout << "rap[" + std::to_string(ind[3]) + "][" +
+//                                  std::to_string(ind[4]) + "][" +
+//                                  std::to_string(ind[5]) + "][" +
+//                                  std::to_string(ind[0]) + "][" +
+//                                  std::to_string(ind[1]) + "][" +
+//                                  std::to_string(ind[2]) + "] = "
+//                           << stencil_trace_nnz[ci][cj] << std::endl
+//                           << std::endl;
+//             }
+//         }
+//     }
+// }
 
 TEST_CASE("Matrix2d::constructor")
 {

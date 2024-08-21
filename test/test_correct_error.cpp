@@ -2,12 +2,16 @@
 
 #include "../src/mgcl/multigrid_engine.hpp"
 #include "../src/mgcl/problem.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 
-#include <iostream>
+#include <catch2/generators/catch_generators.hpp>
 #include <memory>
 
-TEST_CASE("correct_error")
+TEST_CASE("correct_error", "[ocl]")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     int m, n, o;
     m = n = o = 4;
     auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
@@ -15,7 +19,7 @@ TEST_CASE("correct_error")
     mgcl::Problem p(m, n, o, f, v);
 
     p.setUseOpencl(true);
-    p.setDeviceType(CL_DEVICE_TYPE_GPU);
+    p.setDeviceType(deviceType);
     p.init();
 
     auto& lv = p.getLevelAt(0);

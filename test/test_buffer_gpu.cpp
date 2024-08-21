@@ -5,11 +5,14 @@
 #include <catch2/generators/catch_generators.hpp>
 
 #include "../src/mgcl/buffer_gpu.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 #include "test_utility.hpp"
 
-TEST_CASE("BufferGpu::ctor_size")
+TEST_CASE("BufferGpu::ctor_size", "[ocl]")
 {
-    mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    mgcl_test::TestUtility tu(deviceType);
 
     SECTION("success")
     {
@@ -32,9 +35,10 @@ TEST_CASE("BufferGpu::ctor_size")
     }
 }
 
-TEST_CASE("BufferGpu::ctor_h_data")
+TEST_CASE("BufferGpu::ctor_h_data", "[ocl]")
 {
-    mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    mgcl_test::TestUtility tu(deviceType);
     std::vector<double> h_data(10, 1);
 
     SECTION("success")
@@ -65,9 +69,10 @@ TEST_CASE("BufferGpu::ctor_h_data")
     }
 }
 
-TEST_CASE("BufferGpu::write_BufferGpu::read")
+TEST_CASE("BufferGpu::write_BufferGpu::read", "[ocl]")
 {
-    mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    mgcl_test::TestUtility tu(deviceType);
 
     mgcl::BufferGpu b(tu.getContext(), CL_MEM_READ_WRITE, 10);
     b.write(tu.getCommands(), {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, true);
@@ -84,9 +89,10 @@ TEST_CASE("BufferGpu::write_BufferGpu::read")
     }
 }
 
-TEST_CASE("BufferGpu::fill")
+TEST_CASE("BufferGpu::fill", "[ocl]")
 {
-    mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    mgcl_test::TestUtility tu(deviceType);
 
     mgcl::BufferGpu b(tu.getContext(), CL_MEM_READ_WRITE, 10);
 

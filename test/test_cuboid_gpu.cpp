@@ -11,14 +11,17 @@
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/cuboid_gpu.hpp"
 #include "../src/mgcl/multigrid_engine.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 #include "test_utility.hpp"
 
 // Check if CuboidGpu gets initialized correctly with host_ptr being null.
-TEST_CASE("CuboidGpu ctor no host_data")
+TEST_CASE("CuboidGpu ctor no host_data", "[ocl]")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
     SECTION("success")
     {
-        mgcl_test::TestUtility tu;
+        mgcl_test::TestUtility tu(deviceType);
         mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4);
 
         REQUIRE(c.getM() == 1);
@@ -35,7 +38,7 @@ TEST_CASE("CuboidGpu ctor no host_data")
 
     SECTION("Invalid dimensions")
     {
-        mgcl_test::TestUtility tu;
+        mgcl_test::TestUtility tu(deviceType);
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE, 0, 2, 3, 2, 3, 4));
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE, 1, 0, 3, 2, 3, 4));
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 0, 2, 3, 4));
@@ -47,7 +50,7 @@ TEST_CASE("CuboidGpu ctor no host_data")
     SECTION("invalid flags")
     {
         mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
-        mgcl_test::TestUtility tu;
+        mgcl_test::TestUtility tu(deviceType);
 
         // flags must contain one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_COPY_HOST_PTR, 1, 2, 3, 2, 3, 4));
@@ -67,14 +70,15 @@ TEST_CASE("CuboidGpu ctor no host_data")
 }
 
 // Check if CuboidGpu gets initialized correctly with host_ptr not being null.
-TEST_CASE("CuboidGpu ctor host_data given")
+TEST_CASE("CuboidGpu ctor host_data given", "[ocl]")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
     SECTION("sucess")
     {
         mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
         ch.fillRandom();
 
-        mgcl_test::TestUtility tu;
+        mgcl_test::TestUtility tu(deviceType);
         mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, ch);
 
         REQUIRE(c.getM() == 1);
@@ -95,7 +99,7 @@ TEST_CASE("CuboidGpu ctor host_data given")
     SECTION("invalid flags")
     {
         mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
-        mgcl_test::TestUtility tu;
+        mgcl_test::TestUtility tu(deviceType);
 
         // flags must contain one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_WRITE_ONLY, ch));
@@ -110,14 +114,15 @@ TEST_CASE("CuboidGpu ctor host_data given")
 }
 
 // Check if CuboidGpu gets initialized correctly retaining an existing buffer.
-TEST_CASE("CuboidGpu ctor retaining buffer")
+TEST_CASE("CuboidGpu ctor retaining buffer", "[ocl]")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
     SECTION("success")
     {
         int refCount;
         int err;
 
-        mgcl_test::TestUtility tu;
+        mgcl_test::TestUtility tu(deviceType);
         mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
         cl_mem buf = tu.createOpenCLBuffer(ch);
 
@@ -140,7 +145,7 @@ TEST_CASE("CuboidGpu ctor retaining buffer")
 
     SECTION("Invalid dimensions")
     {
-        mgcl_test::TestUtility tu;
+        mgcl_test::TestUtility tu(deviceType);
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE, 0, 2, 3, 2, 3, 4));
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE, 1, 0, 3, 2, 3, 4));
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 0, 2, 3, 4));
@@ -150,24 +155,28 @@ TEST_CASE("CuboidGpu ctor retaining buffer")
     }
 }
 
-TEST_CASE("CuboidGpu::read into new")
+TEST_CASE("CuboidGpu::read into new", "[ocl]")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
     ch.fillRandom();
 
-    mgcl_test::TestUtility tu;
+    mgcl_test::TestUtility tu(deviceType);
     mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, ch);
     auto ret = c.read(tu.getCommands(), nullptr, true);
 
     REQUIRE(ret->isEqualAllCells(ch));
 }
 
-TEST_CASE("CuboidGpu::read into existing")
+TEST_CASE("CuboidGpu::read into existing", "[ocl]")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
     ch.fillRandom();
 
-    mgcl_test::TestUtility tu;
+    mgcl_test::TestUtility tu(deviceType);
     mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, ch);
 
     mgcl::Cuboid ch_act(1, 2, 3, 2, 3, 4);
@@ -176,12 +185,14 @@ TEST_CASE("CuboidGpu::read into existing")
     REQUIRE(ch_act.isEqualAllCells(ch));
 }
 
-TEST_CASE("CuboidGpu::write")
+TEST_CASE("CuboidGpu::write", "[ocl]")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
     ch.fillRandom();
 
-    mgcl_test::TestUtility tu;
+    mgcl_test::TestUtility tu(deviceType);
     mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4);
     c.write(tu.getCommands(), ch, true);
 
@@ -190,12 +201,14 @@ TEST_CASE("CuboidGpu::write")
     REQUIRE(ret->isEqualAllCells(ch));
 }
 
-TEST_CASE("CuboidGpu::fill")
+TEST_CASE("CuboidGpu::fill", "[ocl]")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
     ch.fillRandom();
 
-    mgcl_test::TestUtility tu;
+    mgcl_test::TestUtility tu(deviceType);
     mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4);
     c.write(tu.getCommands(), ch, true);
 
@@ -207,9 +220,11 @@ TEST_CASE("CuboidGpu::fill")
 }
 
 // Tests if CuboidGpu::copyTo works correctly.
-TEST_CASE("CuboidGpu::copyTo")
+TEST_CASE("CuboidGpu::copyTo", "[ocl]")
 {
-    mgcl_test::TestUtility tu;
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    mgcl_test::TestUtility tu(deviceType);
 
     SECTION("success")
     {
@@ -241,9 +256,11 @@ TEST_CASE("CuboidGpu::copyTo")
 }
 
 // Tests if CuboidGpu::swap works correctly.
-TEST_CASE("CuboidGpu::swap")
+TEST_CASE("CuboidGpu::swap", "[ocl]")
 {
-    mgcl_test::TestUtility tu;
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    mgcl_test::TestUtility tu(deviceType);
 
     SECTION("success")
     {
@@ -279,9 +296,11 @@ TEST_CASE("CuboidGpu::swap")
 }
 
 // Tests if CuboidGpu::cloneShallow works correctly.
-TEST_CASE("CuboidGpu::copyShallow")
+TEST_CASE("CuboidGpu::copyShallow", "[ocl]")
 {
-    mgcl_test::TestUtility tu;
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    mgcl_test::TestUtility tu(deviceType);
 
     SECTION("success")
     {
@@ -333,8 +352,10 @@ TEST_CASE("CuboidGpu::copyShallow")
     }
 }
 
-TEST_CASE("CuboidGpu::extract_border_planes")
+TEST_CASE("CuboidGpu::extract_border_planes", "[ocl]")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     SECTION("indices")
     {
         int m = 3;
@@ -508,7 +529,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
         auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
         mgcl::Problem p(1, 1, 1, f, v);
         p.setUseOpencl(true);
-        p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setDeviceType(deviceType);
         p.init();
 
         {
@@ -532,7 +553,7 @@ TEST_CASE("CuboidGpu::extract_border_planes")
         auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
         mgcl::Problem p(1, 1, 1, f, v);
         p.setUseOpencl(true);
-        p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setDeviceType(deviceType);
         p.init();
 
         int m = 3;
@@ -636,8 +657,10 @@ TEST_CASE("CuboidGpu::extract_border_planes")
     }
 }
 
-TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes")
+TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes", "[ocl]")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     SECTION("indices")
     {
         int m = 3;
@@ -845,30 +868,6 @@ TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes")
                 }
     }
 
-    // SECTION("throwing")
-    // {
-    //     // Create dummy problem
-    //     auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-    //     auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-    //     mgcl::Problem p(1, 1, 1, f, v);
-    //     p.setUseOpencl(true);
-    // p.setDeviceType(CL_DEVICE_TYPE_GPU);
-    //     p.init();
-
-    //     {
-    //         mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 2, 1, 1);
-    //         REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr));
-    //     }
-    //     {
-    //         mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 2, 1);
-    //         REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr));
-    //     }
-    //     {
-    //         mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 1, 2);
-    //         REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr));
-    //     }
-    // }
-
     SECTION("success")
     {
         // Create dummy problem
@@ -876,7 +875,7 @@ TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes")
         auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
         mgcl::Problem p(1, 1, 1, f, v);
         p.setUseOpencl(true);
-        p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setDeviceType(deviceType);
         p.init();
 
         int m = 3;
@@ -991,105 +990,5 @@ TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes")
                     REQUIRE((*slice_left)[i][j][k] == buf_planes[idx]);
                     idx++;
                 }
-
-        // mgcl::Cuboid h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o);
-        // h_cuboid.fill1dIndex(false);
-
-        // // Create gpu buffer equal to h_cuboid, without up-to-date ghosts
-        // mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_cuboid);
-
-        // // Update ghosts of h_cuboid
-        // mgcl::MultigridEngine::updateGhostsSeq(h_cuboid, nullptr, true, true);
-
-        // // Extract border planes from h_cuboid with now up-to-date ghosts
-        // auto h_extractedBorders = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr);
-
-        // // Paste ghosts from extracted Borders to device cuboid c
-        // c.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), nullptr, h_extractedBorders.get());
-
-        // // Cuboids should now be equal
-        // auto h_act = c.read(p.getCommands(), nullptr, true);
-
-        // REQUIRE(h_act->isEqualAllCells(h_cuboid));
-
-        // auto check = [&](mgcl::Cuboid& extractedBorders) { //
-        //     const double* data_borders = extractedBorders.field1d().data();
-
-        //     int cnt = 0;
-        //     // front planes (yz)
-        //     for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
-        //         for (int j = 0; j < ngh; j++)             // all cells in y-dir
-        //             for (int k = 0; k < ogh; k++)         // all cells in z-dir
-        //             {
-        //                 CAPTURE(i, j, k, cnt);
-        //                 REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-        //             }
-
-        //     // back planes (yz)
-        //     for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
-        //         for (int j = 0; j < ngh; j++)      // all cells in y-dir
-        //             for (int k = 0; k < ogh; k++)  // all cells in z-dir
-        //                 REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-
-        //     // top planes (xz)
-        //     for (int j = ghosts_n; j < 2 * ghosts_n; j++)
-        //         for (int i = 0; i < mgh; i++)
-        //             for (int k = 0; k < ogh; k++)
-        //                 REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-
-        //     // bottom planes (xz)
-        //     for (int j = n; j < n + ghosts_n; j++)
-        //         for (int i = 0; i < mgh; i++)
-        //             for (int k = 0; k < ogh; k++)
-        //                 REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-
-        //     // left planes (xy)
-        //     for (int k = ghosts_o; k < 2 * ghosts_o; k++)
-        //         for (int i = 0; i < mgh; i++)
-        //             for (int j = 0; j < ngh; j++)
-        //                 REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-
-        //     // right planes (xy)
-        //     for (int k = o; k < o + ghosts_o; k++)
-        //         for (int i = 0; i < mgh; i++)
-        //             for (int j = 0; j < ngh; j++)
-        //                 REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-        // };
-
-        // SECTION("no_reuse")
-        // {
-        //     auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr);
-        //     REQUIRE(ret != nullptr);
-        //     check(*ret);
-        // }
-
-        // SECTION("reuse_both")
-        // {
-        //     mgcl::Cuboid h_ret(1, 1, ressize, 0, 0, 0);
-        //     h_ret.fill(-1, false);
-        //     mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_ret);
-
-        //     c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, &h_ret);
-        //     check(h_ret);
-        // }
-
-        // SECTION("reuse_return_buffer")
-        // {
-        //     mgcl::Cuboid h_ret(1, 1, ressize, 0, 0, 0);
-        //     h_ret.fill(-1, false);
-
-        //     auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, &h_ret);
-        //     REQUIRE(ret == nullptr);
-        //     check(h_ret);
-        // }
-
-        // SECTION("reuse_device_buffer")
-        // {
-        //     mgcl::CuboidGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, 1, 1, ressize, 0, 0, 0);
-        //     d_tmp.fill(p.getCommands(), -1, true);
-
-        //     auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr);
-        //     check(*ret);
-        // }
     }
 }

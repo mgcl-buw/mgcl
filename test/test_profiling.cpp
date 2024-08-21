@@ -3,7 +3,10 @@
 #include "../src/mgcl/multigrid_engine.hpp"
 #include "../src/mgcl/problem.hpp"
 #include "../src/mgcl/util.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 #include "test_utility.hpp"
+
 #include <cmath>
 #include <memory>
 
@@ -53,6 +56,8 @@ void checkResult(mgcl::Problem& p, std::string kernelName, std::array<int, 3> gl
 
 TEST_CASE("profiling_setup")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     int m, n, o;
     m = n = o = 4;
     auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
@@ -60,7 +65,7 @@ TEST_CASE("profiling_setup")
     mgcl::Problem p(m, n, o, f, v);
 
     p.setUseOpencl(true);
-    p.setDeviceType(CL_DEVICE_TYPE_GPU);
+    p.setDeviceType(deviceType);
     p.setProfilingEnabled(true);
 
     REQUIRE(p.getProfilingData() != nullptr);
@@ -71,6 +76,8 @@ TEST_CASE("profiling_setup")
 
 TEST_CASE("profiling_kernels")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     int m, n, o;
     m = n = o = 8;
     double h = 1.0 / static_cast<double>(m);
@@ -79,7 +86,7 @@ TEST_CASE("profiling_kernels")
     mgcl::Problem p(m, n, o, f, v);
 
     p.setUseOpencl(true);
-    p.setDeviceType(CL_DEVICE_TYPE_GPU);
+    p.setDeviceType(deviceType);
     p.setProfilingEnabled(true);
     p.setStencilType(mgcl::MGCL_VARYING);
     auto sv = p.getStencilValues();
@@ -306,4 +313,6 @@ TEST_CASE("profiling_kernels")
                                                  p.getProgram(), p.getCommands(), p.getContext(), &conf, p.getProfilingData());
         checkResult(p, "galerkin", {resm * resn * reso, 0, 0});
     }
+
+    // TODO add extractBordersStencil and paste ghosts stencil
 }

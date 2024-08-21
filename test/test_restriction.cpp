@@ -8,6 +8,8 @@
 #include "../src/mgcl/level.hpp"
 #include "../src/mgcl/multigrid_engine.hpp"
 #include "../src/mgcl/stencil.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 #include "test_results.hpp"
 #include "test_utility.hpp"
 
@@ -47,14 +49,7 @@ TEST_CASE("restriction")
 
     SECTION("restrict OpenCL")
     {
-        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-        {
-            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-            return;
-        }
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
         p->setDeviceType(deviceType);
 

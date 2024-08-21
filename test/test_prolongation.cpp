@@ -7,6 +7,8 @@
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/level.hpp"
 #include "../src/mgcl/multigrid_engine.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 #include "test_utility.hpp"
 
 std::shared_ptr<mgcl::Cuboid> prolongationTestInputFine();
@@ -48,14 +50,7 @@ TEST_CASE("prolongation")
 
     SECTION("prolongate OpenCL")
     {
-        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-        {
-            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-            return;
-        }
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
         p->setDeviceType(deviceType);
         mgcl_test::TestUtility tu(p);

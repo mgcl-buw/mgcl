@@ -5,6 +5,7 @@
 #include "mgcl_kernel.hpp"
 #include "problem.hpp" // for Problem
 
+#include <CL/cl.h>
 #include <cassert>
 #include <fstream>
 #include <sstream>
@@ -39,6 +40,7 @@ namespace mgcl
         cl_uint numPlatforms;
         cl_uint numDevices;
         cl_device_id* device_ids;
+        cl_device_type _device_type = deviceType;
 
         // initialize opencl stuff if not done yet and if buffers should not be reused
         if (!isInitialized() && !problem->getReuseOpenclBuffers() && !problem->getCopyBufferData())
@@ -62,14 +64,15 @@ namespace mgcl
             for (cl_uint i = 0; i < numPlatforms; i++)
             {
                 // Find number of devices for a platform
-                err = clGetDeviceIDs(platforms[i], deviceType, 0, nullptr, &numDevices);
+                err = clGetDeviceIDs(platforms[i], _device_type, 0, nullptr, &numDevices);
                 if (err == CL_DEVICE_NOT_FOUND)
                 {
                     continue; // no device with given type found in current platform
                 }
                 mgcl::mgclCheckError(err, "Finding devices using clGetDeviceIDs");
+
                 device_ids = new cl_device_id[numDevices];
-                err = clGetDeviceIDs(platforms[i], deviceType, numDevices, device_ids, nullptr);
+                err = clGetDeviceIDs(platforms[i], _device_type, numDevices, device_ids, nullptr);
                 mgclCheckError(err, "clGetDeviceIDs");
 
                 // Loop over all devices for a given plattform
@@ -102,6 +105,7 @@ namespace mgcl
 
                     deviceId = device_ids[j];
                     platformId = platforms[i];
+                    deviceType = _device_type;
                     break;
                 }
 

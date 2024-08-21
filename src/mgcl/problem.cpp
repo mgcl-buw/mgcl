@@ -10,6 +10,7 @@
 #include "profiling_data.hpp"
 #include "util.hpp"
 #include <CL/cl.h>
+#include <cassert>
 #include <memory>
 
 #ifdef __APPLE__
@@ -1098,8 +1099,8 @@ namespace mgcl
 
     void Problem::setDeviceName(const std::string& deviceName_)
     {
-        if (!openCLHelper.isInitialized())
-            openCLHelper.deviceName = deviceName_;
+        assert(!openCLHelper.isInitialized() && "OpenCLHelper is already initialized!");
+        openCLHelper.deviceName = deviceName_;
     }
 
     cl_device_id Problem::getDeviceId() const
@@ -1119,8 +1120,8 @@ namespace mgcl
 
     void Problem::setKernelFile(const std::string& kernelFile_)
     {
-        if (!openCLHelper.isInitialized())
-            openCLHelper.setKernelFile(kernelFile_);
+        assert(!openCLHelper.isInitialized() && "OpenCLHelper is already initialized!");
+        openCLHelper.setKernelFile(kernelFile_);
     }
 
     cl_device_type Problem::getDeviceType() const
@@ -1130,8 +1131,8 @@ namespace mgcl
 
     void Problem::setDeviceType(const cl_device_type& deviceType_)
     {
-        if (!openCLHelper.isInitialized())
-            openCLHelper.deviceType = deviceType_;
+        assert(!openCLHelper.isInitialized() && "OpenCLHelper is already initialized!");
+        openCLHelper.deviceType = deviceType_;
     }
 
     cl_context Problem::getContext() const

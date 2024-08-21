@@ -35,6 +35,7 @@ set(SOURCES_TEST
     ocl_wrapper.cpp
     mpi/catch2_main_mpi.cpp
     test_buffer_gpu.cpp    
+    device_type_generator.cpp
 )
 
 add_executable(tests ${SOURCES_TEST} ${BACKWARD_ENABLE})
@@ -55,6 +56,7 @@ set(SOURCES_TEST_SOLVING
     matrix2d.cpp
     test_results.hpp
     test_results.cpp
+    device_type_generator.cpp
     mpi/catch2_main_mpi.cpp)
 
 add_executable(tests_solving ${SOURCES_TEST_SOLVING} ${BACKWARD_ENABLE})

@@ -9,6 +9,8 @@
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/level.hpp"
 #include "../src/mgcl/multigrid_engine.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 #include "test_results.hpp"
 #include "test_utility.hpp"
 
@@ -57,14 +59,7 @@ TEST_CASE("jacobi")
     // TODO adjust expected results for expected r and norm of r?
     SECTION("OpenCL GPU L2-norm 7point periodic")
     {
-        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-        {
-            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-            return;
-        }
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
         auto p = std::make_shared<mgcl::Problem>(m, n, o);
         p->setResidualNorm(mgcl::MGCL_L2);
@@ -101,14 +96,7 @@ TEST_CASE("jacobi")
 
     SECTION("Inf-norm seq vs ocl")
     {
-        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-        {
-            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-            return;
-        }
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
         auto p = std::make_shared<mgcl::Problem>(m, n, o);
         p->setResidualNorm(mgcl::MGCL_INF);
@@ -316,14 +304,7 @@ TEST_CASE("jacobi GPU varying stencil")
 
     SECTION("ocl vs seq periodic")
     {
-        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-        {
-            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-            return;
-        }
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
         int m = 8;
         int n = 8;
@@ -440,93 +421,93 @@ TEST_CASE("jacobi GPU varying stencil")
 }
 
 // omit this test for now, fix later
-TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
-{
-    int m = 16;
-    int n = 16;
-    int o = 16;
-    int ghosts_m = 1;
-    int ghosts_n = 1;
-    int ghosts_o = 1;
-    int mgh = m + 2 * ghosts_m;
-    int ngh = n + 2 * ghosts_n;
-    int ogh = o + 2 * ghosts_o;
-    double omega = 0.8;
-    int maxiter = 5;
+// TEST_CASE("jacobi OpenCL L2-norm 7point localMemory", "[.]")
+// {
+//     int m = 16;
+//     int n = 16;
+//     int o = 16;
+//     int ghosts_m = 1;
+//     int ghosts_n = 1;
+//     int ghosts_o = 1;
+//     int mgh = m + 2 * ghosts_m;
+//     int ngh = n + 2 * ghosts_n;
+//     int ogh = o + 2 * ghosts_o;
+//     double omega = 0.8;
+//     int maxiter = 5;
 
-    auto c_in_f = mgcl_test::test_jacobi::inputF16();
-    auto c_in_v = mgcl_test::test_jacobi::inputV16();
-    auto c_in_r = mgcl_test::test_jacobi::inputR16();
-    auto c_expected_out_v = mgcl_test::test_jacobi::outputV16();
-    auto c_expected_out_r = mgcl_test::test_jacobi::outputR16();
+//     auto c_in_f = mgcl_test::test_jacobi::inputF16();
+//     auto c_in_v = mgcl_test::test_jacobi::inputV16();
+//     auto c_in_r = mgcl_test::test_jacobi::inputR16();
+//     auto c_expected_out_v = mgcl_test::test_jacobi::outputV16();
+//     auto c_expected_out_r = mgcl_test::test_jacobi::outputR16();
 
-    auto stencil = mgcl::MGCL_LAPLACE_7POINT;
-    int ghosts = 3;
+//     auto stencil = mgcl::MGCL_LAPLACE_7POINT;
+//     int ghosts = 3;
 
-    auto p = std::make_shared<mgcl::Problem>(m, n, o);
-    p->setResidualNorm(mgcl::MGCL_L2);
-    p->setStencilType(stencil);
-    p->setGhosts(ghosts);
-    p->setOmega(omega);
-    p->setUseLocalMemory(true);
-    p->setJacobiWgSizeX(8);
-    p->setJacobiWgSizeY(8);
+//     auto p = std::make_shared<mgcl::Problem>(m, n, o);
+//     p->setResidualNorm(mgcl::MGCL_L2);
+//     p->setStencilType(stencil);
+//     p->setGhosts(ghosts);
+//     p->setOmega(omega);
+//     p->setUseLocalMemory(true);
+//     p->setJacobiWgSizeX(8);
+//     p->setJacobiWgSizeY(8);
 
-    mgcl_test::TestUtility* tu_tmp = new mgcl_test::TestUtility();
-    if (tu_tmp->deviceAvailable("Quadro", p->getDeviceType()))
-        p->setDeviceName("Quadro");
-    delete tu_tmp;
+//     mgcl_test::TestUtility* tu_tmp = new mgcl_test::TestUtility();
+//     if (tu_tmp->deviceAvailable("Quadro", p->getDeviceType()))
+//         p->setDeviceName("Quadro");
+//     delete tu_tmp;
 
-    // create input Cuboids with different ghost cell count
-    mgcl::Cuboid c_in_f_gh3(c_in_f->getM(), c_in_f->getN(), c_in_f->getO(), ghosts, ghosts, ghosts);
-    mgcl::Cuboid c_in_v_gh3(c_in_v->getM(), c_in_v->getN(), c_in_v->getO(), ghosts, ghosts, ghosts);
-    mgcl::Cuboid c_in_r_gh3(c_in_r->getM(), c_in_r->getN(), c_in_r->getO(), ghosts, ghosts, ghosts);
-    for (int i = 0; i < c_in_f->getM(); i++)
-        for (int j = 0; j < c_in_f->getN(); j++)
-            for (int k = 0; k < c_in_f->getO(); k++)
-            {
-                c_in_f_gh3[i + ghosts][j + ghosts][k + ghosts] = (*c_in_f)[i + 1][j + 1][k + 1];
-                c_in_v_gh3[i + ghosts][j + ghosts][k + ghosts] = (*c_in_v)[i + 1][j + 1][k + 1];
-                c_in_r_gh3[i + ghosts][j + ghosts][k + ghosts] = (*c_in_r)[i + 1][j + 1][k + 1];
-            }
-    mgcl::MultigridEngine::updateGhostsSeq(c_in_f_gh3, nullptr, true, true);
-    mgcl::MultigridEngine::updateGhostsSeq(c_in_v_gh3, nullptr, true, true);
-    mgcl::MultigridEngine::updateGhostsSeq(c_in_r_gh3, nullptr, true, true);
+//     // create input Cuboids with different ghost cell count
+//     mgcl::Cuboid c_in_f_gh3(c_in_f->getM(), c_in_f->getN(), c_in_f->getO(), ghosts, ghosts, ghosts);
+//     mgcl::Cuboid c_in_v_gh3(c_in_v->getM(), c_in_v->getN(), c_in_v->getO(), ghosts, ghosts, ghosts);
+//     mgcl::Cuboid c_in_r_gh3(c_in_r->getM(), c_in_r->getN(), c_in_r->getO(), ghosts, ghosts, ghosts);
+//     for (int i = 0; i < c_in_f->getM(); i++)
+//         for (int j = 0; j < c_in_f->getN(); j++)
+//             for (int k = 0; k < c_in_f->getO(); k++)
+//             {
+//                 c_in_f_gh3[i + ghosts][j + ghosts][k + ghosts] = (*c_in_f)[i + 1][j + 1][k + 1];
+//                 c_in_v_gh3[i + ghosts][j + ghosts][k + ghosts] = (*c_in_v)[i + 1][j + 1][k + 1];
+//                 c_in_r_gh3[i + ghosts][j + ghosts][k + ghosts] = (*c_in_r)[i + 1][j + 1][k + 1];
+//             }
+//     mgcl::MultigridEngine::updateGhostsSeq(c_in_f_gh3, nullptr, true, true);
+//     mgcl::MultigridEngine::updateGhostsSeq(c_in_v_gh3, nullptr, true, true);
+//     mgcl::MultigridEngine::updateGhostsSeq(c_in_r_gh3, nullptr, true, true);
 
-    mgcl_test::TestUtility tu(p);
-    auto d_in_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_f_gh3);
-    auto d_in_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_v_gh3);
-    auto d_in_v_out = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_v_gh3);
-    auto d_in_r = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_r_gh3);
+//     mgcl_test::TestUtility tu(p);
+//     auto d_in_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_f_gh3);
+//     auto d_in_v = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_v_gh3);
+//     auto d_in_v_out = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_v_gh3);
+//     auto d_in_r = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_in_r_gh3);
 
-    mgcl::Level level(p.get(), 0);
-    level.setDF(d_in_f);
-    level.setDVIn(d_in_v);
-    level.setDVOut(d_in_v_out);
-    level.setDR(d_in_r);
+//     mgcl::Level level(p.get(), 0);
+//     level.setDF(d_in_f);
+//     level.setDVIn(d_in_v);
+//     level.setDVOut(d_in_v_out);
+//     level.setDR(d_in_r);
 
-    double res = mgcl::MultigridEngine::jacobi(*p, level, maxiter, 1);
-    tu.finish();
+//     double res = mgcl::MultigridEngine::jacobi(*p, level, maxiter, 1);
+//     tu.finish();
 
-    // read back from device and copy to Cuboid with ghosts = 1
-    auto c_r_out = d_in_r->read(p->getCommands(), nullptr, true);
-    auto c_v_out = d_in_v->read(p->getCommands(), nullptr, true);
-    for (int i = 0; i < c_in_f->getM(); i++)
-        for (int j = 0; j < c_in_f->getN(); j++)
-            for (int k = 0; k < c_in_f->getO(); k++)
-            {
-                (*c_in_v)[i + 1][j + 1][k + 1] = (*c_v_out)[i + ghosts][j + ghosts][k + ghosts];
-                (*c_in_r)[i + 1][j + 1][k + 1] = (*c_r_out)[i + ghosts][j + ghosts][k + ghosts];
-            }
+//     // read back from device and copy to Cuboid with ghosts = 1
+//     auto c_r_out = d_in_r->read(p->getCommands(), nullptr, true);
+//     auto c_v_out = d_in_v->read(p->getCommands(), nullptr, true);
+//     for (int i = 0; i < c_in_f->getM(); i++)
+//         for (int j = 0; j < c_in_f->getN(); j++)
+//             for (int k = 0; k < c_in_f->getO(); k++)
+//             {
+//                 (*c_in_v)[i + 1][j + 1][k + 1] = (*c_v_out)[i + ghosts][j + ghosts][k + ghosts];
+//                 (*c_in_r)[i + 1][j + 1][k + 1] = (*c_r_out)[i + ghosts][j + ghosts][k + ghosts];
+//             }
 
-    // c_in_r->dumpToFile("c_in_r->txt");
-    // c_expected_out_r->dumpToFile("c_expected_out_r.txt");
+//     // c_in_r->dumpToFile("c_in_r->txt");
+//     // c_expected_out_r->dumpToFile("c_expected_out_r.txt");
 
-    REQUIRE_THAT(res, Catch::Matchers::WithinAbs(4.02895897954478714e+04, 1e-7));
-    // CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
-    CHECK(c_in_v->isEqual(*c_expected_out_v));
-    CHECK(c_in_r->isEqual(*c_expected_out_r));
-}
+//     REQUIRE_THAT(res, Catch::Matchers::WithinAbs(4.02895897954478714e+04, 1e-7));
+//     // CHECK(fabs(res - 4.02895897954478714e+04) < 1e-7);
+//     CHECK(c_in_v->isEqual(*c_expected_out_v));
+//     CHECK(c_in_r->isEqual(*c_expected_out_r));
+// }
 
 // Test if exceptions are thrown for wrong parameters in Jacobi. Only needed for periodic case.
 // TODO check Dirichlet MPI
@@ -588,12 +569,13 @@ TEST_CASE("jacobi throwing")
 
     SECTION("gpu")
     {
-        if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
         {
             // init problem with ghosts = 1
             auto p_exp = std::make_shared<mgcl::Problem>(m, n, o);
             p_exp->setGhosts(1);
-            p_exp->setDeviceType(CL_DEVICE_TYPE_GPU);
+            p_exp->setDeviceType(deviceType);
 
             mgcl_test::TestUtility tu_exp(p_exp);
             auto d_f_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f);
@@ -727,6 +709,8 @@ TEST_CASE("jacobi seq gh > 1 multiple iters")
 // TODO test for non-periodic and varying stencil
 TEST_CASE("jacobi gpu gh > 1 multiple iters")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     int iters = GENERATE(1, 2, 5);
     int stepsPerIter = GENERATE(1, 2, 3);
     // int iters = 1;
@@ -777,13 +761,12 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
     v_act.fillRealFrom(v_exp);
     f_act.fillRealFrom(f_exp);
 
-    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
     {
         // init problem with ghosts = 1
         auto p_exp = std::make_shared<mgcl::Problem>(m, n, o);
         p_exp->setResidualNorm(mgcl::MGCL_L2);
         p_exp->setGhosts(1);
-        p_exp->setDeviceType(CL_DEVICE_TYPE_GPU);
+        p_exp->setDeviceType(deviceType);
         p_exp->setJacobiIterationsPerKernel(1);
 
         mgcl_test::TestUtility tu_exp(p_exp);

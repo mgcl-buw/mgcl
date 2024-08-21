@@ -10,6 +10,8 @@
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/problem.hpp"
 #include "../thirdparty/pmg/mg.h"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 #include "test_utility.hpp"
 
 std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid& solution, mgcl::Cuboid& approximation);
@@ -154,14 +156,7 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
 
     SECTION("OpenCL")
     {
-        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-        {
-            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-            return;
-        }
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
         std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
 
@@ -446,14 +441,7 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
 
     SECTION("OpenCL")
     {
-        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-        {
-            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-            return;
-        }
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
         std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
 
@@ -754,14 +742,7 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
 
     SECTION("OpenCL")
     {
-        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-        {
-            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-            return;
-        }
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
         std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
 
@@ -917,14 +898,7 @@ TEST_CASE("Problem_ignore_tol")
 
     SECTION("OpenCL")
     {
-        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-        {
-            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-            return;
-        }
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
         std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
 

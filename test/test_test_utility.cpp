@@ -1,24 +1,33 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "../src/mgcl/cuboid.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 #include "test_utility.hpp"
 
 TEST_CASE("TestUtility setup")
 {
-    mgcl_test::TestUtility tu;
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    mgcl_test::TestUtility tu(deviceType);
     REQUIRE(tu.getProblem().getOpenCLHelper().isInitialized());
 }
 
 TEST_CASE("TestUtility setup reusing Problem")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     auto p = std::make_shared<mgcl::Problem>(4, 4, 4);
+    p->setDeviceType(deviceType);
     mgcl_test::TestUtility tu(p);
     REQUIRE(tu.getProblem().getOpenCLHelper().isInitialized());
 }
 
 TEST_CASE("TestUtility createOpenCLBuffer + readOpenCLBuffer")
 {
-    mgcl_test::TestUtility tu;
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    mgcl_test::TestUtility tu(deviceType);
     REQUIRE(tu.getProblem().getOpenCLHelper().isInitialized());
 
     mgcl::Cuboid c(4, 4, 4, 3.0);
@@ -32,14 +41,18 @@ TEST_CASE("TestUtility createOpenCLBuffer + readOpenCLBuffer")
 
 TEST_CASE("TestUtility readOpenCLBuffer nullptr")
 {
-    mgcl_test::TestUtility tu;
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    mgcl_test::TestUtility tu(deviceType);
     REQUIRE(tu.getProblem().getOpenCLHelper().isInitialized());
     REQUIRE_THROWS_AS(tu.readOpenCLBuffer(nullptr, 4, 4, 4), std::invalid_argument);
 }
 
 TEST_CASE("TestUtility deviceAvailable")
 {
-    mgcl_test::TestUtility tu;
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    mgcl_test::TestUtility tu(deviceType);
     int err;
     cl_char device_name[1024] = {0};
     cl_device_type device_type;

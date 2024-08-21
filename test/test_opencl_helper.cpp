@@ -1,3 +1,9 @@
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
+#include <CL/cl.h>
+#endif
+
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -6,18 +12,24 @@
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/opencl_helper.hpp"
 #include "../src/mgcl/problem.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 #include "test_utility.hpp"
 
 TEST_CASE("OpenCLHelper")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     auto v = std::make_shared<mgcl::Cuboid>(4, 4, 4);
     auto f = std::make_shared<mgcl::Cuboid>(4, 4, 4);
     auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
-    p->setDeviceType(CL_DEVICE_TYPE_GPU);
-    mgcl::OpenCLHelper openCLHelper(p.get());
+    p->setDeviceType(deviceType);
+    auto& openCLHelper = p->getOpenCLHelper();
 
     SECTION("init default conf")
     {
+        REQUIRE(openCLHelper.getDeviceType() == deviceType);
+
         REQUIRE_FALSE(openCLHelper.isInitialized());
         REQUIRE_NOTHROW(openCLHelper.init());
         REQUIRE(openCLHelper.isInitialized());
@@ -25,6 +37,7 @@ TEST_CASE("OpenCLHelper")
         REQUIRE(openCLHelper.getCommands() != nullptr);
         REQUIRE(openCLHelper.getContext() != nullptr);
         REQUIRE(openCLHelper.getDeviceId() != nullptr);
+        REQUIRE(openCLHelper.getDeviceType() == deviceType);
         REQUIRE(openCLHelper.getDeviceName() == "");
         REQUIRE(openCLHelper.getKernelFile() == "./mgcl.cl");
         REQUIRE(openCLHelper.getProgram() != nullptr);
@@ -40,15 +53,6 @@ TEST_CASE("OpenCLHelper")
 
     SECTION("reusing OpenCL platform")
     {
-        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-        {
-            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-            return;
-        }
-
         openCLHelper.setDeviceType(deviceType);
 
         REQUIRE_FALSE(openCLHelper.isInitialized());
@@ -58,6 +62,7 @@ TEST_CASE("OpenCLHelper")
         auto v2 = std::make_shared<mgcl::Cuboid>(3, 3, 3);
         auto f2 = std::make_shared<mgcl::Cuboid>(3, 3, 3);
         mgcl::Problem p2(3, 3, 3, f2, v2);
+        p2.setDeviceType(deviceType);
         p2.setReuseOpenclBuffers(true);
         mgcl::OpenCLHelper openCLHelper2(&p2);
 

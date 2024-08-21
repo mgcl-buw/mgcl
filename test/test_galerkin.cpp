@@ -11,6 +11,8 @@
 #include "../src/mgcl/multigrid_engine.hpp"
 #include "../src/mgcl/stencil.hpp"
 
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 #include "test_utility.hpp"
 
 TEST_CASE("galerkin Laplace vs Matrix")
@@ -98,14 +100,7 @@ TEST_CASE("seq_galerkin_optimized_random_values_periodic_vs_matrix")
 
 TEST_CASE("GPU galerkin random values periodic")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -586,12 +581,14 @@ TEST_CASE("GalerkinC99")
 // This happens when using MPI on the threshold level (but this test does NOT use MPI).
 TEST_CASE("galerkinOpimizedGpuCoarseGridSizeDifferentFromBufferSize")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     int m = 4;
     int n = 4;
     int o = 4;
     int gh = 1;
 
-    mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+    mgcl_test::TestUtility tu(deviceType);
 
     mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
     a_h.fill1dIndex(false);

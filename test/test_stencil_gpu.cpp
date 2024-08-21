@@ -16,6 +16,8 @@
 #include "../src/mgcl/multigrid_engine.hpp"
 #include "../src/mgcl/opencl_helper.hpp"
 #include "../src/mgcl/stencil.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 
 #include "test_utility.hpp"
 
@@ -23,14 +25,7 @@ using std::min;
 
 TEST_CASE("VaryingStencilGpu ctor+dtor")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -73,14 +68,7 @@ TEST_CASE("VaryingStencilGpu ctor+dtor")
 
 TEST_CASE("VaryingStencilGpu move ctor")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -163,14 +151,7 @@ TEST_CASE("VaryingStencilGpu move ctor")
 
 TEST_CASE("VaryingStencilGpu::fill")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -243,14 +224,7 @@ TEST_CASE("VaryingStencilGpu::fill")
 
 TEST_CASE("VaryingStencilGpu::read")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -302,14 +276,7 @@ TEST_CASE("VaryingStencilGpu::read")
 
 TEST_CASE("VaryingStencilGpu::updateGhosts")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -567,14 +534,7 @@ TEST_CASE("VaryingStencilGpu::updateGhosts")
 
 TEST_CASE("VaryingStencilGpu::multiply(var)")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -864,14 +824,7 @@ TEST_CASE("VaryingStencilGpu::multiply(var)")
 
 TEST_CASE("VaryingStencilGpu::multiply(fix)")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -1159,7 +1112,7 @@ TEST_CASE("VaryingStencilGpu::multiply loop index reordering", "[stencilIndexReo
                 idx1d
             });
 
-            printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n", a_i, a_j, a_k, b_i, b_j, b_k, ci, cj, ck,idx1d);
+            // printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n", a_i, a_j, a_k, b_i, b_j, b_k, ci, cj, ck,idx1d);
         }
     // clang-format on
 
@@ -1202,14 +1155,7 @@ TEST_CASE("VaryingStencilGpu::multiply loop index reordering", "[stencilIndexReo
 
 TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -1367,14 +1313,7 @@ TEST_CASE("VaryingStencilGpu::cutFromW7ToW3")
 
 TEST_CASE("FixedStencilGpu ctor+dtor")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -1414,14 +1353,7 @@ TEST_CASE("FixedStencilGpu ctor+dtor")
 
 TEST_CASE("FixedStencilGpu::multiply(var)")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -1629,14 +1561,7 @@ TEST_CASE("FixedStencilGpu::multiply(var)")
 
 TEST_CASE("FixedStencilGpu::fill")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -1700,14 +1625,7 @@ TEST_CASE("FixedStencilGpu::fill")
 
 TEST_CASE("FixedStencilGpu::read")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -1764,14 +1682,7 @@ TEST_CASE("FixedStencilGpu::read")
 
 TEST_CASE("FixedStencilGpu::create3dFullWeightRestrictionGpu")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -1813,14 +1724,7 @@ TEST_CASE("FixedStencilGpu::create3dFullWeightRestrictionGpu")
 
 TEST_CASE("FixedStencilGpu::create3dBilinearProlongationStencilGpu")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility t(deviceType);
 
@@ -2091,12 +1995,14 @@ TEST_CASE("VaryingStencilGpu::extract_border_planes")
 
     SECTION("success")
     {
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
         // Create dummy problem
         auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
         auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
         mgcl::Problem p(1, 1, 1, f, v);
         p.setUseOpencl(true);
-        p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setDeviceType(deviceType);
         p.setProfilingEnabled(true);
         p.init();
 
@@ -2452,12 +2358,14 @@ TEST_CASE("VaryingStencilGpu::pasteGhostsFromBorderPlanes")
 
     SECTION("success")
     {
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
         // Create dummy problem
         auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
         auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
         mgcl::Problem p(1, 1, 1, f, v);
         p.setUseOpencl(true);
-        p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setDeviceType(deviceType);
         p.init();
 
         mgcl::VaryingStencil h_stencil(m, n, o, 3, ghosts_m, ghosts_n, ghosts_o);

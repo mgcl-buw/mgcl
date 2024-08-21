@@ -10,6 +10,8 @@
 #include "../src/mgcl/cuboid_gpu.hpp"
 #include "../src/mgcl/opencl_helper.hpp"
 #include "../src/mgcl/util.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 
 #ifdef __APPLE__
 #include <OpenCL/cl.h> // for clSetKernelArg, _cl_mem, cl_mem, clE...
@@ -118,6 +120,8 @@ TEST_CASE("util::sum")
 
     SECTION("sum_ocl_naive")
     {
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
         int m = 1;
         int n = 1;
         int o = 800000;
@@ -140,7 +144,7 @@ TEST_CASE("util::sum")
 
         REQUIRE_THAT(sum_host, Catch::Matchers::WithinAbs(0, 1e-8));
 
-        mgcl_test::TestUtility tu;
+        mgcl_test::TestUtility tu(deviceType);
         cl_mem dBuf = tu.createOpenCLBuffer(data);
 
         double sum_ocl = sum_ocl_naive(dBuf, m * n * o, tu.getContext());
@@ -150,10 +154,12 @@ TEST_CASE("util::sum")
 
     SECTION("opencl kernel")
     {
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+        mgcl_test::TestUtility tu(deviceType);
+
         SECTION("sum to 0")
         {
-            mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
-
             // size_t local = GENERATE(8, 32, 43);
             int m = 1;
             int n = 1;
@@ -191,9 +197,6 @@ TEST_CASE("util::sum")
 
         SECTION("arbitrary values")
         {
-
-            mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
-
             // size_t local = GENERATE(8, 32, 43);
             size_t local = 32;
             int m = 1;
@@ -231,7 +234,9 @@ TEST_CASE("util::sum")
 // Test if the sum reduction kernel yields correct results
 TEST_CASE("util::max")
 {
-    mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    mgcl_test::TestUtility tu(deviceType);
 
     // size_t local = GENERATE(8, 32, 43);
     size_t local = 32;
@@ -271,7 +276,9 @@ TEST_CASE("util::max")
 // Test if the sum reduction kernel yields correct results
 TEST_CASE("util::max_abs")
 {
-    mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    mgcl_test::TestUtility tu(deviceType);
 
     // size_t local = GENERATE(8, 32, 43);
     size_t local = 32;
@@ -298,7 +305,9 @@ TEST_CASE("util::max_abs")
 
 TEST_CASE("util::fill")
 {
-    mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    mgcl_test::TestUtility tu(deviceType);
 
     mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
     ch.fillRandom();
@@ -316,6 +325,8 @@ TEST_CASE("util::fill")
 // Builds sum on device using a naive kernel (only 1 work-item iterating over all elements).
 double sum_ocl_naive(cl_mem buf, int num_elements, cl_context context)
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     std::string kernelSrc = R"DELIM(
         __kernel void sum_naive(
             __global double *restrict buf,
@@ -332,7 +343,7 @@ double sum_ocl_naive(cl_mem buf, int num_elements, cl_context context)
         }
     )DELIM";
 
-    OCLWrapper w(CL_DEVICE_TYPE_GPU, "", kernelSrc, "", context);
+    OCLWrapper w(deviceType, "", kernelSrc, "", context);
 
     int err;
     cl_kernel sum_naive_kernel = clCreateKernel(w.program, "sum_naive", &err);

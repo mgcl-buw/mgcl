@@ -4,6 +4,8 @@
 
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/multigrid_engine.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 #include "test_utility.hpp"
 
 TEST_CASE("updateGhosts gh < m")
@@ -53,50 +55,26 @@ TEST_CASE("updateGhosts gh < m")
                 }
     }
 
-    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+    SECTION("OpenCL")
     {
-        SECTION("openclgpu")
-        {
-            mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
-            auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, nullptr, true);
-            tu.finish();
+        mgcl_test::TestUtility tu(deviceType);
+        auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
 
-            auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
+        mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, nullptr, true);
+        tu.finish();
 
-            double tol = 1e-7;
-            for (int i = 0; i < ghosts_m; i++)
-                for (int j = 0; j < ghosts_n; j++)
-                    for (int k = 0; k < ghosts_o; k++)
-                    {
-                        REQUIRE(fabs((*c2)[i][j][k] - (*c2)[i + m][j + n][k + o]) < tol);
-                        REQUIRE(fabs((*c2)[i + ghosts_m][j + ghosts_n][k + ghosts_o] - (*c2)[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
-                    }
-        }
-    }
+        auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
 
-    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_CPU))
-    {
-        SECTION("openclcpu")
-        {
-            mgcl_test::TestUtility tu(CL_DEVICE_TYPE_CPU);
-            auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
-
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, nullptr, true);
-            tu.finish();
-
-            auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
-
-            double tol = 1e-7;
-            for (int i = 0; i < ghosts_m; i++)
-                for (int j = 0; j < ghosts_n; j++)
-                    for (int k = 0; k < ghosts_o; k++)
-                    {
-                        REQUIRE(fabs((*c2)[i][j][k] - (*c2)[i + m][j + n][k + o]) < tol);
-                        REQUIRE(fabs((*c2)[i + ghosts_m][j + ghosts_n][k + ghosts_o] - (*c2)[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
-                    }
-        }
+        double tol = 1e-7;
+        for (int i = 0; i < ghosts_m; i++)
+            for (int j = 0; j < ghosts_n; j++)
+                for (int k = 0; k < ghosts_o; k++)
+                {
+                    REQUIRE(fabs((*c2)[i][j][k] - (*c2)[i + m][j + n][k + o]) < tol);
+                    REQUIRE(fabs((*c2)[i + ghosts_m][j + ghosts_n][k + ghosts_o] - (*c2)[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
+                }
     }
 }
 
@@ -147,49 +125,25 @@ TEST_CASE("updateGhosts gh > m")
                 }
     }
 
-    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+    SECTION("OpenCL")
     {
-        SECTION("openclgpu")
-        {
-            mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
-            auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, nullptr, true);
-            tu.finish();
+        mgcl_test::TestUtility tu(deviceType);
+        auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
 
-            auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
+        mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, nullptr, true);
+        tu.finish();
 
-            double tol = 1e-7;
-            for (int i = 0; i < ghosts_m; i++)
-                for (int j = 0; j < ghosts_n; j++)
-                    for (int k = 0; k < ghosts_o; k++)
-                    {
-                        REQUIRE(fabs((*c2)[i][j][k] - (*c2)[i + m][j + n][k + o]) < tol);
-                        REQUIRE(fabs((*c2)[i + ghosts_m][j + ghosts_n][k + ghosts_o] - (*c2)[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
-                    }
-        }
-    }
+        auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
 
-    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_CPU))
-    {
-        SECTION("openclcpu")
-        {
-            mgcl_test::TestUtility tu(CL_DEVICE_TYPE_CPU);
-            auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, c1);
-
-            mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, nullptr, true);
-            tu.finish();
-
-            auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
-
-            double tol = 1e-7;
-            for (int i = 0; i < ghosts_m; i++)
-                for (int j = 0; j < ghosts_n; j++)
-                    for (int k = 0; k < ghosts_o; k++)
-                    {
-                        REQUIRE(fabs((*c2)[i][j][k] - (*c2)[i + m][j + n][k + o]) < tol);
-                        REQUIRE(fabs((*c2)[i + ghosts_m][j + ghosts_n][k + ghosts_o] - (*c2)[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
-                    }
-        }
+        double tol = 1e-7;
+        for (int i = 0; i < ghosts_m; i++)
+            for (int j = 0; j < ghosts_n; j++)
+                for (int k = 0; k < ghosts_o; k++)
+                {
+                    REQUIRE(fabs((*c2)[i][j][k] - (*c2)[i + m][j + n][k + o]) < tol);
+                    REQUIRE(fabs((*c2)[i + ghosts_m][j + ghosts_n][k + ghosts_o] - (*c2)[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
+                }
     }
 }

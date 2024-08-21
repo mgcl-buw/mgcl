@@ -8,6 +8,8 @@
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/level.hpp"
 #include "../src/mgcl/multigrid_engine.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 #include "test_results.hpp"
 #include "test_utility.hpp"
 
@@ -48,14 +50,7 @@ TEST_CASE("residual")
 
     SECTION("residual OpenCL L2-norm 7point")
     {
-        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-        {
-            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-            return;
-        }
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
         auto p = std::make_shared<mgcl::Problem>(m, n, o);
         p->setResidualNorm(mgcl::MGCL_L2);
@@ -101,14 +96,7 @@ TEST_CASE("residual")
 
 TEST_CASE("residual periodic Laplace seq vs ocl")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     int m = 8;
     int n = 8;
@@ -201,14 +189,7 @@ TEST_CASE("residual periodic Laplace seq vs ocl")
 
 TEST_CASE("residual periodic varying stencil seq vs ocl")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     int m = 8;
     int n = 8;
@@ -395,6 +376,8 @@ TEST_CASE("residual seq gh > 1")
 // tests if residual gpu works if v_gh > 1 or r_gh > 1 or f_gh > 1
 TEST_CASE("residual gpu gh > 1")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     int m = 16;
     int n = 16;
     int o = 16;
@@ -439,13 +422,12 @@ TEST_CASE("residual gpu gh > 1")
 
     mgcl::VaryingStencil dummy(1, 1, 1, 3, 0, 0, 0);
 
-    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
     {
         // init problem with ghosts = 1
         auto p = std::make_shared<mgcl::Problem>(m, n, o);
         p->setResidualNorm(mgcl::MGCL_L2);
         p->setGhosts(1);
-        p->setDeviceType(CL_DEVICE_TYPE_GPU);
+        p->setDeviceType(deviceType);
 
         mgcl_test::TestUtility tu(p);
         auto d_in_f = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_in);
@@ -650,12 +632,13 @@ TEST_CASE("residual throwing")
 
     SECTION("gpu")
     {
-        if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
         {
             // init problem with ghosts = 1
             auto p_exp = std::make_shared<mgcl::Problem>(m, n, o);
             p_exp->setGhosts(1);
-            p_exp->setDeviceType(CL_DEVICE_TYPE_GPU);
+            p_exp->setDeviceType(deviceType);
 
             mgcl_test::TestUtility tu_exp(p_exp);
             auto d_f_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f);
@@ -780,6 +763,8 @@ TEST_CASE("residual seq moff, noff, koff < 0")
 // TODO off > 0 is not tested yet since it's not needed in practice.
 TEST_CASE("residual gpu moff, noff, koff < 0")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     int m = 8;
     int n = 8;
     int o = 8;
@@ -837,13 +822,12 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
 
     mgcl::VaryingStencil dummy(1, 1, 1, 3, 0, 0, 0);
 
-    if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
     {
         // init problem with ghosts = 1
         auto p_exp = std::make_shared<mgcl::Problem>(m, n, o);
         p_exp->setResidualNorm(mgcl::MGCL_L2);
         p_exp->setGhosts(1);
-        p_exp->setDeviceType(CL_DEVICE_TYPE_GPU);
+        p_exp->setDeviceType(deviceType);
 
         mgcl_test::TestUtility tu_exp(p_exp);
         auto d_f_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_exp);

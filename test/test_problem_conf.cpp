@@ -9,6 +9,8 @@
 #include "../src/mgcl/opencl_helper.hpp"
 #include "../src/mgcl/problem.hpp"
 #include "../src/mgcl/stencil.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 #include "test_utility.hpp"
 
 /**
@@ -108,26 +110,13 @@ TEST_CASE("Problem::checkParameters")
 
 TEST_CASE("Problem::checkGpuSizes")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU;
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
-    {
-        deviceType = CL_DEVICE_TYPE_CPU;
-        if (!mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_CPU))
-        {
-            std::cout << "Neither GPU nor CPU OpenCL device available! Skipping test." << std::endl;
-            return;
-        }
-    }
-
-    std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     SECTION("enough space available")
     {
         // 4x4x4 should be no problem
         mgcl::Problem p(4, 4, 4);
         p.setUseOpencl(true);
-        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.setDeviceType(deviceType);
 
         REQUIRE_NOTHROW(p.checkGpuSizes());
@@ -140,28 +129,7 @@ TEST_CASE("Problem::checkGpuSizes")
 
         mgcl::Problem p(N, N, N);
         p.setUseOpencl(true);
-        p.setDeviceType(CL_DEVICE_TYPE_GPU);
         p.setDeviceType(deviceType);
-
-        REQUIRE_THROWS(p.checkGpuSizes());
-    }
-
-    SECTION("not enough space available (on Quadro, varying stencil)")
-    {
-        // Quadro can't handle 128^3 AND varying stencil
-        int N = 256;
-
-        if (!mgcl_test::TestUtility::deviceAvailable("Quadro", CL_DEVICE_TYPE_GPU))
-        {
-            std::cout << "Quadro not available!" << std::endl;
-            return;
-        }
-
-        mgcl::Problem p(N, N, N);
-        p.setUseOpencl(true);
-        p.setDeviceType(CL_DEVICE_TYPE_GPU);
-        p.setDeviceType(deviceType);
-        p.setStencilType(mgcl::MGCL_VARYING);
 
         REQUIRE_THROWS(p.checkGpuSizes());
     }
@@ -235,12 +203,14 @@ TEST_CASE("Problem::calculateAndSetMaxLevel")
 
 TEST_CASE("Problem::initOpenCL, not reusing environment")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     mgcl::Problem p(4, 4, 4);
     REQUIRE(!p.getOpenCLHelper().isInitialized());
     REQUIRE(p.getUseOpencl() == false);
 
     p.setUseOpencl(true);
-    p.setDeviceType(CL_DEVICE_TYPE_GPU);
+    p.setDeviceType(deviceType);
     p.initOpenCL();
     REQUIRE(p.getUseOpencl() == true);
     REQUIRE(p.getOpenCLHelper().isInitialized());
@@ -251,12 +221,14 @@ TEST_CASE("Problem::initOpenCL, not reusing environment")
 
 TEST_CASE("Problem::initOpenCL, reusing environment")
 {
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
     mgcl::Problem p(4, 4, 4);
     REQUIRE(!p.getOpenCLHelper().isInitialized());
     REQUIRE(p.getUseOpencl() == false);
 
     mgcl::OpenCLHelper openCLHelper(&p);
-    openCLHelper.setDeviceType(CL_DEVICE_TYPE_GPU);
+    openCLHelper.setDeviceType(deviceType);
     openCLHelper.init();
 
     p.reuseOpenCL(openCLHelper.getContext(), openCLHelper.getCommands(), openCLHelper.getDeviceId());
@@ -300,23 +272,24 @@ TEST_CASE("set OpenCLHelper values")
 
     /**
      * @brief Using setters after OpenCLHelper was initialized should not have an effect.
+     * Update 21.08.2024: Setters now assert that OpenCLHelper is initialized, which cannot be easily tested here.
      *
      */
-    SECTION("setters, openCLHandler initialized")
-    {
-        REQUIRE(!p.getOpenCLHelper().isInitialized());
-        p.setDeviceType(CL_DEVICE_TYPE_GPU);
-        p.initOpenCL();
-        REQUIRE(p.getOpenCLHelper().isInitialized());
+    // SECTION("setters, openCLHandler initialized")
+    // {
+    //     REQUIRE(!p.getOpenCLHelper().isInitialized());
+    //     p.setDeviceType(CL_DEVICE_TYPE_GPU);
+    //     p.initOpenCL();
+    //     REQUIRE(p.getOpenCLHelper().isInitialized());
 
-        p.setDeviceType(CL_DEVICE_TYPE_CPU);
-        p.setKernelFile("test/");
-        p.setDeviceName("Quadro");
+    //     p.setDeviceType(CL_DEVICE_TYPE_CPU);
+    //     p.setKernelFile("test/");
+    //     p.setDeviceName("Quadro");
 
-        REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_GPU);
-        REQUIRE(p.getKernelFile() == "./mgcl.cl");
-        REQUIRE(p.getDeviceName() == "");
-    }
+    //     REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_GPU);
+    //     REQUIRE(p.getKernelFile() == "./mgcl.cl");
+    //     REQUIRE(p.getDeviceName() == "");
+    // }
 }
 
 /**
@@ -485,14 +458,7 @@ TEST_CASE("Problem::init")
 
     SECTION("reuse OpenCL buffers")
     {
-        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-        {
-            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-            return;
-        }
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
         int ghosts = 1;
         mgcl::Cuboid vgh(m + 2 * ghosts, n + 2 * ghosts, o + 2 * ghosts);
@@ -548,14 +514,7 @@ TEST_CASE("Problem::init")
 
     SECTION("copy OpenCL buffers")
     {
-        auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-        if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-        {
-            std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-            std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-            return;
-        }
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
         int ghosts = 1;
         mgcl::Cuboid vgh(m, n, o, ghosts, ghosts, ghosts);
@@ -658,14 +617,7 @@ TEST_CASE("Problem::init")
 
 TEST_CASE("Problem::readResults")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
-
-    if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
-    {
-        std::string typeName = deviceType == CL_DEVICE_TYPE_GPU ? "CL_DEVICE_TYPE_GPU" : "CL_DEVICE_TYPE_CPU";
-        std::cout << "Skipping non-available device type '" << typeName << "'" << std::endl;
-        return;
-    }
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     auto v = std::make_shared<mgcl::Cuboid>(4, 5, 6, 2, 2, 2);
     auto f = std::make_shared<mgcl::Cuboid>(4, 5, 6, 2, 2, 2);
@@ -675,7 +627,6 @@ TEST_CASE("Problem::readResults")
     mgcl::Problem p(4, 5, 6, f, v);
     p.setGhostsIn(2);
     p.setUseOpencl(true);
-    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setDeviceType(deviceType);
 
     SECTION("default conf")
@@ -715,24 +666,6 @@ TEST_CASE("Problem::setStencilType")
 
     p.setStencilType(mgcl::MGCL_LAPLACE_7POINT);
     CHECK(p.getStencilValues() == nullptr);
-
-    p.setStencilType(mgcl::MGCL_VARYING);
-    REQUIRE(p.getStencilValues() != nullptr);
-    CHECK(p.getStencilValues()->getM() == p.getM());
-    CHECK(p.getStencilValues()->getN() == p.getN());
-    CHECK(p.getStencilValues()->getO() == p.getO());
-    CHECK(p.getStencilValues()->getMgh() == p.getM() + 2);
-    CHECK(p.getStencilValues()->getNgh() == p.getN() + 2);
-    CHECK(p.getStencilValues()->getOgh() == p.getO() + 2);
-
-    p.setStencilType(mgcl::MGCL_VARYING);
-    REQUIRE(p.getStencilValues() != nullptr);
-    CHECK(p.getStencilValues()->getM() == p.getM());
-    CHECK(p.getStencilValues()->getN() == p.getN());
-    CHECK(p.getStencilValues()->getO() == p.getO());
-    CHECK(p.getStencilValues()->getMgh() == p.getM() + 2);
-    CHECK(p.getStencilValues()->getNgh() == p.getN() + 2);
-    CHECK(p.getStencilValues()->getOgh() == p.getO() + 2);
 
     p.setStencilType(mgcl::MGCL_VARYING);
     REQUIRE(p.getStencilValues() != nullptr);

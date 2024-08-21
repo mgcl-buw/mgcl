@@ -8,6 +8,8 @@
 #include "../src/mgcl/level.hpp"
 #include "../src/mgcl/mpi_global_data.hpp"
 #include "../src/mgcl/problem.hpp"
+#include "cli_args.hpp"
+#include "device_type_generator.hpp"
 #include "test_utility.hpp"
 
 /**
@@ -34,7 +36,7 @@ TEST_CASE("Level constructor")
 
 TEST_CASE("Level::initOpenCLBuffers")
 {
-    auto deviceType = CL_DEVICE_TYPE_GPU; // GENERATE(CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_CPU);
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     if (!mgcl_test::TestUtility::deviceAvailable("", deviceType))
         return;

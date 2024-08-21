@@ -1,7 +1,13 @@
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
 #include <CL/cl.h>
+#endif
+
 #include <catch2/catch_session.hpp>
 
 #include "../cli_args.hpp"
+#include "../test_utility.hpp"
 #include "mpi.h"
 
 #include <iostream>
@@ -36,9 +42,21 @@ int main(int argc, char* argv[])
 
     // Set device types
     if (inputDeviceTypes.empty() || inputDeviceTypes.find("gpu") != std::string::npos)
-        CLI_ARGS::deviceTypes.push_back(CL_DEVICE_TYPE_GPU);
+    {
+        if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
+            CLI_ARGS::deviceTypes.push_back(CL_DEVICE_TYPE_GPU);
+        else
+            std::cout << "GPU device type given as argument, but is not available on system." << std::endl;
+    }
+
     if (inputDeviceTypes.find("cpu") != std::string::npos)
-        CLI_ARGS::deviceTypes.push_back(CL_DEVICE_TYPE_CPU);
+    {
+        if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_CPU))
+            CLI_ARGS::deviceTypes.push_back(CL_DEVICE_TYPE_CPU);
+        else
+            std::cout << "CPU device type given as argument, but is not available on system." << std::endl;
+    }
+
     if (mpi_rank == 0)
     {
         std::cout << "Using the following OpenCL device types: " << std::endl;
