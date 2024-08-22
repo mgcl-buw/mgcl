@@ -22,6 +22,7 @@ set(SOURCES_BENCH
     bench_ghost_update.cpp
     bench_ghost_update_galerkin.cpp
     bench_data_transfer.cpp
+    bench_mpi_send_planes.cpp
     bench_fill_buffer.cpp
     bench_utils.hpp # TODO refactor this
     bench_util.hpp
