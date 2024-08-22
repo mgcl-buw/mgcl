@@ -131,7 +131,7 @@ namespace mgcl
         VaryingStencilGpu multiply(
             FixedStencilGpu& b, int ghc,
             BufferGpu* d_planes_buf,
-            std::vector<double>* sbuf, std::vector<double>* rbuf,
+            std::vector<double>* sbuf,
             cl_program program, cl_command_queue queue, cl_context context,
             MPILevelData* mpiData, bool forceLocal,
             conf::KernelConfig* conf, ProfilingData* pd);
@@ -139,7 +139,7 @@ namespace mgcl
         VaryingStencilGpu multiply(
             VaryingStencilGpu& b, int ghc,
             BufferGpu* d_planes_buf,
-            std::vector<double>* sbuf, std::vector<double>* rbuf,
+            std::vector<double>* sbuf,
             cl_program program, cl_command_queue queue, cl_context context,
             MPILevelData* mpiData, bool forceLocal,
             conf::KernelConfig* conf, ProfilingData* pd);
@@ -194,7 +194,7 @@ namespace mgcl
 
         VaryingStencilGpu multiply(VaryingStencilGpu& b, int ghc,
                                    BufferGpu* d_planes_buf,
-                                   std::vector<double>* sbuf, std::vector<double>* rbuf,
+                                   std::vector<double>* sbuf,
                                    cl_program program, cl_command_queue queue, cl_context context,
                                    MPILevelData* mpiData, bool forceLocal,
                                    conf::KernelConfig* conf, ProfilingData* pd);

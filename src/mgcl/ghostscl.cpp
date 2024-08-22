@@ -431,27 +431,25 @@ namespace mgcl
         if (dPlanesBuf->getSize() < ressize)
             error("MultigridEngine::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf->getSize()));
 
-        auto hPlanesBufSend = p.getHPlanesBufSendPtr();
-        auto hPlanesBufRecv = p.getHPlanesBufRecvPtr();
-        if (hPlanesBufSend->size() < ressize || hPlanesBufRecv->size() < ressize)
-            throw "MultigridEngine::updateGhostsOclMpi: hPlanesBufSend or hPlanesBufRecv is too small. Need at least " +
-                std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend->size()) +
-                " (send) and " + std::to_string(hPlanesBufRecv->size()) + " (recv)";
+        auto hPlanesBuf = p.getHPlanesBufPtr();
+        if (hPlanesBuf->size() < ressize)
+            throw "MultigridEngine::updateGhostsOclMpi: hPlanesBuf is too small. Need at least " +
+                std::to_string(ressize) + ", but is " + std::to_string(hPlanesBuf->size()) +
+                " (send) and " + std::to_string(hPlanesBuf->size()) + " (recv)";
 
         // Extract border planes from the buffer
         d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(),
-                                  dPlanesBuf, hPlanesBufSend,
+                                  dPlanesBuf, hPlanesBuf,
                                   &p.getKernelConfig(), p.getProfilingData());
-        auto& sbuf = *hPlanesBufSend;
-        auto& rbuf = *hPlanesBufRecv;
+        auto& h_buf = *hPlanesBuf;
 
         // Send our planes to neighbours and receive their planes
         mpi_util::sendBorderPlanes(d_buf.getMgh(), d_buf.getNgh(), d_buf.getOgh(),
                                    d_buf.getGhostsM(), d_buf.getGhostsN(), d_buf.getGhostsO(), 1,
-                                   sbuf, rbuf, mpiData);
+                                   h_buf, mpiData);
 
         // Paste planes back into the buffer.
-        dPlanesBuf->write(p.getCommands(), rbuf, false);
+        dPlanesBuf->write(p.getCommands(), h_buf, false);
         d_buf.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(),
                                           dPlanesBuf, nullptr,
                                           &p.getKernelConfig(), p.getProfilingData());

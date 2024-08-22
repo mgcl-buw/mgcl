@@ -199,8 +199,9 @@ namespace mgcl
         cl_command_queue commands, cl_program program,
         VaryingStencilGpu& s,
         BufferGpu& d_planes_buf,
-        std::vector<double>& sbuf, std::vector<double>& rbuf,
-        MPILevelData* mpiData, bool forceLocal,
+        std::vector<double>& h_buf,
+        MPILevelData* mpiData,
+        bool forceLocal,
         conf::KernelConfig* conf, ProfilingData* pd)
     {
         if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
@@ -224,24 +225,24 @@ namespace mgcl
         if (d_planes_buf.getSize() < ressize)
             error("MultigridEngine::updateGhostsOclMpi: d_planes_buf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(d_planes_buf.getSize()));
 
-        if (sbuf.size() < ressize || rbuf.size() < ressize)
-            throw "MultigridEngine::updateGhostsOclMpi: sbuf or rbuf is too small. Need at least " +
-                std::to_string(ressize) + ", but is " + std::to_string(sbuf.size()) +
-                " (send) and " + std::to_string(rbuf.size()) + " (recv)";
+        if (h_buf.size() < ressize)
+            throw "MultigridEngine::updateGhostsOclMpi: h_buf is too small. Need at least " +
+                std::to_string(ressize) + ", but is " + std::to_string(h_buf.size()) +
+                " (send) and " + std::to_string(h_buf.size()) + " (recv)";
 
         // Extract border planes from the buffer
         s.extractBorderPlanes(commands, program,
-                              d_planes_buf, sbuf,
+                              d_planes_buf, h_buf,
                               conf, pd);
         mgclCheckError(clFinish(commands), "clFinish");
 
         // Send our planes to neighbours and receive their planes
         mpi_util::sendBorderPlanes(s.getMgh(), s.getNgh(), s.getOgh(),
                                    s.getGh(), s.getGh(), s.getGh(), s.getWidth(),
-                                   sbuf, rbuf, *mpiData);
+                                   h_buf, *mpiData);
 
         // Paste planes back into the buffer.
-        d_planes_buf.write(commands, rbuf, false);
+        d_planes_buf.write(commands, h_buf, false);
         s.pasteGhostsFromBorderPlanes(commands, program,
                                       d_planes_buf,
                                       conf, pd);

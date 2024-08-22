@@ -363,10 +363,7 @@ namespace mgcl
                                    ? stencilValues->getWidth() * stencilValues->getWidth() * stencilValues->getWidth()
                                    : 1);
                 dPlanesBuf = std::make_shared<BufferGpu>(getContext(), CL_MEM_READ_WRITE, ressize);
-
-                // TODO not needing this much memory for these?
-                hPlanesBufSend = std::make_shared<std::vector<double>>(ressize);
-                hPlanesBufRecv = std::make_shared<std::vector<double>>(ressize);
+                hPlanesBuf = std::make_shared<std::vector<double>>(ressize);
             }
         }
 
@@ -446,7 +443,7 @@ namespace mgcl
                             lvCoarse.getStencilValuesGpu()->updateGhosts(getProgram(), getCommands(), &getKernelConfig(), getProfilingData());
                         else
                             updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvCoarse.getStencilValuesGpu(),
-                                                      getDPlanesBuf(), getHPlanesBufSend(), getHPlanesBufRecv(),
+                                                      getDPlanesBuf(), getHPlanesBuf(),
                                                       lvCoarse.getMpiDataPtr(), false,
                                                       &getKernelConfig(), getProfilingData());
                     }
@@ -806,38 +803,21 @@ namespace mgcl
         dPlanesBuf = dPlanesBuf_;
     }
 
-    std::vector<double>& Problem::getHPlanesBufSend() const
+    std::vector<double>& Problem::getHPlanesBuf() const
     {
-        if (!hPlanesBufSend)
+        if (!hPlanesBuf)
             error("hPlanesBuf is null.");
-        return *hPlanesBufSend;
+        return *hPlanesBuf;
     }
 
-    std::vector<double>* Problem::getHPlanesBufSendPtr() const
+    std::vector<double>* Problem::getHPlanesBufPtr() const
     {
-        return hPlanesBufSend.get();
+        return hPlanesBuf.get();
     }
 
-    void Problem::setHPlanesBufSend(std::shared_ptr<std::vector<double>> hPlanesBuf_)
+    void Problem::setHPlanesBuf(std::shared_ptr<std::vector<double>> hPlanesBuf_)
     {
-        hPlanesBufSend = hPlanesBuf_;
-    }
-
-    std::vector<double>& Problem::getHPlanesBufRecv() const
-    {
-        if (!hPlanesBufRecv)
-            error("hPlanesBuf is null.");
-        return *hPlanesBufRecv;
-    }
-
-    std::vector<double>* Problem::getHPlanesBufRecvPtr() const
-    {
-        return hPlanesBufRecv.get();
-    }
-
-    void Problem::setHPlanesBufRecv(const std::shared_ptr<std::vector<double>> hPlanesBuf_)
-    {
-        hPlanesBufRecv = hPlanesBuf_;
+        hPlanesBuf = hPlanesBuf_;
     }
 
     int Problem::getO() const

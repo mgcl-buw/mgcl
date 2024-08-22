@@ -36,8 +36,9 @@ namespace mgcl
         cl_command_queue commands, cl_program program,
         VaryingStencilGpu& s,
         BufferGpu& d_planes_buf,
-        std::vector<double>& sbuf, std::vector<double>& rbuf,
-        MPILevelData* mpiData, bool forceLocal,
+        std::vector<double>& h_buf,
+        MPILevelData* mpiData,
+        bool forceLocal,
         conf::KernelConfig* conf, ProfilingData* pd);
 }
 

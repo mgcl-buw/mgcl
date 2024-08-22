@@ -215,7 +215,7 @@ TEST_CASE("profiling_kernels")
     SECTION("mult_stencils_var_var")
     {
         auto svgpu = lv0.getStencilValuesGpu();
-        svgpu->multiply(*svgpu, 0, p.getDPlanesBufPtr(), p.getHPlanesBufSendPtr(), p.getHPlanesBufRecvPtr(), p.getProgram(), p.getCommands(), p.getContext(), nullptr,
+        svgpu->multiply(*svgpu, 0, p.getDPlanesBufPtr(), p.getHPlanesBufPtr(), p.getProgram(), p.getCommands(), p.getContext(), nullptr,
                         false, &conf, p.getProfilingData());
 
         checkResult(p, "mult_stencils_var_var", {m, n, o});
@@ -225,7 +225,7 @@ TEST_CASE("profiling_kernels")
     {
         auto svgpu = lv0.getStencilValuesGpu();
         mgcl::FixedStencilGpu f(3, p.getContext(), p.getCommands(), p.getProgram());
-        svgpu->multiply(f, 0, p.getDPlanesBufPtr(), p.getHPlanesBufSendPtr(), p.getHPlanesBufRecvPtr(), p.getProgram(), p.getCommands(), p.getContext(), nullptr,
+        svgpu->multiply(f, 0, p.getDPlanesBufPtr(), p.getHPlanesBufPtr(), p.getProgram(), p.getCommands(), p.getContext(), nullptr,
                         false, &conf, p.getProfilingData());
 
         checkResult(p, "mult_stencils_var_fix", {m, n, o * 5 * 5 * 5});
@@ -235,7 +235,7 @@ TEST_CASE("profiling_kernels")
     {
         auto svgpu = lv0.getStencilValuesGpu();
         mgcl::FixedStencilGpu f(3, p.getContext(), p.getCommands(), p.getProgram());
-        f.multiply(*svgpu, 0, p.getDPlanesBufPtr(), p.getHPlanesBufSendPtr(), p.getHPlanesBufRecvPtr(), p.getProgram(), p.getCommands(), p.getContext(), nullptr,
+        f.multiply(*svgpu, 0, p.getDPlanesBufPtr(), p.getHPlanesBufPtr(), p.getProgram(), p.getCommands(), p.getContext(), nullptr,
                    false, &conf, p.getProfilingData());
 
         checkResult(p, "mult_stencils_fix_var", {m, n, o * 5 * 5 * 5});
