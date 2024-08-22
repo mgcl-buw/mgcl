@@ -132,6 +132,10 @@ TEST_CASE("bench_sendBorderPlanes")
             .epochs(CLI_ARGS::bench_epochs)
             .epochIterations(CLI_ARGS::bench_iterations);
 
+        // output only on root process
+        if (mpi_rank > 0)
+            bench.output(nullptr);
+
         {
             std::string name = std::string("MPI_Sendrecv_")
                                    .append(std::to_string(mtt))
@@ -191,6 +195,7 @@ TEST_CASE("bench_sendBorderPlanes")
         }
     }
 
+    MPI_Barrier(mpi_comm);
     bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
 }
 
