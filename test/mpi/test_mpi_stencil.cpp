@@ -427,10 +427,12 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     tu.finish();
 
     REQUIRE(p.getDPlanesBufPtr());
+    REQUIRE(p.getHPlanesBufSendPtr());
+    REQUIRE(p.getHPlanesBufRecvPtr());
 
     // Update ghosts of test data
     mgcl::updateGhostsStencilOclMpi(tu.getCommands(), tu.getProgram(), sgpuLocal,
-                                    p.getDPlanesBuf(), p.getHPlanesBuf(),
+                                    p.getDPlanesBuf(), p.getHPlanesBufSend(), p.getHPlanesBufRecv(),
                                     mpiData, false, nullptr, nullptr);
 
     // Read results

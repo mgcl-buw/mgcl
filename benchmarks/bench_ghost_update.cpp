@@ -670,7 +670,7 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
             bench.run(std::string(name).c_str(), [&] { //
                 mgcl::mpi_util::sendBorderPlanes(c_d.getMgh(), c_d.getNgh(), c_d.getOgh(),
                                                  c_d.getGhostsM(), c_d.getGhostsN(), c_d.getGhostsO(), 1,
-                                                 sbuf, mpiData);
+                                                 sbuf, rbuf, mpiData);
             });
 
             bench_util::ResultGhostUpdateMpi res;
