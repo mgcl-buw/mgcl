@@ -12,8 +12,8 @@ int CLI_ARGS::bench_epochs = 11;
 int CLI_ARGS::bench_iterations = 1;
 int CLI_ARGS::vCycleIterations = 10;
 std::string CLI_ARGS::outputPath = ".";
-std::vector<int> CLI_ARGS::gridsMin; // e.g. {4,4,4}
-std::vector<int> CLI_ARGS::gridsMax; // e.g. {64,64,32}
+std::vector<int> CLI_ARGS::gridsMin{0, 0, 0};    // e.g. {4,4,4}
+std::vector<int> CLI_ARGS::gridsMax{-1, -1, -1}; // e.g. {64,64,32}
 int CLI_ARGS::nu1 = 2;
 int CLI_ARGS::nu2 = 2;
 std::vector<int> CLI_ARGS::jacobiIters;

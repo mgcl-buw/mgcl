@@ -315,7 +315,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_only_galerkin")
         sv->fill1dIndex(true);
 
         ankerl::nanobench::Bench bench;
-        bench.timeUnit(1ns, "ns")
+        bench.timeUnit(1ms, "ms")
             .epochs(11)
             .epochIterations(1)
             // .minEpochTime(100ms)
