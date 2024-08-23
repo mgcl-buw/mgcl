@@ -3,6 +3,7 @@
 #include "mgcl.hpp"
 #include "opencl_helper.hpp"
 #include <CL/cl.h>
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -10,7 +11,7 @@ namespace mgcl
 {
 
     BufferGpu::BufferGpu(cl_context context, cl_mem_flags flags, size_t size)
-        : context(context), size(size)
+        : context(context), _size(size)
     {
         bool containsReadWrite = (flags & CL_MEM_READ_WRITE) == CL_MEM_READ_WRITE;
         bool containsWriteOnly = (flags & CL_MEM_WRITE_ONLY) == CL_MEM_WRITE_ONLY;
@@ -44,7 +45,7 @@ namespace mgcl
      * @param size
      */
     BufferGpu::BufferGpu(cl_context context, cl_mem_flags flags, std::vector<double>& h_data)
-        : context(context), size(h_data.size())
+        : context(context), _size(h_data.size())
     {
         bool containsReadWrite = (flags & CL_MEM_READ_WRITE) == CL_MEM_READ_WRITE;
         bool containsWriteOnly = (flags & CL_MEM_WRITE_ONLY) == CL_MEM_WRITE_ONLY;
@@ -65,7 +66,7 @@ namespace mgcl
             error("flags must contain one and only one of CL_MEM_ALLOC_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_COPY_HOST_PTR.");
 
         cl_int err;
-        buf = clCreateBuffer(context, flags, sizeof(double) * size, h_data.data(), &err);
+        buf = clCreateBuffer(context, flags, sizeof(double) * _size, h_data.data(), &err);
         mgclCheckError(err, "clCreateBuffer");
     }
 
@@ -75,29 +76,71 @@ namespace mgcl
             mgclCheckError(clReleaseMemObject(buf), "clReleaseMemObject");
     }
 
+    /**
+     * @brief Reads and returns the whole device buffer.
+     *
+     * @param queue
+     * @param h_target
+     * @param blocking
+     * @return std::unique_ptr<std::vector<double>>
+     */
     std::unique_ptr<std::vector<double>> BufferGpu::read(cl_command_queue queue, double* h_target, bool blocking) const
+    {
+        return read(queue, h_target, blocking, _size);
+    }
+
+    /**
+     * @brief Reads and returns 'size' elements from the device buffer.
+     *
+     * @param queue
+     * @param h_target
+     * @param blocking
+     * @param _size
+     * @return std::unique_ptr<std::vector<double>>
+     */
+    std::unique_ptr<std::vector<double>> BufferGpu::read(cl_command_queue queue, double* h_target, bool blocking, size_t _size) const
     {
         std::unique_ptr<std::vector<double>> ret = nullptr;
         int err;
         if (h_target)
         {
-            err = clEnqueueReadBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * size, h_target, 0, nullptr, nullptr);
+            err = clEnqueueReadBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * _size, h_target, 0, nullptr, nullptr);
         }
         else
         {
-            ret = std::make_unique<std::vector<double>>(size);
-            err = clEnqueueReadBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * size, ret->data(), 0, nullptr, nullptr);
+            ret = std::make_unique<std::vector<double>>(_size);
+            err = clEnqueueReadBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * _size, ret->data(), 0, nullptr, nullptr);
         }
         mgclCheckError(err, "clEnqueueReadBuffer");
         return ret;
     }
 
+    /**
+     * @brief Writes whole data into the device buffer.
+     *
+     * @param queue
+     * @param host_data
+     * @param blocking
+     */
     void BufferGpu::write(cl_command_queue queue, const std::vector<double>& host_data, bool blocking)
     {
-        if (host_data.size() != size)
-            error("CuboidGpu::write: Buffer sizes do not match!");
+        write(queue, host_data, blocking, _size);
+    }
 
-        int err = clEnqueueWriteBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * size, host_data.data(), 0, nullptr, nullptr);
+    /**
+     * @brief Writes '_size' elements into the device buffer.
+     *
+     * @param queue
+     * @param host_data
+     * @param blocking
+     * @param _size
+     */
+    void BufferGpu::write(cl_command_queue queue, const std::vector<double>& host_data, bool blocking, size_t _size)
+    {
+        if (host_data.size() < _size)
+            error("CuboidGpu::write: host_data is not big enough!");
+
+        int err = clEnqueueWriteBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * _size, host_data.data(), 0, nullptr, nullptr);
         mgclCheckError(err, "clEnqueueWriteBuffer");
     }
 
@@ -114,11 +157,11 @@ namespace mgcl
         int pos = 0;
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buf);
         err |= clSetKernelArg(kernel, ++pos, sizeof(double), &value);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &size);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &_size);
         mgcl::mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
-        size_t global = size;
+        size_t global = _size;
         size_t local = 64;
         // Apply kernel config, if available
         if (conf)

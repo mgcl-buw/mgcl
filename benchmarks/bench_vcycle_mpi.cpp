@@ -310,14 +310,15 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_only_galerkin")
         p.setStencilType(stencilType);
         p.setResidualNorm(resnorm);
         p.setMpiComm(mpi_comm);
+        // p.setProfilingEnabled(true);
 
         auto& sv = p.getStencilValues();
         sv->fill1dIndex(true);
 
         ankerl::nanobench::Bench bench;
         bench.timeUnit(1ms, "ms")
-            .epochs(11)
-            .epochIterations(1)
+            .epochs(CLI_ARGS::bench_epochs)
+            .epochIterations(CLI_ARGS::bench_iterations)
             // .minEpochTime(100ms)
             .relative(false);
 
@@ -355,6 +356,9 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_only_galerkin")
         r.nglob = nglob;
         r.oglob = oglob;
         minTimes.push_back(r);
+
+        if (mpi_rank > 0 && p.isProfilingEnabled())
+            p.getProfilingData()->printBestTimingsPerKernel();
     }
 
     // print min times

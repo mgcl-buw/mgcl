@@ -47,7 +47,7 @@ TEST_VCYCLE=false
 TEST_STENCIL=false
 TEST_GALERKIN=false
 NO_OCL=false
-OCL_DEVICE_TYPES=""
+OCL_DEVICE_TYPES="gpu"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -112,9 +112,6 @@ while [[ $# -gt 0 ]]; do
       elif [[ "$1" =~ .*cpu.* ]] ; then
         echo "Running OpenCL tests only on CPU"
         OCL_DEVICE_TYPES="cpu"
-      else
-        echo "Running OpenCL tests only on GPU"
-        OCL_DEVICE_TYPES="gpu"
       fi
       shift # past argument
   esac

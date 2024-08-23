@@ -23,7 +23,7 @@ namespace mgcl
     class BufferGpu
     {
     private:
-        size_t size;
+        size_t _size;
         cl_mem buf;
         cl_context context;
 
@@ -39,11 +39,13 @@ namespace mgcl
 
         // TODO return type?
         std::unique_ptr<std::vector<double>> read(cl_command_queue queue, double* h_target, bool blocking) const;
+        std::unique_ptr<std::vector<double>> read(cl_command_queue queue, double* h_target, bool blocking, size_t _size) const;
         void write(cl_command_queue queue, const std::vector<double>& host_data, bool blocking);
+        void write(cl_command_queue queue, const std::vector<double>& host_data, bool blocking, size_t _size);
         void fill(cl_program program, cl_command_queue queue, double value, bool blocking,
                   conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
-        inline size_t getSize() const { return size; }
+        inline size_t getSize() const { return _size; }
         inline cl_mem getBuf() const { return buf; }
         inline cl_context getContext() const { return context; }
     };

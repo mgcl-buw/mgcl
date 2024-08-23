@@ -209,10 +209,11 @@ namespace mgcl
             return;
         }
 
-        // TODO optimize, like for cuboids
+        // // TODO optimize, like for cuboids
         // auto tmp = s.read(commands, true);
-        // updateGhostsStencilMpi(tmp, mpiData, periodic, forceLocal);
+        // updateGhostsStencilMpi(tmp, mpiData, true, forceLocal);
         // s.fill(tmp, commands, true);
+        // return;
 
         // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
         // TODO maybe disable check in UNSAFE mode
