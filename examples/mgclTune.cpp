@@ -56,10 +56,10 @@ struct BestKernelConf
 };
 
 void checkResidual(
-    mgcl::conf::KernelConfig& conf, int N, int iters, bool verbose, mgcl::Problem& p, mgcl::Level& level,
+    mgcl::conf::KernelConfig& conf, size_t N, int iters, bool verbose, mgcl::Problem& p, mgcl::Level& level,
     std::vector<BestKernelConf>& bestKernelConfs);
 void checkJacobi(
-    mgcl::conf::KernelConfig& conf, int N, int iters, bool verbose, mgcl::Problem& p, mgcl::Level& level,
+    mgcl::conf::KernelConfig& conf, size_t N, int iters, bool verbose, mgcl::Problem& p, mgcl::Level& level,
     std::vector<BestKernelConf>& bestKernelConfs);
 
 // Arguments:
@@ -135,7 +135,7 @@ int main(int argc, char** argv)
 }
 
 void checkResidual(
-    mgcl::conf::KernelConfig& conf, int N, int iters, bool verbose, mgcl::Problem& p, mgcl::Level& level,
+    mgcl::conf::KernelConfig& conf, size_t N, int iters, bool verbose, mgcl::Problem& p, mgcl::Level& level,
     std::vector<BestKernelConf>& bestKernelConfs)
 {
     std::string kernelName = "residual_27point_varying_stencil";
@@ -182,7 +182,7 @@ void checkResidual(
 }
 
 void checkJacobi(
-    mgcl::conf::KernelConfig& conf, int N, int iters, bool verbose, mgcl::Problem& p, mgcl::Level& level,
+    mgcl::conf::KernelConfig& conf, size_t N, int iters, bool verbose, mgcl::Problem& p, mgcl::Level& level,
     std::vector<BestKernelConf>& bestKernelConfs)
 {
     std::string kernelName = "jacobi_iter_27point_varying_stencil_1d";
