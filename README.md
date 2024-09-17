@@ -123,6 +123,7 @@ Optional useful CMake options:
 - `-DBACKWARD_HAS_DWARF=ON` (for tests targets)
 - `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` (needs to have ccache installed on your system)
 - `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`: Generate a `compile_commands.json` file, that can be used by a language server like clangd.
+- `--DCMAKE_CXX_FLAGS="-fuse-ld=lld"`: Use llvm's lld linker. Especially useful, if link time optimization (LTO) is used (default for Release build) and clang as compiler.
 
 Not used anymore:
 - `-DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=include-what-you-use;-Xiwyu;--cxx17ns` (currently hard-coded only for src and for Debug type)
