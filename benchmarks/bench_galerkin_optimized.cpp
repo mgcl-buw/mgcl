@@ -52,7 +52,8 @@ enum class KernelVersion
 {
     DEFAULT,
     POINTER,
-    PRIVATE_R_P
+    PRIVATE_R_P,
+    PARALLEL_IIJJKK
 };
 
 // Simplified version of optimized galerkin (without kernel config and profiling) as of 08.08.2024.
@@ -91,6 +92,9 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinOptimized(mgcl::VaryingStencilG
         break;
     case KernelVersion::PRIVATE_R_P:
         kernelName = "galerkin_private_r_p";
+        break;
+    case KernelVersion::PARALLEL_IIJJKK:
+        kernelName = "galerkin_parallel_iijjkk";
         break;
     }
     cl_kernel kernel = clCreateKernel(program, kernelName.c_str(), &err);
@@ -136,6 +140,8 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinOptimized(mgcl::VaryingStencilG
 
     // one work-item per local real coarse grid point.
     size_t global = (a_h.getM() >> 1) * (a_h.getN() >> 1) * (a_h.getO() >> 1);
+    if (kernelVersion == KernelVersion::PARALLEL_IIJJKK)
+        global *= 27;
     size_t local = 128;
 
     // // Apply kernel config, if available
@@ -266,10 +272,64 @@ TEST_CASE("benchGalerkinOldVsOptimized")
     bench_util::printCsvFormat(results);
 }
 
+// Checks results for correctness
+TEST_CASE("benchGalerkinOptimizedKernelVersions_checkResults")
+{
+    using std::min;
+
+    if (CLI_ARGS::grids.size() == 0 && (CLI_ARGS::gridsMin.size() == 0 || CLI_ARGS::gridsMax.size() == 0))
+        throw "Need to specify at least one local grid size, e.g. using --grids 4,8,16 or --gridsMin 4,4,4 AND --gridsMax 32,32,32";
+
+    // build grids to be tested from CLI args
+    std::vector<std::vector<int>> gridsTBT;
+    for (auto N : CLI_ARGS::grids)
+        gridsTBT.push_back({N, N, N});
+    if (CLI_ARGS::gridsMin.size() > 0 && CLI_ARGS::gridsMax.size() > 0)
+        for (int m = CLI_ARGS::gridsMin[0]; m <= CLI_ARGS::gridsMax[0]; m *= 2)
+            for (int n = CLI_ARGS::gridsMin[1]; n <= CLI_ARGS::gridsMax[1]; n *= 2)
+                for (int o = CLI_ARGS::gridsMin[2]; o <= CLI_ARGS::gridsMax[2]; o *= 2)
+                    gridsTBT.push_back({m, n, o});
+
+    // Create dummy problem to initialize OpenCL
+    auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    mgcl::Problem p(1, 1, 1, f, v);
+    p.setKernelFile("kernel_optimizations.cl");
+    p.getOpenCLHelper().setReadKernelFromFile(true);
+    p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
+    p.init();
+
+    for (auto gr : gridsTBT)
+    {
+        int m = gr[0];
+        int n = gr[1];
+        int o = gr[2];
+
+        mgcl::VaryingStencilGpu a_h(m, n, o, 3, 2, p.getContext(), p.getCommands(), p.getProgram());
+
+        std::unique_ptr<mgcl::VaryingStencilGpu> a_2h_check = galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::DEFAULT);
+        auto a_2h_check_h = a_2h_check->read(p.getCommands(), true);
+
+        auto a_2h_private_rp = galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::PRIVATE_R_P);
+        auto a_2h_private_rp_h = a_2h_private_rp->read(p.getCommands(), true);
+        REQUIRE(a_2h_check_h.isEqual(a_2h_private_rp_h));
+
+        auto a_2h_parallel_iijjkk = galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::PARALLEL_IIJJKK);
+        auto a_2h_parallel_iijjkk_h = a_2h_parallel_iijjkk->read(p.getCommands(), true);
+        REQUIRE(a_2h_check_h.isEqual(a_2h_parallel_iijjkk_h));
+
+        auto a_2h_pointer = galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::POINTER);
+        auto a_2h_pointer_h = a_2h_pointer->read(p.getCommands(), true);
+        REQUIRE(a_2h_check_h.isEqual(a_2h_pointer_h));
+    }
+}
+
 // Benchs the optimized version of Galerkin using structs vs. pointer to structs, in order to answer the question
 // "Is it faster to use pointers to structs in the utility functions because the structs won't be copied?".
 // Creation date: 08.08.2024
-TEST_CASE("benchGalerkinOptimizedValueVsPointer")
+// 18.09.2024: Refactored to test various kernel versions of optimized galerkin
+TEST_CASE("benchGalerkinOptimizedKernelVersions")
 {
     using std::min;
 
@@ -345,6 +405,29 @@ TEST_CASE("benchGalerkinOptimizedValueVsPointer")
 
             bench.run(std::string(name).c_str(), [&] { //
                 galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::PRIVATE_R_P);
+            });
+
+            bench_util::Result res;
+            res.name = name;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            results.push_back(res);
+        }
+        {
+            std::string name = std::string("galerkin_parallel_iijjkk")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o));
+
+            bench.run(std::string(name).c_str(), [&] { //
+                galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::PARALLEL_IIJJKK);
             });
 
             bench_util::Result res;
