@@ -48,11 +48,18 @@ mgcl::VaryingStencilGpu galerkinStencilMult(mgcl::VaryingStencilGpu& a_h, int gh
     return a_2h;
 }
 
+enum class KernelVersion
+{
+    DEFAULT,
+    POINTER,
+    PRIVATE_R_P
+};
+
 // Simplified version of optimized galerkin (without kernel config and profiling) as of 08.08.2024.
 std::unique_ptr<mgcl::VaryingStencilGpu> galerkinOptimized(mgcl::VaryingStencilGpu& a_h, int gh_a2h,
                                                            int resm, int resn, int reso,
                                                            cl_program program, cl_command_queue queue, cl_context context,
-                                                           bool usePointerVersion)
+                                                           KernelVersion kernelVersion)
 {
     // Make sure a_h has two ghosts at each border for periodic bc.
     if (a_h.getGh() < 1 || a_h.getGh() < 1 || a_h.getGh() < 1)
@@ -73,8 +80,20 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinOptimized(mgcl::VaryingStencilG
     int err;
 
     // Create the compute kernel from the program
-    const char* kernelName = (usePointerVersion ? "galerkin_ptr" : "galerkin");
-    cl_kernel kernel = clCreateKernel(program, kernelName, &err);
+    std::string kernelName;
+    switch (kernelVersion)
+    {
+    case KernelVersion::DEFAULT:
+        kernelName = "galerkin";
+        break;
+    case KernelVersion::POINTER:
+        kernelName = "galerkin_ptr";
+        break;
+    case KernelVersion::PRIVATE_R_P:
+        kernelName = "galerkin_private_r_p";
+        break;
+    }
+    cl_kernel kernel = clCreateKernel(program, kernelName.c_str(), &err);
     mgcl::mgclCheckError(err, "Creating kernel");
 
     cl_mem a_h_raw = a_h.getBuf();
@@ -95,9 +114,14 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinOptimized(mgcl::VaryingStencilG
     int pos = 0;
     err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &a_h_raw);
     err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &a_2h_raw);
-    err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &r_raw);
-    err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &p_raw);
+    mgcl::mgclCheckError(err, "Setting kernel arguments");
+    if (kernelVersion != KernelVersion::PRIVATE_R_P)
+    {
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &r_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &p_raw);
+    }
     err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh_f);
+    mgcl::mgclCheckError(err, "Setting kernel arguments");
     err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh_f);
     err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh_f);
     err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m_c_loc);
@@ -223,7 +247,7 @@ TEST_CASE("benchGalerkinOldVsOptimized")
                                    .append(std::to_string(o));
 
             bench.run(std::string(name).c_str(), [&] { //
-                galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), false);
+                galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::DEFAULT);
             });
 
             bench_util::Result res;
@@ -297,7 +321,30 @@ TEST_CASE("benchGalerkinOptimizedValueVsPointer")
                                    .append(std::to_string(o));
 
             bench.run(std::string(name).c_str(), [&] { //
-                galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), false);
+                galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::DEFAULT);
+            });
+
+            bench_util::Result res;
+            res.name = name;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            results.push_back(res);
+        }
+        {
+            std::string name = std::string("galerkin_optimized_private_r_p_")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o));
+
+            bench.run(std::string(name).c_str(), [&] { //
+                galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::PRIVATE_R_P);
             });
 
             bench_util::Result res;
@@ -320,7 +367,7 @@ TEST_CASE("benchGalerkinOptimizedValueVsPointer")
                                    .append(std::to_string(o));
 
             bench.run(std::string(name).c_str(), [&] { //
-                galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), true);
+                galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::POINTER);
             });
 
             bench_util::Result res;
