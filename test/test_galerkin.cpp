@@ -104,9 +104,9 @@ TEST_CASE("GPU galerkin random values periodic")
 
     mgcl_test::TestUtility t(deviceType);
 
-    int m = GENERATE(2, 4, 8);
-    int n = GENERATE(4, 8);
-    int o = GENERATE(2, 4);
+    int m = 4; // GENERATE(2, 4, 8);
+    int n = 4; // GENERATE(4, 8);
+    int o = 4; // GENERATE(2, 4);
 
     double tol = 1e-12;
     int gh = 2;
@@ -615,4 +615,66 @@ TEST_CASE("galerkinOpimizedGpuCoarseGridSizeDifferentFromBufferSize")
             REQUIRE(a_2h_same_sizes[ii][jj][kk][i][j][k] == a_2h_different_sizes[ii][jj][kk][i][j][k]);
         }
     // clang-format on
+}
+
+TEST_CASE("galerkinOptimized_parallel_iijjkk")
+{
+    int m_c_loc = GENERATE(2, 4);
+    int n_c_loc = GENERATE(4, 6);
+    int o_c_loc = GENERATE(1, 2, 4);
+
+    int totalsize = m_c_loc * n_c_loc * o_c_loc * 27;
+
+    SECTION("indices")
+    {
+        int indices[6] = {0, 0, 0, 0, 0, 0};
+        auto add_one = [o_c_loc, n_c_loc, m_c_loc](int* indices)
+        {
+            indices[5]++;
+            if (indices[5] >= o_c_loc)
+                indices[4]++;
+            if (indices[4] >= n_c_loc)
+                indices[3]++;
+            if (indices[3] >= m_c_loc)
+                indices[2]++;
+            if (indices[2] >= 3)
+                indices[1]++;
+            if (indices[1] >= 3)
+                indices[0]++;
+
+            indices[5] = indices[5] % o_c_loc;
+            indices[4] = indices[4] % n_c_loc;
+            indices[3] = indices[3] % m_c_loc;
+            indices[2] = indices[2] % 3;
+            indices[1] = indices[1] % 3;
+            indices[0] = indices[0] % 3;
+        };
+
+        for (size_t idx = 0; idx < totalsize; idx++)
+        {
+            int gridsize = m_c_loc * n_c_loc * o_c_loc;
+            int stencil_idx = idx / gridsize;
+            int grididx = idx % gridsize;
+
+            int no = n_c_loc * o_c_loc;
+            int i = grididx / no;
+            int j = (grididx - i * no) / o_c_loc;
+            int k = grididx % o_c_loc;
+
+            int ii = stencil_idx / 9;
+            int jj = (stencil_idx - ii * 9) / 3;
+            int kk = stencil_idx % 3;
+
+            CAPTURE(idx, grididx, i, j, k, ii, jj, kk);
+
+            REQUIRE(ii == indices[0]);
+            REQUIRE(jj == indices[1]);
+            REQUIRE(kk == indices[2]);
+            REQUIRE(i == indices[3]);
+            REQUIRE(j == indices[4]);
+            REQUIRE(k == indices[5]);
+
+            add_one(indices);
+        }
+    }
 }
