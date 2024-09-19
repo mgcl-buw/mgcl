@@ -1476,14 +1476,15 @@ __kernel void galerkin_parallel_iijjkk(
     const int m_c_buf, const int n_c_buf, const int o_c_buf,
     const int gh_f, const int gh_c)
 {
-    int idx = get_global_id(0);
+    int gridsize = m_c_loc * n_c_loc * o_c_loc;
+
+    int idx = get_global_id(0) % gridsize;
     int no = n_c_loc * o_c_loc;
     int i = idx / no;
     int j = (idx - i * no) / o_c_loc;
     int k = idx % o_c_loc;
 
-    int gridsize = m_c_loc * n_c_loc * o_c_loc;
-    int stencil_idx = idx / gridsize;
+    int stencil_idx = get_global_id(0) / gridsize;
     int ii = stencil_idx / 9;
     int jj = (stencil_idx - ii * 9) / 3;
     int kk = stencil_idx % 3;

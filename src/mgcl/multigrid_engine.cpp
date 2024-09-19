@@ -476,7 +476,7 @@ namespace mgcl
         mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per local real coarse grid point.
-        size_t global = (a_h.getM() >> 1) * (a_h.getN() >> 1) * (a_h.getO() >> 1);
+        size_t global = (a_h.getM() >> 1) * (a_h.getN() >> 1) * (a_h.getO() >> 1) * 27;
         size_t local = 128;
 
         // Apply kernel config, if available
