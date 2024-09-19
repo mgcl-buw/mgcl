@@ -307,19 +307,32 @@ TEST_CASE("benchGalerkinOptimizedKernelVersions_checkResults")
         int o = gr[2];
 
         mgcl::VaryingStencilGpu a_h(m, n, o, 3, 2, p.getContext(), p.getCommands(), p.getProgram());
+        mgcl::VaryingStencil tmp(m, n, o, 3, 2, 2, 2);
+        tmp.fillRandomInt(-10, 10, false);
+        a_h.fill(tmp, p.getCommands(), true);
 
-        std::unique_ptr<mgcl::VaryingStencilGpu> a_2h_check = galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::DEFAULT);
+        std::unique_ptr<mgcl::VaryingStencilGpu> a_2h_check = galerkinOptimized(
+            a_h, 2, m >> 1, n >> 1, o >> 1,
+            p.getProgram(), p.getCommands(), p.getContext(),
+            KernelVersion::DEFAULT);
         auto a_2h_check_h = a_2h_check->read(p.getCommands(), true);
 
-        auto a_2h_private_rp = galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::PRIVATE_R_P);
+        auto a_2h_private_rp = galerkinOptimized(
+            a_h, 2, m >> 1, n >> 1, o >> 1,
+            p.getProgram(), p.getCommands(), p.getContext(),
+            KernelVersion::PRIVATE_R_P);
         auto a_2h_private_rp_h = a_2h_private_rp->read(p.getCommands(), true);
         REQUIRE(a_2h_check_h.isEqual(a_2h_private_rp_h));
 
-        auto a_2h_parallel_iijjkk = galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::PARALLEL_IIJJKK);
+        auto a_2h_parallel_iijjkk = galerkinOptimized(
+            a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+            KernelVersion::PARALLEL_IIJJKK);
         auto a_2h_parallel_iijjkk_h = a_2h_parallel_iijjkk->read(p.getCommands(), true);
         REQUIRE(a_2h_check_h.isEqual(a_2h_parallel_iijjkk_h));
 
-        auto a_2h_pointer = galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::POINTER);
+        auto a_2h_pointer = galerkinOptimized(
+            a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+            KernelVersion::POINTER);
         auto a_2h_pointer_h = a_2h_pointer->read(p.getCommands(), true);
         REQUIRE(a_2h_check_h.isEqual(a_2h_pointer_h));
     }
