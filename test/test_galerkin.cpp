@@ -625,6 +625,7 @@ TEST_CASE("galerkinOptimized_parallel_iijjkk")
 
     int totalsize = m_c_loc * n_c_loc * o_c_loc * 27;
 
+    // Checks that the index calculation in the optimized galerkin parallel iijjkk kernel works correctly.
     SECTION("indices")
     {
         int indices[6] = {0, 0, 0, 0, 0, 0};
@@ -676,5 +677,50 @@ TEST_CASE("galerkinOptimized_parallel_iijjkk")
 
             add_one(indices);
         }
+    }
+
+    // Checks that the optimized galerkin parallel iijjkk kernel writes to every real cell exactly once.
+    SECTION("cells_written_once")
+    {
+        int gh = 1;
+
+        mgcl::VaryingStencil s(m_c_loc, n_c_loc, o_c_loc, 3, gh, gh, gh);
+        s.fill(0, false);
+
+        for (size_t idx = 0; idx < totalsize; idx++)
+        {
+            int gridsize = m_c_loc * n_c_loc * o_c_loc;
+            int stencil_idx = idx / gridsize;
+            int grididx = idx % gridsize;
+
+            int no = n_c_loc * o_c_loc;
+            int i = grididx / no;
+            int j = (grididx - i * no) / o_c_loc;
+            int k = grididx % o_c_loc;
+
+            int ii = stencil_idx / 9;
+            int jj = (stencil_idx - ii * 9) / 3;
+            int kk = stencil_idx % 3;
+
+            i += gh;
+            j += gh;
+            k += gh;
+
+            if (i < m_c_loc + gh && j < n_c_loc + gh && k < o_c_loc + gh && stencil_idx < 27)
+                s[ii][jj][kk][i][j][k] += 1;
+        }
+
+        // clang-format off
+        for (int ii = 0; ii < 3; ii++)
+        for (int jj = 0; jj < 3; jj++)
+        for (int kk = 0; kk < 3; kk++)
+            for (int i = gh; i < m_c_loc + gh; i++)
+            for (int j = gh; j < n_c_loc + gh; j++)
+            for (int k = gh; k < o_c_loc + gh; k++)
+            {
+                CAPTURE(i,j,k,ii,jj,kk);
+                REQUIRE(s[ii][jj][kk][i][j][k] == 1);
+            }
+        // clang-format on
     }
 }
