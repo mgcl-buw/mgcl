@@ -3,6 +3,7 @@
   - precompile program?
 - hybrid vcycle (coarse levels on cpu, fine levels on gpu)
 - fix local memory jacobi kernel
+  -> See literature regarding stencils. Most are old, i.e. before Compute Capability 2.0, where the automatic cache was introduced. -> Is it still worth it or is the automatic cache too good?
 - bench and optimize work group sizes of all kernels
 - adjust stencil storage for 7p stencil on finest grid + flag
 - multi-gpu for bigger problems (+ mpi)
