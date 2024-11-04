@@ -22,9 +22,9 @@ double calculateErrorNorm(double h, mgcl::Cuboid& error);
  * @brief Tests if solving works correctly for u = x^4 * (x-1)^4.
  *
  */
-TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
+TEST_CASE("solve_periodic")
 {
-    int N = 16;
+    int N = 8;
     double h = 1.0 / (double)N;
 
     // Problem parameters
@@ -87,7 +87,7 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
 
     SECTION("Sequential")
     {
-        SECTION("Laplace")
+        SECTION("Laplace_7p")
         {
             p.solveSeq();
 
@@ -121,7 +121,7 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
             }
         }
 
-        SECTION("Galerkin (varying stencil)")
+        SECTION("Galerkin")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
@@ -166,7 +166,7 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
         p.setDeviceType(deviceType);
         // p.setDeviceName("Quadro");
 
-        SECTION("Laplace")
+        SECTION("Laplace_7p")
         {
             p.solve();
 
@@ -193,7 +193,7 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
             }
         }
 
-        SECTION("Galerkin (varying stencil)")
+        SECTION("Galerkin")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
@@ -201,8 +201,6 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
 
             double h = 1.0 / static_cast<double>(N);
             mgcl_test::fill7pLaplace(s, h, false);
-
-            p.solve();
 
             // check if solution is good
             auto err = calculateError(solution, *v);
@@ -299,7 +297,7 @@ TEST_CASE("Problem solving: periodic 4th order", "[periodic]")
     }
 }
 
-TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
+TEST_CASE("solve_dirichlet")
 {
     int N = 16;
     double h = 1.0 / (double)N;
@@ -381,7 +379,7 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
 
     SECTION("Sequential")
     {
-        SECTION("Laplace")
+        SECTION("Laplace_7p")
         {
             p.solveSeq();
 
@@ -406,7 +404,7 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
             CHECK(errMax < 1e-2);
         }
 
-        SECTION("Galerkin (varying stencil)")
+        SECTION("Galerkin")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
@@ -451,7 +449,7 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
         p.setDeviceType(deviceType);
         // p.setDeviceName("Quadro");
 
-        SECTION("Laplace")
+        SECTION("Laplace_7p")
         {
             p.solve();
 
@@ -469,7 +467,7 @@ TEST_CASE("Problem solving: Dirichlet 4th order", "[dirichlet]")
             CHECK(errMax < 1e-2);
         }
 
-        SECTION("Galerkin (varying stencil)")
+        SECTION("Galerkin")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();

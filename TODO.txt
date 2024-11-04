@@ -27,6 +27,7 @@
 - rework ocl mpi ghost update for stencilValues (like for Cuboid)
 - optimize kernel layout of optimized galerkin kernel
 - remove stencil multiplication stuff
+- check solving tests with 27p Laplace and Varying
 
 Done:
 - aggregate residual norm on gpu
