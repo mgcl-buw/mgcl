@@ -24,7 +24,7 @@ double calculateErrorNorm(double h, mgcl::Cuboid& error);
  */
 TEST_CASE("solve_periodic")
 {
-    int N = 8;
+    int N = 16;
     double h = 1.0 / (double)N;
 
     // Problem parameters
@@ -104,7 +104,7 @@ TEST_CASE("solve_periodic")
             // (*v).dumpToFile("out_v.txt");
 
             std::cout
-                << "seq Laplace" << std::endl
+                << "seq Laplace 7p" << std::endl
                 << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
                 << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
@@ -121,7 +121,7 @@ TEST_CASE("solve_periodic")
             }
         }
 
-        SECTION("Galerkin")
+        SECTION("Galerkin_7p")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
@@ -145,7 +145,74 @@ TEST_CASE("solve_periodic")
             // (*v).dumpToFile("out_v.txt");
 
             std::cout
-                << "seq Galerkin" << std::endl
+                << "seq Galerkin 7p" << std::endl
+                << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
+        }
+
+        SECTION("Laplace_27p")
+        {
+            p.solveSeq();
+            p.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
+
+            // check if input v is equal to the v stored in Problem instance
+            REQUIRE(v.get() == p.getVPtr().get());
+            REQUIRE(v->isEqual(p.getV()));
+
+            // check if solution is good
+            auto err = calculateError(solution, *v);
+            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = calculateMaxError(*err);
+
+            // solution.dumpToFile("out_solution.txt");
+            // (*v).dumpToFile("out_v.txt");
+
+            std::cout
+                << "seq Laplace 27p" << std::endl
+                << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
+
+            // check if error is equal to old mgcl implementation (problem params must match)
+            if (p.getMaxiterVcycles() == 10 && N == 32 && p.getTol() == 1e-14 &&
+                p.getNu1() == 2 && p.getNu2() == 2 && p.getOmega() == 0.8 &&
+                p.getStencilType() == mgcl::MGCL_LAPLACE_7POINT)
+            {
+                CHECK(fabs(errNorm - 3.93115528889639940e-03) < 1e-14);
+                CHECK(fabs(errMax - 3.95723982871564600e-03) < 1e-14);
+            }
+        }
+
+        SECTION("Galerkin_27p")
+        {
+            p.setStencilType(mgcl::MGCL_VARYING);
+            auto& s = *p.getStencilValues();
+            double h2inv = N * N; // h = 1/N -> 1/h = N
+
+            double h = 1.0 / static_cast<double>(N);
+            mgcl_test::fill27pLaplace(s, h, false);
+
+            p.solveSeq();
+
+            // check if input v is equal to the v stored in Problem instance
+            REQUIRE(v.get() == p.getVPtr().get());
+            REQUIRE(v->isEqual(p.getV()));
+
+            // check if solution is good
+            auto err = calculateError(solution, *v);
+            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = calculateMaxError(*err);
+
+            // solution.dumpToFile("out_solution.txt");
+            // (*v).dumpToFile("out_v.txt");
+
+            std::cout
+                << "seq Galerkin 27p" << std::endl
                 << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
                 << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
@@ -176,7 +243,7 @@ TEST_CASE("solve_periodic")
             auto errMax = calculateMaxError(*err);
 
             std::cout
-                << "ocl " << oclDeviceType << " Laplace" << std::endl
+                << "ocl " << oclDeviceType << " Laplace 7p" << std::endl
                 << std::scientific << "  ||e||_2 = " << errNorm << std::endl
                 << std::scientific << "  e_max = " << errMax << std::endl;
 
@@ -193,7 +260,7 @@ TEST_CASE("solve_periodic")
             }
         }
 
-        SECTION("Galerkin")
+        SECTION("Galerkin_7p")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
@@ -211,7 +278,52 @@ TEST_CASE("solve_periodic")
             // (*v).dumpToFile("out_v.txt");
 
             std::cout
-                << "ocl " << oclDeviceType << " Galerkin" << std::endl
+                << "ocl " << oclDeviceType << " Galerkin 7p" << std::endl
+                << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
+        }
+
+        SECTION("Laplace_27p")
+        {
+            p.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
+            p.solve();
+
+            // check if solution is good
+            auto err = calculateError(solution, *v);
+            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = calculateMaxError(*err);
+
+            std::cout
+                << "ocl " << oclDeviceType << " Laplace 27p" << std::endl
+                << std::scientific << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << "  e_max = " << errMax << std::endl;
+
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
+        }
+
+        SECTION("Galerkin_27p")
+        {
+            p.setStencilType(mgcl::MGCL_VARYING);
+            auto& s = *p.getStencilValues();
+            double h2inv = N * N; // h = 1/N -> 1/h = N
+
+            double h = 1.0 / static_cast<double>(N);
+            mgcl_test::fill27pLaplace(s, h, false);
+
+            // check if solution is good
+            auto err = calculateError(solution, *v);
+            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = calculateMaxError(*err);
+
+            // solution.dumpToFile("out_solution.txt");
+            // (*v).dumpToFile("out_v.txt");
+
+            std::cout
+                << "ocl " << oclDeviceType << " Galerkin 27p" << std::endl
                 << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
                 << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
@@ -396,7 +508,7 @@ TEST_CASE("solve_dirichlet")
             // (*v).dumpToFile("out_v.txt");
 
             std::cout
-                << "seq Laplace" << std::endl
+                << "seq Laplace 7p" << std::endl
                 << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
                 << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
@@ -404,7 +516,7 @@ TEST_CASE("solve_dirichlet")
             CHECK(errMax < 1e-2);
         }
 
-        SECTION("Galerkin")
+        SECTION("Galerkin_7p")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
@@ -428,7 +540,65 @@ TEST_CASE("solve_dirichlet")
             // (*v).dumpToFile("out_v.txt");
 
             std::cout
-                << "seq Galerkin" << std::endl
+                << "seq Galerkin 7p" << std::endl
+                << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
+        }
+
+        SECTION("Laplace_27p")
+        {
+            p.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
+            p.solveSeq();
+
+            // check if input v is equal to the v stored in Problem instance
+            REQUIRE(v.get() == p.getVPtr().get());
+            REQUIRE(v->isEqual(p.getV()));
+
+            // check if solution is good
+            auto err = calculateError(solution, *v);
+            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = calculateMaxError(*err);
+
+            // solution.dumpToFile("out_solution.txt");
+            // (*v).dumpToFile("out_v.txt");
+
+            std::cout
+                << "seq Laplace 27p" << std::endl
+                << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
+        }
+
+        SECTION("Galerkin_27p")
+        {
+            p.setStencilType(mgcl::MGCL_VARYING);
+            auto& s = *p.getStencilValues();
+            double h2inv = N * N; // h = 1/N -> 1/h = N
+
+            double h = 1.0 / static_cast<double>(N);
+            mgcl_test::fill27pLaplace(s, h, false);
+
+            p.solveSeq();
+
+            // check if input v is equal to the v stored in Problem instance
+            REQUIRE(v.get() == p.getVPtr().get());
+            REQUIRE(v->isEqual(p.getV()));
+
+            // check if solution is good
+            auto err = calculateError(solution, *v);
+            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = calculateMaxError(*err);
+
+            // solution.dumpToFile("out_solution.txt");
+            // (*v).dumpToFile("out_v.txt");
+
+            std::cout
+                << "seq Galerkin 27p" << std::endl
                 << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
                 << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
@@ -459,7 +629,7 @@ TEST_CASE("solve_dirichlet")
             auto errMax = calculateMaxError(*err);
 
             std::cout
-                << "ocl " << oclDeviceType << " Laplace" << std::endl
+                << "ocl " << oclDeviceType << " Laplace 7p" << std::endl
                 << std::scientific << "  ||e||_2 = " << errNorm << std::endl
                 << std::scientific << "  e_max = " << errMax << std::endl;
 
@@ -467,7 +637,7 @@ TEST_CASE("solve_dirichlet")
             CHECK(errMax < 1e-2);
         }
 
-        SECTION("Galerkin")
+        SECTION("Galerkin_7p")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
@@ -487,7 +657,54 @@ TEST_CASE("solve_dirichlet")
             // (*v).dumpToFile("out_v.txt");
 
             std::cout
-                << "ocl " << oclDeviceType << " Galerkin" << std::endl
+                << "ocl " << oclDeviceType << " Galerkin 7p" << std::endl
+                << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
+        }
+
+        SECTION("Laplace_27p")
+        {
+            p.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
+            p.solve();
+
+            // check if solution is good
+            auto err = calculateError(solution, *v);
+            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = calculateMaxError(*err);
+
+            std::cout
+                << "ocl " << oclDeviceType << " Laplace 27p" << std::endl
+                << std::scientific << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << "  e_max = " << errMax << std::endl;
+
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
+        }
+
+        SECTION("Galerkin_7p")
+        {
+            p.setStencilType(mgcl::MGCL_VARYING);
+            auto& s = *p.getStencilValues();
+            double h2inv = N * N; // h = 1/N -> 1/h = N
+
+            double h = 1.0 / static_cast<double>(N);
+            mgcl_test::fill27pLaplace(s, h, false);
+
+            p.solve();
+
+            // check if solution is good
+            auto err = calculateError(solution, *v);
+            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = calculateMaxError(*err);
+
+            // solution.dumpToFile("out_solution.txt");
+            // (*v).dumpToFile("out_v.txt");
+
+            std::cout
+                << "ocl " << oclDeviceType << " Galerkin 27p" << std::endl
                 << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
                 << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 

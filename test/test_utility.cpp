@@ -297,9 +297,11 @@ void mgcl_test::fill7pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCe
             }
 }
 
+// 27p Laplace stencil taken from "A Family of Large-Stencil Discrete Laplacian Approximations in
+// Three Dimensions", O'Reilly and Beck, 2006
 void mgcl_test::fill27pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCenter)
 {
-    double factor = 1.0 / (30.0 * h * h); // TODO use actual hs
+    double factor = 1.0 / (26.0 * h * h); // TODO use actual hs
     if (negativeCenter)
         factor *= -1.0;
 
@@ -309,15 +311,15 @@ void mgcl_test::fill27pLaplace(mgcl::VaryingStencil& v, double h, bool negativeC
             {
                 // 27-point Laplace
                 // center
-                v[1][1][1][i][j][k] = factor * 128.0;
+                v[1][1][1][i][j][k] = factor * 88.0;
 
                 // adjacent to center
-                v[0][1][1][i][j][k] = factor * -1.0;
-                v[1][0][1][i][j][k] = factor * -1.0;
-                v[1][1][0][i][j][k] = factor * -1.0;
-                v[1][1][2][i][j][k] = factor * -1.0;
-                v[1][2][1][i][j][k] = factor * -1.0;
-                v[2][1][1][i][j][k] = factor * -1.0;
+                v[0][1][1][i][j][k] = factor * -6.0;
+                v[1][0][1][i][j][k] = factor * -6.0;
+                v[1][1][0][i][j][k] = factor * -6.0;
+                v[1][1][2][i][j][k] = factor * -6.0;
+                v[1][2][1][i][j][k] = factor * -6.0;
+                v[2][1][1][i][j][k] = factor * -6.0;
 
                 // diagonally adjacent to center
                 v[1][0][0][i][j][k] = -3.0 * factor;
@@ -333,14 +335,14 @@ void mgcl_test::fill27pLaplace(mgcl::VaryingStencil& v, double h, bool negativeC
                 v[2][0][1][i][j][k] = -3.0 * factor;
                 v[2][2][1][i][j][k] = -3.0 * factor;
 
-                // cornerv
-                v[0][0][0][i][j][k] = -1.0 * factor;
-                v[0][0][2][i][j][k] = -1.0 * factor;
-                v[0][2][0][i][j][k] = -1.0 * factor;
-                v[0][2][2][i][j][k] = -1.0 * factor;
-                v[2][0][0][i][j][k] = -1.0 * factor;
-                v[2][0][2][i][j][k] = -1.0 * factor;
-                v[2][2][0][i][j][k] = -1.0 * factor;
-                v[2][2][2][i][j][k] = -1.0 * factor;
+                // corners
+                v[0][0][0][i][j][k] = -2.0 * factor;
+                v[0][0][2][i][j][k] = -2.0 * factor;
+                v[0][2][0][i][j][k] = -2.0 * factor;
+                v[0][2][2][i][j][k] = -2.0 * factor;
+                v[2][0][0][i][j][k] = -2.0 * factor;
+                v[2][0][2][i][j][k] = -2.0 * factor;
+                v[2][2][0][i][j][k] = -2.0 * factor;
+                v[2][2][2][i][j][k] = -2.0 * factor;
             }
 }

@@ -354,17 +354,17 @@ __kernel void residual_27point(
 
         // A*v
         double stencilsum =
-            (128.0 * v_in[index] - 14.0 * v_in[index - koff] - 14.0 * v_in[index + koff] - 14.0 * v_in[index - joff] -
-             14.0 * v_in[index + joff] - 14.0 * v_in[index - ioff] - 14.0 * v_in[index + ioff]
+            (88.0 * v_in[index] - 6.0 * v_in[index - koff] - 6.0 * v_in[index + koff] - 6.0 * v_in[index - joff] -
+             6.0 * v_in[index + joff] - 6.0 * v_in[index - ioff] - 6.0 * v_in[index + ioff]
 
              - 3.0 * v_in[index - joff - koff] - 3.0 * v_in[index - joff + koff] - 3.0 * v_in[index + joff - koff] -
              3.0 * v_in[index + joff + koff] - 3.0 * v_in[index - ioff - koff] - 3.0 * v_in[index - ioff + koff] -
              3.0 * v_in[index + ioff - koff] - 3.0 * v_in[index + ioff + koff] - 3.0 * v_in[index - ioff - joff] -
              3.0 * v_in[index - ioff + joff] - 3.0 * v_in[index + ioff - joff] - 3.0 * v_in[index + ioff + joff]
 
-             - v_in[index - ioff - joff - koff] - v_in[index - ioff - joff + koff] - v_in[index - ioff + joff - koff] -
-             v_in[index - ioff + joff + koff] - v_in[index + ioff - joff - koff] - v_in[index + ioff - joff + koff] -
-             v_in[index + ioff + joff - koff] - v_in[index + ioff + joff + koff]) *
+             - 2.0 * v_in[index - ioff - joff - koff] - 2.0 * v_in[index - ioff - joff + koff] - 2.0 * v_in[index - ioff + joff - koff] -
+             2.0 * v_in[index - ioff + joff + koff] - 2.0 * v_in[index + ioff - joff - koff] - 2.0 * v_in[index + ioff - joff + koff] -
+             2.0 * v_in[index + ioff + joff - koff] - 2.0 * v_in[index + ioff + joff + koff]) *
             h2inv;
 
         // if (i == 1 && j == 1 && k == 2)
@@ -649,21 +649,21 @@ __kernel void jacobi_iter_27point(
             double res;
             double v_in_index = v_in[index];
 
-            // A*v 19-point laplacian stencil
+            // A*v 27-point laplacian stencil
             double stencilsum =
-                (128.0 * v_in_index - 14.0 * v_in[index - koff] - 14.0 * v_in[index + koff] -
-                 14.0 * v_in[index - joff] - 14.0 * v_in[index + joff] - 14.0 * v_in[index - ioff] -
-                 14.0 * v_in[index + ioff]
+                (88.0 * v_in_index - 6.0 * v_in[index - koff] - 6.0 * v_in[index + koff] -
+                 6.0 * v_in[index - joff] - 6.0 * v_in[index + joff] - 6.0 * v_in[index - ioff] -
+                 6.0 * v_in[index + ioff]
 
                  - 3.0 * v_in[index - joff - koff] - 3.0 * v_in[index - joff + koff] - 3.0 * v_in[index + joff - koff] -
                  3.0 * v_in[index + joff + koff] - 3.0 * v_in[index - ioff - koff] - 3.0 * v_in[index - ioff + koff] -
                  3.0 * v_in[index + ioff - koff] - 3.0 * v_in[index + ioff + koff] - 3.0 * v_in[index - ioff - joff] -
                  3.0 * v_in[index - ioff + joff] - 3.0 * v_in[index + ioff - joff] - 3.0 * v_in[index + ioff + joff]
 
-                 - v_in[index - ioff - joff - koff] - v_in[index - ioff - joff + koff] -
-                 v_in[index - ioff + joff - koff] - v_in[index - ioff + joff + koff] -
-                 v_in[index + ioff - joff - koff] - v_in[index + ioff - joff + koff] -
-                 v_in[index + ioff + joff - koff] - v_in[index + ioff + joff + koff]) *
+                 - 2.0 * v_in[index - ioff - joff - koff] - 2.0 * v_in[index - ioff - joff + koff] -
+                 2.0 * v_in[index - ioff + joff - koff] - 2.0 * v_in[index - ioff + joff + koff] -
+                 2.0 * v_in[index + ioff - joff - koff] - 2.0 * v_in[index + ioff - joff + koff] -
+                 2.0 * v_in[index + ioff + joff - koff] - 2.0 * v_in[index + ioff + joff + koff]) *
                 h2inv; // h2inv = 1 / (30 * h2)
 
             // r = f - A*v

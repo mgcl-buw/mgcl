@@ -661,7 +661,7 @@ namespace mgcl
         else if (problem.stencilType == MGCL_LAPLACE_27POINT)
         {
             kernelName = "residual_27point";
-            h2inv = 1.0 / (30.0 * h2);
+            h2inv = 1.0 / (26.0 * h2);
         }
         else if (problem.stencilType == MGCL_VARYING)
         {
@@ -891,10 +891,10 @@ namespace mgcl
                     else if (stencilType == MGCL_LAPLACE_27POINT)
                     {
                         // clang-format off
-                        stencilsum = (128.0 * vraw[iv][jv][kv]
-                                - 14.0 * vraw[iv][jv][kv - 1] - 14.0 * vraw[iv][jv][kv + 1]
-                                - 14.0 * vraw[iv][jv - 1][kv] - 14.0 * vraw[iv][jv + 1][kv]
-                                - 14.0 * vraw[iv - 1][jv][kv] - 14.0 * vraw[iv + 1][jv][kv]
+                        stencilsum = (88.0 * vraw[iv][jv][kv]
+                                - 6.0 * vraw[iv][jv][kv - 1] - 6.0 * vraw[iv][jv][kv + 1]
+                                - 6.0 * vraw[iv][jv - 1][kv] - 6.0 * vraw[iv][jv + 1][kv]
+                                - 6.0 * vraw[iv - 1][jv][kv] - 6.0 * vraw[iv + 1][jv][kv]
 
                                 - 3.0 * vraw[iv][jv - 1][kv - 1] - 3.0 * vraw[iv][jv - 1][kv + 1]
                                 - 3.0 * vraw[iv][jv + 1][kv - 1] - 3.0 * vraw[iv][jv + 1][kv + 1]
@@ -903,10 +903,10 @@ namespace mgcl
                                 - 3.0 * vraw[iv - 1][jv - 1][kv] - 3.0 * vraw[iv - 1][jv + 1][kv]
                                 - 3.0 * vraw[iv + 1][jv - 1][kv] - 3.0 * vraw[iv + 1][jv + 1][kv]
 
-                                - vraw[iv - 1][jv - 1][kv - 1] - vraw[iv - 1][jv - 1][kv + 1]
-                                - vraw[iv - 1][jv + 1][kv - 1] - vraw[iv - 1][jv + 1][kv + 1]
-                                - vraw[iv + 1][jv - 1][kv - 1] - vraw[iv + 1][jv - 1][kv + 1]
-                                - vraw[iv + 1][jv + 1][kv - 1] - vraw[iv + 1][jv + 1][kv + 1]
+                                - 2.0 * vraw[iv - 1][jv - 1][kv - 1] - 2.0 * vraw[iv - 1][jv - 1][kv + 1]
+                                - 2.0 * vraw[iv - 1][jv + 1][kv - 1] - 2.0 * vraw[iv - 1][jv + 1][kv + 1]
+                                - 2.0 * vraw[iv + 1][jv - 1][kv - 1] - 2.0 * vraw[iv + 1][jv - 1][kv + 1]
+                                - 2.0 * vraw[iv + 1][jv + 1][kv - 1] - 2.0 * vraw[iv + 1][jv + 1][kv + 1]
                                 ) * stencilFactor;
                         // clang-format on
                     }

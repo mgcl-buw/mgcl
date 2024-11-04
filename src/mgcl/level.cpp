@@ -46,7 +46,7 @@ namespace mgcl
         else if (stencilType == MGCL_LAPLACE_19POINT)
             stencilFactor = 1.0 / (6.0 * h * h);
         else if (stencilType == MGCL_LAPLACE_27POINT)
-            stencilFactor = 1.0 / (30.0 * h * h);
+            stencilFactor = 1.0 / (26.0 * h * h);
 
         if (num_ < 0 || num_ > problem->getMaxlevel())
             throw std::invalid_argument(std::string("num is invalid! num: ")
