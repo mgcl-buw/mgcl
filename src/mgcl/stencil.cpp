@@ -647,6 +647,20 @@ namespace mgcl
     }
 
     /**
+     * Writes to the gpu buffer from the supplied VaryingStencil h_stencil.
+     */
+    void VaryingStencilGpu::write(cl_command_queue queue, bool blocking, VaryingStencil& h_stencil)
+    {
+        if (h_stencil.field1d().size() != static_cast<size_t>((m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width))
+            error("Size of h_stencil does not match gpu stencil size");
+
+        int err = clEnqueueWriteBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0,
+                                       h_stencil.field1d().size() * sizeof(double),
+                                       h_stencil.field1d().data(), 0, NULL, NULL);
+        mgclCheckError(err, "clEnqueueWriteBuffer");
+    }
+
+    /**
      * @brief Updates ghost cells, respects periodic ghosts, i.e. when gh > m
      *
      * @param program
