@@ -37,6 +37,9 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
   include(cmake/CPM.cmake)
 endif()
 
+# add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+# add_link_options(-fsanitize=address -fno-omit-frame-pointer)
+
 add_subdirectory(src)
 
 # Only add other subdirs if mgcl is not used in another project. See
