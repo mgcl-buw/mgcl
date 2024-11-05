@@ -28,6 +28,7 @@
 - optimize kernel layout of optimized galerkin kernel
 - remove stencil multiplication stuff
 - check solving tests with 27p Laplace and Varying
+- automatically optimize mpiLevelThreshold by checking available gpu size
 
 Done:
 - aggregate residual norm on gpu
