@@ -266,6 +266,8 @@ TEST_CASE("solve_periodic")
             double h = 1.0 / static_cast<double>(N);
             mgcl_test::fill7pLaplace(s, h, false);
 
+            p.solve();
+
             // check if solution is good
             auto err = calculateError(solution, *v);
             auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
@@ -309,6 +311,8 @@ TEST_CASE("solve_periodic")
 
             double h = 1.0 / static_cast<double>(N);
             mgcl_test::fill27pLaplace(s, h, false);
+
+            p.solve();
 
             // check if solution is good
             auto err = calculateError(solution, *v);
@@ -680,7 +684,7 @@ TEST_CASE("solve_dirichlet")
             CHECK(errMax < 1e-2);
         }
 
-        SECTION("Galerkin_7p")
+        SECTION("Galerkin_27p")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
