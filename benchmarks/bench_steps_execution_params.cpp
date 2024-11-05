@@ -809,7 +809,7 @@ void create4thOrderProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl::Cuboid& solut
 void sv_fill_27p_laplace(mgcl::VaryingStencil& s)
 {
     double hm = 1.0 / s.getM();
-    double factor = 1.0 / (30.0 * hm * hm);
+    double factor = 1.0 / (26.0 * hm * hm);
 
     // Fill with 27-point Laplace
     for (int i = 0; i < s.getMgh(); i++)

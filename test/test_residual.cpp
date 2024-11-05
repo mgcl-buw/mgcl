@@ -407,7 +407,7 @@ TEST_CASE("residual seq gh > 1")
 
     double h = 1.0 / ((double)m);
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
-    double stencilFactor = 1.0 / (30.0 * h * h);
+    double stencilFactor = 1.0 / (26.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
 
     // v, r and f with extended ghosts, i.e. no ghost update between iterations
@@ -489,7 +489,7 @@ TEST_CASE("residual gpu gh > 1")
 
     double h = 1.0 / ((double)m);
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
-    double stencilFactor = 1.0 / (30.0 * h * h);
+    double stencilFactor = 1.0 / (26.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
 
     // v, r and f with extended ghosts, i.e. no ghost update between iterations
@@ -677,7 +677,7 @@ TEST_CASE("residual throwing")
     double omega = 0.8;
     double h = 1.0 / ((double)m);
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
-    double stencilFactor = 1.0 / (30.0 * h * h);
+    double stencilFactor = 1.0 / (26.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
 
     int moff = -1;
@@ -768,7 +768,7 @@ TEST_CASE("residual seq moff, noff, koff < 0")
 
     double h = 1.0 / ((double)m);
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
-    double stencilFactor = 1.0 / (30.0 * h * h);
+    double stencilFactor = 1.0 / (26.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
 
     int moff = GENERATE(-2, -1, 0);
@@ -864,7 +864,7 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
 
     double h = 1.0 / ((double)m);
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
-    double stencilFactor = 1.0 / (30.0 * h * h);
+    double stencilFactor = 1.0 / (26.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
 
     // Must be equal for now since gpu residual does not support varying ghosts for different dimensions yet.

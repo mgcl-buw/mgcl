@@ -43,7 +43,7 @@ TEST_CASE("benchmark_jacobi_seq_multiple_iters")
     int maxiter = 3;
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
-    double stencilFactor = 1.0 / (30.0 * h * h);
+    double stencilFactor = 1.0 / (26.0 * h * h);
 
     ankerl::nanobench::Bench bench;
     bench.timeUnit(1ms, "ms")
@@ -93,7 +93,7 @@ TEST_CASE("benchmark_jacobi_ocl_multiple_iters")
         int maxiter = 3;
         mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
         mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
-        double stencilFactor = 1.0 / (30.0 * h * h);
+        double stencilFactor = 1.0 / (26.0 * h * h);
 
         for (auto iters : itersAll)
         {

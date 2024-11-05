@@ -523,7 +523,7 @@ TEST_CASE("jacobi throwing")
     double omega = 0.8;
     double h = 1.0 / ((double)m);
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
-    double stencilFactor = 1.0 / (30.0 * h * h);
+    double stencilFactor = 1.0 / (26.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
 
     // Ghost cell amounts needed for stepsPerIter
@@ -623,7 +623,7 @@ TEST_CASE("jacobi seq gh > 1 multiple iters")
 
     double h = 1.0 / ((double)m);
 
-    double stencilFactor = 1.0 / (30.0 * h * h);
+    double stencilFactor = 1.0 / (26.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
 
     // v, r and f with extended ghosts, i.e. no ghost update between iterations
@@ -737,7 +737,7 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
 
     double h = 1.0 / ((double)m);
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
-    double stencilFactor = 1.0 / (30.0 * h * h);
+    double stencilFactor = 1.0 / (26.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
 
     // v, r and f with extended ghosts, i.e. no ghost update between iterations

@@ -122,7 +122,7 @@
 //     SECTION("Laplace27p")
 //     {
 //         mgcl::Stencil *stencil = new mgcl::StencilLaplace27p(h);
-//         double stencilFactor = 1.0 / (30.0 * h * h);
+//         double stencilFactor = 1.0 / (26.0 * h * h);
 
 //         b.run(std::string("apply 27p, N = ").append(std::to_string(N)).c_str(),
 //               [&]

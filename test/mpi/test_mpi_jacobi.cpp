@@ -91,7 +91,7 @@ TEST_CASE("MPI_jacobiSeq_Laplace_n_processes", "[mpiN]")
     double omega = 0.8;
     double h = 1.0 / ((double)m);
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
-    double stencilFactor = 1.0 / (30.0 * h * h);
+    double stencilFactor = 1.0 / (26.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
     int maxiter = 10;
 
@@ -233,7 +233,7 @@ TEST_CASE("MPI_jacobiSeq_VaryingStencil_n_processes", "[mpiN]")
     double omega = 0.8;
     double h = 1.0 / ((double)m);
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
-    double stencilFactor = 1.0 / (30.0 * h * h);
+    double stencilFactor = 1.0 / (26.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
     int maxiter = 10;
 
@@ -405,7 +405,7 @@ TEST_CASE("MPI_jacobi_ocl_Laplace_n_processes", "[mpiN]")
     double omega = 0.8;
     double h = 1.0 / ((double)m);
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
-    double stencilFactor = 1.0 / (30.0 * h * h);
+    double stencilFactor = 1.0 / (26.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
     int maxiter = 1;
 
@@ -595,7 +595,7 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_n_processes", "[mpiN]")
     double omega = 0.8;
     double h = 1.0 / ((double)m);
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
-    double stencilFactor = 1.0 / (30.0 * h * h);
+    double stencilFactor = 1.0 / (26.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
     int maxiter = 10;
 

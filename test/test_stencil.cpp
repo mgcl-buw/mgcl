@@ -113,16 +113,16 @@ TEST_CASE("StencilLaplace27p periodic")
     v[2][2][0] = 8;
     v[2][2][2] = 2;
 
-    double expectedFactor = (4.0 * 4.0) / 30.0;
+    double expectedFactor = (4.0 * 4.0) / 26.0;
 
     mgcl::Cuboid f(N, N, N, gh, gh, gh);
     mgcl::Cuboid r(N, N, N, gh, gh, gh);
 
     mgcl::MultigridEngine::residualSeq(f, v, r, mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_27POINT, expectedFactor, nullptr, 0, true, true);
 
-    double expected = expectedFactor * (128.0 * 8 - 14.0 * (4 + 16 + 4 + 2 + 1 + 2) -
+    double expected = expectedFactor * (88.0 * 8 - 6.0 * (4 + 16 + 4 + 2 + 1 + 2) -
                                         3.0 * (8 + 4 + 1 + 2 + 16 + 32 + 8 + 4 + 4 + 4 + 2 + 1) -
-                                        8 - 4 - 1 - 2 - 16 - 4 - 8 - 2);
+                                        2.0 * (8 + 4 + 1 + 2 + 16 + 4 + 8 + 2));
     REQUIRE_THAT(-r[1][1][1], Catch::Matchers::WithinRel(expected));
 }
 
@@ -283,7 +283,7 @@ TEST_CASE("StencilVarying27p periodic")
     REQUIRE(vals.getO() == v.getO());
 
     // fill varying stencil with 27p Laplace stencil
-    double h2inv = (4.0 * 4.0) / 30.0;
+    double h2inv = (4.0 * 4.0) / 26.0;
     for (int i = 0; i < vals.getMgh(); i++)
         for (int j = 0; j < vals.getNgh(); j++)
             for (int k = 0; k < vals.getOgh(); k++)

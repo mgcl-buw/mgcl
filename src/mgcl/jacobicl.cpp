@@ -43,7 +43,7 @@ namespace mgcl
         if (stencilType == MGCL_LAPLACE_19POINT)
             dinv = (6.0 * h2) / 24.0;
         else if (stencilType == MGCL_LAPLACE_27POINT)
-            dinv = (30.0 * h2) / 128.0;
+            dinv = (26.0 * h2) / 88.0;
 
         // decrease stepsPerIter if it's less than maxIter
         if (maxiter < stepsPerIter)
@@ -218,7 +218,7 @@ namespace mgcl
         else if (problem.stencilType == MGCL_LAPLACE_27POINT)
         {
             kernelName = "jacobi_iter_27point";
-            dinv = (30.0 * h2) / 128.0;
+            dinv = (26.0 * h2) / 88.0;
         }
         else if (problem.stencilType == MGCL_VARYING)
         {
@@ -482,7 +482,7 @@ namespace mgcl
         else if (problem.stencilType == MGCL_LAPLACE_27POINT)
         {
             kernel_name = "jacobi_stream_shmem_27point";
-            dinv = (30.0 * h2) / 128.0;
+            dinv = (26.0 * h2) / 88.0;
         }
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernel_name, &err);
         mgclCheckError(err, "Creating kernel");

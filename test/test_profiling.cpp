@@ -311,7 +311,7 @@ TEST_CASE("profiling_kernels")
         mgcl::MultigridEngine::galerkinOptimized(*lv0.getStencilValuesGpu(),
                                                  1, resm, resn, reso,
                                                  p.getProgram(), p.getCommands(), p.getContext(), &conf, p.getProfilingData());
-        checkResult(p, "galerkin", {resm * resn * reso, 0, 0});
+        checkResult(p, "galerkin", {resm * resn * reso * 27, 0, 0});
     }
 
     // TODO add extractBordersStencil and paste ghosts stencil
