@@ -68,6 +68,8 @@ namespace mgcl
 
         static std::unique_ptr<VaryingStencil> galerkinOptimized(VaryingStencil& a_h, int gh_a2h,
                                                                  int resm, int resn, int reso);
+        static std::unique_ptr<VaryingStencil> galerkinHandcrafted(VaryingStencil& a_h, int gh_a2h,
+                                                                   int resm, int resn, int reso);
         static std::unique_ptr<VaryingStencilGpu> galerkinOptimized(VaryingStencilGpu& a_h, int gh_a2h,
                                                                     int resm, int resn, int reso,
                                                                     cl_program program, cl_command_queue queue, cl_context context,

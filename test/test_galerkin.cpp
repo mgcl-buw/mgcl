@@ -820,3 +820,31 @@ TEST_CASE("galerkinHandcrafted_proofOfConcept")
                 REQUIRE(a_2h[2][2][2][ci][cj][ck] == ((r[1][1][1] * a_h[2][2][2][fi + 0][fj + 0][fk + 0] + r[1][1][2] * a_h[2][2][1][fi + 0][fj + 0][fk + 1] + r[1][2][1] * a_h[2][1][2][fi + 0][fj + 1][fk + 0] + r[1][2][2] * a_h[2][1][1][fi + 0][fj + 1][fk + 1] + r[2][1][1] * a_h[1][2][2][fi + 1][fj + 0][fk + 0] + r[2][1][2] * a_h[1][2][1][fi + 1][fj + 0][fk + 1] + r[2][2][1] * a_h[1][1][2][fi + 1][fj + 1][fk + 0] + r[2][2][2] * a_h[1][1][1][fi + 1][fj + 1][fk + 1]) * p[2][2][2] + (r[1][1][2] * a_h[2][2][2][fi + 0][fj + 0][fk + 1] + r[1][2][2] * a_h[2][1][2][fi + 0][fj + 1][fk + 1] + r[2][1][2] * a_h[1][2][2][fi + 1][fj + 0][fk + 1] + r[2][2][2] * a_h[1][1][2][fi + 1][fj + 1][fk + 1]) * p[2][2][1] + (r[1][2][1] * a_h[2][2][2][fi + 0][fj + 1][fk + 0] + r[1][2][2] * a_h[2][2][1][fi + 0][fj + 1][fk + 1] + r[2][2][1] * a_h[1][2][2][fi + 1][fj + 1][fk + 0] + r[2][2][2] * a_h[1][2][1][fi + 1][fj + 1][fk + 1]) * p[2][1][2] + (r[1][2][2] * a_h[2][2][2][fi + 0][fj + 1][fk + 1] + r[2][2][2] * a_h[1][2][2][fi + 1][fj + 1][fk + 1]) * p[2][1][1] + (r[2][1][1] * a_h[2][2][2][fi + 1][fj + 0][fk + 0] + r[2][1][2] * a_h[2][2][1][fi + 1][fj + 0][fk + 1] + r[2][2][1] * a_h[2][1][2][fi + 1][fj + 1][fk + 0] + r[2][2][2] * a_h[2][1][1][fi + 1][fj + 1][fk + 1]) * p[1][2][2] + (r[2][1][2] * a_h[2][2][2][fi + 1][fj + 0][fk + 1] + r[2][2][2] * a_h[2][1][2][fi + 1][fj + 1][fk + 1]) * p[1][2][1] + (r[2][2][1] * a_h[2][2][2][fi + 1][fj + 1][fk + 0] + r[2][2][2] * a_h[2][2][1][fi + 1][fj + 1][fk + 1]) * p[1][1][2] + (r[2][2][2] * a_h[2][2][2][fi + 1][fj + 1][fk + 1]) * p[1][1][1]));
             }
 }
+
+// Checks if the handcrafted version of calculating the Galerkin operator yields the same result as the previously
+// optimized one (the one that uses intervals).
+TEST_CASE("seq_galerkinHandcrafted_vs_galerkinOptimized")
+{
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    int gh = 1;
+
+    mgcl_test::TestUtility tu(deviceType);
+
+    mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
+    a_h.fill1dIndex(false);
+    a_h.updateGhosts();
+
+    mgcl::VaryingStencilGpu a_h_gpu(m, n, o, 3, gh, tu.getContext(), tu.getCommands(), tu.getProgram());
+    a_h_gpu.fill(a_h, tu.getCommands(), true);
+
+    auto a_2h_gpu = mgcl::MultigridEngine::galerkinOptimized(a_h_gpu, gh, m >> 1, n >> 1, o >> 1, tu.getProgram(), tu.getCommands(), tu.getContext(), nullptr, nullptr);
+    auto a_2h = a_2h_gpu->read(tu.getCommands(), true);
+
+    auto a_2h_hc = mgcl::MultigridEngine::galerkinHandcrafted(a_h, gh, m >> 1, n >> 1, o >> 1);
+
+    REQUIRE(a_2h.isEqual(*a_2h_hc));
+}
