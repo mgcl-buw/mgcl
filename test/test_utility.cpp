@@ -297,6 +297,44 @@ void mgcl_test::fill7pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCe
             }
 }
 
+void mgcl_test::fill19pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCenter)
+{
+    double factor = 1.0 / (6.0 * h * h); // TODO use actual hs
+    if (negativeCenter)
+        factor *= -1.0;
+
+    for (int i = 0; i < v.getMgh(); i++)
+        for (int j = 0; j < v.getNgh(); j++)
+            for (int k = 0; k < v.getOgh(); k++)
+            {
+                // 27-point Laplace
+                // center
+                v[1][1][1][i][j][k] = factor * 24.0;
+
+                // adjacent to center
+                v[0][1][1][i][j][k] = factor * -2.0;
+                v[1][0][1][i][j][k] = factor * -2.0;
+                v[1][1][0][i][j][k] = factor * -2.0;
+                v[1][1][2][i][j][k] = factor * -2.0;
+                v[1][2][1][i][j][k] = factor * -2.0;
+                v[2][1][1][i][j][k] = factor * -2.0;
+
+                // diagonally adjacent to center
+                v[1][0][0][i][j][k] = -factor;
+                v[1][0][2][i][j][k] = -factor;
+                v[1][2][0][i][j][k] = -factor;
+                v[1][2][2][i][j][k] = -factor;
+                v[0][1][0][i][j][k] = -factor;
+                v[0][1][2][i][j][k] = -factor;
+                v[2][1][0][i][j][k] = -factor;
+                v[2][1][2][i][j][k] = -factor;
+                v[0][0][1][i][j][k] = -factor;
+                v[0][2][1][i][j][k] = -factor;
+                v[2][0][1][i][j][k] = -factor;
+                v[2][2][1][i][j][k] = -factor;
+            }
+}
+
 // 27p Laplace stencil taken from "A Family of Large-Stencil Discrete Laplacian Approximations in
 // Three Dimensions", O'Reilly and Beck, 2006
 void mgcl_test::fill27pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCenter)
