@@ -1,9 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <cmath>
 #include <iostream>
+#include <memory>
 
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/level.hpp"
@@ -294,6 +296,97 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
 
     REQUIRE_THAT(res_seq, Catch::Matchers::WithinAbs(res_gpu, 1e-7));
     REQUIRE(c_r_out->isEqual(r_in_lv0));
+}
+
+// Checks if Laplace stencil type and varying stencil, filled with Laplace coefficients, yield the same result
+TEST_CASE("residual periodic_laplace_vs_galerkin")
+{
+    int m = GENERATE(8, 16, 32);
+    int n = GENERATE(8, 16);
+    int o = GENERATE(8);
+    mgcl::MGCL_STENCIL stencilType = GENERATE(mgcl::MGCL_LAPLACE_7POINT, mgcl::MGCL_LAPLACE_19POINT, mgcl::MGCL_LAPLACE_27POINT);
+
+    double h = 1.0 / ((double)m); // incorrect if m != n or o but doesn't matter for this test
+    mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+    double stencilFactor = 1.0 / (h * h);
+    if (stencilType == mgcl::MGCL_LAPLACE_19POINT)
+        stencilFactor = 1.0 / (6.0 * h * h);
+    else if (stencilType == mgcl::MGCL_LAPLACE_27POINT)
+        stencilFactor = 1.0 / (26.0 * h * h);
+
+    auto vals = mgcl::VaryingStencil(m, n, o, 3, 1, 1, 1);
+    if (stencilType == mgcl::MGCL_LAPLACE_7POINT)
+        mgcl_test::fill7pLaplace(vals, h, false);
+    else if (stencilType == mgcl::MGCL_LAPLACE_19POINT)
+        mgcl_test::fill19pLaplace(vals, h, false);
+    else if (stencilType == mgcl::MGCL_LAPLACE_27POINT)
+        mgcl_test::fill27pLaplace(vals, h, false);
+
+    std::shared_ptr<mgcl::Cuboid> c_in_v = std::make_shared<mgcl::Cuboid>(m, n, o, 1, 1, 1);
+    std::shared_ptr<mgcl::Cuboid> c_in_f = std::make_shared<mgcl::Cuboid>(m, n, o, 1, 1, 1);
+    std::shared_ptr<mgcl::Cuboid> c_in_r_laplace = std::make_shared<mgcl::Cuboid>(m, n, o, 1, 1, 1);
+    std::shared_ptr<mgcl::Cuboid> c_in_r_galerkin = std::make_shared<mgcl::Cuboid>(m, n, o, 1, 1, 1);
+    c_in_v->fillRandom();
+    c_in_f->fillRandom();
+
+    SECTION("seq")
+    {
+        double res_laplace = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r_laplace, resnorm,
+                                                                stencilType, stencilFactor, nullptr,
+                                                                true, true, true);
+
+        double res_galerkin = mgcl::MultigridEngine::residualSeq(*c_in_f, *c_in_v, *c_in_r_galerkin, resnorm,
+                                                                 mgcl::MGCL_VARYING, stencilFactor, &vals,
+                                                                 true, true, true);
+        REQUIRE_THAT(res_laplace, Catch::Matchers::WithinAbs(res_galerkin, 1e-7));
+    }
+
+    SECTION("ocl")
+    {
+        // // create dummy problem
+        // std::shared_ptr<mgcl::Cuboid> v_dummy = std::make_shared<mgcl::Cuboid>(m, n, o, 1, 1, 1);
+        // std::shared_ptr<mgcl::Cuboid> f_dummy = std::make_shared<mgcl::Cuboid>(m, n, o, 1, 1, 1);
+        // mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
+
+        // mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
+        // mgcl::CuboidGpu c_in_v_gpu(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, c_in_v);
+        // mgcl::CuboidGpu c_in_f_gpu(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, c_in_f);
+        // mgcl::CuboidGpu c_in_r_laplace_gpu(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, c_in_r_laplace);
+        // mgcl::CuboidGpu c_in_r_galerkin_gpu(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, c_in_r_galerkin);
+        double res_laplace;
+        double res_galerkin;
+
+        {
+            mgcl::Problem p(m, n, o, c_in_f, c_in_v);
+            p.setUseOpencl(true);
+            p.setResidualNorm(resnorm);
+            p.setStencilType(stencilType);
+            p.setGhostsIn(1);
+            p.init();
+            res_laplace = mgcl::MultigridEngine::residual(p, p.getLevelAt(0), true, 0, 0, 0);
+        }
+
+        {
+            mgcl::Problem p(m, n, o, c_in_f, c_in_v);
+            p.setUseOpencl(true);
+            p.setResidualNorm(resnorm);
+            p.setStencilType(mgcl::MGCL_VARYING);
+            p.setGhostsIn(1);
+
+            auto& sv = p.getStencilValues();
+            if (stencilType == mgcl::MGCL_LAPLACE_7POINT)
+                mgcl_test::fill7pLaplace(*sv, h, false);
+            else if (stencilType == mgcl::MGCL_LAPLACE_19POINT)
+                mgcl_test::fill19pLaplace(*sv, h, false);
+            else if (stencilType == mgcl::MGCL_LAPLACE_27POINT)
+                mgcl_test::fill27pLaplace(*sv, h, false);
+
+            p.init();
+            res_galerkin = mgcl::MultigridEngine::residual(p, p.getLevelAt(0), true, 0, 0, 0);
+        }
+
+        REQUIRE_THAT(res_laplace, Catch::Matchers::WithinAbs(res_galerkin, 1e-7));
+    }
 }
 
 // tests if residual seq works if v_gh > 1 or r_gh > 1 or f_gh > 1
