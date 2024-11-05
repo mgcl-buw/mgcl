@@ -125,7 +125,6 @@ TEST_CASE("solve_periodic")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
-            double h2inv = N * N; // h = 1/N -> 1/h = N
 
             double h = 1.0 / static_cast<double>(N);
             mgcl_test::fill7pLaplace(s, h, false);
@@ -155,8 +154,8 @@ TEST_CASE("solve_periodic")
 
         SECTION("Laplace_27p")
         {
-            p.solveSeq();
             p.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
+            p.solveSeq();
 
             // check if input v is equal to the v stored in Problem instance
             REQUIRE(v.get() == p.getVPtr().get());
@@ -192,7 +191,6 @@ TEST_CASE("solve_periodic")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
-            double h2inv = N * N; // h = 1/N -> 1/h = N
 
             double h = 1.0 / static_cast<double>(N);
             mgcl_test::fill27pLaplace(s, h, false);
@@ -264,7 +262,6 @@ TEST_CASE("solve_periodic")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
-            double h2inv = N * N; // h = 1/N -> 1/h = N
 
             double h = 1.0 / static_cast<double>(N);
             mgcl_test::fill7pLaplace(s, h, false);
@@ -309,7 +306,6 @@ TEST_CASE("solve_periodic")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
-            double h2inv = N * N; // h = 1/N -> 1/h = N
 
             double h = 1.0 / static_cast<double>(N);
             mgcl_test::fill27pLaplace(s, h, false);
