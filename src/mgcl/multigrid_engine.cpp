@@ -612,4 +612,100 @@ namespace mgcl
         return a_2h;
     }
 
+    std::unique_ptr<VaryingStencilGpu> MultigridEngine::galerkinHandcrafted(VaryingStencilGpu& a_h, int gh_a2h,
+                                                                            int resm, int resn, int reso,
+                                                                            cl_program program, cl_command_queue queue, cl_context context,
+                                                                            conf::KernelConfig* kernelConfig, ProfilingData* pd)
+    {
+        // Make sure a_h has two ghosts at each border for periodic bc.
+        if (a_h.getGh() < 1 || a_h.getGh() < 1 || a_h.getGh() < 1)
+            error("galerkin: a_h needs to have at least 1 ghosts at each border for periodic bc!");
+
+        if (gh_a2h < 1)
+            error("galerkin: gh_a2h must be at least 1.");
+
+        // TODO sanity checks on resm, resn, reso?
+
+        // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
+        // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
+        auto r = create3dFullWeightRestrictionStencilGpu(context, queue, program);
+        auto p = create3dBilinearProlongationStencilGpu(context, queue, program);
+
+        auto a_2h = std::make_unique<VaryingStencilGpu>(resm, resn, reso, 3, gh_a2h, context, queue, program);
+
+        int err;
+
+        // Create the compute kernel from the program
+        const char* kernelName = "galerkin_handcrafted";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
+        mgclCheckError(err, "Creating kernel");
+
+        cl_mem a_h_raw = a_h.getBuf();
+        cl_mem a_2h_raw = a_2h->getBuf();
+        cl_mem r_raw = r.getBuf();
+        cl_mem p_raw = p.getBuf();
+
+        int mgh_f = a_h.getMgh();
+        int ngh_f = a_h.getNgh();
+        int ogh_f = a_h.getOgh();
+        int m_c_loc = a_h.getM() >> 1;
+        int n_c_loc = a_h.getN() >> 1;
+        int o_c_loc = a_h.getO() >> 1;
+        int gh_f = a_h.getGh();
+        int gh_c = a_2h->getGh();
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &a_h_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &a_2h_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &r_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &p_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh_f);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh_f);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh_f);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m_c_loc);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n_c_loc);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o_c_loc);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &resm);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &resn);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &reso);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh_f);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh_c);
+        mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per local real coarse grid point.
+        size_t global = (a_h.getM() >> 1) * (a_h.getN() >> 1) * (a_h.getO() >> 1);
+        size_t local = 128;
+
+        // Apply kernel config, if available
+        if (kernelConfig)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*kernelConfig, kernelName, global);
+            local = static_cast<size_t>(global > c[0] ? c[0] : global);
+        }
+
+        // pad global size to fit multiple of local size
+        if (global % local != 0)
+            global += local - (global % local);
+
+        cl_event ev;
+
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
+        mgclCheckError(err, "Enqueueing update ghosts of varying stencil kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(queue, ev, kernelName,
+                               {global, 0, 0},
+                               {local, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        err = clReleaseKernel(kernel);
+        mgclCheckError(err, "Releasing update ghosts of varying stencil kernel");
+
+        return a_2h;
+    }
+
 }
