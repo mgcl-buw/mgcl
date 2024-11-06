@@ -408,7 +408,7 @@ namespace mgcl
                 {
                     // Call Galerkin on each rank, if not above threshold, or else only on root.
                     if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
-                        lvCoarse.stencilValues = MultigridEngine::galerkinOptimized(
+                        lvCoarse.stencilValues = MultigridEngine::galerkinHandcrafted(
                             *lvFine.getStencilValues(), gh_sv,
                             svm, svn, svo);
 
@@ -429,7 +429,7 @@ namespace mgcl
                 {
                     // Call Galerkin on each rank, if not above threshold, or else only on root.
                     if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
-                        lvCoarse.stencilValuesGpu = MultigridEngine::galerkinOptimized(
+                        lvCoarse.stencilValuesGpu = MultigridEngine::galerkinHandcrafted(
                             *lvFine.getStencilValuesGpu(), gh_sv,
                             svm, svn, svo,
                             getProgram(), getCommands(), getContext(),

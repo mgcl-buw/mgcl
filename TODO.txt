@@ -29,6 +29,7 @@
 - remove stencil multiplication stuff
 - check solving tests with 27p Laplace and Varying
 - automatically optimize mpiLevelThreshold by checking available gpu size
+- bench against different rap_type in Hypre
 
 Done:
 - aggregate residual norm on gpu
