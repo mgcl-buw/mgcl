@@ -860,7 +860,7 @@ TEST_CASE("ocl_galerkinHandcrafted_vs_galerkinOptimized")
     int o = 8;
     int gh = 1;
 
-    mgcl_test::TestUtility tu(deviceType);
+    mgcl_test::TestUtility tu(deviceType, true);
 
     mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
     a_h.fill1dIndex(false);
@@ -869,12 +869,16 @@ TEST_CASE("ocl_galerkinHandcrafted_vs_galerkinOptimized")
     mgcl::VaryingStencilGpu a_h_gpu(m, n, o, 3, gh, tu.getContext(), tu.getCommands(), tu.getProgram());
     a_h_gpu.fill(a_h, tu.getCommands(), true);
 
-    auto a_2h_gpu = mgcl::MultigridEngine::galerkinOptimized(a_h_gpu, gh, m >> 1, n >> 1, o >> 1, tu.getProgram(), tu.getCommands(), tu.getContext(), nullptr, nullptr);
+    auto pd = std::make_unique<mgcl::ProfilingData>();
+
+    auto a_2h_gpu = mgcl::MultigridEngine::galerkinOptimized(a_h_gpu, gh, m >> 1, n >> 1, o >> 1, tu.getProgram(), tu.getCommands(), tu.getContext(), nullptr, pd.get());
     auto a_2h = a_2h_gpu->read(tu.getCommands(), true);
 
     auto a_2h_hc_gpu = mgcl::MultigridEngine::galerkinHandcrafted(a_h_gpu, gh, m >> 1, n >> 1, o >> 1,
-                                                                  tu.getProgram(), tu.getCommands(), tu.getContext(), nullptr, nullptr);
+                                                                  tu.getProgram(), tu.getCommands(), tu.getContext(), nullptr, pd.get());
     auto a_2h_hc = a_2h_hc_gpu->read(tu.getCommands(), true);
+
+    pd->printBestTimingsPerKernel();
 
     REQUIRE(a_2h.isEqual(a_2h_hc));
 }

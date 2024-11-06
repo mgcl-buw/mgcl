@@ -25,7 +25,10 @@ mgcl_test::TestUtility::TestUtility(std::string deviceName)
     problem->printDeviceInfo();
 }
 
-mgcl_test::TestUtility::TestUtility(cl_device_type deviceType)
+mgcl_test::TestUtility::TestUtility(cl_device_type deviceType) : mgcl_test::TestUtility(deviceType, false) {}
+
+mgcl_test::TestUtility::TestUtility(cl_device_type deviceType, bool profilingEnabled)
+    : profilingEnabled(profilingEnabled)
 {
     if (!deviceAvailable("", deviceType))
     {
@@ -42,6 +45,7 @@ mgcl_test::TestUtility::TestUtility(cl_device_type deviceType)
     problem = std::make_shared<mgcl::Problem>(2, 2, 2);
     problem->setSilent(true);
     problem->setDeviceType(deviceType);
+    problem->setProfilingEnabled(profilingEnabled);
     problem->initOpenCL();
     problem->printDeviceInfo();
 }

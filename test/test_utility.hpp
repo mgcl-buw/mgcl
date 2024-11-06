@@ -27,11 +27,13 @@ namespace mgcl_test
     private:
         std::shared_ptr<mgcl::Problem> problem;
         std::vector<cl_mem> openclBuffers;
+        bool profilingEnabled = false;
 
     public:
         TestUtility();
         TestUtility(std::string deviceName);
         TestUtility(cl_device_type deviceType);
+        TestUtility(cl_device_type deviceType, bool profilingEnabled);
         TestUtility(std::shared_ptr<mgcl::Problem> problem);
         ~TestUtility();
         cl_mem createOpenCLBuffer(mgcl::Cuboid& c);
