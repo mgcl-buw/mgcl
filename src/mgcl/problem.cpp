@@ -1170,6 +1170,16 @@ namespace mgcl
         return openCLHelper.program;
     }
 
+    void Problem::setBinaryFile(const std::string& binaryFile_)
+    {
+        openCLHelper.setBinaryFile(binaryFile_);
+    }
+
+    std::string Problem::getBinaryFile() const
+    {
+        return openCLHelper.getBinaryFile();
+    }
+
     bool Problem::getIgnoreTol() const
     {
         return ignoreTol;

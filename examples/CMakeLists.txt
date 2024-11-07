@@ -45,4 +45,13 @@ target_link_libraries(example_profile PRIVATE mgcl)
 # target_compile_options(mgcl_tune PRIVATE "-pg")
 # target_link_options(mgcl_tune PRIVATE "-pg")
 
+# ==========================
+# example_use_binary, demonstrates the usage of a prebuilt kernel binary
+set(SOURCES_EXAMPLE_USE_BINARY example_use_binary.cpp)
+
+add_executable(example_use_binary ${SOURCES_EXAMPLE_USE_BINARY})
+target_link_libraries(example_use_binary PRIVATE mgcl)
+# target_compile_options(mgcl_tune PRIVATE "-pg")
+# target_link_options(mgcl_tune PRIVATE "-pg")
+
 

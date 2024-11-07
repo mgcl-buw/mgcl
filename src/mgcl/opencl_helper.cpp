@@ -147,22 +147,53 @@ namespace mgcl
         err = clGetDeviceInfo(deviceId, CL_DEVICE_TYPE, sizeof(deviceType), &deviceType, nullptr);
         mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
 
-        // read kernel source
-        std::string kernelSource;
-        const char* ksc;
-        if (readKernelFromFile)
+        // if binaryPath is set, check if it exists and use it instead of recompiling
+        std::ifstream fbin(binaryFile, std::ios::binary | std::ios::in);
+        if (binaryFile != "" && fbin)
         {
-            kernelSource = loadKernelSource(kernelFile);
-            ksc = kernelSource.c_str();
+            if (!problem->silent)
+            {
+                std::cout << "mgcl: Found and using binary file: " << binaryFile << std::endl;
+            }
+
+            // Create the compute program from the binary
+            size_t binarySize;
+            fbin.seekg(0, std::ios::end);
+            binarySize = fbin.tellg();
+            fbin.seekg(0, std::ios::beg);
+
+            unsigned char* binary = new unsigned char[binarySize];
+            fbin.read(reinterpret_cast<char*>(binary), binarySize);
+
+            program = clCreateProgramWithBinary(context, 1, &deviceId, &binarySize,
+                                                const_cast<const unsigned char**>(&binary), nullptr, &err);
+            delete[] binary;
+            mgclCheckError(err, "clCreateProgramWithBinary");
         }
         else
         {
-            ksc = MGCL_KERNEL_SOURCE.c_str();
-        }
+            if (!problem->silent)
+            {
+                std::cout << "mgcl: No binary file given or not found. Building from source." << std::endl;
+            }
 
-        // Create the compute program from the source buffer
-        program = clCreateProgramWithSource(context, 1, &ksc, nullptr, &err);
-        mgclCheckError(err, "Creating program");
+            // read kernel source
+            std::string kernelSource;
+            const char* ksc;
+            if (readKernelFromFile)
+            {
+                kernelSource = loadKernelSource(kernelFile);
+                ksc = kernelSource.c_str();
+            }
+            else
+            {
+                ksc = MGCL_KERNEL_SOURCE.c_str();
+            }
+
+            // Create the compute program from the source buffer
+            program = clCreateProgramWithSource(context, 1, &ksc, nullptr, &err);
+            mgclCheckError(err, "Creating program");
+        }
 
         // Build the program
         err = clBuildProgram(program, 0, nullptr, "-cl-fast-relaxed-math", nullptr, nullptr);
@@ -184,6 +215,29 @@ namespace mgcl
             free(log);
 
             assert(err == CL_SUCCESS && "Building the kernel failed.");
+        }
+
+        // Save the program binary if binaryFile is not empty and binaryFile does not exist yet
+        if (binaryFile != "" && !fbin)
+        {
+            if (!problem->silent)
+            {
+                std::cout << "mgcl: Saving binary file to: " << binaryFile << std::endl;
+            }
+
+            // Save the program binary to "test.bin"
+            size_t binarySize;
+            err = clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binarySize, nullptr);
+            mgclCheckError(err, "clGetProgramInfo(CL_PROGRAM_BINARY_SIZES)");
+
+            unsigned char* binary = new unsigned char[binarySize];
+            err = clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(unsigned char*), &binary, nullptr);
+            mgclCheckError(err, "clGetProgramInfo(CL_PROGRAM_BINARIES)");
+
+            std::ofstream binaryFileOut(binaryFile, std::ios::out | std::ios::binary);
+            binaryFileOut.write(reinterpret_cast<char*>(binary), binarySize);
+            binaryFileOut.close();
+            delete[] binary;
         }
     }
 
@@ -702,6 +756,16 @@ namespace mgcl
     Problem* OpenCLHelper::getProblem() const
     {
         return problem;
+    }
+
+    std::string OpenCLHelper::getBinaryFile() const
+    {
+        return binaryFile;
+    }
+
+    void OpenCLHelper::setBinaryFile(const std::string& binaryFile_)
+    {
+        binaryFile = binaryFile_;
     }
 
     cl_command_queue OpenCLHelper::getCommands() const

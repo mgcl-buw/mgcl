@@ -7,6 +7,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include <fstream>
 #include <iostream>
 
 #include "../src/mgcl/cuboid.hpp"
@@ -87,5 +88,31 @@ TEST_CASE("OpenCLHelper")
     SECTION("setKernelFile throwing")
     {
         REQUIRE_THROWS(openCLHelper.setKernelFile("kjhnfkasdf"));
+    }
+
+    SECTION("usingBinaryFile")
+    {
+        // Create random binary file name
+        std::string binaryFileName = "binary_" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count());
+
+        // Remove the binary file if it already exists
+        std::remove(binaryFileName.c_str());
+
+        REQUIRE_NOTHROW(openCLHelper.setBinaryFile(binaryFileName));
+        REQUIRE(openCLHelper.getBinaryFile() == binaryFileName);
+
+        // On first init, the program should be compiled from source, as the binary does not exist
+        openCLHelper.init();
+
+        // Check that the binary file exists
+        std::ifstream f(binaryFileName.c_str());
+        REQUIRE(f.good());
+
+        // On second init, the program should be built from binary. We can't actually check it, but it should not
+        // fail...
+        openCLHelper.init();
+
+        // Remove the binary file to clean up
+        std::remove(binaryFileName.c_str());
     }
 }

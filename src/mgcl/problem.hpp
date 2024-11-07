@@ -332,6 +332,16 @@ namespace mgcl
 
         cl_program getProgram() const;
 
+        /**
+         * @brief Set the path of the OpenCL binary file.
+         * When OpenCL is initialized, mgcl will check if the file exists. If yes, it will be loaded.
+         * Otherwise the kernels are built from source and saved to the binary file.
+         *
+         * @param binaryFile_
+         */
+        void setBinaryFile(const std::string& binaryFile_);
+        std::string getBinaryFile() const;
+
         bool getSilent() const;
         void setSilent(bool silent_);
 
