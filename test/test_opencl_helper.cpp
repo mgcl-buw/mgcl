@@ -24,6 +24,7 @@ TEST_CASE("OpenCLHelper")
     auto v = std::make_shared<mgcl::Cuboid>(4, 4, 4);
     auto f = std::make_shared<mgcl::Cuboid>(4, 4, 4);
     auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
+    p->setUseOpencl(true);
     p->setDeviceType(deviceType);
     auto& openCLHelper = p->getOpenCLHelper();
 
@@ -103,6 +104,7 @@ TEST_CASE("OpenCLHelper")
 
         // On first init, the program should be compiled from source, as the binary does not exist
         openCLHelper.init();
+        p->solve();
 
         // Check that the binary file exists
         std::ifstream f(binaryFileName.c_str());
@@ -111,6 +113,7 @@ TEST_CASE("OpenCLHelper")
         // On second init, the program should be built from binary. We can't actually check it, but it should not
         // fail...
         openCLHelper.init();
+        p->solve();
 
         // Remove the binary file to clean up
         std::remove(binaryFileName.c_str());

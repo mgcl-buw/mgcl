@@ -196,7 +196,8 @@ namespace mgcl
         }
 
         // Build the program
-        err = clBuildProgram(program, 0, nullptr, "-cl-fast-relaxed-math", nullptr, nullptr);
+        err = clBuildProgram(program, 1, &deviceId, "-cl-fast-relaxed-math", nullptr, nullptr);
+        // err = clBuildProgram(program, 1, &deviceId, "-cl-fast-relaxed-math -cl-nv-arch sm_75", nullptr, nullptr);
         if (err != CL_SUCCESS)
         {
             // Determine the size of the log
