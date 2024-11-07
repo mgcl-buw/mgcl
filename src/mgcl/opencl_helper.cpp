@@ -219,7 +219,7 @@ namespace mgcl
         }
 
         // Save the program binary if binaryFile is not empty and binaryFile does not exist yet
-        if (binaryFile != "" && !fbin)
+        if (binaryFile != "" && !fbin && (!problem->useMpi() || problem->mpiRank() == 0))
         {
             if (!problem->silent)
             {
