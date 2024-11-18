@@ -882,3 +882,337 @@ TEST_CASE("ocl_galerkinHandcrafted_vs_galerkinOptimized")
 
     REQUIRE(a_2h.isEqual(a_2h_hc));
 }
+
+// Helper struct for galerkin. Defines an interval with integer start and end.
+typedef struct Interval
+{
+    int start;
+    int end;
+} Interval;
+
+// Returns the intersection of two intervals or [-1,-1] if they don't overlap
+Interval intersect(Interval a, Interval b)
+{
+    Interval ret;
+    // Check if intervals overlap
+    if (a.start <= b.end && b.start <= a.end)
+    {
+        // Calculate start and end points of intersection
+        ret.start = (a.start > b.start) ? a.start : b.start;
+        ret.end = (a.end < b.end) ? a.end : b.end;
+        return ret;
+    }
+    else
+    {
+        // Intervals do not overlap
+        ret.start = -1;
+        ret.end = -1;
+        return ret;
+    }
+};
+
+// Helper struct for galerkin. Defines a grid point with integer 3d coordinates.
+typedef struct Point
+{
+    int x;
+    int y;
+    int z;
+} Point;
+
+// Returns the stencil entry indices of the stencil sitting at locationOfStencil that maps to mapsTo.
+// No check is done, if the mapping is possible, i.e. the returned value might be outside of range [0,2].
+// The result is just the difference of the indices plus one, since the stencil entry indices start at 0
+// and not at -1.
+Point stencilEntryThatMapsTo(Point locationOfStencil, Point mapsTo)
+{
+    Point ret;
+    ret.x = mapsTo.x - locationOfStencil.x + 1;
+    ret.y = mapsTo.y - locationOfStencil.y + 1;
+    ret.z = mapsTo.z - locationOfStencil.z + 1;
+    return ret;
+};
+
+// Returns the stencil entry indices of the stencil sitting at locationOfStencil that maps to mapsTo with radius=2.
+// No check is done, if the mapping is possible, i.e. the returned value might be outside of range [0,4].
+// The result is just the difference of the indices plus two, since the stencil entry indices start at 0
+// and not at -2.
+Point stencilEntryThatMapsToRad2(Point locationOfStencil, Point mapsTo)
+{
+    Point ret;
+    ret.x = mapsTo.x - locationOfStencil.x + 2;
+    ret.y = mapsTo.y - locationOfStencil.y + 2;
+    ret.z = mapsTo.z - locationOfStencil.z + 2;
+    return ret;
+};
+
+// Returns the grid point indices that is mapped to by the stencil entry of another point's stencil with radius=1.
+// stencilEntry must be 0-based, hence the substraction by 1.
+Point pointMappedToByStencilEntry(Point locationOfStencil, Point stencilEntry)
+{
+    Point ret;
+    ret.x = locationOfStencil.x + (stencilEntry.x - 1);
+    ret.y = locationOfStencil.y + (stencilEntry.y - 1);
+    ret.z = locationOfStencil.z + (stencilEntry.z - 1);
+    return ret;
+};
+
+// Returns the grid point indices that is mapped to by the stencil entry of another point's stencil with radius=2.
+// stencilEntry must be 0-based, hence the substraction by 2.
+Point pointMappedToByStencilEntryRad2(Point locationOfStencil, Point stencilEntry)
+{
+    Point ret;
+    ret.x = locationOfStencil.x + (stencilEntry.x - 2);
+    ret.y = locationOfStencil.y + (stencilEntry.y - 2);
+    ret.z = locationOfStencil.z + (stencilEntry.z - 2);
+    return ret;
+};
+
+// Returns the point on the fine grid that is related to the coarse grid point, respecting ghost cells.
+Point coarseToFine(Point p, int ghc, int ghf)
+{
+    Point ret;
+    ret.x = (p.x - ghc) * 2 + 1 + ghf;
+    ret.y = (p.y - ghc) * 2 + 1 + ghf;
+    ret.z = (p.z - ghc) * 2 + 1 + ghf;
+    return ret;
+};
+
+TEST_CASE("galerkinOptimizedCachedRA")
+{
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    int gh = 1;
+
+    mgcl_test::TestUtility tu(deviceType);
+
+    mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
+    a_h.fill1dIndex(false);
+    a_h.updateGhosts();
+
+    mgcl::VaryingStencilGpu a_h_gpu(m, n, o, 3, gh, tu.getContext(), tu.getCommands(), tu.getProgram());
+    a_h_gpu.fill(a_h, tu.getCommands(), true);
+
+    auto a_2h_gpu = mgcl::MultigridEngine::galerkinOptimized(a_h_gpu, gh, m >> 1, n >> 1, o >> 1, tu.getProgram(), tu.getCommands(), tu.getContext(), nullptr, nullptr);
+    auto a_2h_check = a_2h_gpu->read(tu.getCommands(), true);
+
+    auto r = mgcl::create3dFullWeightRestrictionStencil();
+    auto p = mgcl::create3dBilinearProlongationStencil();
+
+    int mc = m >> 1;
+    int nc = n >> 1;
+    int oc = o >> 1;
+
+    mgcl::VaryingStencil a_2h(mc, nc, oc, 3, gh, gh, gh);
+
+    // define kernel arguments
+    int m_c_loc = mc;
+    int n_c_loc = nc;
+    int o_c_loc = oc;
+    int gh_f = gh;
+    int gh_c = gh;
+    int mgh_f = a_h.getMgh();
+    int ngh_f = a_h.getNgh();
+    int ogh_f = a_h.getOgh();
+    int m_c_buf = mc;
+    int n_c_buf = nc;
+    int o_c_buf = oc;
+
+    try
+    {
+
+        // for each real coarse grid point and the corresponding fine grid point
+        // for (int ci = gh, fi = gh + 1; ci < mc + gh; ci++, fi += 2)
+        //     for (int cj = gh, fj = gh + 1; cj < nc + gh; cj++, fj += 2)
+        //         for (int ck = gh, fk = gh + 1; ck < oc + gh; ck++, fk += 2)
+        for (int idx = 0; idx < mc * nc * oc; idx++)
+        {
+            int no = n_c_loc * o_c_loc;
+            int i = idx / no;
+            int j = (idx - i * no) / o_c_loc;
+            int k = idx % o_c_loc;
+
+            // only for real cells of coarse grid
+            i += gh_c;
+            j += gh_c;
+            k += gh_c;
+
+            // plane and grid size of ghosted fine grid
+            int nogh_f = ngh_f * ogh_f;
+            int mnogh_f = mgh_f * nogh_f;
+
+            // plane and grid size of ghosted coarse grid
+            int nogh_c = (n_c_buf + 2 * gh_c) * (o_c_buf + 2 * gh_c);
+            int mnogh_c = (m_c_buf + 2 * gh_c) * nogh_c;
+
+            CAPTURE(idx);
+
+            // Calculate only for real cells of coarse grid
+            if (i < m_c_loc + gh_c && n_c_loc + gh_c && o_c_loc + gh_c)
+            {
+                // calculate RA, which does not change for the current RAP entry. Locations of RAP and RA are equal.
+                double ra[125];
+                // for each coefficient of RA (which is a 5x5x5 stencil)
+                for (int ii = 0; ii < 5; ii++)
+                    for (int jj = 0; jj < 5; jj++)
+                        for (int kk = 0; kk < 5; kk++)
+                        {
+                            // calculate fine grid point indices
+                            Point gp_c = {i, j, k};
+                            Point gp_f = coarseToFine(gp_c, gh_c, gh_f);
+                            Point coeff_RA = {ii, jj, kk};
+
+                            // RA_gp_mapto = find grid point mapped to by coeff
+                            Point RA_gp_mapto = pointMappedToByStencilEntryRad2(gp_f, coeff_RA);
+                            // RA_coeff_gps = set of grid points around RA_gp_mapto with radius = 1
+                            Interval RA_coeff_gps[3] = {
+                                {.start = RA_gp_mapto.x - 1, .end = RA_gp_mapto.x + 1},
+                                {.start = RA_gp_mapto.y - 1, .end = RA_gp_mapto.y + 1},
+                                {.start = RA_gp_mapto.z - 1, .end = RA_gp_mapto.z + 1},
+                            };
+                            // R_gps = set of grid points around R with radius = 1
+                            Interval R_gps[3] = {
+                                {.start = gp_f.x - 1, .end = gp_f.x + 1},
+                                {.start = gp_f.y - 1, .end = gp_f.y + 1},
+                                {.start = gp_f.z - 1, .end = gp_f.z + 1},
+                            };
+                            // S_RA_R = intersection(R_gps, RA_coeff_gps)
+                            Interval S_RA_R[3] = {
+                                intersect(R_gps[0], RA_coeff_gps[0]),
+                                intersect(R_gps[1], RA_coeff_gps[1]),
+                                intersect(R_gps[2], RA_coeff_gps[2]),
+                            };
+                            // foreach gp_s_ra_r in S_RA_R:
+                            double sum = 0;
+                            for (int srar_i = S_RA_R[0].start; srar_i <= S_RA_R[0].end; srar_i++)
+                                for (int srar_j = S_RA_R[1].start; srar_j <= S_RA_R[1].end; srar_j++)
+                                    for (int srar_k = S_RA_R[2].start; srar_k <= S_RA_R[2].end; srar_k++)
+                                    {
+                                        // Point that the coeff of R maps to, or where A is located at
+                                        Point gp_srar = {srar_i, srar_j, srar_k};
+                                        Point coeff_r = stencilEntryThatMapsTo(gp_f, gp_srar);
+
+                                        // Coeff in A that maps to the resulting point RA_gp_mapto
+                                        Point coeff_a = stencilEntryThatMapsTo(gp_srar, RA_gp_mapto);
+
+                                        CAPTURE(coeff_a.x, coeff_a.y, coeff_a.z,
+                                                gp_srar.x, gp_srar.y, gp_srar.z,
+                                                coeff_r.x, coeff_r.y, coeff_r.z,
+                                                RA_gp_mapto.x, RA_gp_mapto.y, RA_gp_mapto.z,
+                                                gp_f.x, gp_f.y, gp_f.z,
+                                                i, j, k,
+                                                ii, jj, kk,
+                                                gp_f.x, gp_f.y, gp_f.z,
+                                                gp_srar.x, gp_srar.y, gp_srar.z);
+
+                                        if (coeff_a.x * 9 * mnogh_f + coeff_a.y * 3 * mnogh_f + coeff_a.z * mnogh_f + gp_srar.x * nogh_f + gp_srar.y * ogh_f + gp_srar.z >= a_h.field1d().size() ||
+                                            coeff_r.x * 9 + coeff_r.y * 3 + coeff_r.z >= 27)
+                                        {
+                                            std::cout << "accessing a_h out of bounds:" << std::endl
+                                                      << "index a_h: " << coeff_a.x * 9 * mnogh_f + coeff_a.y * 3 * mnogh_f + coeff_a.z * mnogh_f + gp_srar.x * nogh_f + gp_srar.y * ogh_f + gp_srar.z << std::endl
+                                                      << "index r_h: " << coeff_r.x * 9 + coeff_r.y * 3 + coeff_r.z << std::endl
+                                                      << "coeff_a.xyz: " << coeff_a.x << ", " << coeff_a.y << ", " << coeff_a.z << std::endl
+                                                      << "coeff_r.xyz: " << coeff_r.x << ", " << coeff_r.y << ", " << coeff_r.z << std::endl
+                                                      << "gp_srar.xyz: " << gp_srar.x << ", " << gp_srar.y << ", " << gp_srar.z << std::endl
+                                                      << "RA_gp_mapto: " << RA_gp_mapto.x << ", " << RA_gp_mapto.y << ", " << RA_gp_mapto.z << std::endl
+                                                      << "S_RA_R: " << S_RA_R[0].start << ", " << S_RA_R[0].end << ", " << S_RA_R[1].start << ", " << S_RA_R[1].end << ", " << S_RA_R[2].start << ", " << S_RA_R[2].end << std::endl
+                                                      << "gp_f: " << gp_f.x << ", " << gp_f.y << ", " << gp_f.z << std::endl
+                                                      << "ii, jj, kk: " << ii << ", " << jj << ", " << kk << std::endl;
+                                            FAIL("accessing a_h or r out of bounds");
+                                        }
+
+                                        // RA(gp, coeff) += R(gp, gp_s_ra_r) * A(gp_s_ra_r, coeff)
+                                        sum += r.field1d().at(coeff_r.x * 9 + coeff_r.y * 3 + coeff_r.z) * a_h.field1d().at(coeff_a.x * 9 * mnogh_f + coeff_a.y * 3 * mnogh_f + coeff_a.z * mnogh_f + gp_srar.x * nogh_f + gp_srar.y * ogh_f + gp_srar.z);
+                                    }
+
+                            // Store in private RA
+                            ra[ii * 25 + jj * 5 + kk] = sum;
+                        }
+
+                // for (int i = a_2h->getGhostsM(); i < (a_h.getM() >> 1) + a_2h->getGhostsM(); i++)
+                //     for (int j = a_2h->getGhostsN(); j < (a_h.getN() >> 1) + a_2h->getGhostsN(); j++)
+                //         for (int k = a_2h->getGhostsO(); k < (a_h.getO() >> 1) + a_2h->getGhostsO(); k++)
+                // for each stencil entry of the coarse grid poiint this work-item maps to
+                for (int ii = 0; ii < 3; ii++)
+                    for (int jj = 0; jj < 3; jj++)
+                        for (int kk = 0; kk < 3; kk++)
+                        {
+                            // calculate fine grid point indices
+                            Point gp_c = {i, j, k};
+                            Point gp_f = coarseToFine(gp_c, gh_c, gh_f);
+                            Point entry_gpc = {ii, jj, kk};
+                            Point entry_gpf = coarseToFine(
+                                pointMappedToByStencilEntry(gp_c, entry_gpc),
+                                gh_c, gh_f);
+
+                            // find intersection S_P of neighbouring points for entry_gpf with reach=1 and gp_f with reach=2
+                            Interval xa = {.start = gp_f.x - 2, .end = gp_f.x + 2};
+                            Interval ya = {.start = gp_f.y - 2, .end = gp_f.y + 2};
+                            Interval za = {.start = gp_f.z - 2, .end = gp_f.z + 2};
+                            Interval xb = {.start = entry_gpf.x - 1, .end = entry_gpf.x + 1};
+                            Interval yb = {.start = entry_gpf.y - 1, .end = entry_gpf.y + 1};
+                            Interval zb = {.start = entry_gpf.z - 1, .end = entry_gpf.z + 1};
+
+                            Interval S_P[3] = {
+                                intersect(xa, xb),
+                                intersect(ya, yb),
+                                intersect(za, zb),
+                            };
+
+                            // Start calc (R*A)*P
+                            double res = 0;
+
+                            // for each fine grid point gp_sp in S_P:
+                            for (int spi = S_P[0].start; spi <= S_P[0].end; spi++)
+                                for (int spj = S_P[1].start; spj <= S_P[1].end; spj++)
+                                    for (int spk = S_P[2].start; spk <= S_P[2].end; spk++)
+                                    {
+                                        Point gp_sp = {spi, spj, spk};
+                                        // tmp_p <- in stencil P located at gp_sp: Find stencil entry entry_p that maps to entry_gpf. Since
+                                        // gp_sp is in S_P, it is ensured that the stencil has a stencil entry that maps to entry_gpf.
+                                        Point tmp_p_indices = stencilEntryThatMapsTo(gp_sp, entry_gpf);
+
+                                        // Use cached RA
+                                        // Find coeff that is mapping to the current gp_sp
+                                        Point coeff_ra = stencilEntryThatMapsToRad2(gp_f, gp_sp);
+
+                                        if (tmp_p_indices.x * 9 + tmp_p_indices.y * 3 + tmp_p_indices.z >= 27)
+                                        {
+                                            std::cout << "accessing p out of bounds:" << std::endl
+                                                      << "idx: " << tmp_p_indices.x * 9 + tmp_p_indices.y * 3 + tmp_p_indices.z << std::endl
+                                                      << "size: " << p.field1d().size() << std::endl
+                                                      << "gp_sp: " << gp_sp.x << ", " << gp_sp.y << ", " << gp_sp.z << std::endl
+                                                      << "tmp_p_indices: " << tmp_p_indices.x << ", " << tmp_p_indices.y << ", " << tmp_p_indices.z << std::endl
+                                                      << "coeff_ra: " << coeff_ra.x << ", " << coeff_ra.y << ", " << coeff_ra.z << std::endl;
+                                            FAIL("accessing p out of bounds");
+                                        }
+
+                                        res += ra[coeff_ra.x * 25 + coeff_ra.y * 5 + coeff_ra.z] * p.field1d().at(tmp_p_indices.x * 9 + tmp_p_indices.y * 3 + tmp_p_indices.z);
+                                        // End calc (R*A)*P
+                                    }
+
+                            // store res in rap
+                            // (*a_2h)[ii][jj][kk][i][j][k] = res;
+                            if (ii * 9 * mnogh_c + jj * 3 * mnogh_c + kk * mnogh_c + i * nogh_c + j * (o_c_buf + 2 * gh_c) + k >= a_2h.field1d().size())
+                            {
+                                std::cout << "accessing a_2h out of bounds:" << std::endl
+                                          << "idx: " << ii * 9 * mnogh_c + jj * 3 * mnogh_c + kk * mnogh_c + i * nogh_c + j * (o_c_buf + 2 * gh_c) + k << std::endl
+                                          << "size: " << a_2h.field1d().size() << std::endl
+                                          << "ii,jj,kk: " << ii << "," << jj << "," << kk << std::endl
+                                          << "i,j,k: " << i << "," << j << "," << k << std::endl;
+                            }
+                            a_2h.field1d().at(ii * 9 * mnogh_c + jj * 3 * mnogh_c + kk * mnogh_c + i * nogh_c + j * (o_c_buf + 2 * gh_c) + k) = res;
+                        }
+            }
+        } // end for idx
+    }
+    catch (...)
+    {
+        // std::cout << str << std::endl;
+        FAIL();
+    }
+
+    REQUIRE(a_2h_check.isEqual(a_2h));
+}
