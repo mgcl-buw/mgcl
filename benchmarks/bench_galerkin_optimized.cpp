@@ -53,7 +53,8 @@ enum class KernelVersion
     DEFAULT,
     POINTER,
     PRIVATE_R_P,
-    PARALLEL_IIJJKK
+    PARALLEL_IIJJKK,
+    CACHED_RA
 };
 
 // Simplified version of optimized galerkin (without kernel config and profiling) as of 08.08.2024.
@@ -95,6 +96,9 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinOptimized(mgcl::VaryingStencilG
         break;
     case KernelVersion::PARALLEL_IIJJKK:
         kernelName = "galerkin_parallel_iijjkk";
+        break;
+    case KernelVersion::CACHED_RA:
+        kernelName = "galerkin_cached_RA";
         break;
     }
     cl_kernel kernel = clCreateKernel(program, kernelName.c_str(), &err);
@@ -403,18 +407,27 @@ TEST_CASE("benchGalerkinOptimizedKernelVersions_checkResults")
             KernelVersion::PRIVATE_R_P);
         auto a_2h_private_rp_h = a_2h_private_rp->read(p.getCommands(), true);
         REQUIRE(a_2h_check_h.isEqual(a_2h_private_rp_h));
+        a_2h_private_rp.reset();
 
         auto a_2h_parallel_iijjkk = galerkinOptimized(
             a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
             KernelVersion::PARALLEL_IIJJKK);
         auto a_2h_parallel_iijjkk_h = a_2h_parallel_iijjkk->read(p.getCommands(), true);
         REQUIRE(a_2h_check_h.isEqual(a_2h_parallel_iijjkk_h));
+        a_2h_parallel_iijjkk.reset();
 
         auto a_2h_pointer = galerkinOptimized(
             a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
             KernelVersion::POINTER);
         auto a_2h_pointer_h = a_2h_pointer->read(p.getCommands(), true);
         REQUIRE(a_2h_check_h.isEqual(a_2h_pointer_h));
+        a_2h_pointer.reset();
+
+        auto a_2h_cached_ra = galerkinOptimized(
+            a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+            KernelVersion::CACHED_RA);
+        auto a_2h_cached_ra_h = a_2h_cached_ra->read(p.getCommands(), true);
+        REQUIRE(a_2h_check_h.isEqual(a_2h_cached_ra_h));
     }
 }
 
@@ -488,6 +501,31 @@ TEST_CASE("benchGalerkinOptimizedKernelVersions")
             res.o = o;
             results.push_back(res);
         }
+
+        {
+            std::string name = std::string("galerkin_optimized_cached_RA_")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o));
+
+            bench.run(std::string(name).c_str(), [&] { //
+                galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::DEFAULT);
+            });
+
+            bench_util::Result res;
+            res.name = name;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            results.push_back(res);
+        }
+
         {
             std::string name = std::string("galerkin_optimized_private_r_p_")
                                    .append(std::to_string(m))
