@@ -1488,6 +1488,174 @@ __kernel void galerkin_cached_RA(
 /**
  * Applies the Galerkin operator, calculating the stencils a_2h for the coarser grid, based on the stencils a_h on the fine grid.
  * Optimized version that does not need full stencil multiplication, but instead directly writes to the resulting stencils.
+ * Caches the calculation of RA per coefficient of RAP in local memory. Each work-item needs 125*sizeof(double) bytes of local memory.
+ * Thus one work-group gets wg-size*125*sizeof(double) bytes of local memory. Each work-item uses a consecutive chunk of local memory,
+ * i.e. wi 0 uses indices 0..124, wi 1 uses 125..249, etc.
+ *
+ * Parallelizes the outermost 3 loops, thus must be called as 1d kernel with
+ *   (a_h_m / 2) * (a_h_n / 2) * (a_h_o / 2) work-items (real grid size).
+ *
+ * Parameters:
+ * a_h: Varying 3x3x3 stencil on fine grid. Has size a_h_m * a_h_n * a_h_o.
+ * a_2h: Varying 3x3x3 stencil on coarse grid. Size depends on level and mpiLevelThreshold (equals resm, resn, reso in host code).
+ * r: Fixed 3x3x3 restriction stencil.
+ * p: Fixed 3x3x3 prolongation stencil.
+ * ra_base: Pointer to base of local memory.
+ * mgh_f, ngh_f, ogh_f: Extends of the fine grid with ghosts.
+ * m_c_loc, n_c_loc, o_c_loc: Extends of the local coarse grid without ghosts, i.e. the points that get written into.
+ * m_c_buf, n_c_buf, o_c_buf: Extends of the coarse grid buffer without ghosts. Only for calculation of the indices.
+ *   This is only different from m_c_loc etc. when using MPI and on rank 0 and on the threshold level.
+ * gh_f: Amount of ghosts of the stencil on the fine grid in one direction.
+ * gh_c: Amount of ghosts of the stencil on the coarse grid in one direction.
+ */
+__kernel void galerkin_cached_RA_localmem(
+    __global double* restrict a_h,
+    __global double* restrict a_2h,
+    __global double* restrict r,
+    __global double* restrict p,
+    __local double* ra_base,
+    const int mgh_f, const int ngh_f, const int ogh_f,
+    const int m_c_loc, const int n_c_loc, const int o_c_loc,
+    const int m_c_buf, const int n_c_buf, const int o_c_buf,
+    const int gh_f, const int gh_c)
+{
+    int idx = get_global_id(0);
+    int no = n_c_loc * o_c_loc;
+    int i = idx / no;
+    int j = (idx - i * no) / o_c_loc;
+    int k = idx % o_c_loc;
+
+    // only for real cells of coarse grid
+    i += gh_c;
+    j += gh_c;
+    k += gh_c;
+
+    // plane and grid size of ghosted fine grid
+    int nogh_f = ngh_f * ogh_f;
+    int mnogh_f = mgh_f * nogh_f;
+
+    // plane and grid size of ghosted coarse grid
+    int nogh_c = (n_c_buf + 2 * gh_c) * (o_c_buf + 2 * gh_c);
+    int mnogh_c = (m_c_buf + 2 * gh_c) * nogh_c;
+
+    // Base of RA for current work-item
+    double* ra = ra_base + get_local_id(0) * 125;
+
+    // Calculate only for real cells of coarse grid
+    if (i < m_c_loc + gh_c && n_c_loc + gh_c && o_c_loc + gh_c)
+    {
+        // calculate RA, which does not change for the current RAP entry. Locations of RAP and RA are equal.
+        // for each coefficient of RA (which is a 5x5x5 stencil)
+        for (int ii = 0; ii < 5; ii++)
+            for (int jj = 0; jj < 5; jj++)
+                for (int kk = 0; kk < 5; kk++)
+                {
+                    // calculate fine grid point indices
+                    Point gp_c = {i, j, k};
+                    Point gp_f = coarseToFine(gp_c, gh_c, gh_f);
+                    Point coeff_RA = {ii, jj, kk};
+
+                    // RA_gp_mapto = find grid point mapped to by coeff
+                    Point RA_gp_mapto = pointMappedToByStencilEntryRad2(gp_f, coeff_RA);
+                    // RA_coeff_gps = set of grid points around RA_gp_mapto with radius = 1
+                    Interval RA_coeff_gps[3] = {
+                        {.start = RA_gp_mapto.x - 1, .end = RA_gp_mapto.x + 1},
+                        {.start = RA_gp_mapto.y - 1, .end = RA_gp_mapto.y + 1},
+                        {.start = RA_gp_mapto.z - 1, .end = RA_gp_mapto.z + 1},
+                    };
+                    // R_gps = set of grid points around R with radius = 1
+                    Interval R_gps[3] = {
+                        {.start = gp_f.x - 1, .end = gp_f.x + 1},
+                        {.start = gp_f.y - 1, .end = gp_f.y + 1},
+                        {.start = gp_f.z - 1, .end = gp_f.z + 1},
+                    };
+                    // S_RA_R = intersection(R_gps, RA_coeff_gps)
+                    Interval S_RA_R[3] = {
+                        intersect(R_gps[0], RA_coeff_gps[0]),
+                        intersect(R_gps[1], RA_coeff_gps[1]),
+                        intersect(R_gps[2], RA_coeff_gps[2]),
+                    };
+                    // foreach gp_s_ra_r in S_RA_R:
+                    double sum = 0;
+                    for (int srar_i = S_RA_R[0].start; srar_i <= S_RA_R[0].end; srar_i++)
+                        for (int srar_j = S_RA_R[1].start; srar_j <= S_RA_R[1].end; srar_j++)
+                            for (int srar_k = S_RA_R[2].start; srar_k <= S_RA_R[2].end; srar_k++)
+                            {
+                                // Point that the coeff of R maps to, or where A is located at
+                                Point gp_srar = {srar_i, srar_j, srar_k};
+                                Point coeff_r = stencilEntryThatMapsTo(gp_f, gp_srar);
+
+                                // Coeff in A that maps to the resulting point RA_gp_mapto
+                                Point coeff_a = stencilEntryThatMapsTo(gp_srar, RA_gp_mapto);
+
+                                // RA(gp, coeff) += R(gp, gp_s_ra_r) * A(gp_s_ra_r, coeff)
+                                sum += r[coeff_r.x * 9 + coeff_r.y * 3 + coeff_r.z] * a_h[coeff_a.x * 9 * mnogh_f + coeff_a.y * 3 * mnogh_f + coeff_a.z * mnogh_f + gp_srar.x * nogh_f + gp_srar.y * ogh_f + gp_srar.z];
+                            }
+
+                    // Store in private RA
+                    ra[ii * 25 + jj * 5 + kk] = sum;
+                }
+
+        // for (int i = a_2h->getGhostsM(); i < (a_h.getM() >> 1) + a_2h->getGhostsM(); i++)
+        //     for (int j = a_2h->getGhostsN(); j < (a_h.getN() >> 1) + a_2h->getGhostsN(); j++)
+        //         for (int k = a_2h->getGhostsO(); k < (a_h.getO() >> 1) + a_2h->getGhostsO(); k++)
+        // for each stencil entry of the coarse grid poiint this work-item maps to
+        for (int ii = 0; ii < 3; ii++)
+            for (int jj = 0; jj < 3; jj++)
+                for (int kk = 0; kk < 3; kk++)
+                {
+                    // calculate fine grid point indices
+                    Point gp_c = {i, j, k};
+                    Point gp_f = coarseToFine(gp_c, gh_c, gh_f);
+                    Point entry_gpc = {ii, jj, kk};
+                    Point entry_gpf = coarseToFine(
+                        pointMappedToByStencilEntry(gp_c, entry_gpc),
+                        gh_c, gh_f);
+
+                    // find intersection S_P of neighbouring points for entry_gpf with reach=1 and gp_f with reach=2
+                    Interval xa = {.start = gp_f.x - 2, .end = gp_f.x + 2};
+                    Interval ya = {.start = gp_f.y - 2, .end = gp_f.y + 2};
+                    Interval za = {.start = gp_f.z - 2, .end = gp_f.z + 2};
+                    Interval xb = {.start = entry_gpf.x - 1, .end = entry_gpf.x + 1};
+                    Interval yb = {.start = entry_gpf.y - 1, .end = entry_gpf.y + 1};
+                    Interval zb = {.start = entry_gpf.z - 1, .end = entry_gpf.z + 1};
+
+                    Interval S_P[3] = {
+                        intersect(xa, xb),
+                        intersect(ya, yb),
+                        intersect(za, zb),
+                    };
+
+                    // Start calc (R*A)*P
+                    double res = 0;
+
+                    // for each fine grid point gp_sp in S_P:
+                    for (int spi = S_P[0].start; spi <= S_P[0].end; spi++)
+                        for (int spj = S_P[1].start; spj <= S_P[1].end; spj++)
+                            for (int spk = S_P[2].start; spk <= S_P[2].end; spk++)
+                            {
+                                Point gp_sp = {spi, spj, spk};
+                                // tmp_p <- in stencil P located at gp_sp: Find stencil entry entry_p that maps to entry_gpf. Since
+                                // gp_sp is in S_P, it is ensured that the stencil has a stencil entry that maps to entry_gpf.
+                                Point tmp_p_indices = stencilEntryThatMapsTo(gp_sp, entry_gpf);
+
+                                // Use cached RA
+                                // Find coeff that is mapping to the current gp_sp
+                                Point coeff_ra = stencilEntryThatMapsToRad2(gp_f, gp_sp);
+
+                                res += ra[coeff_ra.x * 25 + coeff_ra.y * 5 + coeff_ra.z] * p[tmp_p_indices.x * 9 + tmp_p_indices.y * 3 + tmp_p_indices.z];
+                                // End calc (R*A)*P
+                            }
+
+                    // store res in rap
+                    a_2h[ii * 9 * mnogh_c + jj * 3 * mnogh_c + kk * mnogh_c + i * nogh_c + j * (o_c_buf + 2 * gh_c) + k] = res;
+                }
+    }
+}
+
+/**
+ * Applies the Galerkin operator, calculating the stencils a_2h for the coarser grid, based on the stencils a_h on the fine grid.
+ * Optimized version that does not need full stencil multiplication, but instead directly writes to the resulting stencils.
  *
  * Parallelizes the outermost 3 loops, thus must be called as 1d kernel with
  *   (a_h_m / 2) * (a_h_n / 2) * (a_h_o / 2) work-items (real grid size).

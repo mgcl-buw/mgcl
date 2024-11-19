@@ -54,7 +54,8 @@ enum class KernelVersion
     POINTER,
     PRIVATE_R_P,
     PARALLEL_IIJJKK,
-    CACHED_RA
+    CACHED_RA,
+    CACHED_RA_LOCALMEM
 };
 
 // Simplified version of optimized galerkin (without kernel config and profiling) as of 08.08.2024.
@@ -100,6 +101,9 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinOptimized(mgcl::VaryingStencilG
     case KernelVersion::CACHED_RA:
         kernelName = "galerkin_cached_RA";
         break;
+    case KernelVersion::CACHED_RA_LOCALMEM:
+        kernelName = "galerkin_cached_RA_localmem";
+        break;
     }
     cl_kernel kernel = clCreateKernel(program, kernelName.c_str(), &err);
     mgcl::mgclCheckError(err, "Creating kernel");
@@ -118,6 +122,28 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinOptimized(mgcl::VaryingStencilG
     int gh_f = a_h.getGh();
     int gh_c = a_2h->getGh();
 
+    // one work-item per local real coarse grid point.
+    size_t global = (a_h.getM() >> 1) * (a_h.getN() >> 1) * (a_h.getO() >> 1);
+    if (kernelVersion == KernelVersion::PARALLEL_IIJJKK)
+        global *= 27;
+    size_t local = 128;
+
+    if (kernelVersion == KernelVersion::CACHED_RA_LOCALMEM)
+    {
+        local = 32;
+    }
+
+    // // Apply kernel config, if available
+    // if (kernelConfig)
+    // {
+    //     const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*kernelConfig, kernelName, global);
+    //     local = static_cast<size_t>(global > c[0] ? c[0] : global);
+    // }
+
+    // pad global size to fit multiple of local size
+    if (global % local != 0)
+        global += local - (global % local);
+
     // assign kernel arguments
     int pos = 0;
     err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &a_h_raw);
@@ -127,6 +153,12 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinOptimized(mgcl::VaryingStencilG
     {
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &r_raw);
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &p_raw);
+    }
+    if (kernelVersion == KernelVersion::CACHED_RA_LOCALMEM)
+    {
+        size_t localMemSize = local * 125 * sizeof(double); // one wi needs 125 doubles of local memory for caching RA
+        // size_t localMemSize = m_c_loc * n_c_loc * o_c_loc * 125 * sizeof(double); // one wi needs 125 doubles of local memory for caching RA
+        err |= clSetKernelArg(kernel, ++pos, localMemSize, NULL);
     }
     err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh_f);
     mgcl::mgclCheckError(err, "Setting kernel arguments");
@@ -142,28 +174,11 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinOptimized(mgcl::VaryingStencilG
     err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh_c);
     mgcl::mgclCheckError(err, "Setting kernel arguments");
 
-    // one work-item per local real coarse grid point.
-    size_t global = (a_h.getM() >> 1) * (a_h.getN() >> 1) * (a_h.getO() >> 1);
-    if (kernelVersion == KernelVersion::PARALLEL_IIJJKK)
-        global *= 27;
-    size_t local = 128;
-
-    // // Apply kernel config, if available
-    // if (kernelConfig)
-    // {
-    //     const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*kernelConfig, kernelName, global);
-    //     local = static_cast<size_t>(global > c[0] ? c[0] : global);
-    // }
-
-    // pad global size to fit multiple of local size
-    if (global % local != 0)
-        global += local - (global % local);
-
     cl_event ev;
 
     // enqueue kernel
     err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
-    mgcl::mgclCheckError(err, "Enqueueing update ghosts of varying stencil kernel");
+    mgcl::mgclCheckError(err, "Enqueueing galerkin kernel");
 
     // if (pd != nullptr)
     // {
@@ -174,7 +189,7 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinOptimized(mgcl::VaryingStencilG
     mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
     err = clReleaseKernel(kernel);
-    mgcl::mgclCheckError(err, "Releasing update ghosts of varying stencil kernel");
+    mgcl::mgclCheckError(err, "Releasing galerkin kernel");
 
     return a_2h;
 }
@@ -428,6 +443,12 @@ TEST_CASE("benchGalerkinOptimizedKernelVersions_checkResults")
             KernelVersion::CACHED_RA);
         auto a_2h_cached_ra_h = a_2h_cached_ra->read(p.getCommands(), true);
         REQUIRE(a_2h_check_h.isEqual(a_2h_cached_ra_h));
+
+        auto a_2h_cached_ra_localmem = galerkinOptimized(
+            a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+            KernelVersion::CACHED_RA_LOCALMEM);
+        auto a_2h_cached_ra_localmem_h = a_2h_cached_ra_localmem->read(p.getCommands(), true);
+        REQUIRE(a_2h_check_h.isEqual(a_2h_cached_ra_localmem_h));
     }
 }
 
@@ -511,7 +532,30 @@ TEST_CASE("benchGalerkinOptimizedKernelVersions")
                                    .append(std::to_string(o));
 
             bench.run(std::string(name).c_str(), [&] { //
-                galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::DEFAULT);
+                galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::CACHED_RA);
+            });
+
+            bench_util::Result res;
+            res.name = name;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            results.push_back(res);
+        }
+        {
+            std::string name = std::string("galerkin_optimized_cached_RA_localmem_")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o));
+
+            bench.run(std::string(name).c_str(), [&] { //
+                galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::CACHED_RA_LOCALMEM);
             });
 
             bench_util::Result res;
