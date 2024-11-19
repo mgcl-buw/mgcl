@@ -639,6 +639,31 @@ TEST_CASE("benchGalerkinOptimizedKernelVersions")
             res.o = o;
             results.push_back(res);
         }
+
+        {
+            std::string name = std::string("galerkin_handcrafted_")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o));
+
+            bench.run(std::string(name).c_str(), [&] { //
+                galerkinHandcrafted(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext());
+                p.finish();
+            });
+
+            bench_util::Result res;
+            res.name = name;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            results.push_back(res);
+        }
     }
 
     bench_util::printCsvFormat(results);
