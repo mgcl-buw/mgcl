@@ -2092,7 +2092,6 @@ __kernel void galerkin_handcrafted(
  * gh_f: Amount of ghosts of the stencil on the fine grid in one direction.
  * gh_c: Amount of ghosts of the stencil on the coarse grid in one direction.
  */
-//  TODO
 __kernel void galerkin_handcrafted_one_coeff_per_wi(
     __global double* restrict a_h,
     __global double* restrict a_2h,
