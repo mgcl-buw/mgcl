@@ -194,9 +194,16 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinOptimized(mgcl::VaryingStencilG
     return a_2h;
 }
 
+enum class KernelVersionHandcrafted
+{
+    DEFAULT,
+    ONE_COEFF_PER_WI
+};
+
 std::unique_ptr<mgcl::VaryingStencilGpu> galerkinHandcrafted(mgcl::VaryingStencilGpu& a_h, int gh_a2h,
                                                              int resm, int resn, int reso,
-                                                             cl_program program, cl_command_queue queue, cl_context context)
+                                                             cl_program program, cl_command_queue queue, cl_context context,
+                                                             KernelVersionHandcrafted kernelVersion)
 {
     // Make sure a_h has two ghosts at each border for periodic bc.
     if (a_h.getGh() < 1 || a_h.getGh() < 1 || a_h.getGh() < 1)
@@ -218,6 +225,10 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinHandcrafted(mgcl::VaryingStenci
 
     // Create the compute kernel from the program
     const char* kernelName = "galerkin_handcrafted";
+    if (kernelVersion == KernelVersionHandcrafted::ONE_COEFF_PER_WI)
+    {
+        kernelName = "galerkin_handcrafted_one_coeff_per_wi";
+    }
     cl_kernel kernel = clCreateKernel(program, kernelName, &err);
     mgcl::mgclCheckError(err, "Creating kernel");
 
@@ -258,6 +269,11 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinHandcrafted(mgcl::VaryingStenci
     size_t global = (a_h.getM() >> 1) * (a_h.getN() >> 1) * (a_h.getO() >> 1);
     size_t local = 128;
 
+    if (kernelVersion == KernelVersionHandcrafted::ONE_COEFF_PER_WI)
+    {
+        global *= 27;
+    }
+
     // pad global size to fit multiple of local size
     if (global % local != 0)
         global += local - (global % local);
@@ -266,10 +282,10 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinHandcrafted(mgcl::VaryingStenci
 
     // enqueue kernel
     err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
-    mgcl::mgclCheckError(err, "Enqueueing update ghosts of varying stencil kernel");
+    mgcl::mgclCheckError(err, "Enqueueing galerkin kernel");
 
     err = clReleaseKernel(kernel);
-    mgcl::mgclCheckError(err, "Releasing update ghosts of varying stencil kernel");
+    mgcl::mgclCheckError(err, "Enqueueing galerkin kernel");
 
     return a_2h;
 }
@@ -449,6 +465,12 @@ TEST_CASE("benchGalerkinOptimizedKernelVersions_checkResults")
             KernelVersion::CACHED_RA_LOCALMEM);
         auto a_2h_cached_ra_localmem_h = a_2h_cached_ra_localmem->read(p.getCommands(), true);
         REQUIRE(a_2h_check_h.isEqual(a_2h_cached_ra_localmem_h));
+
+        auto a_2h_handcrafted_one_coeff_per_wi = galerkinHandcrafted(
+            a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+            KernelVersionHandcrafted::ONE_COEFF_PER_WI);
+        auto a_2h_handcrafted_one_coeff_per_wi_h = a_2h_handcrafted_one_coeff_per_wi->read(p.getCommands(), true);
+        REQUIRE(a_2h_check_h.isEqual(a_2h_handcrafted_one_coeff_per_wi_h));
     }
 }
 
@@ -649,7 +671,34 @@ TEST_CASE("benchGalerkinOptimizedKernelVersions")
                                    .append(std::to_string(o));
 
             bench.run(std::string(name).c_str(), [&] { //
-                galerkinHandcrafted(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext());
+                galerkinHandcrafted(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+                                    KernelVersionHandcrafted::DEFAULT);
+                p.finish();
+            });
+
+            bench_util::Result res;
+            res.name = name;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            results.push_back(res);
+        }
+
+        {
+            std::string name = std::string("galerkin_handcrafted_one_coeff_per_wi_")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o));
+
+            bench.run(std::string(name).c_str(), [&] { //
+                galerkinHandcrafted(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+                                    KernelVersionHandcrafted::ONE_COEFF_PER_WI);
                 p.finish();
             });
 
@@ -747,7 +796,8 @@ TEST_CASE("benchGalerkinOptimizedVsHandcrafted")
                                    .append(std::to_string(o));
 
             bench.run(std::string(name).c_str(), [&] { //
-                galerkinHandcrafted(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext());
+                galerkinHandcrafted(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+                                    KernelVersionHandcrafted::DEFAULT);
                 p.finish();
             });
 
