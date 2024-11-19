@@ -290,6 +290,90 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinHandcrafted(mgcl::VaryingStenci
     return a_2h;
 }
 
+// Calls handcrafted split kernel versions, i.e. one kernel per coefficient
+std::unique_ptr<mgcl::VaryingStencilGpu> galerkinHandcraftedSplitKernel(mgcl::VaryingStencilGpu& a_h, int gh_a2h,
+                                                                        int resm, int resn, int reso,
+                                                                        cl_program program, cl_command_queue queue, cl_context context)
+{
+    // Make sure a_h has two ghosts at each border for periodic bc.
+    if (a_h.getGh() < 1 || a_h.getGh() < 1 || a_h.getGh() < 1)
+        error("galerkin: a_h needs to have at least 1 ghosts at each border for periodic bc!");
+
+    if (gh_a2h < 1)
+        error("galerkin: gh_a2h must be at least 1.");
+
+    // TODO sanity checks on resm, resn, reso?
+
+    // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
+    // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
+    auto r = mgcl::create3dFullWeightRestrictionStencilGpu(context, queue, program);
+    auto p = mgcl::create3dBilinearProlongationStencilGpu(context, queue, program);
+
+    auto a_2h = std::make_unique<mgcl::VaryingStencilGpu>(resm, resn, reso, 3, gh_a2h, context, queue, program);
+
+    int err;
+
+    cl_mem a_h_raw = a_h.getBuf();
+    cl_mem a_2h_raw = a_2h->getBuf();
+    cl_mem r_raw = r.getBuf();
+    cl_mem p_raw = p.getBuf();
+
+    int mgh_f = a_h.getMgh();
+    int ngh_f = a_h.getNgh();
+    int ogh_f = a_h.getOgh();
+    int m_c_loc = a_h.getM() >> 1;
+    int n_c_loc = a_h.getN() >> 1;
+    int o_c_loc = a_h.getO() >> 1;
+    int gh_f = a_h.getGh();
+    int gh_c = a_2h->getGh();
+
+    // Create the compute kernel from the program
+    for (size_t i = 0; i < 27; i++)
+    {
+        std::ostringstream oss;
+        oss << "galerkin_handcrafted_one_coeff_per_wi_" << std::setw(2) << std::setfill('0') << i;
+        std::string kernelName = oss.str();
+        cl_kernel kernel = clCreateKernel(program, kernelName.c_str(), &err);
+        mgcl::mgclCheckError(err, "Creating kernel");
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &a_h_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &a_2h_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &r_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &p_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh_f);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh_f);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh_f);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m_c_loc);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n_c_loc);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o_c_loc);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &resm);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &resn);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &reso);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh_f);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh_c);
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per local real coarse grid point.
+        size_t global = (a_h.getM() >> 1) * (a_h.getN() >> 1) * (a_h.getO() >> 1);
+        size_t local = 128;
+
+        // pad global size to fit multiple of local size
+        if (global % local != 0)
+            global += local - (global % local);
+
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global, &local, 0, NULL, NULL);
+        mgcl::mgclCheckError(err, "Enqueueing galerkin kernel");
+
+        err = clReleaseKernel(kernel);
+        mgcl::mgclCheckError(err, "Enqueueing galerkin kernel");
+    }
+
+    return a_2h;
+}
+
 // Benchs the old galerkin version (using stencil multiplication) vs. the new optimized one, that writes
 // directly to the result stencil
 // Creation date: 08.08.2024
@@ -432,45 +516,64 @@ TEST_CASE("benchGalerkinOptimizedKernelVersions_checkResults")
             KernelVersion::DEFAULT);
         auto a_2h_check_h = a_2h_check->read(p.getCommands(), true);
 
-        auto a_2h_private_rp = galerkinOptimized(
-            a_h, 2, m >> 1, n >> 1, o >> 1,
-            p.getProgram(), p.getCommands(), p.getContext(),
-            KernelVersion::PRIVATE_R_P);
-        auto a_2h_private_rp_h = a_2h_private_rp->read(p.getCommands(), true);
-        REQUIRE(a_2h_check_h.isEqual(a_2h_private_rp_h));
-        a_2h_private_rp.reset();
+        {
+            auto a_2h_private_rp = galerkinOptimized(
+                a_h, 2, m >> 1, n >> 1, o >> 1,
+                p.getProgram(), p.getCommands(), p.getContext(),
+                KernelVersion::PRIVATE_R_P);
+            auto a_2h_private_rp_h = a_2h_private_rp->read(p.getCommands(), true);
+            REQUIRE(a_2h_check_h.isEqual(a_2h_private_rp_h));
+            a_2h_private_rp.reset();
+        }
 
-        auto a_2h_parallel_iijjkk = galerkinOptimized(
-            a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
-            KernelVersion::PARALLEL_IIJJKK);
-        auto a_2h_parallel_iijjkk_h = a_2h_parallel_iijjkk->read(p.getCommands(), true);
-        REQUIRE(a_2h_check_h.isEqual(a_2h_parallel_iijjkk_h));
-        a_2h_parallel_iijjkk.reset();
+        {
+            auto a_2h_parallel_iijjkk = galerkinOptimized(
+                a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+                KernelVersion::PARALLEL_IIJJKK);
+            auto a_2h_parallel_iijjkk_h = a_2h_parallel_iijjkk->read(p.getCommands(), true);
+            REQUIRE(a_2h_check_h.isEqual(a_2h_parallel_iijjkk_h));
+            a_2h_parallel_iijjkk.reset();
+        }
 
-        auto a_2h_pointer = galerkinOptimized(
-            a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
-            KernelVersion::POINTER);
-        auto a_2h_pointer_h = a_2h_pointer->read(p.getCommands(), true);
-        REQUIRE(a_2h_check_h.isEqual(a_2h_pointer_h));
-        a_2h_pointer.reset();
+        {
+            auto a_2h_pointer = galerkinOptimized(
+                a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+                KernelVersion::POINTER);
+            auto a_2h_pointer_h = a_2h_pointer->read(p.getCommands(), true);
+            REQUIRE(a_2h_check_h.isEqual(a_2h_pointer_h));
+            a_2h_pointer.reset();
+        }
 
-        auto a_2h_cached_ra = galerkinOptimized(
-            a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
-            KernelVersion::CACHED_RA);
-        auto a_2h_cached_ra_h = a_2h_cached_ra->read(p.getCommands(), true);
-        REQUIRE(a_2h_check_h.isEqual(a_2h_cached_ra_h));
+        {
+            auto a_2h_cached_ra = galerkinOptimized(
+                a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+                KernelVersion::CACHED_RA);
+            auto a_2h_cached_ra_h = a_2h_cached_ra->read(p.getCommands(), true);
+            REQUIRE(a_2h_check_h.isEqual(a_2h_cached_ra_h));
+        }
 
-        auto a_2h_cached_ra_localmem = galerkinOptimized(
-            a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
-            KernelVersion::CACHED_RA_LOCALMEM);
-        auto a_2h_cached_ra_localmem_h = a_2h_cached_ra_localmem->read(p.getCommands(), true);
-        REQUIRE(a_2h_check_h.isEqual(a_2h_cached_ra_localmem_h));
+        {
+            auto a_2h_cached_ra_localmem = galerkinOptimized(
+                a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+                KernelVersion::CACHED_RA_LOCALMEM);
+            auto a_2h_cached_ra_localmem_h = a_2h_cached_ra_localmem->read(p.getCommands(), true);
+            REQUIRE(a_2h_check_h.isEqual(a_2h_cached_ra_localmem_h));
+        }
 
-        auto a_2h_handcrafted_one_coeff_per_wi = galerkinHandcrafted(
-            a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
-            KernelVersionHandcrafted::ONE_COEFF_PER_WI);
-        auto a_2h_handcrafted_one_coeff_per_wi_h = a_2h_handcrafted_one_coeff_per_wi->read(p.getCommands(), true);
-        REQUIRE(a_2h_check_h.isEqual(a_2h_handcrafted_one_coeff_per_wi_h));
+        {
+            auto a_2h_handcrafted_one_coeff_per_wi = galerkinHandcrafted(
+                a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+                KernelVersionHandcrafted::ONE_COEFF_PER_WI);
+            auto a_2h_handcrafted_one_coeff_per_wi_h = a_2h_handcrafted_one_coeff_per_wi->read(p.getCommands(), true);
+            REQUIRE(a_2h_check_h.isEqual(a_2h_handcrafted_one_coeff_per_wi_h));
+        }
+
+        {
+            auto a_2h_handcrafted_one_coeff_per_wi_split_kernel = galerkinHandcraftedSplitKernel(
+                a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext());
+            auto a_2h_handcrafted_one_coeff_per_wi_split_kernel_h = a_2h_handcrafted_one_coeff_per_wi_split_kernel->read(p.getCommands(), true);
+            REQUIRE(a_2h_check_h.isEqual(a_2h_handcrafted_one_coeff_per_wi_split_kernel_h));
+        }
     }
 }
 
@@ -699,6 +802,31 @@ TEST_CASE("benchGalerkinOptimizedKernelVersions")
             bench.run(std::string(name).c_str(), [&] { //
                 galerkinHandcrafted(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
                                     KernelVersionHandcrafted::ONE_COEFF_PER_WI);
+                p.finish();
+            });
+
+            bench_util::Result res;
+            res.name = name;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            results.push_back(res);
+        }
+
+        {
+            std::string name = std::string("galerkin_handcrafted_one_coeff_per_wi_split_kernel_")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o));
+
+            bench.run(std::string(name).c_str(), [&] { //
+                galerkinHandcraftedSplitKernel(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext());
                 p.finish();
             });
 
