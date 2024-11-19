@@ -197,7 +197,8 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinOptimized(mgcl::VaryingStencilG
 enum class KernelVersionHandcrafted
 {
     DEFAULT,
-    ONE_COEFF_PER_WI
+    ONE_COEFF_PER_WI,
+    CACHED_RA
 };
 
 std::unique_ptr<mgcl::VaryingStencilGpu> galerkinHandcrafted(mgcl::VaryingStencilGpu& a_h, int gh_a2h,
@@ -228,6 +229,10 @@ std::unique_ptr<mgcl::VaryingStencilGpu> galerkinHandcrafted(mgcl::VaryingStenci
     if (kernelVersion == KernelVersionHandcrafted::ONE_COEFF_PER_WI)
     {
         kernelName = "galerkin_handcrafted_one_coeff_per_wi";
+    }
+    else if (kernelVersion == KernelVersionHandcrafted::CACHED_RA)
+    {
+        kernelName = "galerkin_handcrafted_cached_RA";
     }
     cl_kernel kernel = clCreateKernel(program, kernelName, &err);
     mgcl::mgclCheckError(err, "Creating kernel");
@@ -574,6 +579,13 @@ TEST_CASE("benchGalerkinOptimizedKernelVersions_checkResults")
             auto a_2h_handcrafted_one_coeff_per_wi_split_kernel_h = a_2h_handcrafted_one_coeff_per_wi_split_kernel->read(p.getCommands(), true);
             REQUIRE(a_2h_check_h.isEqual(a_2h_handcrafted_one_coeff_per_wi_split_kernel_h));
         }
+        {
+            auto a_2h_handcrafted_cached_RA = galerkinHandcrafted(
+                a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+                KernelVersionHandcrafted::ONE_COEFF_PER_WI);
+            auto a_2h_handcrafted_cached_RA_h = a_2h_handcrafted_cached_RA->read(p.getCommands(), true);
+            REQUIRE(a_2h_check_h.isEqual(a_2h_handcrafted_cached_RA_h));
+        }
     }
 }
 
@@ -776,6 +788,31 @@ TEST_CASE("benchGalerkinOptimizedKernelVersions")
             bench.run(std::string(name).c_str(), [&] { //
                 galerkinHandcrafted(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
                                     KernelVersionHandcrafted::DEFAULT);
+                p.finish();
+            });
+
+            bench_util::Result res;
+            res.name = name;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            results.push_back(res);
+        }
+        {
+            std::string name = std::string("galerkin_handcrafted_cached_RA_")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o));
+
+            bench.run(std::string(name).c_str(), [&] { //
+                galerkinHandcrafted(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+                                    KernelVersionHandcrafted::CACHED_RA);
                 p.finish();
             });
 
