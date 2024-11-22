@@ -1122,6 +1122,14 @@ namespace mgcl
     {
         assert(!openCLHelper.isInitialized() && "OpenCLHelper is already initialized!");
         openCLHelper.setKernelFile(kernelFile_);
+        if (!kernelFile_.empty())
+        {
+            openCLHelper.setReadKernelFromFile(true);
+        }
+        else
+        {
+            openCLHelper.setReadKernelFromFile(false);
+        }
     }
 
     cl_device_type Problem::getDeviceType() const
