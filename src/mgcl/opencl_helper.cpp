@@ -175,6 +175,11 @@ namespace mgcl
             if (!problem->silent)
             {
                 std::cout << "mgcl: No binary file given or not found. Building from source." << std::endl;
+
+                if (!readKernelFromFile && kernelFile != "")
+                {
+                    std::cout << "mgcl: Warning: kernelFile was set, but readKernelFromFile is false." << std::endl;
+                }
             }
 
             // read kernel source
