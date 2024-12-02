@@ -425,7 +425,7 @@ TEST_CASE("benchGalerkinOldVsOptimized")
             .relative(false);
 
         {
-            std::string name = std::string("galerkin_stencil_arithmetic_")
+            std::string name = std::string("galerkin_optimized_")
                                    .append(std::to_string(m))
                                    .append("_")
                                    .append(std::to_string(n))
@@ -433,7 +433,7 @@ TEST_CASE("benchGalerkinOldVsOptimized")
                                    .append(std::to_string(o));
 
             bench.run(std::string(name).c_str(), [&] { //
-                galerkinStencilMult(a_h, 2, p.getProgram(), p.getCommands(), p.getContext(), m >> 1, n >> 1, o >> 1);
+                galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::DEFAULT);
             });
 
             bench_util::Result res;
@@ -447,9 +447,8 @@ TEST_CASE("benchGalerkinOldVsOptimized")
             res.o = o;
             results.push_back(res);
         }
-
         {
-            std::string name = std::string("galerkin_optimized_")
+            std::string name = std::string("galerkin_stencil_arithmetic_")
                                    .append(std::to_string(m))
                                    .append("_")
                                    .append(std::to_string(n))
@@ -457,7 +456,7 @@ TEST_CASE("benchGalerkinOldVsOptimized")
                                    .append(std::to_string(o));
 
             bench.run(std::string(name).c_str(), [&] { //
-                galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::DEFAULT);
+                galerkinStencilMult(a_h, 2, p.getProgram(), p.getCommands(), p.getContext(), m >> 1, n >> 1, o >> 1);
             });
 
             bench_util::Result res;
