@@ -1610,3 +1610,110 @@ TEST_CASE("galerkinTraceCachedRA", "[.]")
 
     std::cout << ss.str() << std::endl;
 }
+
+// Checks if the sequential FixedStencil Galerkin version yields the same result as for VaryingStencil filled with values
+// of fixed stencil
+TEST_CASE("seq_fixed_stencil")
+{
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    int gh = 1;
+
+    mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
+    mgcl::FixedStencil fs(3);
+    fs.fillRandom();
+
+    // copy fixed to varying
+    for (int i = 0; i < a_h.getMgh(); i++)
+        for (int j = 0; j < a_h.getNgh(); j++)
+            for (int k = 0; k < a_h.getOgh(); k++)
+                for (int ii = 0; ii < 3; ii++)
+                    for (int jj = 0; jj < 3; jj++)
+                        for (int kk = 0; kk < 3; kk++)
+                        {
+                            a_h[ii][jj][kk][i][j][k] = fs[ii][jj][kk];
+                        }
+
+    // mgcl_test::TestUtility tu(deviceType);
+
+    // mgcl::VaryingStencilGpu a_h_gpu(m, n, o, 3, gh, tu.getContext(), tu.getCommands(), tu.getProgram());
+    // a_h_gpu.fill(a_h, tu.getCommands(), true);
+
+    // auto a_2h_gpu = mgcl::MultigridEngine::galerkinOptimized(a_h_gpu, gh, m >> 1, n >> 1, o >> 1, tu.getProgram(), tu.getCommands(), tu.getContext(), nullptr, nullptr);
+    // auto a_2h = a_2h_gpu->read(tu.getCommands(), true);
+
+    // auto a_2h_hc = mgcl::MultigridEngine::galerkinHandcrafted(a_h, gh, m >> 1, n >> 1, o >> 1);
+
+    // REQUIRE(a_2h.isEqual(*a_2h_hc));
+
+    auto a_2h_varying_ptr = mgcl::MultigridEngine::galerkinHandcrafted(a_h, gh, m >> 1, n >> 1, o >> 1);
+    auto a_2h_fixed_ptr = mgcl::MultigridEngine::galerkinOptimized(fs);
+    auto& a_2h_varying = *a_2h_varying_ptr;
+    auto& a_2h_fixed = *a_2h_fixed_ptr;
+
+    for (int i = gh; i < a_2h_varying.getM() + gh; i++)
+        for (int j = gh; j < a_2h_varying.getN() + gh; j++)
+            for (int k = gh; k < a_2h_varying.getO() + gh; k++)
+                for (int ii = 0; ii < 3; ii++)
+                    for (int jj = 0; jj < 3; jj++)
+                        for (int kk = 0; kk < 3; kk++)
+                        {
+                            CAPTURE(i, j, k, ii, jj, kk);
+                            REQUIRE(a_2h_varying[ii][jj][kk][i][j][k] == a_2h_fixed[ii][jj][kk]);
+                        }
+}
+
+// Checks if the OpenCL FixedStencil Galerkin version yields the same result as for VaryingStencil filled with values
+// of fixed stencil
+TEST_CASE("ocl_fixed_stencil")
+{
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    int gh = 1;
+
+    mgcl::VaryingStencil a_h(m, n, o, 3, gh, gh, gh);
+    mgcl::FixedStencil fs(3);
+    fs.fillRandom();
+
+    // copy fixed to varying
+    for (int i = 0; i < a_h.getMgh(); i++)
+        for (int j = 0; j < a_h.getNgh(); j++)
+            for (int k = 0; k < a_h.getOgh(); k++)
+                for (int ii = 0; ii < 3; ii++)
+                    for (int jj = 0; jj < 3; jj++)
+                        for (int kk = 0; kk < 3; kk++)
+                        {
+                            a_h[ii][jj][kk][i][j][k] = fs[ii][jj][kk];
+                        }
+
+    mgcl_test::TestUtility tu(deviceType);
+
+    mgcl::VaryingStencilGpu a_h_gpu(m, n, o, 3, gh, tu.getContext(), tu.getCommands(), tu.getProgram());
+    a_h_gpu.fill(a_h, tu.getCommands(), true);
+
+    mgcl::FixedStencilGpu fs_gpu(3, tu.getContext(), tu.getCommands(), tu.getProgram());
+    fs_gpu.fill(fs, tu.getCommands(), true);
+
+    auto a_2h_gpu = mgcl::MultigridEngine::galerkinOptimized(a_h_gpu, gh, m >> 1, n >> 1, o >> 1, tu.getProgram(), tu.getCommands(), tu.getContext(), nullptr, nullptr);
+    auto a_2h_varying = a_2h_gpu->read(tu.getCommands(), true);
+
+    auto a_2h_gpu_fixed = mgcl::MultigridEngine::galerkinOptimized(fs_gpu, tu.getProgram(), tu.getCommands(), tu.getContext(), nullptr, nullptr);
+    auto a_2h_fixed = a_2h_gpu_fixed->read(tu.getCommands(), true);
+
+    for (int i = gh; i < a_2h_varying.getM() + gh; i++)
+        for (int j = gh; j < a_2h_varying.getN() + gh; j++)
+            for (int k = gh; k < a_2h_varying.getO() + gh; k++)
+                for (int ii = 0; ii < 3; ii++)
+                    for (int jj = 0; jj < 3; jj++)
+                        for (int kk = 0; kk < 3; kk++)
+                        {
+                            CAPTURE(i, j, k, ii, jj, kk);
+                            REQUIRE(a_2h_varying[ii][jj][kk][i][j][k] == a_2h_fixed[ii][jj][kk]);
+                        }
+}

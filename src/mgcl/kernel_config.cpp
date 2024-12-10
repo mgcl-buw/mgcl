@@ -53,6 +53,7 @@ namespace mgcl::conf
         // Galerkin kernels
         ret["galerkin"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         ret["galerkin_handcrafted"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
+        ret["galerkin_fixed_stencil"] = KernelWorkgroupSizes{{1, {32, 1, 1}}};
 
         // Utility kernels
         ret["sum_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};

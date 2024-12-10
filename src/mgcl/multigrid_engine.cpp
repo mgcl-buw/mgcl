@@ -10,6 +10,7 @@
 #include "profiling_data.hpp"
 #include "stencil.hpp"
 
+#include <cassert>
 #include <cstddef> // for size_t, NULL
 #include <iostream>
 #include <memory> // for __shared_ptr_access, shared_ptr
@@ -704,6 +705,218 @@ namespace mgcl
 
         err = clReleaseKernel(kernel);
         mgclCheckError(err, "Releasing update ghosts of varying stencil kernel");
+
+        return a_2h;
+    }
+
+    std::unique_ptr<FixedStencil> MultigridEngine::galerkinOptimized(FixedStencil& a_h)
+    {
+        // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
+        // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
+        auto r = create3dFullWeightRestrictionStencil();
+        auto p = create3dBilinearProlongationStencil();
+
+        auto a_2h = std::make_unique<FixedStencil>(3);
+
+        struct Interval
+        {
+            int start;
+            int end;
+            std::string toString() { return "[" + std::to_string(start) + "," + std::to_string(end) + "]"; }
+        };
+
+        // Returns the intersection of two intervals or [-1,-1] if they don't overlap
+        auto intersect = [](Interval a, Interval b) -> Interval
+        {
+            // Check if intervals overlap
+            if (a.start <= b.end && b.start <= a.end)
+            {
+                // Calculate start and end points of intersection
+                int start = (a.start > b.start) ? a.start : b.start;
+                int end = (a.end < b.end) ? a.end : b.end;
+                return Interval{start, end};
+            }
+            else
+            {
+                // Intervals do not overlap
+                return Interval{-1, -1};
+            }
+        };
+
+        struct Point
+        {
+            int x;
+            int y;
+            int z;
+            std::string toString() { return "(" + std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z) + ")"; }
+        };
+
+        // Returns the stencil entry indices of the stencil sitting at locationOfStencil that maps to mapsTo.
+        // No check is done, if the mapping is possible, i.e. the returned value might be outside of range [0,2].
+        // The result is just the difference of the indices plus one, since the stencil entry indices start at 0
+        // and not at -1.
+        auto stencilEntryThatMapsTo = [](Point locationOfStencil, Point mapsTo) -> Point
+        {
+            return {mapsTo.x - locationOfStencil.x + 1,
+                    mapsTo.y - locationOfStencil.y + 1,
+                    mapsTo.z - locationOfStencil.z + 1};
+        };
+
+        // Returns the grid point indices that is mapped to by the stencil entry of another point.
+        // stencilEntry must be 0-based, hence the substraction by 1.
+        auto pointMappedToByStencilEntry = [](Point locationOfStencil, Point stencilEntry) -> Point
+        {
+            return {locationOfStencil.x + (stencilEntry.x - 1),
+                    locationOfStencil.y + (stencilEntry.y - 1),
+                    locationOfStencil.z + (stencilEntry.z - 1)};
+        };
+
+        // Returns the point on the fine grid that is related to the coarse grid point, respecting ghost cells.
+        auto coarseToFine = [](Point p, int ghc, int ghf) -> Point
+        {
+            return {(p.x - ghc) * 2 + 1 + ghf, (p.y - ghc) * 2 + 1 + ghf, (p.z - ghc) * 2 + 1 + ghf};
+        };
+
+        // No need to iterate each grid point, like for VaryingStencil. Just do for one, result will be the same for
+        // all grid points.
+        // Also, for the same reason, no intersections need to be build. But still we need the correct coefficients.
+        // TODO This for sure can be optimized, but for now we just set the coarse grid point to index 1,1,1
+        int i = 1;
+        int j = 1;
+        int k = 1;
+        for (int ii = 0; ii < a_2h->getWidth(); ii++)
+            for (int jj = 0; jj < a_2h->getWidth(); jj++)
+                for (int kk = 0; kk < a_2h->getWidth(); kk++)
+                {
+                    // calculate fine grid point indices
+                    Point gp_c = {i, j, k};
+                    Point gp_f = coarseToFine(gp_c, a_2h->getGhostsM(), a_h.getGhostsM());
+                    Point entry_gpf = coarseToFine(
+                        pointMappedToByStencilEntry(gp_c, {ii, jj, kk}),
+                        a_2h->getGhostsM(), a_h.getGhostsM());
+
+                    // find intersection S_P of neighbouring points for entry_gpf with reach=1 and gp_f with reach=2
+                    Interval S_P[3] = {
+                        intersect(Interval{gp_f.x - 2, gp_f.x + 2}, Interval{entry_gpf.x - 1, entry_gpf.x + 1}),
+                        intersect(Interval{gp_f.y - 2, gp_f.y + 2}, Interval{entry_gpf.y - 1, entry_gpf.y + 1}),
+                        intersect(Interval{gp_f.z - 2, gp_f.z + 2}, Interval{entry_gpf.z - 1, entry_gpf.z + 1}),
+                    };
+
+                    // Start calc (R*A)*P
+                    double res = 0;
+
+                    // for each fine grid point gp_sp in S_P:
+                    for (int spi = S_P[0].start; spi <= S_P[0].end; spi++)
+                        for (int spj = S_P[1].start; spj <= S_P[1].end; spj++)
+                            for (int spk = S_P[2].start; spk <= S_P[2].end; spk++)
+                            {
+                                Point gp_sp = {spi, spj, spk};
+                                // tmp_p <- in stencil P located at gp_sp: Find stencil entry entry_p that maps to entry_gpf. Since
+                                // gp_sp is in S_P, it is ensured that the stencil has a stencil entry that maps to entry_gpf.
+                                Point tmp_p_indices = stencilEntryThatMapsTo(gp_sp, entry_gpf);
+                                double tmp_p = p[tmp_p_indices.x][tmp_p_indices.y][tmp_p_indices.z];
+
+                                // Start calc R*A
+                                // find intersection S_R of neighbouring points for gp_f and gp_sp, both with reach=1
+                                Interval S_R[3] = {
+                                    intersect(Interval{gp_f.x - 1, gp_f.x + 1}, Interval{spi - 1, spi + 1}),
+                                    intersect(Interval{gp_f.y - 1, gp_f.y + 1}, Interval{spj - 1, spj + 1}),
+                                    intersect(Interval{gp_f.z - 1, gp_f.z + 1}, Interval{spk - 1, spk + 1}),
+                                };
+
+                                double sum = 0;
+                                // for each fine grid point gp_sr in S_R:
+                                for (int sri = S_R[0].start; sri <= S_R[0].end; sri++)
+                                    for (int srj = S_R[1].start; srj <= S_R[1].end; srj++)
+                                        for (int srk = S_R[2].start; srk <= S_R[2].end; srk++)
+                                        {
+                                            Point gp_sr = {sri, srj, srk};
+                                            // tmp_r <- in stencil R located at gp_f: Find stencil entry entry_r that maps to gp_sr
+                                            Point tmp_r_indices = stencilEntryThatMapsTo(gp_f, gp_sr);
+                                            double tmp_r = r[tmp_r_indices.x][tmp_r_indices.y][tmp_r_indices.z];
+                                            // tmp_a <- in stencil A located at gp_sr: Find stencil entry that maps to gp_sp
+                                            Point tmp_a_indices = stencilEntryThatMapsTo(gp_sr, gp_sp);
+
+                                            double tmp_a = a_h[tmp_a_indices.x][tmp_a_indices.y][tmp_a_indices.z];
+                                            // sum <- sum + tmp_r * tmp_a
+                                            sum += tmp_r * tmp_a;
+                                            // End calc R*A
+                                        }
+
+                                //   res <- res + sum * tmp_p
+                                res += sum * tmp_p;
+                                // End calc (R*A)*P
+                            }
+
+                    // store res in rap
+                    (*a_2h)[ii][jj][kk] = res;
+                }
+
+        return a_2h;
+    }
+
+    std::unique_ptr<FixedStencilGpu> MultigridEngine::galerkinOptimized(FixedStencilGpu& a_h,
+                                                                        cl_program program, cl_command_queue queue, cl_context context,
+                                                                        conf::KernelConfig* kernelConfig, ProfilingData* pd)
+    {
+        // Get the full-weight restriction stencil S as 3x3x3 stencil with two additional ghosts at each border.
+        // The ghosts are needed in order to respect periodic boundary conditions. One ghost per stencil multiplication.
+        auto r = create3dFullWeightRestrictionStencilGpu(context, queue, program);
+        auto p = create3dBilinearProlongationStencilGpu(context, queue, program);
+
+        auto a_2h = std::make_unique<FixedStencilGpu>(3, context, queue, program);
+
+        int err;
+
+        // Create the compute kernel from the program
+        const char* kernelName = "galerkin_fixed_stencil";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
+        mgclCheckError(err, "Creating galerkin_fixed_stencil kernel");
+
+        cl_mem a_h_raw = a_h.getBuf();
+        cl_mem a_2h_raw = a_2h->getBuf();
+        cl_mem r_raw = r.getBuf();
+        cl_mem p_raw = p.getBuf();
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &a_h_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &a_2h_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &r_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &p_raw);
+        mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per local real coarse grid point.
+        size_t global = 27;
+        size_t local = 32;
+
+        // Apply kernel config, if available
+        if (kernelConfig)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*kernelConfig, kernelName, global);
+            local = static_cast<size_t>(global > c[0] ? c[0] : global);
+        }
+
+        // pad global size to fit multiple of local size
+        if (global % local != 0)
+            global += local - (global % local);
+
+        cl_event ev;
+
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
+        mgclCheckError(err, "Enqueueing galerkin_fixed_stencil kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(queue, ev, kernelName,
+                               {global, 0, 0},
+                               {local, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        err = clReleaseKernel(kernel);
+        mgclCheckError(err, "Releasing galerkin_fixed_stencil kernel");
 
         return a_2h;
     }

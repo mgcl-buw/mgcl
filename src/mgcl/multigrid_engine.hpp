@@ -78,6 +78,10 @@ namespace mgcl
                                                                       int resm, int resn, int reso,
                                                                       cl_program program, cl_command_queue queue, cl_context context,
                                                                       conf::KernelConfig* kernelConfig, ProfilingData* pd);
+        static std::unique_ptr<FixedStencil> galerkinOptimized(FixedStencil& a_h);
+        static std::unique_ptr<FixedStencilGpu> galerkinOptimized(FixedStencilGpu& a_h,
+                                                                  cl_program program, cl_command_queue queue, cl_context context,
+                                                                  conf::KernelConfig* kernelConfig, ProfilingData* pd);
 
         static void print7point(Cuboid& v, int i, int j, int k);
         static void print19point(Cuboid& v, int i, int j, int k);

@@ -2279,6 +2279,128 @@ __kernel void galerkin(
 }
 
 /**
+ * Applies the Galerkin operator for FixedStencil
+ *
+ * Parallelizes the outermost 3 loops (each stencil entry), thus must be called as 1d kernel with
+ *   27 work-items.
+ *
+ * Parameters:
+ * a_h: Fixed 3x3x3 stencil on fine grid. Has size 27.
+ * a_2h: Fixed 3x3x3 stencil on coarse grid. Has size 27.
+ * r: Fixed 3x3x3 restriction stencil.
+ * p: Fixed 3x3x3 prolongation stencil.
+ */
+__kernel void galerkin_fixed_stencil(
+    __global double* restrict a_h,
+    __global double* restrict a_2h,
+    __global double* restrict r,
+    __global double* restrict p)
+{
+    // TODO optimize, maybe get rid of intersection calcs
+    int i = 1;
+    int j = 1;
+    int k = 1;
+
+    int stencil_idx = get_global_id(0);
+    int ii = stencil_idx / 9;
+    int jj = (stencil_idx - ii * 9) / 3;
+    int kk = stencil_idx % 3;
+
+    // Calculate only for coefficients
+    if (stencil_idx < 27)
+    {
+        // for each stencil entry of the coarse grid point this work-item maps to
+        {
+            // calculate fine grid point indices
+            Point gp_c = {i, j, k};
+            Point gp_f = coarseToFine(gp_c, 0, 0);
+            Point entry_gpc = {ii, jj, kk};
+            Point entry_gpf = coarseToFine(
+                pointMappedToByStencilEntry(gp_c, entry_gpc),
+                0, 0);
+
+            // find intersection S_P of neighbouring points for entry_gpf with reach=1 and gp_f with reach=2
+            Interval xa = {.start = gp_f.x - 2, .end = gp_f.x + 2};
+            Interval ya = {.start = gp_f.y - 2, .end = gp_f.y + 2};
+            Interval za = {.start = gp_f.z - 2, .end = gp_f.z + 2};
+            Interval xb = {.start = entry_gpf.x - 1, .end = entry_gpf.x + 1};
+            Interval yb = {.start = entry_gpf.y - 1, .end = entry_gpf.y + 1};
+            Interval zb = {.start = entry_gpf.z - 1, .end = entry_gpf.z + 1};
+
+            Interval S_P[3] = {
+                intersect(xa, xb),
+                intersect(ya, yb),
+                intersect(za, zb),
+            };
+
+            // Start calc (R*A)*P
+            double res = 0;
+
+            // for each fine grid point gp_sp in S_P:
+            for (int spi = S_P[0].start; spi <= S_P[0].end; spi++)
+                for (int spj = S_P[1].start; spj <= S_P[1].end; spj++)
+                    for (int spk = S_P[2].start; spk <= S_P[2].end; spk++)
+                    {
+                        Point gp_sp = {spi, spj, spk};
+                        // tmp_p <- in stencil P located at gp_sp: Find stencil entry entry_p that maps to entry_gpf. Since
+                        // gp_sp is in S_P, it is ensured that the stencil has a stencil entry that maps to entry_gpf.
+                        Point tmp_p_indices = stencilEntryThatMapsTo(gp_sp, entry_gpf);
+                        double tmp_p = p[tmp_p_indices.x * 9 + tmp_p_indices.y * 3 + tmp_p_indices.z];
+
+                        // Start calc R*A
+                        // find intersection S_R of neighbouring points for gp_f and gp_sp, both with reach=1
+                        xa.start = gp_f.x - 1;
+                        xa.end = gp_f.x + 1;
+                        ya.start = gp_f.y - 1;
+                        ya.end = gp_f.y + 1;
+                        za.start = gp_f.z - 1;
+                        za.end = gp_f.z + 1;
+                        xb.start = spi - 1;
+                        xb.end = spi + 1;
+                        yb.start = spj - 1;
+                        yb.end = spj + 1;
+                        zb.start = spk - 1;
+                        zb.end = spk + 1;
+
+                        Interval S_R[3] = {
+                            intersect(xa, xb),
+                            intersect(ya, yb),
+                            intersect(za, zb),
+                        };
+
+                        double sum = 0;
+                        // for each fine grid point gp_sr in S_R:
+                        for (int sri = S_R[0].start; sri <= S_R[0].end; sri++)
+                            for (int srj = S_R[1].start; srj <= S_R[1].end; srj++)
+                                for (int srk = S_R[2].start; srk <= S_R[2].end; srk++)
+                                {
+                                    Point gp_sr = {sri, srj, srk};
+                                    // tmp_r <- in stencil R located at gp_f: Find stencil entry entry_r that maps to gp_sr
+                                    Point tmp_r_indices = stencilEntryThatMapsTo(gp_f, gp_sr);
+                                    double tmp_r = r[tmp_r_indices.x * 9 + tmp_r_indices.y * 3 + tmp_r_indices.z];
+                                    // tmp_a <- in stencil A located at gp_sr: Find stencil entry that maps to gp_sp
+                                    Point tmp_a_indices = stencilEntryThatMapsTo(gp_sr, gp_sp);
+
+                                    // double tmp_a = a_h[tmp_a_indices.x][tmp_a_indices.y][tmp_a_indices.z][gp_sr.x][gp_sr.y][gp_sr.z];
+                                    double tmp_a = a_h[tmp_a_indices.x * 9 + tmp_a_indices.y * 3 + tmp_a_indices.z];
+                                    // sum <- sum + tmp_r * tmp_a
+                                    sum += tmp_r * tmp_a;
+                                    // End calc R*A
+                                }
+
+                        //   res <- res + sum * tmp_p
+                        res += sum * tmp_p;
+                        // End calc (R*A)*P
+                    }
+
+            // store res in rap
+            // (*a_2h)[ii][jj][kk][i][j][k] = res;
+            a_2h[ii * 9 + jj * 3 + kk] = res;
+        }
+    }
+}
+
+/**
  * Applies the Galerkin operator, calculating the stencils a_2h for the coarser grid, based on the stencils a_h on the fine grid.
  * Handcrafted version derived from matrix multiplication trace. Only works for 3x3x3 stencils and fixed R and P. This is
  * somewhat analogous to what Hypre does.
