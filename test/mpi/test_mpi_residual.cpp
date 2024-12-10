@@ -160,10 +160,10 @@ TEST_CASE("MPI_residual_seq_VaryingStencil_n_processes", "[mpiN]")
 
     // Update ghosts of expected result locally, i.e. not using MPI routines.
     mgcl::MultigridEngine::residualSeq(f_glob, v_glob, r_glob, resnorm, stencilType,
-                                       stencilFactor, &sv_glob, true, true, true, 0, 0, 0, nullptr);
+                                       stencilFactor, &sv_glob, nullptr, true, true, true, 0, 0, 0, nullptr);
 
     mgcl::MultigridEngine::residualSeq(f_loc, v_loc, r_loc, resnorm, stencilType,
-                                       stencilFactor, svptr.get(), true, true, false, 0, 0, 0, mpiData);
+                                       stencilFactor, svptr.get(), nullptr, true, true, false, 0, 0, 0, mpiData);
 
     // Compare local results with respective chunk of global results
     for (int il = r_glob.getGhostsM(), ig = mpi_coords[0] * ml + r_loc.getGhostsM(); il < r_loc.getM() + r_glob.getGhostsM(); il++, ig++)

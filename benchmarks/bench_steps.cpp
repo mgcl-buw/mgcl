@@ -62,11 +62,11 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
         b.run(std::string("seq jacobi, N = ").append(std::to_string(N)).c_str(), [&]
               { mgcl::MultigridEngine::jacobiSeq(v0, f0, r0, p.getOmega(), h * h, p.getNu1(), p.getResidualNorm(),
                                                  p.getStencilType(), stencilFactor0, p.getStencilValues().get(),
-                                                 false, periodic, false); });
+                                                 nullptr, false, periodic, false); });
 
         // residual
         b.run(std::string("seq residual, N = ").append(std::to_string(N)).c_str(), [&]
-              { mgcl::MultigridEngine::residualSeq(f0, v0, r0, p.getResidualNorm(), p.getStencilType(), stencilFactor0, p.getStencilValues().get(), false, periodic, false); });
+              { mgcl::MultigridEngine::residualSeq(f0, v0, r0, p.getResidualNorm(), p.getStencilType(), stencilFactor0, p.getStencilValues().get(), nullptr, false, periodic, false); });
 
         // updateGhosts
         b.run(std::string("seq updateGhosts, N = ").append(std::to_string(N)).c_str(), [&]
@@ -301,7 +301,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             b.run(std::string("seq jacobi, N = ").append(std::to_string(N)).c_str(), [&]
                   { mgcl::MultigridEngine::jacobiSeq(v0, f0, r0, p.getOmega(), h * h, p.getNu1(), p.getResidualNorm(),
                                                      p.getStencilType(), stencilFactor0, p.getStencilValues().get(),
-                                                     false, periodic, false); });
+                                                     nullptr, false, periodic, false); });
         }
 
         {
@@ -352,7 +352,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
 
             b.run(std::string("seq residual, N = ").append(std::to_string(N)).c_str(), [&]
                   { mgcl::MultigridEngine::residualSeq(f0, v0, r0, p.getResidualNorm(), p.getStencilType(),
-                                                       stencilFactor0, p.getStencilValues().get(), false, periodic, false); });
+                                                       stencilFactor0, p.getStencilValues().get(), nullptr, false, periodic, false); });
         }
 
         {

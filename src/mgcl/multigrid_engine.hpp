@@ -55,13 +55,15 @@ namespace mgcl
         static double residual(Problem& problem, Level& level, bool returnResidual,
                                int moff = 0, int noff = 0, int ooff = 0);
         static double residualSeq(Cuboid& f, Cuboid& v, Cuboid& r, MGCL_RESIDUAL_NORM resnorm,
-                                  MGCL_STENCIL stencilType, double stencilFactor, VaryingStencil* stencilValues,
+                                  MGCL_STENCIL stencilType, double stencilFactor,
+                                  VaryingStencil* stencilValues, FixedStencil* fixedStencil,
                                   bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
                                   int moff = 0, int noff = 0, int ooff = 0, MPILevelData* mpiData = nullptr);
 
         static double jacobiSeq(Cuboid& v, Cuboid& f, Cuboid& r, double omega, double h2,
                                 int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType, double stencilFactor,
-                                VaryingStencil* stencilValuesCuboid, bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
+                                VaryingStencil* stencilValuesCuboid, FixedStencil* fixedStencil,
+                                bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
                                 int stepsPerIter = 1, MPILevelData* mpiData = nullptr);
         static double jacobi(Problem& problem, Level& level, int maxiter, bool returnResidual, int stepsPerIter = 1);
         static double jacobiLocalMem(Problem& problem, Level& level, int maxiter, int returnResidual);

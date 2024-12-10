@@ -66,7 +66,7 @@ TEST_CASE("benchmark_jacobi_seq_multiple_iters")
                                .append(std::to_string(spi));
         bench.run(std::string(name).c_str(), [&]
                   { mgcl::MultigridEngine::jacobiSeq(v, f, r, omega, h * h, iters, resnorm, stencilType, stencilFactor,
-                                                     nullptr, false, true, spi); });
+                                                     nullptr, nullptr, false, true, spi); });
     }
 }
 

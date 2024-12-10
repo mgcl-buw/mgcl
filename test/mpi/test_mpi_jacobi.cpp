@@ -141,11 +141,11 @@ TEST_CASE("MPI_jacobiSeq_Laplace_n_processes", "[mpiN]")
 
     // Run Jacobi on global problem
     mgcl::MultigridEngine::jacobiSeq(v_glob, f_glob, r_glob, omega, h * h, maxiter, resnorm, stencilType,
-                                     stencilFactor, nullptr, true, true, false, 1, nullptr);
+                                     stencilFactor, nullptr, nullptr, true, true, false, 1, nullptr);
 
     // Run Jacobi on local problem
     mgcl::MultigridEngine::jacobiSeq(v_loc, f_loc, r_loc, omega, h * h, maxiter, resnorm, stencilType,
-                                     stencilFactor, nullptr, true, true, false, 1, mpiData);
+                                     stencilFactor, nullptr, nullptr, true, true, false, 1, mpiData);
 
     // Compare local results with respective chunk of global results
     for (int il = v_glob.getGhostsM(), ig = mpi_coords[0] * ml + v_loc.getGhostsM(); il < v_loc.getM() + v_glob.getGhostsM(); il++, ig++)
@@ -303,11 +303,11 @@ TEST_CASE("MPI_jacobiSeq_VaryingStencil_n_processes", "[mpiN]")
 
     // Run Jacobi on global problem
     mgcl::MultigridEngine::jacobiSeq(v_glob, f_glob, r_glob, omega, h * h, maxiter, resnorm, stencilType,
-                                     stencilFactor, &sv_glob, true, true, true, 1, nullptr);
+                                     stencilFactor, &sv_glob, nullptr, true, true, true, 1, nullptr);
 
     // Run Jacobi on local problem
     mgcl::MultigridEngine::jacobiSeq(v_loc, f_loc, r_loc, omega, h * h, maxiter, resnorm, stencilType,
-                                     stencilFactor, svptr.get(), true, true, false, 1, mpiData);
+                                     stencilFactor, svptr.get(), nullptr, true, true, false, 1, mpiData);
 
     // Compare local results with respective chunk of global results
     for (int il = v_glob.getGhostsM(), ig = mpi_coords[0] * ml + v_loc.getGhostsM(); il < v_loc.getM() + v_glob.getGhostsM(); il++, ig++)

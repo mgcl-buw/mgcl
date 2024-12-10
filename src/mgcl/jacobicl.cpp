@@ -31,7 +31,8 @@ namespace mgcl
      * cells, i.e. v_gh >= stepsPerIter per border. Defaults to 1. */
     double MultigridEngine::jacobiSeq(Cuboid& v, Cuboid& f, Cuboid& r, double omega, double h2,
                                       int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType,
-                                      double stencilFactor, VaryingStencil* stencilValues, bool returnResidualNorm,
+                                      double stencilFactor, VaryingStencil* stencilValues,
+                                      FixedStencil* fixedStencil, bool returnResidualNorm,
                                       bool periodic, bool updateGhostsLocally, int stepsPerIter, MPILevelData* mpiData)
     {
         double res = 0.0;
@@ -101,7 +102,8 @@ namespace mgcl
                 int kstart_sv = stencilValues ? stencilValues->getGhostsO() - off : 0;
 
                 // r = f - A*v
-                res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, false, periodic,
+                res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, fixedStencil,
+                                  false, periodic,
                                   updateGhostsLocally, -off, -off, -off, mpiData);
 
                 if (stencilType == MGCL_LAPLACE_7POINT || stencilType == MGCL_LAPLACE_19POINT || stencilType == MGCL_LAPLACE_27POINT)
@@ -150,7 +152,8 @@ namespace mgcl
             MultigridEngine::updateGhostsSeq(v, mpiData, periodic, updateGhostsLocally);
 
         if (returnResidualNorm)
-            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, returnResidualNorm, periodic,
+            res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, fixedStencil,
+                              returnResidualNorm, periodic,
                               updateGhostsLocally, 0, 0, 0, mpiData);
 
         return res;
@@ -817,13 +820,15 @@ namespace mgcl
      */
     double MultigridEngine::residualSeq(Cuboid& f, Cuboid& v, Cuboid& r, MGCL_RESIDUAL_NORM resnorm,
                                         MGCL_STENCIL stencilType, double stencilFactor,
-                                        VaryingStencil* stencilValuesCuboid, bool returnResidualNorm,
+                                        VaryingStencil* stencilValuesCuboid, FixedStencil* fixedStencil,
+                                        bool returnResidualNorm,
                                         bool periodic, bool updateGhostsLocally, int moff, int noff, int ooff, MPILevelData* mpiData)
     {
         double res = 0.0;
         double stencilsum = 0;
         double****** stencilValues;
         double*** vraw = v.getData();
+        double*** fsRaw;
 
         // check if off is too small (i.e. start < 0)
         if (moff <= -v.getGhostsM() || noff <= -v.getGhostsN() || ooff <= -v.getGhostsO())
@@ -839,6 +844,11 @@ namespace mgcl
 
         if (stencilType == MGCL_VARYING)
             stencilValues = stencilValuesCuboid->getData();
+
+        if (stencilType == MGCL_FIXED)
+        {
+            fsRaw = fixedStencil->getData(); // TODO
+        }
 
         int istart_v = v.getGhostsM() + moff;
         int jstart_v = v.getGhostsN() + noff;
@@ -907,6 +917,28 @@ namespace mgcl
                                 - 2.0 * vraw[iv - 1][jv + 1][kv - 1] - 2.0 * vraw[iv - 1][jv + 1][kv + 1]
                                 - 2.0 * vraw[iv + 1][jv - 1][kv - 1] - 2.0 * vraw[iv + 1][jv - 1][kv + 1]
                                 - 2.0 * vraw[iv + 1][jv + 1][kv - 1] - 2.0 * vraw[iv + 1][jv + 1][kv + 1]
+                                ) * stencilFactor;
+                        // clang-format on
+                    }
+                    else if (stencilType == MGCL_FIXED)
+                    {
+                        // clang-format off
+                        stencilsum = (fsRaw[1][1][1] * vraw[iv][jv][kv]
+                                - fsRaw[1][1][0] * vraw[iv][jv][kv - 1] - fsRaw[1][1][2] * vraw[iv][jv][kv + 1]
+                                - fsRaw[1][0][1] * vraw[iv][jv - 1][kv] - fsRaw[1][2][1] * vraw[iv][jv + 1][kv]
+                                - fsRaw[0][1][1] * vraw[iv - 1][jv][kv] - fsRaw[2][1][1] * vraw[iv + 1][jv][kv]
+
+                                - fsRaw[1][0][0] * vraw[iv][jv - 1][kv - 1] - fsRaw[1][0][2] * vraw[iv][jv - 1][kv + 1]
+                                - fsRaw[1][2][0] * vraw[iv][jv + 1][kv - 1] - fsRaw[1][2][2] * vraw[iv][jv + 1][kv + 1]
+                                - fsRaw[0][1][0] * vraw[iv - 1][jv][kv - 1] - fsRaw[0][1][2] * vraw[iv - 1][jv][kv + 1]
+                                - fsRaw[2][1][0] * vraw[iv + 1][jv][kv - 1] - fsRaw[2][1][2] * vraw[iv + 1][jv][kv + 1]
+                                - fsRaw[0][0][1] * vraw[iv - 1][jv - 1][kv] - fsRaw[0][2][1] * vraw[iv - 1][jv + 1][kv]
+                                - fsRaw[2][0][1] * vraw[iv + 1][jv - 1][kv] - fsRaw[2][2][1] * vraw[iv + 1][jv + 1][kv]
+
+                                - fsRaw[0][0][0] * vraw[iv - 1][jv - 1][kv - 1] - fsRaw[0][0][2] * vraw[iv - 1][jv - 1][kv + 1]
+                                - fsRaw[0][2][0] * vraw[iv - 1][jv + 1][kv - 1] - fsRaw[0][2][2] * vraw[iv - 1][jv + 1][kv + 1]
+                                - fsRaw[2][0][0] * vraw[iv + 1][jv - 1][kv - 1] - fsRaw[2][0][2] * vraw[iv + 1][jv - 1][kv + 1]
+                                - fsRaw[2][2][0] * vraw[iv + 1][jv + 1][kv - 1] - fsRaw[2][2][2] * vraw[iv + 1][jv + 1][kv + 1]
                                 ) * stencilFactor;
                         // clang-format on
                     }

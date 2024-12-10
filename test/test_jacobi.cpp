@@ -49,7 +49,7 @@ TEST_CASE("jacobi")
     {
         double res = mgcl::MultigridEngine::jacobiSeq(*c_in_v, *c_in_f, *c_in_r, omega, h * h, maxiter,
                                                       mgcl::MGCL_L2, mgcl::MGCL_LAPLACE_7POINT, stencilFactor,
-                                                      nullptr, true, true, true);
+                                                      nullptr, nullptr, true, true, true);
 
         // REQUIRE_THAT(res, Catch::Matchers::WithinAbs(4.02895897954478714e+04, 1e-7));
         CHECK(c_in_v->isEqual(*c_expected_out_v));
@@ -125,7 +125,7 @@ TEST_CASE("jacobi")
 
         double res_seq = mgcl::MultigridEngine::jacobiSeq(*c_in_v, *c_in_f, *c_in_r, omega, h * h, maxiter,
                                                           mgcl::MGCL_INF, mgcl::MGCL_LAPLACE_7POINT,
-                                                          stencilFactor, nullptr, true, true, true);
+                                                          stencilFactor, nullptr, nullptr, true, true, true);
 
         // c_r_out_ocl->dumpToFile("/home/simon/tmp/c_r_out_ocl.csv");
         // c_in_r->dumpToFile("/home/simon/tmp/c_in_r.csv");
@@ -387,7 +387,7 @@ TEST_CASE("jacobi GPU varying stencil")
         tu.finish();
         double res_seq = mgcl::MultigridEngine::jacobiSeq(v_in_lv0, f_in_lv0, r_in_lv0, omega, h * h, maxiter, resnorm,
                                                           stencilType, level0_seq.getStencilFactor(), sv_in_lv0.get(),
-                                                          true, true, true);
+                                                          nullptr, true, true, true);
 
         // res_gpu = mgcl::MultigridEngine::residual(*p_gpu, level0_gpu, true);
         // res_seq = mgcl::MultigridEngine::residualSeq(f_in_lv0, v_in_lv0, r_in_lv0, mgcl::MGCL_L2,
@@ -549,21 +549,21 @@ TEST_CASE("jacobi throwing")
         {
             // ghosts of v too small
             REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v, f_gh, r_gh, omega, h * h, iters, resnorm, stencilType,
-                                                            stencilFactor, nullptr, false, true, true, stepsPerIter));
+                                                            stencilFactor, nullptr, nullptr, false, true, true, stepsPerIter));
 
             // ghosts of f too small
             REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f, r_gh, omega, h * h, iters, resnorm, stencilType,
-                                                            stencilFactor, nullptr, false, true, true, stepsPerIter));
+                                                            stencilFactor, nullptr, nullptr, false, true, true, stepsPerIter));
 
             // ghosts of r too small
             REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f_gh, r, omega, h * h, iters, resnorm, stencilType,
-                                                            stencilFactor, nullptr, false, true, true, stepsPerIter));
+                                                            stencilFactor, nullptr, nullptr, false, true, true, stepsPerIter));
         }
 
         SECTION("throws when stencilValues null and stencilType varying")
         {
             REQUIRE_THROWS(mgcl::MultigridEngine::jacobiSeq(v_gh, f_gh, r_gh, omega, h * h, iters, resnorm, mgcl::MGCL_VARYING,
-                                                            stencilFactor, nullptr, false, true, true, stepsPerIter));
+                                                            stencilFactor, nullptr, nullptr, false, true, true, stepsPerIter));
         }
     }
 
@@ -651,10 +651,10 @@ TEST_CASE("jacobi seq gh > 1 multiple iters")
         mgcl::MultigridEngine::updateGhostsSeq(f_in_gh, nullptr, true, true);
 
         // First calculate exptected result with regular ghost updates between iterations
-        double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, h * h, iters, resnorm, stencilType, stencilFactor, nullptr, true, true, 1);
+        double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, h * h, iters, resnorm, stencilType, stencilFactor, nullptr, nullptr, true, true, 1);
 
         // Now calculate with gh > 1
-        double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, h * h, iters, resnorm, stencilType, stencilFactor, nullptr, true, true, stepsPerIter);
+        double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, h * h, iters, resnorm, stencilType, stencilFactor, nullptr, nullptr, true, true, stepsPerIter);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(v_in.isEqual(v_in_gh));
@@ -666,10 +666,10 @@ TEST_CASE("jacobi seq gh > 1 multiple iters")
         mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_27POINT;
 
         // First calculate exptected result with regular ghost updates between iterations
-        double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, h * h, iters, resnorm, stencilType, stencilFactor, nullptr, true, false, 1);
+        double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, h * h, iters, resnorm, stencilType, stencilFactor, nullptr, nullptr, true, false, 1);
 
         // Now calculate with gh > 1
-        double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, h * h, iters, resnorm, stencilType, stencilFactor, nullptr, true, false, stepsPerIter);
+        double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, h * h, iters, resnorm, stencilType, stencilFactor, nullptr, nullptr, true, false, stepsPerIter);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));
         REQUIRE(v_in.isEqual(v_in_gh));
@@ -692,11 +692,11 @@ TEST_CASE("jacobi seq gh > 1 multiple iters")
 
         // First calculate exptected result with regular ghost updates between iterations
         double res_exp = mgcl::MultigridEngine::jacobiSeq(v_in, f_in, r_in, omega, h * h, iters, resnorm,
-                                                          stencilType, stencilFactor, &stencilValuesExp, true, true, 1);
+                                                          stencilType, stencilFactor, &stencilValuesExp, nullptr, true, true, 1);
 
         // Now calculate with gh > 1
         double res_act = mgcl::MultigridEngine::jacobiSeq(v_in_gh, f_in_gh, r_in_gh, omega, h * h, iters, resnorm,
-                                                          stencilType, stencilFactor, &stencilValuesAct,
+                                                          stencilType, stencilFactor, &stencilValuesAct, nullptr,
                                                           true, true, stepsPerIter);
 
         REQUIRE_THAT(res_exp, Catch::Matchers::WithinAbs(res_act, 1e-7));

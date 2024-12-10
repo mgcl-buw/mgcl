@@ -41,12 +41,12 @@ namespace mgcl
         // relax nu1 times
         MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
                                    problem.omega, level.h * level.h, problem.nu1, problem.residual_norm, problem.stencilType,
-                                   level.stencilFactor, level.stencilValues.get(), false, problem.isPeriodic(),
+                                   level.stencilFactor, level.stencilValues.get(), level.fixedStencil.get(), false, problem.isPeriodic(),
                                    level.isCalculatedLocally(), problem.getJacobiIterationsPerKernel(), level.getMpiDataPtr());
 
         // update residual before restriction
         residualSeq(level.getF(), level.getV(), level.getR(), problem.residual_norm, problem.stencilType,
-                    level.stencilFactor, level.stencilValues.get(), false, problem.isPeriodic(),
+                    level.stencilFactor, level.stencilValues.get(), level.fixedStencil.get(), false, problem.isPeriodic(),
                     level.isCalculatedLocally(), 0, 0, 0, level.getMpiDataPtr());
 
         // restrict residual as right hand side on coarser grid
@@ -82,7 +82,7 @@ namespace mgcl
                 MultigridEngine::jacobiSeq(levelAbove.getV(), levelAbove.getF(), levelAbove.getR(), problem.omega,
                                            levelAbove.h * levelAbove.h, problem.nu1 + problem.nu2, problem.residual_norm,
                                            problem.stencilType, levelAbove.stencilFactor,
-                                           levelAbove.stencilValues.get(), false, problem.isPeriodic(),
+                                           levelAbove.stencilValues.get(), levelAbove.fixedStencil.get(), false, problem.isPeriodic(),
                                            levelAbove.isCalculatedLocally(), problem.getJacobiIterationsPerKernel(),
                                            levelAbove.getMpiDataPtr());
 
@@ -108,7 +108,7 @@ namespace mgcl
         // relax nu2 times
         res = MultigridEngine::jacobiSeq(level.getV(), level.getF(), level.getR(),
                                          problem.omega, level.h * level.h, problem.nu2, problem.residual_norm, problem.stencilType,
-                                         level.stencilFactor, level.stencilValues.get(), !problem.ignoreTol,
+                                         level.stencilFactor, level.stencilValues.get(), level.fixedStencil.get(), !problem.ignoreTol,
                                          problem.isPeriodic(), level.isCalculatedLocally(),
                                          problem.getJacobiIterationsPerKernel(), level.getMpiDataPtr());
         // printf("res on level %d, downwards: %.17e\n", level.getNum(), res);
