@@ -8,6 +8,7 @@
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "opencl_helper.hpp"
 #include "profiling_data.hpp"
+#include "stencil.hpp"
 #include "util.hpp"
 #include <CL/cl.h>
 #include <cassert>
@@ -224,6 +225,15 @@ namespace mgcl
                 // Ghost cell amount per border of varying stencil is 1 for each level
                 int gh = 1;
                 upd(sizeof(double) * (ml + 2 * gh) * (nl + 2 * gh) * (ol + 2 * gh) * 3 * 3 * 3); // stencilValues
+
+                // Temporary buffers created in galerkin
+                upd(sizeof(double) * 3 * 3 * 3); // full-weight restriction stencil
+                upd(sizeof(double) * 3 * 3 * 3); // bilinear prolongation stencil
+            }
+
+            else if (stencilType == MGCL_FIXED)
+            {
+                upd(sizeof(double) * 3 * 3 * 3); // fixedStencil
 
                 // Temporary buffers created in galerkin
                 upd(sizeof(double) * 3 * 3 * 3); // full-weight restriction stencil
@@ -450,6 +460,30 @@ namespace mgcl
                                                       lvCoarse.getMpiDataPtr(), false,
                                                       &getKernelConfig(), getProfilingData());
                     }
+                }
+            }
+
+            // Apply Galerkin operator if stencil is fixed and we're not on level 0.
+            // No need for gathering required as for VaryingStencil, since coefficients do not differ per grid point
+            else if (level >= 1 && getStencilType() == MGCL_FIXED &&
+                     levels.back()->getM() > 0 && levels.back()->getN() > 0 && levels.back()->getO() > 0)
+            {
+                auto& lvFine = *levels[level - 1];
+                auto& lvCoarse = *levels[level];
+
+                if (!use_opencl)
+                {
+                    // Call Galerkin on each rank, if not above threshold, or else only on root.
+                    if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
+                        lvCoarse.fixedStencil = MultigridEngine::galerkinOptimized(*lvFine.getFixedStencil());
+                }
+                else
+                {
+                    // Call Galerkin on each rank, if not above threshold, or else only on root.
+                    if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
+                        lvCoarse.fixedStencilGpu = MultigridEngine::galerkinOptimized(
+                            *lvFine.getFixedStencilGpu(), getProgram(), getCommands(), getContext(),
+                            &getKernelConfig(), getProfilingData());
                 }
             }
         }
@@ -1199,6 +1233,7 @@ namespace mgcl
         // TODO move to getStencilValues?
         if (stencilType == MGCL_VARYING)
         {
+            fixedStencil = nullptr;
             calculateAndSetMpiLevelThreshold();
             int gh = std::max(1, jacobi_iterations_per_kernel);
             if (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) // TODO check
@@ -1206,13 +1241,27 @@ namespace mgcl
             else
                 stencilValues = std::make_shared<VaryingStencil>(m, n, o, 3, gh, gh, gh);
         }
-        else
+        else if (stencilType == MGCL_FIXED)
+        {
+            // No need for ghosts for fixed stencil as the coefficients would be the same for the ghost points
             stencilValues = nullptr;
+            fixedStencil = std::make_shared<FixedStencil>(3);
+        }
+        else
+        {
+            stencilValues = nullptr;
+            fixedStencil = nullptr;
+        }
     }
 
     std::shared_ptr<VaryingStencil>& Problem::getStencilValues()
     {
         return stencilValues;
+    }
+
+    std::shared_ptr<FixedStencil>& Problem::getFixedStencil()
+    {
+        return fixedStencil;
     }
 
     void Problem::setIgnoreTol(bool ignoreTol_)

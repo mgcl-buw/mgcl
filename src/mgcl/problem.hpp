@@ -51,7 +51,7 @@ namespace mgcl
         /* Buffers for v and f. Only need to be set if buffers already exist on device and should be reused */
         std::shared_ptr<CuboidGpu> dV = nullptr;
         std::shared_ptr<CuboidGpu> dF = nullptr;
-        std::shared_ptr<CuboidGpu> dStencilValues = nullptr;
+        std::shared_ptr<CuboidGpu> dStencilValues = nullptr; // TODO remove or bugfix: VaryingStencilGpu instead of CuboidGpu
 
         // Temporary buffer for storing cuboid planes for ghost update. Must be greater or equal to the amount
         // of ghost cells of the cuboid that is being updated. It is initialized based on dVIn of level 0 and
@@ -112,6 +112,7 @@ namespace mgcl
         /* Stencil that will be used in Jacobi's method */
         MGCL_STENCIL stencilType = MGCL_LAPLACE_7POINT;
         std::shared_ptr<VaryingStencil> stencilValues = nullptr;
+        std::shared_ptr<FixedStencil> fixedStencil = nullptr;
 
         /* Boundary condition that shall be used. Only affects whether ghosts are updated. Values need to be set
            in input v.
@@ -352,6 +353,7 @@ namespace mgcl
         void setStencilType(const MGCL_STENCIL& stencilType_);
 
         std::shared_ptr<VaryingStencil>& getStencilValues();
+        std::shared_ptr<FixedStencil>& getFixedStencil();
 
         BC getBc() const;
         void setBc(const BC& bc_);

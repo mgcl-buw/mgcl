@@ -5,6 +5,7 @@
 #include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, MultigridEngine
 #include "problem.hpp"
+#include "stencil.hpp"
 
 #include <cassert>
 #include <cstddef> // for NULL
@@ -84,6 +85,12 @@ namespace mgcl
                 // TODO refactor updateGhosts local?
                 updateGhostsStencilMpi(*stencilValues, mpiData.get(), problem->isPeriodic(),
                                        problem->getMpiLevelThreshold() == 0);
+            }
+
+            // copy fixedStencil pointer from Problem to first Level
+            if (stencilType == MGCL_FIXED)
+            {
+                fixedStencil = problem->getFixedStencil();
             }
 
             // create ghosted arrays for v and f on host if device buffer should not be reused
@@ -170,17 +177,31 @@ namespace mgcl
             {
                 // If level threshold is 0, stencilValues must have global sizes.
                 if (problem->getMpiLevelThreshold() == 0 && problem->mpiRank() == 0)
+                {
                     stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
                         problem->mGlobal, problem->nGlobal, problem->oGlobal, 3,
                         std::max(1, problem->getJacobiIterationsPerKernel()),
                         problem->getContext(), problem->getCommands(), problem->getProgram());
+                }
                 else
+                {
                     stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
                         m, n, o, 3, std::max(1, problem->getJacobiIterationsPerKernel()),
                         problem->getContext(), problem->getCommands(), problem->getProgram());
+                }
 
                 // Fill stencil values on gpu on level 0 from input stencil
                 stencilValuesGpu->fill(*stencilValues, problem->getCommands(), true);
+            }
+
+            // create gpu buffer for fixed stencil if needed
+            if (stencilType == MGCL_FIXED)
+            {
+                fixedStencilGpu = std::make_shared<FixedStencilGpu>(
+                    3, problem->getContext(), problem->getCommands(), problem->getProgram());
+
+                // Fill stencil values on gpu on level 0 from input stencil
+                fixedStencilGpu->fill(*fixedStencil, problem->getCommands(), true);
             }
 
             if (problem->getReuseOpenclBuffers())
@@ -511,6 +532,16 @@ namespace mgcl
         stencilValuesGpu = sv;
     }
 
+    std::shared_ptr<FixedStencilGpu>& Level::getFixedStencilGpu()
+    {
+        return fixedStencilGpu;
+    }
+
+    void Level::setFixedStencilGpu(std::shared_ptr<FixedStencilGpu> sv)
+    {
+        fixedStencilGpu = sv;
+    }
+
     int Level::getNgh() const
     {
         return ngh;
@@ -519,6 +550,11 @@ namespace mgcl
     std::shared_ptr<VaryingStencil>& Level::getStencilValues()
     {
         return stencilValues;
+    }
+
+    std::shared_ptr<FixedStencil>& Level::getFixedStencil()
+    {
+        return fixedStencil;
     }
 
     int Level::getOgh() const

@@ -52,7 +52,8 @@ namespace mgcl
         MGCL_LAPLACE_7POINT,
         MGCL_LAPLACE_19POINT,
         MGCL_LAPLACE_27POINT,
-        MGCL_VARYING
+        MGCL_VARYING,
+        MGCL_FIXED
     } MGCL_STENCIL;
 
     enum class BC
