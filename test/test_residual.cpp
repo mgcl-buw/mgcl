@@ -1089,7 +1089,7 @@ TEST_CASE("residual_seq_fixed_stencil")
     auto& lv0_fixed = pfixed.getLevelAt(0);
     auto& r_fixed = lv0_fixed.getR();
 
-    mgcl::MultigridEngine::residualSeq(*f, *v, r_fixed, resnorm, mgcl::MGCL_FIXED, 0, nullptr, fixedStencil.get(), true, periodic, true);
+    double r_norm_fixed = mgcl::MultigridEngine::residualSeq(*f, *v, r_fixed, resnorm, mgcl::MGCL_FIXED, 0, nullptr, fixedStencil.get(), true, periodic, true);
 
     // Varying
     mgcl::Problem pvarying(m, n, o, f, v);
@@ -1115,5 +1115,8 @@ TEST_CASE("residual_seq_fixed_stencil")
     auto& lv0_varying = pvarying.getLevelAt(0);
     auto& r_varying = lv0_varying.getR();
 
-    mgcl::MultigridEngine::residualSeq(*f, *v, r_varying, resnorm, mgcl::MGCL_VARYING, 0, sv.get(), nullptr, true, periodic, true);
+    double r_norm_varying = mgcl::MultigridEngine::residualSeq(*f, *v, r_varying, resnorm, mgcl::MGCL_VARYING, 0, sv.get(), nullptr, true, periodic, true);
+
+    REQUIRE(r_norm_fixed == r_norm_varying);
+    REQUIRE(r_fixed.isEqual(r_varying));
 }

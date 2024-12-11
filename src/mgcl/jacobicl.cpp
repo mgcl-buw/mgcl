@@ -842,12 +842,17 @@ namespace mgcl
         if (stencilType == MGCL_VARYING && stencilValuesCuboid == nullptr)
             error("stencilType is varying but stencilValues is null!");
 
+        if (stencilType == MGCL_FIXED && fixedStencil == nullptr)
+        {
+            error("stencilType is fixed but fixedStencil is null!");
+        }
+
         if (stencilType == MGCL_VARYING)
             stencilValues = stencilValuesCuboid->getData();
 
         if (stencilType == MGCL_FIXED)
         {
-            fsRaw = fixedStencil->getData(); // TODO
+            fsRaw = fixedStencil->getData();
         }
 
         int istart_v = v.getGhostsM() + moff;
@@ -923,23 +928,35 @@ namespace mgcl
                     else if (stencilType == MGCL_FIXED)
                     {
                         // clang-format off
-                        stencilsum = (fsRaw[1][1][1] * vraw[iv][jv][kv]
-                                - fsRaw[1][1][0] * vraw[iv][jv][kv - 1] - fsRaw[1][1][2] * vraw[iv][jv][kv + 1]
-                                - fsRaw[1][0][1] * vraw[iv][jv - 1][kv] - fsRaw[1][2][1] * vraw[iv][jv + 1][kv]
-                                - fsRaw[0][1][1] * vraw[iv - 1][jv][kv] - fsRaw[2][1][1] * vraw[iv + 1][jv][kv]
-
-                                - fsRaw[1][0][0] * vraw[iv][jv - 1][kv - 1] - fsRaw[1][0][2] * vraw[iv][jv - 1][kv + 1]
-                                - fsRaw[1][2][0] * vraw[iv][jv + 1][kv - 1] - fsRaw[1][2][2] * vraw[iv][jv + 1][kv + 1]
-                                - fsRaw[0][1][0] * vraw[iv - 1][jv][kv - 1] - fsRaw[0][1][2] * vraw[iv - 1][jv][kv + 1]
-                                - fsRaw[2][1][0] * vraw[iv + 1][jv][kv - 1] - fsRaw[2][1][2] * vraw[iv + 1][jv][kv + 1]
-                                - fsRaw[0][0][1] * vraw[iv - 1][jv - 1][kv] - fsRaw[0][2][1] * vraw[iv - 1][jv + 1][kv]
-                                - fsRaw[2][0][1] * vraw[iv + 1][jv - 1][kv] - fsRaw[2][2][1] * vraw[iv + 1][jv + 1][kv]
-
-                                - fsRaw[0][0][0] * vraw[iv - 1][jv - 1][kv - 1] - fsRaw[0][0][2] * vraw[iv - 1][jv - 1][kv + 1]
-                                - fsRaw[0][2][0] * vraw[iv - 1][jv + 1][kv - 1] - fsRaw[0][2][2] * vraw[iv - 1][jv + 1][kv + 1]
-                                - fsRaw[2][0][0] * vraw[iv + 1][jv - 1][kv - 1] - fsRaw[2][0][2] * vraw[iv + 1][jv - 1][kv + 1]
-                                - fsRaw[2][2][0] * vraw[iv + 1][jv + 1][kv - 1] - fsRaw[2][2][2] * vraw[iv + 1][jv + 1][kv + 1]
-                                ) * stencilFactor;
+                        stencilsum = fsRaw[1][1][1]  * vraw[iv][jv][kv]
+                            + fsRaw[1][1][0] * vraw[ iv ][ jv ][kv-1]
+                            + fsRaw[1][1][2] * vraw[ iv ][ jv ][kv+1]
+                            + fsRaw[1][0][1] * vraw[ iv ][jv-1][ kv ]
+                            + fsRaw[1][2][1] * vraw[ iv ][jv+1][ kv ]
+                            + fsRaw[0][1][1] * vraw[iv-1][ jv ][ kv ]
+                            + fsRaw[2][1][1] * vraw[iv+1][ jv ][ kv ]
+                            
+                            + fsRaw[1][0][0] * vraw[ iv ][jv-1][kv-1]
+                            + fsRaw[1][0][2] * vraw[ iv ][jv-1][kv+1]
+                            + fsRaw[1][2][0] * vraw[ iv ][jv+1][kv-1]
+                            + fsRaw[1][2][2] * vraw[ iv ][jv+1][kv+1]
+                            + fsRaw[0][1][0] * vraw[iv-1][ jv ][kv-1]
+                            + fsRaw[0][1][2] * vraw[iv-1][ jv ][kv+1]
+                            + fsRaw[2][1][0] * vraw[iv+1][ jv ][kv-1]
+                            + fsRaw[2][1][2] * vraw[iv+1][ jv ][kv+1]
+                            + fsRaw[0][0][1] * vraw[iv-1][jv-1][ kv ]
+                            + fsRaw[0][2][1] * vraw[iv-1][jv+1][ kv ]
+                            + fsRaw[2][0][1] * vraw[iv+1][jv-1][ kv ]
+                            + fsRaw[2][2][1] * vraw[iv+1][jv+1][ kv ]
+                            
+                            + fsRaw[0][0][0] * vraw[iv-1][jv-1][kv-1]
+                            + fsRaw[0][0][2] * vraw[iv-1][jv-1][kv+1]
+                            + fsRaw[0][2][0] * vraw[iv-1][jv+1][kv-1]
+                            + fsRaw[0][2][2] * vraw[iv-1][jv+1][kv+1]
+                            + fsRaw[2][0][0] * vraw[iv+1][jv-1][kv-1]
+                            + fsRaw[2][0][2] * vraw[iv+1][jv-1][kv+1]
+                            + fsRaw[2][2][0] * vraw[iv+1][jv+1][kv-1]
+                            + fsRaw[2][2][2] * vraw[iv+1][jv+1][kv+1];
                         // clang-format on
                     }
                     else if (stencilType == MGCL_VARYING)
