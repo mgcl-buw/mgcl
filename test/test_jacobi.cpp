@@ -981,11 +981,11 @@ TEST_CASE("jacobi_seq_fixed")
     int m = 4;
     int n = 4;
     int o = 4;
-    int gh = 1;
     double omega = 0.8;
     double h2 = 1.0 / (double)(m * m);
-    int maxiter = 1;      // GENERATE(1, 2, 3);
-    int stepsPerIter = 1; // GENERATE(1, 2, 3);
+    int maxiter = GENERATE(1, 2, 3);
+    int stepsPerIter = GENERATE(1, 2, 3);
+    int gh = stepsPerIter;
 
     if (maxiter < stepsPerIter)
     {
@@ -1002,8 +1002,10 @@ TEST_CASE("jacobi_seq_fixed")
 
     mgcl::Problem pfixed(m, n, o, fin, vin);
     pfixed.setResidualNorm(resnorm);
-    pfixed.setStencilType(mgcl::MGCL_FIXED);
     pfixed.setGhostsIn(gh);
+    pfixed.setGhosts(gh);
+    pfixed.setJacobiIterationsPerKernel(stepsPerIter);
+    pfixed.setStencilType(mgcl::MGCL_FIXED);
     pfixed.init();
 
     auto& fixedStencil = pfixed.getFixedStencil();
@@ -1020,8 +1022,10 @@ TEST_CASE("jacobi_seq_fixed")
     // Varying
     mgcl::Problem pvarying(m, n, o, fin, vin);
     pvarying.setResidualNorm(resnorm);
-    pvarying.setStencilType(mgcl::MGCL_VARYING);
     pvarying.setGhostsIn(gh);
+    pvarying.setGhosts(gh);
+    pvarying.setJacobiIterationsPerKernel(stepsPerIter);
+    pvarying.setStencilType(mgcl::MGCL_VARYING);
     pvarying.init();
 
     auto& sv = pvarying.getStencilValues();
