@@ -1081,10 +1081,11 @@ TEST_CASE("residual_seq_fixed_stencil")
     pfixed.setResidualNorm(resnorm);
     pfixed.setStencilType(mgcl::MGCL_FIXED);
     pfixed.setGhostsIn(gh);
-    pfixed.init();
 
     auto& fixedStencil = pfixed.getFixedStencil();
     fixedStencil->fillRandom();
+
+    pfixed.init();
 
     auto& lv0_fixed = pfixed.getLevelAt(0);
     auto& r_fixed = lv0_fixed.getR();
@@ -1096,7 +1097,6 @@ TEST_CASE("residual_seq_fixed_stencil")
     pvarying.setResidualNorm(resnorm);
     pvarying.setStencilType(mgcl::MGCL_VARYING);
     pvarying.setGhostsIn(gh);
-    pvarying.init();
 
     auto& sv = pvarying.getStencilValues();
     // copy from fixed into varying
@@ -1112,6 +1112,8 @@ TEST_CASE("residual_seq_fixed_stencil")
         }
     // clang-format on
 
+    pvarying.init();
+
     auto& lv0_varying = pvarying.getLevelAt(0);
     auto& r_varying = lv0_varying.getR();
 
@@ -1119,4 +1121,65 @@ TEST_CASE("residual_seq_fixed_stencil")
 
     REQUIRE(r_norm_fixed == r_norm_varying);
     REQUIRE(r_fixed.isEqual(r_varying));
+}
+
+// Checks if residual for fixed stencil is the same as for varying stencil filled with fixed coeffs
+TEST_CASE("residual_ocl_fixed_stencil")
+{
+    int m = 4;
+    int n = 4;
+    int o = 4;
+    int gh = 1;
+
+    mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+    bool periodic = true;
+
+    auto v = std::make_shared<mgcl::Cuboid>(m, n, o, gh, gh, gh);
+    auto f = std::make_shared<mgcl::Cuboid>(m, n, o, gh, gh, gh);
+    v->fillRandom();
+    f->fillRandom();
+
+    mgcl::Problem pfixed(m, n, o, f, v);
+    pfixed.setUseOpencl(true);
+    pfixed.setResidualNorm(resnorm);
+    pfixed.setStencilType(mgcl::MGCL_FIXED);
+    pfixed.setGhostsIn(gh);
+
+    auto& fixedStencil = pfixed.getFixedStencil();
+    fixedStencil->fillRandom();
+
+    pfixed.init();
+
+    auto& lv0_fixed = pfixed.getLevelAt(0);
+
+    double r_norm_fixed = mgcl::MultigridEngine::residual(pfixed, lv0_fixed, true);
+
+    // Varying
+    mgcl::Problem pvarying(m, n, o, f, v);
+    pvarying.setUseOpencl(true);
+    pvarying.setResidualNorm(resnorm);
+    pvarying.setStencilType(mgcl::MGCL_VARYING);
+    pvarying.setGhostsIn(gh);
+
+    auto& sv = pvarying.getStencilValues();
+    // copy from fixed into varying
+    // clang-format off
+    for (int i = 0; i < sv->getMgh(); i++)
+    for (int j = 0; j < sv->getNgh(); j++)
+    for (int k = 0; k < sv->getOgh(); k++)
+        for (int ii = 0; ii < 3; ii++)
+        for (int jj = 0; jj < 3; jj++)
+        for (int kk = 0; kk < 3; kk++)
+        {
+            (*sv)[ii][jj][kk][i][j][k] = (*fixedStencil)[ii][jj][kk];
+        }
+    // clang-format on
+
+    pvarying.init();
+
+    auto& lv0_varying = pvarying.getLevelAt(0);
+
+    double r_norm_varying = mgcl::MultigridEngine::residual(pvarying, lv0_varying, true);
+
+    REQUIRE(r_norm_fixed == r_norm_varying);
 }

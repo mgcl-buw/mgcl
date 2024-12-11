@@ -465,6 +465,122 @@ __kernel void residual_27point_varying_stencil(
     }
 }
 
+/**
+ * Calculates the residual r = f - A*v for a 27-point stencil.
+ * Must be called with one wi per grid point that the residual shall be calculated for (only real grid points, if {m,n,o}off = 0)
+ * Arguments:
+ * - v_in: v
+ * - f: f
+ * - r: r
+ * - mgh, ngh, ogh: ghosted grid dimensions
+ * - ghosts: number of ghosts
+ * - moff, noff, ooff: offsets for relevant cells. Can be used to enlarge or shrink the grid cells that the residual is calculated for.
+ *     E.g. if real m=n=o=4 and gh=2, with moff=0, the residual is calculated for grid points m=2,...,5. With moff=-1, the residual is calculated for grid points m=1,...,6.
+ * - c000 ... c222: coefficients for the 27-point stencil with respective index
+ */
+__kernel void residual_27point_fixed_stencil(
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict f,
+    __global double* restrict r,
+    const int mgh, const int ngh, const int ogh,
+    const int ghosts,
+    const int moff, const int noff, const int ooff,
+    const double c000,
+    const double c001,
+    const double c002,
+    const double c010,
+    const double c011,
+    const double c012,
+    const double c020,
+    const double c021,
+    const double c022,
+    const double c100,
+    const double c101,
+    const double c102,
+    const double c110,
+    const double c111,
+    const double c112,
+    const double c120,
+    const double c121,
+    const double c122,
+    const double c200,
+    const double c201,
+    const double c202,
+    const double c210,
+    const double c211,
+    const double c212,
+    const double c220,
+    const double c221,
+    const double c222)
+
+{
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
+
+    // loop boundaries
+    // TODO maybe refactor to use v_ghm, etc.?
+    int istart_v = ghosts + moff;
+    int jstart_v = ghosts + noff;
+    int kstart_v = ghosts + ooff;
+    int iend_v = mgh - ghosts - moff;
+    int jend_v = ngh - ghosts - noff;
+    int kend_v = ogh - ghosts - ooff;
+
+    // calculate residual only for relevant cells (off = 0: only real cells)
+    if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
+    {
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
+        int index = i * ioff + j * ogh + k;
+
+        // A*v
+        // clang-format off
+        double stencilsum = c111 * v_in[index]
+            + c110 * v_in[index - 1]
+            + c112 * v_in[index + 1]
+            + c101 * v_in[index - joff]
+            + c121 * v_in[index + joff]
+            + c011 * v_in[index - ioff]
+            + c211 * v_in[index + ioff]
+            
+            + c100 * v_in[index - joff - koff]
+            + c102 * v_in[index - joff + koff]
+            + c120 * v_in[index + joff - koff]
+            + c122 * v_in[index + joff + koff]
+            + c010 * v_in[index - ioff - koff]
+            + c012 * v_in[index - ioff + koff]
+            + c210 * v_in[index + ioff - koff]
+            + c212 * v_in[index + ioff + koff]
+            + c001 * v_in[index - ioff - joff]
+            + c021 * v_in[index - ioff + joff]
+            + c201 * v_in[index + ioff - joff]
+            + c221 * v_in[index + ioff + joff]
+
+            + c000 * v_in[index - ioff - joff - koff]
+            + c002 * v_in[index - ioff - joff + koff]
+            + c020 * v_in[index - ioff + joff - koff]
+            + c022 * v_in[index - ioff + joff + koff]
+            + c200 * v_in[index + ioff - joff - koff]
+            + c202 * v_in[index + ioff - joff + koff]
+            + c220 * v_in[index + ioff + joff - koff]
+            + c222 * v_in[index + ioff + joff + koff];
+        // clang-format on
+
+        // if (i == 2 && j == 2 && k == 2)
+        // {
+        //     printf("ocl stencilsum = %e\n", stencilsum);
+        //     print27point_sv(v_in, index, ioff, joff, koff, stencilValues, index_sv);
+        // }
+
+        // r = f - A*v
+        r[index] = f[index] - stencilsum;
+    }
+}
+
 /* Calculates the squares of the residual.
  * r is ghosted, rsquares must be only real cells.
  * m, n and o must be real grid size.

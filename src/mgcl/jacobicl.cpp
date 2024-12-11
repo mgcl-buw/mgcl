@@ -684,6 +684,10 @@ namespace mgcl
         {
             kernelName = "residual_27point_varying_stencil";
         }
+        else if (problem.stencilType == MGCL_FIXED)
+        {
+            kernelName = "residual_27point_fixed_stencil";
+        }
 
         cl_event ev;
 
@@ -722,6 +726,48 @@ namespace mgcl
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &moff);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &noff);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ooff);
+        }
+        else if (problem.stencilType == MGCL_FIXED)
+        {
+            // TODO avoid reading by keeping FixedStencil only on host, if it turns out to be fast
+            auto fs = level.getFixedStencilGpu()->read(problem.getCommands(), true);
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &moff);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &noff);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ooff);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][0][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][0][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][0][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][1][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][1][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][1][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][2][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][2][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][2][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][0][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][0][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][0][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][1][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][1][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][1][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][2][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][2][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][2][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][0][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][0][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][0][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][1][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][1][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][1][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][2][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][2][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][2][2]);
         }
         else
         {

@@ -22,6 +22,7 @@ namespace mgcl::conf
 
         // Residual kernels
         ret["residual_27point_varying_stencil"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
+        ret["residual_27point_fixed_stencil"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         ret["residual_7point"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         ret["residual_19point"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         ret["residual_27point"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
