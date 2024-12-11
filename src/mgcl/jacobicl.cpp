@@ -75,6 +75,11 @@ namespace mgcl
         if (stencilType == MGCL_VARYING && stencilValues == nullptr)
             error("stencilType is varying but stencilValues is null!");
 
+        if (stencilType == MGCL_FIXED && fixedStencil == nullptr)
+        {
+            error("stencilType is fixed but fixedStencil is null!");
+        }
+
         for (int iter = 0; iter < maxiter; iter += stepsPerIter)
         {
             // update ghost cells for periodic boundary condition
@@ -118,7 +123,7 @@ namespace mgcl
                                 vraw[iv][jv][kv] = vraw[iv][jv][kv] + omega * dinv * r[ir][jr][kr];
                             }
                 }
-                else
+                else if (stencilType == MGCL_VARYING)
                 {
                     // printf("seq x = %d, omega = %e, res = %e, v_out = %e, sv_self = %e\n", 1, omega, r[1][2][5], vraw[1][2][5], stencilValues[2][3][6][1][1][1]);
                     // print_7point(v_in, index, ioff, joff, koff);
@@ -143,6 +148,15 @@ namespace mgcl
                                 //     // // print_7point(v_in, index, ioff, joff, koff);
                                 //     // print27point(v, i, j, k);
                                 // }
+                            }
+                }
+                else if (stencilType == MGCL_FIXED)
+                {
+                    for (int iv = istart_v, ir = istart_r, isv = istart_sv; iv < iend_v; iv++, ir++, isv++)
+                        for (int jv = jstart_v, jr = jstart_r, jsv = jstart_sv; jv < jend_v; jv++, jr++, jsv++)
+                            for (int kv = kstart_v, kr = kstart_r, ksv = kstart_sv; kv < kend_v; kv++, kr++, ksv++)
+                            {
+                                vraw[iv][jv][kv] = vraw[iv][jv][kv] + omega * (1.0 / (*fixedStencil)[1][1][1]) * r[ir][jr][kr];
                             }
                 }
             }

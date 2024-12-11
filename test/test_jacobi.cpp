@@ -975,3 +975,78 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
         }
     }
 }
+
+TEST_CASE("jacobi_seq_fixed")
+{
+    int m = 4;
+    int n = 4;
+    int o = 4;
+    int gh = 1;
+    double omega = 0.8;
+    double h2 = 1.0 / (double)(m * m);
+    int maxiter = 1;      // GENERATE(1, 2, 3);
+    int stepsPerIter = 1; // GENERATE(1, 2, 3);
+
+    if (maxiter < stepsPerIter)
+    {
+        SUCCEED("maxiter < stepsPerIter, skipping test");
+    }
+
+    mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+    bool periodic = true;
+
+    auto vin = std::make_shared<mgcl::Cuboid>(m, n, o, gh, gh, gh);
+    auto fin = std::make_shared<mgcl::Cuboid>(m, n, o, gh, gh, gh);
+    vin->fillRandom();
+    fin->fillRandom();
+
+    mgcl::Problem pfixed(m, n, o, fin, vin);
+    pfixed.setResidualNorm(resnorm);
+    pfixed.setStencilType(mgcl::MGCL_FIXED);
+    pfixed.setGhostsIn(gh);
+    pfixed.init();
+
+    auto& fixedStencil = pfixed.getFixedStencil();
+    fixedStencil->fillRandom();
+
+    auto& lv0_fixed = pfixed.getLevelAt(0);
+    auto& r_fixed = lv0_fixed.getR();
+    auto& v_fixed = lv0_fixed.getV();
+    auto& f_fixed = lv0_fixed.getF();
+
+    double res_norm_fixed = mgcl::MultigridEngine::jacobiSeq(v_fixed, f_fixed, r_fixed, omega, h2, maxiter, resnorm, mgcl::MGCL_FIXED,
+                                                             0, nullptr, fixedStencil.get(), true, periodic, true, stepsPerIter);
+
+    // Varying
+    mgcl::Problem pvarying(m, n, o, fin, vin);
+    pvarying.setResidualNorm(resnorm);
+    pvarying.setStencilType(mgcl::MGCL_VARYING);
+    pvarying.setGhostsIn(gh);
+    pvarying.init();
+
+    auto& sv = pvarying.getStencilValues();
+    // copy from fixed into varying
+    // clang-format off
+    for (int i = 0; i < sv->getMgh(); i++)
+    for (int j = 0; j < sv->getNgh(); j++)
+    for (int k = 0; k < sv->getOgh(); k++)
+        for (int ii = 0; ii < 3; ii++)
+        for (int jj = 0; jj < 3; jj++)
+        for (int kk = 0; kk < 3; kk++)
+        {
+            (*sv)[ii][jj][kk][i][j][k] = (*fixedStencil)[ii][jj][kk];
+        }
+    // clang-format on
+
+    auto& lv0_varying = pvarying.getLevelAt(0);
+    auto& r_varying = lv0_varying.getR();
+    auto& v_varying = lv0_varying.getV();
+    auto& f_varying = lv0_varying.getF();
+
+    double res_norm_varying = mgcl::MultigridEngine::jacobiSeq(v_varying, f_varying, r_varying, omega, h2, maxiter, resnorm, mgcl::MGCL_VARYING,
+                                                               0, sv.get(), nullptr, true, periodic, true, stepsPerIter);
+
+    REQUIRE(res_norm_fixed == res_norm_varying);
+    REQUIRE(r_fixed.isEqual(r_varying));
+    REQUIRE(v_fixed.isEqual(v_varying));
+}
