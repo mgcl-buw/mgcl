@@ -241,6 +241,10 @@ namespace mgcl
         {
             kernelName = "jacobi_iter_27point_varying_stencil_1d";
         }
+        else if (problem.stencilType == MGCL_FIXED)
+        {
+            kernelName = "jacobi_iter_27point_fixed_stencil_1d";
+        }
 
         cl_kernel kernel = clCreateKernel(problem.openCLHelper.getProgram(), kernelName, &err);
         mgclCheckError(err, "Creating kernel");
@@ -252,6 +256,8 @@ namespace mgcl
 
         // assign kernel arguments
         int pos = 0;
+        int pos_idxstart = -1;
+        int pos_storeres = -1;
 
         if (problem.stencilType == MGCL_VARYING)
         {
@@ -277,7 +283,54 @@ namespace mgcl
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
+            pos_idxstart = pos;
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
+            pos_storeres = pos;
+        }
+        else if (problem.stencilType == MGCL_FIXED)
+        {
+            // TODO avoid reading by keeping FixedStencil only on host, if it turns out to be fast
+            auto fs = level.getFixedStencilGpu()->read(problem.getCommands(), true);
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &problem.omega);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
+            pos_idxstart = pos;
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
+            pos_storeres = pos;
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][0][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][0][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][0][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][1][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][1][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][1][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][2][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][2][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][2][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][0][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][0][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][0][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][1][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][1][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][1][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][2][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][2][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][2][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][0][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][0][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][0][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][1][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][1][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][1][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][2][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][2][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][2][2]);
         }
         else
         {
@@ -293,7 +346,9 @@ namespace mgcl
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
+            pos_idxstart = pos;
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
+            pos_storeres = pos;
         }
         mgclCheckError(err, "Setting kernel arguments");
 
@@ -303,7 +358,7 @@ namespace mgcl
         size_t local[2] = {c[0], c[1]};
 
         // kernels that use constant Laplace stencils are 2d and need different global and local sizes
-        if (problem.stencilType != MGCL_VARYING)
+        if (problem.stencilType != MGCL_VARYING && problem.stencilType != MGCL_FIXED)
         {
             global[0] = static_cast<size_t>(ngh);
             global[1] = static_cast<size_t>(ogh);
@@ -312,7 +367,8 @@ namespace mgcl
         }
 
         // Pad global sizes to fit to local sizes
-        for (int i = 0; i < (problem.stencilType == MGCL_VARYING ? 1 : 2); i++)
+        int kernelDims = (problem.stencilType == MGCL_VARYING || problem.stencilType == MGCL_FIXED) ? 1 : 2;
+        for (int i = 0; i < kernelDims; i++)
             if (global[i] % local[i] != 0)
             {
                 global[i] += local[i] - (global[i] % local[i]);
@@ -358,19 +414,16 @@ namespace mgcl
                 if (globalIter == maxiter - 1)
                 {
                     store_res = 1;
-                    err = clSetKernelArg(kernel, pos, sizeof(int), &store_res);
+                    err = clSetKernelArg(kernel, pos_storeres, sizeof(int), &store_res);
                     mgclCheckError(err, "Setting kernel arguments");
                 }
 
                 // recalculate and set idx_start
                 idx_start = problem.ghosts - ((stepsPerIter - innerIter) - 1);
-                err = clSetKernelArg(kernel, pos - 1, sizeof(int), &idx_start);
+                err = clSetKernelArg(kernel, pos_idxstart, sizeof(int), &idx_start);
                 mgclCheckError(err, "Setting kernel arguments");
 
-                if (problem.stencilType != MGCL_VARYING)
-                    err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 2, NULL, global, local, 0, NULL, &ev);
-                else
-                    err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 1, NULL, global, local, 0, NULL, &ev);
+                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, kernelDims, NULL, global, local, 0, NULL, &ev);
                 mgclCheckError(err, "Enqueueing kernel");
 
                 if (problem.isProfilingEnabled())

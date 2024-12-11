@@ -1000,6 +1000,121 @@ __kernel void jacobi_iter_27point_varying_stencil_1d(
     }
 }
 
+/* runs one iteration of jacobi's method using one work-item per grid node for a fixed stencil.
+ * uses a 1d kernel, which parallelizes all three loop in x,y and z directions.
+ * global size must be of ghosted grid.
+ * Arguments:
+ * - v_in: input v, only read from
+ * - v_out: output v, only written to
+ * - f: rhs, only read from
+ * - r: residual, only written to if store_residual is true. Else unused
+ * - omega: relaxation parameter
+ * - mgh, ngh,ogh: Dimensions of local ghosted grid
+ * - store_residual: If true, the residual will be stored into global field r.
+ * - ghosts: Amount of ghost cells of v, f and r.
+ * - idx_start: Determines which cells shall be calculated, which is relevant for running
+ *     Jacobi with multiple iterations without ghost cell update in-between. I.e. when
+ *     stepsPerIter = 1: idx_start = ghosts.
+ * - c000 ... c222: coefficients for the 27-point stencil with respective index
+ */
+__kernel void jacobi_iter_27point_fixed_stencil_1d(
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out,
+    __global double* restrict f,
+    __global double* restrict r,
+    const double omega,
+    const int mgh, const int ngh, const int ogh,
+    const int ghosts,
+    const int idx_start, const int store_residual,
+    const double c000,
+    const double c001,
+    const double c002,
+    const double c010,
+    const double c011,
+    const double c012,
+    const double c020,
+    const double c021,
+    const double c022,
+    const double c100,
+    const double c101,
+    const double c102,
+    const double c110,
+    const double c111,
+    const double c112,
+    const double c120,
+    const double c121,
+    const double c122,
+    const double c200,
+    const double c201,
+    const double c202,
+    const double c210,
+    const double c211,
+    const double c212,
+    const double c220,
+    const double c221,
+    const double c222)
+{
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
+
+    // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
+    if (i >= idx_start && j >= idx_start && k >= idx_start && i < mgh - idx_start && j < ngh - idx_start && k < ogh - idx_start)
+    {
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
+        int index = i * ioff + j * ogh + k;
+
+        double res;
+        double v_in_index = v_in[index];
+
+        // A*v
+        // clang-format off
+        double stencilsum = c111 * v_in_index
+            + c110 * v_in[index - 1]
+            + c112 * v_in[index + 1]
+            + c101 * v_in[index - joff]
+            + c121 * v_in[index + joff]
+            + c011 * v_in[index - ioff]
+            + c211 * v_in[index + ioff]
+            
+            + c100 * v_in[index - joff - koff]
+            + c102 * v_in[index - joff + koff]
+            + c120 * v_in[index + joff - koff]
+            + c122 * v_in[index + joff + koff]
+            + c010 * v_in[index - ioff - koff]
+            + c012 * v_in[index - ioff + koff]
+            + c210 * v_in[index + ioff - koff]
+            + c212 * v_in[index + ioff + koff]
+            + c001 * v_in[index - ioff - joff]
+            + c021 * v_in[index - ioff + joff]
+            + c201 * v_in[index + ioff - joff]
+            + c221 * v_in[index + ioff + joff]
+
+            + c000 * v_in[index - ioff - joff - koff]
+            + c002 * v_in[index - ioff - joff + koff]
+            + c020 * v_in[index - ioff + joff - koff]
+            + c022 * v_in[index - ioff + joff + koff]
+            + c200 * v_in[index + ioff - joff - koff]
+            + c202 * v_in[index + ioff - joff + koff]
+            + c220 * v_in[index + ioff + joff - koff]
+            + c222 * v_in[index + ioff + joff + koff];
+        // clang-format on
+
+        // r = f - A*v
+        res = f[index] - stencilsum;
+
+        // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
+        v_out[index] = v_in_index + omega * (1.0 / c111) * res;
+
+        if (store_residual)
+            r[index] = res;
+    }
+}
+
 /* Restricts from fine to coarse grid.
  * Needs to get called with m*n*o work-items.
  * m,n,o is size of ghosted coarse grid.

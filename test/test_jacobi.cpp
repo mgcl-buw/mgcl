@@ -1054,3 +1054,79 @@ TEST_CASE("jacobi_seq_fixed")
     REQUIRE(r_fixed.isEqual(r_varying));
     REQUIRE(v_fixed.isEqual(v_varying));
 }
+
+TEST_CASE("jacobi_ocl_fixed")
+{
+    int m = 4;
+    int n = 4;
+    int o = 4;
+    double omega = 0.8;
+    double h2 = 1.0 / (double)(m * m);
+    int maxiter = 1;      // GENERATE(1, 2, 3);
+    int stepsPerIter = 1; // GENERATE(1, 2, 3);
+    int gh = stepsPerIter;
+
+    if (maxiter < stepsPerIter)
+    {
+        SUCCEED("maxiter < stepsPerIter, skipping test");
+    }
+
+    mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+    bool periodic = true;
+
+    auto vin = std::make_shared<mgcl::Cuboid>(m, n, o, gh, gh, gh);
+    auto fin = std::make_shared<mgcl::Cuboid>(m, n, o, gh, gh, gh);
+    vin->fillRandom();
+    fin->fillRandom();
+
+    mgcl::Problem pfixed(m, n, o, fin, vin);
+    pfixed.setUseOpencl(true);
+    pfixed.setResidualNorm(resnorm);
+    pfixed.setGhostsIn(gh);
+    pfixed.setGhosts(gh);
+    pfixed.setJacobiIterationsPerKernel(stepsPerIter);
+    pfixed.setStencilType(mgcl::MGCL_FIXED);
+    pfixed.init();
+
+    auto& fixedStencil = pfixed.getFixedStencil();
+    fixedStencil->fillRandom();
+
+    auto& lv0_fixed = pfixed.getLevelAt(0);
+
+    double res_norm_fixed = mgcl::MultigridEngine::jacobi(pfixed, lv0_fixed, maxiter, true, stepsPerIter);
+
+    auto v_fixed_out = lv0_fixed.getDVIn().read(pfixed.getCommands(), nullptr, true);
+
+    // Varying
+    mgcl::Problem pvarying(m, n, o, fin, vin);
+    pvarying.setUseOpencl(true);
+    pvarying.setResidualNorm(resnorm);
+    pvarying.setGhostsIn(gh);
+    pvarying.setGhosts(gh);
+    pvarying.setJacobiIterationsPerKernel(stepsPerIter);
+    pvarying.setStencilType(mgcl::MGCL_VARYING);
+    pvarying.init();
+
+    auto& sv = pvarying.getStencilValues();
+    // copy from fixed into varying
+    // clang-format off
+    for (int i = 0; i < sv->getMgh(); i++)
+    for (int j = 0; j < sv->getNgh(); j++)
+    for (int k = 0; k < sv->getOgh(); k++)
+        for (int ii = 0; ii < 3; ii++)
+        for (int jj = 0; jj < 3; jj++)
+        for (int kk = 0; kk < 3; kk++)
+        {
+            (*sv)[ii][jj][kk][i][j][k] = (*fixedStencil)[ii][jj][kk];
+        }
+    // clang-format on
+
+    auto& lv0_varying = pvarying.getLevelAt(0);
+
+    double res_norm_varying = mgcl::MultigridEngine::jacobi(pvarying, lv0_varying, maxiter, true, stepsPerIter);
+
+    auto v_varying_out = lv0_varying.getDVIn().read(pvarying.getCommands(), nullptr, true);
+
+    REQUIRE(res_norm_fixed == res_norm_varying); // TODO check
+    REQUIRE(v_fixed_out->isEqual(*v_varying_out));
+}
