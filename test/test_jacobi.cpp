@@ -1006,10 +1006,12 @@ TEST_CASE("jacobi_seq_fixed")
     pfixed.setGhosts(gh);
     pfixed.setJacobiIterationsPerKernel(stepsPerIter);
     pfixed.setStencilType(mgcl::MGCL_FIXED);
-    pfixed.init();
 
     auto& fixedStencil = pfixed.getFixedStencil();
     fixedStencil->fillRandom();
+    (*fixedStencil)[1][1][1] = 1.0; // make sure the stencil does not produce nan
+
+    pfixed.init();
 
     auto& lv0_fixed = pfixed.getLevelAt(0);
     auto& r_fixed = lv0_fixed.getR();
@@ -1026,7 +1028,6 @@ TEST_CASE("jacobi_seq_fixed")
     pvarying.setGhosts(gh);
     pvarying.setJacobiIterationsPerKernel(stepsPerIter);
     pvarying.setStencilType(mgcl::MGCL_VARYING);
-    pvarying.init();
 
     auto& sv = pvarying.getStencilValues();
     // copy from fixed into varying
@@ -1042,6 +1043,8 @@ TEST_CASE("jacobi_seq_fixed")
         }
     // clang-format on
 
+    pvarying.init();
+
     auto& lv0_varying = pvarying.getLevelAt(0);
     auto& r_varying = lv0_varying.getR();
     auto& v_varying = lv0_varying.getV();
@@ -1050,6 +1053,8 @@ TEST_CASE("jacobi_seq_fixed")
     double res_norm_varying = mgcl::MultigridEngine::jacobiSeq(v_varying, f_varying, r_varying, omega, h2, maxiter, resnorm, mgcl::MGCL_VARYING,
                                                                0, sv.get(), nullptr, true, periodic, true, stepsPerIter);
 
+    REQUIRE(!std::isnan(res_norm_fixed));
+    REQUIRE(!std::isnan(res_norm_varying));
     REQUIRE(res_norm_fixed == res_norm_varying);
     REQUIRE(r_fixed.isEqual(r_varying));
     REQUIRE(v_fixed.isEqual(v_varying));
@@ -1086,10 +1091,12 @@ TEST_CASE("jacobi_ocl_fixed")
     pfixed.setGhosts(gh);
     pfixed.setJacobiIterationsPerKernel(stepsPerIter);
     pfixed.setStencilType(mgcl::MGCL_FIXED);
-    pfixed.init();
 
     auto& fixedStencil = pfixed.getFixedStencil();
     fixedStencil->fillRandom();
+    (*fixedStencil)[1][1][1] = 1.0; // make sure the stencil does not produce nan
+
+    pfixed.init();
 
     auto& lv0_fixed = pfixed.getLevelAt(0);
 
@@ -1105,7 +1112,6 @@ TEST_CASE("jacobi_ocl_fixed")
     pvarying.setGhosts(gh);
     pvarying.setJacobiIterationsPerKernel(stepsPerIter);
     pvarying.setStencilType(mgcl::MGCL_VARYING);
-    pvarying.init();
 
     auto& sv = pvarying.getStencilValues();
     // copy from fixed into varying
@@ -1121,12 +1127,16 @@ TEST_CASE("jacobi_ocl_fixed")
         }
     // clang-format on
 
+    pvarying.init();
+
     auto& lv0_varying = pvarying.getLevelAt(0);
 
     double res_norm_varying = mgcl::MultigridEngine::jacobi(pvarying, lv0_varying, maxiter, true, stepsPerIter);
 
     auto v_varying_out = lv0_varying.getDVIn().read(pvarying.getCommands(), nullptr, true);
 
+    REQUIRE(!std::isnan(res_norm_fixed));
+    REQUIRE(!std::isnan(res_norm_varying));
     REQUIRE(res_norm_fixed == res_norm_varying); // TODO check
     REQUIRE(v_fixed_out->isEqual(*v_varying_out));
 }
