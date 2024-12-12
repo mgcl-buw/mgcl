@@ -148,6 +148,27 @@ namespace mgcl
                               stencilValues->getGhostsO() < ghosts))
             error("Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!");
 
+        // error if there is a zero coefficient on the diagonal, since then the Jacobi result will be NaN
+        if (stencilValues)
+        {
+            for (int i = ghosts; i < m + ghosts; i++)
+                for (int j = ghosts; j < n + ghosts; j++)
+                    for (int k = ghosts; k < o + ghosts; k++)
+                    {
+                        if ((*stencilValues)[1][1][1][i][j][k] == 0)
+                        {
+                            error("stencilValues having at least one zero on the diagonal. Did you call Problem::init() before setting the coefficients?");
+                        }
+                    }
+        }
+        else if (fixedStencil)
+        {
+            if ((*fixedStencil)[1][1][1] == 0)
+            {
+                error("fixedStencil having a zero on the diagonal. Did you call Problem::init() before setting the coefficients?");
+            }
+        }
+
         return true;
     }
 
