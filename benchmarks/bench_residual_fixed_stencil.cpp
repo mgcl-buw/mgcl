@@ -348,9 +348,7 @@ double residual(ResidualArgs& args)
     return res;
 }
 
-// Benchs the old galerkin version (using stencil multiplication) vs. the new optimized one, that writes
-// directly to the result stencil
-// Creation date: 08.08.2024
+// Benchs the various residual fixed stencil kernel versions
 TEST_CASE("residualFixedKernelVersions")
 {
     using std::min;
