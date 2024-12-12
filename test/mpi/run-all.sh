@@ -248,6 +248,7 @@ if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
       run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_FixedStencil_multiple_jacobi_iters" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_multiple_solve_calls"
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_different_relres"

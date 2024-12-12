@@ -301,6 +301,20 @@ void mgcl_test::fill7pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCe
             }
 }
 
+void mgcl_test::fill7pLaplace(mgcl::FixedStencil& v, double h, bool negativeCenter)
+{
+    double f = negativeCenter ? -1.0 : 1.0;
+    double h2inv = f * (1.0 / (h * h));
+    // 7-point Laplace
+    v[0][1][1] = h2inv * -1.0;
+    v[1][0][1] = h2inv * -1.0;
+    v[1][1][0] = h2inv * -1.0;
+    v[1][1][1] = h2inv * 6.0;
+    v[1][1][2] = h2inv * -1.0;
+    v[1][2][1] = h2inv * -1.0;
+    v[2][1][1] = h2inv * -1.0;
+}
+
 void mgcl_test::fill19pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCenter)
 {
     double factor = 1.0 / (6.0 * h * h); // TODO use actual hs
