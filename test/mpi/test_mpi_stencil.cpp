@@ -391,6 +391,7 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
     p.setStencilType(mgcl::MGCL_VARYING);
+    p.getStencilValues()->fill1dIndex(true);
     p.init();
 
     // Check on level 0

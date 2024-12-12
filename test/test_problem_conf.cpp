@@ -656,25 +656,34 @@ TEST_CASE("Problem::readResults")
 TEST_CASE("Problem::setStencilType")
 {
     mgcl::Problem p(2, 2, 2);
-    CHECK(p.getStencilValues() == nullptr);
+    REQUIRE_THROWS(p.getStencilValues() == nullptr);
+    REQUIRE_THROWS(p.getFixedStencil() == nullptr);
 
     p.setStencilType(mgcl::MGCL_LAPLACE_19POINT);
-    CHECK(p.getStencilValues() == nullptr);
+    REQUIRE_THROWS(p.getStencilValues() == nullptr);
+    REQUIRE_THROWS(p.getFixedStencil() == nullptr);
 
     p.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
-    CHECK(p.getStencilValues() == nullptr);
+    REQUIRE_THROWS(p.getStencilValues() == nullptr);
+    REQUIRE_THROWS(p.getFixedStencil() == nullptr);
 
     p.setStencilType(mgcl::MGCL_LAPLACE_7POINT);
-    CHECK(p.getStencilValues() == nullptr);
+    REQUIRE_THROWS(p.getStencilValues() == nullptr);
+    REQUIRE_THROWS(p.getFixedStencil() == nullptr);
 
     p.setStencilType(mgcl::MGCL_VARYING);
     REQUIRE(p.getStencilValues() != nullptr);
+    REQUIRE_THROWS(p.getFixedStencil() == nullptr);
     CHECK(p.getStencilValues()->getM() == p.getM());
     CHECK(p.getStencilValues()->getN() == p.getN());
     CHECK(p.getStencilValues()->getO() == p.getO());
     CHECK(p.getStencilValues()->getMgh() == p.getM() + 2);
     CHECK(p.getStencilValues()->getNgh() == p.getN() + 2);
     CHECK(p.getStencilValues()->getOgh() == p.getO() + 2);
+
+    p.setStencilType(mgcl::MGCL_FIXED);
+    REQUIRE(p.getFixedStencil() != nullptr);
+    REQUIRE_THROWS(p.getStencilValues() == nullptr);
 }
 
 /**
