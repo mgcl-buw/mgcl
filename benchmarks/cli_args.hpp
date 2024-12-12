@@ -25,6 +25,8 @@ namespace CLI_ARGS
     extern std::vector<int> jacobiStepsPerIter;
 
     extern std::vector<int> elements;
+
+    extern bool checkResults;
 }
 
 // // Simple wrapper for command line args which are static variables.

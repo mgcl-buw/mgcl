@@ -19,6 +19,7 @@ int CLI_ARGS::nu2 = 2;
 std::vector<int> CLI_ARGS::jacobiIters;
 std::vector<int> CLI_ARGS::jacobiStepsPerIter;
 std::vector<int> CLI_ARGS::elements;
+bool CLI_ARGS::checkResults = false;
 
 // helper functions
 std::vector<int> split_int(std::string s, std::string delimiter);
@@ -93,6 +94,10 @@ int main(int argc, char* argv[])
                | Opt(vCycleIterations, "nu2")         // bind variable to a new option, with a hint string
                      ["--nu2"]                        // the option names it will respond to
                ("post-smoothing steps, 2 is default") // description string for the help output
+
+               | Opt(CLI_ARGS::checkResults)                                       // bind variable to a new option, with a hint string
+                     ["--checkResults"]                                            // the option names it will respond to
+               ("if true, results will be checked for benchmarks supporting this") // description string for the help output
 
                | Opt(jacobiIters, "jacobiIters")                                                                          // bind variable to a new option, with a hint string
                      ["--jacobiIters"]                                                                                    // the option names it will respond to
@@ -216,6 +221,8 @@ int main(int argc, char* argv[])
             std::cout << "gridsMax: " << gridsMax << std::endl;
         CLI_ARGS::gridsMax = split_int(gridsMax, ",");
     }
+
+    std::cout << "checkResults: " << CLI_ARGS::checkResults << std::endl;
 
     int result = session.run();
 
