@@ -1279,11 +1279,19 @@ namespace mgcl
 
     std::shared_ptr<VaryingStencil>& Problem::getStencilValues()
     {
+        if (stencilType != MGCL_VARYING)
+        {
+            error("Problem::getStencilValues: stencilType is not MGCL_VARYING. Use Problem::setStencilType(MGCL_VARYING) first.");
+        }
         return stencilValues;
     }
 
     std::shared_ptr<FixedStencil>& Problem::getFixedStencil()
     {
+        if (stencilType != MGCL_FIXED)
+        {
+            error("Problem::getFixedStencil: stencilType is not MGCL_FIXED. Use Problem::setStencilType(MGCL_FIXED) first.");
+        }
         return fixedStencil;
     }
 
