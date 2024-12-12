@@ -1140,6 +1140,130 @@ TEST_CASE("Problem_ignore_tol")
 }
 
 /**
+ * @brief Checks whether using FixedStencil yields the same solution as using VaryingStencil with values of FixedStencil
+ *
+ */
+TEST_CASE("solve_fixed_vs_varying_stencil")
+{
+    int N = 16;
+    double h = 1.0 / (double)N;
+
+    // Problem parameters
+    double tol = 1e-1; // will be reached really quick
+    int nu1 = 2;
+    int nu2 = 2;
+    double omega = 0.8;
+    int maxIterVCycles = 10;
+    int maxlevel = 10;
+
+    auto v_fixed = std::make_shared<mgcl::Cuboid>(N, N, N);
+    auto v_varying = std::make_shared<mgcl::Cuboid>(N, N, N);
+    auto f = std::make_shared<mgcl::Cuboid>(N, N, N);
+    auto solution = mgcl::Cuboid(N, N, N);
+
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++)
+            for (int k = 0; k < N; k++)
+            {
+                double zs = i * h;
+                double ys = j * h;
+                double xs = k * h;
+                double xs2 = xs * xs;
+                double ys2 = ys * ys;
+                double zs2 = zs * zs;
+                double xsm1_2 = (xs - 1) * (xs - 1);
+                double ysm1_2 = (ys - 1) * (ys - 1);
+                double zsm1_2 = (zs - 1) * (zs - 1);
+                double xs3 = xs * xs * xs;
+                double ys3 = ys * ys * ys;
+                double zs3 = zs * zs * zs;
+                double xsm1_3 = (xs - 1) * (xs - 1) * (xs - 1);
+                double ysm1_3 = (ys - 1) * (ys - 1) * (ys - 1);
+                double zsm1_3 = (zs - 1) * (zs - 1) * (zs - 1);
+                double xs4 = xs * xs * xs * xs;
+                double ys4 = ys * ys * ys * ys;
+                double zs4 = zs * zs * zs * zs;
+                double xsm1_4 = (xs - 1) * (xs - 1) * (xs - 1) * (xs - 1);
+                double ysm1_4 = (ys - 1) * (ys - 1) * (ys - 1) * (ys - 1);
+                double zsm1_4 = (zs - 1) * (zs - 1) * (zs - 1) * (zs - 1);
+                (*v_fixed)[i][j][k] = 0;
+                (*v_varying)[i][j][k] = 0;
+                solution[i][j][k] = 1000000 * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) *
+                                    (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) *
+                                    (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1));
+                (*f)[i][j][k] =
+                    -1000000 *
+                    (12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_2 + 12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_2 * zsm1_4 +
+                     12 * xs4 * ys4 * zs4 * xsm1_2 * ysm1_4 * zsm1_4 + 32 * xs4 * ys4 * zs3 * xsm1_4 * ysm1_4 * zsm1_3 +
+                     12 * xs4 * ys4 * zs2 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs4 * ys3 * zs4 * xsm1_4 * ysm1_3 * zsm1_4 +
+                     12 * xs4 * ys2 * zs4 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs3 * ys4 * zs4 * xsm1_3 * ysm1_4 * zsm1_4 +
+                     12 * xs2 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_4);
+            }
+
+    mgcl::Problem p_fixed(N, N, N, f, v_fixed);
+    p_fixed.setMaxiterVcycles(maxIterVCycles);
+    p_fixed.setTol(tol);
+    p_fixed.setNu1(nu1);
+    p_fixed.setNu2(nu2);
+    p_fixed.setOmega(omega);
+    p_fixed.setMaxlevel(maxlevel);
+
+    p_fixed.setStencilType(mgcl::MGCL_FIXED);
+    auto& fixedStencil = p_fixed.getFixedStencil();
+    fixedStencil->fillRandom();
+    (*fixedStencil)[1][1][1] = 1.0; // make sure the stencil does not produce nan
+
+    mgcl::Problem p_varying(N, N, N, f, v_varying);
+    p_varying.setMaxiterVcycles(maxIterVCycles);
+    p_varying.setTol(tol);
+    p_varying.setNu1(nu1);
+    p_varying.setNu2(nu2);
+    p_varying.setOmega(omega);
+    p_varying.setMaxlevel(maxlevel);
+
+    auto& sv = p_varying.getStencilValues();
+    // copy from fixed into varying
+    // clang-format off
+    for (int i = 0; i < sv->getMgh(); i++)
+    for (int j = 0; j < sv->getNgh(); j++)
+    for (int k = 0; k < sv->getOgh(); k++)
+        for (int ii = 0; ii < 3; ii++)
+        for (int jj = 0; jj < 3; jj++)
+        for (int kk = 0; kk < 3; kk++)
+        {
+            (*sv)[ii][jj][kk][i][j][k] = (*fixedStencil)[ii][jj][kk];
+        }
+    // clang-format on
+
+    SECTION("Sequential")
+    {
+        p_fixed.solve();
+        p_varying.solve();
+
+        REQUIRE(v_fixed->isEqual(*v_varying));
+    }
+
+    SECTION("OpenCL")
+    {
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+        std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
+
+        p_fixed.setUseOpencl(true);
+        p_fixed.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p_fixed.setDeviceType(deviceType);
+        p_varying.setUseOpencl(true);
+        p_varying.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p_varying.setDeviceType(deviceType);
+
+        p_fixed.solve();
+        p_varying.solve();
+
+        REQUIRE(v_fixed->isEqual(*v_varying));
+    }
+}
+
+/**
  * @brief Calculates error for each cell, e.g. difference between solution and approximation. Dimensions must match.
  *
  * @param solution

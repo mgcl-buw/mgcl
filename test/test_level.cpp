@@ -156,12 +156,38 @@ TEST_CASE("Level::initOpenCLBuffers")
 
         REQUIRE(p->init());
 
-        int levelNum = GENERATE(0, 1, 2);
-        auto& level0 = p->getLevelAt(levelNum);
+        for (int levelNum = 0; levelNum < 3; levelNum++)
+        {
+            auto& level0 = p->getLevelAt(levelNum);
 
-        REQUIRE(level0.getStencilValuesGpu());
-        if (levelNum > 0)
-            REQUIRE(!level0.getStencilValues());
+            REQUIRE(level0.getStencilValuesGpu());
+            if (levelNum > 0)
+                REQUIRE(!level0.getStencilValues());
+        }
+    }
+
+    SECTION("FixedStencil")
+    {
+        auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
+        p->setUseOpencl(true);
+        p->setGhostsIn(1);
+        p->setDeviceType(deviceType);
+
+        p->setStencilType(mgcl::MGCL_FIXED);
+        auto& sv = p->getFixedStencil();
+        sv->fillRandomInt();
+
+        REQUIRE(p->init());
+
+        for (int levelNum = 0; levelNum < 3; levelNum++)
+        {
+            auto& level0 = p->getLevelAt(levelNum);
+
+            // TODO remove this test if fixedStencil are only stored on host
+            REQUIRE(level0.getFixedStencilGpu());
+            if (levelNum > 0)
+                REQUIRE(!level0.getFixedStencil());
+        }
     }
 }
 
@@ -178,25 +204,27 @@ TEST_CASE("Level::init")
     p->getStencilValues()->fillRandom();
     // REQUIRE(p->init());
 
-    int levelNum = GENERATE(0, 1, 2);
-    mgcl::Level level(p.get(), levelNum);
-    level.init();
-
-    if (levelNum == 0)
+    for (int levelNum = 0; levelNum < 3; levelNum++)
     {
-        CHECK(level.getV().isEqual(*v));
-        CHECK(level.getF().isEqual(*f));
+        mgcl::Level level(p.get(), levelNum);
+        level.init();
+
+        if (levelNum == 0)
+        {
+            CHECK(level.getV().isEqual(*v));
+            CHECK(level.getF().isEqual(*f));
+        }
+
+        CHECK(level.getV().getM() == p->getM() >> levelNum);
+        CHECK(level.getV().getN() == p->getN() >> levelNum);
+        CHECK(level.getV().getO() == p->getO() >> levelNum);
+
+        CHECK(level.getF().getM() == p->getM() >> levelNum);
+        CHECK(level.getF().getN() == p->getN() >> levelNum);
+        CHECK(level.getF().getO() == p->getO() >> levelNum);
+
+        CHECK(level.getR().getM() == p->getM() >> levelNum);
+        CHECK(level.getR().getN() == p->getN() >> levelNum);
+        CHECK(level.getR().getO() == p->getO() >> levelNum);
     }
-
-    CHECK(level.getV().getM() == p->getM() >> levelNum);
-    CHECK(level.getV().getN() == p->getN() >> levelNum);
-    CHECK(level.getV().getO() == p->getO() >> levelNum);
-
-    CHECK(level.getF().getM() == p->getM() >> levelNum);
-    CHECK(level.getF().getN() == p->getN() >> levelNum);
-    CHECK(level.getF().getO() == p->getO() >> levelNum);
-
-    CHECK(level.getR().getM() == p->getM() >> levelNum);
-    CHECK(level.getR().getN() == p->getN() >> levelNum);
-    CHECK(level.getR().getO() == p->getO() >> levelNum);
 }
