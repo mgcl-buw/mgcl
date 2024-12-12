@@ -525,7 +525,6 @@ __kernel void residual_27point_fixed_stencil(
     const double c220,
     const double c221,
     const double c222)
-
 {
     int idx = get_global_id(0);
     int no = ngh * ogh;
