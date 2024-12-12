@@ -1221,6 +1221,7 @@ TEST_CASE("solve_fixed_vs_varying_stencil")
     p_varying.setOmega(omega);
     p_varying.setMaxlevel(maxlevel);
 
+    p_varying.setStencilType(mgcl::MGCL_VARYING);
     auto& sv = p_varying.getStencilValues();
     // copy from fixed into varying
     // clang-format off
