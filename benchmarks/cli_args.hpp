@@ -27,6 +27,7 @@ namespace CLI_ARGS
     extern std::vector<int> elements;
 
     extern bool checkResults;
+    extern bool enableKernelProfiling;
 }
 
 // // Simple wrapper for command line args which are static variables.

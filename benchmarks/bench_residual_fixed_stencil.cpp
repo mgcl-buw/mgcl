@@ -397,6 +397,7 @@ TEST_CASE("residualFixedKernelVersions")
     p.setKernelFile("kernel_optimizations.cl");
     p.setUseOpencl(true);
     p.setDeviceType(CL_DEVICE_TYPE_GPU);
+    p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
     p.init();
 
     int ghosts = 1;
@@ -565,4 +566,9 @@ TEST_CASE("residualFixedKernelVersions")
     }
 
     bench_util::printCsvFormat(results);
+
+    if (CLI_ARGS::enableKernelProfiling)
+    {
+        p.getProfilingData()->printBestTimingsPerKernel();
+    }
 }

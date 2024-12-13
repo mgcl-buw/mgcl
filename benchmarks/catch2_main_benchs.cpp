@@ -20,6 +20,7 @@ std::vector<int> CLI_ARGS::jacobiIters;
 std::vector<int> CLI_ARGS::jacobiStepsPerIter;
 std::vector<int> CLI_ARGS::elements;
 bool CLI_ARGS::checkResults = false;
+bool CLI_ARGS::enableKernelProfiling = false;
 
 // helper functions
 std::vector<int> split_int(std::string s, std::string delimiter);
@@ -98,6 +99,10 @@ int main(int argc, char* argv[])
                | Opt(CLI_ARGS::checkResults)                                       // bind variable to a new option, with a hint string
                      ["--checkResults"]                                            // the option names it will respond to
                ("if true, results will be checked for benchmarks supporting this") // description string for the help output
+
+               | Opt(CLI_ARGS::enableKernelProfiling)        // bind variable to a new option, with a hint string
+                     ["--enableKernelProfiling"]             // the option names it will respond to
+               ("if true, kernel profiling will be enabled") // description string for the help output
 
                | Opt(jacobiIters, "jacobiIters")                                                                          // bind variable to a new option, with a hint string
                      ["--jacobiIters"]                                                                                    // the option names it will respond to
@@ -223,6 +228,7 @@ int main(int argc, char* argv[])
     }
 
     std::cout << "checkResults: " << CLI_ARGS::checkResults << std::endl;
+    std::cout << "enableKernelProfiling: " << CLI_ARGS::enableKernelProfiling << std::endl;
 
     int result = session.run();
 
