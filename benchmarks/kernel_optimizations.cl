@@ -4596,6 +4596,97 @@ __kernel void residual_27point_fixed_stencil_coeffs_as_constants(
  *     E.g. if real m=n=o=4 and gh=2, with moff=0, the residual is calculated for grid points m=2,...,5. With moff=-1, the residual is calculated for grid points m=1,...,6.
  * - c000 ... c222: coefficients for the 27-point stencil with respective index
  */
+__kernel void residual_27point_fixed_stencil_coeffs_as_constant_memory(
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict f,
+    __global double* restrict r,
+    const int mgh, const int ngh, const int ogh,
+    const int ghosts,
+    const int moff, const int noff, const int ooff)
+{
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
+
+    // loop boundaries
+    // TODO maybe refactor to use v_ghm, etc.?
+    int istart_v = ghosts + moff;
+    int jstart_v = ghosts + noff;
+    int kstart_v = ghosts + ooff;
+    int iend_v = mgh - ghosts - moff;
+    int jend_v = ngh - ghosts - noff;
+    int kend_v = ogh - ghosts - ooff;
+
+    __constant double coeffs[27] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
+
+    // calculate residual only for relevant cells (off = 0: only real cells)
+    if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
+    {
+
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
+        int index = i * ioff + j * ogh + k;
+
+        // A*v
+        // clang-format off
+        double stencilsum = coeffs[1*9 + 1*3 + 1] * v_in[index]
+            + coeffs[1*9 + 1*3 + 0] * v_in[index - 1]
+            + coeffs[1*9 + 1*3 + 2] * v_in[index + 1]
+            + coeffs[1*9 + 0*3 + 1] * v_in[index - joff]
+            + coeffs[1*9 + 2*3 + 1] * v_in[index + joff]
+            + coeffs[0*9 + 1*3 + 1] * v_in[index - ioff]
+            + coeffs[2*9 + 1*3 + 1] * v_in[index + ioff]
+
+            + coeffs[1*9 + 0*3 + 0] * v_in[index - joff - koff]
+            + coeffs[1*9 + 0*3 + 2] * v_in[index - joff + koff]
+            + coeffs[1*9 + 2*3 + 0] * v_in[index + joff - koff]
+            + coeffs[1*9 + 2*3 + 2] * v_in[index + joff + koff]
+            + coeffs[0*9 + 1*3 + 0] * v_in[index - ioff - koff]
+            + coeffs[0*9 + 1*3 + 2] * v_in[index - ioff + koff]
+            + coeffs[2*9 + 1*3 + 0] * v_in[index + ioff - koff]
+            + coeffs[2*9 + 1*3 + 2] * v_in[index + ioff + koff]
+            + coeffs[0*9 + 0*3 + 1] * v_in[index - ioff - joff]
+            + coeffs[0*9 + 2*3 + 1] * v_in[index - ioff + joff]
+            + coeffs[2*9 + 0*3 + 1] * v_in[index + ioff - joff]
+            + coeffs[2*9 + 2*3 + 1] * v_in[index + ioff + joff]
+
+            + coeffs[0*9 + 0*3 + 0] * v_in[index - ioff - joff - koff]
+            + coeffs[0*9 + 0*3 + 2] * v_in[index - ioff - joff + koff]
+            + coeffs[0*9 + 2*3 + 0] * v_in[index - ioff + joff - koff]
+            + coeffs[0*9 + 2*3 + 2] * v_in[index - ioff + joff + koff]
+            + coeffs[2*9 + 0*3 + 0] * v_in[index + ioff - joff - koff]
+            + coeffs[2*9 + 0*3 + 2] * v_in[index + ioff - joff + koff]
+            + coeffs[2*9 + 2*3 + 0] * v_in[index + ioff + joff - koff]
+            + coeffs[2*9 + 2*3 + 2] * v_in[index + ioff + joff + koff];
+        // clang-format on
+
+        // if (i == 2 && j == 2 && k == 2)
+        // {
+        //     printf("ocl stencilsum = %e\n", stencilsum);
+        //     print27point_sv(v_in, index, ioff, joff, koff, stencilValues, index_sv);
+        // }
+
+        // r = f - A*v
+        r[index] = f[index] - stencilsum;
+    }
+}
+
+/**
+ * Calculates the residual r = f - A*v for a 27-point stencil.
+ * Must be called with one wi per grid point that the residual shall be calculated for (only real grid points, if {m,n,o}off = 0)
+ * Arguments:
+ * - v_in: v
+ * - f: f
+ * - r: r
+ * - mgh, ngh, ogh: ghosted grid dimensions
+ * - ghosts: number of ghosts
+ * - moff, noff, ooff: offsets for relevant cells. Can be used to enlarge or shrink the grid cells that the residual is calculated for.
+ *     E.g. if real m=n=o=4 and gh=2, with moff=0, the residual is calculated for grid points m=2,...,5. With moff=-1, the residual is calculated for grid points m=1,...,6.
+ * - c000 ... c222: coefficients for the 27-point stencil with respective index
+ */
 __kernel void residual_27point_fixed_stencil_coeffs_as_global_buffer(
     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
     __global double* restrict f,

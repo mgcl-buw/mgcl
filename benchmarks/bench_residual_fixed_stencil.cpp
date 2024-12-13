@@ -31,7 +31,8 @@ enum class KernelVersion
 {
     GLOBAL_BUFFER,
     CONSTANTS,
-    PREPROCESSOR
+    PREPROCESSOR,
+    CONSTANT_MEMORY
 };
 
 using size_t3 = struct
@@ -153,6 +154,10 @@ double residual(ResidualArgs& args)
     {
         kernelName = "residual_27point_fixed_stencil_coeffs_preprocessed";
     }
+    else if (args.kernelVersion == KernelVersion::CONSTANT_MEMORY)
+    {
+        kernelName = "residual_27point_fixed_stencil_coeffs_as_constant_memory";
+    }
 
     cl_event ev;
 
@@ -253,7 +258,7 @@ double residual(ResidualArgs& args)
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.noff);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ooff);
     }
-    else if (args.stencilType == mgcl::MGCL_FIXED && args.kernelVersion == KernelVersion::PREPROCESSOR)
+    else if (args.stencilType == mgcl::MGCL_FIXED && (args.kernelVersion == KernelVersion::PREPROCESSOR || args.kernelVersion == KernelVersion::CONSTANT_MEMORY))
     {
         // TODO avoid reading by keeping FixedStencil only on host, if it turns out to be fast
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
@@ -529,6 +534,38 @@ TEST_CASE("residualFixedKernelVersions")
         {
             args.kernelVersion = KernelVersion::PREPROCESSOR;
             std::string name = std::string("residual_fixed_stencil_preprocessor_")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o));
+
+            bench.run(std::string(name).c_str(), [&] { //
+                residual(args);
+                p.finish();
+            });
+
+            bench_util::Result res;
+            res.name = name;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            results.push_back(res);
+
+            if (CLI_ARGS::checkResults)
+            {
+                r_out_preprocessor = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                args.c_dR.read(args.commands, r_out_preprocessor.get(), true);
+            }
+        }
+
+        {
+            args.kernelVersion = KernelVersion::CONSTANT_MEMORY;
+            std::string name = std::string("residual_fixed_stencil_constant_memory_")
                                    .append(std::to_string(m))
                                    .append("_")
                                    .append(std::to_string(n))
