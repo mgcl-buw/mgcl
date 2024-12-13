@@ -15,6 +15,7 @@
 #include "catch2/generators/catch_generators.hpp"
 
 #include <CL/cl.h>
+#include <catch2/catch_message.hpp>
 #include <chrono>
 #include <iostream>
 #include <memory>
@@ -101,6 +102,21 @@ double residual(ResidualArgs& args)
     if (args.moff * 2 >= m || args.noff * 2 >= n || args.ooff * 2 >= o)
         error("2*args.moff, 2*args.noff and 2*args.ooff must not be >= m, n or o");
 
+    if (args.c_dVIn.getGhostsM() < 1 || args.c_dVIn.getGhostsN() < 1 || args.c_dVIn.getGhostsO() < 1)
+    {
+        error("args.c_dVIn must have at least 1 ghost cell in each dimension");
+    }
+
+    if (args.c_dF.getGhostsM() < 1 || args.c_dF.getGhostsN() < 1 || args.c_dF.getGhostsO() < 1)
+    {
+        error("args.c_dF must have at least 1 ghost cell in each dimension");
+    }
+
+    if (args.c_dR.getGhostsM() < 1 || args.c_dR.getGhostsN() < 1 || args.c_dR.getGhostsO() < 1)
+    {
+        error("args.c_dR must have at least 1 ghost cell in each dimension");
+    }
+
     // Create the compute kernel from the program
     const char* kernelName;
     if (args.stencilType == mgcl::MGCL_LAPLACE_7POINT)
@@ -147,6 +163,10 @@ double residual(ResidualArgs& args)
     cl_mem dVIn = args.c_dVIn.getBuffer();
     cl_mem dF = args.c_dF.getBuffer();
     cl_mem dR = args.c_dR.getBuffer();
+
+    // args.c_dVIn.dumpToFile(args.commands, "dVIn.txt");
+    // args.c_dF.dumpToFile(args.commands, "dF.txt");
+    // args.c_dR.dumpToFile(args.commands, "dR.txt");
 
     // assign kernel arguments
     int pos = 0;
@@ -283,6 +303,8 @@ double residual(ResidualArgs& args)
     }
     mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
+    // mgcl::mgclCheckError(clFinish(args.commands), "clFinish");
+
     // if (problem.isPeriodic())
     // {
     //     err = MultigridEngine::updateargs.ghosts(problem, level.getDR(), level.getMpiDataPtr(),
@@ -385,11 +407,13 @@ TEST_CASE("residualFixedKernelVersions")
         int n = gr[1];
         int o = gr[2];
 
-        auto v_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts);
-        auto f_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts);
-        auto r_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts);
-        v_in->fill1dIndex(true);
-        f_in->fill1dIndex(true);
+        auto v_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+        auto f_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+        auto r_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+        // v_in->fill1dIndex(true);
+        // f_in->fill1dIndex(true);
+        v_in->fillRandom();
+        f_in->fillRandom();
 
         mgcl::CuboidGpu c_dVIn(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *v_in);
         mgcl::CuboidGpu c_dF(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *f_in);
@@ -410,7 +434,7 @@ TEST_CASE("residualFixedKernelVersions")
             .stencilType = mgcl::MGCL_FIXED,
             .program = p.getProgram(),
             .commands = p.getCommands(),
-            .wgsize = {128, 0, 0},
+            .wgsize = {128, 1, 1},
             .c_dVIn = c_dVIn,
             .c_dF = c_dF,
             .c_dR = c_dR,
@@ -464,7 +488,7 @@ TEST_CASE("residualFixedKernelVersions")
 
             if (CLI_ARGS::checkResults)
             {
-                r_out_global_buffer = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts);
+                r_out_global_buffer = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
                 args.c_dR.read(args.commands, r_out_global_buffer.get(), true);
             }
         }
@@ -496,7 +520,7 @@ TEST_CASE("residualFixedKernelVersions")
 
             if (CLI_ARGS::checkResults)
             {
-                r_out_constants = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts);
+                r_out_constants = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
                 args.c_dR.read(args.commands, r_out_constants.get(), true);
             }
         }
@@ -528,7 +552,7 @@ TEST_CASE("residualFixedKernelVersions")
 
             if (CLI_ARGS::checkResults)
             {
-                r_out_preprocessor = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts);
+                r_out_preprocessor = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
                 args.c_dR.read(args.commands, r_out_preprocessor.get(), true);
             }
         }

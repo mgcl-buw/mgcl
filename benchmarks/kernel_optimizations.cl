@@ -4637,7 +4637,7 @@ __kernel void residual_27point_fixed_stencil_coeffs_as_global_buffer(
             + coeffs[1*9 + 2*3 + 1] * v_in[index + joff]
             + coeffs[0*9 + 1*3 + 1] * v_in[index - ioff]
             + coeffs[2*9 + 1*3 + 1] * v_in[index + ioff]
-            
+
             + coeffs[1*9 + 0*3 + 0] * v_in[index - joff - koff]
             + coeffs[1*9 + 0*3 + 2] * v_in[index - joff + koff]
             + coeffs[1*9 + 2*3 + 0] * v_in[index + joff - koff]
@@ -4756,7 +4756,7 @@ __kernel void residual_27point_fixed_stencil_coeffs_preprocessed(
             + FS_COEFF121 * v_in[index + joff]
             + FS_COEFF011 * v_in[index - ioff]
             + FS_COEFF211 * v_in[index + ioff]
-            
+
             + FS_COEFF100 * v_in[index - joff - koff]
             + FS_COEFF102 * v_in[index - joff + koff]
             + FS_COEFF120 * v_in[index + joff - koff]
