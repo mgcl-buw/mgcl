@@ -719,6 +719,21 @@ namespace mgcl
         if (moff * 2 >= level.m || noff * 2 >= level.n || ooff * 2 >= level.o)
             error("2*moff, 2*noff and 2*ooff must not be >= m, n or o");
 
+        if (level.getDVIn().getGhostsM() < 1 || level.getDVIn().getGhostsN() < 1 || level.getDVIn().getGhostsO() < 1)
+        {
+            error("level.getDVIn() must have at least 1 ghost cell in each dimension");
+        }
+
+        if (level.getDF().getGhostsM() < 1 || level.getDF().getGhostsN() < 1 || level.getDF().getGhostsO() < 1)
+        {
+            error("level.getDF must have at least 1 ghost cell in each dimension");
+        }
+
+        if (level.getDR().getGhostsM() < 1 || level.getDR().getGhostsN() < 1 || level.getDR().getGhostsO() < 1)
+        {
+            error("level.getDR must have at least 1 ghost cell in each dimension");
+        }
+
         // Create the compute kernel from the program
         const char* kernelName;
         if (problem.stencilType == MGCL_LAPLACE_7POINT)
