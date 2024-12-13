@@ -83,12 +83,13 @@ namespace mgcl
                     err = clGetDeviceInfo(device_ids[j], CL_DEVICE_EXTENSIONS, 0, nullptr, &numExtensions);
                     mgclCheckError(err, "Finding number of extensions using clGetDeviceInfo(CL_DEVICE_EXTENSIONS)");
 
-                    char* extensions = new char[numExtensions];
-                    err = clGetDeviceInfo(device_ids[j], CL_DEVICE_EXTENSIONS, numExtensions, extensions, nullptr);
+                    // char* extensions = new char[numExtensions];
+                    std::unique_ptr<char[]> extensions(new char[numExtensions]);
+                    err = clGetDeviceInfo(device_ids[j], CL_DEVICE_EXTENSIONS, numExtensions, extensions.get(), nullptr);
                     mgclCheckError(err, "Finding extensions using clGetDeviceInfo(CL_DEVICE_EXTENSIONS)");
 
                     // if device does not support double precision, continue to next device
-                    if (std::string(extensions).find("cl_khr_fp64") == std::string::npos)
+                    if (std::string(extensions.get()).find("cl_khr_fp64") == std::string::npos)
                         continue;
 
                     if (deviceName != "" && deviceName != "default")

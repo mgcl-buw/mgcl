@@ -45,6 +45,12 @@ target_link_libraries(benchmarks PRIVATE mgcl)
 target_link_libraries(benchmarks PRIVATE pmg)
 target_link_libraries(benchmarks PRIVATE mgcl_c)
 
+# Remove comments to use address sanitizer (ASAN). ASAN is not compatible with OpenCL, see
+# https://stackoverflow.com/a/68027496/4108363. A workaround is to set
+# ASAN_OPTIONS=protect_shadow_gap=0 when calling the executable. 
+# target_compile_options(benchmarks PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+# target_link_options(benchmarks PUBLIC -fsanitize=address)
+
 # copy kernel file to build directory
 add_custom_command(
   OUTPUT "${CMAKE_BINARY_DIR}/benchmarks/kernel_optimizations.cl"
