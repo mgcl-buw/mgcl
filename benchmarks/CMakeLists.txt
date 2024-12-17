@@ -28,6 +28,7 @@ set(SOURCES_BENCH
     bench_util.hpp
     bench_various_ndim_kernels.cpp
     bench_residual_fixed_stencil.cpp
+    bench_vector_valued_cuboid.cpp
     cli_args.hpp
     catch2_main_benchs.cpp)
 
