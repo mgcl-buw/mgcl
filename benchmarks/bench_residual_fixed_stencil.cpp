@@ -408,6 +408,10 @@ TEST_CASE("residualFixedKernelVersions")
     auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
     mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
     p.setKernelFile("kernel_optimizations.cl");
+    if (CLI_ARGS::useBinaryFile)
+    {
+        p.setBinaryFile("residualFixedKernelVersions.bin");
+    }
     p.setUseOpencl(true);
     p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);

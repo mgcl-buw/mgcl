@@ -28,6 +28,7 @@ namespace CLI_ARGS
 
     extern bool checkResults;
     extern bool enableKernelProfiling;
+    extern bool useBinaryFile;
 }
 
 // // Simple wrapper for command line args which are static variables.

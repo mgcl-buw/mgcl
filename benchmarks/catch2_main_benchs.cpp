@@ -21,6 +21,7 @@ std::vector<int> CLI_ARGS::jacobiStepsPerIter;
 std::vector<int> CLI_ARGS::elements;
 bool CLI_ARGS::checkResults = false;
 bool CLI_ARGS::enableKernelProfiling = false;
+bool CLI_ARGS::useBinaryFile = false;
 
 // helper functions
 std::vector<int> split_int(std::string s, std::string delimiter);
@@ -103,6 +104,10 @@ int main(int argc, char* argv[])
                | Opt(CLI_ARGS::enableKernelProfiling)        // bind variable to a new option, with a hint string
                      ["--enableKernelProfiling"]             // the option names it will respond to
                ("if true, kernel profiling will be enabled") // description string for the help output
+
+               | Opt(CLI_ARGS::useBinaryFile)                                                                                         // bind variable to a new option, with a hint string
+                     ["--useBinaryFile"]                                                                                              // the option names it will respond to
+               ("if true, OpenCL kernels will be loaded from a binary file, if it exists. If it does not exist, it will be created.") // description string for the help output
 
                | Opt(jacobiIters, "jacobiIters")                                                                          // bind variable to a new option, with a hint string
                      ["--jacobiIters"]                                                                                    // the option names it will respond to
@@ -229,6 +234,7 @@ int main(int argc, char* argv[])
 
     std::cout << "checkResults: " << CLI_ARGS::checkResults << std::endl;
     std::cout << "enableKernelProfiling: " << CLI_ARGS::enableKernelProfiling << std::endl;
+    std::cout << "useBinaryFile: " << CLI_ARGS::useBinaryFile << std::endl;
 
     int result = session.run();
 

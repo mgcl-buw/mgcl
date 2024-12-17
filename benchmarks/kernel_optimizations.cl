@@ -4766,33 +4766,33 @@ __kernel void residual_27point_fixed_stencil_coeffs_as_global_buffer(
 // These defines are only here to avoid linter error messages. They need to be set to
 // the FixedStencil's coefficient when compiling the kernel file by using -D FS_COEFF000=<number> etc.
 // For the benchmark however, it is ok to just use these numbers to keep setting up opencl simple.
-#define FS_COEFF000 0
-#define FS_COEFF001 1
-#define FS_COEFF002 2
-#define FS_COEFF010 3
-#define FS_COEFF011 4
-#define FS_COEFF012 5
-#define FS_COEFF020 6
-#define FS_COEFF021 7
-#define FS_COEFF022 8
-#define FS_COEFF100 9
-#define FS_COEFF101 10
-#define FS_COEFF102 11
-#define FS_COEFF110 12
-#define FS_COEFF111 13
-#define FS_COEFF112 14
-#define FS_COEFF120 15
-#define FS_COEFF121 16
-#define FS_COEFF122 17
-#define FS_COEFF200 18
-#define FS_COEFF201 19
-#define FS_COEFF202 20
-#define FS_COEFF210 21
-#define FS_COEFF211 22
-#define FS_COEFF212 23
-#define FS_COEFF220 24
-#define FS_COEFF221 25
-#define FS_COEFF222 26
+#define FS_COEFF000 0.0
+#define FS_COEFF001 1.0
+#define FS_COEFF002 2.0
+#define FS_COEFF010 3.0
+#define FS_COEFF011 4.0
+#define FS_COEFF012 5.0
+#define FS_COEFF020 6.0
+#define FS_COEFF021 7.0
+#define FS_COEFF022 8.0
+#define FS_COEFF100 9.0
+#define FS_COEFF101 10.0
+#define FS_COEFF102 11.0
+#define FS_COEFF110 12.0
+#define FS_COEFF111 13.0
+#define FS_COEFF112 14.0
+#define FS_COEFF120 15.0
+#define FS_COEFF121 16.0
+#define FS_COEFF122 17.0
+#define FS_COEFF200 18.0
+#define FS_COEFF201 19.0
+#define FS_COEFF202 20.0
+#define FS_COEFF210 21.0
+#define FS_COEFF211 22.0
+#define FS_COEFF212 23.0
+#define FS_COEFF220 24.0
+#define FS_COEFF221 25.0
+#define FS_COEFF222 26.0
 
 /**
  * Calculates the residual r = f - A*v for a 27-point stencil.
