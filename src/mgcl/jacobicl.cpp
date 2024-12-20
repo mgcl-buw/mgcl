@@ -289,8 +289,7 @@ namespace mgcl
         }
         else if (problem.stencilType == MGCL_FIXED)
         {
-            // TODO avoid reading by keeping FixedStencil only on host, if it turns out to be fast
-            auto fs = level.getFixedStencilGpu()->read(problem.getCommands(), true);
+            auto& fs = *level.getFixedStencil();
             err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
             err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
             err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
@@ -797,8 +796,7 @@ namespace mgcl
         }
         else if (problem.stencilType == MGCL_FIXED)
         {
-            // TODO avoid reading by keeping FixedStencil only on host, if it turns out to be fast
-            auto fs = level.getFixedStencilGpu()->read(problem.getCommands(), true);
+            auto& fs = *level.getFixedStencil();
             err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
             err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
             err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);

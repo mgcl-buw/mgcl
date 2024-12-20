@@ -194,16 +194,6 @@ namespace mgcl
                 stencilValuesGpu->fill(*stencilValues, problem->getCommands(), true);
             }
 
-            // create gpu buffer for fixed stencil if needed
-            if (stencilType == MGCL_FIXED)
-            {
-                fixedStencilGpu = std::make_shared<FixedStencilGpu>(
-                    3, problem->getContext(), problem->getCommands(), problem->getProgram());
-
-                // Fill stencil values on gpu on level 0 from input stencil
-                fixedStencilGpu->fill(*fixedStencil, problem->getCommands(), true);
-            }
-
             if (problem->getReuseOpenclBuffers())
             {
                 dVIn = problem->getDVPtr();
@@ -530,16 +520,6 @@ namespace mgcl
     void Level::setStencilValuesGpu(std::shared_ptr<VaryingStencilGpu> sv)
     {
         stencilValuesGpu = sv;
-    }
-
-    std::shared_ptr<FixedStencilGpu>& Level::getFixedStencilGpu()
-    {
-        return fixedStencilGpu;
-    }
-
-    void Level::setFixedStencilGpu(std::shared_ptr<FixedStencilGpu> sv)
-    {
-        fixedStencilGpu = sv;
     }
 
     int Level::getNgh() const

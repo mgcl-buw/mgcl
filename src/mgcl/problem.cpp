@@ -485,27 +485,17 @@ namespace mgcl
             }
 
             // Apply Galerkin operator if stencil is fixed and we're not on level 0.
-            // No need for gathering required as for VaryingStencil, since coefficients do not differ per grid point
+            // No need for gathering required as for VaryingStencil, since coefficients do not differ per grid point.
+            // No need to differentiate between GPU and CPU, as FixedStencil is stored on Host only.
             else if (level >= 1 && getStencilType() == MGCL_FIXED &&
                      levels.back()->getM() > 0 && levels.back()->getN() > 0 && levels.back()->getO() > 0)
             {
                 auto& lvFine = *levels[level - 1];
                 auto& lvCoarse = *levels[level];
 
-                if (!use_opencl)
-                {
-                    // Call Galerkin on each rank, if not above threshold, or else only on root.
-                    if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
-                        lvCoarse.fixedStencil = MultigridEngine::galerkinOptimized(*lvFine.getFixedStencil());
-                }
-                else
-                {
-                    // Call Galerkin on each rank, if not above threshold, or else only on root.
-                    if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
-                        lvCoarse.fixedStencilGpu = MultigridEngine::galerkinOptimized(
-                            *lvFine.getFixedStencilGpu(), getProgram(), getCommands(), getContext(),
-                            &getKernelConfig(), getProfilingData());
-                }
+                // Call Galerkin on each rank, if not above threshold, or else only on root.
+                if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
+                    lvCoarse.fixedStencil = MultigridEngine::galerkinOptimized(*lvFine.getFixedStencil());
             }
         }
 

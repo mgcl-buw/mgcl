@@ -165,30 +165,6 @@ TEST_CASE("Level::initOpenCLBuffers")
                 REQUIRE(!level0.getStencilValues());
         }
     }
-
-    SECTION("FixedStencil")
-    {
-        auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
-        p->setUseOpencl(true);
-        p->setGhostsIn(1);
-        p->setDeviceType(deviceType);
-
-        p->setStencilType(mgcl::MGCL_FIXED);
-        auto& sv = p->getFixedStencil();
-        sv->fillRandomInt();
-
-        REQUIRE(p->init());
-
-        for (int levelNum = 0; levelNum < 3; levelNum++)
-        {
-            auto& level0 = p->getLevelAt(levelNum);
-
-            // TODO remove this test if fixedStencil are only stored on host
-            REQUIRE(level0.getFixedStencilGpu());
-            if (levelNum > 0)
-                REQUIRE(!level0.getFixedStencil());
-        }
-    }
 }
 
 TEST_CASE("Level::init")

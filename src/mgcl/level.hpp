@@ -41,7 +41,6 @@ namespace mgcl
         std::shared_ptr<VaryingStencil> stencilValues = nullptr;
         std::shared_ptr<VaryingStencilGpu> stencilValuesGpu = nullptr;
         std::shared_ptr<FixedStencil> fixedStencil = nullptr;
-        std::shared_ptr<FixedStencilGpu> fixedStencilGpu = nullptr;
 
         /* grid dimensions of local real grid */
         int m;
@@ -139,8 +138,6 @@ namespace mgcl
 
         std::shared_ptr<VaryingStencilGpu>& getStencilValuesGpu();
         void setStencilValuesGpu(std::shared_ptr<VaryingStencilGpu> sv);
-        std::shared_ptr<FixedStencilGpu>& getFixedStencilGpu();
-        void setFixedStencilGpu(std::shared_ptr<FixedStencilGpu> sv);
 
         bool isCalculatedLocally() const;
 
