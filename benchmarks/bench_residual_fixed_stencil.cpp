@@ -31,6 +31,7 @@ enum class KernelVersion
 {
     GLOBAL_BUFFER,
     CONSTANTS,
+    CONSTANTS_REORDERED_INDEX,
     PREPROCESSOR,
     PREPROCESSOR_STENCILSUM_SPLIT,
     CONSTANT_MEMORY
@@ -151,6 +152,10 @@ double residual(ResidualArgs& args)
     {
         kernelName = "residual_27point_fixed_stencil_coeffs_as_constants";
     }
+    else if (args.kernelVersion == KernelVersion::CONSTANTS_REORDERED_INDEX)
+    {
+        kernelName = "residual_27point_fixed_stencil_coeffs_as_constants_index_reordered";
+    }
     else if (args.kernelVersion == KernelVersion::PREPROCESSOR)
     {
         kernelName = "residual_27point_fixed_stencil_coeffs_preprocessed";
@@ -206,7 +211,7 @@ double residual(ResidualArgs& args)
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.noff);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ooff);
     }
-    else if (args.stencilType == mgcl::MGCL_FIXED && args.kernelVersion == KernelVersion::CONSTANTS)
+    else if (args.stencilType == mgcl::MGCL_FIXED && (args.kernelVersion == KernelVersion::CONSTANTS_REORDERED_INDEX || args.kernelVersion == KernelVersion::CONSTANTS))
     {
         // TODO avoid reading by keeping FixedStencil only on host, if it turns out to be fast
         auto fs = args.c_fixedStencil->read(args.commands, true);
@@ -473,6 +478,7 @@ TEST_CASE("residualFixedKernelVersions")
 
         std::unique_ptr<mgcl::Cuboid> r_out_global_buffer = nullptr;
         std::unique_ptr<mgcl::Cuboid> r_out_constants = nullptr;
+        std::unique_ptr<mgcl::Cuboid> r_out_constants_reordered_index = nullptr;
         std::unique_ptr<mgcl::Cuboid> r_out_preprocessor = nullptr;
         std::unique_ptr<mgcl::Cuboid> r_out_preprocessor_split = nullptr;
         std::unique_ptr<mgcl::Cuboid> r_out_constant_mem = nullptr;
@@ -542,6 +548,38 @@ TEST_CASE("residualFixedKernelVersions")
             {
                 r_out_constants = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
                 args.c_dR.read(args.commands, r_out_constants.get(), true);
+            }
+        }
+
+        {
+            args.kernelVersion = KernelVersion::CONSTANTS_REORDERED_INDEX;
+            std::string name = std::string("residual_fixed_stencil_constants_reordered_index_")
+                                   .append(std::to_string(m))
+                                   .append("_")
+                                   .append(std::to_string(n))
+                                   .append("_")
+                                   .append(std::to_string(o));
+
+            bench.run(std::string(name).c_str(), [&] { //
+                residual(args);
+                p.finish();
+            });
+
+            bench_util::Result res;
+            res.name = name;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            res.m = m;
+            res.n = n;
+            res.o = o;
+            results.push_back(res);
+
+            if (CLI_ARGS::checkResults)
+            {
+                r_out_constants_reordered_index = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                args.c_dR.read(args.commands, r_out_constants_reordered_index.get(), true);
             }
         }
 
@@ -644,6 +682,7 @@ TEST_CASE("residualFixedKernelVersions")
         if (CLI_ARGS::checkResults)
         {
             REQUIRE(r_out_global_buffer->isEqual(*r_out_constants));
+            REQUIRE(r_out_global_buffer->isEqual(*r_out_constants_reordered_index));
             REQUIRE(r_out_global_buffer->isEqual(*r_out_preprocessor));
             REQUIRE(r_out_global_buffer->isEqual(*r_out_preprocessor_split));
             REQUIRE(r_out_global_buffer->isEqual(*r_out_constant_mem));
