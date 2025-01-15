@@ -1,3 +1,4 @@
+#include "bench_util.hpp"
 #include "nanobench.h"
 
 #include "catch2/catch_test_macros.hpp"
@@ -798,7 +799,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_fixed_vs_varying")
                   << "nu1: " << nu1 << ", nu2: " << nu2 << std::endl
                   << "  #procs: " << mpi_size << std::endl;
 
-    std::vector<int> itersPerKernel{1, 2, 3};
+    std::vector<bench_util::ResultMpi> results;
 
     for (auto N : CLI_ARGS::grids)
     {
@@ -860,7 +861,21 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_fixed_vs_varying")
                 // tu.finish(); //
                 MPI_Barrier(mpi_comm);
             });
+
+            bench_util::ResultMpi res;
+            res.name = name;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            res.m = N;
+            res.n = N;
+            res.o = N;
+            res.gpus = mpi_size;
+            res.LT = -1;
+            results.push_back(res);
         }
+
         {
             mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_FIXED;
 
@@ -901,6 +916,21 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_fixed_vs_varying")
                 // tu.finish(); //
                 MPI_Barrier(mpi_comm);
             });
+
+            bench_util::ResultMpi res;
+            res.name = name;
+            res.minTime = bench_util::getMinTime(bench, name);
+            res.medianTime = bench_util::getMedianTime(bench, name);
+            res.avgTime = bench_util::getAvgTime(bench, name);
+            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            res.m = N;
+            res.n = N;
+            res.o = N;
+            res.gpus = mpi_size;
+            res.LT = -1;
+            results.push_back(res);
         }
     }
+
+    bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
 }
