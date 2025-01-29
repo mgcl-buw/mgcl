@@ -5615,7 +5615,7 @@ __kernel void residual_27point(
 }
 
 /* Calculates residual without dinv */
-__kernel void residual_27point_varying_stencil(
+__kernel void residual_27point_varying_stencil_coeffs_first(
     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
     __global double* restrict f,
     __global double* restrict r,
