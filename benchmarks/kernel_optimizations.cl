@@ -5789,7 +5789,7 @@ __kernel void residual_27point_varying_stencil_no_v(
         // }
 
         // r = f - A*v
-        r[index] = f[index] - stencilsum + index; // using index here so it won't be optimized away
+        r[index] = f[index] - stencilsum;
     }
 }
 
