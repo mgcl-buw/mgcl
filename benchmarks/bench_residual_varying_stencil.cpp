@@ -34,6 +34,7 @@ namespace mgcl_bench_residual_varying
         COEFFS_FIRST,
         REMOVED_V,
         // COEFFS_WITHOUT_GHOSTS // not needed, using COEFFS_FIRST for this
+        FOUR_GP_PER_WI
     };
 
     using size_t3 = struct
@@ -151,6 +152,10 @@ namespace mgcl_bench_residual_varying
         {
             kernelName = "residual_27point_varying_stencil_no_v";
         }
+        else if (args.kernelVersion == KernelVersion::FOUR_GP_PER_WI)
+        {
+            kernelName = "residual_27point_varying_stencil_coeffs_first_4_gps_per_thread";
+        }
 
         cl_event ev;
 
@@ -171,7 +176,8 @@ namespace mgcl_bench_residual_varying
         if (args.stencilType == mgcl::MGCL_VARYING)
         {
             if (args.kernelVersion == KernelVersion::COEFFS_FIRST ||
-                args.kernelVersion == KernelVersion::REMOVED_V)
+                args.kernelVersion == KernelVersion::REMOVED_V ||
+                args.kernelVersion == KernelVersion::FOUR_GP_PER_WI)
             {
                 auto svbuf = args.c_stencilValues->getBuf();
                 int svgh = args.c_stencilValues->getGh();
@@ -232,6 +238,10 @@ namespace mgcl_bench_residual_varying
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
         size_t global = args.mgh * args.ngh * args.ogh;
+        if (args.kernelVersion == KernelVersion::FOUR_GP_PER_WI)
+        {
+            global /= 4;
+        }
         // const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
         size_t local = args.wgsize.x; // c[0];
 
@@ -405,7 +415,8 @@ namespace mgcl_bench_residual_varying
                 .relative(false);
 
             std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first = nullptr;
-            std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_without_ghosts = nullptr;
+            // std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_without_ghosts = nullptr;
+            std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_4_gp_per_thread = nullptr;
             if (CLI_ARGS::checkResults)
             {
                 bench.epochs(1).epochIterations(1);
@@ -444,53 +455,8 @@ namespace mgcl_bench_residual_varying
             }
 
             {
-                args.kernelVersion = KernelVersion::REMOVED_V;
-                std::string name = std::string("residual_varying_no_v_")
-                                       .append(std::to_string(m))
-                                       .append("_")
-                                       .append(std::to_string(n))
-                                       .append("_")
-                                       .append(std::to_string(o));
-
-                bench.run(std::string(name).c_str(), [&] { //
-                    residual(args);
-                    p.finish();
-                });
-
-                bench_util::Result res;
-                res.name = name;
-                res.minTime = bench_util::getMinTime(bench, name);
-                res.medianTime = bench_util::getMedianTime(bench, name);
-                res.avgTime = bench_util::getAvgTime(bench, name);
-                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                res.m = m;
-                res.n = n;
-                res.o = o;
-                results.push_back(res);
-
-                // No result checking for this kernel
-                // if (CLI_ARGS::checkResults)
-                // {
-                //     r_out_global_coeffs_first = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                //     args.c_dR.read(args.commands, r_out_global_coeffs_first.get(), true);
-                // }
-            }
-
-            // IMPORTANT: Do this test last as it needs to free stencil values and reallocate.
-            {
-                // actually coeffs without ghosts
-                args.kernelVersion = KernelVersion::COEFFS_FIRST;
-
-                // free ghosted stencil values
-                vs_in.reset();
-                c_varyingStencil.reset();
-
-                vs_in = std::make_shared<mgcl::VaryingStencil>(m, n, o, 3, 0, 0, 0);
-                vs_in->fill1dIndex(false);
-                c_varyingStencil = std::make_shared<mgcl::VaryingStencilGpu>(m, n, o, 3, 0, p.getContext(), p.getCommands(), p.getProgram());
-                c_varyingStencil->fill(*vs_in, p.getCommands(), true);
-
-                std::string name = std::string("residual_varying_stencil_coeffs_without_ghosts_")
+                args.kernelVersion = KernelVersion::FOUR_GP_PER_WI;
+                std::string name = std::string("residual_varying_stencil_coeffs_first_4_gps_per_thread")
                                        .append(std::to_string(m))
                                        .append("_")
                                        .append(std::to_string(n))
@@ -515,16 +481,94 @@ namespace mgcl_bench_residual_varying
 
                 if (CLI_ARGS::checkResults)
                 {
-                    r_out_global_coeffs_without_ghosts = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                    args.c_dR.read(args.commands, r_out_global_coeffs_without_ghosts.get(), true);
+                    r_out_global_coeffs_4_gp_per_thread = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                    args.c_dR.read(args.commands, r_out_global_coeffs_4_gp_per_thread.get(), true);
                 }
             }
 
-            // No result checking for this kernel. Would need to manually write coefficients to the same as ghosted one
-            // if (CLI_ARGS::checkResults)
             // {
-            //     REQUIRE(r_out_global_coeffs_first->isEqual(*r_out_global_coeffs_without_ghosts));
+            //     args.kernelVersion = KernelVersion::REMOVED_V;
+            //     std::string name = std::string("residual_varying_no_v_")
+            //                            .append(std::to_string(m))
+            //                            .append("_")
+            //                            .append(std::to_string(n))
+            //                            .append("_")
+            //                            .append(std::to_string(o));
+
+            //     bench.run(std::string(name).c_str(), [&] { //
+            //         residual(args);
+            //         p.finish();
+            //     });
+
+            //     bench_util::Result res;
+            //     res.name = name;
+            //     res.minTime = bench_util::getMinTime(bench, name);
+            //     res.medianTime = bench_util::getMedianTime(bench, name);
+            //     res.avgTime = bench_util::getAvgTime(bench, name);
+            //     res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            //     res.m = m;
+            //     res.n = n;
+            //     res.o = o;
+            //     results.push_back(res);
+
+            //     // No result checking for this kernel
+            //     // if (CLI_ARGS::checkResults)
+            //     // {
+            //     //     r_out_global_coeffs_first = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+            //     //     args.c_dR.read(args.commands, r_out_global_coeffs_first.get(), true);
+            //     // }
             // }
+
+            // // IMPORTANT: Do this test last as it needs to free stencil values and reallocate.
+            // {
+            //     // actually coeffs without ghosts
+            //     args.kernelVersion = KernelVersion::COEFFS_FIRST;
+
+            //     // free ghosted stencil values
+            //     vs_in.reset();
+            //     c_varyingStencil.reset();
+
+            //     vs_in = std::make_shared<mgcl::VaryingStencil>(m, n, o, 3, 0, 0, 0);
+            //     vs_in->fill1dIndex(false);
+            //     c_varyingStencil = std::make_shared<mgcl::VaryingStencilGpu>(m, n, o, 3, 0, p.getContext(), p.getCommands(), p.getProgram());
+            //     c_varyingStencil->fill(*vs_in, p.getCommands(), true);
+
+            //     std::string name = std::string("residual_varying_stencil_coeffs_without_ghosts_")
+            //                            .append(std::to_string(m))
+            //                            .append("_")
+            //                            .append(std::to_string(n))
+            //                            .append("_")
+            //                            .append(std::to_string(o));
+
+            //     bench.run(std::string(name).c_str(), [&] { //
+            //         residual(args);
+            //         p.finish();
+            //     });
+
+            //     bench_util::Result res;
+            //     res.name = name;
+            //     res.minTime = bench_util::getMinTime(bench, name);
+            //     res.medianTime = bench_util::getMedianTime(bench, name);
+            //     res.avgTime = bench_util::getAvgTime(bench, name);
+            //     res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            //     res.m = m;
+            //     res.n = n;
+            //     res.o = o;
+            //     results.push_back(res);
+
+            //     // No result checking for this kernel. Would need to manually write coefficients to the same as ghosted one
+            //     // if (CLI_ARGS::checkResults)
+            //     // {
+            //     //     r_out_global_coeffs_without_ghosts = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+            //     //     args.c_dR.read(args.commands, r_out_global_coeffs_without_ghosts.get(), true);
+            //     // }
+            // }
+
+            // Check results for kernels that it is valid for
+            if (CLI_ARGS::checkResults)
+            {
+                REQUIRE(r_out_global_coeffs_first->isEqual(*r_out_global_coeffs_4_gp_per_thread));
+            }
         }
 
         bench_util::printCsvFormat(results);
