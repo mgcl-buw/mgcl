@@ -6482,6 +6482,147 @@ __kernel void jacobi_iter_27point_varying_stencil_1d(
     }
 }
 
+// /**
+//  * Loads values of v into local memory and executes two iterations. Called as 1d kernel.
+//  * Size of local memory must be 5*5*(wg-size + 4) for 3d.
+//  * This kernel must be called with one work-item per real grid point plus (iters-1)*wi.
+//  */
+// __kernel void jacobi_iter_27point_varying_stencil_1d_local_mem_2iters(
+//     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+//     __global double* restrict v_out,
+//     __global double* restrict f,
+//     __global double* restrict r,
+//     __global double* restrict stencilValues,
+//     __local double* shmem,
+//     const double omega,
+//     const int mgh, const int ngh, const int ogh,
+//     const int svmgh, const int svngh, const int svogh,
+//     const int ghosts, const int ghosts_sv,
+//     const int svGridSize,
+//     const int idx_start, const int store_residual)
+// {
+//     int idx = get_global_id(0);
+//     int no = ngh * ogh;
+//     int i = idx / no;
+//     int j = (idx - i * no) / ogh;
+//     int k = idx % ogh;
+
+//     // shmem: flat 3d array of size 5x5x(wg-size+4)
+
+//     // case 1: easy case
+//     // shmem[i-2 .. i+2][j-2 .. j+2][k-2] = v_in[i-2 .. i+2][j-2 .. j+2][k-2]
+//     // if wg_idx >= wg_size - 4:
+//     //   shmem[i-2 .. i+2][j-2 .. j+2][k + 2] = v_in[i-2 .. i+2][j-2 .. j+2][k + 2]
+
+//     // case 2: wg wrapping around
+//     // TODO also need to wrap around -2 :(
+//     // shmem[i-2 .. i+2][j-2 .. j+2][k-2] = v_in[i-2 .. i+2][j-2 .. j+2][k-2] // same as in case 1
+//     // if wg_idx >= wg_size - 4: // wrap around i,j,k
+//     //   kget = (k+2 > ogh) ? k+2-ogh : k+2
+//     //   jget = (kget < 2) ? j+1 : j    // if k+2 needs wrapping, we'll go one level below, i.e. j+1
+//     //   ioff =
+//     //   for iiter in i-2 .. i+2:
+//     //     for jiter in jget-2 .. jget+2:
+//     //       if jiter > ngh:
+//     //         iiter++     // increase i, since we'll wrap around j
+//     //         jiter = jiter > ngh ? jiter - ngh : jiter    // wrap around j. If so, increase i and wrap around if needed, too
+//     //       if iiter > mgh:
+//     //         iiter = (iiter > mgh) ? iiter-mgh : iiter     // wrap around i if needed
+//     //       shmem[i-2 .. i+2][jiter][k + 2] = v_in[i-2 .. i+2][jiter][k + 2]
+
+//     // Alternative: Work with 1d index, so the dimensions don't need to be wrapped around individually
+//     // base wi and grid point index
+//     // int idx = get_global_id(0);
+//     // int no = ngh * ogh;
+//     // int i = idx / no;
+//     // int j = (idx - i * no) / ogh;
+//     // int k = idx % ogh;
+//     //
+//     // int idx_tmp = idx
+//     // int iloc = 0
+//     // int jloc = 0
+//     //
+//     // // fetch k left:
+//     // for ioff in [-2*no , -no , 0 , no , 2*no] ; icnt in 0..5       // for i-2 .. i+2:
+//     // for joff in [-2*ogh , -ogh , 0 , ogh , 2*ogh] ; jcnt in 0..5   // for j-2 .. j+2:
+//     //   idx_tmp += ioff + joff - 2
+//     //   if (idx_tmp < 0) idx_tmp += mgh*ngh*ogh   // wrap around is entirely handled by this line
+//     //   int i_fetch = idx_tmp / no;
+//     //   int j_fetch = (idx_tmp - i_fetch * no) / ogh;
+//     //   int k_fetch = idx_tmp % ogh;
+//     //   shmem[icnt * 5*(wg_size+4) + jcnt * (wg_size+4) + loc_idx] = v[i_fetch * no + j_fetch * ogh + k_fetch]
+
+//     // // fetch k right:
+//     // if loc_idx >= wg_size - 4:
+//     // for ioff in [-2*no , -no , 0 , no , 2*no] ; i_cnt in 0..5       // for i-2 .. i+2:
+//     // for joff in [-2*ogh , -ogh , 0 , ogh , 2*ogh] ; j_cnt in 0..5   // for j-2 .. j+2:
+//     //     idx_tmp += ioff + joff + 2
+//     //     if (idx_tmp < 0) idx_tmp += mgh*ngh*ogh   // wrap around is entirely handled by this line
+//     //     int i_fetch = idx_tmp / no;
+//     //     int j_fetch = (idx_tmp - i_fetch * no) / ogh;
+//     //     int k_fetch = idx_tmp % ogh;
+//     //     shmem[icnt * 5*(wg_size+4) + jcnt*(wg_size+4) + loc_idx + 4] = v[i_fetch * no + j_fetch * ogh + k_fetch]
+
+//     // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
+//     if (i >= idx_start && j >= idx_start && k >= idx_start && i < mgh - idx_start && j < ngh - idx_start && k < ogh - idx_start)
+//     {
+//         int ioff = ngh * ogh;
+//         int joff = ogh;
+//         int koff = 1;
+//         int index = i * ioff + j * ogh + k;
+
+//         int svno = svngh * svogh;
+//         // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
+//         int index_sv = (i - ghosts + ghosts_sv) * svno + (j - ghosts + ghosts_sv) * svogh + (k - ghosts + ghosts_sv);
+
+//         double res;
+//         double v_in_index = v_in[index];
+//         double sv_self = stencilValues[index_sv + (9 + 3 + 1) * svGridSize];
+
+//         // A*v
+//         // clang-format off
+//         double stencilsum = sv_self * v_in[index]
+//             + stencilValues[index_sv + (9 + 3) * svGridSize]      * v_in[index - 1]
+//             + stencilValues[index_sv + (9 + 3 + 2) * svGridSize]  * v_in[index + 1]
+//             + stencilValues[index_sv + (9 + 1) * svGridSize]      * v_in[index - joff]
+//             + stencilValues[index_sv + (9 + 6 + 1) * svGridSize]  * v_in[index + joff]
+//             + stencilValues[index_sv + (3 + 1) * svGridSize]      * v_in[index - ioff]
+//             + stencilValues[index_sv + (18 + 3 + 1) * svGridSize] * v_in[index + ioff]
+            
+//             + stencilValues[index_sv + (9) * svGridSize]          * v_in[index - joff - koff]
+//             + stencilValues[index_sv + (9 + 2) * svGridSize]      * v_in[index - joff + koff]
+//             + stencilValues[index_sv + (9 + 6) * svGridSize]      * v_in[index + joff - koff]
+//             + stencilValues[index_sv + (9 + 6 + 2) * svGridSize]  * v_in[index + joff + koff]
+//             + stencilValues[svGridSize * 3 + index_sv]            * v_in[index - ioff - koff]
+//             + stencilValues[index_sv + (3 + 2) * svGridSize]      * v_in[index - ioff + koff]
+//             + stencilValues[index_sv + (18 + 3) * svGridSize]     * v_in[index + ioff - koff]
+//             + stencilValues[index_sv + (18 + 3 + 2) * svGridSize] * v_in[index + ioff + koff]
+//             + stencilValues[svGridSize + index_sv]                * v_in[index - ioff - joff]
+//             + stencilValues[index_sv + (6 + 1) * svGridSize]      * v_in[index - ioff + joff]
+//             + stencilValues[index_sv + (18 + 1) * svGridSize]     * v_in[index + ioff - joff]
+//             + stencilValues[index_sv + (18 + 6 + 1) * svGridSize] * v_in[index + ioff + joff]
+
+//             + stencilValues[index_sv]                           * v_in[index - ioff - joff - koff]
+//             + stencilValues[svGridSize * 2 + index_sv]            * v_in[index - ioff - joff + koff]
+//             + stencilValues[index_sv + (6) * svGridSize]          * v_in[index - ioff + joff - koff]
+//             + stencilValues[index_sv + (6 + 2) * svGridSize]      * v_in[index - ioff + joff + koff]
+//             + stencilValues[index_sv + (18) * svGridSize]         * v_in[index + ioff - joff - koff]
+//             + stencilValues[index_sv + (18 + 2) * svGridSize]     * v_in[index + ioff - joff + koff]
+//             + stencilValues[index_sv + (18 + 6) * svGridSize]     * v_in[index + ioff + joff - koff]
+//             + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * v_in[index + ioff + joff + koff];
+//         // clang-format on
+
+//         // r = f - A*v
+//         res = f[index] - stencilsum;
+
+//         // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
+//         v_out[index] = v_in_index + omega * (1.0 / sv_self) * res;
+
+//         if (store_residual)
+//             r[index] = res;
+//     }
+// }
+
 /* Restricts from fine to coarse grid.
  * Needs to get called with m*n*o work-items.
  * m,n,o is size of ghosted coarse grid.

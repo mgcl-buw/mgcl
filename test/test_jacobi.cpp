@@ -1,9 +1,11 @@
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 
 #include "../src/mgcl/cuboid.hpp"
@@ -1139,4 +1141,105 @@ TEST_CASE("jacobi_ocl_fixed")
     REQUIRE(!std::isnan(res_norm_varying));
     REQUIRE(res_norm_fixed == res_norm_varying); // TODO check
     REQUIRE(v_fixed_out->isEqual(*v_varying_out));
+}
+
+// Tests local memory kernel using temporal tiling, i.e. doing multiple iterations in one kernel call,
+// but without the need of having more than one ghost layer at each border.
+TEST_CASE("temporal_tiling_localmem_1d")
+{
+    // Test whether fetching into local memory works
+    SECTION("fetch_into_localmem")
+    {
+        int m = 16;
+        int n = 16;
+        int o = 16;
+        int gh = 1;
+        int mgh = m + 2 * gh;
+        int ngh = n + 2 * gh;
+        int ogh = o + 2 * gh;
+
+        // int wg_size = 32;
+        int wg_size = 4;
+        int grid_size = mgh * ngh * ogh;
+
+        std::vector<double> shmem(5 * 5 * (wg_size + 4));
+        mgcl::Cuboid v_cub(m, n, o, gh, gh, gh);
+        v_cub.fill1dIndex(false);
+        auto& v = v_cub.field1d();
+
+        // for (int idx = 1372; idx < grid_size; idx++)
+        for (int idx = 0; idx < grid_size; idx++)
+        {
+            // int idx = get_global_id(0);
+            int no = ngh * ogh;
+            int i = idx / no;
+            int j = (idx - i * no) / ogh;
+            int k = idx % ogh;
+
+            int idx_tmp = idx;
+            int iloc = 0;
+            int jloc = 0;
+
+            int loc_idx = idx % wg_size;
+
+            // fetch k left:
+            for (int icnt = 0, ioff = -2 * no; icnt < 5; icnt++, ioff += no)
+                for (int jcnt = 0, joff = -2 * ogh; jcnt < 5; jcnt++, joff += ogh)
+                {
+                    idx_tmp = idx + ioff + joff - 2;
+                    if (idx_tmp < 0)
+                        idx_tmp += mgh * ngh * ogh; // wrap around is entirely handled by this line
+                    int i_fetch = idx_tmp / no;
+                    int j_fetch = (idx_tmp - i_fetch * no) / ogh;
+                    int k_fetch = idx_tmp % ogh;
+                    shmem[icnt * 5 * (wg_size + 4) + jcnt * (wg_size + 4) + loc_idx] = v[i_fetch * no + j_fetch * ogh + k_fetch];
+                    std::cout << "shmem[" << icnt << "," << jcnt << "," << loc_idx << "] <- v[" << i_fetch << "," << j_fetch << "," << k_fetch << "]" << std::endl;
+                }
+
+            // fetch k right:
+            if (loc_idx > wg_size - 4)
+            {
+                for (int icnt = 0, ioff = -2 * no; icnt < 5; icnt++, ioff += no)
+                    for (int jcnt = 0, joff = -2 * ogh; jcnt < 5; jcnt++, joff += ogh)
+                    {
+                        idx_tmp = idx + ioff + joff + 2;
+                        if (idx_tmp < 0)
+                            idx_tmp += mgh * ngh * ogh; // wrap around is entirely handled by this line
+                        int i_fetch = idx_tmp / no;
+                        int j_fetch = (idx_tmp - i_fetch * no) / ogh;
+                        int k_fetch = idx_tmp % ogh;
+                        shmem[icnt * 5 * (wg_size + 4) + jcnt * (wg_size + 4) + loc_idx + 4] = v[i_fetch * no + j_fetch * ogh + k_fetch];
+                    }
+            }
+
+            // loop over shmem to check if values are correct, if idx_loc = wg_size-1 reached (looped over one wg)
+            if (loc_idx == wg_size - 1)
+            {
+                // std::string filename = "shmem.txt";
+                // std::ofstream of(filename);
+                // for (int ii = 0; ii < 5 * 5 * (wg_size + 4); ii++)
+                // {
+                //     int no = ngh * ogh;
+                //     int i = ii / no;
+                //     int j = (ii - i * no) / ogh;
+                //     int k = ii % ogh;
+                //     of << i << "," << j << "," << k << ": " << shmem[ii] << std::endl;
+                // }
+                // of.close();
+                // return;
+
+                for (int ioff = -2; ioff < 3; ioff++)
+                    for (int joff = -2; joff < 3; joff++)
+                        for (int koff = -2; koff < 3; koff++)
+                        {
+                            int iget = (i + ioff < 0) ? i + ioff + mgh : i + ioff;
+                            int jget = (j + joff < 0) ? j + joff + ngh : j + joff;
+                            int kget = (k - loc_idx + koff < 0) ? k - loc_idx + koff + ogh : k - loc_idx + koff;
+                            int idxget = iget * no + jget * ogh + kget;
+                            CAPTURE(idx, loc_idx, i, j, k, ioff, joff, koff, iget, jget, kget);
+                            REQUIRE(shmem[(ioff + 2) * 5 * (wg_size + 4) + (joff + 2) * (wg_size + 4) + (koff + 2)] == v[idxget]);
+                        }
+            }
+        }
+    }
 }
