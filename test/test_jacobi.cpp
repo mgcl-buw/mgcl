@@ -1243,3 +1243,209 @@ TEST_CASE("temporal_tiling_localmem_1d")
         }
     }
 }
+
+// Tests local memory kernel using temporal tiling, i.e. doing multiple iterations in one kernel call,
+// but without the need of having more than one ghost layer at each border.
+// 2d kernel that loops over the 1st dimension. One wi per real grid point.
+TEST_CASE("temporal_tiling_localmem_2d_stream")
+{
+
+    // kernel
+    // set any idx_ps ("index_plane_start"), i.e. the plane index that the wg maps to
+    // fetch v plane i=idx_ps-2 and store in locmem[0] (need to get from back, if idx_ps<2, be careful about ghosts)
+    // fetch v plane i=idx_ps-1 and store in locmem[1] (need to get from back, if idx_ps<1, be careful about ghosts)
+    // fetch v plane i=idx_ps and store in locmem[2]
+    // fetch v plane i=idx_ps+1 and store in locmem[3]
+    // fetch v plane i=idx_ps+2 and store in locmem[4]
+    //
+    // apply stencils in locmem[1] for grid points except outer border and store in locmem[0] (t=0)
+    // apply stencils in locmem[2] for grid points except outer border and store in locmem[1] (t=0)
+    // apply stencils in locmem[3] for grid points except outer border and store in locmem[2] (t=0)
+    // apply stencils in locmem[1] for grid points except outer 2 borders and store in global memory (t=1)
+    //
+    // next_buf = 0
+    //
+    // current_glob_plane = 1 .. m // 1: the second real plane, m: the last real plane
+    //   load next entire plane in locmem[next_buf] (with 2 ghost layers)
+    //   apply stencils in locmem[(next_buf-1) % 5] for grid points except outer border and store in locmem[(next_buf-2) % 5] (t=0)
+    //   apply stencils in locmem[(next_buf-3) % 5] for grid points except outer border and store in global memory (t=1)
+    //   next_buf = (next_buf + 1) % 5
+    //
+    // Notes:
+    // Applying stencil: Need to divide stencil into planes and apply to each plane separately, since we don't want to
+    // shift data in local memory. E.g. when applying stencil in plane 0, we need to take values from planes 4, 0 and 1.
+    // The planes indices are always in increasing order, whereas after plane 4 it restarts with plane 0. So, if
+    // the current plane has index locmem[p], we need to get values from locmem[(p-1) % 5], locmem[p] and locmem[(p+1) % 5].
+    // Maybe we could also use 3 counters to avoid the modulo op...
+    //
+    // Loading a real plane p: Each wi loads its grid point. Then, the outer 2 layers of wis load the ghost values. E.g.:
+    // // k_loc is the local memory index in the z dimension and in range 0..loc_size_y-1 (wg is only part of real grid), i.e. loc_size_{x,y} is without local ghosts.
+    // // locmem has size [loc_size_x + 4][loc_size_y + 4].
+    // // ploc is the target plane in local memory, i.e. in range 0..4
+    // // pglob is the global plane index of v to be fetched
+    //
+    // // Handle ghost planes at the beginning and at the end
+    // if (pglob < 2):
+    //   p = (pglob-2 < 0 ? pglob-2+m : pglob-2) % m;
+    // else if (pglob >= m):
+    //   p = (pglob+2) % m;
+    //
+    // locmem[ploc][j_loc+2][k_loc+2] = v[p][j][k];    // load self
+    //
+    // // Load ghosts in z dimension.
+    // if (k_loc < 2)
+    //   locmem[ploc][j_loc+2][k_loc] = v[p][j][(k-2 < 0 ? k-2+o : k-2) % o];
+    // else if (k_loc >= loc_size_y - 2)
+    //   locmem[ploc][j_loc+2][k_loc + loc_size_y] = v[p][j][(k+2) % o];
+    //
+    // // Load ghosts in y dimension.
+    // if (j_loc < 2)
+    //   locmem[ploc][j_loc][k_loc+2] = v[p][(j-2 < 0 ? j-2+n : j-2) % n][k];
+    // else if (j_loc >= loc_size_x - 2)
+    //   locmem[ploc][j_loc + loc_size_x][k_loc+2] = v[p][(j+2) % n][k];
+    //
+    // // Load ghosts in corners.
+    // if (j_loc < 2 && k_loc < 2)   // upper left
+    //   locmem[ploc][j_loc][k_loc] = v[p][(j-2 < 0 ? j-2+n : j-2) % n][(k-2 < 0 ? k-2+o : k-2) % o];
+    // else if (j_loc < 2 && k_loc >= loc_size_y - 2)   // upper right
+    //   locmem[ploc][j_loc + loc_size_x][k_loc + loc_size_y] = v[p][(j+2) % n][(k+2) % o];
+    // else if (j_loc >= loc_size_x - 2 && k_loc < 2)   // lower left
+    //   locmem[ploc][j_loc + loc_size_x][k_loc] = v[p][(j-2 < 0 ? j-2+n : j-2) % n][(k-2 < 0 ? k-2+o : k-2) % o];
+    // else if (j_loc >= loc_size_x - 2 && k_loc >= loc_size_y - 2)   // lower right
+    //   locmem[ploc][j_loc + loc_size_x][k_loc + loc_size_y] = v[p][(j+2) % n][(k+2) % o];
+
+    auto load_plane = [](int pglob, int ploc,
+                         int k_loc, int j_loc,
+                         int loc_size_x, int loc_size_y,
+                         mgcl::Cuboid& locmem, mgcl::Cuboid& v,
+                         int m, int n, int o,
+                         int j, int k)
+    {
+        int p = pglob;
+        // Handle ghost planes at the beginning and at the end
+        if (pglob < 2)
+            p = (pglob - 2 < 0 ? pglob - 2 + m : pglob - 2) % m;
+        else if (pglob >= m)
+            p = (pglob + 2) % m;
+
+        locmem[ploc][j_loc + 2][k_loc + 2] = v[p][j][k]; // load self
+
+        // Load ghosts in z dimension.
+        if (k_loc < 2)
+            locmem[ploc][j_loc + 2][k_loc] = v[p][j][(k - 2 < 0 ? k - 2 + o : k - 2) % o];
+        else if (k_loc >= loc_size_y - 2)
+            locmem[ploc][j_loc + 2][k_loc + loc_size_y] = v[p][j][(k + 2) % o];
+
+        // Load ghosts in y dimension.
+        if (j_loc < 2)
+            locmem[ploc][j_loc][k_loc + 2] = v[p][(j - 2 < 0 ? j - 2 + n : j - 2) % n][k];
+        else if (j_loc >= loc_size_x - 2)
+            locmem[ploc][j_loc + loc_size_x][k_loc + 2] = v[p][(j + 2) % n][k];
+
+        // Load ghosts in corners.
+        if (j_loc < 2 && k_loc < 2) // upper left
+            locmem[ploc][j_loc][k_loc] = v[p][(j - 2 < 0 ? j - 2 + n : j - 2) % n][(k - 2 < 0 ? k - 2 + o : k - 2) % o];
+        else if (j_loc < 2 && k_loc >= loc_size_y - 2) // upper right
+            locmem[ploc][j_loc][k_loc + loc_size_y] = v[p][(j - 2 < 0 ? j - 2 + n : j - 2) % n][(k + 2) % o];
+        else if (j_loc >= loc_size_x - 2 && k_loc < 2) // lower left
+            locmem[ploc][j_loc + loc_size_x][k_loc] = v[p][(j + 2) % n][(k - 2 < 0 ? k - 2 + o : k - 2) % o];
+        else if (j_loc >= loc_size_x - 2 && k_loc >= loc_size_y - 2) // lower right
+            locmem[ploc][j_loc + loc_size_x][k_loc + loc_size_y] = v[p][(j + 2) % n][(k + 2) % o];
+    };
+
+    // Test whether loading a plane into local memory works
+    SECTION("load_plane")
+    {
+        int m = 16;
+        int n = 16;
+        int o = 16;
+        int gh = 1;
+        int mgh = m + 2 * gh;
+        int ngh = n + 2 * gh;
+        int ogh = o + 2 * gh;
+
+        // int wg_size = 32;
+        int wg_size_x = 4;
+        int wg_size_y = 4;
+        int grid_size = mgh * ngh * ogh;
+
+        // std::vector<double> shmem((wg_size_x + 4) * (wg_size_y + 4) * 5); // need 5 planes in buffer
+        mgcl::Cuboid locmem(5, (wg_size_x + 4), (wg_size_y + 4)); // need 5 planes in buffer
+        mgcl::Cuboid v_cub(m, n, o, gh, gh, gh);
+        mgcl::Cuboid v_cub_nogh(m, n, o);
+        v_cub.fill1dIndex(false);
+        v_cub_nogh.fill1dIndex(false);
+        auto& v = v_cub.field1d();
+
+        {
+            // Test the following wg cases for a real plane (not ghosted):
+            // {not touching border, touching upper border, touching lower border, touching left border, touching right border,
+            //  all 4 corners (4 cases)}
+            std::vector<std::vector<int>> wgs{
+                {1, 1},
+                {0, 1},
+                {n / wg_size_x - 1, 1},
+                {1, 0},
+                {1, o / wg_size_y - 1},
+                {0, 0},
+                {n / wg_size_x - 1, 0},
+                {0, o / wg_size_y - 1},
+                {n / wg_size_x - 1, o / wg_size_y - 1}};
+
+            for (auto wg : wgs)
+            {
+                // Test wg in the upper left corner
+                int wg_num_x = wg[0];
+                int wg_num_y = wg[1];
+                int pglob = 3;
+                int ploc = 0;
+
+                // for (int idx = 1372; idx < grid_size; idx++)
+                // loop over first work-group, i.e. in upper left corner of the grid. Try without handling ghosts of global v
+                // first.
+                for (int jloc = 0; jloc < wg_size_x; jloc++)
+                    for (int kloc = 0; kloc < wg_size_y; kloc++)
+                    {
+                        int j = wg_num_x * wg_size_x + jloc;
+                        int k = wg_num_y * wg_size_y + kloc;
+                        // int idx = get_global_id(0);
+                        // int no = ngh * ogh;
+                        // int i = idx / no;
+                        // int j = (idx - i * no) / ogh;
+                        // int k = idx % ogh;
+
+                        load_plane(pglob, ploc, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+                        load_plane(pglob + 1, ploc + 1, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+                        load_plane(pglob + 2, ploc + 3, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+                        load_plane(pglob + 3, ploc + 2, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+
+                        // v_cub_nogh.dumpToFile("v_cub_nogh.txt");
+                        // locmem.dumpToFile("locmem.txt");
+                    }
+
+                // Since we test wg 1,1, which does not touch the border, we can just check the 1d indices
+                for (int jloc = 0; jloc < locmem.getN(); jloc++)
+                    for (int kloc = 0; kloc < locmem.getO(); kloc++)
+                    {
+                        int j = wg_num_x * wg_size_x + jloc - 2;
+                        int k = wg_num_y * wg_size_y + kloc - 2;
+
+                        if (j < 0)
+                            j += n;
+                        else if (j >= n)
+                            j -= n;
+                        if (k < 0)
+                            k += o;
+                        else if (k >= o)
+                            k -= o;
+
+                        CAPTURE(jloc, kloc, j, k, pglob, ploc);
+                        REQUIRE(locmem[ploc][jloc][kloc] == v_cub_nogh[pglob][j][k]);
+                        REQUIRE(locmem[ploc + 1][jloc][kloc] == v_cub_nogh[pglob + 1][j][k]);
+                        REQUIRE(locmem[ploc + 3][jloc][kloc] == v_cub_nogh[pglob + 2][j][k]);
+                        REQUIRE(locmem[ploc + 2][jloc][kloc] == v_cub_nogh[pglob + 3][j][k]);
+                    }
+            }
+        }
+    }
+}

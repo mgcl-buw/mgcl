@@ -6388,6 +6388,88 @@ __kernel void jacobi_iter_27point_varying_stencil(
     }
 }
 
+__kernel void jacobi_iter_27point_varying_stencil_temp_tiling_2d(
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out,
+    __global double* restrict f,
+    __global double* restrict r,
+    __global double* restrict stencilValues,
+    const double omega,
+    const int mgh, const int ngh, const int ogh,
+    const int svmgh, const int svngh, const int svogh,
+    const int ghosts, const int ghosts_sv,
+    const int svGridSize,
+    const int idx_start, const int store_residual)
+{
+    int j = get_global_id(0);
+    int k = get_global_id(1);
+
+    // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
+    if (j >= idx_start && k >= idx_start && j < ngh - idx_start && k < ogh - idx_start)
+    {
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
+        int index = idx_start * ioff + j * ogh + k;
+
+        int svno = svngh * svogh;
+        // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
+        int index_sv = (idx_start - ghosts + ghosts_sv) * svno + (j - ghosts + ghosts_sv) * svogh + (k - ghosts + ghosts_sv);
+
+        for (int i = idx_start; i < mgh - idx_start; i++)
+        {
+            double res;
+            double v_in_index = v_in[index];
+            double sv_self = stencilValues[index_sv + (9 + 3 + 1) * svGridSize];
+
+            // A*v
+            // clang-format off
+            double stencilsum = stencilValues[index_sv + (9 + 3 + 1) * svGridSize] * v_in[index]
+                + stencilValues[index_sv + (9 + 3) * svGridSize]      * v_in[index - 1]
+                + stencilValues[index_sv + (9 + 3 + 2) * svGridSize]  * v_in[index + 1]
+                + stencilValues[index_sv + (9 + 1) * svGridSize]      * v_in[index - joff]
+                + stencilValues[index_sv + (9 + 6 + 1) * svGridSize]  * v_in[index + joff]
+                + stencilValues[index_sv + (3 + 1) * svGridSize]      * v_in[index - ioff]
+                + stencilValues[index_sv + (18 + 3 + 1) * svGridSize] * v_in[index + ioff]
+                
+                + stencilValues[index_sv + (9) * svGridSize]          * v_in[index - joff - koff]
+                + stencilValues[index_sv + (9 + 2) * svGridSize]      * v_in[index - joff + koff]
+                + stencilValues[index_sv + (9 + 6) * svGridSize]      * v_in[index + joff - koff]
+                + stencilValues[index_sv + (9 + 6 + 2) * svGridSize]  * v_in[index + joff + koff]
+                + stencilValues[svGridSize * 3 + index_sv]            * v_in[index - ioff - koff]
+                + stencilValues[index_sv + (3 + 2) * svGridSize]      * v_in[index - ioff + koff]
+                + stencilValues[index_sv + (18 + 3) * svGridSize]     * v_in[index + ioff - koff]
+                + stencilValues[index_sv + (18 + 3 + 2) * svGridSize] * v_in[index + ioff + koff]
+                + stencilValues[svGridSize + index_sv]                * v_in[index - ioff - joff]
+                + stencilValues[index_sv + (6 + 1) * svGridSize]      * v_in[index - ioff + joff]
+                + stencilValues[index_sv + (18 + 1) * svGridSize]     * v_in[index + ioff - joff]
+                + stencilValues[index_sv + (18 + 6 + 1) * svGridSize] * v_in[index + ioff + joff]
+
+                + stencilValues[index_sv]                           * v_in[index - ioff - joff - koff]
+                + stencilValues[svGridSize * 2 + index_sv]            * v_in[index - ioff - joff + koff]
+                + stencilValues[index_sv + (6) * svGridSize]          * v_in[index - ioff + joff - koff]
+                + stencilValues[index_sv + (6 + 2) * svGridSize]      * v_in[index - ioff + joff + koff]
+                + stencilValues[index_sv + (18) * svGridSize]         * v_in[index + ioff - joff - koff]
+                + stencilValues[index_sv + (18 + 2) * svGridSize]     * v_in[index + ioff - joff + koff]
+                + stencilValues[index_sv + (18 + 6) * svGridSize]     * v_in[index + ioff + joff - koff]
+                + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * v_in[index + ioff + joff + koff];
+            // clang-format on
+
+            // r = f - A*v
+            res = f[index] - stencilsum;
+
+            // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
+            v_out[index] = v_in_index + omega * (1.0 / sv_self) * res;
+
+            if (store_residual)
+                r[index] = res;
+
+            index += ioff;
+            index_sv += svno;
+        }
+    }
+}
+
 /* runs one iteration of jacobi's method using one work-item per grid node.
  * uses a 1d kernel, which parallelizes all three loop in x,y and z directions.
  * global size must be of ghosted grid.
