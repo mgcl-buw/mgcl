@@ -1321,12 +1321,13 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                          int m, int n, int o,
                          int j, int k)
     {
-        int p = pglob;
+        // int p = pglob - 2;
         // Handle ghost planes at the beginning and at the end
-        if (pglob < 2)
-            p = (pglob - 2 < 0 ? pglob - 2 + m : pglob - 2) % m;
-        else if (pglob >= m)
-            p = (pglob + 2) % m;
+        // if (pglob < 2)
+        //     p = (pglob - 2 < 0 ? pglob - 2 + m : pglob - 2) % m;
+        // else if (pglob >= m)
+        //     p = (pglob + 2) % m;
+        int p = pglob; // Don't do ghost handling for x-plane here, instead do it in algorithm.
 
         locmem[ploc][j_loc + 2][k_loc + 2] = v[p][j][k]; // load self
 
@@ -1414,10 +1415,11 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                         // int j = (idx - i * no) / ogh;
                         // int k = idx % ogh;
 
-                        load_plane(pglob, ploc, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
-                        load_plane(pglob + 1, ploc + 1, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
-                        load_plane(pglob + 2, ploc + 3, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
-                        load_plane(pglob + 3, ploc + 2, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+                        load_plane(3, 0, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+                        load_plane(5, 3, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+                        load_plane(6, 2, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+                        load_plane(1, 4, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+                        load_plane(m - 1, 1, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
 
                         // v_cub_nogh.dumpToFile("v_cub_nogh.txt");
                         // locmem.dumpToFile("locmem.txt");
@@ -1429,7 +1431,12 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                     {
                         int j = wg_num_x * wg_size_x + jloc - 2;
                         int k = wg_num_y * wg_size_y + kloc - 2;
+                        // int pglob_real = pglob - 2;
 
+                        // if (pglob_real < 2)
+                        //     pglob_real += m;
+                        // else if (pglob_real >= m + 2)
+                        //     pglob_real -= m;
                         if (j < 0)
                             j += n;
                         else if (j >= n)
@@ -1440,10 +1447,11 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                             k -= o;
 
                         CAPTURE(jloc, kloc, j, k, pglob, ploc);
-                        REQUIRE(locmem[ploc][jloc][kloc] == v_cub_nogh[pglob][j][k]);
-                        REQUIRE(locmem[ploc + 1][jloc][kloc] == v_cub_nogh[pglob + 1][j][k]);
-                        REQUIRE(locmem[ploc + 3][jloc][kloc] == v_cub_nogh[pglob + 2][j][k]);
-                        REQUIRE(locmem[ploc + 2][jloc][kloc] == v_cub_nogh[pglob + 3][j][k]);
+                        REQUIRE(locmem[0][jloc][kloc] == v_cub_nogh[3][j][k]);
+                        REQUIRE(locmem[3][jloc][kloc] == v_cub_nogh[5][j][k]);
+                        REQUIRE(locmem[2][jloc][kloc] == v_cub_nogh[6][j][k]);
+                        REQUIRE(locmem[4][jloc][kloc] == v_cub_nogh[1][j][k]);
+                        REQUIRE(locmem[1][jloc][kloc] == v_cub_nogh[m - 1][j][k]);
                     }
             }
         }
