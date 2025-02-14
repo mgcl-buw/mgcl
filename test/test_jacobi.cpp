@@ -1286,12 +1286,30 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
     //
     // Implementation see below
 
+    /**
+     * @brief
+     * pglob: Real global plane index, i.e. in range 0...m-1.
+     * ploc: Local memory plane index, i.e. in range 0..4.
+     * j_loc: Local memory index in y dimension, i.e. in range 0..loc_size_y-1.
+     * k_loc: Local memory index in z dimension, i.e. in range 0..loc_size_y-1.
+     * loc_size_x: Size of work-group in x dimension, i.e. without ghosts of local memory.
+     * loc_size_y: Size of work-group in y dimension, i.e. without ghosts of local memory.
+     * locmem: Local memory.
+     * v: Global memory.
+     * m: Size in x dimension of global memory.
+     * n: Size in y dimension of global memory.
+     * o: Size in z dimension of global memory.
+     * j: Global index in y dimension of REAL grid point to be loaded.
+     * k: Global index in z dimension of REAL grid point to be loaded.
+     * vgh: Number of ghost cells in global memory.
+     */
     auto load_plane = [](int pglob, int ploc,
                          int j_loc, int k_loc,
                          int loc_size_x, int loc_size_y,
                          mgcl::Cuboid& locmem, mgcl::Cuboid& v,
                          int m, int n, int o,
-                         int j, int k)
+                         int j, int k,
+                         int vgh)
     {
         // int p = pglob - 2;
         // Handle ghost planes at the beginning and at the end
@@ -1299,31 +1317,31 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         //     p = (pglob - 2 < 0 ? pglob - 2 + m : pglob - 2) % m;
         // else if (pglob >= m)
         //     p = (pglob + 2) % m;
-        int p = pglob; // Don't do ghost handling for x-plane here, instead do it in algorithm.
+        int p = pglob + vgh; // Don't do ghost handling for x-plane here, instead do it in algorithm. But respect amount of ghosts in v.
 
-        locmem[ploc][j_loc + 2][k_loc + 2] = v[p][j][k]; // load self
+        locmem[ploc][j_loc + 2][k_loc + 2] = v[p][j + vgh][k + vgh]; // load self
 
         // Load ghosts in z dimension.
         if (k_loc < 2)
-            locmem[ploc][j_loc + 2][k_loc] = v[p][j][(k - 2 < 0 ? k - 2 + o : k - 2) % o];
+            locmem[ploc][j_loc + 2][k_loc] = v[p][j + vgh][((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh];
         else if (k_loc >= loc_size_y - 2)
-            locmem[ploc][j_loc + 2][k_loc + 4] = v[p][j][(k + 2) % o];
+            locmem[ploc][j_loc + 2][k_loc + 4] = v[p][j + vgh][((k + 2) % o) + vgh];
 
         // Load ghosts in y dimension.
         if (j_loc < 2)
-            locmem[ploc][j_loc][k_loc + 2] = v[p][(j - 2 < 0 ? j - 2 + n : j - 2) % n][k];
+            locmem[ploc][j_loc][k_loc + 2] = v[p][((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh][k + vgh];
         else if (j_loc >= loc_size_x - 2)
-            locmem[ploc][j_loc + 4][k_loc + 2] = v[p][(j + 2) % n][k];
+            locmem[ploc][j_loc + 4][k_loc + 2] = v[p][((j + 2) % n) + vgh][k + vgh];
 
         // Load ghosts in corners.
         if (j_loc < 2 && k_loc < 2) // upper left
-            locmem[ploc][j_loc][k_loc] = v[p][(j - 2 < 0 ? j - 2 + n : j - 2) % n][(k - 2 < 0 ? k - 2 + o : k - 2) % o];
+            locmem[ploc][j_loc][k_loc] = v[p][((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh][((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh];
         else if (j_loc < 2 && k_loc >= loc_size_y - 2) // upper right
-            locmem[ploc][j_loc][k_loc + 4] = v[p][(j - 2 < 0 ? j - 2 + n : j - 2) % n][(k + 2) % o];
+            locmem[ploc][j_loc][k_loc + 4] = v[p][((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh][((k + 2) % o) + vgh];
         else if (j_loc >= loc_size_x - 2 && k_loc < 2) // lower left
-            locmem[ploc][j_loc + 4][k_loc] = v[p][(j + 2) % n][(k - 2 < 0 ? k - 2 + o : k - 2) % o];
+            locmem[ploc][j_loc + 4][k_loc] = v[p][((j + 2) % n) + vgh][((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh];
         else if (j_loc >= loc_size_x - 2 && k_loc >= loc_size_y - 2) // lower right
-            locmem[ploc][j_loc + 4][k_loc + 4] = v[p][(j + 2) % n][(k + 2) % o];
+            locmem[ploc][j_loc + 4][k_loc + 4] = v[p][((j + 2) % n) + vgh][((k + 2) % o) + vgh];
     };
 
     // Test whether loading a plane into local memory works
@@ -1351,7 +1369,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         auto& v = v_cub.field1d();
 
         {
-            // Test the following wg cases for a real plane (not ghosted):
+            // Test the following wg cases for a non-ghosted v:
             // {not touching border, touching upper border, touching lower border, touching left border, touching right border,
             //  all 4 corners (4 cases)}
             std::vector<std::vector<int>> wgs{
@@ -1385,11 +1403,11 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                         // int j = (idx - i * no) / ogh;
                         // int k = idx % ogh;
 
-                        load_plane(3, 0, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
-                        load_plane(5, 3, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
-                        load_plane(6, 2, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
-                        load_plane(1, 4, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
-                        load_plane(m - 1, 1, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+                        load_plane(3, 0, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k, 0);
+                        load_plane(5, 3, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k, 0);
+                        load_plane(6, 2, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k, 0);
+                        load_plane(1, 4, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k, 0);
+                        load_plane(m - 1, 1, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k, 0);
 
                         // v_cub_nogh.dumpToFile("v_cub_nogh.txt");
                         // locmem.dumpToFile("locmem.txt");
@@ -1425,5 +1443,123 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                     }
             }
         }
+
+        {
+            // Test the following wg cases for a ghosted v:
+            // {not touching border, touching upper border, touching lower border, touching left border, touching right border,
+            //  all 4 corners (4 cases)}
+            std::vector<std::vector<int>> wgs{
+                {1, 1},
+                {0, 1},
+                {n / wg_size_x - 1, 1},
+                {1, 0},
+                {1, o / wg_size_y - 1},
+                {0, 0},
+                {n / wg_size_x - 1, 0},
+                {0, o / wg_size_y - 1},
+                {n / wg_size_x - 1, o / wg_size_y - 1}};
+
+            locmem.field1d().clear();
+
+            for (auto wg : wgs)
+            {
+                // Test wg in the upper left corner
+                int wg_num_x = wg[0];
+                int wg_num_y = wg[1];
+
+                // for (int idx = 1372; idx < grid_size; idx++)
+                // loop over first work-group, i.e. in upper left corner of the grid. Try without handling ghosts of global v
+                // first.
+                for (int jloc = 0; jloc < wg_size_x; jloc++)
+                    for (int kloc = 0; kloc < wg_size_y; kloc++)
+                    {
+                        int j = wg_num_x * wg_size_x + jloc;
+                        int k = wg_num_y * wg_size_y + kloc;
+                        // int idx = get_global_id(0);
+                        // int no = ngh * ogh;
+                        // int i = idx / no;
+                        // int j = (idx - i * no) / ogh;
+                        // int k = idx % ogh;
+
+                        load_plane(3, 0, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub, m, n, o, j, k, gh);
+                        load_plane(5, 3, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub, m, n, o, j, k, gh);
+                        load_plane(6, 2, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub, m, n, o, j, k, gh);
+                        load_plane(1, 4, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub, m, n, o, j, k, gh);
+                        load_plane(m - 1, 1, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub, m, n, o, j, k, gh);
+
+                        // v_cub_nogh.dumpToFile("v_cub.txt");
+                        // locmem.dumpToFile("locmem.txt");
+                    }
+
+                // Check results
+                for (int jloc = 0; jloc < locmem.getN(); jloc++)
+                    for (int kloc = 0; kloc < locmem.getO(); kloc++)
+                    {
+                        int j = wg_num_x * wg_size_x + jloc - 2;
+                        int k = wg_num_y * wg_size_y + kloc - 2;
+                        // int pglob_real = pglob - 2;
+
+                        // if (pglob_real < 2)
+                        //     pglob_real += m;
+                        // else if (pglob_real >= m + 2)
+                        //     pglob_real -= m;
+                        if (j < 0)
+                            j += n;
+                        else if (j >= n)
+                            j -= n;
+                        if (k < 0)
+                            k += o;
+                        else if (k >= o)
+                            k -= o;
+
+                        CAPTURE(jloc, kloc, j, k);
+                        REQUIRE(locmem[0][jloc][kloc] == v_cub[3 + gh][j + gh][k + gh]);
+                        REQUIRE(locmem[3][jloc][kloc] == v_cub[5 + gh][j + gh][k + gh]);
+                        REQUIRE(locmem[2][jloc][kloc] == v_cub[6 + gh][j + gh][k + gh]);
+                        REQUIRE(locmem[4][jloc][kloc] == v_cub[1 + gh][j + gh][k + gh]);
+                        REQUIRE(locmem[1][jloc][kloc] == v_cub[m - 1 + gh][j + gh][k + gh]);
+                    }
+            }
+        }
     }
+
+    // // front is i-1, center is i, back is i+1
+    // auto apply_stencil = [](double* front, double* center, double* back, double* stencilValues, int svGridSize, int index_sv, int index, int joff, int koff)
+    // {
+    //     // clang-format off
+    //         double stencilsum = stencilValues[index_sv + (9 + 3 + 1) * svGridSize] * center[index]
+    //             + stencilValues[index_sv + (9 + 3) * svGridSize]      * center[index - 1]
+    //             + stencilValues[index_sv + (9 + 3 + 2) * svGridSize]  * center[index + 1]
+    //             + stencilValues[index_sv + (9 + 1) * svGridSize]      * center[index - joff]
+    //             + stencilValues[index_sv + (9 + 6 + 1) * svGridSize]  * center[index + joff]
+    //             + stencilValues[index_sv + (3 + 1) * svGridSize]      * front[index]
+    //             + stencilValues[index_sv + (18 + 3 + 1) * svGridSize] * back[index]
+
+    //             + stencilValues[index_sv + (9) * svGridSize]          * center[index - joff - koff]
+    //             + stencilValues[index_sv + (9 + 2) * svGridSize]      * center[index - joff + koff]
+    //             + stencilValues[index_sv + (9 + 6) * svGridSize]      * center[index + joff - koff]
+    //             + stencilValues[index_sv + (9 + 6 + 2) * svGridSize]  * center[index + joff + koff]
+    //             + stencilValues[svGridSize * 3 + index_sv]            * front[index  - koff]
+    //             + stencilValues[index_sv + (3 + 2) * svGridSize]      * front[index  + koff]
+    //             + stencilValues[index_sv + (18 + 3) * svGridSize]     * back[index  - koff]
+    //             + stencilValues[index_sv + (18 + 3 + 2) * svGridSize] * back[index  + koff]
+    //             + stencilValues[svGridSize + index_sv]                * front[index  - joff]
+    //             + stencilValues[index_sv + (6 + 1) * svGridSize]      * front[index  + joff]
+    //             + stencilValues[index_sv + (18 + 1) * svGridSize]     * back[index  - joff]
+    //             + stencilValues[index_sv + (18 + 6 + 1) * svGridSize] * back[index  + joff]
+
+    //             + stencilValues[index_sv]                           * front[index  - joff - koff]
+    //             + stencilValues[svGridSize * 2 + index_sv]            * front[index  - joff + koff]
+    //             + stencilValues[index_sv + (6) * svGridSize]          * front[index  + joff - koff]
+    //             + stencilValues[index_sv + (6 + 2) * svGridSize]      * front[index  + joff + koff]
+    //             + stencilValues[index_sv + (18) * svGridSize]         * back[index  - joff - koff]
+    //             + stencilValues[index_sv + (18 + 2) * svGridSize]     * back[index  - joff + koff]
+    //             + stencilValues[index_sv + (18 + 6) * svGridSize]     * back[index  + joff - koff]
+    //             + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * back[index  + joff + koff];
+    //     // clang-format on
+    // };
+
+    // SECTION("apply_stencil")
+    // {
+    // }
 }
