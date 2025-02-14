@@ -1277,6 +1277,8 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
     // The planes indices are always in increasing order, whereas after plane 4 it restarts with plane 0. So, if
     // the current plane has index locmem[p], we need to get values from locmem[(p-1) % 5], locmem[p] and locmem[(p+1) % 5].
     // Maybe we could also use 3 counters to avoid the modulo op...
+    // Note that for 2 iterations, stencilValues works, because it is ghosted with 1 anyway. However, more iterations would
+    // either need more ghost layers in stencilValues, or special handling in apply_stencil.
     //
     // Loading a real plane p: Each wi loads its grid point. Then, the outer 2 layers of wis load the ghost values. E.g.:
     // // k_loc is the local memory index in the z dimension and in range 0..loc_size_y-1 (wg is only part of real grid), i.e. loc_size_{x,y} is without local ghosts.
@@ -1389,8 +1391,6 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                 {0, o / wg_size_y - 1},
                 {n / wg_size_x - 1, o / wg_size_y - 1}};
 
-            locmem.field1d().clear();
-
             for (auto wg : wgs)
             {
                 // Test wg in the upper left corner
@@ -1453,51 +1453,188 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         }
     }
 
-    // // front is i-1, center is i, back is i+1
-    // // front: address of front plane in local memory
-    // // center: address of center plane in local memory
-    // // back: address of back plane in local memory
-    // // stencilValues: Coefficients in global memory
-    // // svGridSize: Size of coefficients array in global memory
-    // // index_sv: Index of stencil (top left front coefficient) in global memory
-    // // index: Index of grid point in local memory, i.e. center of stencil
-    // // joff: Distance to the next grid point in y-direction
-    // auto apply_stencil = [](double* front, double* center, double* back, double* stencilValues, int svGridSize, int index_sv, int index, int joff)
-    // {
-    //     // clang-format off
-    //         double stencilsum = stencilValues[index_sv + (9 + 3 + 1) * svGridSize] * center[index]
-    //             + stencilValues[index_sv + (9 + 3) * svGridSize]      * center[index - 1]
-    //             + stencilValues[index_sv + (9 + 3 + 2) * svGridSize]  * center[index + 1]
-    //             + stencilValues[index_sv + (9 + 1) * svGridSize]      * center[index - joff]
-    //             + stencilValues[index_sv + (9 + 6 + 1) * svGridSize]  * center[index + joff]
-    //             + stencilValues[index_sv + (3 + 1) * svGridSize]      * front[index]
-    //             + stencilValues[index_sv + (18 + 3 + 1) * svGridSize] * back[index]
+    // front is i-1, center is i, back is i+1
+    // front: address of front plane in local memory
+    // center: address of center plane in local memory
+    // back: address of back plane in local memory
+    // stencilValues: Coefficients in global memory
+    // svGridSize: Size of coefficients array in global memory
+    // index_sv: Index of stencil (top left front coefficient) in global memory
+    // index: Index of grid point in local memory, i.e. center of stencil
+    // joff: Distance to the next grid point in y-direction
+    auto apply_stencil = [](double* front, double* center, double* back, double* stencilValues, int svGridSize, int index_sv, int index, int joff)
+    {
+        // clang-format off
+            double stencilsum = stencilValues[index_sv + (9 + 3 + 1) * svGridSize] * center[index]
+                + stencilValues[index_sv + (9 + 3) * svGridSize]      * center[index - 1]
+                + stencilValues[index_sv + (9 + 3 + 2) * svGridSize]  * center[index + 1]
+                + stencilValues[index_sv + (9 + 1) * svGridSize]      * center[index - joff]
+                + stencilValues[index_sv + (9 + 6 + 1) * svGridSize]  * center[index + joff]
+                + stencilValues[index_sv + (3 + 1) * svGridSize]      * front[index]
+                + stencilValues[index_sv + (18 + 3 + 1) * svGridSize] * back[index]
 
-    //             + stencilValues[index_sv + (9) * svGridSize]          * center[index - joff - 1]
-    //             + stencilValues[index_sv + (9 + 2) * svGridSize]      * center[index - joff + 1]
-    //             + stencilValues[index_sv + (9 + 6) * svGridSize]      * center[index + joff - 1]
-    //             + stencilValues[index_sv + (9 + 6 + 2) * svGridSize]  * center[index + joff + 1]
-    //             + stencilValues[svGridSize * 3 + index_sv]            * front[index - 1]
-    //             + stencilValues[index_sv + (3 + 2) * svGridSize]      * front[index + 1]
-    //             + stencilValues[index_sv + (18 + 3) * svGridSize]     * back[index - 1]
-    //             + stencilValues[index_sv + (18 + 3 + 2) * svGridSize] * back[index + 1]
-    //             + stencilValues[svGridSize + index_sv]                * front[index - joff]
-    //             + stencilValues[index_sv + (6 + 1) * svGridSize]      * front[index + joff]
-    //             + stencilValues[index_sv + (18 + 1) * svGridSize]     * back[index - joff]
-    //             + stencilValues[index_sv + (18 + 6 + 1) * svGridSize] * back[index + joff]
+                + stencilValues[index_sv + (9) * svGridSize]          * center[index - joff - 1]
+                + stencilValues[index_sv + (9 + 2) * svGridSize]      * center[index - joff + 1]
+                + stencilValues[index_sv + (9 + 6) * svGridSize]      * center[index + joff - 1]
+                + stencilValues[index_sv + (9 + 6 + 2) * svGridSize]  * center[index + joff + 1]
+                + stencilValues[svGridSize * 3 + index_sv]            * front[index - 1]
+                + stencilValues[index_sv + (3 + 2) * svGridSize]      * front[index + 1]
+                + stencilValues[index_sv + (18 + 3) * svGridSize]     * back[index - 1]
+                + stencilValues[index_sv + (18 + 3 + 2) * svGridSize] * back[index + 1]
+                + stencilValues[svGridSize + index_sv]                * front[index - joff]
+                + stencilValues[index_sv + (6 + 1) * svGridSize]      * front[index + joff]
+                + stencilValues[index_sv + (18 + 1) * svGridSize]     * back[index - joff]
+                + stencilValues[index_sv + (18 + 6 + 1) * svGridSize] * back[index + joff]
 
-    //             + stencilValues[index_sv]                           * front[index - joff - 1]
-    //             + stencilValues[svGridSize * 2 + index_sv]            * front[index - joff + 1]
-    //             + stencilValues[index_sv + (6) * svGridSize]          * front[index + joff - 1]
-    //             + stencilValues[index_sv + (6 + 2) * svGridSize]      * front[index + joff + 1]
-    //             + stencilValues[index_sv + (18) * svGridSize]         * back[index - joff - 1]
-    //             + stencilValues[index_sv + (18 + 2) * svGridSize]     * back[index - joff + 1]
-    //             + stencilValues[index_sv + (18 + 6) * svGridSize]     * back[index + joff - 1]
-    //             + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * back[index + joff + 1];
-    //     // clang-format on
-    // };
+                + stencilValues[index_sv]                           * front[index - joff - 1]
+                + stencilValues[svGridSize * 2 + index_sv]            * front[index - joff + 1]
+                + stencilValues[index_sv + (6) * svGridSize]          * front[index + joff - 1]
+                + stencilValues[index_sv + (6 + 2) * svGridSize]      * front[index + joff + 1]
+                + stencilValues[index_sv + (18) * svGridSize]         * back[index - joff - 1]
+                + stencilValues[index_sv + (18 + 2) * svGridSize]     * back[index - joff + 1]
+                + stencilValues[index_sv + (18 + 6) * svGridSize]     * back[index + joff - 1]
+                + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * back[index + joff + 1];
+        // clang-format on
 
-    // SECTION("apply_stencil")
-    // {
-    // }
+        return stencilsum;
+    };
+
+    // regular stencil application for checking results
+    auto apply_stencil_check = [](double* v_in, double* stencilValues, int svGridSize, int index_sv, int index, int joff, int ioff)
+    {
+        // clang-format off
+            double stencilsum = stencilValues[index_sv + (9 + 3 + 1) * svGridSize] * v_in[index]
+                + stencilValues[index_sv + (9 + 3) * svGridSize]      * v_in[index - 1]
+                + stencilValues[index_sv + (9 + 3 + 2) * svGridSize]  * v_in[index + 1]
+                + stencilValues[index_sv + (9 + 1) * svGridSize]      * v_in[index - joff]
+                + stencilValues[index_sv + (9 + 6 + 1) * svGridSize]  * v_in[index + joff]
+                + stencilValues[index_sv + (3 + 1) * svGridSize]      * v_in[index - ioff]
+                + stencilValues[index_sv + (18 + 3 + 1) * svGridSize] * v_in[index + ioff]
+                
+                + stencilValues[index_sv + (9) * svGridSize]          * v_in[index - joff - 1]
+                + stencilValues[index_sv + (9 + 2) * svGridSize]      * v_in[index - joff + 1]
+                + stencilValues[index_sv + (9 + 6) * svGridSize]      * v_in[index + joff - 1]
+                + stencilValues[index_sv + (9 + 6 + 2) * svGridSize]  * v_in[index + joff + 1]
+                + stencilValues[svGridSize * 3 + index_sv]            * v_in[index - ioff - 1]
+                + stencilValues[index_sv + (3 + 2) * svGridSize]      * v_in[index - ioff + 1]
+                + stencilValues[index_sv + (18 + 3) * svGridSize]     * v_in[index + ioff - 1]
+                + stencilValues[index_sv + (18 + 3 + 2) * svGridSize] * v_in[index + ioff + 1]
+                + stencilValues[svGridSize + index_sv]                * v_in[index - ioff - joff]
+                + stencilValues[index_sv + (6 + 1) * svGridSize]      * v_in[index - ioff + joff]
+                + stencilValues[index_sv + (18 + 1) * svGridSize]     * v_in[index + ioff - joff]
+                + stencilValues[index_sv + (18 + 6 + 1) * svGridSize] * v_in[index + ioff + joff]
+
+                + stencilValues[index_sv]                           * v_in[index - ioff - joff - 1]
+                + stencilValues[svGridSize * 2 + index_sv]            * v_in[index - ioff - joff + 1]
+                + stencilValues[index_sv + (6) * svGridSize]          * v_in[index - ioff + joff - 1]
+                + stencilValues[index_sv + (6 + 2) * svGridSize]      * v_in[index - ioff + joff + 1]
+                + stencilValues[index_sv + (18) * svGridSize]         * v_in[index + ioff - joff - 1]
+                + stencilValues[index_sv + (18 + 2) * svGridSize]     * v_in[index + ioff - joff + 1]
+                + stencilValues[index_sv + (18 + 6) * svGridSize]     * v_in[index + ioff + joff - 1]
+                + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * v_in[index + ioff + joff + 1];
+        // clang-format on
+
+        return stencilsum;
+    };
+
+    SECTION("apply_stencil")
+    {
+        int m = 16;
+        int n = 16;
+        int o = 16;
+        int gh = GENERATE(0, 1);
+        int mgh = m + 2 * gh;
+        int ngh = n + 2 * gh;
+        int ogh = o + 2 * gh;
+
+        // int wg_size = 32;
+        int wg_size_x = GENERATE(4, 8);
+        int wg_size_y = 4;
+        int grid_size = mgh * ngh * ogh;
+
+        int locmem_size_x = (wg_size_x + 4);
+        int locmem_size_y = (wg_size_y + 4);
+
+        // std::vector<double> shmem((wg_size_x + 4) * (wg_size_y + 4) * 5); // need 5 planes in buffer
+        mgcl::Cuboid locmem(5, locmem_size_x, locmem_size_y); // need 5 planes in buffer
+        mgcl::Cuboid v_cub(m, n, o, gh, gh, gh);
+        v_cub.fill1dIndex(false);
+        auto& v = v_cub.field1d();
+
+        int svgh = 1;
+        mgcl::VaryingStencil stencilValues(m, n, o, 3, svgh, svgh, svgh);
+        stencilValues.fill1dIndex(false);
+        // stencilValues.fill(1.0, false); // TODO varying
+        stencilValues.updateGhosts();
+
+        int svGridSize = stencilValues.getMgh() * stencilValues.getNgh() * stencilValues.getOgh();
+
+        {
+            // Test the following wg cases for a ghosted v:
+            // {not touching border, touching upper border, touching lower border, touching left border, touching right border,
+            //  all 4 corners (4 cases)}
+            std::vector<std::vector<int>> wgs{
+                {1, 1},
+                // {0, 1},
+                // {n / wg_size_x - 1, 1},
+                // {1, 0},
+                // {1, o / wg_size_y - 1},
+                // {0, 0},
+                // {n / wg_size_x - 1, 0},
+                // {0, o / wg_size_y - 1},
+                // {n / wg_size_x - 1, o / wg_size_y - 1}
+            };
+
+            for (auto wg : wgs)
+            {
+                // Test wg in the upper left corner
+                int wg_num_x = wg[0];
+                int wg_num_y = wg[1];
+
+                int p = 5; // current real center plane index
+
+                // Load some planes first
+                for (int jloc = 0; jloc < wg_size_x; jloc++)
+                    for (int kloc = 0; kloc < wg_size_y; kloc++)
+                    {
+                        int j = wg_num_x * wg_size_x + jloc;
+                        int k = wg_num_y * wg_size_y + kloc;
+                        // int idx = get_global_id(0);
+                        // int no = ngh * ogh;
+                        // int i = idx / no;
+                        // int j = (idx - i * no) / ogh;
+                        // int k = idx % ogh;
+
+                        load_plane(p - 1, 0, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                        load_plane(p, 3, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                        load_plane(p + 1, 2, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+
+                        // v_cub.dumpToFile("v_cub.txt");
+                        // locmem.dumpToFile("locmem.txt");
+                    }
+
+                { // Apply stencil for a grid point not touching any border
+                    int jloc = 2;
+                    int kloc = 2;
+                    int j = wg_num_x * wg_size_x + jloc;
+                    int k = wg_num_y * wg_size_y + kloc;
+
+                    int ioff = ngh * ogh;
+                    int joff = ogh;
+                    int index = (p + gh) * ioff + (j + gh) * ogh + k + gh;
+                    int index_localmem_plane = (jloc + 2) * locmem_size_y + kloc + 2;
+                    int joff_localmem = locmem_size_y;
+                    int svno = stencilValues.getNgh() * stencilValues.getOgh();
+                    // // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
+                    int index_sv = (p + svgh) * svno + (j + svgh) * stencilValues.getOgh() + (k + svgh);
+
+                    double s_act = apply_stencil(locmem[0][0], locmem[3][0], locmem[2][0], stencilValues.field1d().data(), svGridSize, index_sv, index_localmem_plane, joff_localmem);
+                    double s_exp = apply_stencil_check(v.data(), stencilValues.field1d().data(), svGridSize, index_sv, index, joff, ioff);
+
+                    CAPTURE(p, j, k, jloc, kloc, index, index_localmem_plane, index_sv, s_exp, s_act);
+                    REQUIRE(s_act == s_exp);
+                }
+            }
+        }
+    }
 }
