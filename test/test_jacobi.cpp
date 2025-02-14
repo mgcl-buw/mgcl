@@ -1284,38 +1284,10 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
     // // ploc is the target plane in local memory, i.e. in range 0..4
     // // pglob is the global plane index of v to be fetched
     //
-    // // Handle ghost planes at the beginning and at the end
-    // if (pglob < 2):
-    //   p = (pglob-2 < 0 ? pglob-2+m : pglob-2) % m;
-    // else if (pglob >= m):
-    //   p = (pglob+2) % m;
-    //
-    // locmem[ploc][j_loc+2][k_loc+2] = v[p][j][k];    // load self
-    //
-    // // Load ghosts in z dimension.
-    // if (k_loc < 2)
-    //   locmem[ploc][j_loc+2][k_loc] = v[p][j][(k-2 < 0 ? k-2+o : k-2) % o];
-    // else if (k_loc >= loc_size_y - 2)
-    //   locmem[ploc][j_loc+2][k_loc + loc_size_y] = v[p][j][(k+2) % o];
-    //
-    // // Load ghosts in y dimension.
-    // if (j_loc < 2)
-    //   locmem[ploc][j_loc][k_loc+2] = v[p][(j-2 < 0 ? j-2+n : j-2) % n][k];
-    // else if (j_loc >= loc_size_x - 2)
-    //   locmem[ploc][j_loc + loc_size_x][k_loc+2] = v[p][(j+2) % n][k];
-    //
-    // // Load ghosts in corners.
-    // if (j_loc < 2 && k_loc < 2)   // upper left
-    //   locmem[ploc][j_loc][k_loc] = v[p][(j-2 < 0 ? j-2+n : j-2) % n][(k-2 < 0 ? k-2+o : k-2) % o];
-    // else if (j_loc < 2 && k_loc >= loc_size_y - 2)   // upper right
-    //   locmem[ploc][j_loc + loc_size_x][k_loc + loc_size_y] = v[p][(j+2) % n][(k+2) % o];
-    // else if (j_loc >= loc_size_x - 2 && k_loc < 2)   // lower left
-    //   locmem[ploc][j_loc + loc_size_x][k_loc] = v[p][(j-2 < 0 ? j-2+n : j-2) % n][(k-2 < 0 ? k-2+o : k-2) % o];
-    // else if (j_loc >= loc_size_x - 2 && k_loc >= loc_size_y - 2)   // lower right
-    //   locmem[ploc][j_loc + loc_size_x][k_loc + loc_size_y] = v[p][(j+2) % n][(k+2) % o];
+    // Implementation see below
 
     auto load_plane = [](int pglob, int ploc,
-                         int k_loc, int j_loc,
+                         int j_loc, int k_loc,
                          int loc_size_x, int loc_size_y,
                          mgcl::Cuboid& locmem, mgcl::Cuboid& v,
                          int m, int n, int o,
@@ -1335,23 +1307,23 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         if (k_loc < 2)
             locmem[ploc][j_loc + 2][k_loc] = v[p][j][(k - 2 < 0 ? k - 2 + o : k - 2) % o];
         else if (k_loc >= loc_size_y - 2)
-            locmem[ploc][j_loc + 2][k_loc + loc_size_y] = v[p][j][(k + 2) % o];
+            locmem[ploc][j_loc + 2][k_loc + 4] = v[p][j][(k + 2) % o];
 
         // Load ghosts in y dimension.
         if (j_loc < 2)
             locmem[ploc][j_loc][k_loc + 2] = v[p][(j - 2 < 0 ? j - 2 + n : j - 2) % n][k];
         else if (j_loc >= loc_size_x - 2)
-            locmem[ploc][j_loc + loc_size_x][k_loc + 2] = v[p][(j + 2) % n][k];
+            locmem[ploc][j_loc + 4][k_loc + 2] = v[p][(j + 2) % n][k];
 
         // Load ghosts in corners.
         if (j_loc < 2 && k_loc < 2) // upper left
             locmem[ploc][j_loc][k_loc] = v[p][(j - 2 < 0 ? j - 2 + n : j - 2) % n][(k - 2 < 0 ? k - 2 + o : k - 2) % o];
         else if (j_loc < 2 && k_loc >= loc_size_y - 2) // upper right
-            locmem[ploc][j_loc][k_loc + loc_size_y] = v[p][(j - 2 < 0 ? j - 2 + n : j - 2) % n][(k + 2) % o];
+            locmem[ploc][j_loc][k_loc + 4] = v[p][(j - 2 < 0 ? j - 2 + n : j - 2) % n][(k + 2) % o];
         else if (j_loc >= loc_size_x - 2 && k_loc < 2) // lower left
-            locmem[ploc][j_loc + loc_size_x][k_loc] = v[p][(j + 2) % n][(k - 2 < 0 ? k - 2 + o : k - 2) % o];
+            locmem[ploc][j_loc + 4][k_loc] = v[p][(j + 2) % n][(k - 2 < 0 ? k - 2 + o : k - 2) % o];
         else if (j_loc >= loc_size_x - 2 && k_loc >= loc_size_y - 2) // lower right
-            locmem[ploc][j_loc + loc_size_x][k_loc + loc_size_y] = v[p][(j + 2) % n][(k + 2) % o];
+            locmem[ploc][j_loc + 4][k_loc + 4] = v[p][(j + 2) % n][(k + 2) % o];
     };
 
     // Test whether loading a plane into local memory works
@@ -1366,7 +1338,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         int ogh = o + 2 * gh;
 
         // int wg_size = 32;
-        int wg_size_x = 4;
+        int wg_size_x = GENERATE(4, 8);
         int wg_size_y = 4;
         int grid_size = mgh * ngh * ogh;
 
@@ -1398,8 +1370,6 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                 // Test wg in the upper left corner
                 int wg_num_x = wg[0];
                 int wg_num_y = wg[1];
-                int pglob = 3;
-                int ploc = 0;
 
                 // for (int idx = 1372; idx < grid_size; idx++)
                 // loop over first work-group, i.e. in upper left corner of the grid. Try without handling ghosts of global v
@@ -1415,17 +1385,17 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                         // int j = (idx - i * no) / ogh;
                         // int k = idx % ogh;
 
-                        load_plane(3, 0, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
-                        load_plane(5, 3, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
-                        load_plane(6, 2, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
-                        load_plane(1, 4, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
-                        load_plane(m - 1, 1, kloc, jloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+                        load_plane(3, 0, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+                        load_plane(5, 3, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+                        load_plane(6, 2, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+                        load_plane(1, 4, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
+                        load_plane(m - 1, 1, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh, m, n, o, j, k);
 
                         // v_cub_nogh.dumpToFile("v_cub_nogh.txt");
                         // locmem.dumpToFile("locmem.txt");
                     }
 
-                // Since we test wg 1,1, which does not touch the border, we can just check the 1d indices
+                // Check results
                 for (int jloc = 0; jloc < locmem.getN(); jloc++)
                     for (int kloc = 0; kloc < locmem.getO(); kloc++)
                     {
@@ -1446,7 +1416,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                         else if (k >= o)
                             k -= o;
 
-                        CAPTURE(jloc, kloc, j, k, pglob, ploc);
+                        CAPTURE(jloc, kloc, j, k);
                         REQUIRE(locmem[0][jloc][kloc] == v_cub_nogh[3][j][k]);
                         REQUIRE(locmem[3][jloc][kloc] == v_cub_nogh[5][j][k]);
                         REQUIRE(locmem[2][jloc][kloc] == v_cub_nogh[6][j][k]);
