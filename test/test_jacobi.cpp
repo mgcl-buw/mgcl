@@ -1306,7 +1306,8 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
     auto load_plane = [](int pglob, int ploc,
                          int j_loc, int k_loc,
                          int loc_size_x, int loc_size_y,
-                         mgcl::Cuboid& locmem, double* v,
+                         int locmem_size_x, int locmem_size_y,
+                         double* locmem, double* v,
                          int m, int n, int o,
                          int mgh, int ngh, int ogh,
                          int j, int k,
@@ -1320,29 +1321,32 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         //     p = (pglob + 2) % m;
         int p = pglob + vgh; // Don't do ghost handling for x-plane here, instead do it in algorithm. But respect amount of ghosts in v.
 
-        locmem[ploc][j_loc + 2][k_loc + 2] = v[p * ngh * ogh + (j + vgh) * ogh + (k + vgh)]; // load self
+        int locmem_size_xy = locmem_size_x * locmem_size_y;
+        int pnogh = p * ngh * ogh;
+
+        locmem[ploc * locmem_size_xy + (j_loc + 2) * locmem_size_y + (k_loc + 2)] = v[pnogh + (j + vgh) * ogh + (k + vgh)]; // load self
 
         // Load ghosts in z dimension.
         if (k_loc < 2)
-            locmem[ploc][j_loc + 2][k_loc] = v[p * ngh * ogh + (j + vgh) * ogh + (((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh)];
+            locmem[ploc * locmem_size_xy + (j_loc + 2) * locmem_size_y + (k_loc)] = v[pnogh + (j + vgh) * ogh + (((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh)];
         else if (k_loc >= loc_size_y - 2)
-            locmem[ploc][j_loc + 2][k_loc + 4] = v[p * ngh * ogh + (j + vgh) * ogh + (((k + 2) % o) + vgh)];
+            locmem[ploc * locmem_size_xy + (j_loc + 2) * locmem_size_y + (k_loc + 4)] = v[pnogh + (j + vgh) * ogh + (((k + 2) % o) + vgh)];
 
         // Load ghosts in y dimension.
         if (j_loc < 2)
-            locmem[ploc][j_loc][k_loc + 2] = v[p * ngh * ogh + (((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh) * ogh + (k + vgh)];
+            locmem[ploc * locmem_size_xy + (j_loc)*locmem_size_y + (k_loc + 2)] = v[pnogh + (((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh) * ogh + (k + vgh)];
         else if (j_loc >= loc_size_x - 2)
-            locmem[ploc][j_loc + 4][k_loc + 2] = v[p * ngh * ogh + (((j + 2) % n) + vgh) * ogh + (k + vgh)];
+            locmem[ploc * locmem_size_xy + (j_loc + 4) * locmem_size_y + (k_loc + 2)] = v[pnogh + (((j + 2) % n) + vgh) * ogh + (k + vgh)];
 
         // Load ghosts in corners.
         if (j_loc < 2 && k_loc < 2) // upper left
-            locmem[ploc][j_loc][k_loc] = v[p * ngh * ogh + (((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh) * ogh + (((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh)];
+            locmem[ploc * locmem_size_xy + (j_loc)*locmem_size_y + (k_loc)] = v[pnogh + (((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh) * ogh + (((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh)];
         else if (j_loc < 2 && k_loc >= loc_size_y - 2) // upper right
-            locmem[ploc][j_loc][k_loc + 4] = v[p * ngh * ogh + (((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh) * ogh + (((k + 2) % o) + vgh)];
+            locmem[ploc * locmem_size_xy + (j_loc)*locmem_size_y + (k_loc + 4)] = v[pnogh + (((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh) * ogh + (((k + 2) % o) + vgh)];
         else if (j_loc >= loc_size_x - 2 && k_loc < 2) // lower left
-            locmem[ploc][j_loc + 4][k_loc] = v[p * ngh * ogh + (((j + 2) % n) + vgh) * ogh + (((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh)];
+            locmem[ploc * locmem_size_xy + (j_loc + 4) * locmem_size_y + (k_loc)] = v[pnogh + (((j + 2) % n) + vgh) * ogh + (((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh)];
         else if (j_loc >= loc_size_x - 2 && k_loc >= loc_size_y - 2) // lower right
-            locmem[ploc][j_loc + 4][k_loc + 4] = v[p * ngh * ogh + (((j + 2) % n) + vgh) * ogh + (((k + 2) % o) + vgh)];
+            locmem[ploc * locmem_size_xy + (j_loc + 4) * locmem_size_y + (k_loc + 4)] = v[pnogh + (((j + 2) % n) + vgh) * ogh + (((k + 2) % o) + vgh)];
     };
 
     // Test whether loading a plane into local memory works
@@ -1361,8 +1365,11 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         int wg_size_y = 4;
         int grid_size = mgh * ngh * ogh;
 
+        int locmem_size_x = (wg_size_x + 4);
+        int locmem_size_y = (wg_size_y + 4);
+
         // std::vector<double> shmem((wg_size_x + 4) * (wg_size_y + 4) * 5); // need 5 planes in buffer
-        mgcl::Cuboid locmem(5, (wg_size_x + 4), (wg_size_y + 4)); // need 5 planes in buffer
+        mgcl::Cuboid locmem(5, locmem_size_x, locmem_size_y); // need 5 planes in buffer
         mgcl::Cuboid v_cub(m, n, o, gh, gh, gh);
         mgcl::Cuboid v_cub_nogh(m, n, o);
         v_cub.fill1dIndex(false);
@@ -1404,11 +1411,11 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                         // int j = (idx - i * no) / ogh;
                         // int k = idx % ogh;
 
-                        load_plane(3, 0, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
-                        load_plane(5, 3, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
-                        load_plane(6, 2, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
-                        load_plane(1, 4, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
-                        load_plane(m - 1, 1, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
+                        load_plane(3, 0, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
+                        load_plane(5, 3, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
+                        load_plane(6, 2, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
+                        load_plane(1, 4, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
+                        load_plane(m - 1, 1, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
 
                         // v_cub_nogh.dumpToFile("v_cub_nogh.txt");
                         // locmem.dumpToFile("locmem.txt");
@@ -1482,11 +1489,11 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                         // int j = (idx - i * no) / ogh;
                         // int k = idx % ogh;
 
-                        load_plane(3, 0, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
-                        load_plane(5, 3, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
-                        load_plane(6, 2, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
-                        load_plane(1, 4, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
-                        load_plane(m - 1, 1, jloc, kloc, wg_size_x, wg_size_y, locmem, v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                        load_plane(3, 0, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                        load_plane(5, 3, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                        load_plane(6, 2, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                        load_plane(1, 4, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                        load_plane(m - 1, 1, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
 
                         // v_cub_nogh.dumpToFile("v_cub.txt");
                         // locmem.dumpToFile("locmem.txt");
