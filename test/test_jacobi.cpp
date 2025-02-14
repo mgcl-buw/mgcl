@@ -1355,7 +1355,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         int m = 16;
         int n = 16;
         int o = 16;
-        int gh = 1;
+        int gh = GENERATE(0, 1);
         int mgh = m + 2 * gh;
         int ngh = n + 2 * gh;
         int ogh = o + 2 * gh;
@@ -1371,86 +1371,8 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         // std::vector<double> shmem((wg_size_x + 4) * (wg_size_y + 4) * 5); // need 5 planes in buffer
         mgcl::Cuboid locmem(5, locmem_size_x, locmem_size_y); // need 5 planes in buffer
         mgcl::Cuboid v_cub(m, n, o, gh, gh, gh);
-        mgcl::Cuboid v_cub_nogh(m, n, o);
         v_cub.fill1dIndex(false);
-        v_cub_nogh.fill1dIndex(false);
         auto& v = v_cub.field1d();
-
-        {
-            // Test the following wg cases for a non-ghosted v:
-            // {not touching border, touching upper border, touching lower border, touching left border, touching right border,
-            //  all 4 corners (4 cases)}
-            std::vector<std::vector<int>> wgs{
-                {1, 1},
-                {0, 1},
-                {n / wg_size_x - 1, 1},
-                {1, 0},
-                {1, o / wg_size_y - 1},
-                {0, 0},
-                {n / wg_size_x - 1, 0},
-                {0, o / wg_size_y - 1},
-                {n / wg_size_x - 1, o / wg_size_y - 1}};
-
-            for (auto wg : wgs)
-            {
-                // Test wg in the upper left corner
-                int wg_num_x = wg[0];
-                int wg_num_y = wg[1];
-
-                // for (int idx = 1372; idx < grid_size; idx++)
-                // loop over first work-group, i.e. in upper left corner of the grid. Try without handling ghosts of global v
-                // first.
-                for (int jloc = 0; jloc < wg_size_x; jloc++)
-                    for (int kloc = 0; kloc < wg_size_y; kloc++)
-                    {
-                        int j = wg_num_x * wg_size_x + jloc;
-                        int k = wg_num_y * wg_size_y + kloc;
-                        // int idx = get_global_id(0);
-                        // int no = ngh * ogh;
-                        // int i = idx / no;
-                        // int j = (idx - i * no) / ogh;
-                        // int k = idx % ogh;
-
-                        load_plane(3, 0, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
-                        load_plane(5, 3, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
-                        load_plane(6, 2, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
-                        load_plane(1, 4, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
-                        load_plane(m - 1, 1, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub_nogh.field1d().data(), m, n, o, m, n, o, j, k, 0);
-
-                        // v_cub_nogh.dumpToFile("v_cub_nogh.txt");
-                        // locmem.dumpToFile("locmem.txt");
-                    }
-
-                // Check results
-                for (int jloc = 0; jloc < locmem.getN(); jloc++)
-                    for (int kloc = 0; kloc < locmem.getO(); kloc++)
-                    {
-                        int j = wg_num_x * wg_size_x + jloc - 2;
-                        int k = wg_num_y * wg_size_y + kloc - 2;
-                        // int pglob_real = pglob - 2;
-
-                        // if (pglob_real < 2)
-                        //     pglob_real += m;
-                        // else if (pglob_real >= m + 2)
-                        //     pglob_real -= m;
-                        if (j < 0)
-                            j += n;
-                        else if (j >= n)
-                            j -= n;
-                        if (k < 0)
-                            k += o;
-                        else if (k >= o)
-                            k -= o;
-
-                        CAPTURE(jloc, kloc, j, k);
-                        REQUIRE(locmem[0][jloc][kloc] == v_cub_nogh[3][j][k]);
-                        REQUIRE(locmem[3][jloc][kloc] == v_cub_nogh[5][j][k]);
-                        REQUIRE(locmem[2][jloc][kloc] == v_cub_nogh[6][j][k]);
-                        REQUIRE(locmem[4][jloc][kloc] == v_cub_nogh[1][j][k]);
-                        REQUIRE(locmem[1][jloc][kloc] == v_cub_nogh[m - 1][j][k]);
-                    }
-            }
-        }
 
         {
             // Test the following wg cases for a ghosted v:
@@ -1532,7 +1454,15 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
     }
 
     // // front is i-1, center is i, back is i+1
-    // auto apply_stencil = [](double* front, double* center, double* back, double* stencilValues, int svGridSize, int index_sv, int index, int joff, int koff)
+    // // front: address of front plane in local memory
+    // // center: address of center plane in local memory
+    // // back: address of back plane in local memory
+    // // stencilValues: Coefficients in global memory
+    // // svGridSize: Size of coefficients array in global memory
+    // // index_sv: Index of stencil (top left front coefficient) in global memory
+    // // index: Index of grid point in local memory, i.e. center of stencil
+    // // joff: Distance to the next grid point in y-direction
+    // auto apply_stencil = [](double* front, double* center, double* back, double* stencilValues, int svGridSize, int index_sv, int index, int joff)
     // {
     //     // clang-format off
     //         double stencilsum = stencilValues[index_sv + (9 + 3 + 1) * svGridSize] * center[index]
@@ -1543,27 +1473,27 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
     //             + stencilValues[index_sv + (3 + 1) * svGridSize]      * front[index]
     //             + stencilValues[index_sv + (18 + 3 + 1) * svGridSize] * back[index]
 
-    //             + stencilValues[index_sv + (9) * svGridSize]          * center[index - joff - koff]
-    //             + stencilValues[index_sv + (9 + 2) * svGridSize]      * center[index - joff + koff]
-    //             + stencilValues[index_sv + (9 + 6) * svGridSize]      * center[index + joff - koff]
-    //             + stencilValues[index_sv + (9 + 6 + 2) * svGridSize]  * center[index + joff + koff]
-    //             + stencilValues[svGridSize * 3 + index_sv]            * front[index  - koff]
-    //             + stencilValues[index_sv + (3 + 2) * svGridSize]      * front[index  + koff]
-    //             + stencilValues[index_sv + (18 + 3) * svGridSize]     * back[index  - koff]
-    //             + stencilValues[index_sv + (18 + 3 + 2) * svGridSize] * back[index  + koff]
-    //             + stencilValues[svGridSize + index_sv]                * front[index  - joff]
-    //             + stencilValues[index_sv + (6 + 1) * svGridSize]      * front[index  + joff]
-    //             + stencilValues[index_sv + (18 + 1) * svGridSize]     * back[index  - joff]
-    //             + stencilValues[index_sv + (18 + 6 + 1) * svGridSize] * back[index  + joff]
+    //             + stencilValues[index_sv + (9) * svGridSize]          * center[index - joff - 1]
+    //             + stencilValues[index_sv + (9 + 2) * svGridSize]      * center[index - joff + 1]
+    //             + stencilValues[index_sv + (9 + 6) * svGridSize]      * center[index + joff - 1]
+    //             + stencilValues[index_sv + (9 + 6 + 2) * svGridSize]  * center[index + joff + 1]
+    //             + stencilValues[svGridSize * 3 + index_sv]            * front[index - 1]
+    //             + stencilValues[index_sv + (3 + 2) * svGridSize]      * front[index + 1]
+    //             + stencilValues[index_sv + (18 + 3) * svGridSize]     * back[index - 1]
+    //             + stencilValues[index_sv + (18 + 3 + 2) * svGridSize] * back[index + 1]
+    //             + stencilValues[svGridSize + index_sv]                * front[index - joff]
+    //             + stencilValues[index_sv + (6 + 1) * svGridSize]      * front[index + joff]
+    //             + stencilValues[index_sv + (18 + 1) * svGridSize]     * back[index - joff]
+    //             + stencilValues[index_sv + (18 + 6 + 1) * svGridSize] * back[index + joff]
 
-    //             + stencilValues[index_sv]                           * front[index  - joff - koff]
-    //             + stencilValues[svGridSize * 2 + index_sv]            * front[index  - joff + koff]
-    //             + stencilValues[index_sv + (6) * svGridSize]          * front[index  + joff - koff]
-    //             + stencilValues[index_sv + (6 + 2) * svGridSize]      * front[index  + joff + koff]
-    //             + stencilValues[index_sv + (18) * svGridSize]         * back[index  - joff - koff]
-    //             + stencilValues[index_sv + (18 + 2) * svGridSize]     * back[index  - joff + koff]
-    //             + stencilValues[index_sv + (18 + 6) * svGridSize]     * back[index  + joff - koff]
-    //             + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * back[index  + joff + koff];
+    //             + stencilValues[index_sv]                           * front[index - joff - 1]
+    //             + stencilValues[svGridSize * 2 + index_sv]            * front[index - joff + 1]
+    //             + stencilValues[index_sv + (6) * svGridSize]          * front[index + joff - 1]
+    //             + stencilValues[index_sv + (6 + 2) * svGridSize]      * front[index + joff + 1]
+    //             + stencilValues[index_sv + (18) * svGridSize]         * back[index - joff - 1]
+    //             + stencilValues[index_sv + (18 + 2) * svGridSize]     * back[index - joff + 1]
+    //             + stencilValues[index_sv + (18 + 6) * svGridSize]     * back[index + joff - 1]
+    //             + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * back[index + joff + 1];
     //     // clang-format on
     // };
 
