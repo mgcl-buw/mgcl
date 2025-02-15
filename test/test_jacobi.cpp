@@ -1496,6 +1496,34 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                 + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * back[index + joff + 1];
         // clang-format on
 
+        // std::cout << "center[index]: " << center[index] << std::endl;
+        // std::cout << "center[index - 1]: " << center[index - 1] << std::endl;
+        // std::cout << "center[index + 1]: " << center[index + 1] << std::endl;
+        // std::cout << "center[index - joff]: " << center[index - joff] << std::endl;
+        // std::cout << "center[index + joff]: " << center[index + joff] << std::endl;
+        // std::cout << "front[index]: " << front[index] << std::endl;
+        // std::cout << "back[index]: " << back[index] << std::endl;
+        // std::cout << "center[index - joff - 1]: " << center[index - joff - 1] << std::endl;
+        // std::cout << "center[index - joff + 1]: " << center[index - joff + 1] << std::endl;
+        // std::cout << "center[index + joff - 1]: " << center[index + joff - 1] << std::endl;
+        // std::cout << "center[index + joff + 1]: " << center[index + joff + 1] << std::endl;
+        // std::cout << "front[index - 1]: " << front[index - 1] << std::endl;
+        // std::cout << "front[index + 1]: " << front[index + 1] << std::endl;
+        // std::cout << "back[index - 1]: " << back[index - 1] << std::endl;
+        // std::cout << "back[index + 1]: " << back[index + 1] << std::endl;
+        // std::cout << "front[index - joff]: " << front[index - joff] << std::endl;
+        // std::cout << "front[index + joff]: " << front[index + joff] << std::endl;
+        // std::cout << "back[index - joff]: " << back[index - joff] << std::endl;
+        // std::cout << "back[index + joff]: " << back[index + joff] << std::endl;
+        // std::cout << "front[index - joff - 1]: " << front[index - joff - 1] << std::endl;
+        // std::cout << "front[index - joff + 1]: " << front[index - joff + 1] << std::endl;
+        // std::cout << "front[index + joff - 1]: " << front[index + joff - 1] << std::endl;
+        // std::cout << "front[index + joff + 1]: " << front[index + joff + 1] << std::endl;
+        // std::cout << "back[index - joff - 1]: " << back[index - joff - 1] << std::endl;
+        // std::cout << "back[index - joff + 1]: " << back[index - joff + 1] << std::endl;
+        // std::cout << "back[index + joff - 1]: " << back[index + joff - 1] << std::endl;
+        // std::cout << "back[index + joff + 1]: " << back[index + joff + 1] << std::endl;
+
         return stencilsum;
     };
 
@@ -1534,6 +1562,34 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                 + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * v_in[index + ioff + joff + 1];
         // clang-format on
 
+        // std::cout << "v_in[index]: " << v_in[index] << std::endl;
+        // std::cout << "v_in[index - 1]: " << v_in[index - 1] << std::endl;
+        // std::cout << "v_in[index + 1]: " << v_in[index + 1] << std::endl;
+        // std::cout << "v_in[index - joff]: " << v_in[index - joff] << std::endl;
+        // std::cout << "v_in[index + joff]: " << v_in[index + joff] << std::endl;
+        // std::cout << "v_in[index - ioff]: " << v_in[index - ioff] << std::endl;
+        // std::cout << "v_in[index + ioff]: " << v_in[index + ioff] << std::endl;
+        // std::cout << "v_in[index - joff - 1]: " << v_in[index - joff - 1] << std::endl;
+        // std::cout << "v_in[index - joff + 1]: " << v_in[index - joff + 1] << std::endl;
+        // std::cout << "v_in[index + joff - 1]: " << v_in[index + joff - 1] << std::endl;
+        // std::cout << "v_in[index + joff + 1]: " << v_in[index + joff + 1] << std::endl;
+        // std::cout << "v_in[index - ioff - 1]: " << v_in[index - ioff - 1] << std::endl;
+        // std::cout << "v_in[index - ioff + 1]: " << v_in[index - ioff + 1] << std::endl;
+        // std::cout << "v_in[index + ioff - 1]: " << v_in[index + ioff - 1] << std::endl;
+        // std::cout << "v_in[index + ioff + 1]: " << v_in[index + ioff + 1] << std::endl;
+        // std::cout << "v_in[index - ioff - joff]: " << v_in[index - ioff - joff] << std::endl;
+        // std::cout << "v_in[index - ioff + joff]: " << v_in[index - ioff + joff] << std::endl;
+        // std::cout << "v_in[index + ioff - joff]: " << v_in[index + ioff - joff] << std::endl;
+        // std::cout << "v_in[index + ioff + joff]: " << v_in[index + ioff + joff] << std::endl;
+        // std::cout << "v_in[index - ioff - joff - 1]: " << v_in[index - ioff - joff - 1] << std::endl;
+        // std::cout << "v_in[index - ioff - joff + 1]: " << v_in[index - ioff - joff + 1] << std::endl;
+        // std::cout << "v_in[index - ioff + joff - 1]: " << v_in[index - ioff + joff - 1] << std::endl;
+        // std::cout << "v_in[index - ioff + joff + 1]: " << v_in[index - ioff + joff + 1] << std::endl;
+        // std::cout << "v_in[index + ioff - joff - 1]: " << v_in[index + ioff - joff - 1] << std::endl;
+        // std::cout << "v_in[index + ioff - joff + 1]: " << v_in[index + ioff - joff + 1] << std::endl;
+        // std::cout << "v_in[index + ioff + joff - 1]: " << v_in[index + ioff + joff - 1] << std::endl;
+        // std::cout << "v_in[index + ioff + joff + 1]: " << v_in[index + ioff + joff + 1] << std::endl;
+
         return stencilsum;
     };
 
@@ -1542,7 +1598,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         int m = 16;
         int n = 16;
         int o = 16;
-        int gh = GENERATE(0, 1);
+        int gh = 1;
         int mgh = m + 2 * gh;
         int ngh = n + 2 * gh;
         int ogh = o + 2 * gh;
@@ -1559,6 +1615,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         mgcl::Cuboid locmem(5, locmem_size_x, locmem_size_y); // need 5 planes in buffer
         mgcl::Cuboid v_cub(m, n, o, gh, gh, gh);
         v_cub.fill1dIndex(false);
+        mgcl::MultigridEngine::updateGhostsSeq(v_cub, nullptr, true, true);
         auto& v = v_cub.field1d();
 
         int svgh = 1;
@@ -1575,15 +1632,14 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
             //  all 4 corners (4 cases)}
             std::vector<std::vector<int>> wgs{
                 {1, 1},
-                // {0, 1},
+                {0, 1},
                 // {n / wg_size_x - 1, 1},
                 // {1, 0},
                 // {1, o / wg_size_y - 1},
                 // {0, 0},
                 // {n / wg_size_x - 1, 0},
                 // {0, o / wg_size_y - 1},
-                // {n / wg_size_x - 1, o / wg_size_y - 1}
-            };
+                {n / wg_size_x - 1, o / wg_size_y - 1}};
 
             for (auto wg : wgs)
             {
@@ -1591,29 +1647,21 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                 int wg_num_x = wg[0];
                 int wg_num_y = wg[1];
 
-                int p = 5; // current real center plane index
+                { // Apply stencil for a grid point not touching any border of the current yz-plane and not in a ghosted x-plane
+                    int p = 0;
 
-                // Load some planes first
-                for (int jloc = 0; jloc < wg_size_x; jloc++)
-                    for (int kloc = 0; kloc < wg_size_y; kloc++)
-                    {
-                        int j = wg_num_x * wg_size_x + jloc;
-                        int k = wg_num_y * wg_size_y + kloc;
-                        // int idx = get_global_id(0);
-                        // int no = ngh * ogh;
-                        // int i = idx / no;
-                        // int j = (idx - i * no) / ogh;
-                        // int k = idx % ogh;
+                    // Load some planes first
+                    for (int jloc = 0; jloc < wg_size_x; jloc++)
+                        for (int kloc = 0; kloc < wg_size_y; kloc++)
+                        {
+                            int j = wg_num_x * wg_size_x + jloc;
+                            int k = wg_num_y * wg_size_y + kloc;
 
-                        load_plane(p - 1, 0, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
-                        load_plane(p, 3, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
-                        load_plane(p + 1, 2, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                            load_plane(p - 1, 0, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                            load_plane(p, 3, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                            load_plane(p + 1, 2, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                        }
 
-                        // v_cub.dumpToFile("v_cub.txt");
-                        // locmem.dumpToFile("locmem.txt");
-                    }
-
-                { // Apply stencil for a grid point not touching any border
                     int jloc = 2;
                     int kloc = 2;
                     int j = wg_num_x * wg_size_x + jloc;
@@ -1632,6 +1680,79 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                     double s_exp = apply_stencil_check(v.data(), stencilValues.field1d().data(), svGridSize, index_sv, index, joff, ioff);
 
                     CAPTURE(p, j, k, jloc, kloc, index, index_localmem_plane, index_sv, s_exp, s_act);
+                    REQUIRE(s_act == s_exp);
+                }
+
+                { // Apply stencil for a grid point not touching any border of the current yz-plane but in a ghosted x-plane:
+                    // If the first real x-plane has index p=0, apply stencil in x-plane p = -1 = m-1.
+                    int p = m - 1;
+
+                    // Load some planes first
+                    for (int jloc = 0; jloc < wg_size_x; jloc++)
+                        for (int kloc = 0; kloc < wg_size_y; kloc++)
+                        {
+                            int j = wg_num_x * wg_size_x + jloc;
+                            int k = wg_num_y * wg_size_y + kloc;
+
+                            load_plane(p - 1, 0, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                            load_plane(p, 3, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                            load_plane(p + 1, 2, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                        }
+
+                    int jloc = 2;
+                    int kloc = 2;
+                    int j = wg_num_x * wg_size_x + jloc;
+                    int k = wg_num_y * wg_size_y + kloc;
+
+                    int ioff = ngh * ogh;
+                    int joff = ogh;
+                    int index = (p + gh) * ioff + (j + gh) * ogh + k + gh;
+                    int index_localmem_plane = (jloc + 2) * locmem_size_y + kloc + 2;
+                    int joff_localmem = locmem_size_y;
+                    int svno = stencilValues.getNgh() * stencilValues.getOgh();
+                    // // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
+                    int index_sv = (p + svgh) * svno + (j + svgh) * stencilValues.getOgh() + (k + svgh);
+
+                    double s_act = apply_stencil(locmem[0][0], locmem[3][0], locmem[2][0], stencilValues.field1d().data(), svGridSize, index_sv, index_localmem_plane, joff_localmem);
+                    double s_exp = apply_stencil_check(v.data(), stencilValues.field1d().data(), svGridSize, index_sv, index, joff, ioff);
+
+                    CAPTURE(p, j, k, jloc, kloc, index, index_localmem_plane, index_sv, s_exp, s_act);
+                    REQUIRE(s_act == s_exp);
+                }
+
+                { // Apply stencil for a grid point touching a border of the current yz-plane
+                    int p = 0;
+
+                    // Load some planes first
+                    for (int jloc = 0; jloc < wg_size_x; jloc++)
+                        for (int kloc = 0; kloc < wg_size_y; kloc++)
+                        {
+                            int j = wg_num_x * wg_size_x + jloc;
+                            int k = wg_num_y * wg_size_y + kloc;
+
+                            load_plane(p - 1, 0, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                            load_plane(p, 3, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                            load_plane(p + 1, 2, jloc, kloc, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem.field1d().data(), v_cub.field1d().data(), m, n, o, mgh, ngh, ogh, j, k, gh);
+                        }
+
+                    int jloc = 0;
+                    int kloc = 0;
+                    int j = wg_num_x * wg_size_x + jloc;
+                    int k = wg_num_y * wg_size_y + kloc;
+
+                    int ioff = ngh * ogh;
+                    int joff = ogh;
+                    int index = (p + gh) * ioff + (j + gh) * ogh + k + gh;
+                    int index_localmem_plane = (jloc + 2) * locmem_size_y + kloc + 2;
+                    int joff_localmem = locmem_size_y;
+                    int svno = stencilValues.getNgh() * stencilValues.getOgh();
+                    // // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
+                    int index_sv = (p + svgh) * svno + (j + svgh) * stencilValues.getOgh() + (k + svgh);
+
+                    double s_act = apply_stencil(locmem[0][0], locmem[3][0], locmem[2][0], stencilValues.field1d().data(), svGridSize, index_sv, index_localmem_plane, joff_localmem);
+                    double s_exp = apply_stencil_check(v.data(), stencilValues.field1d().data(), svGridSize, index_sv, index, joff, ioff);
+
+                    CAPTURE(p, j, k, jloc, kloc, index, index_localmem_plane, index_sv, s_exp, s_act, wg_num_x, wg_num_y, wg_size_x, wg_size_y);
                     REQUIRE(s_act == s_exp);
                 }
             }
