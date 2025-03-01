@@ -1843,7 +1843,6 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                                                    int p_start,
                                                    int p_end)
     {
-        int p = m - 1;
         int ioff = ngh * ogh;
         int svno = svngh * svogh;
         // int index = (jloc + 2) * locmem_size_y + kloc + 2;
@@ -1859,7 +1858,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
 
         // Helper function that calls a function for every wi of a wg. Needed because we don't actually parallelize here
         // and don't synch with a barrier.
-        auto for_all_wis = [&](std::function<void(int, int, int, int)> func)
+        auto for_all_wis = [&](int p, std::function<void(int, int, int, int)> func)
         {
             for (int jloc = 0; jloc < wg_size_x; jloc++)
                 for (int kloc = 0; kloc < wg_size_y; kloc++)
@@ -1878,15 +1877,15 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                                               double* front, double* center, double* back, double* stencilValues, int svGridSize, int joff_localmem,
                                               int joff_globalmem,
                                               int loc_size_x, int loc_size_y,
-                                              double* locmem_store_base, double* v_glob)
+                                              double* locmem_store_base, double* v_glob, int p)
         {
             // apply on real grid points
-            for_all_wis([&](int jloc, int kloc, int index, int index_sv)
+            for_all_wis(p, [&](int jloc, int kloc, int index, int index_sv)
                         {
                             // apply on real grid point
                             stencilsums_tmp[(jloc + 2) * locmem_size_y + kloc + 2] = center[index] + 0.8 * (1.0 / stencilValues[index_sv + (9 + 3 + 1) * svGridSize]) * (f[index_sv] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv, index, joff_localmem));
 
-                            apply_stencil_check(v_in, stencilValues, svGridSize, index_sv, index_sv, joff_globalmem, ngh * ogh);
+                            // apply_stencil_check(v_in, stencilValues, svGridSize, index_sv, index_sv, joff_globalmem, ngh * ogh);
 
                             int index_tmp = index;
                             int index_sv_tmp = index_sv;
@@ -1896,13 +1895,13 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                             {
                                 index_tmp = index - 1;
                                 index_sv_tmp = index_sv - 1;
-                                stencilsums_tmp[(jloc + 2) * locmem_size_y + kloc + 1] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv + (9 + 3 + 1) * svGridSize]) * (f[index_sv] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
+                                stencilsums_tmp[(jloc + 2) * locmem_size_y + kloc + 1] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
                             }
                             else if (kloc >= wg_size_y - 1)
                             {
                                 index_tmp = index + 1;
                                 index_sv_tmp = index_sv + 1;
-                                stencilsums_tmp[(jloc + 2) * locmem_size_y + kloc + 3] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv + (9 + 3 + 1) * svGridSize]) * (f[index_sv] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
+                                stencilsums_tmp[(jloc + 2) * locmem_size_y + kloc + 3] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
                             }
 
                             // apply in y dim
@@ -1910,13 +1909,13 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                             {
                                 index_tmp = index - joff;
                                 index_sv_tmp = index_sv - joff_globalmem;
-                                stencilsums_tmp[(jloc + 1) * locmem_size_y + kloc + 2] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv + (9 + 3 + 1) * svGridSize]) * (f[index_sv] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
+                                stencilsums_tmp[(jloc + 1) * locmem_size_y + kloc + 2] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
                             }
                             else if (jloc >= wg_size_x - 1)
                             {
                                 index_tmp = index + joff;
                                 index_sv_tmp = index_sv + joff_globalmem;
-                                stencilsums_tmp[(jloc + 3) * locmem_size_y + kloc + 2] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv + (9 + 3 + 1) * svGridSize]) * (f[index_sv] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
+                                stencilsums_tmp[(jloc + 3) * locmem_size_y + kloc + 2] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
                             }
 
                             // apply in corners
@@ -1924,25 +1923,27 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                             {
                                 index_tmp = index + (-joff - 1);
                                 index_sv_tmp = index_sv + (-joff_globalmem - 1);
-                                stencilsums_tmp[(jloc + 1) * locmem_size_y + kloc + 1] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv + (9 + 3 + 1) * svGridSize]) * (f[index_sv] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
+                                stencilsums_tmp[(jloc + 1) * locmem_size_y + kloc + 1] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
+
+                                // apply_stencil_check(v_in, stencilValues, svGridSize, index_sv_tmp, index_sv_tmp, joff_globalmem, ngh * ogh);
                             }
                             else if (kloc >= wg_size_y - 1 && jloc < 1)
                             {
                                 index_tmp = index + (-joff + 1);
                                 index_sv_tmp = index_sv + (joff_globalmem + 1);
-                                stencilsums_tmp[(jloc + 1) * locmem_size_y + kloc + 3] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv + (9 + 3 + 1) * svGridSize]) * (f[index_sv] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
+                                stencilsums_tmp[(jloc + 1) * locmem_size_y + kloc + 3] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
                             }
                             else if (kloc < 1 && jloc >= wg_size_x - 1)
                             {
                                 index_tmp = index + (joff - 1);
                                 index_sv_tmp = index_sv + (joff_globalmem - 1);
-                                stencilsums_tmp[(jloc + 3) * locmem_size_y + kloc + 1] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv + (9 + 3 + 1) * svGridSize]) * (f[index_sv] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
+                                stencilsums_tmp[(jloc + 3) * locmem_size_y + kloc + 1] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
                             }
                             else if (kloc >= wg_size_y - 1 && jloc >= wg_size_x - 1)
                             {
                                 index_tmp = index + (joff + 1);
                                 index_sv_tmp = index_sv + (joff_globalmem + 1);
-                                stencilsums_tmp[(jloc + 3) * locmem_size_y + kloc + 3] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv + (9 + 3 + 1) * svGridSize]) * (f[index_sv] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
+                                stencilsums_tmp[(jloc + 3) * locmem_size_y + kloc + 3] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
                             }
 
                             //
@@ -1951,7 +1952,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
             // store in locmem, i.e. do Jacobi step
             if (locmem_store_base != nullptr)
             {
-                for_all_wis([&](int jloc, int kloc, int index, int index_sv)
+                for_all_wis(p, [&](int jloc, int kloc, int index, int index_sv)
                             {
                                 // barrier(CLK_LOCAL_MEM_FENCE);
                                 // locmem_store_base[jloc * locmem_size_y + kloc] = stencilsums_tmp[jloc * locmem_size_y + kloc];
@@ -2023,7 +2024,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
             {
                 // store in global memory. Only real cells.
                 // TODO index_sv only works if ghosts of v and stencilValues are equal. Need global index for v!
-                for_all_wis([&](int jloc, int kloc, int index, int index_sv)
+                for_all_wis(p, [&](int jloc, int kloc, int index, int index_sv)
                             { v_glob[index_sv] = stencilsums_tmp[(jloc + 2) * locmem_size_y + kloc + 2]; });
             }
         };
@@ -2043,11 +2044,12 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         load_entire_plane(2, 4, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem, v_in, m, n, o, mgh, ngh, ogh, gh, wg_num_x, wg_num_y);
 
         // TODO apply_stencil must be mocked for all local indices, too! :(
+        int p_outer = m - 1;
 
         // apply stencils in locmem[1] for grid points except outer border and store in locmem[0] (t=0)
         apply_stencil_entire_plane(&locmem[0], &locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy],
                                    stencilValues, svGridSize, joff, ogh, locmem_size_x, locmem_size_y,
-                                   &locmem[0], v_in);
+                                   &locmem[0], v_in, p_outer);
         // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
         //             { stencilsums_tmp[jloc * locmem_size_y + kloc] = apply_stencil(&locmem[0], &locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy], stencilValues, svGridSize, index_sv, index, joff); });
         // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
@@ -2059,12 +2061,12 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         // locmem[jloc * locmem_size_y + kloc] = stencilsums_tmp[jloc * locmem_size_y + kloc];
 
         // apply stencils in locmem[2] for grid points except outer border and store in locmem[1] (t=0)
-        p = 0;
+        p_outer = 0;
         // index = (p + gh) * ioff + (j + gh) * ogh + k + gh;
         // index_sv = (p + svgh) * svno + (j + svgh) * svogh + (k + svgh);
         apply_stencil_entire_plane(&locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy], &locmem[3 * locmem_size_xy],
                                    stencilValues, svGridSize, joff, ogh, locmem_size_x, locmem_size_y,
-                                   &locmem[1 * locmem_size_xy], v_in);
+                                   &locmem[1 * locmem_size_xy], v_in, p_outer);
         // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
         //             { stencilsums_tmp[jloc * locmem_size_y + kloc] = apply_stencil(&locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy], &locmem[3 * locmem_size_xy], stencilValues, svGridSize, index_sv, index, joff); });
         // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
@@ -2073,10 +2075,10 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         // locmem[1 * locmem_size_xy + jloc * locmem_size_y + kloc] = stencilsums_tmp[jloc * locmem_size_y + kloc]; });
 
         // apply stencils in &locmem[3] for grid points except outer border and store in &locmem[2] (t=0)
-        p = 1;
+        p_outer = 1;
         apply_stencil_entire_plane(&locmem[2 * locmem_size_xy], &locmem[3 * locmem_size_xy], &locmem[4 * locmem_size_xy],
                                    stencilValues, svGridSize, joff, ogh, locmem_size_x, locmem_size_y,
-                                   &locmem[2 * locmem_size_xy], v_in);
+                                   &locmem[2 * locmem_size_xy], v_in, p_outer);
         // index = (p + gh) * ioff + (j + gh) * ogh + k + gh;
         // index_sv = (p + svgh) * svno + (j + svgh) * svogh + (k + svgh);
         // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
@@ -2088,10 +2090,10 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         // barrier(CLK_LOCAL_MEM_FENCE);
 
         // apply stencils in &locmem[1] for grid points except outer 2 borders and store in global memory (t=1)
-        p = 0;
+        p_outer = 0;
         apply_stencil_entire_plane(&locmem[0 * locmem_size_xy], &locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy],
                                    stencilValues, svGridSize, joff, ogh, locmem_size_x, locmem_size_y,
-                                   nullptr, v_in);
+                                   nullptr, v_in, p_outer);
         // index = (p + gh) * ioff + (j + gh) * ogh + k + gh;
         // index_sv = (p + svgh) * svno + (j + svgh) * svogh + (k + svgh);
         // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
@@ -2104,24 +2106,25 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         // dump_locmem(locmem_size_x, locmem_size_y, locmem_size_xy, locmem);
         // TODO check content of v_in, i.e. the first result in global memory after 2 iters
         // OK!
-        dump_globmem(mgh, ngh, ogh, v_in);
+        // dump_globmem(mgh, ngh, ogh, v_in);
 
         // ****** Prologue end ******
 
         int next_buf = 0;
         // for (int p = p_start; p < p_end; p++)
-        for (int p = 2; p < m + 1; p++)
+        // p_pouter in this loop is the plane index, for which the first iteration's stencil is at its center
+        for (p_outer = 2; p_outer <= m + gh; p_outer++)
         {
             // load next entire plane in &locmem[next_buf] (with 2 ghost layers)
-            load_entire_plane(p + 1, next_buf, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem, v_in, m, n, o, mgh, ngh, ogh, gh, wg_num_x, wg_num_y);
+            load_entire_plane(p_outer + 1, next_buf, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem, v_in, m, n, o, mgh, ngh, ogh, gh, wg_num_x, wg_num_y);
             // barrier(CLK_LOCAL_MEM_FENCE);
 
             //   apply stencils in &locmem[(next_buf-1) % 5] for grid points except outer border and store in &locmem[(next_buf-2) % 5] (t=0)
             // index = (p - 1 + gh) * ioff + (j + gh) * ogh + k + gh;
             // index_sv = (p - 1 + svgh) * svno + (j + svgh) * svogh + (k + svgh);
-            apply_stencil_entire_plane(&locmem[next_buf * locmem_size_xy], &locmem[((next_buf - 1 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy],
+            apply_stencil_entire_plane(&locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 1 + 5) % 5) * locmem_size_xy], &locmem[next_buf * locmem_size_xy],
                                        stencilValues, svGridSize, joff, ogh, locmem_size_x, locmem_size_y,
-                                       &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy], v_in);
+                                       &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy], v_in, p_outer);
             // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
             //             { stencilsums_tmp[jloc * locmem_size_y + kloc] = apply_stencil(&locmem[next_buf * locmem_size_xy], &locmem[((next_buf - 1 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy], stencilValues, svGridSize, index_sv, index, joff); });
             // // barrier(CLK_LOCAL_MEM_FENCE);
@@ -2132,11 +2135,11 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
             //             });
 
             //   apply stencils in &locmem[(next_buf-3) % 5] for grid points except outer border and store in global memory (t=1)
-            p--; // Hack for this test, as the global index is built using p, which is not passed as an argument.
-            apply_stencil_entire_plane(&locmem[((next_buf - 4 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 4 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy],
+            // p = p_inner - 1; // Hack for this test, as the global index is built using p, which is not passed as an argument.
+            apply_stencil_entire_plane(&locmem[((next_buf - 4 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 3 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy],
                                        stencilValues, svGridSize, joff, ogh, locmem_size_x, locmem_size_y,
-                                       nullptr, v_in);
-            p++;
+                                       nullptr, v_in, p_outer - 1);
+            // p++;
             // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
             //             { stencilsums_tmp[jloc * locmem_size_y + kloc] = apply_stencil(&locmem[((next_buf - 4 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 4 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy], stencilValues, svGridSize, index_sv, index, joff); });
             // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
@@ -2228,7 +2231,6 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                 // Test with temporal tiling algorithm
 
                 { // Apply stencil for a grid point not touching any border of the current yz-plane and not in a ghosted x-plane
-                    int p = 0;
 
                     // Load some planes first
                     // for (int jloc = 0; jloc < wg_size_x; jloc++)
@@ -2257,6 +2259,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                     // }
 
                     v_exp.dumpToFile("v_exp.txt");
+                    v_cub.dumpToFile("v_act.txt");
 
                     for (int i = gh; i < m + gh; i++)
                         for (int j = wg_num_x * wg_size_x + gh; j < (wg_num_x + 1) * wg_size_x + gh; j++)
