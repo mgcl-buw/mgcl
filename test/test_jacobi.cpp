@@ -2167,7 +2167,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
 
         // int wg_size = 32;
-        int wg_size_x = 4; // GENERATE(4, 8);
+        int wg_size_x = GENERATE(4, 8);
         int wg_size_y = 4;
         int grid_size = mgh * ngh * ogh;
 
@@ -2195,7 +2195,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         v_exp.fill1dIndex(false);
         mgcl::MultigridEngine::updateGhostsSeq(v_exp, nullptr, true, true);
 
-        v_exp.dumpToFile("v_input.txt");
+        // v_exp.dumpToFile("v_input.txt");
 
         // v_exp.dumpToFile("v_exp.txt");
 
@@ -2216,15 +2216,14 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
             //  all 4 corners (4 cases)}
             std::vector<std::vector<int>> wgs{
                 {1, 1},
-                // {0, 1},
-                // {n / wg_size_x - 1, 1},
-                // {1, 0},
-                // {1, o / wg_size_y - 1},
-                // {0, 0},
-                // {n / wg_size_x - 1, 0},
-                // {0, o / wg_size_y - 1},
-                // {n / wg_size_x - 1, o / wg_size_y - 1}
-            };
+                {0, 1},
+                {n / wg_size_x - 1, 1},
+                {1, 0},
+                {1, o / wg_size_y - 1},
+                {0, 0},
+                {n / wg_size_x - 1, 0},
+                {0, o / wg_size_y - 1},
+                {n / wg_size_x - 1, o / wg_size_y - 1}};
 
             for (auto wg : wgs)
             {
