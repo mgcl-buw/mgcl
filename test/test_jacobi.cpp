@@ -1832,6 +1832,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                                                    int wg_num_x,
                                                    int wg_num_y,
                                                    double* v_in,
+                                                   double* v_out,
                                                    double* r,
                                                    double* f,
                                                    double* locmem,
@@ -2049,7 +2050,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         // apply stencils in locmem[1] for grid points except outer border and store in locmem[0] (t=0)
         apply_stencil_entire_plane(&locmem[0], &locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy],
                                    stencilValues, svGridSize, joff, ogh, locmem_size_x, locmem_size_y,
-                                   &locmem[0], v_in, p_outer);
+                                   &locmem[0], nullptr, p_outer);
         // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
         //             { stencilsums_tmp[jloc * locmem_size_y + kloc] = apply_stencil(&locmem[0], &locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy], stencilValues, svGridSize, index_sv, index, joff); });
         // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
@@ -2066,7 +2067,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         // index_sv = (p + svgh) * svno + (j + svgh) * svogh + (k + svgh);
         apply_stencil_entire_plane(&locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy], &locmem[3 * locmem_size_xy],
                                    stencilValues, svGridSize, joff, ogh, locmem_size_x, locmem_size_y,
-                                   &locmem[1 * locmem_size_xy], v_in, p_outer);
+                                   &locmem[1 * locmem_size_xy], nullptr, p_outer);
         // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
         //             { stencilsums_tmp[jloc * locmem_size_y + kloc] = apply_stencil(&locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy], &locmem[3 * locmem_size_xy], stencilValues, svGridSize, index_sv, index, joff); });
         // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
@@ -2078,7 +2079,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         p_outer = 1;
         apply_stencil_entire_plane(&locmem[2 * locmem_size_xy], &locmem[3 * locmem_size_xy], &locmem[4 * locmem_size_xy],
                                    stencilValues, svGridSize, joff, ogh, locmem_size_x, locmem_size_y,
-                                   &locmem[2 * locmem_size_xy], v_in, p_outer);
+                                   &locmem[2 * locmem_size_xy], nullptr, p_outer);
         // index = (p + gh) * ioff + (j + gh) * ogh + k + gh;
         // index_sv = (p + svgh) * svno + (j + svgh) * svogh + (k + svgh);
         // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
@@ -2093,7 +2094,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         p_outer = 0;
         apply_stencil_entire_plane(&locmem[0 * locmem_size_xy], &locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy],
                                    stencilValues, svGridSize, joff, ogh, locmem_size_x, locmem_size_y,
-                                   nullptr, v_in, p_outer);
+                                   nullptr, v_out, p_outer);
         // index = (p + gh) * ioff + (j + gh) * ogh + k + gh;
         // index_sv = (p + svgh) * svno + (j + svgh) * svogh + (k + svgh);
         // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
@@ -2116,7 +2117,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         for (p_outer = 2; p_outer <= m + gh; p_outer++)
         {
             // load next entire plane in &locmem[next_buf] (with 2 ghost layers)
-            load_entire_plane(p_outer + 1, next_buf, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem, v_in, m, n, o, mgh, ngh, ogh, gh, wg_num_x, wg_num_y);
+            load_entire_plane((p_outer + 1 >= m) ? (p_outer + 1) - m : p_outer + 1, next_buf, wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem, v_in, m, n, o, mgh, ngh, ogh, gh, wg_num_x, wg_num_y);
             // barrier(CLK_LOCAL_MEM_FENCE);
 
             //   apply stencils in &locmem[(next_buf-1) % 5] for grid points except outer border and store in &locmem[(next_buf-2) % 5] (t=0)
@@ -2124,7 +2125,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
             // index_sv = (p - 1 + svgh) * svno + (j + svgh) * svogh + (k + svgh);
             apply_stencil_entire_plane(&locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 1 + 5) % 5) * locmem_size_xy], &locmem[next_buf * locmem_size_xy],
                                        stencilValues, svGridSize, joff, ogh, locmem_size_x, locmem_size_y,
-                                       &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy], v_in, p_outer);
+                                       &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy], nullptr, p_outer);
             // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
             //             { stencilsums_tmp[jloc * locmem_size_y + kloc] = apply_stencil(&locmem[next_buf * locmem_size_xy], &locmem[((next_buf - 1 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy], stencilValues, svGridSize, index_sv, index, joff); });
             // // barrier(CLK_LOCAL_MEM_FENCE);
@@ -2138,7 +2139,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
             // p = p_inner - 1; // Hack for this test, as the global index is built using p, which is not passed as an argument.
             apply_stencil_entire_plane(&locmem[((next_buf - 4 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 3 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy],
                                        stencilValues, svGridSize, joff, ogh, locmem_size_x, locmem_size_y,
-                                       nullptr, v_in, p_outer - 1);
+                                       nullptr, v_out, p_outer - 1);
             // p++;
             // for_all_wis([&](int jloc, int kloc, int index, int index_sv)
             //             { stencilsums_tmp[jloc * locmem_size_y + kloc] = apply_stencil(&locmem[((next_buf - 4 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 4 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy], stencilValues, svGridSize, index_sv, index, joff); });
@@ -2176,10 +2177,14 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
 
         // std::vector<double> shmem((wg_size_x + 4) * (wg_size_y + 4) * 5); // need 5 planes in buffer
         mgcl::Cuboid locmem(5, locmem_size_x, locmem_size_y); // need 5 planes in buffer
-        mgcl::Cuboid v_cub(m, n, o, gh, gh, gh);
-        v_cub.fill1dIndex(false);
-        mgcl::MultigridEngine::updateGhostsSeq(v_cub, nullptr, true, true);
-        auto& v = v_cub.field1d();
+        mgcl::Cuboid v_in_cub(m, n, o, gh, gh, gh);
+        v_in_cub.fill1dIndex(false);
+        mgcl::MultigridEngine::updateGhostsSeq(v_in_cub, nullptr, true, true);
+        auto& v_in = v_in_cub.field1d();
+        mgcl::Cuboid v_out_cub(m, n, o, gh, gh, gh);
+        v_out_cub.fill1dIndex(false);
+        mgcl::MultigridEngine::updateGhostsSeq(v_out_cub, nullptr, true, true);
+        auto& v_out = v_out_cub.field1d();
 
         mgcl::Cuboid f_act(m, n, o, gh, gh, gh);
         mgcl::Cuboid r_act(m, n, o, gh, gh, gh);
@@ -2189,6 +2194,8 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
         mgcl::Cuboid v_exp(m, n, o, gh, gh, gh);
         v_exp.fill1dIndex(false);
         mgcl::MultigridEngine::updateGhostsSeq(v_exp, nullptr, true, true);
+
+        v_exp.dumpToFile("v_input.txt");
 
         // v_exp.dumpToFile("v_exp.txt");
 
@@ -2221,8 +2228,8 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
 
             for (auto wg : wgs)
             {
-                v_cub.fill1dIndex(false);
-                mgcl::MultigridEngine::updateGhostsSeq(v_cub, nullptr, true, true);
+                v_in_cub.fill1dIndex(false);
+                mgcl::MultigridEngine::updateGhostsSeq(v_in_cub, nullptr, true, true);
 
                 // Test wg in the upper left corner
                 int wg_num_x = wg[0];
@@ -2252,21 +2259,21 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                         // jloc, kloc, j, k,
                         wg_size_x, wg_size_y, locmem_size_x, locmem_size_y, locmem_size_xy, mgh, ngh, ogh, m, n, o, gh,
                         stencilValues.getMgh(), stencilValues.getNgh(), stencilValues.getOgh(), stencilValues.getGhostsM(),
-                        wg_num_x, wg_num_y, v_cub.field1d().data(),
+                        wg_num_x, wg_num_y, v_in_cub.field1d().data(), v_out_cub.field1d().data(),
                         r_act.field1d().data(), f_act.field1d().data(), locmem.field1d().data(), stencilValues.field1d().data(), svGridSize,
                         0, 0);
                     // CAPTURE(p, j, k, jloc, kloc, index, index_localmem_plane, index_sv);
                     // }
 
-                    v_exp.dumpToFile("v_exp.txt");
-                    v_cub.dumpToFile("v_act.txt");
+                    // v_exp.dumpToFile("v_exp.txt");
+                    // v_in_cub.dumpToFile("v_act.txt");
 
                     for (int i = gh; i < m + gh; i++)
                         for (int j = wg_num_x * wg_size_x + gh; j < (wg_num_x + 1) * wg_size_x + gh; j++)
                             for (int k = wg_num_y * wg_size_y + gh; k < (wg_num_y + 1) * wg_size_y + gh; k++)
                             {
                                 CAPTURE(i, j, k);
-                                REQUIRE_THAT(v_cub[i][j][k], Catch::Matchers::WithinRel(v_exp[i][j][k], 1e-6));
+                                REQUIRE_THAT(v_out_cub[i][j][k], Catch::Matchers::WithinRel(v_exp[i][j][k], 1e-6));
                             }
                 }
             }
