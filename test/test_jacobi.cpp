@@ -1249,7 +1249,7 @@ TEST_CASE("temporal_tiling_localmem_1d")
 // Tests local memory kernel using temporal tiling, i.e. doing multiple iterations in one kernel call,
 // but without the need of having more than one ghost layer at each border.
 // 2d kernel that loops over the 1st dimension. One wi per real grid point.
-TEST_CASE("temporal_tiling_localmem_2d_stream")
+TEST_CASE("seq_temporal_tiling_localmem_2d_stream")
 {
 
     // kernel
@@ -2234,10 +2234,7 @@ TEST_CASE("temporal_tiling_localmem_2d_stream")
                 int wg_num_x = wg[0];
                 int wg_num_y = wg[1];
 
-                // Test with temporal tiling algorithm
-
-                { // Apply stencil for a grid point not touching any border of the current yz-plane and not in a ghosted x-plane
-
+                {
                     // Load some planes first
                     // for (int jloc = 0; jloc < wg_size_x; jloc++)
                     //     for (int kloc = 0; kloc < wg_size_y; kloc++)
