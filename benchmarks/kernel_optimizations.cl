@@ -6707,6 +6707,20 @@ double jacobi_2iters_apply_stencil(__local double* front, __local double* center
     return stencilsum;
 };
 
+// Applies the stencil to the real self grid point and, depedning on the work-item's index, on surrounding grid points
+// Args:
+// - front, center and back are pointers to planes in local memory
+// - stencilValues: Coefficients in global memory
+// - svGridSize: Size of the grid in the coefficients array, e.g. mgh x ngh x ogh
+// - joff_localmem: Distance between two rows in local memory
+// - joff_globalmem: Distance between to planes in global memory
+// - localmem_store_base: Pointer to the plane in local memory that shall be written to
+// - v_glob: v in global memory
+// - f: f in global memory
+// - p: Real global plane index
+// - svgh: ghosts of stencilValues AND v
+// - svno: joff for stencilValues
+// - svogh: ghosts of stencilValues
 void jacobi_2iters_apply_stencil_entire_plane (__local double* front, __local double* center, __local double* back, 
     __global double* stencilValues, int svGridSize, 
     int joff_localmem, int joff_globalmem,
