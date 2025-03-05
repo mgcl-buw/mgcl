@@ -2276,3 +2276,7 @@ TEST_CASE("seq_temporal_tiling_localmem_2d_stream")
         }
     }
 }
+
+TEST_CASE("ocl_temporal_tiling_localmem_2d_stream")
+{
+}
