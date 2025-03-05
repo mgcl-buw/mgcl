@@ -1,3 +1,7 @@
+#ifndef NULL
+#define NULL 0
+#endif
+
 /**
  * Multiplies two varying stencils c = a * b.
  * m, n and o are dimensions of the grid.
