@@ -178,6 +178,9 @@ namespace mgcl
         /* If true, all MPI routines are ignored, even if the program is started with more than one MPI process. */
         bool ignoreMpi = false;
 
+        /* If true, the log of clBuildProgram will be printed even if the function returns CL_SUCCESS. */
+        bool printKernelLog = false;
+
         void checkGlobalDimensions();
         bool useMpi();
 
@@ -390,6 +393,9 @@ namespace mgcl
         inline int getElapsedIterations() const { return elapsedIterations; }
 
         std::vector<double>& getResiduals();
+
+        inline bool isPrintKernelLog() const { return printKernelLog; }
+        inline void setPrintKernelLog(bool _printKernelLog) { printKernelLog = _printKernelLog; }
 
         friend std::ostream& operator<<(std::ostream& os, const Problem& lv);
     };

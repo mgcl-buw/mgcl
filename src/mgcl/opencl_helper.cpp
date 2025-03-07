@@ -205,11 +205,13 @@ namespace mgcl
         // Build the program
         err = clBuildProgram(program, 1, &deviceId, "-cl-fast-relaxed-math", nullptr, nullptr);
         // err = clBuildProgram(program, 1, &deviceId, "-cl-fast-relaxed-math -cl-nv-arch sm_75", nullptr, nullptr);
-        if (err != CL_SUCCESS)
+        if (err != CL_SUCCESS || problem->isPrintKernelLog())
         {
             // Determine the size of the log
             size_t log_size;
             clGetProgramBuildInfo(program, deviceId, CL_PROGRAM_BUILD_LOG, 0, nullptr, &log_size);
+
+            std::cout << "mgcl: Printing build log (" << log_size << " Bytes):" << std::endl;
 
             // Allocate memory for the log
             char* log = static_cast<char*>(malloc(log_size));
@@ -222,7 +224,10 @@ namespace mgcl
 
             free(log);
 
-            assert(err == CL_SUCCESS && "Building the kernel failed.");
+            if (err != CL_SUCCESS)
+            {
+                assert(err == CL_SUCCESS && "Building the kernel failed.");
+            }
         }
 
         // Save the program binary if binaryFile is not empty and binaryFile does not exist yet
