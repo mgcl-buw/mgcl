@@ -4,11 +4,13 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <fstream>
 #include <functional>
 #include <ios>
 #include <iostream>
+#include <memory>
 
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/level.hpp"
@@ -2279,4 +2281,221 @@ TEST_CASE("seq_temporal_tiling_localmem_2d_stream")
 
 TEST_CASE("ocl_temporal_tiling_localmem_2d_stream")
 {
+    using size_t2 = struct
+    {
+        size_t x, y;
+    };
+
+    struct JacobiTBArgs
+    {
+        bool return_residual;
+        int m;
+        int n;
+        int o;
+        int mgh;
+        int ngh;
+        int ogh;
+        double h2;
+        int ghosts;
+        double omega;
+
+        cl_program program;
+        cl_command_queue commands;
+        size_t2 wgsize;
+
+        mgcl::CuboidGpu& c_dVIn;
+        mgcl::CuboidGpu& c_dVOut;
+        mgcl::CuboidGpu& c_dF;
+        mgcl::CuboidGpu& c_dR;
+        mgcl::VaryingStencilGpu& c_stencilValues;
+
+        mgcl::ProfilingData* pd;
+
+        int moff;
+        int noff;
+        int ooff;
+    };
+
+    auto jacobi_ocl_tb_2iters = [](JacobiTBArgs& args)
+    {
+        int err;
+        int m = args.m;
+        int n = args.n;
+        int o = args.o;
+        int mgh = args.mgh;
+        int ngh = args.ngh;
+        int ogh = args.ogh;
+        int store_res = 0;
+        double res = -1;
+        int idx_start = 0;
+
+        cl_event ev;
+
+        double h2 = 1.0 / static_cast<double>(m * m);
+        double dinv = h2 / 6.0;
+
+        // Create the compute kernel from the program
+        const char* kernelName = "jacobi_iter_27point_varying_stencil_2d_local_mem_2iters";
+
+        cl_kernel kernel = clCreateKernel(args.program, kernelName, &err);
+        mgcl::mgclCheckError(err, "Creating kernel");
+
+        cl_mem dVIn = args.c_dVIn.getBuffer();
+        cl_mem dVOut = args.c_dVOut.getBuffer();
+        cl_mem dF = args.c_dF.getBuffer();
+        cl_mem dR = args.c_dR.getBuffer();
+
+        // assign kernel arguments
+        int pos = 0;
+        int pos_idxstart = -1;
+        int pos_storeres = -1;
+
+        auto svbuf = args.c_stencilValues.getBuf();
+        int svgh = args.c_stencilValues.getGh();
+        int svmgh = args.c_stencilValues.getMgh();
+        int svngh = args.c_stencilValues.getNgh();
+        int svogh = args.c_stencilValues.getOgh();
+        int svGridSize = svmgh * svngh * svogh;
+        int locmem_size = (args.wgsize.x + 4) * (args.wgsize.y + 4) * 5; // 5 planes in local memory
+
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &svbuf);
+        err |= clSetKernelArg(kernel, ++pos, locmem_size, NULL);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(double), &args.omega);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svmgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ghosts);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
+        pos_idxstart = pos;
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
+        pos_storeres = pos;
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        // One work-item per real grid point in a yz-plane
+        // TODO adjust when not streaming along whole x-dim
+        size_t global[2] = {static_cast<size_t>(n), static_cast<size_t>(o)};
+        size_t local[2] = {args.wgsize.x, args.wgsize.y};
+
+        // No padding of work-items. Instead, sum of wgs must match global grid size
+        assert((n / args.wgsize.x) * args.wgsize.x == n && "n is not divisible by wgsize.x!");
+        assert((o / args.wgsize.y) * args.wgsize.y == o && "o is not divisible by wgsize.y!");
+
+        err = clEnqueueNDRangeKernel(args.commands, kernel, 2, NULL, global, local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing kernel");
+
+        if (args.pd)
+        {
+            args.pd->addMeasurement(args.commands, ev, kernelName,
+                                    {global[0], global[1], 0},
+                                    {local[0], local[1], 1});
+        }
+        mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        clReleaseKernel(kernel);
+    };
+
+    int m = 16;
+    int n = 16;
+    int o = 16;
+    int gh = 1;
+    int mgh = m + 2 * gh;
+    int ngh = n + 2 * gh;
+    int ogh = o + 2 * gh;
+
+    double omega = 0.8;
+    double h2 = 1.0 / (double)(m * m);
+    mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+    mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
+
+    // int wg_size = 32;
+    int wg_size_x = 4; // GENERATE(4, 8);
+    int wg_size_y = 4;
+    int grid_size = mgh * ngh * ogh;
+
+    int locmem_size_x = (wg_size_x + 4);
+    int locmem_size_y = (wg_size_y + 4);
+    int locmem_size_xy = locmem_size_x * locmem_size_y;
+
+    mgcl::Cuboid v_in_cub(m, n, o, gh, gh, gh);
+    v_in_cub.fill1dIndex(false);
+    mgcl::MultigridEngine::updateGhostsSeq(v_in_cub, nullptr, true, true);
+    auto& v_in = v_in_cub.field1d();
+    mgcl::Cuboid v_out_cub(m, n, o, gh, gh, gh);
+    v_out_cub.fill1dIndex(false);
+    mgcl::MultigridEngine::updateGhostsSeq(v_out_cub, nullptr, true, true);
+    auto& v_out = v_out_cub.field1d();
+
+    mgcl::Cuboid f_act(m, n, o, gh, gh, gh);
+    mgcl::Cuboid r_act(m, n, o, gh, gh, gh);
+
+    mgcl::Cuboid f_exp(m, n, o, gh, gh, gh);
+    mgcl::Cuboid r_exp(m, n, o, gh, gh, gh);
+    mgcl::Cuboid v_exp(m, n, o, gh, gh, gh);
+    v_exp.fill1dIndex(false);
+    mgcl::MultigridEngine::updateGhostsSeq(v_exp, nullptr, true, true);
+
+    // v_exp.dumpToFile("v_input.txt");
+
+    // v_exp.dumpToFile("v_exp.txt");
+
+    int svgh = 1;
+    mgcl::VaryingStencil stencilValues(m, n, o, 3, svgh, svgh, svgh);
+    // stencilValues.fill1dIndex(false);
+    stencilValues.fill(1.0, false); // TODO varying
+    stencilValues.updateGhosts();
+
+    int svGridSize = stencilValues.getMgh() * stencilValues.getNgh() * stencilValues.getOgh();
+
+    // Load expected result using regular Jacobi
+    mgcl::MultigridEngine::jacobiSeq(v_exp, f_exp, r_exp, omega, h2, 2, resnorm, stencilType, 1.0, &stencilValues, nullptr, true, true, true);
+
+    // Dummy problem for initializing OpenCL environment
+    auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    mgcl::Problem p(m, n, o, f_dummy, v_dummy);
+    p.setUseOpencl(true);
+    p.setKernelFile("kernel_optimizations.cl");
+    p.setProfilingEnabled(true);
+    p.getOpenCLHelper().init();
+
+    // Create gpu buffers
+    mgcl::CuboidGpu d_vin(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v_in_cub);
+    mgcl::CuboidGpu d_vout(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v_out_cub);
+    mgcl::CuboidGpu d_f(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, f_act);
+    mgcl::CuboidGpu d_r(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, r_act);
+    mgcl::VaryingStencilGpu d_sv(m, n, o, 3, gh, p.getContext(), p.getCommands(), p.getProgram());
+
+    JacobiTBArgs args{
+        false,
+        m,
+        n,
+        o,
+        mgh,
+        ngh,
+        ogh,
+        h2,
+        gh,
+        omega,
+        p.getProgram(),
+        p.getCommands(),
+        {4, 4},
+        d_vin,
+        d_vout,
+        d_f,
+        d_r,
+        d_sv,
+        p.getProfilingData(),
+        0,
+        0,
+        0};
+    jacobi_ocl_tb_2iters(args);
 }
