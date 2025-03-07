@@ -6889,12 +6889,12 @@ __kernel void jacobi_iter_27point_varying_stencil_2d_local_mem_2iters(
     __global double* restrict f,
     __global double* restrict r,
     __global double* restrict stencilValues,
-    __local double* locmem,
+    __local double* restrict locmem,
     const double omega,
     const int m, const int n, const int o,
     const int mgh, const int ngh, const int ogh,
     const int svmgh, const int svngh, const int svogh,
-    const int ghosts, const int ghosts_sv,
+    const int ghosts, const int ghosts_sv, 
     const int svGridSize,
     const int idx_start, const int store_residual)
 {

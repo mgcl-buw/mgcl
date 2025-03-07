@@ -2363,8 +2363,11 @@ TEST_CASE("ocl_temporal_tiling_localmem_2d_stream")
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &svbuf);
-        err |= clSetKernelArg(kernel, ++pos, locmem_size, NULL);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(double) * locmem_size, NULL);
         err |= clSetKernelArg(kernel, ++pos, sizeof(double), &args.omega);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
@@ -2464,6 +2467,7 @@ TEST_CASE("ocl_temporal_tiling_localmem_2d_stream")
     mgcl::Problem p(m, n, o, f_dummy, v_dummy);
     p.setUseOpencl(true);
     p.setKernelFile("kernel_optimizations.cl");
+    p.setPrintKernelLog(true);
     p.setProfilingEnabled(true);
     p.getOpenCLHelper().init();
 
@@ -2497,5 +2501,15 @@ TEST_CASE("ocl_temporal_tiling_localmem_2d_stream")
         0,
         0,
         0};
+
     jacobi_ocl_tb_2iters(args);
+
+    // Read result
+    d_vout.read(p.getCommands(), &v_out_cub, true);
+    mgcl::MultigridEngine::updateGhostsSeq(v_out_cub, nullptr, true, true);
+
+    v_exp.dumpToFile("v_exp.txt");
+    v_out_cub.dumpToFile("v_act.txt");
+
+    REQUIRE(v_out_cub.isEqual(v_exp));
 }
