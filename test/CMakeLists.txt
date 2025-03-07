@@ -107,3 +107,23 @@ add_custom_target(copy_script DEPENDS "${CMAKE_BINARY_DIR}/test/run-all.sh")
 
 # Whenever target 'tests_mpi' is requested, the custom target will be evaluated.
 add_dependencies(tests_mpi copy_script)
+
+# copy kernel file to build directory
+add_custom_command(
+  OUTPUT "${CMAKE_BINARY_DIR}/test/kernel_optimizations.cl"
+  COMMAND
+    ${CMAKE_COMMAND} -E copy
+    "${CMAKE_CURRENT_SOURCE_DIR}/../benchmarks/kernel_optimizations.cl"
+    "${CMAKE_BINARY_DIR}/test"
+  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/../benchmarks/kernel_optimizations.cl")
+
+# Custom target for activate the custom command above
+add_custom_target(
+  copy_kernel_optimizations_test
+  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/../benchmarks/kernel_optimizations.cl")
+
+# Whenever target 'benchmarks' is requested, the custom target will be
+# evaluated.
+add_dependencies(tests copy_kernel_optimizations_test)
+add_dependencies(tests_mpi copy_kernel_optimizations_test)
+
