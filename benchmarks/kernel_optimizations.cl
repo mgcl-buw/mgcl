@@ -6761,14 +6761,12 @@ void jacobi_2iters_apply_stencil_entire_plane (__local double* front, __local do
                         index_tmp = index - 1;
                         index_sv_tmp = index_sv - 1;
 stencilsums[1] = jacobi_2iters_apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem);
-                        locmem_store_base[(jloc + 2) * locmem_size_y + kloc + 1] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - stencilsums[1]);
                     }
                     else if (kloc >= get_local_size(1) - 1)
                     {
                         index_tmp = index + 1;
                         index_sv_tmp = index_sv + 1;
 stencilsums[1] = jacobi_2iters_apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem);
-                        locmem_store_base[(jloc + 2) * locmem_size_y + kloc + 3] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - stencilsums[1]);
                     }
 
                     // apply in y dim
@@ -6777,14 +6775,12 @@ stencilsums[1] = jacobi_2iters_apply_stencil(front, center, back, stencilValues,
                         index_tmp = index - joff_localmem;
                         index_sv_tmp = index_sv - joff_globalmem;
 stencilsums[2] = jacobi_2iters_apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem);
-                        locmem_store_base[(jloc + 1) * locmem_size_y + kloc + 2] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - stencilsums[2]);
                     }
                     else if (jloc >= get_local_size(0) - 1)
                     {
                         index_tmp = index + joff_localmem;
                         index_sv_tmp = index_sv + joff_globalmem;
 stencilsums[2] = jacobi_2iters_apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem);
-                        locmem_store_base[(jloc + 3) * locmem_size_y + kloc + 2] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - stencilsums[2]);
                     }
 
                     // apply in corners
@@ -6793,28 +6789,24 @@ stencilsums[2] = jacobi_2iters_apply_stencil(front, center, back, stencilValues,
                         index_tmp = index + (-joff_localmem - 1);
                         index_sv_tmp = index_sv + (-joff_globalmem - 1);
 stencilsums[3] = jacobi_2iters_apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem);
-                        locmem_store_base[(jloc + 1) * locmem_size_y + kloc + 1] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - stencilsums[3]);
                     }
                     else if (kloc >= get_local_size(1) - 1 && jloc < 1)
                     {
                         index_tmp = index + (-joff_localmem + 1);
                         index_sv_tmp = index_sv + (joff_globalmem + 1);
 stencilsums[3] = jacobi_2iters_apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem);
-                        locmem_store_base[(jloc + 1) * locmem_size_y + kloc + 3] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - stencilsums[3]);
                     }
                     else if (kloc < 1 && jloc >= get_local_size(0) - 1)
                     {
                         index_tmp = index + (-joff_localmem - 1);
-                        index_sv_tmp = index_sv + (joff_globalmem - 1);
+                        index_sv_tmp = index_sv + (-joff_globalmem - 1);
 stencilsums[3] = jacobi_2iters_apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem);
-                        locmem_store_base[(jloc + 3) * locmem_size_y + kloc + 1] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - stencilsums[3]);
                     }
                     else if (kloc >= get_local_size(1) - 1 && jloc >= get_local_size(0) - 1)
                     {
                         index_tmp = index + (-joff_localmem + 1);
                         index_sv_tmp = index_sv + (joff_globalmem + 1);
 stencilsums[3] = jacobi_2iters_apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem);
-                        locmem_store_base[(jloc + 3) * locmem_size_y + kloc + 3] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - stencilsums[3]);
                     }
                     
                     // Wait for all wi's to finish applying the stencil. Then write to local memory.
@@ -6861,7 +6853,7 @@ stencilsums[3] = jacobi_2iters_apply_stencil(front, center, back, stencilValues,
                     else if (kloc >= get_local_size(1) - 1 && jloc < 1)
                     {
                         index_tmp = index + (-joff_localmem + 1);
-                        index_sv_tmp = index_sv + (joff_globalmem + 1);
+                        index_sv_tmp = index_sv + (-joff_globalmem + 1);
                         locmem_store_base[(jloc + 1) * locmem_size_y + kloc + 3] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - stencilsums[3]);
                     }
                     else if (kloc < 1 && jloc >= get_local_size(0) - 1)

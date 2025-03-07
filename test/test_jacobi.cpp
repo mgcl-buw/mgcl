@@ -1459,7 +1459,7 @@ TEST_CASE("seq_temporal_tiling_localmem_2d_stream")
     // center: address of center plane in local memory
     // back: address of back plane in local memory
     // stencilValues: Coefficients in global memory
-    // svGridSize: Size of coefficients array in global memory
+    // svGridSize: Size of ghosted grid of coefficients array in global memory
     // index_sv: Index of stencil (top left front coefficient) in global memory
     // index: Index of grid point in local memory, i.e. center of stencil
     // joff: Distance to the next grid point in y-direction in local memory
@@ -1931,7 +1931,7 @@ TEST_CASE("seq_temporal_tiling_localmem_2d_stream")
                             else if (kloc >= wg_size_y - 1 && jloc < 1)
                             {
                                 index_tmp = index + (-joff + 1);
-                                index_sv_tmp = index_sv + (joff_globalmem + 1);
+                                index_sv_tmp = index_sv + (-joff_globalmem + 1);
                                 stencilsums_tmp[(jloc + 1) * locmem_size_y + kloc + 3] = center[index_tmp] + 0.8 * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
                             }
                             else if (kloc < 1 && jloc >= wg_size_x - 1)
@@ -2201,8 +2201,8 @@ TEST_CASE("seq_temporal_tiling_localmem_2d_stream")
 
         int svgh = 1;
         mgcl::VaryingStencil stencilValues(m, n, o, 3, svgh, svgh, svgh);
-        // stencilValues.fill1dIndex(false);
-        stencilValues.fill(1.0, false); // TODO varying
+        stencilValues.fill1dIndex(false);
+        // stencilValues.fill(1.0, false); // TODO varying
         stencilValues.updateGhosts();
 
         int svGridSize = stencilValues.getMgh() * stencilValues.getNgh() * stencilValues.getOgh();
@@ -2268,7 +2268,7 @@ TEST_CASE("seq_temporal_tiling_localmem_2d_stream")
                         for (int j = wg_num_x * wg_size_x + gh; j < (wg_num_x + 1) * wg_size_x + gh; j++)
                             for (int k = wg_num_y * wg_size_y + gh; k < (wg_num_y + 1) * wg_size_y + gh; k++)
                             {
-                                CAPTURE(i, j, k);
+                                CAPTURE(i, j, k, wg_num_x, wg_num_y, wg_size_x, wg_size_y);
                                 REQUIRE_THAT(v_out_cub[i][j][k], Catch::Matchers::WithinRel(v_exp[i][j][k], 1e-6));
                             }
                 }
