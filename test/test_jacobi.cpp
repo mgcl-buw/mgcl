@@ -2477,6 +2477,7 @@ TEST_CASE("ocl_temporal_tiling_localmem_2d_stream")
     mgcl::CuboidGpu d_f(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, f_act);
     mgcl::CuboidGpu d_r(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, r_act);
     mgcl::VaryingStencilGpu d_sv(m, n, o, 3, gh, p.getContext(), p.getCommands(), p.getProgram());
+    d_sv.fill(stencilValues, p.getCommands(), true);
 
     JacobiTBArgs args{
         false,
