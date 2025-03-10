@@ -6600,41 +6600,41 @@ void jacobi_2iters_load_plane(int pglob, int ploc,
                          int ngh, int ogh,
                          int vgh) 
 {
-        int p = pglob + vgh; // Don't do ghost handling for x-plane here, instead do it in algorithm. But respect amount of ghosts in v.
+    int p = pglob + vgh; // Don't do ghost handling for x-plane here, instead do it in algorithm. But respect amount of ghosts in v.
 
-        int locmem_size_xy = locmem_size_x * locmem_size_y;
-        int pnogh = p * ngh * ogh;
-        
-        int jloc = get_local_id(0);
-        int kloc = get_local_id(1);
-        int loc_size_x = get_local_size(0);
-        int loc_size_y = get_local_size(1);
-        int j = get_global_id(0);
-        int k = get_global_id(1);
+    int locmem_size_xy = locmem_size_x * locmem_size_y;
+    int pnogh = p * ngh * ogh;
+    
+    int jloc = get_local_id(0);
+    int kloc = get_local_id(1);
+    int loc_size_x = get_local_size(0);
+    int loc_size_y = get_local_size(1);
+    int j = get_global_id(0);
+    int k = get_global_id(1);
 
-        locmem[ploc * locmem_size_xy + (jloc + 2) * locmem_size_y + (kloc + 2)] = v[pnogh + (j + vgh) * ogh + (k + vgh)]; // load self
+    locmem[ploc * locmem_size_xy + (jloc + 2) * locmem_size_y + (kloc + 2)] = v[pnogh + (j + vgh) * ogh + (k + vgh)]; // load self
 
-        // Load ghosts in z dimension.
-        if (kloc < 2)
-            locmem[ploc * locmem_size_xy + (jloc + 2) * locmem_size_y + (kloc)] = v[pnogh + (j + vgh) * ogh + (((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh)];
-        else if (kloc >= loc_size_y - 2)
-            locmem[ploc * locmem_size_xy + (jloc + 2) * locmem_size_y + (kloc + 4)] = v[pnogh + (j + vgh) * ogh + (((k + 2) % o) + vgh)];
+    // Load ghosts in z dimension.
+    if (kloc < 2)
+        locmem[ploc * locmem_size_xy + (jloc + 2) * locmem_size_y + (kloc)] = v[pnogh + (j + vgh) * ogh + (((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh)];
+    else if (kloc >= loc_size_y - 2)
+        locmem[ploc * locmem_size_xy + (jloc + 2) * locmem_size_y + (kloc + 4)] = v[pnogh + (j + vgh) * ogh + (((k + 2) % o) + vgh)];
 
-        // Load ghosts in y dimension.
-        if (jloc < 2)
-            locmem[ploc * locmem_size_xy + (jloc)*locmem_size_y + (kloc + 2)] = v[pnogh + (((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh) * ogh + (k + vgh)];
-        else if (jloc >= loc_size_x - 2)
-            locmem[ploc * locmem_size_xy + (jloc + 4) * locmem_size_y + (kloc + 2)] = v[pnogh + (((j + 2) % n) + vgh) * ogh + (k + vgh)];
+    // Load ghosts in y dimension.
+    if (jloc < 2)
+        locmem[ploc * locmem_size_xy + (jloc)*locmem_size_y + (kloc + 2)] = v[pnogh + (((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh) * ogh + (k + vgh)];
+    else if (jloc >= loc_size_x - 2)
+        locmem[ploc * locmem_size_xy + (jloc + 4) * locmem_size_y + (kloc + 2)] = v[pnogh + (((j + 2) % n) + vgh) * ogh + (k + vgh)];
 
-        // Load ghosts in corners.
-        if (jloc < 2 && kloc < 2) // upper left
-            locmem[ploc * locmem_size_xy + (jloc)*locmem_size_y + (kloc)] = v[pnogh + (((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh) * ogh + (((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh)];
-        else if (jloc < 2 && kloc >= loc_size_y - 2) // upper right
-            locmem[ploc * locmem_size_xy + (jloc)*locmem_size_y + (kloc + 4)] = v[pnogh + (((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh) * ogh + (((k + 2) % o) + vgh)];
-        else if (jloc >= loc_size_x - 2 && kloc < 2) // lower left
-            locmem[ploc * locmem_size_xy + (jloc + 4) * locmem_size_y + (kloc)] = v[pnogh + (((j + 2) % n) + vgh) * ogh + (((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh)];
-        else if (jloc >= loc_size_x - 2 && kloc >= loc_size_y - 2) // lower right
-            locmem[ploc * locmem_size_xy + (jloc + 4) * locmem_size_y + (kloc + 4)] = v[pnogh + (((j + 2) % n) + vgh) * ogh + (((k + 2) % o) + vgh)];
+    // Load ghosts in corners.
+    if (jloc < 2 && kloc < 2) // upper left
+        locmem[ploc * locmem_size_xy + (jloc)*locmem_size_y + (kloc)] = v[pnogh + (((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh) * ogh + (((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh)];
+    else if (jloc < 2 && kloc >= loc_size_y - 2) // upper right
+        locmem[ploc * locmem_size_xy + (jloc)*locmem_size_y + (kloc + 4)] = v[pnogh + (((j - 2 < 0 ? j - 2 + n : j - 2) % n) + vgh) * ogh + (((k + 2) % o) + vgh)];
+    else if (jloc >= loc_size_x - 2 && kloc < 2) // lower left
+        locmem[ploc * locmem_size_xy + (jloc + 4) * locmem_size_y + (kloc)] = v[pnogh + (((j + 2) % n) + vgh) * ogh + (((k - 2 < 0 ? k - 2 + o : k - 2) % o) + vgh)];
+    else if (jloc >= loc_size_x - 2 && kloc >= loc_size_y - 2) // lower right
+        locmem[ploc * locmem_size_xy + (jloc + 4) * locmem_size_y + (kloc + 4)] = v[pnogh + (((j + 2) % n) + vgh) * ogh + (((k + 2) % o) + vgh)];
 }
 
 // front is i-1, center is i, back is i+1
@@ -6649,35 +6649,35 @@ void jacobi_2iters_load_plane(int pglob, int ploc,
 double jacobi_2iters_apply_stencil(__local double* front, __local double* center, __local double* back, __global double* stencilValues, int svGridSize, int index_sv, int index, int joff_localmem)
 {
     // clang-format off
-        double stencilsum = stencilValues[index_sv + (9 + 3 + 1) * svGridSize] * center[index]
-            + stencilValues[index_sv + (9 + 3) * svGridSize]      * center[index - 1]
-            + stencilValues[index_sv + (9 + 3 + 2) * svGridSize]  * center[index + 1]
-            + stencilValues[index_sv + (9 + 1) * svGridSize]      * center[index - joff_localmem]
-            + stencilValues[index_sv + (9 + 6 + 1) * svGridSize]  * center[index + joff_localmem]
-            + stencilValues[index_sv + (3 + 1) * svGridSize]      * front[index]
-            + stencilValues[index_sv + (18 + 3 + 1) * svGridSize] * back[index]
+    double stencilsum = stencilValues[index_sv + (9 + 3 + 1) * svGridSize] * center[index]
+        + stencilValues[index_sv + (9 + 3) * svGridSize]      * center[index - 1]
+        + stencilValues[index_sv + (9 + 3 + 2) * svGridSize]  * center[index + 1]
+        + stencilValues[index_sv + (9 + 1) * svGridSize]      * center[index - joff_localmem]
+        + stencilValues[index_sv + (9 + 6 + 1) * svGridSize]  * center[index + joff_localmem]
+        + stencilValues[index_sv + (3 + 1) * svGridSize]      * front[index]
+        + stencilValues[index_sv + (18 + 3 + 1) * svGridSize] * back[index]
 
-            + stencilValues[index_sv + (9) * svGridSize]          * center[index - joff_localmem - 1]
-            + stencilValues[index_sv + (9 + 2) * svGridSize]      * center[index - joff_localmem + 1]
-            + stencilValues[index_sv + (9 + 6) * svGridSize]      * center[index + joff_localmem - 1]
-            + stencilValues[index_sv + (9 + 6 + 2) * svGridSize]  * center[index + joff_localmem + 1]
-            + stencilValues[svGridSize * 3 + index_sv]            * front[index - 1]
-            + stencilValues[index_sv + (3 + 2) * svGridSize]      * front[index + 1]
-            + stencilValues[index_sv + (18 + 3) * svGridSize]     * back[index - 1]
-            + stencilValues[index_sv + (18 + 3 + 2) * svGridSize] * back[index + 1]
-            + stencilValues[svGridSize + index_sv]                * front[index - joff_localmem]
-            + stencilValues[index_sv + (6 + 1) * svGridSize]      * front[index + joff_localmem]
-            + stencilValues[index_sv + (18 + 1) * svGridSize]     * back[index - joff_localmem]
-            + stencilValues[index_sv + (18 + 6 + 1) * svGridSize] * back[index + joff_localmem]
+        + stencilValues[index_sv + (9) * svGridSize]          * center[index - joff_localmem - 1]
+        + stencilValues[index_sv + (9 + 2) * svGridSize]      * center[index - joff_localmem + 1]
+        + stencilValues[index_sv + (9 + 6) * svGridSize]      * center[index + joff_localmem - 1]
+        + stencilValues[index_sv + (9 + 6 + 2) * svGridSize]  * center[index + joff_localmem + 1]
+        + stencilValues[svGridSize * 3 + index_sv]            * front[index - 1]
+        + stencilValues[index_sv + (3 + 2) * svGridSize]      * front[index + 1]
+        + stencilValues[index_sv + (18 + 3) * svGridSize]     * back[index - 1]
+        + stencilValues[index_sv + (18 + 3 + 2) * svGridSize] * back[index + 1]
+        + stencilValues[svGridSize + index_sv]                * front[index - joff_localmem]
+        + stencilValues[index_sv + (6 + 1) * svGridSize]      * front[index + joff_localmem]
+        + stencilValues[index_sv + (18 + 1) * svGridSize]     * back[index - joff_localmem]
+        + stencilValues[index_sv + (18 + 6 + 1) * svGridSize] * back[index + joff_localmem]
 
-            + stencilValues[index_sv]                           * front[index - joff_localmem - 1]
-            + stencilValues[svGridSize * 2 + index_sv]            * front[index - joff_localmem + 1]
-            + stencilValues[index_sv + (6) * svGridSize]          * front[index + joff_localmem - 1]
-            + stencilValues[index_sv + (6 + 2) * svGridSize]      * front[index + joff_localmem + 1]
-            + stencilValues[index_sv + (18) * svGridSize]         * back[index - joff_localmem - 1]
-            + stencilValues[index_sv + (18 + 2) * svGridSize]     * back[index - joff_localmem + 1]
-            + stencilValues[index_sv + (18 + 6) * svGridSize]     * back[index + joff_localmem - 1]
-            + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * back[index + joff_localmem + 1];
+        + stencilValues[index_sv]                           * front[index - joff_localmem - 1]
+        + stencilValues[svGridSize * 2 + index_sv]            * front[index - joff_localmem + 1]
+        + stencilValues[index_sv + (6) * svGridSize]          * front[index + joff_localmem - 1]
+        + stencilValues[index_sv + (6 + 2) * svGridSize]      * front[index + joff_localmem + 1]
+        + stencilValues[index_sv + (18) * svGridSize]         * back[index - joff_localmem - 1]
+        + stencilValues[index_sv + (18 + 2) * svGridSize]     * back[index - joff_localmem + 1]
+        + stencilValues[index_sv + (18 + 6) * svGridSize]     * back[index + joff_localmem - 1]
+        + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * back[index + joff_localmem + 1];
     // clang-format on
 
     // std::cout << "center[index]: " << center[index] << std::endl;
@@ -6906,71 +6906,70 @@ __kernel void jacobi_iter_27point_varying_stencil_2d_local_mem_2iters(
     int wg_size_y = get_local_size(1);
     int j = get_global_id(0);
     int k = get_global_id(1);
-        int svno = svngh * svogh;
+    int svno = svngh * svogh;
 
-        // Load last 2 and first 3 real planes into local memory
-        jacobi_2iters_load_plane(m - 2, 0, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
-        jacobi_2iters_load_plane(m - 1, 1, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
-        jacobi_2iters_load_plane(0, 2, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
-        jacobi_2iters_load_plane(1, 3, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
-        jacobi_2iters_load_plane(2, 4, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
+    // Load last 2 and first 3 real planes into local memory
+    jacobi_2iters_load_plane(m - 2, 0, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
+    jacobi_2iters_load_plane(m - 1, 1, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
+    jacobi_2iters_load_plane(0, 2, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
+    jacobi_2iters_load_plane(1, 3, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
+    jacobi_2iters_load_plane(2, 4, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    int p_outer = m - 1;
+
+    // apply stencils in locmem[1] for grid points except outer border and store in locmem[0] (t=0)
+    jacobi_2iters_apply_stencil_entire_plane(&locmem[0], &locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy],
+                                stencilValues, svGridSize, locmem_size_y, ogh, 
+                                &locmem[0], NULL, f, p_outer, ghosts_sv,svno,svogh,omega);
+
+    // apply stencils in locmem[2] for grid points except outer border and store in locmem[1] (t=0)
+    p_outer = 0;
+    // index = (p + gh) * ioff + (j + gh) * ogh + k + gh;
+    // index_sv = (p + svgh) * svno + (j + svgh) * svogh + (k + svgh);
+    jacobi_2iters_apply_stencil_entire_plane(&locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy], &locmem[3 * locmem_size_xy],
+                                stencilValues, svGridSize, locmem_size_y, ogh, 
+                                &locmem[1 * locmem_size_xy], NULL, f, p_outer, ghosts_sv,svno,svogh,omega);
+
+    // apply stencils in &locmem[3] for grid points except outer border and store in &locmem[2] (t=0)
+    p_outer = 1;
+    jacobi_2iters_apply_stencil_entire_plane(&locmem[2 * locmem_size_xy], &locmem[3 * locmem_size_xy], &locmem[4 * locmem_size_xy],
+                                stencilValues, svGridSize, locmem_size_y, ogh, 
+                                &locmem[2 * locmem_size_xy], NULL, f, p_outer, ghosts_sv,svno,svogh,omega);
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+    // apply stencils in &locmem[1] for grid points except outer 2 borders and store in global memory (t=1)
+    p_outer = 0;
+    jacobi_2iters_apply_stencil_entire_plane(&locmem[0 * locmem_size_xy], &locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy],
+                                stencilValues, svGridSize, locmem_size_y, ogh, 
+                                NULL, v_out, f, p_outer, ghosts_sv,svno,svogh,omega);
+
+    // ****** Prologue end ******
+
+    int next_buf = 0;
+    // for (int p = p_start; p < p_end; p++)
+    // p_pouter in this loop is the plane index, for which the first iteration's stencil is at its center
+    for (p_outer = 2; p_outer <= m + ghosts; p_outer++)
+    {
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        int p_outer = m - 1;
-
-        // apply stencils in locmem[1] for grid points except outer border and store in locmem[0] (t=0)
-        jacobi_2iters_apply_stencil_entire_plane(&locmem[0], &locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy],
-                                   stencilValues, svGridSize, locmem_size_y, ogh, 
-                                   &locmem[0], NULL, f, p_outer, ghosts_sv,svno,svogh,omega);
-
-        // apply stencils in locmem[2] for grid points except outer border and store in locmem[1] (t=0)
-        p_outer = 0;
-        // index = (p + gh) * ioff + (j + gh) * ogh + k + gh;
-        // index_sv = (p + svgh) * svno + (j + svgh) * svogh + (k + svgh);
-        jacobi_2iters_apply_stencil_entire_plane(&locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy], &locmem[3 * locmem_size_xy],
-                                   stencilValues, svGridSize, locmem_size_y, ogh, 
-                                   &locmem[1 * locmem_size_xy], NULL, f, p_outer, ghosts_sv,svno,svogh,omega);
-
-        // apply stencils in &locmem[3] for grid points except outer border and store in &locmem[2] (t=0)
-        p_outer = 1;
-        jacobi_2iters_apply_stencil_entire_plane(&locmem[2 * locmem_size_xy], &locmem[3 * locmem_size_xy], &locmem[4 * locmem_size_xy],
-                                   stencilValues, svGridSize, locmem_size_y, ogh, 
-                                   &locmem[2 * locmem_size_xy], NULL, f, p_outer, ghosts_sv,svno,svogh,omega);
-
+        // load next entire plane in &locmem[next_buf] (with 2 ghost layers)
+        jacobi_2iters_load_plane((p_outer + 1 >= m) ? (p_outer + 1) - m : p_outer + 1, next_buf, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
         barrier(CLK_LOCAL_MEM_FENCE);
-        // apply stencils in &locmem[1] for grid points except outer 2 borders and store in global memory (t=1)
-        p_outer = 0;
-        jacobi_2iters_apply_stencil_entire_plane(&locmem[0 * locmem_size_xy], &locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy],
-                                   stencilValues, svGridSize, locmem_size_y, ogh, 
-                                   NULL, v_out, f, p_outer, ghosts_sv,svno,svogh,omega);
 
-        // ****** Prologue end ******
+        //   apply stencils in &locmem[(next_buf-1) % 5] for grid points except outer border and store in &locmem[(next_buf-2) % 5] (t=0)
+        jacobi_2iters_apply_stencil_entire_plane(&locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 1 + 5) % 5) * locmem_size_xy], &locmem[next_buf * locmem_size_xy],
+                                stencilValues, svGridSize, locmem_size_y, ogh, 
+                                &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy], NULL, f, p_outer, ghosts_sv,svno,svogh,omega);
+        barrier(CLK_LOCAL_MEM_FENCE);
 
-        int next_buf = 0;
-        // for (int p = p_start; p < p_end; p++)
-        // p_pouter in this loop is the plane index, for which the first iteration's stencil is at its center
-        for (p_outer = 2; p_outer <= m + ghosts; p_outer++)
-        {
-            barrier(CLK_LOCAL_MEM_FENCE);
+        //   apply stencils in &locmem[(next_buf-3) % 5] for grid points except outer border and store in global memory (t=1)
+        jacobi_2iters_apply_stencil_entire_plane(&locmem[((next_buf - 4 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 3 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy],
+                                stencilValues, svGridSize, locmem_size_y, ogh, 
+                                NULL, v_out, f, p_outer - 1, ghosts_sv,svno,svogh,omega);
 
-            // load next entire plane in &locmem[next_buf] (with 2 ghost layers)
-            jacobi_2iters_load_plane((p_outer + 1 >= m) ? (p_outer + 1) - m : p_outer + 1, next_buf, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
-            barrier(CLK_LOCAL_MEM_FENCE);
-
-            //   apply stencils in &locmem[(next_buf-1) % 5] for grid points except outer border and store in &locmem[(next_buf-2) % 5] (t=0)
-            jacobi_2iters_apply_stencil_entire_plane(&locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 1 + 5) % 5) * locmem_size_xy], &locmem[next_buf * locmem_size_xy],
-                                   stencilValues, svGridSize, locmem_size_y, ogh, 
-                                   &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy], NULL, f, p_outer, ghosts_sv,svno,svogh,omega);
-            barrier(CLK_LOCAL_MEM_FENCE);
-
-            //   apply stencils in &locmem[(next_buf-3) % 5] for grid points except outer border and store in global memory (t=1)
-            jacobi_2iters_apply_stencil_entire_plane(&locmem[((next_buf - 4 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 3 + 5) % 5) * locmem_size_xy], &locmem[((next_buf - 2 + 5) % 5) * locmem_size_xy],
-                                   stencilValues, svGridSize, locmem_size_y, ogh, 
-                                    NULL, v_out, f, p_outer - 1, ghosts_sv,svno,svogh,omega);
-
-            next_buf = (next_buf + 1) % 5;
-        }
-
+        next_buf = (next_buf + 1) % 5;
+    }
 }
 
 // /**
