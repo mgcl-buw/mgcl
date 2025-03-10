@@ -2505,6 +2505,11 @@ TEST_CASE("ocl_temporal_tiling_localmem_2d_stream")
 
     jacobi_ocl_tb_2iters(args);
 
+    if (p.isProfilingEnabled())
+    {
+        p.getProfilingData()->printBestTimingsPerKernel();
+    }
+
     // Read result
     d_vout.read(p.getCommands(), &v_out_cub, true);
     mgcl::MultigridEngine::updateGhostsSeq(v_out_cub, nullptr, true, true);
