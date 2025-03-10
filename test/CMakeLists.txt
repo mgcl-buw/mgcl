@@ -108,6 +108,7 @@ add_custom_target(copy_script DEPENDS "${CMAKE_BINARY_DIR}/test/run-all.sh")
 # Whenever target 'tests_mpi' is requested, the custom target will be evaluated.
 add_dependencies(tests_mpi copy_script)
 
+# TODO not triggered, must copy manually
 # copy kernel file to build directory
 add_custom_command(
   OUTPUT "${CMAKE_BINARY_DIR}/test/kernel_optimizations.cl"

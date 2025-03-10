@@ -30,6 +30,7 @@ set(SOURCES_BENCH
     bench_residual_fixed_stencil.cpp
     bench_residual_varying_stencil.cpp
     bench_vector_valued_cuboid.cpp
+    bench_jacobi_temporal_blocking.cpp
     cli_args.hpp
     catch2_main_benchs.cpp)
 
