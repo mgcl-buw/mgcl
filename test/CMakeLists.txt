@@ -115,13 +115,13 @@ add_custom_command(
   COMMAND
     ${CMAKE_COMMAND} -E copy
     "${CMAKE_CURRENT_SOURCE_DIR}/../benchmarks/kernel_optimizations.cl"
-    "${CMAKE_BINARY_DIR}/test"
+    "${CMAKE_BINARY_DIR}/test/kernel_optimizations.cl"
   DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/../benchmarks/kernel_optimizations.cl")
 
 # Custom target for activate the custom command above
 add_custom_target(
   copy_kernel_optimizations_test
-  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/../benchmarks/kernel_optimizations.cl")
+  DEPENDS "${CMAKE_BINARY_DIR}/test/kernel_optimizations.cl")
 
 # Whenever target 'benchmarks' is requested, the custom target will be
 # evaluated.
