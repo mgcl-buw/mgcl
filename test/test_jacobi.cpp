@@ -2298,6 +2298,7 @@ TEST_CASE("ocl_temporal_tiling_localmem_2d_stream")
         double h2;
         int ghosts;
         double omega;
+        int num_x_planes;
 
         cl_program program;
         cl_command_queue commands;
@@ -2381,25 +2382,31 @@ TEST_CASE("ocl_temporal_tiling_localmem_2d_stream")
         pos_idxstart = pos;
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
         pos_storeres = pos;
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.num_x_planes);
         mgcl::mgclCheckError(err, "Setting kernel arguments");
 
         // One work-item per real grid point in a yz-plane
         // TODO adjust when not streaming along whole x-dim
-        size_t global[2] = {static_cast<size_t>(n), static_cast<size_t>(o)};
-        size_t local[2] = {args.wgsize.x, args.wgsize.y};
+        size_t num_dim_x_wis = m / args.num_x_planes;
+        size_t global[3] = {num_dim_x_wis, static_cast<size_t>(n), static_cast<size_t>(o)};
+        size_t local[3] = {1, args.wgsize.x, args.wgsize.y};
+
+        std::cout << "global: " << global[0] << " " << global[1] << " " << global[2] << std::endl;
+        std::cout << "local: " << local[0] << " " << local[1] << " " << local[2] << std::endl;
 
         // No padding of work-items. Instead, sum of wgs must match global grid size
         assert((n / args.wgsize.x) * args.wgsize.x == n && "n is not divisible by wgsize.x!");
         assert((o / args.wgsize.y) * args.wgsize.y == o && "o is not divisible by wgsize.y!");
+        assert((m / args.num_x_planes) * args.num_x_planes == m && "m is not divisible by num_x_planes!");
 
-        err = clEnqueueNDRangeKernel(args.commands, kernel, 2, NULL, global, local, 0, NULL, &ev);
+        err = clEnqueueNDRangeKernel(args.commands, kernel, 3, NULL, global, local, 0, NULL, &ev);
         mgcl::mgclCheckError(err, "Enqueueing kernel");
 
         if (args.pd)
         {
             args.pd->addMeasurement(args.commands, ev, kernelName,
-                                    {global[0], global[1], 0},
-                                    {local[0], local[1], 1});
+                                    {global[0], global[1], global[2]},
+                                    {local[0], local[1], local[2]});
         }
         mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
@@ -2420,9 +2427,13 @@ TEST_CASE("ocl_temporal_tiling_localmem_2d_stream")
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
 
     // int wg_size = 32;
-    int wg_size_x = 4; // GENERATE(4, 8);
+    int wg_size_x = GENERATE(4, 8);
     int wg_size_y = 4;
     int grid_size = mgh * ngh * ogh;
+
+    int num_x_planes = GENERATE_COPY(m, m / 2, m / 4);
+    // int num_x_planes = m / 2;
+    // int num_x_planes = m; // m / 2;
 
     int locmem_size_x = (wg_size_x + 4);
     int locmem_size_y = (wg_size_y + 4);
@@ -2490,6 +2501,7 @@ TEST_CASE("ocl_temporal_tiling_localmem_2d_stream")
         h2,
         gh,
         omega,
+        num_x_planes,
         p.getProgram(),
         p.getCommands(),
         {4, 4},

@@ -6579,10 +6579,10 @@ __kernel void jacobi_iter_27point_varying_stencil_1d(
  * - ploc: Index of plane in local memory, i.e. in range 0..4 for 2 iters
  * - jloc: get_local_id(0)
  * - kloc: get_local_id(1)
- * - loc_size_x: get_local_size(0)
- * - loc_size_y: get_local_size(1)
- * - locmem_size_x: get_local_size(0) + 2*gh_loc (gh_loc = 2 here)
- * - locmem_size_y: get_local_size(1) + 2*gh_loc
+ * - loc_size_x: get_local_size(1)
+ * - loc_size_y: get_local_size(2)
+ * - locmem_size_x: get_local_size(1) + 2*gh_loc (gh_loc = 2 here)
+ * - locmem_size_y: get_local_size(2) + 2*gh_loc
  * - locmem: Local memory buffer that gets written into
  * - v: Global memory buffer that gets read from
  * - n: Global real grid size in 2nd dim
@@ -6605,12 +6605,12 @@ void jacobi_2iters_load_plane(int pglob, int ploc,
     int locmem_size_xy = locmem_size_x * locmem_size_y;
     int pnogh = p * ngh * ogh;
     
-    int jloc = get_local_id(0);
-    int kloc = get_local_id(1);
-    int loc_size_x = get_local_size(0);
-    int loc_size_y = get_local_size(1);
-    int j = get_global_id(0);
-    int k = get_global_id(1);
+    int jloc = get_local_id(1);
+    int kloc = get_local_id(2);
+    int loc_size_x = get_local_size(1);
+    int loc_size_y = get_local_size(2);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
 
     locmem[ploc * locmem_size_xy + (jloc + 2) * locmem_size_y + (kloc + 2)] = v[pnogh + (j + vgh) * ogh + (k + vgh)]; // load self
 
@@ -6733,12 +6733,12 @@ void jacobi_2iters_apply_stencil_entire_plane (__local double* front, __local do
                                         int svgh, int svno, int svogh,
                                         double omega)
 {
-    int jloc = get_local_id(0);
-    int kloc = get_local_id(1);
-    int locmem_size_x = get_local_size(0) + 4; // + 4: ghost cells
-    int locmem_size_y = get_local_size(1) + 4; // + 4: ghost cells
+    int jloc = get_local_id(1);
+    int kloc = get_local_id(2);
+    int locmem_size_x = get_local_size(1) + 4; // + 4: ghost cells
+    int locmem_size_y = get_local_size(2) + 4; // + 4: ghost cells
     int index = (jloc + 2) * locmem_size_y + kloc + 2;
-    int index_sv = (p + svgh) * svno + (get_global_id(0) + svgh) * svogh + (get_global_id(1) + svgh);
+    int index_sv = (p + svgh) * svno + (get_global_id(1) + svgh) * svogh + (get_global_id(2) + svgh);
     // apply on real grid points
     // for_all_wis(p, [&](int jloc, int kloc, int index, int index_sv)
     // jloc, kloc: local index
@@ -6764,7 +6764,7 @@ void jacobi_2iters_apply_stencil_entire_plane (__local double* front, __local do
             index_sv_tmp = index_sv - 1;
             stencilsums[1] = center[index_tmp] + omega * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - jacobi_2iters_apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
         }
-        else if (kloc >= get_local_size(1) - 1)
+        else if (kloc >= get_local_size(2) - 1)
         {
             index_tmp = index + 1;
             index_sv_tmp = index_sv + 1;
@@ -6778,7 +6778,7 @@ void jacobi_2iters_apply_stencil_entire_plane (__local double* front, __local do
             index_sv_tmp = index_sv - joff_globalmem;
             stencilsums[2] = center[index_tmp] + omega * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - jacobi_2iters_apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
         }
-        else if (jloc >= get_local_size(0) - 1)
+        else if (jloc >= get_local_size(1) - 1)
         {
             index_tmp = index + joff_localmem;
             index_sv_tmp = index_sv + joff_globalmem;
@@ -6792,19 +6792,19 @@ void jacobi_2iters_apply_stencil_entire_plane (__local double* front, __local do
             index_sv_tmp = index_sv + (-joff_globalmem - 1);
             stencilsums[3] = center[index_tmp] + omega * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - jacobi_2iters_apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
         }
-        else if (kloc >= get_local_size(1) - 1 && jloc < 1)
+        else if (kloc >= get_local_size(2) - 1 && jloc < 1)
         {
             index_tmp = index + (-joff_localmem + 1);
             index_sv_tmp = index_sv + (-joff_globalmem + 1);
             stencilsums[3] = center[index_tmp] + omega * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - jacobi_2iters_apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
         }
-        else if (kloc < 1 && jloc >= get_local_size(0) - 1)
+        else if (kloc < 1 && jloc >= get_local_size(1) - 1)
         {
             index_tmp = index + (joff_localmem - 1);
             index_sv_tmp = index_sv + (joff_globalmem - 1);
             stencilsums[3] = center[index_tmp] + omega * (1.0 / stencilValues[index_sv_tmp + (9 + 3 + 1) * svGridSize]) * (f[index_sv_tmp] - jacobi_2iters_apply_stencil(front, center, back, stencilValues, svGridSize, index_sv_tmp, index_tmp, joff_localmem));
         }
-        else if (kloc >= get_local_size(1) - 1 && jloc >= get_local_size(0) - 1)
+        else if (kloc >= get_local_size(2) - 1 && jloc >= get_local_size(1) - 1)
         {
             index_tmp = index + (joff_localmem + 1);
             index_sv_tmp = index_sv + (joff_globalmem + 1);
@@ -6824,7 +6824,7 @@ void jacobi_2iters_apply_stencil_entire_plane (__local double* front, __local do
             index_sv_tmp = index_sv - 1;
             locmem_store_base[(jloc + 2) * locmem_size_y + kloc + 1] = stencilsums[1];
         }
-        else if (kloc >= get_local_size(1) - 1)
+        else if (kloc >= get_local_size(2) - 1)
         {
             index_tmp = index + 1;
             index_sv_tmp = index_sv + 1;
@@ -6838,7 +6838,7 @@ void jacobi_2iters_apply_stencil_entire_plane (__local double* front, __local do
             index_sv_tmp = index_sv - joff_globalmem;
             locmem_store_base[(jloc + 1) * locmem_size_y + kloc + 2] = stencilsums[2];
         }
-        else if (jloc >= get_local_size(0) - 1)
+        else if (jloc >= get_local_size(1) - 1)
         {
             index_tmp = index + joff_localmem;
             index_sv_tmp = index_sv + joff_globalmem;
@@ -6852,19 +6852,19 @@ void jacobi_2iters_apply_stencil_entire_plane (__local double* front, __local do
             index_sv_tmp = index_sv + (-joff_globalmem - 1);
             locmem_store_base[(jloc + 1) * locmem_size_y + kloc + 1] = stencilsums[3];
         }
-        else if (kloc >= get_local_size(1) - 1 && jloc < 1)
+        else if (kloc >= get_local_size(2) - 1 && jloc < 1)
         {
             index_tmp = index + (-joff_localmem + 1);
             index_sv_tmp = index_sv + (-joff_globalmem + 1);
             locmem_store_base[(jloc + 1) * locmem_size_y + kloc + 3] = stencilsums[3];
         }
-        else if (kloc < 1 && jloc >= get_local_size(0) - 1)
+        else if (kloc < 1 && jloc >= get_local_size(1) - 1)
         {
             index_tmp = index + (joff_localmem - 1);
             index_sv_tmp = index_sv + (joff_globalmem - 1);
             locmem_store_base[(jloc + 3) * locmem_size_y + kloc + 1] = stencilsums[3];
         }
-        else if (kloc >= get_local_size(1) - 1 && jloc >= get_local_size(0) - 1)
+        else if (kloc >= get_local_size(2) - 1 && jloc >= get_local_size(1) - 1)
         {
             index_tmp = index + (joff_localmem + 1);
             index_sv_tmp = index_sv + (joff_globalmem + 1);
@@ -6883,6 +6883,8 @@ void jacobi_2iters_apply_stencil_entire_plane (__local double* front, __local do
  * Calculates 2 Jacobi iterations using temporal blocking and local memory.
  * Needs to be called as 2d kernel with one work-item per real grid point in a yz-plane.
  * Streams along the x-dimension.
+ * num_x_planes: Determines the amount of x-planes to stream over. Start and stop is determined by work-group x-index, i.e. get_group_id(0).
+ *   Thus, the kernel must be called with (grid_size_m / num_x_planes) * wg_x * wg_y work-items, where global grid size m must be dividable by num_x_planes.
  */
 __kernel void jacobi_iter_27point_varying_stencil_2d_local_mem_2iters(
     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
@@ -6897,26 +6899,29 @@ __kernel void jacobi_iter_27point_varying_stencil_2d_local_mem_2iters(
     const int svmgh, const int svngh, const int svogh,
     const int ghosts, const int ghosts_sv, 
     const int svGridSize,
-    const int idx_start, const int store_residual)
+    const int idx_start, const int store_residual,
+    const int num_x_planes)
 {
-    int locmem_size_x = get_local_size(0) + 4; // + 4: ghost cells
-    int locmem_size_y = get_local_size(1) + 4; // + 4: ghost cells
+    int locmem_size_x = get_local_size(1) + 4; // + 4: ghost cells
+    int locmem_size_y = get_local_size(2) + 4; // + 4: ghost cells
     int locmem_size_xy = locmem_size_x * locmem_size_y;
-    int wg_size_x = get_local_size(0);
-    int wg_size_y = get_local_size(1);
-    int j = get_global_id(0);
-    int k = get_global_id(1);
+    int wg_size_x = get_local_size(1);
+    int wg_size_y = get_local_size(2);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
     int svno = svngh * svogh;
+    
+    int p = get_global_id(0) * num_x_planes;
 
     // Load last 2 and first 3 real planes into local memory
-    jacobi_2iters_load_plane(m - 2, 0, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
-    jacobi_2iters_load_plane(m - 1, 1, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
-    jacobi_2iters_load_plane(0, 2, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
-    jacobi_2iters_load_plane(1, 3, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
-    jacobi_2iters_load_plane(2, 4, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
+    jacobi_2iters_load_plane(p == 0 ? m - 2 : p - 2, 0, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
+    jacobi_2iters_load_plane(p == 0 ? m - 1 : p - 1, 1, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
+    jacobi_2iters_load_plane(p, 2, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
+    jacobi_2iters_load_plane(p + 1, 3, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
+    jacobi_2iters_load_plane(p + 2, 4, locmem_size_x, locmem_size_y, locmem, v_in, n, o, ngh, ogh, ghosts);
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    int p_outer = m - 1;
+    int p_outer = p == 0 ? m - 1 : p - 1;
 
     // apply stencils in locmem[1] for grid points except outer border and store in locmem[0] (t=0)
     jacobi_2iters_apply_stencil_entire_plane(&locmem[0], &locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy],
@@ -6924,7 +6929,7 @@ __kernel void jacobi_iter_27point_varying_stencil_2d_local_mem_2iters(
                                 &locmem[0], NULL, f, p_outer, ghosts_sv,svno,svogh,omega);
 
     // apply stencils in locmem[2] for grid points except outer border and store in locmem[1] (t=0)
-    p_outer = 0;
+    p_outer = p;
     // index = (p + gh) * ioff + (j + gh) * ogh + k + gh;
     // index_sv = (p + svgh) * svno + (j + svgh) * svogh + (k + svgh);
     jacobi_2iters_apply_stencil_entire_plane(&locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy], &locmem[3 * locmem_size_xy],
@@ -6932,14 +6937,14 @@ __kernel void jacobi_iter_27point_varying_stencil_2d_local_mem_2iters(
                                 &locmem[1 * locmem_size_xy], NULL, f, p_outer, ghosts_sv,svno,svogh,omega);
 
     // apply stencils in &locmem[3] for grid points except outer border and store in &locmem[2] (t=0)
-    p_outer = 1;
+    p_outer = p + 1;
     jacobi_2iters_apply_stencil_entire_plane(&locmem[2 * locmem_size_xy], &locmem[3 * locmem_size_xy], &locmem[4 * locmem_size_xy],
                                 stencilValues, svGridSize, locmem_size_y, ogh, 
                                 &locmem[2 * locmem_size_xy], NULL, f, p_outer, ghosts_sv,svno,svogh,omega);
 
     barrier(CLK_LOCAL_MEM_FENCE);
     // apply stencils in &locmem[1] for grid points except outer 2 borders and store in global memory (t=1)
-    p_outer = 0;
+    p_outer = p;
     jacobi_2iters_apply_stencil_entire_plane(&locmem[0 * locmem_size_xy], &locmem[1 * locmem_size_xy], &locmem[2 * locmem_size_xy],
                                 stencilValues, svGridSize, locmem_size_y, ogh, 
                                 NULL, v_out, f, p_outer, ghosts_sv,svno,svogh,omega);
@@ -6949,7 +6954,7 @@ __kernel void jacobi_iter_27point_varying_stencil_2d_local_mem_2iters(
     int next_buf = 0;
     // for (int p = p_start; p < p_end; p++)
     // p_pouter in this loop is the plane index, for which the first iteration's stencil is at its center
-    for (p_outer = 2; p_outer <= m + ghosts; p_outer++)
+    for (p_outer = p + 2; p_outer <= p + num_x_planes + 1; p_outer++)
     {
         barrier(CLK_LOCAL_MEM_FENCE);
 
