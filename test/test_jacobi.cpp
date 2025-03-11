@@ -2391,9 +2391,6 @@ TEST_CASE("ocl_temporal_tiling_localmem_2d_stream")
         size_t global[3] = {num_dim_x_wis, static_cast<size_t>(n), static_cast<size_t>(o)};
         size_t local[3] = {1, args.wgsize.x, args.wgsize.y};
 
-        std::cout << "global: " << global[0] << " " << global[1] << " " << global[2] << std::endl;
-        std::cout << "local: " << local[0] << " " << local[1] << " " << local[2] << std::endl;
-
         // No padding of work-items. Instead, sum of wgs must match global grid size
         assert((n / args.wgsize.x) * args.wgsize.x == n && "n is not divisible by wgsize.x!");
         assert((o / args.wgsize.y) * args.wgsize.y == o && "o is not divisible by wgsize.y!");

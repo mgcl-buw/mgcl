@@ -20,6 +20,22 @@ namespace bench_util
         int o;
     };
 
+    struct ResultJacobiTempBlock
+    {
+        std::string name;
+        double minTime;
+        double medianTime;
+        double avgTime;
+        double medianAbsolutePercentError;
+        int m;
+        int n;
+        int o;
+        int wgx;
+        int wgy;
+        int wgz;
+        int num_x_planes;
+    };
+
     struct ResultGhosts
     {
         std::string name;
@@ -192,6 +208,32 @@ namespace bench_util
         {
             ss << r.name << ";"
                << r.m << ";" << r.n << ";" << r.o
+               << ";" << std::setprecision(17) << r.minTime
+               << ";" << std::setprecision(17) << r.medianTime
+               << ";" << std::setprecision(17) << r.avgTime
+               << ";" << std::setprecision(4) << r.medianAbsolutePercentError << "%"
+               << std::endl;
+        }
+        ss << "***DATAEND***" << std::endl;
+        std::string output = ss.str();
+        std::replace(output.begin(), output.end(), '.', ',');
+        std::cout << output;
+    }
+
+    inline void printCsvFormat(std::vector<ResultJacobiTempBlock> results)
+    {
+        // print min times
+        std::stringstream ss;
+        ss << std::endl;
+        ss << "***DATASTART***" << std::endl;
+        // ss << "gpus;spi;iters;name;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+        ss << "name;m;n;o;wgx;wgy;wgz;num_x_planes;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+        for (auto r : results)
+        {
+            ss << r.name << ";"
+               << r.m << ";" << r.n << ";" << r.o << ";"
+               << r.wgx << ";" << r.wgy << ";" << r.wgz << ";"
+               << r.num_x_planes
                << ";" << std::setprecision(17) << r.minTime
                << ";" << std::setprecision(17) << r.medianTime
                << ";" << std::setprecision(17) << r.avgTime

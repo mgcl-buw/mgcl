@@ -14,6 +14,7 @@
 #include <CL/cl.h>
 #include <catch2/catch_message.hpp>
 #include <chrono>
+#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -44,6 +45,7 @@ namespace mgcl_bench_residual_varying
         double h2;
         int ghosts;
         double omega;
+        int num_x_planes;
 
         cl_program program;
         cl_command_queue commands;
@@ -127,25 +129,28 @@ namespace mgcl_bench_residual_varying
         pos_idxstart = pos;
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
         pos_storeres = pos;
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.num_x_planes);
         mgcl::mgclCheckError(err, "Setting kernel arguments");
 
         // One work-item per real grid point in a yz-plane
         // TODO adjust when not streaming along whole x-dim
-        size_t global[2] = {static_cast<size_t>(n), static_cast<size_t>(o)};
-        size_t local[2] = {args.wgsize.x, args.wgsize.y};
+        size_t num_dim_x_wis = m / args.num_x_planes;
+        size_t global[3] = {num_dim_x_wis, static_cast<size_t>(n), static_cast<size_t>(o)};
+        size_t local[3] = {1, args.wgsize.x, args.wgsize.y};
 
         // No padding of work-items. Instead, sum of wgs must match global grid size
         assert((n / args.wgsize.x) * args.wgsize.x == n && "n is not divisible by wgsize.x!");
         assert((o / args.wgsize.y) * args.wgsize.y == o && "o is not divisible by wgsize.y!");
+        assert((m / args.num_x_planes) * args.num_x_planes == m && "m is not divisible by num_x_planes!");
 
-        err = clEnqueueNDRangeKernel(args.commands, kernel, 2, NULL, global, local, 0, NULL, &ev);
+        err = clEnqueueNDRangeKernel(args.commands, kernel, 3, NULL, global, local, 0, NULL, &ev);
         mgcl::mgclCheckError(err, "Enqueueing kernel");
 
         if (args.pd)
         {
             args.pd->addMeasurement(args.commands, ev, kernelName,
-                                    {global[0], global[1], 0},
-                                    {local[0], local[1], 1});
+                                    {global[0], global[1], global[2]},
+                                    {local[0], local[1], local[2]});
         }
         mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
@@ -170,7 +175,7 @@ namespace mgcl_bench_residual_varying
                     for (int o = CLI_ARGS::gridsMin[2]; o <= CLI_ARGS::gridsMax[2]; o *= 2)
                         gridsTBT.push_back({m, n, o});
 
-        std::vector<bench_util::Result> results;
+        std::vector<bench_util::ResultJacobiTempBlock> results;
 
         // // Create dummy problem to initialize OpenCL
         // auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
@@ -189,6 +194,7 @@ namespace mgcl_bench_residual_varying
         int ghosts = 1;
 
         std::vector<std::vector<size_t>> wg_sizes{{4, 4}, {4, 8}, {8, 8}, {8, 16}, {16, 16}};
+        std::vector<size_t> num_x_planes_divisors{1, 2, 4}; // divisors for num_x_planes, i.e. num_x_planes = m / num_x_planes_divisor
 
         for (auto gr : gridsTBT)
         {
@@ -248,11 +254,11 @@ namespace mgcl_bench_residual_varying
             }
 
             {
-                std::string name = std::string("jacobi_globmem_one_iter_per_kernel_call")
+                std::string name = std::string("jacobi_globmem_one_iter_per_kernel_call_mxnxno")
                                        .append(std::to_string(m))
-                                       .append("_")
+                                       .append("x")
                                        .append(std::to_string(n))
-                                       .append("_")
+                                       .append("x")
                                        .append(std::to_string(o));
 
                 bench.run(std::string(name).c_str(), [&] { //
@@ -260,7 +266,7 @@ namespace mgcl_bench_residual_varying
                     p.finish();
                 });
 
-                bench_util::Result res;
+                bench_util::ResultJacobiTempBlock res;
                 res.name = name;
                 res.minTime = bench_util::getMinTime(bench, name);
                 res.medianTime = bench_util::getMedianTime(bench, name);
@@ -269,6 +275,11 @@ namespace mgcl_bench_residual_varying
                 res.m = m;
                 res.n = n;
                 res.o = o;
+                const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(p.getKernelConfig(), "jacobi_iter_27point_varying_stencil_1d", 1);
+                res.wgx = c[0];
+                res.wgy = c[1];
+                res.wgz = c[2];
+                res.num_x_planes = 0;
                 results.push_back(res);
 
                 // if (CLI_ARGS::checkResults)
@@ -279,107 +290,118 @@ namespace mgcl_bench_residual_varying
             }
 
             {
-
                 for (auto wg : wg_sizes)
                 {
+                    for (auto xpdiv : num_x_planes_divisors)
+                    {
 
-                    size_t wg_size_x = wg[0]; // GENERATE(4, 8);
-                    size_t wg_size_y = wg[1];
-                    int grid_size = mgh * ngh * ogh;
+                        size_t wg_size_x = wg[0]; // GENERATE(4, 8);
+                        size_t wg_size_y = wg[1];
+                        int grid_size = mgh * ngh * ogh;
+                        int num_x_planes = m / xpdiv;
 
-                    int locmem_size_x = (wg_size_x + 4);
-                    int locmem_size_y = (wg_size_y + 4);
-                    int locmem_size_xy = locmem_size_x * locmem_size_y;
+                        JacobiTBArgs args{
+                            false,
+                            m,
+                            n,
+                            o,
+                            mgh,
+                            ngh,
+                            ogh,
+                            h2,
+                            ghosts,
+                            omega,
+                            num_x_planes,
+                            p.getProgram(),
+                            p.getCommands(),
+                            {wg_size_x, wg_size_y},
+                            // c_dVIn,
+                            // c_dVOut,
+                            // c_dF,
+                            // c_dR,
+                            // *c_dSv,
+                            lv0.getDVIn(),
+                            lv0.getDVOut(),
+                            lv0.getDF(),
+                            lv0.getDR(),
+                            *lv0.getStencilValuesGpu(),
+                            p.getProfilingData(),
+                            0,
+                            0,
+                            0};
 
-                    JacobiTBArgs args{
-                        false,
-                        m,
-                        n,
-                        o,
-                        mgh,
-                        ngh,
-                        ogh,
-                        h2,
-                        ghosts,
-                        omega,
-                        p.getProgram(),
-                        p.getCommands(),
-                        {wg_size_x, wg_size_y},
-                        // c_dVIn,
-                        // c_dVOut,
-                        // c_dF,
-                        // c_dR,
-                        // *c_dSv,
-                        lv0.getDVIn(),
-                        lv0.getDVOut(),
-                        lv0.getDF(),
-                        lv0.getDR(),
-                        *lv0.getStencilValuesGpu(),
-                        p.getProfilingData(),
-                        0,
-                        0,
-                        0};
+                        // m must be divisable by num_x_planes_divisor and n,o must be divisable by wg_size
+                        if ((m / num_x_planes) * num_x_planes != m || (n / args.wgsize.x) * args.wgsize.x != n || (o / args.wgsize.y) * args.wgsize.y != o)
+                        {
+                            continue;
+                        }
 
-                    std::string name = std::string("jacobi_tempblock_2iters_wg")
-                                           .append(std::to_string(wg_size_x))
-                                           .append("x")
-                                           .append(std::to_string(wg_size_y))
-                                           .append("_")
-                                           .append(std::to_string(m))
-                                           .append("_")
-                                           .append(std::to_string(n))
-                                           .append("_")
-                                           .append(std::to_string(o));
+                        std::string name = std::string("jacobi_tempblock_2iters_wg")
+                                               .append(std::to_string(wg_size_x))
+                                               .append("x")
+                                               .append(std::to_string(wg_size_y))
+                                               .append("_num-x-planes")
+                                               .append(std::to_string(num_x_planes))
+                                               .append("_mxnxo")
+                                               .append(std::to_string(m))
+                                               .append("x")
+                                               .append(std::to_string(n))
+                                               .append("x")
+                                               .append(std::to_string(o));
 
-                    bench.run(std::string(name).c_str(), [&] { //
-                        // Update ghosts before and after to match globmem jacobi more closely
-                        int err = mgcl::MultigridEngine::updateGhosts(p, args.c_dVIn,
+                        bench.run(std::string(name).c_str(), [&] { //
+                            // Update ghosts before and after to match globmem jacobi more closely
+                            int err = mgcl::MultigridEngine::updateGhosts(p, args.c_dVIn,
+                                                                          nullptr, true);
+                            mgcl::mgclCheckError(err, "Updating ghosts");
+
+                            jacobi_ocl_tb_2iters(args);
+
+                            err = mgcl::MultigridEngine::updateGhosts(p, args.c_dVOut,
                                                                       nullptr, true);
-                        mgcl::mgclCheckError(err, "Updating ghosts");
+                            mgcl::mgclCheckError(err, "Updating ghosts");
+                            p.finish();
+                        });
 
-                        jacobi_ocl_tb_2iters(args);
+                        bench_util::ResultJacobiTempBlock res;
+                        res.name = name;
+                        res.minTime = bench_util::getMinTime(bench, name);
+                        res.medianTime = bench_util::getMedianTime(bench, name);
+                        res.avgTime = bench_util::getAvgTime(bench, name);
+                        res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                        res.m = m;
+                        res.n = n;
+                        res.o = o;
+                        res.wgx = 1;
+                        res.wgy = wg_size_x;
+                        res.wgz = wg_size_y;
+                        res.num_x_planes = num_x_planes;
+                        results.push_back(res);
 
-                        err = mgcl::MultigridEngine::updateGhosts(p, args.c_dVOut,
-                                                                  nullptr, true);
-                        mgcl::mgclCheckError(err, "Updating ghosts");
-                        p.finish();
-                    });
+                        // if (CLI_ARGS::checkResults)
+                        // {
+                        //     r_out_globmem_1iter_per_call = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                        //     lv0.getDVIn().read(p.getCommands(), r_out_globmem_1iter_per_call.get(), true);
+                        // } }
+                    }
+                }
 
-                    bench_util::Result res;
-                    res.name = name;
-                    res.minTime = bench_util::getMinTime(bench, name);
-                    res.medianTime = bench_util::getMedianTime(bench, name);
-                    res.avgTime = bench_util::getAvgTime(bench, name);
-                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                    res.m = m;
-                    res.n = n;
-                    res.o = o;
-                    results.push_back(res);
-
-                    // if (CLI_ARGS::checkResults)
-                    // {
-                    //     r_out_globmem_1iter_per_call = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                    //     lv0.getDVIn().read(p.getCommands(), r_out_globmem_1iter_per_call.get(), true);
-                    // }
+                // Check results for kernels that it is valid for
+                // if (CLI_ARGS::checkResults)
+                // {
+                //     REQUIRE(r_out_global_coeffs_first->isEqual(*r_out_global_coeffs_4_gp_per_thread));
+                // }
+                if (CLI_ARGS::enableKernelProfiling)
+                {
+                    p.getProfilingData()->printBestTimingsPerKernel();
                 }
             }
 
-            // Check results for kernels that it is valid for
-            // if (CLI_ARGS::checkResults)
+            // if (CLI_ARGS::enableKernelProfiling)
             // {
-            //     REQUIRE(r_out_global_coeffs_first->isEqual(*r_out_global_coeffs_4_gp_per_thread));
+            //     p.getProfilingData()->printBestTimingsPerKernel();
             // }
-            if (CLI_ARGS::enableKernelProfiling)
-            {
-                p.getProfilingData()->printBestTimingsPerKernel();
-            }
         }
-
         bench_util::printCsvFormat(results);
-
-        // if (CLI_ARGS::enableKernelProfiling)
-        // {
-        //     p.getProfilingData()->printBestTimingsPerKernel();
-        // }
     }
 }
