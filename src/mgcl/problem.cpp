@@ -952,16 +952,6 @@ namespace mgcl
         read_results = readResults;
     }
 
-    int Problem::getJacobiWgSizeX() const
-    {
-        return jacobi_wg_size_x;
-    }
-
-    void Problem::setJacobiWgSizeX(int jacobiWgSizeX)
-    {
-        jacobi_wg_size_x = jacobiWgSizeX;
-    }
-
     int Problem::getJacobiIterationsPerKernel() const
     {
         return jacobi_iterations_per_kernel;
@@ -1102,26 +1092,6 @@ namespace mgcl
     void Problem::setCopyBufferData(bool copyBufferData)
     {
         copy_buffer_data = copyBufferData;
-    }
-
-    bool Problem::getUseLocalMemory() const
-    {
-        return use_local_memory;
-    }
-
-    void Problem::setUseLocalMemory(bool useLocalMemory)
-    {
-        use_local_memory = useLocalMemory;
-    }
-
-    int Problem::getJacobiWgSizeY() const
-    {
-        return jacobi_wg_size_y;
-    }
-
-    void Problem::setJacobiWgSizeY(int jacobiWgSizeY)
-    {
-        jacobi_wg_size_y = jacobiWgSizeY;
     }
 
     bool Problem::getUseOpencl() const

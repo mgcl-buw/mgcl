@@ -66,7 +66,6 @@ namespace mgcl
                                 bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
                                 int stepsPerIter = 1, MPILevelData* mpiData = nullptr);
         static double jacobi(Problem& problem, Level& level, int maxiter, bool returnResidual, int stepsPerIter = 1);
-        static double jacobiLocalMem(Problem& problem, Level& level, int maxiter, int returnResidual);
 
         static std::unique_ptr<VaryingStencil> galerkinOptimized(VaryingStencil& a_h, int gh_a2h,
                                                                  int resm, int resn, int reso);

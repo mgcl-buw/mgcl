@@ -134,17 +134,6 @@ namespace mgcl
         /* If true, resulting v is read from device to host when mgcl has finished. Defaults to 0 (not reading results). */
         bool read_results = false;
 
-        /* If true, optimized jacobi version is used which calculates multiple iterations in one kernel call using local
-         * memory. ghosts must be equal to iteration count per kernel call which is limited by local memory size of the
-         * device. Defaults to false. */
-        bool use_local_memory = false;
-
-        /* Preferred work-group size in x-dimension for jacobi smoother. Defaults to 16. */
-        int jacobi_wg_size_x = 16;
-
-        /* Preferred work-group size in y-dimension for jacobi smoother. Defaults to 16. */
-        int jacobi_wg_size_y = 16;
-
         /* Preferred iterations per jacobi kernel call. Is only used when use_local_memory is true. Defaults to 1.
          * Gets automatically decreased if nu1, nu2 or ghosts are smaller. */
         int jacobi_iterations_per_kernel = 1;

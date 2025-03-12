@@ -51,10 +51,7 @@ TEST_CASE("Problem conf")
         REQUIRE(p.getReuseOpenclBuffers() == false);
         REQUIRE(p.getCopyBufferData() == false);
         REQUIRE(p.getReadResults() == false);
-        REQUIRE(p.getUseLocalMemory() == false);
 
-        REQUIRE(p.getJacobiWgSizeX() == 16);
-        REQUIRE(p.getJacobiWgSizeY() == 16);
         REQUIRE(p.getJacobiIterationsPerKernel() == 1);
     }
 }
