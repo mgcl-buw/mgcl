@@ -2283,6 +2283,7 @@ TEST_CASE("ocl_temporal_tiling_localmem_2d_stream")
     auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
     auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
     mgcl::Problem p(m, n, o, f_dummy, v_dummy);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
     p.setUseOpencl(true);
     p.setKernelFile("kernel_optimizations.cl");
     p.setPrintKernelLog(true);
