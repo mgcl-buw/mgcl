@@ -34,7 +34,8 @@ namespace mgcl_bench_residual_varying
         COEFFS_FIRST,
         REMOVED_V,
         // COEFFS_WITHOUT_GHOSTS // not needed, using COEFFS_FIRST for this
-        FOUR_GP_PER_WI
+        FOUR_GP_PER_WI,
+        COEFF_INDICES_PRECALC
     };
 
     using size_t3 = struct
@@ -89,6 +90,11 @@ namespace mgcl_bench_residual_varying
      */
     double residual(ResidualArgs& args)
     {
+        if (args.kernelVersion == KernelVersion::COEFF_INDICES_PRECALC && args.mgh != 66)
+        {
+            throw "COEFF_INDICES_PRECALC needs grid 64^3 with 1 ghosts";
+        }
+
         int err;
         double res = 0.0;
         int m = args.mgh - 2 * args.ghosts;
@@ -156,6 +162,10 @@ namespace mgcl_bench_residual_varying
         {
             kernelName = "residual_27point_varying_stencil_coeffs_first_4_gps_per_thread";
         }
+        else if (args.kernelVersion == KernelVersion::COEFF_INDICES_PRECALC)
+        {
+            kernelName = "residual_27point_varying_stencil_coeffs_first_indices_precalc_64";
+        }
 
         cl_event ev;
 
@@ -177,7 +187,8 @@ namespace mgcl_bench_residual_varying
         {
             if (args.kernelVersion == KernelVersion::COEFFS_FIRST ||
                 args.kernelVersion == KernelVersion::REMOVED_V ||
-                args.kernelVersion == KernelVersion::FOUR_GP_PER_WI)
+                args.kernelVersion == KernelVersion::FOUR_GP_PER_WI ||
+                args.kernelVersion == KernelVersion::COEFF_INDICES_PRECALC)
             {
                 auto svbuf = args.c_stencilValues->getBuf();
                 int svgh = args.c_stencilValues->getGh();
@@ -198,7 +209,10 @@ namespace mgcl_bench_residual_varying
                 err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svogh);
                 err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ghosts);
                 err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
-                err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
+                if (args.kernelVersion != KernelVersion::COEFF_INDICES_PRECALC)
+                {
+                    err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
+                }
                 err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.moff);
                 err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.noff);
                 err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ooff);
@@ -415,6 +429,7 @@ namespace mgcl_bench_residual_varying
                 .relative(false);
 
             std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first = nullptr;
+            // std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_indices_precalc = nullptr;
             // std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_without_ghosts = nullptr;
             std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_4_gp_per_thread = nullptr;
             if (CLI_ARGS::checkResults)
@@ -452,6 +467,39 @@ namespace mgcl_bench_residual_varying
                     r_out_global_coeffs_first = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
                     args.c_dR.read(args.commands, r_out_global_coeffs_first.get(), true);
                 }
+            }
+
+            if (m == 64)
+            {
+                args.kernelVersion = KernelVersion::COEFF_INDICES_PRECALC;
+                std::string name = std::string("residual_varying_stencil_coeff_indices_precalc_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    residual(args);
+                    p.finish();
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+
+                // if (CLI_ARGS::checkResults)
+                // {
+                //     r_out_global_coeffs_first = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                //     args.c_dR.read(args.commands, r_out_global_coeffs_first.get(), true);
+                // }
             }
 
             {

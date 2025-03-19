@@ -5708,6 +5708,92 @@ __kernel void residual_27point_varying_stencil_coeffs_first(
 }
 
 /* Calculates residual without dinv.
+   Indices of coeffs are precalculated for a fixed grid size and amount of ghosts. */
+__kernel void residual_27point_varying_stencil_coeffs_first_indices_precalc_64(
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict f,
+    __global double* restrict r,
+    __global double* restrict stencilValues,
+    const int mgh, const int ngh, const int ogh,
+    const int svmgh, const int svngh, const int svogh,
+    const int ghosts, const int ghosts_sv,
+    const int moff, const int noff, const int ooff)
+
+{
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
+
+    // loop boundaries
+    // TODO maybe refactor to use v_ghm, etc.?
+    int istart_v = ghosts + moff;
+    int jstart_v = ghosts + noff;
+    int kstart_v = ghosts + ooff;
+    int iend_v = mgh - ghosts - moff;
+    int jend_v = ngh - ghosts - noff;
+    int kend_v = ogh - ghosts - ooff;
+
+    // calculate residual only for relevant cells (off = 0: only real cells)
+    if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
+    {
+        int index = i * ngh * ogh + j * ogh + k;
+
+        int svno = svngh * svogh;
+        // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
+        int index_sv = (i - ghosts + ghosts_sv) * svno + (j - ghosts + ghosts_sv) * svogh + (k - ghosts + ghosts_sv);
+
+        // if (i == 2 && j == 2 && k == 2)
+        // {
+        //     printf("i,j,k,mgh,ngh,ogh,gh,gh_sv,index_sv,gridsize: %d,%d,%d,%d,%d,%d,%d,%d,%d,%d\ngh", i, j, k, mgh, ngh, ogh, ghosts, ghosts_sv, index_sv, gridsize);
+        // }
+
+        // A*v
+        // clang-format off
+        double stencilsum = stencilValues[index_sv + 3737448] * v_in[index]
+            + stencilValues[index_sv + 3449952]      * v_in[index - 1]
+            + stencilValues[index_sv + 4024944]  * v_in[index + 1]
+            + stencilValues[index_sv + 2874960]      * v_in[index - 66]
+            + stencilValues[index_sv + 4599936]  * v_in[index + 66]
+            + stencilValues[index_sv + 1149984]      * v_in[index - 4356]
+            + stencilValues[index_sv + 6324912] * v_in[index + 4356]
+            
+            + stencilValues[index_sv + 2587464]          * v_in[index - 67]
+            + stencilValues[index_sv + 3162456]      * v_in[index - 65]
+            + stencilValues[index_sv + 4312440]      * v_in[index + 65]
+            + stencilValues[index_sv + 4887432]  * v_in[index + 67]
+            + stencilValues[index_sv + 862488]            * v_in[index - 4357]
+            + stencilValues[index_sv + 1437480]      * v_in[index - 4355]
+            + stencilValues[index_sv + 6037416]     * v_in[index + 4355]
+            + stencilValues[index_sv + 6612408] * v_in[index + 4357]
+            + stencilValues[index_sv + 287496]                * v_in[index - 4422]
+            + stencilValues[index_sv + 2012472]      * v_in[index - 4290]
+            + stencilValues[index_sv + 5462424]     * v_in[index + 4290]
+            + stencilValues[index_sv + 7187400] * v_in[index + 4422]
+
+            + stencilValues[index_sv]                           * v_in[index - 4423]
+            + stencilValues[index_sv + 574992]            * v_in[index - 4421]
+            + stencilValues[index_sv + 1724976]          * v_in[index + (-4291)]
+            + stencilValues[index_sv + 2299968]      * v_in[index + (-4289)]
+            + stencilValues[index_sv + 5174928]         * v_in[index + (4289)]
+            + stencilValues[index_sv + 5749920]     * v_in[index + (4291)]
+            + stencilValues[index_sv + 6899904]     * v_in[index + (4421)]
+            + stencilValues[index_sv + 7474896] * v_in[index + (4423)];
+        // clang-format on
+
+        // if (i == 2 && j == 2 && k == 2)
+        // {
+        //     printf("ocl stencilsum = %e\n", stencilsum);
+        //     print27point_sv(v_in, index, ioff, joff, koff, stencilValues, index_sv);
+        // }
+
+        // r = f - A*v
+        r[index] = f[index] - stencilsum;
+    }
+}
+
+/* Calculates residual without dinv.
  * Calculates 4 grid points per work-item to increase ILP.
  */
 __kernel void residual_27point_varying_stencil_coeffs_first_4_gps_per_thread(
