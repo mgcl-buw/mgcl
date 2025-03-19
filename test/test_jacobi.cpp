@@ -1061,7 +1061,7 @@ TEST_CASE("jacobi_ocl_fixed")
 // Tests local memory kernel using temporal tiling, i.e. doing multiple iterations in one kernel call,
 // but without the need of having more than one ghost layer at each border.
 // 2d kernel that loops over the 1st dimension. One wi per real grid point.
-TEST_CASE("seq_temporal_tiling_localmem_2d_stream")
+TEST_CASE("seq_temporal_tiling_localmem_2d_stream", "[.]")
 {
 
     // kernel
@@ -2089,7 +2089,7 @@ TEST_CASE("seq_temporal_tiling_localmem_2d_stream")
     }
 }
 
-TEST_CASE("ocl_temporal_tiling_localmem_2d_stream")
+TEST_CASE("ocl_temporal_tiling_localmem_2d_stream", "[.]")
 {
     using size_t2 = struct
     {
