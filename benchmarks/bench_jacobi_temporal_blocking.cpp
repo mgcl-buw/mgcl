@@ -193,8 +193,8 @@ namespace mgcl_bench_residual_varying
 
         int ghosts = 1;
 
-        std::vector<std::vector<size_t>> wg_sizes{{4, 4}, {4, 8}, {8, 8}, {8, 16}, {16, 16}};
-        std::vector<size_t> num_x_planes_divisors{1, 2, 4}; // divisors for num_x_planes, i.e. num_x_planes = m / num_x_planes_divisor
+        std::vector<std::vector<size_t>> wg_sizes{{4, 4}, {4, 8}, {8, 8}, {8, 16}, {16, 16}, {4, 32}, {8, 32}, {4, 64}, {2, 32}, {2, 64}};
+        std::vector<size_t> num_x_planes_divisors{1, 2, 4, 8}; // divisors for num_x_planes, i.e. num_x_planes = m / num_x_planes_divisor
 
         for (auto gr : gridsTBT)
         {
