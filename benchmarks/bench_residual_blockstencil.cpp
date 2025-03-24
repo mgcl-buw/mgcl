@@ -34,10 +34,10 @@ namespace mgcl_bench_residual_blockstencil
 {
     enum class KernelVersion
     {
-        COEFFS_FIRST_V_GP_FIRST,    // [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [mx][my][gpx][gpy][gpz] for v, f, r
-        COEFFS_FIRST_V_BLOCK_FIRST, // [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][mx][my] for v, f, r
-        BLOCK_FIRST_V_GP_FIRST,     // [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [mx][my][gpx][gpy][gpz] for v, f, r
-        BLOCK_FIRST_V_BLOCK_FIRST   // [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][mx][my] for v, f, r
+        COEFFS_FIRST_V_GP_FIRST,    // [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
+        COEFFS_FIRST_V_BLOCK_FIRST, // [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
+        BLOCK_FIRST_V_GP_FIRST,     // [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
+        BLOCK_FIRST_V_BLOCK_FIRST   // [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
     };
 
     using size_t3 = struct
@@ -114,17 +114,17 @@ namespace mgcl_bench_residual_blockstencil
         {
             kernelName = "residual_27point_blockstencil_coeffs_first_v_block_first";
         }
-        else if (args.kernelVersion == KernelVersion::BLOCK_FIRST_V_GP_FIRST)
+        else if (args.kernelVersion == KernelVersion::COEFFS_FIRST_V_GP_FIRST)
         {
-            kernelName = "residual_27point_blockstencil_block_first";
+            kernelName = "residual_27point_blockstencil_coeffs_first_v_gp_first";
         }
         else if (args.kernelVersion == KernelVersion::BLOCK_FIRST_V_BLOCK_FIRST)
         {
-            kernelName = "residual_27point_blockstencil_block_first";
+            kernelName = "";
         }
         else if (args.kernelVersion == KernelVersion::BLOCK_FIRST_V_GP_FIRST)
         {
-            kernelName = "residual_27point_blockstencil_block_first";
+            kernelName = "";
         }
 
         cl_event ev;
@@ -308,7 +308,6 @@ namespace mgcl_bench_residual_blockstencil
             // TODO
             std::vector<double> vin(mgh * ngh * ogh * blocksize);
             std::vector<double> f(mgh * ngh * ogh * blocksize);
-            std::vector<double> r(mgh * ngh * ogh * blocksize);
             std::vector<double> bs(mgh * ngh * ogh * blocksize2 * 27);
             for (int i = 0; i < vin.size(); i++)
             {
@@ -321,8 +320,10 @@ namespace mgcl_bench_residual_blockstencil
             }
             mgcl::BufferGpu d_vin(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, vin);
             mgcl::BufferGpu d_f(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f);
-            mgcl::BufferGpu d_r(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r);
+            mgcl::BufferGpu d_r(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f); // careful, init with f
             mgcl::BufferGpu d_bs(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
+
+            d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
 
             // auto v_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
             // auto f_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
@@ -364,16 +365,19 @@ namespace mgcl_bench_residual_blockstencil
                 .epochIterations(CLI_ARGS::bench_iterations)
                 .relative(false);
 
-            std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first = nullptr;
+            std::unique_ptr<std::vector<double>> r_out_bs_coeffs_first_v_block_first = nullptr;
+            std::unique_ptr<std::vector<double>> r_out_bs_coeffs_first_v_gp_first = nullptr;
             // std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_indices_precalc = nullptr;
             // std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_without_ghosts = nullptr;
-            std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_4_gp_per_thread = nullptr;
             if (CLI_ARGS::checkResults)
             {
                 bench.epochs(1).epochIterations(1);
             }
 
             {
+                // reset r to zero
+                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+
                 args.kernelVersion = KernelVersion::COEFFS_FIRST_V_BLOCK_FIRST;
                 std::string name = std::string("residual_blockstencil_coeff_first_v_block_first_")
                                        .append(std::to_string(m))
@@ -398,18 +402,57 @@ namespace mgcl_bench_residual_blockstencil
                 res.o = o;
                 results.push_back(res);
 
-                // if (CLI_ARGS::checkResults)
-                // {
-                //     r_out_global_coeffs_first = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                //     args.c_dR.read(args.commands, r_out_global_coeffs_first.get(), true);
-                // }
+                if (CLI_ARGS::checkResults)
+                {
+                    r_out_bs_coeffs_first_v_block_first = args.c_dR.read(args.commands, nullptr, true);
+                }
+            }
+
+            {
+                // reset r to zero
+                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+
+                args.kernelVersion = KernelVersion::COEFFS_FIRST_V_GP_FIRST;
+                std::string name = std::string("residual_blockstencil_coeff_first_v_gp_first_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    residual(args);
+                    p.finish();
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+
+                if (CLI_ARGS::checkResults)
+                {
+                    r_out_bs_coeffs_first_v_gp_first = args.c_dR.read(args.commands, nullptr, true);
+                }
             }
 
             // Check results for kernels that it is valid for
-            // if (CLI_ARGS::checkResults)
-            // {
-            //     REQUIRE(r_out_global_coeffs_first->isEqual(*r_out_global_coeffs_4_gp_per_thread));
-            // }
+            if (CLI_ARGS::checkResults)
+            {
+                REQUIRE(r_out_bs_coeffs_first_v_block_first);
+                REQUIRE(r_out_bs_coeffs_first_v_gp_first);
+
+                for (int i = 0; i < r_out_bs_coeffs_first_v_block_first->size(); i++)
+                {
+                    REQUIRE((*r_out_bs_coeffs_first_v_block_first)[i] == (*r_out_bs_coeffs_first_v_gp_first)[i]);
+                }
+            }
         }
 
         bench_util::printCsvFormat(results);

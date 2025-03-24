@@ -7,7 +7,7 @@
 /*****************************************/
 
 /* Calculates residual without dinv.
- * Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [mx][my][gpx][gpy][gpz] for v, f, r
+ * Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
  */
 __kernel void residual_27point_blockstencil_coeffs_first_v_block_first(
     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
@@ -57,7 +57,7 @@ __kernel void residual_27point_blockstencil_coeffs_first_v_block_first(
         // }
         double stencilsums[3]; // assumption: blocksize <= 3
 
-        // Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [mx][my][gpx][gpy][gpz] for v, f, r
+        // Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
         int b1didx = 0;
         for (int bi = 0; bi < blocksize; bi++)
         {
@@ -66,8 +66,8 @@ __kernel void residual_27point_blockstencil_coeffs_first_v_block_first(
                 // A*v
                 // clang-format off
                 stencilsums[bi] += stencilValues[index_sv + (9 + 3 + 1) * svGridSizeBlock + b1didx * svGridSize] * v_in[index + bj * gridsize]
-                    + stencilValues[index_sv + (9 + 3) * svGridSizeBlock + b1didx * svGridSize]      * v_in[index - 1 + bj * gridsize]
-                    + stencilValues[index_sv + (9 + 3 + 2) * svGridSizeBlock + b1didx * svGridSize]  * v_in[index + 1 + bj * gridsize]
+                    + stencilValues[index_sv + (9 + 3) * svGridSizeBlock + b1didx * svGridSize]      * v_in[index - koff + bj * gridsize]
+                    + stencilValues[index_sv + (9 + 3 + 2) * svGridSizeBlock + b1didx * svGridSize]  * v_in[index + koff + bj * gridsize]
                     + stencilValues[index_sv + (9 + 1) * svGridSizeBlock + b1didx * svGridSize]      * v_in[index - joff + bj * gridsize]
                     + stencilValues[index_sv + (9 + 6 + 1) * svGridSizeBlock + b1didx * svGridSize]  * v_in[index + joff + bj * gridsize]
                     + stencilValues[index_sv + (3 + 1) * svGridSizeBlock + b1didx * svGridSize]      * v_in[index - ioff + bj * gridsize]
@@ -102,6 +102,112 @@ __kernel void residual_27point_blockstencil_coeffs_first_v_block_first(
         {
             // r = f - A*v
             r[index + bi * gridsize] = f[index + bi * gridsize] - stencilsums[bi];
+        }
+
+        // if (i == 2 && j == 2 && k == 2)
+        // {
+        //     printf("ocl stencilsum = %e\n", stencilsum);
+        //     print27point_sv(v_in, index, ioff, joff, koff, stencilValues, index_sv);
+        // }
+    }
+}
+
+/* Calculates residual without dinv.
+ * Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
+ */
+__kernel void residual_27point_blockstencil_coeffs_first_v_gp_first(
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict f,
+    __global double* restrict r,
+    __global double* restrict stencilValues,
+    const int mgh, const int ngh, const int ogh,
+    const int svmgh, const int svngh, const int svogh,
+    const int ghosts, const int ghosts_sv,
+    const int svGridSize, const int svGridSizeBlock,
+    const int blocksize,
+    const int moff, const int noff, const int ooff)
+
+{
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
+
+    // loop boundaries
+    // TODO maybe refactor to use v_ghm, etc.?
+    int istart_v = ghosts + moff;
+    int jstart_v = ghosts + noff;
+    int kstart_v = ghosts + ooff;
+    int iend_v = mgh - ghosts - moff;
+    int jend_v = ngh - ghosts - noff;
+    int kend_v = ogh - ghosts - ooff;
+
+    // calculate residual only for relevant cells (off = 0: only real cells)
+    if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
+    {
+        int ioff = blocksize * ngh * ogh;
+        int joff = blocksize * ogh;
+        int koff = blocksize;
+        int index = i * ngh * ogh + j * ogh + k;
+        int gridsize = mgh * ngh * ogh;
+
+        int blocksize2 = blocksize * blocksize;
+        int svno = svngh * svogh;
+        // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
+        int index_sv = (i - ghosts + ghosts_sv) * svno * blocksize2 + (j - ghosts + ghosts_sv) * svogh * blocksize2 + (k - ghosts + ghosts_sv) * blocksize2;
+
+        // if (i == 2 && j == 2 && k == 2)
+        // {
+        //     printf("i,j,k,mgh,ngh,ogh,gh,gh_sv,index_sv,gridsize: %d,%d,%d,%d,%d,%d,%d,%d,%d,%d\ngh", i, j, k, mgh, ngh, ogh, ghosts, ghosts_sv, index_sv, gridsize);
+        // }
+        double stencilsums[3]; // assumption: blocksize <= 3
+
+        // Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
+        int b1didx = 0;
+        for (int bi = 0; bi < blocksize; bi++)
+        {
+            for (int bj = 0; bj < blocksize; bj++)
+            {
+                // A*v
+                // clang-format off
+                stencilsums[bi] += stencilValues[index_sv + (9 + 3 + 1) * svGridSizeBlock + b1didx * svGridSize] * v_in[index + bj]
+                    + stencilValues[index_sv + (9 + 3) * svGridSizeBlock + b1didx * svGridSize]      * v_in[index - koff + bj]
+                    + stencilValues[index_sv + (9 + 3 + 2) * svGridSizeBlock + b1didx * svGridSize]  * v_in[index + koff + bj]
+                    + stencilValues[index_sv + (9 + 1) * svGridSizeBlock + b1didx * svGridSize]      * v_in[index - joff + bj]
+                    + stencilValues[index_sv + (9 + 6 + 1) * svGridSizeBlock + b1didx * svGridSize]  * v_in[index + joff + bj]
+                    + stencilValues[index_sv + (3 + 1) * svGridSizeBlock + b1didx * svGridSize]      * v_in[index - ioff + bj]
+                    + stencilValues[index_sv + (18 + 3 + 1) * svGridSizeBlock + b1didx * svGridSize] * v_in[index + ioff + bj]
+                    
+                    + stencilValues[index_sv + (9) * svGridSizeBlock + b1didx * svGridSize]          * v_in[index - joff - koff + bj]
+                    + stencilValues[index_sv + (9 + 2) * svGridSizeBlock + b1didx * svGridSize]      * v_in[index - joff + koff + bj]
+                    + stencilValues[index_sv + (9 + 6) * svGridSizeBlock + b1didx * svGridSize]      * v_in[index + joff - koff + bj]
+                    + stencilValues[index_sv + (9 + 6 + 2) * svGridSizeBlock + b1didx * svGridSize]  * v_in[index + joff + koff + bj]
+                    + stencilValues[index_sv + svGridSizeBlock * 3 + b1didx * svGridSize]            * v_in[index - ioff - koff + bj]
+                    + stencilValues[index_sv + (3 + 2) * svGridSizeBlock + b1didx * svGridSize]      * v_in[index - ioff + koff + bj]
+                    + stencilValues[index_sv + (18 + 3) * svGridSizeBlock + b1didx * svGridSize]     * v_in[index + ioff - koff + bj]
+                    + stencilValues[index_sv + (18 + 3 + 2) * svGridSizeBlock + b1didx * svGridSize] * v_in[index + ioff + koff + bj]
+                    + stencilValues[index_sv + svGridSizeBlock + b1didx * svGridSize]                * v_in[index - ioff - joff + bj]
+                    + stencilValues[index_sv + (6 + 1) * svGridSizeBlock + b1didx * svGridSize]      * v_in[index - ioff + joff + bj]
+                    + stencilValues[index_sv + (18 + 1) * svGridSizeBlock + b1didx * svGridSize]     * v_in[index + ioff - joff + bj]
+                    + stencilValues[index_sv + (18 + 6 + 1) * svGridSizeBlock + b1didx * svGridSize] * v_in[index + ioff + joff + bj]
+
+                    + stencilValues[index_sv + b1didx * svGridSize]                                  * v_in[index - ioff - joff - koff + bj]
+                    + stencilValues[index_sv + svGridSizeBlock * 2 + b1didx * svGridSize]            * v_in[index - ioff - joff + koff + bj]
+                    + stencilValues[index_sv + (6) * svGridSizeBlock + b1didx * svGridSize]          * v_in[index - ioff + joff - koff + bj]
+                    + stencilValues[index_sv + (6 + 2) * svGridSizeBlock + b1didx * svGridSize]      * v_in[index - ioff + joff + koff + bj]
+                    + stencilValues[index_sv + (18) * svGridSizeBlock + b1didx * svGridSize]         * v_in[index + ioff - joff - koff + bj]
+                    + stencilValues[index_sv + (18 + 2) * svGridSizeBlock + b1didx * svGridSize]     * v_in[index + ioff - joff + koff + bj]
+                    + stencilValues[index_sv + (18 + 6) * svGridSizeBlock + b1didx * svGridSize]     * v_in[index + ioff + joff - koff + bj]
+                    + stencilValues[index_sv + (18 + 6 + 2) * svGridSizeBlock + b1didx * svGridSize] * v_in[index + ioff + joff + koff + bj];
+                // clang-format on
+            }
+        }
+
+        for (int bi = 0; bi < blocksize; bi++)
+        {
+            // r = f - A*v
+            r[index + bi] = f[index + bi] - stencilsums[bi];
         }
 
         // if (i == 2 && j == 2 && k == 2)
