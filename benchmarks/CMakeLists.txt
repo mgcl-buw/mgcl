@@ -31,6 +31,7 @@ set(SOURCES_BENCH
     bench_residual_varying_stencil.cpp
     bench_cuboid_blockstencil.cpp
     bench_jacobi_temporal_blocking.cpp
+    bench_residual_blockstencil.cpp
     cli_args.hpp
     catch2_main_benchs.cpp)
 
@@ -71,3 +72,21 @@ add_custom_target(
 # Whenever target 'benchmarks' is requested, the custom target will be
 # evaluated.
 add_dependencies(benchmarks copy_kernel_optimizations)
+
+# copy kernel file to build directory
+add_custom_command(
+  OUTPUT "${CMAKE_BINARY_DIR}/benchmarks/blockstencil_kernels.cl"
+  COMMAND
+    ${CMAKE_COMMAND} -E copy
+    "${CMAKE_CURRENT_SOURCE_DIR}/blockstencil_kernels.cl"
+    "${CMAKE_BINARY_DIR}/benchmarks"
+  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/blockstencil_kernels.cl")
+
+# Custom target for activate the custom command above
+add_custom_target(
+  copy_blockstencil_kernels
+  DEPENDS "${CMAKE_BINARY_DIR}/benchmarks/blockstencil_kernels.cl")
+
+# Whenever target 'benchmarks' is requested, the custom target will be
+# evaluated.
+add_dependencies(benchmarks copy_blockstencil_kernels)
