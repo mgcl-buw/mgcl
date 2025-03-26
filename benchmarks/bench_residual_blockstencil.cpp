@@ -120,7 +120,7 @@ namespace mgcl_bench_residual_blockstencil
         }
         else if (args.kernelVersion == KernelVersion::BLOCK_FIRST_V_BLOCK_FIRST)
         {
-            kernelName = "";
+            kernelName = "residual_27point_blockstencil_block_first_v_block_first";
         }
         else if (args.kernelVersion == KernelVersion::BLOCK_FIRST_V_GP_FIRST)
         {
@@ -146,6 +146,12 @@ namespace mgcl_bench_residual_blockstencil
 
         int svGridSize = svmgh * svngh * svogh;
         int svGridSizeBlock = svGridSize * args.blocksize * args.blocksize;
+
+        if (args.kernelVersion == KernelVersion::BLOCK_FIRST_V_BLOCK_FIRST ||
+            args.kernelVersion == KernelVersion::BLOCK_FIRST_V_GP_FIRST)
+        {
+            svGridSizeBlock = 27 * svGridSize;
+        }
 
         // assign kernel arguments
         int pos = 0;
@@ -414,6 +420,39 @@ namespace mgcl_bench_residual_blockstencil
 
                 args.kernelVersion = KernelVersion::COEFFS_FIRST_V_GP_FIRST;
                 std::string name = std::string("residual_blockstencil_coeff_first_v_gp_first_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    residual(args);
+                    p.finish();
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+
+                if (CLI_ARGS::checkResults)
+                {
+                    r_out_bs_coeffs_first_v_gp_first = args.c_dR.read(args.commands, nullptr, true);
+                }
+            }
+            {
+                // reset r to zero
+                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+
+                args.kernelVersion = KernelVersion::BLOCK_FIRST_V_BLOCK_FIRST;
+                std::string name = std::string("residual_blockstencil_block_first_v_block_first_")
                                        .append(std::to_string(m))
                                        .append("_")
                                        .append(std::to_string(n))
