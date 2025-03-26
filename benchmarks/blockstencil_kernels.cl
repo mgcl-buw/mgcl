@@ -8,6 +8,9 @@
 
 /* Calculates residual without dinv.
  * Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
+ *
+ * svGridSize = sv_mgh * sv_ngh * sv_ogh
+ * svGridSizeBlock = blocksize^2 * svGridSize
  */
 __kernel void residual_27point_blockstencil_coeffs_first_v_block_first(
     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
