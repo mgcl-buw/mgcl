@@ -373,8 +373,8 @@ namespace mgcl_bench_residual_blockstencil
 
             std::unique_ptr<std::vector<double>> r_out_bs_coeffs_first_v_block_first = nullptr;
             std::unique_ptr<std::vector<double>> r_out_bs_coeffs_first_v_gp_first = nullptr;
-            // std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_indices_precalc = nullptr;
-            // std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_without_ghosts = nullptr;
+            std::unique_ptr<std::vector<double>> r_out_bs_block_first_v_block_first = nullptr;
+            std::unique_ptr<std::vector<double>> r_out_bs_block_first_v_gp_first = nullptr;
             if (CLI_ARGS::checkResults)
             {
                 bench.epochs(1).epochIterations(1);
@@ -478,7 +478,7 @@ namespace mgcl_bench_residual_blockstencil
 
                 if (CLI_ARGS::checkResults)
                 {
-                    r_out_bs_coeffs_first_v_gp_first = args.c_dR.read(args.commands, nullptr, true);
+                    r_out_bs_block_first_v_gp_first = args.c_dR.read(args.commands, nullptr, true);
                 }
             }
 
@@ -512,7 +512,7 @@ namespace mgcl_bench_residual_blockstencil
 
                 if (CLI_ARGS::checkResults)
                 {
-                    r_out_bs_coeffs_first_v_gp_first = args.c_dR.read(args.commands, nullptr, true);
+                    r_out_bs_block_first_v_gp_first = args.c_dR.read(args.commands, nullptr, true);
                 }
             }
 
@@ -521,10 +521,18 @@ namespace mgcl_bench_residual_blockstencil
             {
                 REQUIRE(r_out_bs_coeffs_first_v_block_first);
                 REQUIRE(r_out_bs_coeffs_first_v_gp_first);
+                REQUIRE(r_out_bs_block_first_v_gp_first);
+                REQUIRE(r_out_bs_block_first_v_gp_first);
+
+                REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_coeffs_first_v_gp_first->size());
+                REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_block_first_v_gp_first->size());
+                REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_block_first_v_gp_first->size());
 
                 for (int i = 0; i < r_out_bs_coeffs_first_v_block_first->size(); i++)
                 {
                     REQUIRE((*r_out_bs_coeffs_first_v_block_first)[i] == (*r_out_bs_coeffs_first_v_gp_first)[i]);
+                    REQUIRE((*r_out_bs_coeffs_first_v_block_first)[i] == (*r_out_bs_block_first_v_gp_first)[i]);
+                    REQUIRE((*r_out_bs_coeffs_first_v_block_first)[i] == (*r_out_bs_block_first_v_block_first)[i]);
                 }
             }
         }
