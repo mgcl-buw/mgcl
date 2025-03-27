@@ -279,36 +279,36 @@ namespace mgcl_bench_borderplanes_blockstencil
             //     bench.epochs(1).epochIterations(1);
             // }
 
-            // {
-            //     args.kernelVersion = KernelVersion::BLOCK_FIRST;
-            //     std::string name = std::string("extractBorderPlanes_blockstencil_cuboid_block_first_")
-            //                            .append(std::to_string(m))
-            //                            .append("_")
-            //                            .append(std::to_string(n))
-            //                            .append("_")
-            //                            .append(std::to_string(o));
+            {
+                args.kernelVersion = KernelVersion::BLOCK_FIRST;
+                std::string name = std::string("extractBorderPlanes_blockstencil_cuboid_block_first_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
 
-            //     bench.run(std::string(name).c_str(), [&] { //
-            //         extractBorderPlanes(args);
-            //         p.finish();
-            //     });
+                bench.run(std::string(name).c_str(), [&] { //
+                    extractBorderPlanes(args);
+                    p.finish();
+                });
 
-            //     bench_util::Result res;
-            //     res.name = name;
-            //     res.minTime = bench_util::getMinTime(bench, name);
-            //     res.medianTime = bench_util::getMedianTime(bench, name);
-            //     res.avgTime = bench_util::getAvgTime(bench, name);
-            //     res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-            //     res.m = m;
-            //     res.n = n;
-            //     res.o = o;
-            //     results.push_back(res);
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
 
-            //     // if (CLI_ARGS::checkResults)
-            //     // {
-            //     //     r_out_bs_coeffs_first_v_block_first = args.c_dR.read(args.commands, nullptr, true);
-            //     // }
-            // }
+                // if (CLI_ARGS::checkResults)
+                // {
+                //     r_out_bs_coeffs_first_v_block_first = args.c_dR.read(args.commands, nullptr, true);
+                // }
+            }
 
             {
                 args.kernelVersion = KernelVersion::GP_FIRST;
@@ -340,13 +340,12 @@ namespace mgcl_bench_borderplanes_blockstencil
                 //     r_out_bs_coeffs_first_v_block_first = args.c_dR.read(args.commands, nullptr, true);
                 // }
             }
+        }
+        bench_util::printCsvFormat(results);
 
-            bench_util::printCsvFormat(results);
-
-            if (CLI_ARGS::enableKernelProfiling)
-            {
-                p.getProfilingData()->printBestTimingsPerKernel();
-            }
+        if (CLI_ARGS::enableKernelProfiling)
+        {
+            p.getProfilingData()->printBestTimingsPerKernel();
         }
     }
 }
