@@ -32,6 +32,7 @@ set(SOURCES_BENCH
     bench_cuboid_blockstencil.cpp
     bench_jacobi_temporal_blocking.cpp
     bench_residual_blockstencil.cpp
+    bench_borderplanes_blockstencil.cpp
     cli_args.hpp
     catch2_main_benchs.cpp)
 
