@@ -260,7 +260,8 @@ namespace mgcl_bench_residual_blockstencil
         //     }
         // }
 
-        clReleaseKernel(kernel); // TODO maybe clFinish before release?
+        err = clReleaseKernel(kernel); // TODO maybe clFinish before release?
+        mgcl::mgclCheckError(err, "clReleaseKernel residual");
         return res;
     }
 

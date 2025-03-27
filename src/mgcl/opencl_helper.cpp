@@ -762,6 +762,7 @@ namespace mgcl
             fprintf(stderr, "in '%s' on line %d\n", filename, line);
             fprintf(stderr, "Error code was \"%s\" (%d)\n", mgcl_err_code(err), err);
             // cpptrace::generate_trace().print();
+            // error("Error");
             exit(EXIT_FAILURE);
         }
     }
