@@ -1,5 +1,5 @@
-#ifndef MGCL_CUBOID__HPP
-#define MGCL_CUBOID__HPP
+#ifndef MGCL_CUBOID_BS__HPP
+#define MGCL_CUBOID_BS__HPP
 
 #include <memory>
 #include <string>
@@ -81,4 +81,4 @@ namespace mgcl
         static CuboidBS copyFrom(CuboidBS& c);
     };
 }
-#endif /* ifndef MGCL_CUBOID__HPP */
+#endif /* ifndef MGCL_CUBOID_BS__HPP */
