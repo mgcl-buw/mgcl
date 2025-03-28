@@ -57,17 +57,17 @@ __kernel void residual_27point_blockstencil_coeffs_first_v_block_first(
         // {
         //     printf("i,j,k,mgh,ngh,ogh,gh,gh_sv,index_sv_gp,gridsize: %d,%d,%d,%d,%d,%d,%d,%d,%d,%d\ngh", i, j, k, mgh, ngh, ogh, ghosts, ghosts_sv, index_sv_gp, gridsize);
         // }
-        double stencilsums[3]; // assumption: blocksize <= 3
 
         // Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
         int idx_block = 0;
         for (int bi = 0; bi < blocksize; bi++)
         {
+            double stencilsum = 0;
             for (int bj = 0; bj < blocksize; bj++)
             {
                 // A*v
                 // clang-format off
-                stencilsums[bi] += stencilValues[index_sv_gp + (9 + 3 + 1) * svGridSizeBlock + idx_block] * v_in[index + bj * gridsize]
+                stencilsum += stencilValues[index_sv_gp + (9 + 3 + 1) * svGridSizeBlock + idx_block] * v_in[index + bj * gridsize]
                     + stencilValues[index_sv_gp + (9 + 3) * svGridSizeBlock + idx_block]      * v_in[index - koff + bj * gridsize]
                     + stencilValues[index_sv_gp + (9 + 3 + 2) * svGridSizeBlock + idx_block]  * v_in[index + koff + bj * gridsize]
                     + stencilValues[index_sv_gp + (9 + 1) * svGridSizeBlock + idx_block]      * v_in[index - joff + bj * gridsize]
@@ -100,12 +100,9 @@ __kernel void residual_27point_blockstencil_coeffs_first_v_block_first(
 
                 idx_block += svGridSize; // increase by gridsize to get to next matrix entry
             }
-        }
 
-        for (int bi = 0; bi < blocksize; bi++)
-        {
             // r = f - A*v
-            r[index + bi * gridsize] = f[index + bi * gridsize] - stencilsums[bi];
+            r[index + bi * gridsize] = f[index + bi * gridsize] - stencilsum;
         }
 
         // if (i == 2 && j == 2 && k == 2)
@@ -167,17 +164,17 @@ __kernel void residual_27point_blockstencil_coeffs_first_v_gp_first(
         // {
         //     printf("i,j,k,mgh,ngh,ogh,gh,gh_sv,index_sv_gp,gridsize: %d,%d,%d,%d,%d,%d,%d,%d,%d,%d\ngh", i, j, k, mgh, ngh, ogh, ghosts, ghosts_sv, index_sv_gp, gridsize);
         // }
-        double stencilsums[3]; // assumption: blocksize <= 3
 
         // Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
         int idx_block = 0;
         for (int bi = 0; bi < blocksize; bi++)
         {
+            double stencilsum = 0;
             for (int bj = 0; bj < blocksize; bj++)
             {
                 // A*v
                 // clang-format off
-                stencilsums[bi] += stencilValues[index_sv_gp + (9 + 3 + 1) * svGridSizeBlock + idx_block] * v_in[index + bj]
+                stencilsum += stencilValues[index_sv_gp + (9 + 3 + 1) * svGridSizeBlock + idx_block] * v_in[index + bj]
                     + stencilValues[index_sv_gp + (9 + 3) * svGridSizeBlock + idx_block]      * v_in[index - koff + bj]
                     + stencilValues[index_sv_gp + (9 + 3 + 2) * svGridSizeBlock + idx_block]  * v_in[index + koff + bj]
                     + stencilValues[index_sv_gp + (9 + 1) * svGridSizeBlock + idx_block]      * v_in[index - joff + bj]
@@ -210,12 +207,9 @@ __kernel void residual_27point_blockstencil_coeffs_first_v_gp_first(
 
                 idx_block += svGridSize; // increase by gridsize to get to next matrix entry
             }
-        }
 
-        for (int bi = 0; bi < blocksize; bi++)
-        {
             // r = f - A*v
-            r[index + bi] = f[index + bi] - stencilsums[bi];
+            r[index + bi] = f[index + bi] - stencilsum;
         }
 
         // if (i == 2 && j == 2 && k == 2)
@@ -277,17 +271,17 @@ __kernel void residual_27point_blockstencil_block_first_v_block_first(
         // {
         //     printf("i,j,k,mgh,ngh,ogh,gh,gh_sv,index_sv_gp,gridsize: %d,%d,%d,%d,%d,%d,%d,%d,%d,%d\ngh", i, j, k, mgh, ngh, ogh, ghosts, ghosts_sv, index_sv_gp, gridsize);
         // }
-        double stencilsums[3]; // assumption: blocksize <= 3
 
         // Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
         int idx_block = 0;
         for (int bi = 0; bi < blocksize; bi++)
         {
+            double stencilsum = 0;
             for (int bj = 0; bj < blocksize; bj++)
             {
                 // A*v
                 // clang-format off
-                stencilsums[bi] += stencilValues[index_sv_gp + (9 + 3 + 1) * svGridSize + idx_block] * v_in[index + bj * gridsize]
+                stencilsum += stencilValues[index_sv_gp + (9 + 3 + 1) * svGridSize + idx_block] * v_in[index + bj * gridsize]
                     + stencilValues[index_sv_gp + (9 + 3) * svGridSize + idx_block]      * v_in[index - koff + bj * gridsize]
                     + stencilValues[index_sv_gp + (9 + 3 + 2) * svGridSize + idx_block]  * v_in[index + koff + bj * gridsize]
                     + stencilValues[index_sv_gp + (9 + 1) * svGridSize + idx_block]      * v_in[index - joff + bj * gridsize]
@@ -320,12 +314,9 @@ __kernel void residual_27point_blockstencil_block_first_v_block_first(
 
                 idx_block += svGridSizeCoeffs; // increase by gridsize * 27 to get to next matrix entry for same grid point
             }
-        }
 
-        for (int bi = 0; bi < blocksize; bi++)
-        {
             // r = f - A*v
-            r[index + bi * gridsize] = f[index + bi * gridsize] - stencilsums[bi];
+            r[index + bi * gridsize] = f[index + bi * gridsize] - stencilsum;
         }
 
         // if (i == 2 && j == 2 && k == 2)
@@ -387,17 +378,18 @@ __kernel void residual_27point_blockstencil_block_first_v_gp_first(
         // {
         //     printf("i,j,k,mgh,ngh,ogh,gh,gh_sv,index_sv_gp,gridsize: %d,%d,%d,%d,%d,%d,%d,%d,%d,%d\ngh", i, j, k, mgh, ngh, ogh, ghosts, ghosts_sv, index_sv_gp, gridsize);
         // }
-        double stencilsums[3]; // assumption: blocksize <= 3
 
         // Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
         int idx_block = 0;
         for (int bi = 0; bi < blocksize; bi++)
         {
+            double stencilsum = 0;
+
             for (int bj = 0; bj < blocksize; bj++)
             {
                 // A*v
                 // clang-format off
-                stencilsums[bi] += stencilValues[index_sv_gp + (9 + 3 + 1) * svGridSize + idx_block] * v_in[index + bj]
+                stencilsum += stencilValues[index_sv_gp + (9 + 3 + 1) * svGridSize + idx_block] * v_in[index + bj]
                     + stencilValues[index_sv_gp + (9 + 3) * svGridSize + idx_block]      * v_in[index - koff + bj]
                     + stencilValues[index_sv_gp + (9 + 3 + 2) * svGridSize + idx_block]  * v_in[index + koff + bj]
                     + stencilValues[index_sv_gp + (9 + 1) * svGridSize + idx_block]      * v_in[index - joff + bj]
@@ -430,12 +422,9 @@ __kernel void residual_27point_blockstencil_block_first_v_gp_first(
 
                 idx_block += svGridSizeCoeffs; // increase by gridsize to get to next matrix entry
             }
-        }
 
-        for (int bi = 0; bi < blocksize; bi++)
-        {
             // r = f - A*v
-            r[index + bi] = f[index + bi] - stencilsums[bi];
+            r[index + bi] = f[index + bi] - stencilsum;
         }
 
         // if (i == 2 && j == 2 && k == 2)
