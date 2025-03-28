@@ -37,6 +37,7 @@ set(SOURCES_TEST
     test_buffer_gpu.cpp    
     device_type_generator.cpp
     blockstencil/test_cuboid_bs.cpp
+    blockstencil/test_cuboid_bs_gpu.cpp
 )
 
 add_executable(tests ${SOURCES_TEST} ${BACKWARD_ENABLE})
