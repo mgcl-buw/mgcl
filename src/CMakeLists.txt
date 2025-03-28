@@ -23,6 +23,7 @@ set(MGCL_PUBLIC_HEADERS
   mgcl/kernel_config.hpp
   mgcl/profiling_data.hpp
   mgcl/buffer_gpu.hpp
+  mgcl/cuboid_bs.hpp
 )
 
 set(SOURCES_LIB
@@ -51,6 +52,7 @@ set(SOURCES_LIB
   mgcl/kernel_config.cpp
   mgcl/profiling_data.cpp
   mgcl/buffer_gpu.cpp
+  mgcl/cuboid_bs.cpp
 )
 
 add_library(mgcl ${MGCL_PUBLIC_HEADERS} ${SOURCES_LIB})

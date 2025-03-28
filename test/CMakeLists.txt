@@ -36,6 +36,7 @@ set(SOURCES_TEST
     mpi/catch2_main_mpi.cpp
     test_buffer_gpu.cpp    
     device_type_generator.cpp
+    blockstencil/test_cuboid_bs.cpp
 )
 
 add_executable(tests ${SOURCES_TEST} ${BACKWARD_ENABLE})
