@@ -3,6 +3,7 @@
 #include <catch2/generators/catch_generators.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
@@ -1010,3 +1011,93 @@ TEST_CASE("CuboidBSGpu::copyShallow", "[ocl]")
 //                 }
 //     }
 // }
+
+TEST_CASE("CuboidBSGpu::updateGhosts gh < m")
+{
+    int m = 16;
+    int n = 8;
+    int o = 4;
+    int ghosts_m = 2;
+    int ghosts_n = 1;
+    int ghosts_o = 0;
+    int mgh = m + 2 * ghosts_m;
+    int ngh = n + 2 * ghosts_n;
+    int ogh = o + 2 * ghosts_o;
+    int blocksize = 2;
+
+    mgcl::CuboidBS c1(m, n, o, ghosts_m, ghosts_n, ghosts_o, blocksize);
+    c1.fillRandom();
+
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    // create dummy problem
+    auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
+    p.setUseOpencl(true);
+    p.setDeviceType(deviceType);
+    p.setProfilingEnabled(true);
+    p.init();
+
+    auto d_c1 = std::make_shared<mgcl::CuboidBSGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
+
+    d_c1->updateGhostsLocally(p.getProgram(), p.getCommands(), nullptr, p.getProfilingData());
+    p.finish();
+
+    auto c2 = d_c1->read(p.getCommands(), nullptr, true);
+
+    double tol = 1e-7;
+    for (int i = 0; i < ghosts_m; i++)
+        for (int j = 0; j < ghosts_n; j++)
+            for (int k = 0; k < ghosts_o; k++)
+                for (int b = 0; b < blocksize; b++)
+                {
+                    REQUIRE(fabs((*c2)[i][j][k][b] - (*c2)[i + m][j + n][k + o][b]) < tol);
+                    REQUIRE(fabs((*c2)[i + ghosts_m][j + ghosts_n][k + ghosts_o][b] - (*c2)[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o][b]) < tol);
+                }
+}
+
+TEST_CASE("CuboidBSGpu::updateGhosts gh > m")
+{
+    int m = 2;
+    int n = 3;
+    int o = 4;
+    int ghosts_m = 3;
+    int ghosts_n = 3;
+    int ghosts_o = 7;
+    int mgh = m + 2 * ghosts_m;
+    int ngh = n + 2 * ghosts_n;
+    int ogh = o + 2 * ghosts_o;
+    int blocksize = 2;
+
+    mgcl::CuboidBS c1(m, n, o, ghosts_m, ghosts_n, ghosts_o, blocksize);
+    c1.fillRandom();
+
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    // create dummy problem
+    auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
+    p.setUseOpencl(true);
+    p.setDeviceType(deviceType);
+    p.setProfilingEnabled(true);
+    p.init();
+
+    auto d_c1 = std::make_shared<mgcl::CuboidBSGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
+
+    d_c1->updateGhostsLocally(p.getProgram(), p.getCommands(), nullptr, p.getProfilingData());
+    p.finish();
+
+    auto c2 = d_c1->read(p.getCommands(), nullptr, true);
+
+    double tol = 1e-7;
+    for (int i = 0; i < ghosts_m; i++)
+        for (int j = 0; j < ghosts_n; j++)
+            for (int k = 0; k < ghosts_o; k++)
+                for (int b = 0; b < blocksize; b++)
+                {
+                    REQUIRE(fabs((*c2)[i][j][k][b] - (*c2)[i + m][j + n][k + o][b]) < tol);
+                    REQUIRE(fabs((*c2)[i + ghosts_m][j + ghosts_n][k + ghosts_o][b] - (*c2)[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o][b]) < tol);
+                }
+}

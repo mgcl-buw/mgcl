@@ -155,6 +155,45 @@ __kernel void update_ghosts_periodic(
     }
 }
 
+/**
+ * Updates ghosts of a CuboidBS, respecting small grids, e.g. gh > m.
+ * Needs to be called with one work-item per cell of ghosted grid.
+ * Work-items that map to a real cell simply do nothing (optimization potential here!).
+ * m,n,o are sizes of real grid.
+ * ghm, ghn, gho are amount of ghosts at one border.
+ */
+__kernel void update_ghosts_cuboidbs_periodic_blockstencil(
+    __global double* restrict c,
+    const int m, const int n, const int o,
+    const int ghm, const int ghn, const int gho,
+    const int blocksize)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
+
+    int mgh = m + 2 * ghm;
+    int ngh = n + 2 * ghn;
+    int ogh = o + 2 * gho;
+
+    if ((i < ghm || j < ghn || k < gho ||
+         i >= ghm + m || j >= ghn + n || k >= gho + o) &&
+        (i < mgh && j < ngh && k < ogh))
+    {
+        int ireal = i + floor(((double)(ghm - 1 - i)) / m + 1) * m;
+        int jreal = j + floor(((double)(ghn - 1 - j)) / n + 1) * n;
+        int kreal = k + floor(((double)(gho - 1 - k)) / o + 1) * o;
+
+        // 1d indices
+        int idx_gh_cell = i * ngh * ogh * blocksize + j * ogh * blocksize + k * blocksize;
+        int idx_real_cell = ireal * ngh * ogh * blocksize + jreal * ogh * blocksize + kreal * blocksize;
+
+        // update ghost cell
+        for (int b = 0; b < blocksize; b++)
+            c[idx_gh_cell + b] = c[idx_real_cell + b];
+    }
+}
+
 /* Copies data from v_input to v_in and from f_input to f, respecting nearfield ghost cell count.
  * m, n and o are dimensions of mgcl's ghosted grid, thus sizes of v_in and f.
  * ghosts_in is ghost cell count in one direction of nearfield. */

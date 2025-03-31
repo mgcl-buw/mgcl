@@ -1,11 +1,13 @@
 #include "cuboid_gpu.hpp"
 
+#include "cuboid_bs_gpu.hpp"
 #include "kernel_config.hpp"
 #include "opencl_helper.hpp"
 #include "profiling_data.hpp"
 
 #include "mgcl.hpp"
 
+#include <CL/cl.h>
 #include <fstream>
 #include <iomanip>
 #include <memory>
