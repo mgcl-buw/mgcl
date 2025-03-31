@@ -24,7 +24,7 @@ print_help() {
   echo "Available options:"
   echo "-p,--problem: Run Problem specific tests"
   echo "-l,--level: Run Level specific tests"
-  echo "-g,--ghosts: Run Ghost-Update specific tests (Cuboid only)"
+  echo "-g,--ghosts: Run Ghost-Update specific tests (Cuboid and CuboidBS only)"
   echo "-j,--jacobi: Run Jacobi specific tests"
   echo "-r,--residual: Run Residual specific tests"
   echo "-u,--util: Run Utility specific tests (e.g. gather and scatter)"
@@ -162,6 +162,7 @@ if [ "$TEST_GHOSTS" = true ] || [ "$TEST_ALL" = true ] ; then
 
     run_test -n 1 "$exe" "MPI updateGhostsSeq (1 process)"
     run_test --oversubscribe -n 8 "$exe" "MPI updateGhostsSeq (n processes)"
+    run_test --oversubscribe -n 8 "$exe" "MPI-updateGhostsSeq-CuboidBS_(n_processes)"
     if [ "$NO_OCL" = false ] ; then
         run_test --oversubscribe -n 8 "$exe" "MPI updateGhosts ocl (n processes)" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
