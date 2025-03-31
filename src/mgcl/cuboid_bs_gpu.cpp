@@ -530,9 +530,6 @@ namespace mgcl
                                                   BufferGpu* d_source, std::vector<double>* h_source,
                                                   mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
-        // TODO implement
-        assert(false && "Not implemented yet");
-
         if (d_source == nullptr && h_source == nullptr)
             error("CuboidBSGpu::pasteGhostsFromBorderPlanes: At least one source buffer must be given.");
 
@@ -540,7 +537,7 @@ namespace mgcl
         int yz = ngh * ogh;
         int xz = mgh * ogh;
         int xy = mgh * ngh;
-        int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
+        int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * blocksize;
 
         BufferGpu* d_tmp = d_source;
         bool createdDTmp = false;
@@ -554,7 +551,7 @@ namespace mgcl
         int err;
 
         // Create the compute kernel from the program
-        const char* kernelName = "paste_ghosts_from_border_planes";
+        const char* kernelName = "paste_ghosts_from_border_planes_cuboidbs";
         cl_kernel kernel = clCreateKernel(program, kernelName, &err);
         mgcl::mgclCheckError(err, "clCreateKernel");
 
@@ -572,6 +569,7 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_n);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &blocksize);
         mgcl::mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item for each border cell. Pad global sizes to fit to local sizes
@@ -591,7 +589,7 @@ namespace mgcl
 
         // enqueue kernel
         err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
-        mgcl::mgclCheckError(err, "Enqueueing pasteGhostsFromBorderPlanes kernel");
+        mgcl::mgclCheckError(err, "Enqueueing paste_ghosts_from_border_planes_cuboidbs kernel");
 
         if (pd != nullptr)
         {
@@ -604,7 +602,7 @@ namespace mgcl
         mgcl::mgclCheckError(clFinish(commands), "clFinish");
 
         err = clReleaseKernel(kernel);
-        mgcl::mgclCheckError(err, "Releasing pasteGhostsFromBorderPlanes kernel");
+        mgcl::mgclCheckError(err, "Releasing paste_ghosts_from_border_planes_cuboidbs kernel");
 
         if (createdDTmp)
             delete d_tmp;

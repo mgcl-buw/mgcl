@@ -2875,6 +2875,146 @@ __kernel void extract_border_planes_cuboidbs(
 }
 
 /**
+ * Paste ghosts from border planes into buf_cuboid.
+ * Since corners and edges are not up-to-date for alle planes, some
+ *   cells at the borders are ignored. Every cuboid ghost cell should be written
+ *   exactly once. TODO some wi's do nothing as result, so maybe optimize.
+ * The planes are stored in the following order:
+ *   front (yz), back (yz), top (xz), bottom (xz), left (xy), right (xy)
+ * Hence, the borders of the planes are stored multiple times.
+ * The planes itself are stored as follows:
+ * - yz: j-major, i.e. forall j { forall k { ... } }
+ * - xz: i-major, i.e. forall i { forall k { ... } }
+ * - xy: i-major, i.e. forall i { forall k { ... } }
+ *
+ * This kernel must be called as a 1d kernel with
+ *   #borderCells = ghosts_m*n*o * ghosts_n*m*o * ghosts_o*n*m
+ * work-items.
+ * Arguments:
+ * * buf_cuboid: CuboidBSGPU::buffer of size mgh*ngh*ogh
+ * * buf_planes: CuboidGPU::buffer of size 1*1*#borderCells
+ * * m, n, o: Extents of buf_cuboid excluding ghost cells
+ * * mgh, ngh, ogh: Extents of buf_cuboid including ghost cells
+ * * ghosts_m, ghosts_n, ghosts_o: Ghost cell amount of buf_cuboid
+ */
+__kernel void paste_ghosts_from_border_planes_cuboidbs(
+    __global double* buf_cuboid,
+    __global double* buf_planes,
+    const int m, const int n, const int o,
+    const int mgh, const int ngh, const int ogh,
+    const int ghosts_m, const int ghosts_n, const int ghosts_o,
+    const int blocksize)
+{
+    // plane sizes
+    int yz = ngh * ogh;
+    int xz = mgh * ogh;
+    int xy = mgh * ngh;
+
+    // Get buf_cuboid's 1d and 3d indices
+    int idx = get_global_id(0);
+
+    // Front planes (back ghosts)
+    if (idx < ghosts_m * yz)
+    {
+        int i = idx / yz + m + ghosts_m;
+        int j = (idx - (i - (m + ghosts_m)) * yz) / ogh;
+        int k = idx % ogh;
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+
+        // No corners or edges, only ghosts directly adjacent to real back face
+        if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
+        {
+            for (int bi = 0; bi < blocksize; bi++)
+            {
+                buf_cuboid[gp_base_idx + bi] = buf_planes[idx * blocksize + bi];
+            }
+        }
+    }
+    // Back planes (front ghosts)
+    else if (idx < 2 * ghosts_m * yz)
+    {
+        idx -= ghosts_m * yz; // reset to 0 for index calculation
+        int i = idx / yz;
+        int j = (idx - i * yz) / ogh;
+        int k = idx % ogh;
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+
+        // No corners or edges, only ghosts directly adjacent to real front face
+        if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
+        {
+            for (int bi = 0; bi < blocksize; bi++)
+            {
+                buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + ghosts_m * yz) * blocksize + bi];
+            }
+        }
+    }
+    // Top planes (bottom ghosts)
+    else if (idx < 2 * ghosts_m * yz + ghosts_n * xz)
+    {
+        idx -= 2 * ghosts_m * yz; // reset to 0 for index calculation
+        int j = idx / xz + n + ghosts_n;
+        int i = (idx - (j - (n + ghosts_n)) * xz) / ogh;
+        int k = idx % ogh;
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+
+        // Ignore left and right ghost cells, but include front and back ghosts
+        if (k >= ghosts_o && k < o + ghosts_o)
+        {
+            for (int bi = 0; bi < blocksize; bi++)
+            {
+                buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz) * blocksize + bi];
+            }
+        }
+    }
+    // // Bottom planes (top ghosts)
+    else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz)
+    {
+        idx -= 2 * ghosts_m * yz + ghosts_n * xz; // reset to 0 for index calculation
+        int j = idx / xz;
+        int i = (idx - j * xz) / ogh;
+        int k = idx % ogh;
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+
+        // Ignore left and right ghost cells, but include front and back ghosts
+        if (k >= ghosts_o && k < o + ghosts_o)
+        {
+            for (int bi = 0; bi < blocksize; bi++)
+            {
+                buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz + ghosts_n * xz) * blocksize + bi];
+            }
+        }
+    }
+    // Left planes (right ghosts)
+    else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy)
+    {
+        idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz; // reset to 0 for index calculation
+        int k = idx / xy + o + ghosts_o;
+        int i = (idx - (k - (o + ghosts_o)) * xy) / ngh;
+        int j = idx % ngh;
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+
+        for (int bi = 0; bi < blocksize; bi++)
+        {
+            buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz) * blocksize + bi];
+        }
+    }
+    // Right planes (left ghosts)
+    else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy)
+    {
+        idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy; // reset to 0 for index calculation
+        int k = idx / xy;
+        int i = (idx - k * xy) / ngh;
+        int j = idx % ngh;
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+
+        for (int bi = 0; bi < blocksize; bi++)
+        {
+            buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * blocksize + bi];
+        }
+    }
+}
+
+/**
  * Fill buffer with value, equivalent to clEnqueueFillBuffer.
  * size is the number of elements in the buffer.
  */
