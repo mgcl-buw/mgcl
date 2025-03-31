@@ -370,311 +370,153 @@ TEST_CASE("CuboidBSGpu::copyShallow", "[ocl]")
     }
 }
 
-// TEST_CASE("CuboidBSGpu::extract_border_planes", "[ocl]")
-// {
-//     int blocksize = 2;
-//     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+TEST_CASE("CuboidBSGpu::extract_border_planes", "[ocl]")
+{
+    int blocksize = 2;
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
-//     SECTION("indices")
-//     {
-//         int m = 3;
-//         int n = 5;
-//         int o = 7;
-//         int ghosts_m = 1;
-//         int ghosts_n = 2;
-//         int ghosts_o = 3;
-//         int mgh = m + 2 * ghosts_m;
-//         int ngh = n + 2 * ghosts_n;
-//         int ogh = o + 2 * ghosts_o;
-//         int yz = ngh * ogh;
-//         int xz = mgh * ogh;
-//         int xy = mgh * ngh;
-//         int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
+    SECTION("throwing")
+    {
+        // Create dummy problem
+        auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        mgcl::Problem p(1, 1, 1, f, v);
+        p.setUseOpencl(true);
+        p.setDeviceType(deviceType);
+        p.init();
 
-//         mgcl::CuboidBS h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o, blocksize);
-//         h_cuboid.fill1dIndex(false);
-//         const double* buf_cuboid = h_cuboid.field1d().data();
+        {
+            mgcl::CuboidBSGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 2, 1, 1, blocksize);
+            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
+        }
+        {
+            mgcl::CuboidBSGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 2, 1, blocksize);
+            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
+        }
+        {
+            mgcl::CuboidBSGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 1, 2, blocksize);
+            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
+        }
+    }
 
-//         mgcl::CuboidBS h_res(1, 1, ressize, blocksize);
-//         double* buf_res = h_res.field1d().data();
-//         h_res.fill(-1, false);
+    SECTION("success")
+    {
+        // Create dummy problem
+        auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        mgcl::Problem p(1, 1, 1, f, v);
+        p.setUseOpencl(true);
+        p.setDeviceType(deviceType);
+        p.init();
 
-//         for (int cnt = 0; cnt < ressize; cnt++)
-//         {
-//             int idx = cnt;
-//             // plane sizes
-//             // int yz = ngh * ogh;
-//             // int xz = mgh * ogh;
-//             // int xy = mgh * ngh;
+        int m = 3;
+        int n = 5;
+        int o = 7;
+        int ghosts_m = 1;
+        int ghosts_n = 2;
+        int ghosts_o = 3;
+        int mgh = m + 2 * ghosts_m;
+        int ngh = n + 2 * ghosts_n;
+        int ogh = o + 2 * ghosts_o;
+        int yz = ngh * ogh;
+        int xz = mgh * ogh;
+        int xy = mgh * ngh;
+        int blocksize = 2;
+        int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * blocksize;
 
-//             // Front planes
-//             if (idx < ghosts_m * yz)
-//             {
-//                 REQUIRE(idx == cnt);
+        mgcl::CuboidBS h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o, blocksize);
+        h_cuboid.fill1dIndex(false);
 
-//                 int i = idx / yz + ghosts_m;
-//                 int j = (idx - (i - ghosts_m) * yz) / ogh;
-//                 int k = idx % ogh;
-//                 buf_res[idx] = buf_cuboid[i * ngh * ogh + j * ogh + k];
-//             }
-//             // Back planes
-//             else if (idx < 2 * ghosts_m * yz)
-//             {
-//                 idx -= ghosts_m * yz; // reset to 0 for index calculation
+        mgcl::CuboidBSGpu c(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_cuboid);
 
-//                 if (cnt == yz)
-//                     REQUIRE(idx == 0);
+        auto check = [&](std::vector<double>& extractedBorders) { //
+            const double* data_borders = extractedBorders.data();
 
-//                 int i = idx / yz + m;
-//                 int j = (idx - (i - m) * yz) / ogh;
-//                 int k = idx % ogh;
+            int cnt = 0;
+            // front planes (yz)
+            for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
+                for (int j = 0; j < ngh; j++)             // all cells in y-dir
+                    for (int k = 0; k < ogh; k++)         // all cells in z-dir
+                        for (int b = 0; b < blocksize; b++)
+                        {
+                            CAPTURE(i, j, k, cnt);
+                            REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k][b]);
+                        }
 
-//                 REQUIRE(idx + ghosts_m * yz == cnt);
+            // back planes (yz)
+            for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
+                for (int j = 0; j < ngh; j++)      // all cells in y-dir
+                    for (int k = 0; k < ogh; k++)  // all cells in z-dir
+                        for (int b = 0; b < blocksize; b++)
+                            REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k][b]);
 
-//                 buf_res[idx + ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
-//             }
-//             // Top planes
-//             else if (idx < 2 * ghosts_m * yz + ghosts_n * xz)
-//             {
-//                 idx -= 2 * ghosts_m * yz; // reset to 0 for index calculation
+            // top planes (xz)
+            for (int j = ghosts_n; j < 2 * ghosts_n; j++)
+                for (int i = 0; i < mgh; i++)
+                    for (int k = 0; k < ogh; k++)
+                        for (int b = 0; b < blocksize; b++)
+                            REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k][b]);
 
-//                 if (cnt == 2 * ghosts_m * yz)
-//                     REQUIRE(idx == 0);
+            // bottom planes (xz)
+            for (int j = n; j < n + ghosts_n; j++)
+                for (int i = 0; i < mgh; i++)
+                    for (int k = 0; k < ogh; k++)
+                        for (int b = 0; b < blocksize; b++)
+                            REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k][b]);
 
-//                 int j = idx / xz + ghosts_n;
-//                 int i = (idx - (j - ghosts_n) * xz) / ogh;
-//                 int k = idx % ogh;
+            // left planes (xy)
+            for (int k = ghosts_o; k < 2 * ghosts_o; k++)
+                for (int i = 0; i < mgh; i++)
+                    for (int j = 0; j < ngh; j++)
+                        for (int b = 0; b < blocksize; b++)
+                            REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k][b]);
 
-//                 REQUIRE(idx + 2 * ghosts_m * yz == cnt);
+            // right planes (xy)
+            for (int k = o; k < o + ghosts_o; k++)
+                for (int i = 0; i < mgh; i++)
+                    for (int j = 0; j < ngh; j++)
+                        for (int b = 0; b < blocksize; b++)
+                            REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k][b]);
+        };
 
-//                 buf_res[idx + 2 * ghosts_m * yz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
-//             }
-//             // Bottom planes
-//             else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz)
-//             {
-//                 idx -= 2 * ghosts_m * yz + ghosts_n * xz; // reset to 0 for index calculation
+        SECTION("no_reuse")
+        {
+            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr);
+            REQUIRE(ret != nullptr);
+            REQUIRE(ret->size() == ressize);
+            check(*ret);
+        }
 
-//                 if (cnt == 2 * ghosts_m * yz + ghosts_n * xz)
-//                     REQUIRE(idx == 0);
+        SECTION("reuse_both")
+        {
+            std::vector<double> h_ret(ressize);
+            std::fill(h_ret.begin(), h_ret.end(), -1);
+            mgcl::BufferGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_ret);
 
-//                 int j = idx / xz + n;
-//                 int i = (idx - (j - n) * xz) / ogh;
-//                 int k = idx % ogh;
+            c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, &h_ret, nullptr, nullptr);
+            check(h_ret);
+        }
 
-//                 REQUIRE(idx + 2 * ghosts_m * yz + ghosts_n * xz == cnt);
+        SECTION("reuse_return_buffer")
+        {
+            std::vector<double> h_ret(ressize);
+            std::fill(h_ret.begin(), h_ret.end(), -1);
 
-//                 buf_res[idx + 2 * ghosts_m * yz + ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
-//             }
-//             // Left planes
-//             else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy)
-//             {
-//                 idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz; // reset to 0 for index calculation
+            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, &h_ret, nullptr, nullptr);
+            REQUIRE(ret == nullptr);
+            check(h_ret);
+        }
 
-//                 if (cnt == 2 * ghosts_m * yz + 2 * ghosts_n * xz)
-//                     REQUIRE(idx == 0);
+        SECTION("reuse_device_buffer")
+        {
+            mgcl::BufferGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, ressize);
+            d_tmp.fill(p.getProgram(), p.getCommands(), -1, true, &p.getKernelConfig(), p.getProfilingData());
 
-//                 int k = idx / xy + ghosts_o;
-//                 int i = (idx - (k - ghosts_o) * xy) / ngh;
-//                 int j = idx % ngh;
-
-//                 REQUIRE(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz == cnt);
-
-//                 buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz] = buf_cuboid[i * ngh * ogh + j * ogh + k];
-//             }
-//             // Right planes
-//             else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy)
-//             {
-//                 idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy; // reset to 0 for index calculation
-
-//                 if (cnt == 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy)
-//                     REQUIRE(idx == 0);
-
-//                 int k = idx / xy + o;
-//                 int i = (idx - (k - o) * xy) / ngh;
-//                 int j = idx % ngh;
-
-//                 REQUIRE(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy == cnt);
-
-//                 buf_res[idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy] = buf_cuboid[i * ngh * ogh + j * ogh + k];
-//             }
-//         }
-
-//         // Check that every index was written to
-//         for (auto val : h_res.field1d())
-//             REQUIRE(val >= 0);
-
-//         int cnt = 0;
-//         // front planes (yz)
-//         for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
-//             for (int j = 0; j < ngh; j++)             // all real cells in y-dir
-//                 for (int k = 0; k < ogh; k++)         // all real cells in z-dir
-//                     REQUIRE(buf_res[cnt++] == h_cuboid[i][j][k]);
-
-//         // back planes (yz)
-//         for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
-//             for (int j = 0; j < ngh; j++)      // all real cells in y-dir
-//                 for (int k = 0; k < ogh; k++)  // all real cells in z-dir
-//                     REQUIRE(buf_res[cnt++] == h_cuboid[i][j][k]);
-
-//         // top planes (xz)
-//         for (int j = ghosts_n; j < 2 * ghosts_n; j++)
-//             for (int i = 0; i < mgh; i++)
-//                 for (int k = 0; k < ogh; k++)
-//                     REQUIRE(buf_res[cnt++] == h_cuboid[i][j][k]);
-
-//         // bottom planes (xz)
-//         for (int j = n; j < n + ghosts_n; j++)
-//             for (int i = 0; i < mgh; i++)
-//                 for (int k = 0; k < ogh; k++)
-//                     REQUIRE(buf_res[cnt++] == h_cuboid[i][j][k]);
-
-//         // left planes (xy)
-//         for (int k = ghosts_o; k < 2 * ghosts_o; k++)
-//             for (int i = 0; i < mgh; i++)
-//                 for (int j = 0; j < ngh; j++)
-//                     REQUIRE(buf_res[cnt++] == h_cuboid[i][j][k]);
-
-//         // right planes (xy)
-//         for (int k = o; k < o + ghosts_o; k++)
-//             for (int i = 0; i < mgh; i++)
-//                 for (int j = 0; j < ngh; j++)
-//                     REQUIRE(buf_res[cnt++] == h_cuboid[i][j][k]);
-//     }
-
-//     SECTION("throwing")
-//     {
-//         // Create dummy problem
-//         auto v = std::make_shared<mgcl::CuboidBS>(1, 1, 1);
-//         auto f = std::make_shared<mgcl::CuboidBS>(1, 1, 1);
-//         mgcl::Problem p(1, 1, 1, f, v);
-//         p.setUseOpencl(true);
-//         p.setDeviceType(deviceType);
-//         p.init();
-
-//         {
-//             mgcl::CuboidBSGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 2, 1, 1);
-//             REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
-//         }
-//         {
-//             mgcl::CuboidBSGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 2, 1);
-//             REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
-//         }
-//         {
-//             mgcl::CuboidBSGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 1, 2);
-//             REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
-//         }
-//     }
-
-//     SECTION("success")
-//     {
-//         // Create dummy problem
-//         auto v = std::make_shared<mgcl::CuboidBS>(1, 1, 1);
-//         auto f = std::make_shared<mgcl::CuboidBS>(1, 1, 1);
-//         mgcl::Problem p(1, 1, 1, f, v);
-//         p.setUseOpencl(true);
-//         p.setDeviceType(deviceType);
-//         p.init();
-
-//         int m = 3;
-//         int n = 5;
-//         int o = 7;
-//         int ghosts_m = 1;
-//         int ghosts_n = 2;
-//         int ghosts_o = 3;
-//         int mgh = m + 2 * ghosts_m;
-//         int ngh = n + 2 * ghosts_n;
-//         int ogh = o + 2 * ghosts_o;
-//         int yz = ngh * ogh;
-//         int xz = mgh * ogh;
-//         int xy = mgh * ngh;
-//         int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
-
-//         mgcl::CuboidBS h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o);
-//         h_cuboid.fill1dIndex(false);
-
-//         mgcl::CuboidBSGpu c(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_cuboid);
-
-//         auto check = [&](std::vector<double>& extractedBorders) { //
-//             const double* data_borders = extractedBorders.data();
-
-//             int cnt = 0;
-//             // front planes (yz)
-//             for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
-//                 for (int j = 0; j < ngh; j++)             // all cells in y-dir
-//                     for (int k = 0; k < ogh; k++)         // all cells in z-dir
-//                     {
-//                         CAPTURE(i, j, k, cnt);
-//                         REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-//                     }
-
-//             // back planes (yz)
-//             for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
-//                 for (int j = 0; j < ngh; j++)      // all cells in y-dir
-//                     for (int k = 0; k < ogh; k++)  // all cells in z-dir
-//                         REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-
-//             // top planes (xz)
-//             for (int j = ghosts_n; j < 2 * ghosts_n; j++)
-//                 for (int i = 0; i < mgh; i++)
-//                     for (int k = 0; k < ogh; k++)
-//                         REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-
-//             // bottom planes (xz)
-//             for (int j = n; j < n + ghosts_n; j++)
-//                 for (int i = 0; i < mgh; i++)
-//                     for (int k = 0; k < ogh; k++)
-//                         REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-
-//             // left planes (xy)
-//             for (int k = ghosts_o; k < 2 * ghosts_o; k++)
-//                 for (int i = 0; i < mgh; i++)
-//                     for (int j = 0; j < ngh; j++)
-//                         REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-
-//             // right planes (xy)
-//             for (int k = o; k < o + ghosts_o; k++)
-//                 for (int i = 0; i < mgh; i++)
-//                     for (int j = 0; j < ngh; j++)
-//                         REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k]);
-//         };
-
-//         SECTION("no_reuse")
-//         {
-//             auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr);
-//             REQUIRE(ret != nullptr);
-//             check(*ret);
-//         }
-
-//         SECTION("reuse_both")
-//         {
-//             std::vector<double> h_ret(ressize);
-//             std::fill(h_ret.begin(), h_ret.end(), -1);
-//             mgcl::BufferGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_ret);
-
-//             c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, &h_ret, nullptr, nullptr);
-//             check(h_ret);
-//         }
-
-//         SECTION("reuse_return_buffer")
-//         {
-//             std::vector<double> h_ret(ressize);
-//             std::fill(h_ret.begin(), h_ret.end(), -1);
-
-//             auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, &h_ret, nullptr, nullptr);
-//             REQUIRE(ret == nullptr);
-//             check(h_ret);
-//         }
-
-//         SECTION("reuse_device_buffer")
-//         {
-//             mgcl::BufferGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, ressize);
-//             d_tmp.fill(p.getProgram(), p.getCommands(), -1, true, &p.getKernelConfig(), p.getProfilingData());
-
-//             auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr, nullptr, nullptr);
-//             check(*ret);
-//         }
-//     }
-// }
+            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr, nullptr, nullptr);
+            check(*ret);
+        }
+    }
+}
 
 // TEST_CASE("CuboidBSGpu::pasteGhostsFromBorderPlanes", "[ocl]")
 // {

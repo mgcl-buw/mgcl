@@ -423,14 +423,11 @@ namespace mgcl
                                                                           BufferGpu* d_target, std::vector<double>* h_target,
                                                                           mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
-        // TODO implement
-        assert(false && "Not implemented yet");
-
         // Plane sizes
         int yz = ngh * ogh;
         int xz = mgh * ogh;
         int xy = mgh * ngh;
-        int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
+        int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * blocksize;
 
         if (ghosts_m > m || ghosts_n > n || ghosts_o > o)
             error("CuboidBSGpu::extractBorderPlanes: Only defined for ghosts <= m, n, o");
@@ -456,7 +453,7 @@ namespace mgcl
         int err;
 
         // Create the compute kernel from the program
-        const char* kernelName = "extract_border_planes";
+        const char* kernelName = "extract_border_planes_cuboidbs";
         cl_kernel kernel = clCreateKernel(program, kernelName, &err);
         mgcl::mgclCheckError(err, "clCreateKernel");
 
@@ -474,6 +471,7 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_n);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &blocksize);
         mgcl::mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
@@ -493,7 +491,7 @@ namespace mgcl
 
         // enqueue kernel
         err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
-        mgcl::mgclCheckError(err, "Enqueueing extract_border_planes kernel");
+        mgcl::mgclCheckError(err, "Enqueueing extract_border_planes_cuboidbs kernel");
 
         if (pd != nullptr)
         {
@@ -506,7 +504,7 @@ namespace mgcl
         mgcl::mgclCheckError(clFinish(commands), "clFinish");
 
         err = clReleaseKernel(kernel);
-        mgcl::mgclCheckError(err, "Releasing extract_border_planes kernel");
+        mgcl::mgclCheckError(err, "Releasing extract_border_planes_cuboidbs kernel");
 
         // Read into h_target
         d_target->read(commands, retraw->data(), true, ressize);

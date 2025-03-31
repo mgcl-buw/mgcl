@@ -2771,6 +2771,123 @@ __kernel void paste_ghosts_from_border_planes_varying_stencil(
 }
 
 /**
+ * Extracts border planes from buf_cuboid and writes result into buf_res.
+ * The planes are stored in the following order:
+ *   front (yz), back (yz), top (xz), bottom (xz), left (xy), right (xy)
+ * Hence, the borders of the planes are stored multiple times.
+ * The planes itself are stored as follows:
+ * - yz: j-major, i.e. forall j { forall k { ... } }
+ * - xz: i-major, i.e. forall i { forall k { ... } }
+ * - xy: i-major, i.e. forall i { forall k { ... } }
+ *
+ * This kernel must be called as a 1d kernel with
+ *   #borderCells = ghosts_m*n*o * ghosts_n*m*o * ghosts_o*n*m
+ * work-items.
+ * Block entries for one grid points lay conescutively in memory, i.e. gp000_m0, gp000_m1, gp001_m0, gp001_m1, etc.
+ * Arguments:
+ * * buf_cuboid: CuboidBSGPU::buffer of size mgh*ngh*ogh
+ * * buf_res: CuboidGPU::buffer of size 1*1*#borderCells
+ * * m, n, o: Extents of buf_cuboid excluding ghost cells
+ * * mgh, ngh, ogh: Extents of buf_cuboid including ghost cells
+ * * ghosts_m, ghosts_n, ghosts_o: Ghost cell amount of buf_cuboid
+ * * blocksize: Number of vector components
+ */
+__kernel void extract_border_planes_cuboidbs(
+    __global double* buf_cuboid,
+    __global double* buf_res,
+    int m, int n, int o,
+    int mgh, int ngh, int ogh,
+    int ghosts_m, int ghosts_n, int ghosts_o,
+    const int blocksize)
+{
+    // plane sizes
+    int yz = ngh * ogh;
+    int xz = mgh * ogh;
+    int xy = mgh * ngh;
+
+    // Get buf_cuboid's 1d index for the first matrix entry
+    int idx = get_global_id(0);
+
+    // Front planes
+    if (idx < ghosts_m * yz)
+    {
+        int i = idx / yz + ghosts_m;
+        int j = (idx - (i - ghosts_m) * yz) / ogh;
+        int k = idx % ogh;
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+        for (int bi = 0; bi < blocksize; bi++)
+        {
+            buf_res[idx * blocksize + bi] = buf_cuboid[gp_base_idx + bi]; // store block entries for each grid point consecutively
+        }
+    }
+    // Back planes
+    else if (idx < 2 * ghosts_m * yz)
+    {
+        idx -= ghosts_m * yz; // reset to 0 for index calculation
+        int i = idx / yz + m;
+        int j = (idx - (i - m) * yz) / ogh;
+        int k = idx % ogh;
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+        for (int bi = 0; bi < blocksize; bi++)
+        {
+            buf_res[(idx + ghosts_m * yz) * blocksize + bi] = buf_cuboid[gp_base_idx + bi];
+        }
+    }
+    // Top planes
+    else if (idx < 2 * ghosts_m * yz + ghosts_n * xz)
+    {
+        idx -= 2 * ghosts_m * yz; // reset to 0 for index calculation
+        int j = idx / xz + ghosts_n;
+        int i = (idx - (j - ghosts_n) * xz) / ogh;
+        int k = idx % ogh;
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+        for (int bi = 0; bi < blocksize; bi++)
+        {
+            buf_res[(idx + 2 * ghosts_m * yz) * blocksize + bi] = buf_cuboid[gp_base_idx + bi];
+        }
+    }
+    // Bottom planes
+    else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz)
+    {
+        idx -= 2 * ghosts_m * yz + ghosts_n * xz; // reset to 0 for index calculation
+        int j = idx / xz + n;
+        int i = (idx - (j - n) * xz) / ogh;
+        int k = idx % ogh;
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+        for (int bi = 0; bi < blocksize; bi++)
+        {
+            buf_res[(idx + 2 * ghosts_m * yz + ghosts_n * xz) * blocksize + bi] = buf_cuboid[gp_base_idx + bi];
+        }
+    }
+    // Left planes
+    else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy)
+    {
+        idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz; // reset to 0 for index calculation
+        int k = idx / xy + ghosts_o;
+        int i = (idx - (k - ghosts_o) * xy) / ngh;
+        int j = idx % ngh;
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+        for (int bi = 0; bi < blocksize; bi++)
+        {
+            buf_res[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz) * blocksize + bi] = buf_cuboid[gp_base_idx + bi];
+        }
+    }
+    // Right planes
+    else if (idx < 2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy)
+    {
+        idx -= 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy; // reset to 0 for index calculation
+        int k = idx / xy + o;
+        int i = (idx - (k - o) * xy) / ngh;
+        int j = idx % ngh;
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+        for (int bi = 0; bi < blocksize; bi++)
+        {
+            buf_res[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * blocksize + bi] = buf_cuboid[gp_base_idx + bi];
+        }
+    }
+}
+
+/**
  * Fill buffer with value, equivalent to clEnqueueFillBuffer.
  * size is the number of elements in the buffer.
  */
