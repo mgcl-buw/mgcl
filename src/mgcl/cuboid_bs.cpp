@@ -1,9 +1,11 @@
 #include "cuboid_bs.hpp"
 
 #include "mgcl.hpp"
+#include "mpi_util.hpp"
 
 #include <algorithm> // for fill
 #include <cmath>     // for fabs
+#include <cstdint>
 #include <fstream>   // IWYU pragma: keep
 #include <iomanip>   // for operator<<, setw, setprecision
 #include <iostream>  // for basic_ostream::operator<<, basic_ostream, opera...
@@ -529,4 +531,192 @@ namespace mgcl
         return std::make_unique<CuboidBS>(m, n, o, ghostsM, ghostsN, ghostsO, blocksize);
     }
 
+    void CuboidBS::updateGhostsLocally()
+    {
+        int ghm_start_right = ghostsM + m;
+        int ghn_start_right = ghostsN + n;
+        int gho_start_right = ghostsO + o;
+
+        // clang-format off
+        // sending data in z-direction           
+        for (int i = 0; i < ghostsM; i++)
+        {
+            int factor_left = (ghostsM - 1 - i) / m + 1;
+            int factor_right = (ghm_start_right + i - ghostsM) / m;
+
+            for (int j = 0; j < n + 2 * ghostsN; j++)
+            for (int k = 0; k < o + 2 * ghostsO; k++)
+            for (int b = 0; b < blocksize; b++)
+                {
+                    
+                    field_4d[i][j][k][b] = field_4d[i + factor_left * m][j][k][b]; // left ghost cell = right real cell
+                    field_4d[ghm_start_right + i][j][k][b] = field_4d[ghm_start_right + i - factor_right * m][j][k][b]; // right ghost cell = left real cell
+                }
+        }
+
+        // sending data in y-direction           
+        for (int i = 0; i < ghostsN; i++)
+        {
+            int factor_left = (ghostsN - 1 - i) / n + 1;
+            int factor_right = (ghn_start_right + i - ghostsN) / n;
+
+            for (int j = 0; j < m + 2 * ghostsM; j++)
+            for (int k = 0; k < o + 2 * ghostsO; k++)
+            for (int b = 0; b < blocksize; b++)
+                {
+                    
+                    field_4d[j][i][k][b] = field_4d[j][i + factor_left * n][k][b]; // left ghost cell = right real cell
+                    field_4d[j][ghn_start_right + i][k][b] = field_4d[j][ghn_start_right + i - factor_right * n][k][b]; // right ghost cell = left real cell
+                }
+        }
+
+        // sending data in x-direction           
+        for (int i = 0; i < ghostsO; i++)
+        {
+            int factor_left = (ghostsO - 1 - i) / o + 1;
+            int factor_right = (gho_start_right + i - ghostsO) / o;
+
+            for (int j = 0; j < m + 2 * ghostsM; j++)
+            for (int k = 0; k < n + 2 * ghostsN; k++)
+            for (int b = 0; b < blocksize; b++)
+                {
+                    
+                    field_4d[j][k][i][b] = field_4d[j][k][i + factor_left * o][b]; // left ghost cell = right real cell
+                    field_4d[j][k][gho_start_right + i][b] = field_4d[j][k][gho_start_right + i - factor_right * o][b]; // right ghost cell = left real cell
+                }
+        }
+        // clang-format on
+    }
+
+    void CuboidBS::updateGhosts(MPILevelData* mpiData, bool forceLocal)
+    {
+        // TODO adjust for ghosts > 1
+        if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
+        {
+            updateGhostsLocally();
+            return;
+        }
+
+        double**** cbuf = getData();
+
+        /* Loop variables */
+        int i, j, k;
+        /* Getting local rank */
+        int myid;
+        MPI_Comm_rank(mpiData->comm, &myid);
+
+        int err;
+
+        /* Sending data to the front */
+        auto sbuf_ptr = sliceIncGhosts(ghostsM, 2 * ghostsM - 1, 0, ngh - 1, 0, ogh - 1); // TODO max when gh > m
+        auto sbuf = sbuf_ptr->getData();
+        auto rbuf_ptr = std::make_unique<CuboidBS>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0, blocksize);
+        auto rbuf = rbuf_ptr->getData();
+
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0]), ghostsM * ngh * ogh * blocksize, MPI_DOUBLE, mpiData->front, 0,
+                           static_cast<void*>(rbuf[0][0][0]), ghostsM * ngh * ogh * blocksize, MPI_DOUBLE, mpiData->back, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
+        if (MPI_PROC_NULL != mpiData->back)
+            for (i = 0; i < ghostsM; i++)
+                for (j = 0; j < ngh; j++)
+                    for (k = 0; k < ogh; k++)
+                        for (int b = 0; b < blocksize; b++)
+                            cbuf[mgh - ghostsM + i][j][k][b] = rbuf[i][j][k][b];
+
+        /* Sending data to the back */
+        sbuf_ptr = sliceIncGhosts(m, m + ghostsM - 1, 0, ngh - 1, 0, ogh - 1); // TODO max when gh > m
+        sbuf = sbuf_ptr->getData();
+        rbuf_ptr = std::make_unique<CuboidBS>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0, blocksize);
+        rbuf = rbuf_ptr->getData();
+
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0]), ghostsM * ngh * ogh * blocksize, MPI_DOUBLE, mpiData->back, 0,
+                           static_cast<void*>(rbuf[0][0][0]), ghostsM * ngh * ogh * blocksize, MPI_DOUBLE, mpiData->front, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
+        if (MPI_PROC_NULL != mpiData->front)
+            for (i = 0; i < ghostsM; i++)
+                for (j = 0; j < ngh; j++)
+                    for (k = 0; k < ogh; k++)
+                        for (int b = 0; b < blocksize; b++)
+                            cbuf[i][j][k][b] = rbuf[i][j][k][b];
+
+        /* Sending data downwards */
+        sbuf_ptr = sliceIncGhosts(0, mgh - 1, ghostsM, 2 * ghostsN - 1, 0, ogh - 1); // TODO max when gh > m
+        sbuf = sbuf_ptr->getData();
+        rbuf_ptr = std::make_unique<CuboidBS>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0, blocksize);
+        rbuf = rbuf_ptr->getData();
+
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0]), mgh * ghostsN * ogh * blocksize, MPI_DOUBLE, mpiData->down, 0,
+                           static_cast<void*>(rbuf[0][0][0]), mgh * ghostsN * ogh * blocksize, MPI_DOUBLE, mpiData->up, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
+        if (MPI_PROC_NULL != mpiData->up)
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ghostsN; j++)
+                    for (k = 0; k < ogh; k++)
+                        for (int b = 0; b < blocksize; b++)
+                            cbuf[i][ngh - ghostsN + j][k][b] = rbuf[i][j][k][b];
+
+        /* Sending data upwards */
+        sbuf_ptr = sliceIncGhosts(0, mgh - 1, n, n + ghostsN - 1, 0, ogh - 1); // TODO max when gh > m
+        sbuf = sbuf_ptr->getData();
+        rbuf_ptr = std::make_unique<CuboidBS>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0, blocksize);
+        rbuf = rbuf_ptr->getData();
+
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0]), mgh * ghostsN * ogh * blocksize, MPI_DOUBLE, mpiData->up, 0,
+                           static_cast<void*>(rbuf[0][0][0]), mgh * ghostsN * ogh * blocksize, MPI_DOUBLE, mpiData->down, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
+        if (MPI_PROC_NULL != mpiData->down)
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ghostsN; j++)
+                    for (k = 0; k < ogh; k++)
+                        for (int b = 0; b < blocksize; b++)
+                            cbuf[i][j][k][b] = rbuf[i][j][k][b];
+
+        /* Sending data to the left */
+        sbuf_ptr = sliceIncGhosts(0, mgh - 1, 0, ngh - 1, ghostsO, 2 * ghostsO - 1); // TODO max when gh > m
+        sbuf = sbuf_ptr->getData();
+        rbuf_ptr = std::make_unique<CuboidBS>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0, blocksize);
+        rbuf = rbuf_ptr->getData();
+
+        // std::cout << myid << "," << mpiData->left << std::endl;
+        // MPI_Barrier(comm);
+        // sbuf_ptr->dumpToFile("sbuf_ptr_left" + std::to_string(myid) + ".txt");
+
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0]), mgh * ngh * ghostsO * blocksize, MPI_DOUBLE, mpiData->left, 0,
+                           static_cast<void*>(rbuf[0][0][0]), mgh * ngh * ghostsO * blocksize, MPI_DOUBLE, mpiData->right, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
+        if (MPI_PROC_NULL != mpiData->right)
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ngh; j++)
+                    for (int b = 0; b < blocksize; b++)
+                        for (k = 0; k < ghostsO; k++)
+                            cbuf[i][j][ogh - ghostsO + k][b] = rbuf[i][j][k][b];
+
+        /* Sending data to the right */
+        sbuf_ptr = sliceIncGhosts(0, mgh - 1, 0, ngh - 1, o, o + ghostsO - 1); // TODO max when gh > m
+        sbuf = sbuf_ptr->getData();
+        rbuf_ptr = std::make_unique<CuboidBS>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0, blocksize);
+        rbuf = rbuf_ptr->getData();
+
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0]), mgh * ngh * ghostsO * blocksize, MPI_DOUBLE, mpiData->right, 0,
+                           static_cast<void*>(rbuf[0][0][0]), mgh * ngh * ghostsO * blocksize, MPI_DOUBLE, mpiData->left, 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
+        if (MPI_PROC_NULL != mpiData->left)
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ngh; j++)
+                    for (k = 0; k < ghostsO; k++)
+                        for (int b = 0; b < blocksize; b++)
+                            cbuf[i][j][k][b] = rbuf[i][j][k][b];
+    }
 }

@@ -360,3 +360,101 @@ TEST_CASE("CuboidBS::fill1dindex")
                     cnt++;
                 }
 }
+
+TEST_CASE("updateGhostsLocally gh < m")
+{
+    int m = 16;
+    int n = 8;
+    int o = 4;
+    int ghosts_m = 2;
+    int ghosts_n = 1;
+    int ghosts_o = 0;
+    int mgh = m + 2 * ghosts_m;
+    int ngh = n + 2 * ghosts_n;
+    int ogh = o + 2 * ghosts_o;
+    int blocksize = 2;
+
+    mgcl::CuboidBS c1(m, n, o, ghosts_m, ghosts_n, ghosts_o, blocksize);
+    c1.fillRandom();
+
+    c1.updateGhosts(nullptr, true);
+
+    // check in z-direction
+    for (int i = 0; i < ghosts_m; i++)
+        for (int j = 0; j < n + 2 * ghosts_n; j++)
+            for (int k = 0; k < o + 2 * ghosts_o; k++)
+                for (int b = 0; b < blocksize; b++)
+                {
+                    REQUIRE(c1[i][j][k][b] == c1[i + m][j][k][b]);
+                    REQUIRE(c1[i + ghosts_m][j][k][b] == c1[i + ghosts_m + m][j][k][b]);
+                }
+
+    // check in y-direction
+    for (int i = 0; i < m + 2 * ghosts_m; i++)
+        for (int j = 0; j < ghosts_n; j++)
+            for (int k = 0; k < o + 2 * ghosts_o; k++)
+                for (int b = 0; b < blocksize; b++)
+                {
+                    REQUIRE(c1[i][j][k][b] == c1[i][j + n][k][b]);
+                    REQUIRE(c1[i][j + ghosts_n][k][b] == c1[i][j + ghosts_n + n][k][b]);
+                }
+
+    // check in x-direction
+    for (int i = 0; i < m + 2 * ghosts_m; i++)
+        for (int j = 0; j < n + 2 * ghosts_n; j++)
+            for (int k = 0; k < ghosts_o; k++)
+                for (int b = 0; b < blocksize; b++)
+                {
+                    REQUIRE(c1[i][j][k][b] == c1[i][j][k + o][b]);
+                    REQUIRE(c1[i][j][k + ghosts_o][b] == c1[i][j][k + ghosts_o + o][b]);
+                }
+}
+
+TEST_CASE("updateGhostsLocally gh > m")
+{
+    int m = 2;
+    int n = 3;
+    int o = 4;
+    int ghosts_m = 3;
+    int ghosts_n = 3;
+    int ghosts_o = 7;
+    int mgh = m + 2 * ghosts_m;
+    int ngh = n + 2 * ghosts_n;
+    int ogh = o + 2 * ghosts_o;
+    int blocksize = 2;
+
+    mgcl::CuboidBS c1(m, n, o, ghosts_m, ghosts_n, ghosts_o, blocksize);
+    c1.fillRandom();
+
+    c1.updateGhosts(nullptr, true);
+
+    // check in z-direction
+    for (int i = 0; i < ghosts_m; i++)
+        for (int j = 0; j < n + 2 * ghosts_n; j++)
+            for (int k = 0; k < o + 2 * ghosts_o; k++)
+                for (int b = 0; b < blocksize; b++)
+                {
+                    REQUIRE(c1[i][j][k][b] == c1[i + m][j][k][b]);
+                    REQUIRE(c1[i + ghosts_m][j][k][b] == c1[i + ghosts_m + m][j][k][b]);
+                }
+
+    // check in y-direction
+    for (int i = 0; i < m + 2 * ghosts_m; i++)
+        for (int j = 0; j < ghosts_n; j++)
+            for (int k = 0; k < o + 2 * ghosts_o; k++)
+                for (int b = 0; b < blocksize; b++)
+                {
+                    REQUIRE(c1[i][j][k][b] == c1[i][j + n][k][b]);
+                    REQUIRE(c1[i][j + ghosts_n][k][b] == c1[i][j + ghosts_n + n][k][b]);
+                }
+
+    // check in x-direction
+    for (int i = 0; i < m + 2 * ghosts_m; i++)
+        for (int j = 0; j < n + 2 * ghosts_n; j++)
+            for (int k = 0; k < ghosts_o; k++)
+                for (int b = 0; b < blocksize; b++)
+                {
+                    REQUIRE(c1[i][j][k][b] == c1[i][j][k + o][b]);
+                    REQUIRE(c1[i][j][k + ghosts_o][b] == c1[i][j][k + ghosts_o + o][b]);
+                }
+}

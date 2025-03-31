@@ -1,6 +1,7 @@
 #ifndef MGCL_CUBOID_BS__HPP
 #define MGCL_CUBOID_BS__HPP
 
+#include "mpi_level_data.hpp"
 #include <memory>
 #include <string>
 #include <vector>
@@ -34,6 +35,8 @@ namespace mgcl
         std::vector<double> field_1d;
         double**** field_4d;
 
+        void updateGhostsLocally();
+
     public:
         CuboidBS(int m_, int n_, int o_, int blocksize);
         CuboidBS(int m_, int n_, int o_, int blocksize, double value);
@@ -59,6 +62,8 @@ namespace mgcl
         std::unique_ptr<CuboidBS> sliceIncGhosts(int m_start, int m_end, int n_start, int n_end,
                                                  int o_start, int o_end);
         std::unique_ptr<CuboidBS> copyShallow();
+
+        void updateGhosts(MPILevelData* mpiData, bool forceLocal);
 
         inline double*** operator[](int index) { return field_4d[index]; }
 
