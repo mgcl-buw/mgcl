@@ -81,6 +81,22 @@ cl_mem mgcl_test::TestUtility::createOpenCLBuffer(mgcl::Cuboid& c)
 }
 
 /**
+ * @brief Creates an OpenCL buffer with content of c.
+ *
+ * @param c
+ * @return cl_mem
+ */
+cl_mem mgcl_test::TestUtility::createOpenCLBuffer(mgcl::CuboidBS& c)
+{
+    int err;
+    cl_mem buf = clCreateBuffer(problem->getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+                                sizeof(double) * c.getSize(), c.field1d().data(), &err);
+    mgcl::mgclCheckError(err, "clCreateBuffer");
+    openclBuffers.push_back(buf);
+    return buf;
+}
+
+/**
  * @brief Waits for command queue to finish and reads a buffer into a Cuboid.
  *
  * @param buf

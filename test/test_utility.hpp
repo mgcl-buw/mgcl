@@ -17,6 +17,7 @@
 #endif
 
 #include "../src/mgcl/cuboid.hpp"
+#include "../src/mgcl/cuboid_bs.hpp"
 #include "../src/mgcl/opencl_helper.hpp"
 #include "../src/mgcl/problem.hpp"
 
@@ -37,6 +38,7 @@ namespace mgcl_test
         TestUtility(std::shared_ptr<mgcl::Problem> problem);
         ~TestUtility();
         cl_mem createOpenCLBuffer(mgcl::Cuboid& c);
+        cl_mem createOpenCLBuffer(mgcl::CuboidBS& c);
         std::unique_ptr<mgcl::Cuboid> readOpenCLBuffer(cl_mem buf, int m, int n, int o, int ghosts_m = 0, int ghosts_n = 0, int ghosts_o = 0);
         int finish();
         void releaseBuffers();
