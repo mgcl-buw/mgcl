@@ -165,6 +165,7 @@ if [ "$TEST_GHOSTS" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 8 "$exe" "MPI-updateGhostsSeq-CuboidBS_(n_processes)"
     if [ "$NO_OCL" = false ] ; then
         run_test --oversubscribe -n 8 "$exe" "MPI updateGhosts ocl (n processes)" --deviceTypes "$OCL_DEVICE_TYPES"
+        run_test --oversubscribe -n 8 "$exe" "MPI_updateGhosts_ocl_CuboidBS_(n_processes)" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
 fi
 

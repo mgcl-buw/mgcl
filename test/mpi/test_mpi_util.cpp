@@ -1525,3 +1525,167 @@ TEST_CASE("mpi_util::sendBorderPlanes_stencil")
                             REQUIRE(rbuf[(ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xygh + base_xy_right + k * xy + i * ngh + j] == c[ii][jj][kk][i][j][k]);
                         }
 }
+
+// Checks that sending border planes of a CuboidBS is correct.
+// Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::sendBorderPlanes_cuboid"
+TEST_CASE("mpi_util::sendBorderPlanes_cuboidbs_blockstencil")
+{
+    using std::min;
+
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    int ghosts_m = 1;
+    int ghosts_n = 2;
+    int ghosts_o = 3;
+    int mgh = m + 2 * ghosts_m;
+    int ngh = n + 2 * ghosts_n;
+    int ogh = o + 2 * ghosts_o;
+    int blocksize = 2;
+    int periodic = 1; // GENERATE(0,1);
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    REQUIRE(mpi_size > 1);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    // Calculate global sizes
+    int mglob = m * mpi_dims[0];
+    int nglob = n * mpi_dims[1];
+    int oglob = o * mpi_dims[2];
+
+    // Create dummy problem
+    auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
+    auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
+    mgcl::Problem p(m, n, o, f, v, mglob, nglob, oglob);
+    p.setMpiComm(mpi_comm);
+    p.init();
+
+    auto& mpiData = p.getLevelAt(0).getMpiData();
+
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (i == mpi_rank)
+    //     {
+    //         std::cerr << i << ":" << std::endl;
+    //         std::cerr << "  coords: " << mpi_coords[0] << "," << mpi_coords[1] << "," << mpi_coords[2] << std::endl;
+    //         std::cerr << "  front: " << mpiData.front << std::endl;
+    //         std::cerr << "   back: " << mpiData.back << std::endl;
+    //         std::cerr << "     up: " << mpiData.up << std::endl;
+    //         std::cerr << "   down: " << mpiData.down << std::endl;
+    //         std::cerr << "   left: " << mpiData.left << std::endl;
+    //         std::cerr << "  right: " << mpiData.right << std::endl;
+    //     }
+    // }
+
+    int yz = ngh * ogh;
+    int xz = mgh * ogh;
+    int xy = mgh * ngh;
+    int ressize = (2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy) * blocksize;
+
+    // int base_yz_front = 0;
+    int base_yz_back = ghosts_m * yz * blocksize;
+    int base_xz_top = 2 * ghosts_m * yz * blocksize;
+    int base_xz_bottom = (2 * ghosts_m * yz + ghosts_n * xz) * blocksize;
+    int base_xy_left = (2 * ghosts_m * yz + 2 * ghosts_n * xz) * blocksize;
+    int base_xy_right = (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * blocksize;
+
+    std::vector<double> sbuf(ressize);
+    std::vector<double> rbuf(ressize);
+
+    mgcl::CuboidBS c(m, n, o, ghosts_m, ghosts_n, ghosts_o, blocksize);
+    c.fill1dIndex(false);
+
+    // fill planes with 1d index from cuboid
+    for (int i = 0; i < ghosts_m; i++)
+        for (int j = 0; j < ngh; j++)
+            for (int k = 0; k < ogh; k++)
+                for (int b = 0; b < blocksize; b++)
+                {
+                    // front
+                    sbuf[(i * yz + j * ogh + k) * blocksize + b] = c[i + ghosts_m][j][k][b];
+
+                    // back
+                    sbuf[base_yz_back + (i * yz + j * ogh + k) * blocksize + b] = c[i + m][j][k][b];
+                }
+    for (int i = 0; i < mgh; i++)
+        for (int j = 0; j < ghosts_n; j++)
+            for (int k = 0; k < ogh; k++)
+                for (int b = 0; b < blocksize; b++)
+                {
+                    // top
+                    sbuf[base_xz_top + (j * xz + i * ogh + k) * blocksize + b] = c[i][j + ghosts_n][k][b];
+
+                    // bottom
+                    sbuf[base_xz_bottom + (j * xz + i * ogh + k) * blocksize + b] = c[i][j + n][k][b];
+                }
+    for (int i = 0; i < mgh; i++)
+        for (int j = 0; j < ngh; j++)
+            for (int k = 0; k < ghosts_o; k++)
+                for (int b = 0; b < blocksize; b++)
+                {
+                    // left
+                    sbuf[base_xy_left + (k * xy + i * ngh + j) * blocksize + b] = c[i][j][k + ghosts_o][b];
+
+                    // right
+                    sbuf[base_xy_right + (k * xy + i * ngh + j) * blocksize + b] = c[i][j][k + o][b];
+                }
+
+    for (size_t i = 0; i < rbuf.size(); i++)
+    {
+        rbuf[i] = -1;
+    }
+
+    mgcl::mpi_util::sendBorderPlanesBlockstencil(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, 1, blocksize,
+                                                 sbuf, rbuf, mpiData);
+
+    c.updateGhosts(nullptr, true);
+
+    // Check against cuboid with updated ghosts
+    // Edges in send buffers for top and down after sending to front and back
+    for (int i = 0; i < ghosts_m; i++)
+        for (int j = 0; j < ghosts_n; j++)
+            for (int k = ghosts_o; k < ghosts_o + o; k++)
+                for (int b = 0; b < blocksize; b++)
+                {
+                    CAPTURE(i, j, k);
+                    // top (bottom ghosts)
+                    REQUIRE(rbuf[base_xz_top + (j * xz + i * ogh + k) * blocksize + b] == c[i][j + ghosts_n + n][k][b]);
+
+                    // bottom (top ghosts)
+                    REQUIRE(rbuf[base_xz_bottom + (j * xz + i * ogh + k) * blocksize + b] == c[i][j][k][b]);
+                }
+    // Toruses in send buffers for left and right after sending to top and bottom
+    for (int i = 0; i < mgh; i++)
+        for (int j = 0; j < ngh; j++)
+            for (int k = 0; k < ghosts_o; k++)
+                for (int b = 0; b < blocksize; b++)
+                {
+                    // left (right ghosts)
+                    REQUIRE(rbuf[base_xy_left + (k * xy + i * ngh + j) * blocksize + b] == c[i][j][k + ghosts_o + o][b]);
+
+                    // right (left ghosts)
+                    REQUIRE(rbuf[base_xy_right + (k * xy + i * ngh + j) * blocksize + b] == c[i][j][k][b]);
+                }
+}

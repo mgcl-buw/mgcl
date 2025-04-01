@@ -24,6 +24,9 @@ namespace mgcl::mpi_util
     void sendBorderPlanes(int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
                           int stencilWidth,
                           std::vector<double>& sbuf, std::vector<double>& rbuf, MPILevelData& mpiData);
+    void sendBorderPlanesBlockstencil(int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
+                                      int stencilWidth, int blocksize,
+                                      std::vector<double>& sbuf, std::vector<double>& rbuf, MPILevelData& mpiData);
 
     void mgcl_check_mpi_error(MPI_Comm comm, int err, const char* operation, const char* filename, int line);
 }
