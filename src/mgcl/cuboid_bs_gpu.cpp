@@ -1,14 +1,18 @@
 #include "cuboid_bs_gpu.hpp"
 
+#include "buffer_gpu.hpp"
 #include "kernel_config.hpp"
+#include "mpi_util.hpp"
 #include "opencl_helper.hpp"
 #include "profiling_data.hpp"
 
 #include "mgcl.hpp"
 
+#include <CL/cl.h>
 #include <cassert>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 #include <memory>
 #include <vector>
 
@@ -668,145 +672,64 @@ namespace mgcl
         mgclCheckError(err, "Releasing update_ghosts_cuboidbs_periodic_blockstencil kernel");
     }
 
-    // /* updates ghost cells on opencl device.
-    //  * m,n,o must be size of ghosted grid.
-    //  * Only enqueues the kernel. Neither waits for kernel to finish nor reads back results */
-    // void CuboidBSGpu::updateGhosts(MPILevelData* mpiData, bool forceLocal)
-    // {
-    //     if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
-    //     {
-    //         updateGhostsLocally();
-    //         return;
-    //     }
+    /**
+     * @brief Updates ghosts of an OpenCL buffer respecting MPI usage. That is, the buffer is sent to host, ghosts
+     * are updated using MPI routines, and the updated buffer is sent back to the device.
+     * Waits for previous commands to finish before reading the buffer.
+     *
+     * @param program OpenCL program
+     * @param commands OpenCL command queue
+     * @param dPlanesBuf Device buffer for storing planes. Must be at least of size
+     *   (2 * yz * getGhostsM() + 2 * xz * getGhostsN() + 2 * xy * getGhostsO()) * blocksize
+     * @param hPlanesBufSend Host buffer for sending planes.
+     * @param hPlanesBufRecv Host buffer for receiving planes.
+     * @param mpiData Contains MPI topology data for the current level.
+     * @param forceLocal If true, ghosts will be updated locally without MPI routines.
+     * @param conf OpenCL Kernel launch config
+     * @param pd OpenCL profiling data
+     */
+    void CuboidBSGpu::updateGhostsOclMpi(cl_program program, cl_command_queue commands,
+                                         BufferGpu& dPlanesBuf,
+                                         std::vector<double>& hPlanesBufSend, std::vector<double>& hPlanesBufRecv,
+                                         MPILevelData& mpiData, bool forceLocal,
+                                         conf::KernelConfig* conf, mgcl::ProfilingData* pd)
+    {
+        if (forceLocal)
+        {
+            updateGhostsLocally(program, commands, conf, pd);
+            return;
+        }
 
-    //     if (problem.useMpi() && !mpiData)
-    //         error("Problem uses MPI but mpiData is null!");
+        // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
+        // TODO maybe disable check in UNSAFE mode
+        int yz = getNgh() * getOgh();
+        int xz = getMgh() * getOgh();
+        int xy = getMgh() * getNgh();
+        int ressize = (2 * yz * getGhostsM() + 2 * xz * getGhostsN() + 2 * xy * getGhostsO()) * blocksize;
 
-    //     if (!problem.isPeriodic())
-    //         return CL_SUCCESS;
+        if (dPlanesBuf.getSize() < ressize)
+            error("MultigridEngine::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf.getSize()));
 
-    //     int err;
+        if (hPlanesBufSend.size() < ressize || hPlanesBufRecv.size() < ressize)
+            throw "MultigridEngine::updateGhostsOclMpi: hPlanesBufSend or hPlanesBufRecv is too small. Need at least " +
+                std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend.size()) +
+                " (send) and " + std::to_string(hPlanesBufRecv.size()) + " (recv)";
 
-    //     // Create the compute kernel from the program
-    //     const char* kernelName = "update_ghosts_periodic";
-    //     cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper().getProgram(), kernelName, &err);
-    //     mgclCheckError(err, "clCreateKernel");
+        // Extract border planes from the buffer
+        extractBorderPlanes(commands, program,
+                            &dPlanesBuf, &hPlanesBufSend,
+                            conf, pd);
 
-    //     // assign kernel arguments
-    //     int pos = 0;
-    //     err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dBuffer);
-    //     err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
-    //     err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
-    //     err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
-    //     err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);
-    //     err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_n);
-    //     err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
-    //     mgclCheckError(err, "Setting kernel arguments");
+        // Send our planes to neighbours and receive their planes
+        mpi_util::sendBorderPlanesBlockstencil(getMgh(), getNgh(), getOgh(),
+                                               getGhostsM(), getGhostsN(), getGhostsO(), 1, blocksize,
+                                               hPlanesBufSend, hPlanesBufRecv, mpiData);
 
-    //     // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
-    //     // int mgh = m + 2 * gh;
-    //     // int ngh = n + 2 * gh;
-    //     // int ogh = o + 2 * gh;
-    //     size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
-    //     const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, 1);
-    //     const size_t local[3] = {
-    //         static_cast<size_t>(mgh > c[0] ? c[0] : mgh),
-    //         static_cast<size_t>(ngh > c[1] ? c[1] : ngh),
-    //         static_cast<size_t>(ogh > c[2] ? c[2] : ogh)};
-
-    //     for (int i = 0; i < 3; i++)
-    //         if (global[i] % local[i] != 0)
-    //             global[i] += local[i] - (global[i] % local[i]);
-
-    //     cl_event ev;
-
-    //     // enqueue kernel
-    //     err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, &ev);
-    //     mgclCheckError(err, "Enqueueing update_ghosts_periodic kernel");
-
-    //     if (problem.isProfilingEnabled())
-    //     {
-    //         problem.getProfilingData()->addMeasurement(problem.getCommands(), ev, kernelName,
-    //                                                    {global[0], global[1], global[2]},
-    //                                                    {local[0], local[1], local[2]});
-    //     }
-    //     mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
-
-    //     err = clReleaseKernel(kernel);
-    //     mgclCheckError(err, "Releasing update_ghosts_periodic kernel");
-
-    //     return err;
-    // }
-
-    // /**
-    //  * @brief Updates ghosts of an OpenCL buffer respecting MPI usage. That is, the buffer is sent to host, ghosts
-    //  * are updated using MPI routines, and the updated buffer is sent back to the device.
-    //  * Waits for previous commands to finish before reading the buffer.
-    //  *
-    //  * @param commands
-    //  * @param d_buf
-    //  * @param mpiData
-    //  * @param m Real grid's size in 1st dim
-    //  * @param n Real grid's size in 2nd dim
-    //  * @param o Real grid's size in 3rd dim
-    //  * @param ghosts_m
-    //  * @param ghosts_n
-    //  * @param ghosts_o
-    //  * @param periodic
-    //  * @param forceLocal
-    //  */
-    // void CuboidBSGpu::updateGhostsOclMpi(Problem& p, CuboidGpu& d_buf, MPILevelData& mpiData,
-    //                                      bool periodic, bool forceLocal)
-    // {
-    //     // Read back from GPU and update ghosts on host in order to update neighbouring nodes, too.
-    //     // auto tmp = d_buf.read(commands, nullptr, true);
-    //     // MultigridEngine::updateGhostsSeq(*tmp, &mpiData, periodic, forceLocal);
-    //     // d_buf.write(commands, *tmp, true);
-
-    //     if (forceLocal)
-    //     {
-    //         MultigridEngine::updateGhosts(p, d_buf, nullptr, true);
-    //         return;
-    //     }
-
-    //     if (p.getDPlanesBufPtr() == nullptr)
-    //         error("MultigridEngine::updateGhostsOclMpi: dPlanesBufPtr is null");
-
-    //     // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
-    //     // TODO maybe disable check in UNSAFE mode
-    //     int yz = d_buf.getNgh() * d_buf.getOgh();
-    //     int xz = d_buf.getMgh() * d_buf.getOgh();
-    //     int xy = d_buf.getMgh() * d_buf.getNgh();
-    //     int ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
-
-    //     auto dPlanesBuf = p.getDPlanesBufPtr();
-    //     if (dPlanesBuf->getSize() < ressize)
-    //         error("MultigridEngine::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf->getSize()));
-
-    //     auto hPlanesBufSend = p.getHPlanesBufSendPtr();
-    //     auto hPlanesBufRecv = p.getHPlanesBufRecvPtr();
-    //     if (hPlanesBufSend->size() < ressize || hPlanesBufRecv->size() < ressize)
-    //         throw "MultigridEngine::updateGhostsOclMpi: hPlanesBufSend or hPlanesBufRecv is too small. Need at least " +
-    //             std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend->size()) +
-    //             " (send) and " + std::to_string(hPlanesBufRecv->size()) + " (recv)";
-
-    //     // Extract border planes from the buffer
-    //     d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(),
-    //                               dPlanesBuf, hPlanesBufSend,
-    //                               &p.getKernelConfig(), p.getProfilingData());
-    //     auto& sbuf = *hPlanesBufSend;
-    //     auto& rbuf = *hPlanesBufRecv;
-
-    //     // Send our planes to neighbours and receive their planes
-    //     mpi_util::sendBorderPlanes(d_buf.getMgh(), d_buf.getNgh(), d_buf.getOgh(),
-    //                                d_buf.getGhostsM(), d_buf.getGhostsN(), d_buf.getGhostsO(), 1,
-    //                                sbuf, rbuf, mpiData);
-
-    //     // Paste planes back into the buffer.
-    //     dPlanesBuf->write(p.getCommands(), rbuf, false, ressize);
-    //     d_buf.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(),
-    //                                       dPlanesBuf, nullptr,
-    //                                       &p.getKernelConfig(), p.getProfilingData());
-    // }
+        // Paste planes back into the buffer.
+        dPlanesBuf.write(commands, hPlanesBufRecv, false, ressize);
+        pasteGhostsFromBorderPlanes(context, commands, program,
+                                    &dPlanesBuf, nullptr,
+                                    conf, pd);
+    }
 
 } // namespace mgcl
