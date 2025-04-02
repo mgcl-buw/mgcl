@@ -276,3 +276,112 @@ TEST_CASE("Hypercube6d::fill1dindex")
                             cnt++;
                         }
 }
+
+TEST_CASE("Hypercube8d")
+{
+    SECTION("move ctor")
+    {
+        int n = GENERATE(1, 2, 3);
+        int m = GENERATE(1, 3);
+        int o = GENERATE(2, 3);
+        int d4to8 = GENERATE(1, 3);
+
+        mgcl::Hypercube8d h(m, n, o, d4to8, d4to8, d4to8, d4to8, d4to8);
+        h.fillRandom();
+
+        // copy manually for checking results
+        mgcl::Hypercube8d h_check(m, n, o, d4to8, d4to8, d4to8, d4to8, d4to8);
+        for (int dim1 = 0; dim1 < m; dim1++)
+            for (int dim2 = 0; dim2 < n; dim2++)
+                for (int dim3 = 0; dim3 < o; dim3++)
+                    for (int dim4 = 0; dim4 < d4to8; dim4++)
+                        for (int dim5 = 0; dim5 < d4to8; dim5++)
+                            for (int dim6 = 0; dim6 < d4to8; dim6++)
+                                for (int dim7 = 0; dim7 < d4to8; dim7++)
+                                    for (int dim8 = 0; dim8 < d4to8; dim8++)
+                                    {
+                                        h_check[dim1][dim2][dim3][dim4][dim5][dim6][dim7][dim8] = h[dim1][dim2][dim3][dim4][dim5][dim6][dim7][dim8];
+                                    }
+
+        // check size
+        CHECK(h.getSize() == m * n * o * d4to8 * d4to8 * d4to8 * d4to8 * d4to8);
+
+        // check move ctor
+        auto h2(std::move(h));
+
+        CHECK(h.getDim1() == 0);
+        CHECK(h.getDim2() == 0);
+        CHECK(h.getDim3() == 0);
+        CHECK(h.getDim4() == 0);
+        CHECK(h.getDim5() == 0);
+        CHECK(h.getDim6() == 0);
+        CHECK(h.getDim7() == 0);
+        CHECK(h.getDim8() == 0);
+        CHECK(h.getData() == nullptr);
+        CHECK(h2.isEqual(h_check));
+
+        // check move assignment
+        auto h3 = std::move(h2);
+
+        CHECK(h2.getDim1() == 0);
+        CHECK(h2.getDim2() == 0);
+        CHECK(h2.getDim3() == 0);
+        CHECK(h2.getDim4() == 0);
+        CHECK(h2.getDim5() == 0);
+        CHECK(h2.getDim6() == 0);
+        CHECK(h2.getDim7() == 0);
+        CHECK(h2.getDim8() == 0);
+        CHECK(h2.getData() == nullptr);
+        CHECK(h3.isEqual(h_check));
+    }
+}
+
+// Test if Hypercube8d gets filled with 1d index.
+TEST_CASE("Hypercube8d::fill1dindex")
+{
+    int dim1 = 1;
+    int dim2 = 2;
+    int dim3 = 3;
+    int dim4 = 4;
+    int dim5 = 5;
+    int dim6 = 6;
+    int dim7 = 7;
+    int dim8 = 8;
+    int ghdim1 = 0;
+    int ghdim2 = 1;
+    int ghdim3 = 2;
+    int ghdim4 = 0;
+    int ghdim5 = 1;
+    int ghdim6 = 2;
+    int ghdim7 = 0;
+    int ghdim8 = 2;
+
+    mgcl::Hypercube8d c_real(dim1, dim2, dim3, dim4, dim5, dim6, dim7, dim8, ghdim1, ghdim2, ghdim3, ghdim4, ghdim5, ghdim6, ghdim7, ghdim8);
+    c_real.fill1dIndex(true);
+    mgcl::Hypercube8d c_gh(dim1, dim2, dim3, dim4, dim5, dim6, dim7, dim8, ghdim1, ghdim2, ghdim3, ghdim4, ghdim5, ghdim6, ghdim7, ghdim8);
+    c_gh.fill1dIndex(false);
+
+    int cnt = 0;
+    for (int d1 = 0; d1 < c_gh.getDim1gh(); d1++)
+        for (int d2 = 0; d2 < c_gh.getDim2gh(); d2++)
+            for (int d3 = 0; d3 < c_gh.getDim3gh(); d3++)
+                for (int d4 = 0; d4 < c_gh.getDim4gh(); d4++)
+                    for (int d5 = 0; d5 < c_gh.getDim5gh(); d5++)
+                        for (int d6 = 0; d6 < c_gh.getDim6gh(); d6++)
+                            for (int d7 = 0; d7 < c_gh.getDim7gh(); d7++)
+                                for (int d8 = 0; d8 < c_gh.getDim8gh(); d8++)
+                                {
+                                    if (d1 > ghdim1 && d1 < dim1 + ghdim1 &&
+                                        d2 > ghdim2 && d2 < dim2 + ghdim2 &&
+                                        d3 > ghdim3 && d3 < dim3 + ghdim3 &&
+                                        d4 > ghdim4 && d4 < dim4 + ghdim4 &&
+                                        d5 > ghdim5 && d5 < dim5 + ghdim5 &&
+                                        d6 > ghdim6 && d6 < dim6 + ghdim6 &&
+                                        d7 > ghdim7 && d7 < dim7 + ghdim7 &&
+                                        d8 > ghdim8 && d8 < dim8 + ghdim8)
+                                        REQUIRE(c_real[d1][d2][d3][d4][d5][d6][d7][d8] == cnt);
+
+                                    REQUIRE(c_gh[d1][d2][d3][d4][d5][d6][d7][d8] == cnt);
+                                    cnt++;
+                                }
+}
