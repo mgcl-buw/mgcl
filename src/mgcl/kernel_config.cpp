@@ -1,5 +1,7 @@
 #include "kernel_config.hpp"
+#include "mgcl.hpp"
 #include <algorithm>
+#include <stdexcept>
 
 namespace mgcl::conf
 {
@@ -65,6 +67,11 @@ namespace mgcl::conf
         ret["max_abs_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         ret["fill_buffer"] = KernelWorkgroupSizes{{1, {64, 1, 1}}};
 
+        // blockstencil kernels
+        ret["extract_border_planes_cuboidbs"] = KernelWorkgroupSizes{{1, {32, 1, 1}}};
+        ret["paste_ghosts_from_border_planes_cuboidbs"] = KernelWorkgroupSizes{{1, {32, 1, 1}}};
+        ret["update_ghosts_cuboidbs_periodic_blockstencil"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
+
         return ret;
     }
 
@@ -79,18 +86,25 @@ namespace mgcl::conf
      */
     std::array<size_t, 3>& getWorkGroupSizeForKernelAndWiCount(KernelConfig& conf, std::string kernelName, size_t wiCount)
     {
-        auto& confForKernel = conf.at(kernelName); // Will throw exception, if key is not found.
+        try
+        {
+            auto& confForKernel = conf.at(kernelName); // Will throw exception, if key is not found.
 
-        // Sort the workgroup sizes wrt wiCount in descending order
-        std::sort(confForKernel.begin(), confForKernel.end(), [](const auto& a, const auto& b)
-                  { return a.first > b.first; });
+            // Sort the workgroup sizes wrt wiCount in descending order
+            std::sort(confForKernel.begin(), confForKernel.end(), [](const auto& a, const auto& b)
+                      { return a.first > b.first; });
 
-        // Loop through the workgroup sizes from high wiCount to low and return the first one that is bigger
-        // or equal to wiCount.
-        for (auto& workgroupSize : confForKernel)
-            if (wiCount >= workgroupSize.first)
-                return workgroupSize.second;
+            // Loop through the workgroup sizes from high wiCount to low and return the first one that is bigger
+            // or equal to wiCount.
+            for (auto& workgroupSize : confForKernel)
+                if (wiCount >= workgroupSize.first)
+                    return workgroupSize.second;
 
-        return confForKernel.back().second;
+            return confForKernel.back().second;
+        }
+        catch (std::out_of_range ex)
+        {
+            error("No launch configuration found for kernel with name: " + kernelName);
+        }
     }
 }
