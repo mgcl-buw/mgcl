@@ -1,6 +1,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <memory>
@@ -607,117 +608,122 @@ TEST_CASE("Blockstencil::updateGhosts")
 //     }
 // }
 
-// TEST_CASE("Blockstencil::slice")
-// {
-//     int m = 4;
-//     int n = 4;
-//     int o = 4;
+TEST_CASE("Blockstencil::slice")
+{
+    int m = 4;
+    int n = 4;
+    int o = 4;
+    int blocksize = 2;
 
-//     mgcl::Blockstencil cb(m, n, o, 3, 1, 1, 1);
-//     // cb.fillRandom();
-//     cb.fill1dIndex(true);
+    mgcl::Blockstencil cb(m, n, o, 3, blocksize, 1, 1, 1);
+    // cb.fillRandom();
+    cb.fill1dIndex(true);
 
-//     SECTION("throwing")
-//     {
-//         REQUIRE_THROWS(cb.slice(-1, 0, 0, 0, 0, 0));
-//         REQUIRE_THROWS(cb.slice(0, 0, -1, 0, 0, 0));
-//         REQUIRE_THROWS(cb.slice(0, 0, 0, 0, -1, 0));
+    SECTION("throwing")
+    {
+        REQUIRE_THROWS(cb.slice(-1, 0, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, -1, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, 0, -1, 0));
 
-//         REQUIRE_THROWS(cb.slice(0, m + 3, 0, 0, 0, 0));
-//         REQUIRE_THROWS(cb.slice(0, 0, 0, n + 3, 0, 0));
-//         REQUIRE_THROWS(cb.slice(0, 0, 0, 0, 0, n + 3));
-//     }
+        REQUIRE_THROWS(cb.slice(0, m + 3, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, n + 3, 0, 0));
+        REQUIRE_THROWS(cb.slice(0, 0, 0, 0, 0, n + 3));
+    }
 
-//     SECTION("success")
-//     {
-//         auto cs = cb.slice(0, 1, 0, 2, 2, 3);
+    SECTION("success")
+    {
+        auto cs = cb.slice(0, 1, 0, 2, 2, 3);
 
-//         REQUIRE(cs->getM() == 2);
-//         REQUIRE(cs->getN() == 3);
-//         REQUIRE(cs->getO() == 2);
-//         REQUIRE(cs->getWidth() == cb.getWidth());
-//         REQUIRE(cs->getWidth() == cb.getWidth());
-//         REQUIRE(cs->getWidth() == cb.getWidth());
-//         REQUIRE(cs->getGhostsM() == cb.getGhostsM());
-//         REQUIRE(cs->getGhostsN() == cb.getGhostsN());
-//         REQUIRE(cs->getGhostsO() == cb.getGhostsO());
+        REQUIRE(cs->getM() == 2);
+        REQUIRE(cs->getN() == 3);
+        REQUIRE(cs->getO() == 2);
+        REQUIRE(cs->getWidth() == cb.getWidth());
+        REQUIRE(cs->getBlocksize() == cb.getBlocksize());
+        REQUIRE(cs->getGhostsM() == cb.getGhostsM());
+        REQUIRE(cs->getGhostsN() == cb.getGhostsN());
+        REQUIRE(cs->getGhostsO() == cb.getGhostsO());
 
-//         for (int d1 = cs->getGhostsM(); d1 < cs->getM() + cs->getGhostsM(); d1++)
-//             for (int d2 = cs->getGhostsN(); d2 < cs->getN() + cs->getGhostsN(); d2++)
-//                 for (int d3 = cs->getGhostsO(); d3 < cs->getO() + cs->getGhostsO(); d3++)
-//                     for (int d4 = 0; d4 < cs->getWidth(); d4++)
-//                         for (int d5 = 0; d5 < cs->getWidth(); d5++)
-//                             for (int d6 = 0; d6 < cs->getWidth(); d6++)
-//                             {
-//                                 CAPTURE(d1, d2, d3, d4, d5, d6);
-//                                 REQUIRE(
-//                                     cs->getData()[d4][d5][d6][d1][d2][d3] == cb[d4][d5][d6][d1][d2][d3 + 2]);
-//                             }
-//     }
-// }
+        for (int d1 = cs->getGhostsM(); d1 < cs->getM() + cs->getGhostsM(); d1++)
+            for (int d2 = cs->getGhostsN(); d2 < cs->getN() + cs->getGhostsN(); d2++)
+                for (int d3 = cs->getGhostsO(); d3 < cs->getO() + cs->getGhostsO(); d3++)
+                    for (int d4 = 0; d4 < cs->getWidth(); d4++)
+                        for (int d5 = 0; d5 < cs->getWidth(); d5++)
+                            for (int d6 = 0; d6 < cs->getWidth(); d6++)
+                                for (int d7 = 0; d7 < cs->getBlocksize(); d7++)
+                                    for (int d8 = 0; d8 < cs->getBlocksize(); d8++)
+                                    {
+                                        CAPTURE(d1, d2, d3, d4, d5, d6, d7, d8);
+                                        REQUIRE(cs->getData()[d7][d8][d4][d5][d6][d1][d2][d3] == cb[d7][d8][d4][d5][d6][d1][d2][d3 + 2]);
+                                    }
+    }
+}
 
-// TEST_CASE("Blockstencil::sliceIncGhosts")
-// {
-//     int m = 4;
-//     int n = 4;
-//     int o = 4;
+TEST_CASE("Blockstencil::sliceIncGhosts")
+{
+    int m = 4;
+    int n = 4;
+    int o = 4;
+    int blocksize = 2;
 
-//     mgcl::Blockstencil cb(m, n, o, 3, 1, 1, 1);
-//     cb.fillRandom();
+    mgcl::Blockstencil cb(m, n, o, 3, blocksize, 1, 1, 1);
+    cb.fillRandom();
 
-//     SECTION("throwing")
-//     {
-//         REQUIRE_THROWS(cb.sliceIncGhosts(-1, 0, 0, 0, 0, 0));
-//         REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, -1, 0, 0, 0));
-//         REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, 0, 0, -1, 0));
+    SECTION("throwing")
+    {
+        REQUIRE_THROWS(cb.sliceIncGhosts(-1, 0, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, -1, 0, 0, 0));
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, 0, 0, -1, 0));
 
-//         REQUIRE_THROWS(cb.sliceIncGhosts(0, m + 3, 0, 0, 0, 0));
-//         REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, 0, n + 3, 0, 0));
-//         REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, 0, 0, 0, n + 3));
-//     }
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, m + 3, 0, 0, 0, 0));
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, 0, n + 3, 0, 0));
+        REQUIRE_THROWS(cb.sliceIncGhosts(0, 0, 0, 0, 0, n + 3));
+    }
 
-//     SECTION("success")
-//     {
-//         auto cs = cb.sliceIncGhosts(0, 1, 0, 2, 2, 3);
+    SECTION("success")
+    {
+        auto cs = cb.sliceIncGhosts(0, 1, 0, 2, 2, 3);
 
-//         REQUIRE(cs->getM() == 2);
-//         REQUIRE(cs->getN() == 3);
-//         REQUIRE(cs->getO() == 2);
-//         REQUIRE(cs->getWidth() == cb.getWidth());
-//         REQUIRE(cs->getWidth() == cb.getWidth());
-//         REQUIRE(cs->getWidth() == cb.getWidth());
-//         REQUIRE(cs->getGhostsM() == 0);
-//         REQUIRE(cs->getGhostsN() == 0);
-//         REQUIRE(cs->getGhostsO() == 0);
+        REQUIRE(cs->getM() == 2);
+        REQUIRE(cs->getN() == 3);
+        REQUIRE(cs->getO() == 2);
+        REQUIRE(cs->getWidth() == cb.getWidth());
+        REQUIRE(cs->getBlocksize() == cb.getBlocksize());
+        REQUIRE(cs->getGhostsM() == 0);
+        REQUIRE(cs->getGhostsN() == 0);
+        REQUIRE(cs->getGhostsO() == 0);
 
-//         for (int d1 = 0; d1 < cs->getMgh(); d1++)
-//             for (int d2 = 0; d2 < cs->getNgh(); d2++)
-//                 for (int d3 = 0; d3 < cs->getOgh(); d3++)
-//                     for (int d4 = 0; d4 < cs->getWidth(); d4++)
-//                         for (int d5 = 0; d5 < cs->getWidth(); d5++)
-//                             for (int d6 = 0; d6 < cs->getWidth(); d6++)
-//                             {
-//                                 REQUIRE(cs->getData()[d4][d5][d6][d1][d2][d3] == cb[d4][d5][d6][d1][d2][d3 + 2]);
-//                             }
-//     }
-// }
+        for (int d1 = 0; d1 < cs->getMgh(); d1++)
+            for (int d2 = 0; d2 < cs->getNgh(); d2++)
+                for (int d3 = 0; d3 < cs->getOgh(); d3++)
+                    for (int d4 = 0; d4 < cs->getWidth(); d4++)
+                        for (int d5 = 0; d5 < cs->getWidth(); d5++)
+                            for (int d6 = 0; d6 < cs->getWidth(); d6++)
+                                for (int d7 = 0; d7 < cs->getBlocksize(); d7++)
+                                    for (int d8 = 0; d8 < cs->getBlocksize(); d8++)
+                                    {
+                                        REQUIRE(cs->getData()[d7][d8][d4][d5][d6][d1][d2][d3] == cb[d7][d8][d4][d5][d6][d1][d2][d3 + 2]);
+                                    }
+    }
+}
 
-// TEST_CASE("VaryingStecnil::copyShallow")
-// {
-//     mgcl::Blockstencil s1(2, 3, 4, 3, 5, 6, 7);
-//     s1.fillRandom();
-//     auto s2 = s1.copyShallow();
+TEST_CASE("Blockstencil::copyShallow")
+{
+    mgcl::Blockstencil s1(2, 3, 4, 3, 2, 5, 6, 7);
+    s1.fillRandom();
+    auto s2 = s1.copyShallow();
 
-//     REQUIRE(s1.getM() == s2->getM());
-//     REQUIRE(s1.getN() == s2->getN());
-//     REQUIRE(s1.getO() == s2->getO());
-//     REQUIRE(s1.getWidth() == s2->getWidth());
-//     REQUIRE(s1.getWidth() == s2->getWidth());
-//     REQUIRE(s1.getWidth() == s2->getWidth());
-//     REQUIRE(s1.getGhostsM() == s2->getGhostsM());
-//     REQUIRE(s1.getGhostsN() == s2->getGhostsN());
-//     REQUIRE(s1.getGhostsO() == s2->getGhostsO());
-//     REQUIRE(s1.getGhostsDim4() == s2->getGhostsDim4());
-//     REQUIRE(s1.getGhostsDim5() == s2->getGhostsDim5());
-//     REQUIRE(s1.getGhostsDim6() == s2->getGhostsDim6());
-// }
+    REQUIRE(s1.getM() == s2->getM());
+    REQUIRE(s1.getN() == s2->getN());
+    REQUIRE(s1.getO() == s2->getO());
+    REQUIRE(s1.getWidth() == s2->getWidth());
+    REQUIRE(s1.getBlocksize() == s2->getBlocksize());
+    REQUIRE(s1.getGhostsM() == s2->getGhostsM());
+    REQUIRE(s1.getGhostsN() == s2->getGhostsN());
+    REQUIRE(s1.getGhostsO() == s2->getGhostsO());
+    REQUIRE(s1.getGhostsDim4() == s2->getGhostsDim4());
+    REQUIRE(s1.getGhostsDim5() == s2->getGhostsDim5());
+    REQUIRE(s1.getGhostsDim6() == s2->getGhostsDim6());
+    REQUIRE(s1.getGhostsDim7() == s2->getGhostsDim7());
+    REQUIRE(s1.getGhostsDim8() == s2->getGhostsDim8());
+    REQUIRE(s1.getSize() == s2->getSize());
+}
