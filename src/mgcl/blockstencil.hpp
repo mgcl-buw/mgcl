@@ -7,10 +7,13 @@
 namespace mgcl
 {
     /**
-     * @brief Class for NxNxN varying stencils, i.e. stencil can differ for each grid point.
-     * Choose N = 3 to include only direct neighbors, N = 5 to include 2 nearest neighbors, etc.
-     * If two stencils of size NxNxN and NBxNBxNB get multiplied with each other, the resulting stencil has size
-     * (N + NB - 1)^3.
+     * @brief Class for storing a blockstencil of varying width and blocksize. Each coefficient is a matrix of size
+     * blocksize x blocksize. The stencil has width x width x width coefficients for each grid point.
+     *
+     * Memory layout is [bi][bj][ci][cj][ck][x][y][z], where
+     * - bi and bj are matrix indices,
+     * - ci, cj and ck are coefficient indices and
+     * - x, y and z are grid point indices
      *
      */
     class Blockstencil : public Hypercube8d

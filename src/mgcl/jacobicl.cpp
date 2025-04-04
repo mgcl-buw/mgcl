@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdio> // for printf, size_t, NULL
 // #include <iostream>
+#include <iostream>
 #include <math.h> // for fabs, sqrt, ceil
 
 #ifdef __APPLE__
@@ -913,6 +914,117 @@ namespace mgcl
             MultigridEngine::updateGhostsSeq(r, mpiData, periodic, updateGhostsLocally);
 
         return (returnResidualNorm && resnorm == MGCL_L2) ? sqrt(res) : res;
+    }
+
+    /* Calculates r = f - A*v using a Blockstencil and CuboidBS.
+     * m,n,o is the size of the real grid.
+     * v needs to have updated ghost cells if the problem is periodic!
+     * moff, noff and ooff can be used to change the size of the grid that the residual shall be calculated for.
+     *   Per default only real cells are considered (moff = 0), but with e.g. moff = -1, the first ghost cell border is
+     *   considered, too. Analogously, with moff = 1 the outermost set of real cells is ignored. The calculation
+     *   of the boundaries is e.g. istart = v.ghosts_m + moff.
+     *   moff,noff,ooff not supported yet!
+     */
+    double MultigridEngine::residualSeq(args::ResidualBSSeqArgs& args)
+    {
+        CuboidBS& v = args.v;
+        CuboidBS& f = args.f;
+        CuboidBS& r = args.r;
+        double res = 0.0;
+        double**** vraw = v.getData();
+        double******** bsraw = args.bs.getData();
+
+        // check if off is too small (i.e. start < 0)
+        // if (moff <= -v.getGhostsM() || noff <= -v.getGhostsN() || ooff <= -v.getGhostsO())
+        //     error("moff, noff and ooff must not be <= -ghosts");
+
+        // // check if off is too large (i.e. start > end)
+        // if (moff * 2 >= v.getM() || noff * 2 >= v.getN() || ooff * 2 >= v.getO())
+        //     error("2*moff, 2*noff and 2*ooff must not be >= m, n or o");
+
+        int istart_v = v.getGhostsM() + args.moff;
+        int jstart_v = v.getGhostsN() + args.noff;
+        int kstart_v = v.getGhostsO() + args.ooff;
+        int iend_v = v.getMgh() - v.getGhostsM() - args.moff;
+        int jend_v = v.getNgh() - v.getGhostsN() - args.noff;
+        int kend_v = v.getOgh() - v.getGhostsO() - args.ooff;
+        int istart_r = r.getGhostsM() + args.moff;
+        int jstart_r = r.getGhostsN() + args.noff;
+        int kstart_r = r.getGhostsO() + args.ooff;
+        int istart_f = f.getGhostsM() + args.moff;
+        int jstart_f = f.getGhostsN() + args.noff;
+        int kstart_f = f.getGhostsO() + args.ooff;
+        int istart_sv = args.bs.getGhostsM() + args.moff;
+        int jstart_sv = args.bs.getGhostsN() + args.noff;
+        int kstart_sv = args.bs.getGhostsO() + args.ooff;
+
+        for (int iv = istart_v, ir = istart_r, fi = istart_f, isv = istart_sv; iv < iend_v; iv++, ir++, fi++, isv++)
+            for (int jv = jstart_v, jr = jstart_r, fj = jstart_f, jsv = jstart_sv; jv < jend_v; jv++, jr++, fj++, jsv++)
+                for (int kv = kstart_v, kr = kstart_r, fk = kstart_f, ksv = kstart_sv; kv < kend_v; kv++, kr++, fk++, ksv++)
+                {
+                    for (int bi = 0; bi < args.bs.getBlocksize(); bi++)
+                    {
+                        double stencilsum = 0;
+                        for (int bj = 0; bj < args.bs.getBlocksize(); bj++)
+                        {
+                            // clang-format off
+                            stencilsum += bsraw[bi][bj][1][1][1][isv][jsv][ksv] * vraw[iv][jv][kv][bj]
+                                + bsraw[bi][bj][1][1][0][isv][jsv][ksv] * vraw[ iv ][ jv ][kv-1][bj]
+                                + bsraw[bi][bj][1][1][2][isv][jsv][ksv] * vraw[ iv ][ jv ][kv+1][bj]
+                                + bsraw[bi][bj][1][0][1][isv][jsv][ksv] * vraw[ iv ][jv-1][ kv ][bj]
+                                + bsraw[bi][bj][1][2][1][isv][jsv][ksv] * vraw[ iv ][jv+1][ kv ][bj]
+                                + bsraw[bi][bj][0][1][1][isv][jsv][ksv] * vraw[iv-1][ jv ][ kv ][bj]
+                                + bsraw[bi][bj][2][1][1][isv][jsv][ksv] * vraw[iv+1][ jv ][ kv ][bj]
+                                
+                                + bsraw[bi][bj][1][0][0][isv][jsv][ksv] * vraw[ iv ][jv-1][kv-1][bj]
+                                + bsraw[bi][bj][1][0][2][isv][jsv][ksv] * vraw[ iv ][jv-1][kv+1][bj]
+                                + bsraw[bi][bj][1][2][0][isv][jsv][ksv] * vraw[ iv ][jv+1][kv-1][bj]
+                                + bsraw[bi][bj][1][2][2][isv][jsv][ksv] * vraw[ iv ][jv+1][kv+1][bj]
+                                + bsraw[bi][bj][0][1][0][isv][jsv][ksv] * vraw[iv-1][ jv ][kv-1][bj]
+                                + bsraw[bi][bj][0][1][2][isv][jsv][ksv] * vraw[iv-1][ jv ][kv+1][bj]
+                                + bsraw[bi][bj][2][1][0][isv][jsv][ksv] * vraw[iv+1][ jv ][kv-1][bj]
+                                + bsraw[bi][bj][2][1][2][isv][jsv][ksv] * vraw[iv+1][ jv ][kv+1][bj]
+                                + bsraw[bi][bj][0][0][1][isv][jsv][ksv] * vraw[iv-1][jv-1][ kv ][bj]
+                                + bsraw[bi][bj][0][2][1][isv][jsv][ksv] * vraw[iv-1][jv+1][ kv ][bj]
+                                + bsraw[bi][bj][2][0][1][isv][jsv][ksv] * vraw[iv+1][jv-1][ kv ][bj]
+                                + bsraw[bi][bj][2][2][1][isv][jsv][ksv] * vraw[iv+1][jv+1][ kv ][bj]
+                                
+                                + bsraw[bi][bj][0][0][0][isv][jsv][ksv] * vraw[iv-1][jv-1][kv-1][bj]
+                                + bsraw[bi][bj][0][0][2][isv][jsv][ksv] * vraw[iv-1][jv-1][kv+1][bj]
+                                + bsraw[bi][bj][0][2][0][isv][jsv][ksv] * vraw[iv-1][jv+1][kv-1][bj]
+                                + bsraw[bi][bj][0][2][2][isv][jsv][ksv] * vraw[iv-1][jv+1][kv+1][bj]
+                                + bsraw[bi][bj][2][0][0][isv][jsv][ksv] * vraw[iv+1][jv-1][kv-1][bj]
+                                + bsraw[bi][bj][2][0][2][isv][jsv][ksv] * vraw[iv+1][jv-1][kv+1][bj]
+                                + bsraw[bi][bj][2][2][0][isv][jsv][ksv] * vraw[iv+1][jv+1][kv-1][bj]
+                                + bsraw[bi][bj][2][2][2][isv][jsv][ksv] * vraw[iv+1][jv+1][kv+1][bj];
+                            // clang-format on
+                        }
+
+                        // if (j == 2 && k == 2 && i == 2)
+                        // {
+                        //     printf("seq stencilsum = %e\n", stencilsum);
+                        //     print27point_sv(v, i, j, k, stencilValuesCuboid, isv, jsv, ksv);
+                        // }
+
+                        // r = f - A*v
+                        r[ir][jr][kr][bi] = f[fi][fj][fk][bi] - stencilsum;
+
+                        if (args.returnResidualNorm)
+                        {
+                            if (args.resnorm == MGCL_L2)
+                                res += r[ir][jr][kr][bi] * r[ir][jr][kr][bi];
+                            else if (fabs(r[ir][jr][kr][bi]) > res)
+                                res = fabs(r[ir][jr][kr][bi]);
+                        }
+                    }
+                }
+
+        if (args.periodic)
+        {
+            r.updateGhosts(args.mpiData, args.updateGhostsLocally);
+        }
+
+        return (args.returnResidualNorm && args.resnorm == MGCL_L2) ? sqrt(res) : res;
     }
 
     /* Prints components of 7-point laplacian stencil for debugging purposes */

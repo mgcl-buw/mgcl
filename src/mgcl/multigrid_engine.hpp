@@ -1,6 +1,8 @@
 #ifndef MGCL_MULTIGRID_ENGINE_HPP
 #define MGCL_MULTIGRID_ENGINE_HPP
 
+#include "blockstencil.hpp"
+#include "cuboid_bs.hpp"
 #include "kernel_config.hpp"
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -29,6 +31,25 @@ namespace mgcl
     class Level;
     class Cuboid;
     class MPILevelData;
+
+    namespace args
+    {
+        struct ResidualBSSeqArgs
+        {
+            CuboidBS& f;
+            CuboidBS& v;
+            CuboidBS& r;
+            MGCL_RESIDUAL_NORM resnorm;
+            Blockstencil& bs;
+            bool returnResidualNorm;
+            bool periodic;
+            bool updateGhostsLocally;
+            int moff = 0;
+            int noff = 0;
+            int ooff = 0;
+            MPILevelData* mpiData = nullptr;
+        };
+    }
 
     /**
      * @brief Encapsulates all relevant methods that execute the logic of the multigrid method.
@@ -59,6 +80,7 @@ namespace mgcl
                                   VaryingStencil* stencilValues, FixedStencil* fixedStencil,
                                   bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
                                   int moff = 0, int noff = 0, int ooff = 0, MPILevelData* mpiData = nullptr);
+        static double residualSeq(args::ResidualBSSeqArgs& args);
 
         static double jacobiSeq(Cuboid& v, Cuboid& f, Cuboid& r, double omega, double h2,
                                 int maxiter, MGCL_RESIDUAL_NORM resnorm, MGCL_STENCIL stencilType, double stencilFactor,
