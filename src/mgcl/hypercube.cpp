@@ -1331,7 +1331,7 @@ namespace mgcl
      * @return false Cuboids not equal.
      * @throws invalid_argument When dimensions of Cuboids don't match.
      */
-    bool Hypercube8d::isEqual(Hypercube8d& c, double tol, bool printDiffs)
+    bool Hypercube8d::isEqual(Hypercube8d& c, double tol)
     {
         if (dim1 != c.getDim1() ||
             dim2 != c.getDim2() ||
@@ -1357,6 +1357,53 @@ namespace mgcl
                                     {
                                         diff = fabs(field_8d[d1 + ghostsDim1][d2 + ghostsDim2][d3 + ghostsDim3][d4 + ghostsDim4][d5 + ghostsDim5][d6 + ghostsDim6][d7 + ghostsDim7][d8 + ghostsDim8] -
                                                     c[d1 + c.getGhostsDim1()][d2 + c.getGhostsDim2()][d3 + c.getGhostsDim3()][d4 + c.getGhostsDim4()][d5 + c.getGhostsDim5()][d6 + c.getGhostsDim6()][d7 + c.getGhostsDim7()][d8 + c.getGhostsDim8()]);
+                                        if (diff > tol)
+                                        {
+                                            return false;
+                                        }
+                                    }
+
+        return true;
+    }
+
+    /**
+     * @brief Returns true if real cells contents of this Hypercube8d is equal to the one of another Hypercube8d c
+     * within a given tolerance tol, respecting ghost cell amount. Dimensions of real cell amount of this Hypercube8d
+     *  and c must be equal (without ghost cells).
+     *
+     * @param c Other Hypercube8d
+     * @param tol tolerance that is used for checking equality. Defaults to 1e-7.
+     * @param printDiffs If true, differences will be printed to standard output. Defaults to true.
+     * @return true Cuboids equal.
+     * @return false Cuboids not equal.
+     * @throws invalid_argument When dimensions of Cuboids don't match.
+     */
+    bool Hypercube8d::isEqualIncGhosts(Hypercube8d& c, double tol)
+    {
+        if (dim1gh != c.getDim1gh() ||
+            dim2gh != c.getDim2gh() ||
+            dim3gh != c.getDim3gh() ||
+            dim4gh != c.getDim4gh() ||
+            dim5gh != c.getDim5gh() ||
+            dim6gh != c.getDim6gh() ||
+            dim7gh != c.getDim7gh() ||
+            dim8gh != c.getDim8gh())
+        {
+            error(std::invalid_argument("Cannot check equality for Hypercube8d. Dimensions differ."));
+        }
+
+        double diff;
+        for (int d1 = 0; d1 < dim1gh; d1++)
+            for (int d2 = 0; d2 < dim2gh; d2++)
+                for (int d3 = 0; d3 < dim3gh; d3++)
+                    for (int d4 = 0; d4 < dim4gh; d4++)
+                        for (int d5 = 0; d5 < dim5gh; d5++)
+                            for (int d6 = 0; d6 < dim6gh; d6++)
+                                for (int d7 = 0; d7 < dim7gh; d7++)
+                                    for (int d8 = 0; d8 < dim8gh; d8++)
+                                    {
+                                        diff = fabs(field_8d[d1][d2][d3][d4][d5][d6][d7][d8] -
+                                                    c[d1][d2][d3][d4][d5][d6][d7][d8]);
                                         if (diff > tol)
                                         {
                                             return false;
