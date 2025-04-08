@@ -1,6 +1,7 @@
-#ifndef MGCL_BLOCKSTENCIL_HPP
-#define MGCL_BLOCKSTENCIL_HPP
+#ifndef MGCL_BLOCKSTENCIL_GPU_HPP
+#define MGCL_BLOCKSTENCIL_GPU_HPP
 
+#include "blockstencil.hpp"
 #include "buffer_gpu.hpp"
 #include "kernel_config.hpp"
 #include "profiling_data.hpp"
@@ -24,60 +25,50 @@ namespace mgcl
 {
 
     /**
-     * @brief Wrapper class for a varying stencil gpu buffer. Stores additional information like width of the grid,
+     * @brief Wrapper class for blockstencil gpu buffer. Stores additional information like width of the grid,
      * width of the stencil and amount of ghost cells. The device buffer gets automatically created in the constructor
      * and gets released in the destructor.
      *
+     * Memory layout is [bi][bj][ci][cj][ck][x][y][z], where
+     * - bi and bj are matrix indices,
+     * - ci, cj and ck are coefficient indices and
+     * - x, y and z are grid point indices
+     *
+     *
      */
-    class VaryingStencilGpu
+    class BlockstencilGpu
     {
     private:
         int m;
         int n;
         int o;
         int width;
+        int blocksize;
         int gh;
         cl_mem buf = nullptr;
 
     public:
-        VaryingStencilGpu(int m_, int n_, int o_, int width_, int gh_,
-                          cl_context context, cl_command_queue queue, cl_program program);
-        VaryingStencilGpu(VaryingStencilGpu&&);
-        VaryingStencilGpu& operator=(VaryingStencilGpu&&);
-        ~VaryingStencilGpu();
+        BlockstencilGpu(int m_, int n_, int o_, int width_, int blocksize_, int gh_,
+                        cl_context context, cl_command_queue queue, cl_program program);
+        BlockstencilGpu(Blockstencil& bs, cl_context context, cl_command_queue queue, cl_program program);
+        BlockstencilGpu(BlockstencilGpu&&);
+        BlockstencilGpu& operator=(BlockstencilGpu&&);
+        ~BlockstencilGpu();
 
-        VaryingStencilGpu(const VaryingStencilGpu&) = delete;
-        VaryingStencilGpu& operator=(const VaryingStencilGpu&) = delete;
+        BlockstencilGpu(const BlockstencilGpu&) = delete;
+        BlockstencilGpu& operator=(const BlockstencilGpu&) = delete;
 
-        void fill(VaryingStencil& f, cl_command_queue queue, bool blocking);
-        VaryingStencil read(cl_command_queue queue, bool blocking);
-        void read(cl_command_queue queue, bool blocking, VaryingStencil& h_stencil);
-        void write(cl_command_queue queue, bool blocking, VaryingStencil& h_stencil);
+        void fill(Blockstencil& f, cl_command_queue queue, bool blocking);
+        Blockstencil read(cl_command_queue queue, bool blocking);
+        void read(cl_command_queue queue, bool blocking, Blockstencil& h_stencil);
+        void write(cl_command_queue queue, bool blocking, Blockstencil& h_stencil);
+
+        bool isEqual(cl_command_queue queue, Blockstencil& bs, double tol = 1e-7);
+        bool isEqualIncGhosts(cl_command_queue queue, Blockstencil& bs, double tol = 1e-7);
 
         void updateGhosts(
             cl_program program, cl_command_queue queue,
             conf::KernelConfig* conf, ProfilingData* pd);
-
-        VaryingStencilGpu multiply(
-            FixedStencilGpu& b, int ghc,
-            BufferGpu* d_planes_buf,
-            std::vector<double>* sbuf, std::vector<double>* rbuf,
-            cl_program program, cl_command_queue queue, cl_context context,
-            MPILevelData* mpiData, bool forceLocal,
-            conf::KernelConfig* conf, ProfilingData* pd);
-
-        VaryingStencilGpu multiply(
-            VaryingStencilGpu& b, int ghc,
-            BufferGpu* d_planes_buf,
-            std::vector<double>* sbuf, std::vector<double>* rbuf,
-            cl_program program, cl_command_queue queue, cl_context context,
-            MPILevelData* mpiData, bool forceLocal,
-            conf::KernelConfig* conf, ProfilingData* pd);
-
-        VaryingStencilGpu cutFromW7ToW3(
-            cl_program program, cl_command_queue queue, cl_context context,
-            int ghout, mgcl::conf::KernelConfig* conf, ProfilingData* pd,
-            int resm = 0, int resn = 0, int reso = 0);
 
         void extractBorderPlanes(cl_command_queue commands, cl_program program,
                                  BufferGpu& d_target, std::vector<double>& h_target,
@@ -86,18 +77,22 @@ namespace mgcl
                                          BufferGpu& d_ghosts,
                                          mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
-        int getM() const;
-        int getN() const;
-        int getO() const;
-        int getMgh() const;
-        int getNgh() const;
-        int getOgh() const;
-        int getWidth() const;
-        int getGh() const;
-        cl_mem getBuf() const;
+        void dumpToFile(cl_command_queue commands, std::string path, bool realCellsOnly);
 
-        friend std::ostream& operator<<(std::ostream& os, const VaryingStencilGpu& v);
+        inline int getM() const { return m; }
+        inline int getN() const { return n; }
+        inline int getO() const { return o; }
+        inline int getMgh() const { return m + 2 * gh; }
+        inline int getNgh() const { return n + 2 * gh; }
+        inline int getOgh() const { return o + 2 * gh; }
+        inline int getWidth() const { return width; }
+        inline int getBlocksize() const { return blocksize; }
+        inline int getGh() const { return gh; }
+        inline int getSize() const { return blocksize * blocksize * (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh) * width * width * width; }
+        inline cl_mem getBuf() const { return buf; }
+
+        friend std::ostream& operator<<(std::ostream& os, const BlockstencilGpu& v);
     };
 }
 
-#endif // MGCL_BLOCKSTENCIL_HPP
+#endif // MGCL_BLOCKSTENCIL_GPU_HPP

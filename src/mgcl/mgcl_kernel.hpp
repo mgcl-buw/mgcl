@@ -1294,6 +1294,45 @@ __kernel void update_ghosts_varying_stencil(
 }
 
 /**
+ * Updates ghosts of a blockstencil, respecting small grids, e.g. gh > m.
+ * Needs to be called with one work-item per cell of ghosted grid.
+ * Work-items that map to a real cell simply do nothing (optimization potential here!).
+ */
+__kernel void update_ghosts_blockstencil(
+    __global double* restrict c,
+    const int m, const int n, const int o,
+    const int width, const int blocksize, const int gh)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
+
+    if ((i < gh || j < gh || k < gh ||
+         i >= gh + m || j >= gh + n || k >= gh + o) &&
+        (i < m + 2 * gh && j < n + 2 * gh && k < o + 2 * gh))
+    {
+        int ireal = i + floor(((double)(gh - 1 - i)) / m + 1) * m;
+        int jreal = j + floor(((double)(gh - 1 - j)) / n + 1) * n;
+        int kreal = k + floor(((double)(gh - 1 - k)) / o + 1) * o;
+
+        int gridsize = (m + 2 * gh) * (n + 2 * gh) * (o + 2 * gh);
+        int idx_gh_cell = i * (n + 2 * gh) * (o + 2 * gh) + j * (o + 2 * gh) + k;
+        int idx_real_cell = ireal * (n + 2 * gh) * (o + 2 * gh) + jreal * (o + 2 * gh) + kreal;
+
+        // Iterate over every matrix entry and coefficient for the grid point this work-item maps to.
+        for (int b = 0; b < blocksize * blocksize; b++)
+        {
+            for (int s = 0; s < width * width * width; s++)
+            {
+                c[idx_gh_cell] = c[idx_real_cell];
+                idx_gh_cell += gridsize;
+                idx_real_cell += gridsize;
+            }
+        }
+    }
+}
+
+/**
  * Multiplies two varying stencils c = a * b.
  * m, n and o are dimensions of the grid.
  * wa and wb are the widths of the stencils. Must be odd and >= 3.

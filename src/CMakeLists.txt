@@ -26,6 +26,7 @@ set(MGCL_PUBLIC_HEADERS
   mgcl/cuboid_bs.hpp
   mgcl/cuboid_bs_gpu.hpp
   mgcl/blockstencil.hpp
+  mgcl/blockstencil_gpu.hpp
 )
 
 set(SOURCES_LIB
@@ -57,6 +58,7 @@ set(SOURCES_LIB
   mgcl/cuboid_bs.cpp
   mgcl/cuboid_bs_gpu.cpp
   mgcl/blockstencil.cpp
+  mgcl/blockstencil_gpu.cpp
 )
 
 add_library(mgcl ${MGCL_PUBLIC_HEADERS} ${SOURCES_LIB})

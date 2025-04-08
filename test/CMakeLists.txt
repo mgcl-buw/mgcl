@@ -39,6 +39,7 @@ set(SOURCES_TEST
     blockstencil/test_cuboid_bs.cpp
     blockstencil/test_cuboid_bs_gpu.cpp
     blockstencil/test_blockstencil.cpp
+    blockstencil/test_blockstencil_gpu.cpp
     blockstencil/test_bs_residual.cpp
 )
 
