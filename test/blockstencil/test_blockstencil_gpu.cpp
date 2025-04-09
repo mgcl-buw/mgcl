@@ -629,115 +629,112 @@ TEST_CASE("BlockstencilGpu::updateGhosts")
 TEST_CASE("BlockstencilGpu::extract_border_planes")
 {
 
-    SECTION("success")
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    // Create dummy problem
+    auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    mgcl::Problem p(1, 1, 1, f, v);
+    p.setUseOpencl(true);
+    p.setDeviceType(deviceType);
+    p.setProfilingEnabled(true);
+    p.init();
+
+    int m = 3;
+    int n = 5;
+    int o = 7;
+    int ghosts_m = 1;
+    int ghosts_n = 1; // BlockstencilGpu currently does not support different ghosts per dimension
+    int ghosts_o = 1;
+    int mgh = m + 2 * ghosts_m;
+    int ngh = n + 2 * ghosts_n;
+    int ogh = o + 2 * ghosts_o;
+    int yz = ngh * ogh;
+    int xz = mgh * ogh;
+    int xy = mgh * ngh;
+    int blocksize = 2;
+    int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27 * blocksize * blocksize;
+
+    mgcl::Blockstencil h_stencil(m, n, o, 3, blocksize, ghosts_m, ghosts_n, ghosts_o);
+    h_stencil.fill1dIndex(false);
+    const double* buf_stencil = h_stencil.field1d().data();
+
+    mgcl::BlockstencilGpu d_stencil(h_stencil, p.getContext(), p.getCommands(), p.getProgram());
+
+    std::vector<double> h_ret(ressize, -1);
+    mgcl::BufferGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, ressize);
+
+    d_stencil.extractBorderPlanes(p.getCommands(), p.getProgram(), d_tmp, h_ret, &p.getKernelConfig(), p.getProfilingData());
+    p.finish();
+
+    // Check that every index was written to
+    for (size_t i = 0; i < ressize; i++)
     {
-        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
-
-        // Create dummy problem
-        auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-        auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-        mgcl::Problem p(1, 1, 1, f, v);
-        p.setUseOpencl(true);
-        p.setDeviceType(deviceType);
-        p.setProfilingEnabled(true);
-        p.init();
-
-        int m = 3;
-        int n = 5;
-        int o = 7;
-        int ghosts_m = 1;
-        int ghosts_n = 1; // BlockstencilGpu currently does not support different ghosts per dimension
-        int ghosts_o = 1;
-        int mgh = m + 2 * ghosts_m;
-        int ngh = n + 2 * ghosts_n;
-        int ogh = o + 2 * ghosts_o;
-        int yz = ngh * ogh;
-        int xz = mgh * ogh;
-        int xy = mgh * ngh;
-        int blocksize = 2;
-        int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27 * blocksize * blocksize;
-
-        mgcl::Blockstencil h_stencil(m, n, o, 3, blocksize, ghosts_m, ghosts_n, ghosts_o);
-        h_stencil.fill1dIndex(false);
-        const double* buf_stencil = h_stencil.field1d().data();
-
-        mgcl::BlockstencilGpu d_stencil(h_stencil, p.getContext(), p.getCommands(), p.getProgram());
-
-        std::vector<double> h_ret(ressize, -1);
-        mgcl::BufferGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, ressize);
-
-        d_stencil.extractBorderPlanes(p.getCommands(), p.getProgram(), d_tmp, h_ret, &p.getKernelConfig(), p.getProfilingData());
-        p.finish();
-
-        // Check that every index was written to
-        for (size_t i = 0; i < ressize; i++)
-        {
-            CAPTURE(i, ressize);
-            REQUIRE(h_ret[i] >= 0);
-        }
-
-        int cnt = 0;
-        // front planes (yz)
-        for (int bi = 0; bi < blocksize; bi++)
-            for (int bj = 0; bj < blocksize; bj++)
-            {
-                for (int ii = 0; ii < 3; ii++)
-                    for (int jj = 0; jj < 3; jj++)
-                        for (int kk = 0; kk < 3; kk++)
-                            for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
-                                for (int j = 0; j < ngh; j++)             // all cells in y-dir
-                                    for (int k = 0; k < ogh; k++)         // all cells in z-dir
-                                    {
-                                        CAPTURE(i, j, k, ii, jj, kk, bi, bj, cnt);
-                                        REQUIRE(h_ret[cnt++] == h_stencil[bi][bj][ii][jj][kk][i][j][k]);
-                                    }
-
-                // back planes (yz)
-                for (int ii = 0; ii < 3; ii++)
-                    for (int jj = 0; jj < 3; jj++)
-                        for (int kk = 0; kk < 3; kk++)
-                            for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
-                                for (int j = 0; j < ngh; j++)      // all cells in y-dir
-                                    for (int k = 0; k < ogh; k++)  // all cells in z-dir
-                                        REQUIRE(h_ret[cnt++] == h_stencil[bi][bj][ii][jj][kk][i][j][k]);
-
-                // top planes (xz)
-                for (int ii = 0; ii < 3; ii++)
-                    for (int jj = 0; jj < 3; jj++)
-                        for (int kk = 0; kk < 3; kk++)
-                            for (int j = ghosts_n; j < 2 * ghosts_n; j++)
-                                for (int i = 0; i < mgh; i++)
-                                    for (int k = 0; k < ogh; k++)
-                                        REQUIRE(h_ret[cnt++] == h_stencil[bi][bj][ii][jj][kk][i][j][k]);
-
-                // bottom planes (xz)
-                for (int ii = 0; ii < 3; ii++)
-                    for (int jj = 0; jj < 3; jj++)
-                        for (int kk = 0; kk < 3; kk++)
-                            for (int j = n; j < n + ghosts_n; j++)
-                                for (int i = 0; i < mgh; i++)
-                                    for (int k = 0; k < ogh; k++)
-                                        REQUIRE(h_ret[cnt++] == h_stencil[bi][bj][ii][jj][kk][i][j][k]);
-
-                // left planes (xy)
-                for (int ii = 0; ii < 3; ii++)
-                    for (int jj = 0; jj < 3; jj++)
-                        for (int kk = 0; kk < 3; kk++)
-                            for (int k = ghosts_o; k < 2 * ghosts_o; k++)
-                                for (int i = 0; i < mgh; i++)
-                                    for (int j = 0; j < ngh; j++)
-                                        REQUIRE(h_ret[cnt++] == h_stencil[bi][bj][ii][jj][kk][i][j][k]);
-
-                // right planes (xy)
-                for (int ii = 0; ii < 3; ii++)
-                    for (int jj = 0; jj < 3; jj++)
-                        for (int kk = 0; kk < 3; kk++)
-                            for (int k = o; k < o + ghosts_o; k++)
-                                for (int i = 0; i < mgh; i++)
-                                    for (int j = 0; j < ngh; j++)
-                                        REQUIRE(h_ret[cnt++] == h_stencil[bi][bj][ii][jj][kk][i][j][k]);
-            }
+        CAPTURE(i, ressize);
+        REQUIRE(h_ret[i] >= 0);
     }
+
+    int cnt = 0;
+    // front planes (yz)
+    for (int bi = 0; bi < blocksize; bi++)
+        for (int bj = 0; bj < blocksize; bj++)
+        {
+            for (int ii = 0; ii < 3; ii++)
+                for (int jj = 0; jj < 3; jj++)
+                    for (int kk = 0; kk < 3; kk++)
+                        for (int i = ghosts_m; i < 2 * ghosts_m; i++) // ghm real planes in the front
+                            for (int j = 0; j < ngh; j++)             // all cells in y-dir
+                                for (int k = 0; k < ogh; k++)         // all cells in z-dir
+                                {
+                                    CAPTURE(i, j, k, ii, jj, kk, bi, bj, cnt);
+                                    REQUIRE(h_ret[cnt++] == h_stencil[bi][bj][ii][jj][kk][i][j][k]);
+                                }
+
+            // back planes (yz)
+            for (int ii = 0; ii < 3; ii++)
+                for (int jj = 0; jj < 3; jj++)
+                    for (int kk = 0; kk < 3; kk++)
+                        for (int i = m; i < m + ghosts_m; i++) // ghosts_m real planes in the back
+                            for (int j = 0; j < ngh; j++)      // all cells in y-dir
+                                for (int k = 0; k < ogh; k++)  // all cells in z-dir
+                                    REQUIRE(h_ret[cnt++] == h_stencil[bi][bj][ii][jj][kk][i][j][k]);
+
+            // top planes (xz)
+            for (int ii = 0; ii < 3; ii++)
+                for (int jj = 0; jj < 3; jj++)
+                    for (int kk = 0; kk < 3; kk++)
+                        for (int j = ghosts_n; j < 2 * ghosts_n; j++)
+                            for (int i = 0; i < mgh; i++)
+                                for (int k = 0; k < ogh; k++)
+                                    REQUIRE(h_ret[cnt++] == h_stencil[bi][bj][ii][jj][kk][i][j][k]);
+
+            // bottom planes (xz)
+            for (int ii = 0; ii < 3; ii++)
+                for (int jj = 0; jj < 3; jj++)
+                    for (int kk = 0; kk < 3; kk++)
+                        for (int j = n; j < n + ghosts_n; j++)
+                            for (int i = 0; i < mgh; i++)
+                                for (int k = 0; k < ogh; k++)
+                                    REQUIRE(h_ret[cnt++] == h_stencil[bi][bj][ii][jj][kk][i][j][k]);
+
+            // left planes (xy)
+            for (int ii = 0; ii < 3; ii++)
+                for (int jj = 0; jj < 3; jj++)
+                    for (int kk = 0; kk < 3; kk++)
+                        for (int k = ghosts_o; k < 2 * ghosts_o; k++)
+                            for (int i = 0; i < mgh; i++)
+                                for (int j = 0; j < ngh; j++)
+                                    REQUIRE(h_ret[cnt++] == h_stencil[bi][bj][ii][jj][kk][i][j][k]);
+
+            // right planes (xy)
+            for (int ii = 0; ii < 3; ii++)
+                for (int jj = 0; jj < 3; jj++)
+                    for (int kk = 0; kk < 3; kk++)
+                        for (int k = o; k < o + ghosts_o; k++)
+                            for (int i = 0; i < mgh; i++)
+                                for (int j = 0; j < ngh; j++)
+                                    REQUIRE(h_ret[cnt++] == h_stencil[bi][bj][ii][jj][kk][i][j][k]);
+        }
 }
 
 // TEST_CASE("BlockstencilGpu::pasteGhostsFromBorderPlanes")
