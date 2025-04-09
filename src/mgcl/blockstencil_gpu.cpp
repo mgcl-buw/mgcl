@@ -1,4 +1,5 @@
 #include "blockstencil_gpu.hpp"
+#include "blockstencil.hpp"
 #include "mgcl.hpp"
 #include "opencl_helper.hpp"
 #include "util.hpp"
@@ -248,7 +249,7 @@ namespace mgcl
     }
 
     /**
-     * @brief Extracts the border planes of the varying stencil.
+     * @brief Extracts the border planes of the blockstencil.
      *
      * @param commands OpenCL command queue
      * @param program OpenCL program
@@ -259,8 +260,6 @@ namespace mgcl
                                               BufferGpu& d_target, std::vector<double>& h_target,
                                               mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
-        assert(false && "Not implemented");
-
         // Plane sizes
         int yz = getNgh() * getOgh();
         int xz = getMgh() * getOgh();
@@ -268,7 +267,7 @@ namespace mgcl
         int ghosts_m = getGh();
         int ghosts_n = getGh();
         int ghosts_o = getGh();
-        int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27;
+        int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27 * blocksize * blocksize;
 
         if (ghosts_m > m || ghosts_n > n || ghosts_o > o)
             error("BlockstencilGpu::extractBorderPlanes: Only defined for ghosts <= m, n, o");
@@ -276,7 +275,7 @@ namespace mgcl
         int err;
 
         // Create the compute kernel from the program
-        const char* kernelName = "extract_border_planes_varying_stencil";
+        const char* kernelName = "extract_border_planes_blockstencil";
         cl_kernel kernel = clCreateKernel(program, kernelName, &err);
         mgcl::mgclCheckError(err, "clCreateKernel");
 
@@ -298,6 +297,7 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_n);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &blocksize);
         mgcl::mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
@@ -317,7 +317,7 @@ namespace mgcl
 
         // enqueue kernel
         err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
-        mgcl::mgclCheckError(err, "Enqueueing extract_border_planes_varying_stencil kernel");
+        mgcl::mgclCheckError(err, "Enqueueing extract_border_planes_blockstencil kernel");
 
         if (pd != nullptr)
         {
@@ -328,7 +328,7 @@ namespace mgcl
         mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         err = clReleaseKernel(kernel);
-        mgcl::mgclCheckError(err, "Releasing extract_border_planes_varying_stencil kernel");
+        mgcl::mgclCheckError(err, "Releasing extract_border_planes_blockstencil kernel");
 
         // Read into h_target
         d_target.read(commands, h_target.data(), false);
