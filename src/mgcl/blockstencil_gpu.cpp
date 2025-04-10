@@ -267,7 +267,7 @@ namespace mgcl
         int ghosts_m = getGh();
         int ghosts_n = getGh();
         int ghosts_o = getGh();
-        int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27 * blocksize * blocksize;
+        int wicount = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27;
 
         if (ghosts_m > m || ghosts_n > n || ghosts_o > o)
             error("BlockstencilGpu::extractBorderPlanes: Only defined for ghosts <= m, n, o");
@@ -301,7 +301,7 @@ namespace mgcl
         mgcl::mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
-        size_t global = ressize;
+        size_t global = wicount;
         size_t local = 32;
         // Apply kernel config, if available
         if (conf)
@@ -345,8 +345,6 @@ namespace mgcl
                                                       BufferGpu& d_ghosts,
                                                       mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
-        assert(false && "Not implemented");
-
         // Plane sizes
         int yz = getNgh() * getOgh();
         int xz = getMgh() * getOgh();
@@ -354,15 +352,15 @@ namespace mgcl
         int ghosts_m = getGh();
         int ghosts_n = getGh();
         int ghosts_o = getGh();
-        int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27;
+        int wicount = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27;
 
         if (ghosts_m > m || ghosts_n > n || ghosts_o > o)
-            error("BlockstencilGpu::extractBorderPlanes: Only defined for ghosts <= m, n, o");
+            error("BlockstencilGpu::pasteGhostsFromBorderPlanes: Only defined for ghosts <= m, n, o");
 
         int err;
 
         // Create the compute kernel from the program
-        const char* kernelName = "paste_ghosts_from_border_planes_varying_stencil";
+        const char* kernelName = "paste_ghosts_from_border_planes_blockstencil";
         cl_kernel kernel = clCreateKernel(program, kernelName, &err);
         mgcl::mgclCheckError(err, "clCreateKernel");
 
@@ -384,10 +382,11 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_n);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &blocksize);
         mgcl::mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
-        size_t global = ressize;
+        size_t global = wicount;
         size_t local = 32;
         // Apply kernel config, if available
         if (conf)
@@ -403,7 +402,7 @@ namespace mgcl
 
         // enqueue kernel
         err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
-        mgcl::mgclCheckError(err, "Enqueueing paste_ghosts_from_border_planes_varying_stencil kernel");
+        mgcl::mgclCheckError(err, "Enqueueing paste_ghosts_from_border_planes_blockstencil kernel");
 
         if (pd != nullptr)
         {
@@ -414,7 +413,7 @@ namespace mgcl
         mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         err = clReleaseKernel(kernel);
-        mgcl::mgclCheckError(err, "Releasing paste_ghosts_from_border_planes_varying_stencil kernel");
+        mgcl::mgclCheckError(err, "Releasing paste_ghosts_from_border_planes_blockstencil kernel");
     }
 
     std::ostream& operator<<(std::ostream& os, const BlockstencilGpu& v)
