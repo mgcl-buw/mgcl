@@ -3062,12 +3062,15 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
  * - yz: j-major, i.e. forall j { forall k { ... } }
  * - xz: i-major, i.e. forall i { forall k { ... } }
  * - xy: i-major, i.e. forall i { forall k { ... } }
+ * For each matrix entry, all coefficients with all planes are stored.
+ * bi=0, bj=0: all coeffs, all 6 planes, then
+ * bi=0, bj=1: all coeffs, all 6 planes and so on.
  *
  * This kernel must be called as a 1d kernel with
  *   #wis = (ghosts_m*n*o * ghosts_n*m*o * ghosts_o*n*m) * 27
  * work-items.
  * Hardcoded for a 27p blockstencil.
- * Memory layout: [bi][bj][ci][cj][ck][x][y][z]
+ * Memory layout blockstencil: [bi][bj][ci][cj][ck][x][y][z]
  * Arguments:
  * * buf_stencil: BlockstencilGpu of size mgh*ngh*ogh*27*blocksize^2
  * * buf_res: std::vector of size (ghosts_m*n*o * ghosts_n*m*o * ghosts_o*n*m) * 27 * blocksize^2
