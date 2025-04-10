@@ -2119,19 +2119,7 @@ TEST_CASE("VaryingStencilGpu::pasteGhostsFromBorderPlanes")
 
     auto checkResult = [&](mgcl::VaryingStencil& h_stencil, double* buf_ghosts)
     {
-        // Check that all real cells were left untouched
-        for (int ii = 0; ii < 3; ii++)
-            for (int jj = 0; jj < 3; jj++)
-                for (int kk = 0; kk < 3; kk++)
-                    for (int i = ghosts_m; i < m + ghosts_m; i++)
-                        for (int j = ghosts_n; j < n + ghosts_n; j++)
-                            for (int k = ghosts_o; k < o + ghosts_o; k++)
-                            {
-                                CAPTURE(i, j, k);
-                                REQUIRE(h_stencil[ii][jj][kk][i][j][k] == -1);
-                            }
-
-        // Check that all ghost cells were filled with any value
+        // Check that all ghost cells were filled with any value and all real cells were left untouched
         for (int ii = 0; ii < 3; ii++)
             for (int jj = 0; jj < 3; jj++)
                 for (int kk = 0; kk < 3; kk++)
@@ -2139,11 +2127,15 @@ TEST_CASE("VaryingStencilGpu::pasteGhostsFromBorderPlanes")
                         for (int j = 0; j < ngh; j++)
                             for (int k = 0; k < ogh; k++)
                             {
-                                if ((i < ghosts_m || i >= m + ghosts_m) && (j < ghosts_n || j >= n + ghosts_n) && (k < ghosts_o || k >= o + ghosts_o))
+                                CAPTURE(i, j, k, ii, jj, kk);
+                                if ((i < ghosts_m || i >= m + ghosts_m) || (j < ghosts_n || j >= n + ghosts_n) || (k < ghosts_o || k >= o + ghosts_o))
                                 {
-                                    CAPTURE(i, j, k);
                                     REQUIRE(h_stencil[ii][jj][kk][i][j][k] >= 0);
                                     REQUIRE(!std::isnan(h_stencil[ii][jj][kk][i][j][k]));
+                                }
+                                else
+                                {
+                                    REQUIRE(h_stencil[ii][jj][kk][i][j][k] == -1);
                                 }
                             }
 
