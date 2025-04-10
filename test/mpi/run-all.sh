@@ -218,6 +218,9 @@ if [ "$TEST_UTIL" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 2 "$exe" "mpi_util::sendBorderPlanes_stencil"
     run_test --oversubscribe -n 8 "$exe" "mpi_util::sendBorderPlanes_stencil"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::sendBorderPlanes_stencil"
+    run_test --oversubscribe -n 2 "$exe" "mpi_util::sendBorderPlanes_cuboidbs"
+    run_test --oversubscribe -n 8 "$exe" "mpi_util::sendBorderPlanes_cuboidbs"
+    run_test --oversubscribe -n 17 "$exe" "mpi_util::sendBorderPlanes_cuboidbs"
 
     if [ "$NO_OCL" = false ] ; then
       run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-GPU-src-dest-same-different-gh" --deviceTypes "$OCL_DEVICE_TYPES"

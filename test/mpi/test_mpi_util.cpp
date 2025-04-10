@@ -1527,8 +1527,8 @@ TEST_CASE("mpi_util::sendBorderPlanes_stencil")
 }
 
 // Checks that sending border planes of a CuboidBS is correct.
-// Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::sendBorderPlanes_cuboid"
-TEST_CASE("mpi_util::sendBorderPlanes_cuboidbs_blockstencil")
+// Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::sendBorderPlanes_cuboidbs_blockstencil"
+TEST_CASE("mpi_util::sendBorderPlanes_cuboidbs")
 {
     using std::min;
 
