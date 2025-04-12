@@ -789,9 +789,9 @@ TEST_CASE("BlockstencilGpu::pasteGhostsFromBorderPlanes")
                                     }
 
         int cnt = 0;
+        // back ghosts (yz)
         for (int bi = 0; bi < blocksize; bi++)
             for (int bj = 0; bj < blocksize; bj++)
-            { // back ghosts (yz)
                 for (int ii = 0; ii < 3; ii++)
                     for (int jj = 0; jj < 3; jj++)
                         for (int kk = 0; kk < 3; kk++)
@@ -808,7 +808,9 @@ TEST_CASE("BlockstencilGpu::pasteGhostsFromBorderPlanes")
                                         cnt++;
                                     }
 
-                // front ghosts (yz)
+        // front ghosts (yz)
+        for (int bi = 0; bi < blocksize; bi++)
+            for (int bj = 0; bj < blocksize; bj++)
                 for (int ii = 0; ii < 3; ii++)
                     for (int jj = 0; jj < 3; jj++)
                         for (int kk = 0; kk < 3; kk++)
@@ -824,7 +826,9 @@ TEST_CASE("BlockstencilGpu::pasteGhostsFromBorderPlanes")
                                         cnt++;
                                     }
 
-                // bottom ghosts (xz)
+        // bottom ghosts (xz)
+        for (int bi = 0; bi < blocksize; bi++)
+            for (int bj = 0; bj < blocksize; bj++)
                 for (int ii = 0; ii < 3; ii++)
                     for (int jj = 0; jj < 3; jj++)
                         for (int kk = 0; kk < 3; kk++)
@@ -841,7 +845,9 @@ TEST_CASE("BlockstencilGpu::pasteGhostsFromBorderPlanes")
                                         cnt++;
                                     }
 
-                // top ghosts (xz)
+        // top ghosts (xz)
+        for (int bi = 0; bi < blocksize; bi++)
+            for (int bj = 0; bj < blocksize; bj++)
                 for (int ii = 0; ii < 3; ii++)
                     for (int jj = 0; jj < 3; jj++)
                         for (int kk = 0; kk < 3; kk++)
@@ -858,7 +864,9 @@ TEST_CASE("BlockstencilGpu::pasteGhostsFromBorderPlanes")
                                         cnt++;
                                     }
 
-                // right ghosts (xy)
+        // right ghosts (xy)
+        for (int bi = 0; bi < blocksize; bi++)
+            for (int bj = 0; bj < blocksize; bj++)
                 for (int ii = 0; ii < 3; ii++)
                     for (int jj = 0; jj < 3; jj++)
                         for (int kk = 0; kk < 3; kk++)
@@ -870,7 +878,9 @@ TEST_CASE("BlockstencilGpu::pasteGhostsFromBorderPlanes")
                                         REQUIRE_THAT(buf_ghosts[cnt++], Catch::Matchers::WithinAbs(h_stencil[bi][bj][ii][jj][kk][i][j][k], 1e-15));
                                     }
 
-                // left ghosts (xy)
+        // left ghosts (xy)
+        for (int bi = 0; bi < blocksize; bi++)
+            for (int bj = 0; bj < blocksize; bj++)
                 for (int ii = 0; ii < 3; ii++)
                     for (int jj = 0; jj < 3; jj++)
                         for (int kk = 0; kk < 3; kk++)
@@ -881,7 +891,6 @@ TEST_CASE("BlockstencilGpu::pasteGhostsFromBorderPlanes")
                                         CAPTURE(i, j, k, ii, jj, kk, cnt);
                                         REQUIRE_THAT(buf_ghosts[cnt++], Catch::Matchers::WithinAbs(h_stencil[bi][bj][ii][jj][kk][i][j][k], 1e-15));
                                     }
-            }
     };
 
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));

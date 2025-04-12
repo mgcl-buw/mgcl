@@ -3276,8 +3276,14 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
     int gridsizeStencil = gridsize * 27;
     int blocksize2 = blocksize * blocksize;
 
-    // size of all planes for all coeffs, i.e. content of one matrix entry
-    int ressizeOneMatrixEntry = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27;
+    int yzgh = yz * ghosts_m;
+    int xzgh = xz * ghosts_n;
+    int xygh = xy * ghosts_o;
+
+    // size of one matrix entry (coeffs and gps) for each plane
+    int yzRessizeOneMatrixEntry = yzgh * 27;
+    int xzRessizeOneMatrixEntry = xzgh * 27;
+    int xyRessizeOneMatrixEntry = xygh * 27;
 
     // wi-index = index in input buffer buf_ghosts
     int idx = get_global_id(0);
@@ -3296,7 +3302,7 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
         if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
             for (int b = 0; b < blocksize2; b++)
             {
-                buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * ressizeOneMatrixEntry + idx];
+                buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * yzRessizeOneMatrixEntry + idx];
             }
     }
     // Back planes (front ghosts)
@@ -3314,7 +3320,7 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
         if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
             for (int b = 0; b < blocksize2; b++)
             {
-                buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * ressizeOneMatrixEntry + idx + ghosts_m * yz * 27];
+                buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * yzRessizeOneMatrixEntry + idx + ghosts_m * yz * 27 * blocksize2];
             }
     }
     // Top planes (bottom ghosts)
@@ -3332,7 +3338,7 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
         if (k >= ghosts_o && k < o + ghosts_o)
             for (int b = 0; b < blocksize2; b++)
             {
-                buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * ressizeOneMatrixEntry + idx + 2 * ghosts_m * yz * 27];
+                buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * xzRessizeOneMatrixEntry + idx + 2 * ghosts_m * yz * 27 * blocksize2];
             }
     }
     // Bottom planes (top ghosts)
@@ -3350,7 +3356,7 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
         if (k >= ghosts_o && k < o + ghosts_o)
             for (int b = 0; b < blocksize2; b++)
             {
-                buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * ressizeOneMatrixEntry + idx + (2 * ghosts_m * yz + ghosts_n * xz) * 27];
+                buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * xzRessizeOneMatrixEntry + idx + (2 * ghosts_m * yz + ghosts_n * xz) * 27 * blocksize2];
             }
     }
     // Left planes (right ghosts)
@@ -3365,7 +3371,7 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
         int j = idx_grid % ngh;
         for (int b = 0; b < blocksize2; b++)
         {
-            buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * ressizeOneMatrixEntry + idx + (2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27];
+            buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * xyRessizeOneMatrixEntry + idx + (2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27 * blocksize2];
         }
     }
     // Right planes (left ghosts)
@@ -3380,7 +3386,7 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
         int j = idx_grid % ngh;
         for (int b = 0; b < blocksize2; b++)
         {
-            buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * ressizeOneMatrixEntry + idx + (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27];
+            buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * xyRessizeOneMatrixEntry + idx + (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27 * blocksize2];
         }
     }
 }
