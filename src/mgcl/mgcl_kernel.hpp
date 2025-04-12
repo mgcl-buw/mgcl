@@ -2822,7 +2822,7 @@ __kernel void paste_ghosts_from_border_planes_varying_stencil(
  * This kernel must be called as a 1d kernel with
  *   #borderCells = ghosts_m*n*o * ghosts_n*m*o * ghosts_o*n*m
  * work-items.
- * Block entries for one grid points lay conescutively in memory, i.e. gp000_m0, gp000_m1, gp001_m0, gp001_m1, etc.
+ * Block entries for one grid point lie in memory consecutively, i.e. gp000_m0, gp000_m1, gp001_m0, gp001_m1, etc.
  * Arguments:
  * * buf_cuboid: CuboidBSGPU::buffer of size mgh*ngh*ogh
  * * buf_res: CuboidGPU::buffer of size 1*1*#borderCells
@@ -3112,8 +3112,14 @@ __kernel void extract_border_planes_blockstencil(
     int gridsizeStencil = gridsize * 27;
     int blocksize2 = blocksize * blocksize;
 
-    // size of all planes for all coeffs, i.e. content of one matrix entry
-    int ressizeOneMatrixEntry = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27;
+    int yzgh = yz * ghosts_m;
+    int xzgh = xz * ghosts_n;
+    int xygh = xy * ghosts_o;
+
+    // size of one matrix entry (coeffs and gps) for each plane
+    int yzRessizeOneMatrixEntry = yzgh * 27;
+    int xzRessizeOneMatrixEntry = xzgh * 27;
+    int xyRessizeOneMatrixEntry = xygh * 27;
 
     // wi-index = index in output buffer buf_res
     int idx = get_global_id(0);
@@ -3129,16 +3135,22 @@ __kernel void extract_border_planes_blockstencil(
         int k = idx_grid % ogh;
         for (int b = 0; b < blocksize2; b++)
         {
-            buf_res[idx + b * ressizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
+            // if (idx == 0)
+            // {
+            //     printf("b: %i, idx_coeff: %i, idx_grid: %i, i: %i, j: %i, k: %i\n", b, idx_coeff, idx_grid, i, j, k);
+            //     printf("idx + b * yzRessizeOneMatrixEntry: %i\n", idx + b * yzRessizeOneMatrixEntry);
+            //     printf("b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k: %i\n", b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k);
+            // }
+            buf_res[idx + b * yzRessizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
         }
     }
     // Back planes
     else if (idx < 2 * ghosts_m * yz * 27)
     {
-        int idx_resbuf = idx;
-        idx -= ghosts_m * yz * 27;                        // reset to 0 for index calculation
-        int idx_coeff = idx / (ghosts_m * yz);            // 1d index of the current coefficient
-        int idx_grid = idx - idx_coeff * (ghosts_m * yz); // local index of the grid point inside the grid of one coefficient
+        idx -= ghosts_m * yz * 27;                              // reset to 0 for index calculation
+        int idx_resbuf = ghosts_m * yz * 27 * blocksize2 + idx; // add resbuf offset to idx
+        int idx_coeff = idx / (ghosts_m * yz);                  // 1d index of the current coefficient
+        int idx_grid = idx - idx_coeff * (ghosts_m * yz);       // local index of the grid point inside the grid of one coefficient
 
         int i = idx_grid / yz + m;
         int j = (idx_grid - (i - m) * yz) / ogh;
@@ -3146,16 +3158,16 @@ __kernel void extract_border_planes_blockstencil(
 
         for (int b = 0; b < blocksize2; b++)
         {
-            buf_res[idx_resbuf + b * ressizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
+            buf_res[idx_resbuf + b * yzRessizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
         }
     }
     // Top planes
     else if (idx < (2 * ghosts_m * yz + ghosts_n * xz) * 27)
     {
-        int idx_resbuf = idx;
-        idx -= 2 * ghosts_m * yz * 27;                    // reset to 0 for index calculation
-        int idx_coeff = idx / (ghosts_n * xz);            // 1d index of the current coefficient
-        int idx_grid = idx - idx_coeff * (ghosts_n * xz); // local index of the grid point inside the grid of one coefficient
+        idx -= 2 * ghosts_m * yz * 27;                                // reset to 0 for index calculation
+        int idx_resbuf = (2 * ghosts_m * yz * 27) * blocksize2 + idx; // add resbuf offset to idx
+        int idx_coeff = idx / (ghosts_n * xz);                        // 1d index of the current coefficient
+        int idx_grid = idx - idx_coeff * (ghosts_n * xz);             // local index of the grid point inside the grid of one coefficient
 
         int j = idx_grid / xz + ghosts_n;
         int i = (idx_grid - (j - ghosts_n) * xz) / ogh;
@@ -3163,16 +3175,16 @@ __kernel void extract_border_planes_blockstencil(
 
         for (int b = 0; b < blocksize2; b++)
         {
-            buf_res[idx_resbuf + b * ressizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
+            buf_res[idx_resbuf + b * xzRessizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
         }
     }
     // Bottom planes
     else if (idx < (2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27)
     {
-        int idx_resbuf = idx;
-        idx -= (2 * ghosts_m * yz + ghosts_n * xz) * 27;  // reset to 0 for index calculation
-        int idx_coeff = idx / (ghosts_n * xz);            // 1d index of the current coefficient
-        int idx_grid = idx - idx_coeff * (ghosts_n * xz); // local index of the grid point inside the grid of one coefficient
+        idx -= (2 * ghosts_m * yz + ghosts_n * xz) * 27;                                // reset to 0 for index calculation
+        int idx_resbuf = ((2 * ghosts_m * yz + ghosts_n * xz) * 27 * blocksize2) + idx; // add resbuf offset to idx
+        int idx_coeff = idx / (ghosts_n * xz);                                          // 1d index of the current coefficient
+        int idx_grid = idx - idx_coeff * (ghosts_n * xz);                               // local index of the grid point inside the grid of one coefficient
 
         int j = idx_grid / xz + n;
         int i = (idx_grid - (j - n) * xz) / ogh;
@@ -3180,16 +3192,16 @@ __kernel void extract_border_planes_blockstencil(
 
         for (int b = 0; b < blocksize2; b++)
         {
-            buf_res[idx_resbuf + b * ressizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
+            buf_res[idx_resbuf + b * xzRessizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
         }
     }
     // Left planes
     else if (idx < (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27)
     {
-        int idx_resbuf = idx;
-        idx -= (2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27; // reset to 0 for index calculation
-        int idx_coeff = idx / (ghosts_o * xy);               // 1d index of the current coefficient
-        int idx_grid = idx - idx_coeff * (ghosts_o * xy);    // local index of the grid point inside the grid of one coefficient
+        idx -= (2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27;                                // reset to 0 for index calculation
+        int idx_resbuf = ((2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27 * blocksize2) + idx; // add resbuf offset to idx
+        int idx_coeff = idx / (ghosts_o * xy);                                              // 1d index of the current coefficient
+        int idx_grid = idx - idx_coeff * (ghosts_o * xy);                                   // local index of the grid point inside the grid of one coefficient
 
         int k = idx_grid / xy + ghosts_o;
         int i = (idx_grid - (k - ghosts_o) * xy) / ngh;
@@ -3197,16 +3209,16 @@ __kernel void extract_border_planes_blockstencil(
 
         for (int b = 0; b < blocksize2; b++)
         {
-            buf_res[idx_resbuf + b * ressizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
+            buf_res[idx_resbuf + b * xyRessizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
         }
     }
     // Right planes
     else if (idx < (2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy) * 27)
     {
-        int idx_resbuf = idx;
-        idx -= (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27; // reset to 0 for index calculation
-        int idx_coeff = idx / (ghosts_o * xy);                               // 1d index of the current coefficient
-        int idx_grid = idx - idx_coeff * (ghosts_o * xy);                    // local index of the grid point inside the grid of one coefficient
+        idx -= (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27;                                // reset to 0 for index calculation
+        int idx_resbuf = ((2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27 * blocksize2) + idx; // add resbuf offset to idx
+        int idx_coeff = idx / (ghosts_o * xy);                                                              // 1d index of the current coefficient
+        int idx_grid = idx - idx_coeff * (ghosts_o * xy);                                                   // local index of the grid point inside the grid of one coefficient
 
         int k = idx_grid / xy + o;
         int i = (idx_grid - (k - o) * xy) / ngh;
@@ -3214,7 +3226,7 @@ __kernel void extract_border_planes_blockstencil(
 
         for (int b = 0; b < blocksize2; b++)
         {
-            buf_res[idx_resbuf + b * ressizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
+            buf_res[idx_resbuf + b * xyRessizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
         }
     }
 }
