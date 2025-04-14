@@ -73,7 +73,7 @@ namespace mgcl::conf
         ret["update_ghosts_cuboidbs_periodic_blockstencil"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
         ret["update_ghosts_blockstencil"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
         ret["extract_border_planes_blockstencil"] = KernelWorkgroupSizes{{1, {32, 1, 1}}};
-        // ret["paste_ghosts_from_border_planes_cuboidbs"] = KernelWorkgroupSizes{{1, {32, 1, 1}}};
+        ret["paste_ghosts_from_border_planes_blockstencil"] = KernelWorkgroupSizes{{1, {32, 1, 1}}};
 
         return ret;
     }
