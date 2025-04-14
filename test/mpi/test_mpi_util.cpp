@@ -1861,7 +1861,7 @@ TEST_CASE("mpi_util::sendBorderPlanes_blockstencil")
         REQUIRE(sbuf[i] != -1);
     }
 
-    mgcl::mpi_util::sendBorderPlanesBlockstencil(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, stencilWidth, blocksize2,
+    mgcl::mpi_util::sendBorderPlanesBlockstencil(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, stencilWidth, blocksize,
                                                  sbuf, rbuf, mpiData);
 
     c.updateGhosts();

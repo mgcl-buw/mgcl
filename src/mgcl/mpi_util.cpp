@@ -1010,31 +1010,32 @@ namespace mgcl::mpi_util
         int xygh = xy * ghosts_o;
 
         int stencilSize = stencilWidth * stencilWidth * stencilWidth;
+        int blocksize2 = blocksize * blocksize;
 
         int m = mgh - 2 * ghosts_m;
         int n = ngh - 2 * ghosts_n;
         int o = ogh - 2 * ghosts_o;
 
         // int base_yz_front = 0;
-        int base_yz_back = yzgh * stencilSize * blocksize;
-        int base_xz_top = (2 * yzgh) * stencilSize * blocksize;
-        int base_xz_bottom = (2 * yzgh + xzgh) * stencilSize * blocksize;
-        int base_xy_left = (2 * yzgh + 2 * xzgh) * stencilSize * blocksize;
-        int base_xy_right = (2 * yzgh + 2 * xzgh + xygh) * stencilSize * blocksize;
+        int base_yz_back = yzgh * stencilSize * blocksize2;
+        int base_xz_top = (2 * yzgh) * stencilSize * blocksize2;
+        int base_xz_bottom = (2 * yzgh + xzgh) * stencilSize * blocksize2;
+        int base_xy_left = (2 * yzgh + 2 * xzgh) * stencilSize * blocksize2;
+        int base_xy_right = (2 * yzgh + 2 * xzgh + xygh) * stencilSize * blocksize2;
 
         // Send planes to neighbors
         int myid, err;
         MPI_Comm_rank(mpiData.comm, &myid);
 
         // Send front planes to the back
-        err = MPI_Sendrecv(static_cast<void*>(sbuf.data()), yzgh * stencilSize * blocksize, MPI_DOUBLE, mpiData.back, 0,
-                           static_cast<void*>(rbuf.data()), yzgh * stencilSize * blocksize, MPI_DOUBLE, mpiData.front, 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf.data()), yzgh * stencilSize * blocksize2, MPI_DOUBLE, mpiData.back, 0,
+                           static_cast<void*>(rbuf.data()), yzgh * stencilSize * blocksize2, MPI_DOUBLE, mpiData.front, 0,
                            mpiData.comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
 
         // Send back planes to the front
-        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_yz_back])), yzgh * stencilSize * blocksize, MPI_DOUBLE, mpiData.front, 0,
-                           static_cast<void*>(&(rbuf[base_yz_back])), yzgh * stencilSize * blocksize, MPI_DOUBLE, mpiData.back, 0,
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_yz_back])), yzgh * stencilSize * blocksize2, MPI_DOUBLE, mpiData.front, 0,
+                           static_cast<void*>(&(rbuf[base_yz_back])), yzgh * stencilSize * blocksize2, MPI_DOUBLE, mpiData.back, 0,
                            mpiData.comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
 
@@ -1052,7 +1053,7 @@ namespace mgcl::mpi_util
                      j0 < ghosts_n;
                      j0++, j1++, j2++)
                     for (int k = 0; k < ogh; k++)
-                        for (int b = 0; b < blocksize; b++)
+                        for (int b = 0; b < blocksize2; b++)
                         {
                             // Upper front edge - Write ghosts in the front (from back recv buffer) to xz top send buffer
                             sbuf[base_xz_top + b * xzgh * stencilSize + st * xzgh + j0 * xz + i0 * ogh + k] = rbuf[base_yz_back + b * yzgh * stencilSize + st * yzgh + i0 * yz + j1 * ogh + k];
@@ -1068,14 +1069,14 @@ namespace mgcl::mpi_util
                         }
 
         // Send top planes to the bottom
-        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xz_top])), xzgh * stencilSize * blocksize, MPI_DOUBLE, mpiData.down, 0,
-                           static_cast<void*>(&(rbuf[base_xz_top])), xzgh * stencilSize * blocksize, MPI_DOUBLE, mpiData.up, 0,
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xz_top])), xzgh * stencilSize * blocksize2, MPI_DOUBLE, mpiData.down, 0,
+                           static_cast<void*>(&(rbuf[base_xz_top])), xzgh * stencilSize * blocksize2, MPI_DOUBLE, mpiData.up, 0,
                            mpiData.comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
 
         // Send bottom planes to the top
-        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xz_bottom])), xzgh * stencilSize * blocksize, MPI_DOUBLE, mpiData.up, 0,
-                           static_cast<void*>(&(rbuf[base_xz_bottom])), xzgh * stencilSize * blocksize, MPI_DOUBLE, mpiData.down, 0,
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xz_bottom])), xzgh * stencilSize * blocksize2, MPI_DOUBLE, mpiData.up, 0,
+                           static_cast<void*>(&(rbuf[base_xz_bottom])), xzgh * stencilSize * blocksize2, MPI_DOUBLE, mpiData.down, 0,
                            mpiData.comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
 
@@ -1096,7 +1097,7 @@ namespace mgcl::mpi_util
                      i0 < ghosts_m;
                      i0++, i1++)
                     for (int j = ghosts_n; j < ghosts_n + n; j++)
-                        for (int b = 0; b < blocksize; b++)
+                        for (int b = 0; b < blocksize2; b++)
                         {
                             // Left front face - Write ghosts in the send left buffer from recv back buffer
                             sbuf[base_xy_left + b * xygh * stencilSize + (st * xygh + k0 * xy + i0 * ngh + j)] = rbuf[base_yz_back + b * yzgh * stencilSize + (st * yzgh + i0 * yz + j * ogh + k1)];
@@ -1118,7 +1119,7 @@ namespace mgcl::mpi_util
                     for (int j0 = 0, j1 = n + ghosts_n;
                          j0 < ghosts_n;
                          j0++, j1++)
-                        for (int b = 0; b < blocksize; b++)
+                        for (int b = 0; b < blocksize2; b++)
                         {
                             // Left top edge - Write ghosts in the send left buffer from recv bottom buffer
                             sbuf[base_xy_left + b * xygh * stencilSize + (st * xygh + k0 * xy + i * ngh + j0)] = rbuf[base_xz_bottom + b * xzgh * stencilSize + (st * xzgh + j0 * xz + i * ogh + k1)];
@@ -1135,14 +1136,14 @@ namespace mgcl::mpi_util
             }
 
         // Send left planes to the right
-        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xy_left])), xygh * stencilSize * blocksize, MPI_DOUBLE, mpiData.right, 0,
-                           static_cast<void*>(&(rbuf[base_xy_left])), xygh * stencilSize * blocksize, MPI_DOUBLE, mpiData.left, 0,
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xy_left])), xygh * stencilSize * blocksize2, MPI_DOUBLE, mpiData.right, 0,
+                           static_cast<void*>(&(rbuf[base_xy_left])), xygh * stencilSize * blocksize2, MPI_DOUBLE, mpiData.left, 0,
                            mpiData.comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
 
         // Send right planes to the left
-        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xy_right])), xygh * stencilSize * blocksize, MPI_DOUBLE, mpiData.left, 0,
-                           static_cast<void*>(&(rbuf[base_xy_right])), xygh * stencilSize * blocksize, MPI_DOUBLE, mpiData.right, 0,
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xy_right])), xygh * stencilSize * blocksize2, MPI_DOUBLE, mpiData.left, 0,
+                           static_cast<void*>(&(rbuf[base_xy_right])), xygh * stencilSize * blocksize2, MPI_DOUBLE, mpiData.right, 0,
                            mpiData.comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
     }
