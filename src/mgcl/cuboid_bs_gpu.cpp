@@ -721,9 +721,9 @@ namespace mgcl
                             conf, pd);
 
         // Send our planes to neighbours and receive their planes
-        mpi_util::sendBorderPlanesBlockstencil(getMgh(), getNgh(), getOgh(),
-                                               getGhostsM(), getGhostsN(), getGhostsO(), 1, blocksize,
-                                               hPlanesBufSend, hPlanesBufRecv, mpiData);
+        mpi_util::sendBorderPlanesCuboidBS(getMgh(), getNgh(), getOgh(),
+                                           getGhostsM(), getGhostsN(), getGhostsO(), blocksize,
+                                           hPlanesBufSend, hPlanesBufRecv, mpiData);
 
         // Paste planes back into the buffer.
         dPlanesBuf.write(commands, hPlanesBufRecv, false, ressize);

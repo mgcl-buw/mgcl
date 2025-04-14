@@ -6,6 +6,7 @@
 #include <csetjmp>
 #include <iostream>
 #include <memory>
+#include <string>
 
 #include "../../src/mgcl/cuboid.hpp"
 #include "../../src/mgcl/cuboid_gpu.hpp"
@@ -1657,8 +1658,8 @@ TEST_CASE("mpi_util::sendBorderPlanes_cuboidbs")
         rbuf[i] = -1;
     }
 
-    mgcl::mpi_util::sendBorderPlanesBlockstencil(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, 1, blocksize,
-                                                 sbuf, rbuf, mpiData);
+    mgcl::mpi_util::sendBorderPlanesCuboidBS(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, blocksize,
+                                             sbuf, rbuf, mpiData);
 
     c.updateGhosts(nullptr, true);
 
@@ -1769,6 +1770,9 @@ TEST_CASE("mpi_util::sendBorderPlanes_blockstencil")
     int yz = ngh * ogh;
     int xz = mgh * ogh;
     int xy = mgh * ngh;
+    int yzgh = yz * ghosts_m;
+    int xzgh = xz * ghosts_n;
+    int xygh = xy * ghosts_o;
     int ressize = (2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy) * blocksize2 * stencilSize;
 
     // int base_yz_front = 0;
@@ -1781,6 +1785,9 @@ TEST_CASE("mpi_util::sendBorderPlanes_blockstencil")
     // size of all planes for all coeffs, i.e. content of one matrix entry
     int ressizeOneCoeff = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o);
     int ressizeOneMatrixEntry = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * stencilSize;
+    int yzRessizeOneMatrixEntry = yzgh * 27;
+    int xzRessizeOneMatrixEntry = xzgh * 27;
+    int xyRessizeOneMatrixEntry = xygh * 27;
 
     std::vector<double> sbuf(ressize);
     std::vector<double> rbuf(ressize);
@@ -1794,17 +1801,20 @@ TEST_CASE("mpi_util::sendBorderPlanes_blockstencil")
         sbuf[i] = -1;
     }
 
-    for (int i = 0; i < mpi_size; i++)
+    auto yz1dindex = [&blocksize, &yzRessizeOneMatrixEntry, &stencilWidth, &yzgh, &yz, &ogh](int bi, int bj, int ii, int jj, int kk, int i, int k, int j)
     {
-        MPI_Barrier(mpi_comm);
-        if (i == mpi_rank)
-        {
-            std::cerr << i << ": sbuf size: " << sbuf.size() << std::endl;
-        }
-    }
+        return (bi * blocksize + bj) * yzRessizeOneMatrixEntry + (ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * yzgh + (i * yz + j * ogh + k);
+    };
+    auto xz1dindex = [&blocksize, &xzRessizeOneMatrixEntry, &stencilWidth, &xzgh, &xz, &ogh](int bi, int bj, int ii, int jj, int kk, int i, int k, int j)
+    {
+        return (bi * blocksize + bj) * xzRessizeOneMatrixEntry + (ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xzgh + (j * xz + i * ogh + k);
+    };
+    auto xy1dindex = [&blocksize, &xyRessizeOneMatrixEntry, &stencilWidth, &xygh, &xy, &ngh](int bi, int bj, int ii, int jj, int kk, int i, int k, int j)
+    {
+        return (bi * blocksize + bj) * xyRessizeOneMatrixEntry + (ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * xygh + (k * xy + i * ngh + j);
+    };
 
     // fill planes with 1d index from blockstencil
-    int offset = 0;
     for (int bi = 0; bi < blocksize; bi++)
         for (int bj = 0; bj < blocksize; bj++)
             for (int ii = 0; ii < stencilWidth; ii++)
@@ -1817,50 +1827,32 @@ TEST_CASE("mpi_util::sendBorderPlanes_blockstencil")
                                 {
                                     // front
                                     // sbuf[(bi * blocksize + bj) * ressizeOneMatrixEntry + (ii * stencilWidth * stencilWidth + jj * stencilWidth + kk) * ressizeOneCoeff + (i * yz + j * ogh + k)] = c[bi][bj][ii][jj][kk][i + ghosts_m][j][k];
-                                    sbuf[offset + (i * yz + j * ogh + k)] = c[bi][bj][ii][jj][kk][i + ghosts_m][j][k];
+                                    sbuf[yz1dindex(bi, bj, ii, jj, kk, i, k, j)] = c[bi][bj][ii][jj][kk][i + ghosts_m][j][k];
 
                                     // back
-                                    sbuf[offset + base_yz_back + (i * yz + j * ogh + k)] = c[bi][bj][ii][jj][kk][i + m][j][k];
+                                    sbuf[base_yz_back + yz1dindex(bi, bj, ii, jj, kk, i, k, j)] = c[bi][bj][ii][jj][kk][i + m][j][k];
                                 }
                         for (int i = 0; i < mgh; i++)
                             for (int j = 0; j < ghosts_n; j++)
                                 for (int k = 0; k < ogh; k++)
                                 {
                                     // top
-                                    sbuf[offset + base_xz_top + (j * xz + i * ogh + k)] = c[bi][bj][ii][jj][kk][i][j + ghosts_n][k];
+                                    sbuf[base_xz_top + xz1dindex(bi, bj, ii, jj, kk, i, k, j)] = c[bi][bj][ii][jj][kk][i][j + ghosts_n][k];
 
                                     // bottom
-                                    sbuf[offset + base_xz_bottom + (j * xz + i * ogh + k)] = c[bi][bj][ii][jj][kk][i][j + n][k];
+                                    sbuf[base_xz_bottom + xz1dindex(bi, bj, ii, jj, kk, i, k, j)] = c[bi][bj][ii][jj][kk][i][j + n][k];
                                 }
                         for (int i = 0; i < mgh; i++)
                             for (int j = 0; j < ngh; j++)
                                 for (int k = 0; k < ghosts_o; k++)
                                 {
                                     // left
-                                    sbuf[offset + base_xy_left + (k * xy + i * ngh + j)] = c[bi][bj][ii][jj][kk][i][j][k + ghosts_o];
+                                    sbuf[base_xy_left + xy1dindex(bi, bj, ii, jj, kk, i, k, j)] = c[bi][bj][ii][jj][kk][i][j][k + ghosts_o];
 
                                     // right
-                                    sbuf[offset + base_xy_right + (k * xy + i * ngh + j)] = c[bi][bj][ii][jj][kk][i][j][k + o];
+                                    sbuf[base_xy_right + xy1dindex(bi, bj, ii, jj, kk, i, k, j)] = c[bi][bj][ii][jj][kk][i][j][k + o];
                                 }
-                        offset += ressizeOneCoeff; // advance one coeff in planesbuf
-                        for (int i = 0; i < mpi_size; i++)
-                        {
-                            MPI_Barrier(mpi_comm);
-                            if (i == mpi_rank)
-                            {
-                                std::cerr << i << ": offset: " << offset << std::endl;
-                            }
-                        }
                     }
-
-    if (mpi_rank == 0)
-    {
-        for (size_t i = 0; i < rbuf.size(); i++)
-        {
-            std::cout << "i: " << i << ", sbuf: " << sbuf[i] << std::endl;
-        }
-    }
-    MPI_Barrier(mpi_comm);
 
     // fill rbuf with -1 and make sure, sbuf is completely filled
     for (size_t i = 0; i < rbuf.size(); i++)
@@ -1869,8 +1861,6 @@ TEST_CASE("mpi_util::sendBorderPlanes_blockstencil")
         REQUIRE(sbuf[i] != -1);
     }
 
-    SUCCEED("");
-
     mgcl::mpi_util::sendBorderPlanesBlockstencil(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, stencilWidth, blocksize2,
                                                  sbuf, rbuf, mpiData);
 
@@ -1878,7 +1868,6 @@ TEST_CASE("mpi_util::sendBorderPlanes_blockstencil")
 
     // Check against cuboid with updated ghosts
     // Edges in send buffers for top and down after sending to front and back
-    offset = 0;
     for (int bi = 0; bi < blocksize; bi++)
         for (int bj = 0; bj < blocksize; bj++)
             for (int ii = 0; ii < stencilWidth; ii++)
@@ -1889,12 +1878,12 @@ TEST_CASE("mpi_util::sendBorderPlanes_blockstencil")
                             for (int j = 0; j < ghosts_n; j++)
                                 for (int k = ghosts_o; k < ghosts_o + o; k++)
                                 {
-                                    CAPTURE(i, j, k);
+                                    CAPTURE(i, j, k, ii, jj, kk, bi, bj, mpi_rank);
                                     // top (bottom ghosts)
-                                    REQUIRE(rbuf[offset + base_xz_top + (j * xz + i * ogh + k)] == c[bi][bj][ii][jj][kk][i][j + ghosts_n + n][k]);
+                                    REQUIRE(rbuf[base_xz_top + xz1dindex(bi, bj, ii, jj, kk, i, k, j)] == c[bi][bj][ii][jj][kk][i][j + ghosts_n + n][k]);
 
                                     // bottom (top ghosts)
-                                    REQUIRE(rbuf[offset + base_xz_bottom + (j * xz + i * ogh + k)] == c[bi][bj][ii][jj][kk][i][j][k]);
+                                    REQUIRE(rbuf[base_xz_bottom + xz1dindex(bi, bj, ii, jj, kk, i, k, j)] == c[bi][bj][ii][jj][kk][i][j][k]);
                                 }
                         // Toruses in send buffers for left and right after sending to top and bottom
                         for (int i = 0; i < mgh; i++)
@@ -1902,12 +1891,10 @@ TEST_CASE("mpi_util::sendBorderPlanes_blockstencil")
                                 for (int k = 0; k < ghosts_o; k++)
                                 {
                                     // left (right ghosts)
-                                    REQUIRE(rbuf[offset + base_xy_left + (k * xy + i * ngh + j)] == c[bi][bj][ii][jj][kk][i][j][k + ghosts_o + o]);
+                                    REQUIRE(rbuf[base_xy_left + xy1dindex(bi, bj, ii, jj, kk, i, k, j)] == c[bi][bj][ii][jj][kk][i][j][k + ghosts_o + o]);
 
                                     // right (left ghosts)
-                                    REQUIRE(rbuf[offset + base_xy_right + (k * xy + i * ngh + j)] == c[bi][bj][ii][jj][kk][i][j][k]);
+                                    REQUIRE(rbuf[base_xy_right + xy1dindex(bi, bj, ii, jj, kk, i, k, j)] == c[bi][bj][ii][jj][kk][i][j][k]);
                                 }
-
-                        offset += ressizeOneCoeff; // advance one coeff in planesbuf
                     }
 }

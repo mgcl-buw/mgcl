@@ -830,6 +830,170 @@ namespace mgcl::mpi_util
      * @param rbuf Temporary receive buffer
      * @param mpiData Contains neighbouring processes' info
      */
+    void sendBorderPlanesCuboidBS(int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
+                                  int blocksize,
+                                  std::vector<double>& sbuf, std::vector<double>& rbuf, MPILevelData& mpiData)
+    {
+        // Sizes of planes
+        int yz = ngh * ogh;
+        int xz = mgh * ogh;
+        int xy = mgh * ngh;
+
+        // Size of planes times amount of ghosts in that direction, i.e. number of grid points that are sent in that
+        // direction
+        int yzgh = yz * ghosts_m;
+        int xzgh = xz * ghosts_n;
+        int xygh = xy * ghosts_o;
+
+        int m = mgh - 2 * ghosts_m;
+        int n = ngh - 2 * ghosts_n;
+        int o = ogh - 2 * ghosts_o;
+
+        // int base_yz_front = 0;
+        int base_yz_back = yzgh * blocksize;
+        int base_xz_top = (2 * yzgh) * blocksize;
+        int base_xz_bottom = (2 * yzgh + xzgh) * blocksize;
+        int base_xy_left = (2 * yzgh + 2 * xzgh) * blocksize;
+        int base_xy_right = (2 * yzgh + 2 * xzgh + xygh) * blocksize;
+
+        // Send planes to neighbors
+        int myid, err;
+        MPI_Comm_rank(mpiData.comm, &myid);
+
+        // Send front planes to the back
+        err = MPI_Sendrecv(static_cast<void*>(sbuf.data()), yzgh * blocksize, MPI_DOUBLE, mpiData.back, 0,
+                           static_cast<void*>(rbuf.data()), yzgh * blocksize, MPI_DOUBLE, mpiData.front, 0,
+                           mpiData.comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
+
+        // Send back planes to the front
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_yz_back])), yzgh * blocksize, MPI_DOUBLE, mpiData.front, 0,
+                           static_cast<void*>(&(rbuf[base_yz_back])), yzgh * blocksize, MPI_DOUBLE, mpiData.back, 0,
+                           mpiData.comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
+
+        // Write received edges of cuboid to send buffer
+        // i0: i index of recv buffers for yz plane (always all i indices)
+        // i1: i index of send buffers xz back ghosts
+        // j0: j index of send buffers for xz plane (always all j indices)
+        // j1: j index of recv buffer yz top edge
+        // j2: j index of recv buffer yz bottom edge
+        for (int i0 = 0, i1 = m + ghosts_m;
+             i0 < ghosts_m;
+             i0++, i1++)
+            for (int j0 = 0, j1 = ghosts_n, j2 = n;
+                 j0 < ghosts_n;
+                 j0++, j1++, j2++)
+                for (int k = 0; k < ogh; k++)
+                    for (int b = 0; b < blocksize; b++)
+                    {
+                        // Upper front edge - Write ghosts in the front (from back recv buffer) to xz top send buffer
+                        sbuf[base_xz_top + (j0 * xz + i0 * ogh + k) * blocksize + b] = rbuf[base_yz_back + (i0 * yz + j1 * ogh + k) * blocksize + b];
+
+                        // Lower front edge - Write ghosts in the front (from back recv buffer) to xz bottom send buffer
+                        sbuf[base_xz_bottom + (j0 * xz + i0 * ogh + k) * blocksize + b] = rbuf[base_yz_back + (i0 * yz + j2 * ogh + k) * blocksize + b];
+
+                        // Upper back edge - Write ghosts in the back (from front recv buffer, base 0) to xz top send buffer
+                        sbuf[base_xz_top + (j0 * xz + i1 * ogh + k) * blocksize + b] = rbuf[(i0 * yz + j1 * ogh + k) * blocksize + b];
+
+                        // Lower back edge - Write ghosts in the back (from front recv buffer, base 0) to xz bottom send buffer
+                        sbuf[base_xz_bottom + (j0 * xz + i1 * ogh + k) * blocksize + b] = rbuf[(i0 * yz + j2 * ogh + k) * blocksize + b];
+                    }
+
+        // Send top planes to the bottom
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xz_top])), xzgh * blocksize, MPI_DOUBLE, mpiData.down, 0,
+                           static_cast<void*>(&(rbuf[base_xz_top])), xzgh * blocksize, MPI_DOUBLE, mpiData.up, 0,
+                           mpiData.comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
+
+        // Send bottom planes to the top
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xz_bottom])), xzgh * blocksize, MPI_DOUBLE, mpiData.up, 0,
+                           static_cast<void*>(&(rbuf[base_xz_bottom])), xzgh * blocksize, MPI_DOUBLE, mpiData.down, 0,
+                           mpiData.comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
+
+        // Write received left torus of cuboid to send buffer
+        // k0: k index of send buffers for xy planes (left and right)
+        // k1: k index of recv buffers for copy into left send buffer
+        // k2: k index of recv buffers for copy into right send buffer
+        for (int k0 = 0, k1 = ghosts_o, k2 = o;
+             k0 < ghosts_o;
+             k0++, k1++, k2++)
+        {
+
+            // Copying from yz planes (front back)
+            // i0: i index of recv buffers for yz plane (always all i indices)
+            // i1: i index of send buffers xz back ghosts
+            for (int i0 = 0, i1 = m + ghosts_m;
+                 i0 < ghosts_m;
+                 i0++, i1++)
+                for (int j = ghosts_n; j < ghosts_n + n; j++)
+                    for (int b = 0; b < blocksize; b++)
+                    {
+                        // Left front face - Write ghosts in the send left buffer from recv back buffer
+                        sbuf[base_xy_left + (k0 * xy + i0 * ngh + j) * blocksize + b] = rbuf[base_yz_back + (i0 * yz + j * ogh + k1) * blocksize + b];
+
+                        // Left back face - Write ghosts in the send left buffer from recv front buffer
+                        sbuf[base_xy_left + (k0 * xy + i1 * ngh + j) * blocksize + b] = rbuf[i0 * yz + (j * ogh + k1) * blocksize + b];
+
+                        // Right front face - Write ghosts in the send right buffer from recv back buffer
+                        sbuf[base_xy_right + (k0 * xy + i0 * ngh + j) * blocksize + b] = rbuf[base_yz_back + (i0 * yz + j * ogh + k2) * blocksize + b];
+
+                        // Right back face - Write ghosts in the send right buffer from recv front buffer
+                        sbuf[base_xy_right + (k0 * xy + i1 * ngh + j) * blocksize + b] = rbuf[i0 * yz + (j * ogh + k2) * blocksize + b];
+                    }
+
+            // Copying from xz planes (top bottom)
+            // j0: j index of recv buffers yz bottom and send both left and right
+            // j1: j index of send buffers xy bottom ghosts (recv top)
+            for (int i = 0; i < mgh; i++)
+                for (int j0 = 0, j1 = n + ghosts_n;
+                     j0 < ghosts_n;
+                     j0++, j1++)
+                    for (int b = 0; b < blocksize; b++)
+                    {
+                        // Left top edge - Write ghosts in the send left buffer from recv bottom buffer
+                        sbuf[base_xy_left + (k0 * xy + i * ngh + j0) * blocksize + b] = rbuf[base_xz_bottom + (j0 * xz + i * ogh + k1) * blocksize + b];
+
+                        // Left bottom edge - Write ghosts in the send left buffer from recv top buffer
+                        sbuf[base_xy_left + (k0 * xy + i * ngh + j1) * blocksize + b] = rbuf[base_xz_top + (j0 * xz + i * ogh + k1) * blocksize + b];
+
+                        // Right top edge - Write ghosts in the send left buffer from recv bottom buffer
+                        sbuf[base_xy_right + (k0 * xy + i * ngh + j0) * blocksize + b] = rbuf[base_xz_bottom + (j0 * xz + i * ogh + k2) * blocksize + b];
+
+                        // Right bottom face - Write ghosts in the send right buffer from recv top buffer
+                        sbuf[base_xy_right + (k0 * xy + i * ngh + j1) * blocksize + b] = rbuf[base_xz_top + (j0 * xz + i * ogh + k2) * blocksize + b];
+                    }
+        }
+
+        // Send left planes to the right
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xy_left])), xygh * blocksize, MPI_DOUBLE, mpiData.right, 0,
+                           static_cast<void*>(&(rbuf[base_xy_left])), xygh * blocksize, MPI_DOUBLE, mpiData.left, 0,
+                           mpiData.comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
+
+        // Send right planes to the left
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xy_right])), xygh * blocksize, MPI_DOUBLE, mpiData.left, 0,
+                           static_cast<void*>(&(rbuf[base_xy_right])), xygh * blocksize, MPI_DOUBLE, mpiData.right, 0,
+                           mpiData.comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
+    }
+
+    /**
+     * @brief Sends border planes of a CuboidBS to neighbouring processes.
+     *
+     * @param mgh Extend of cuboid, that the planes belong to, in z-direction
+     * @param ngh Extend of cuboid, that the planes belong to, in y-direction
+     * @param ogh Extend of cuboid, that the planes belong to, in x-direction
+     * @param ghosts_m Ghosts of cuboid, that the planes belong to, at one border in z-direction
+     * @param ghosts_n Ghosts of cuboid, that the planes belong to, at one border in y-direction
+     * @param ghosts_o Ghosts of cuboid, that the planes belong to, at one border in x-direction
+     * @param stencilWidth Width of stencil, e.g. 3 for 3x3x3. Can be 1, when border planes of a cuboid shall be sent.
+     * @param blocksize Size of the block (vector in CuboidBS case).
+     * @param sbuf Send buffer, must contain planes in the same order that CuboidGpu::extractBorderPlanes() returns.
+     * @param rbuf Temporary receive buffer
+     * @param mpiData Contains neighbouring processes' info
+     */
     void sendBorderPlanesBlockstencil(int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
                                       int stencilWidth, int blocksize,
                                       std::vector<double>& sbuf, std::vector<double>& rbuf, MPILevelData& mpiData)
@@ -891,16 +1055,16 @@ namespace mgcl::mpi_util
                         for (int b = 0; b < blocksize; b++)
                         {
                             // Upper front edge - Write ghosts in the front (from back recv buffer) to xz top send buffer
-                            sbuf[base_xz_top + (st * xzgh + j0 * xz + i0 * ogh + k) * blocksize + b] = rbuf[base_yz_back + (st * yzgh + i0 * yz + j1 * ogh + k) * blocksize + b];
+                            sbuf[base_xz_top + b * xzgh * stencilSize + st * xzgh + j0 * xz + i0 * ogh + k] = rbuf[base_yz_back + b * yzgh * stencilSize + st * yzgh + i0 * yz + j1 * ogh + k];
 
                             // Lower front edge - Write ghosts in the front (from back recv buffer) to xz bottom send buffer
-                            sbuf[base_xz_bottom + (st * xzgh + j0 * xz + i0 * ogh + k) * blocksize + b] = rbuf[base_yz_back + (st * yzgh + i0 * yz + j2 * ogh + k) * blocksize + b];
+                            sbuf[base_xz_bottom + b * xzgh * stencilSize + st * xzgh + j0 * xz + i0 * ogh + k] = rbuf[base_yz_back + b * yzgh * stencilSize + st * yzgh + i0 * yz + j2 * ogh + k];
 
                             // Upper back edge - Write ghosts in the back (from front recv buffer, base 0) to xz top send buffer
-                            sbuf[base_xz_top + (st * xzgh + j0 * xz + i1 * ogh + k) * blocksize + b] = rbuf[(st * yzgh + i0 * yz + j1 * ogh + k) * blocksize + b];
+                            sbuf[base_xz_top + b * xzgh * stencilSize + st * xzgh + j0 * xz + i1 * ogh + k] = rbuf[b * yzgh * stencilSize + st * yzgh + i0 * yz + j1 * ogh + k];
 
                             // Lower back edge - Write ghosts in the back (from front recv buffer, base 0) to xz bottom send buffer
-                            sbuf[base_xz_bottom + (st * xzgh + j0 * xz + i1 * ogh + k) * blocksize + b] = rbuf[(st * yzgh + i0 * yz + j2 * ogh + k) * blocksize + b];
+                            sbuf[base_xz_bottom + b * xzgh * stencilSize + st * xzgh + j0 * xz + i1 * ogh + k] = rbuf[b * yzgh * stencilSize + st * yzgh + i0 * yz + j2 * ogh + k];
                         }
 
         // Send top planes to the bottom
@@ -935,16 +1099,16 @@ namespace mgcl::mpi_util
                         for (int b = 0; b < blocksize; b++)
                         {
                             // Left front face - Write ghosts in the send left buffer from recv back buffer
-                            sbuf[base_xy_left + (st * xygh + k0 * xy + i0 * ngh + j) * blocksize + b] = rbuf[base_yz_back + (st * yzgh + i0 * yz + j * ogh + k1) * blocksize + b];
+                            sbuf[base_xy_left + b * xygh * stencilSize + (st * xygh + k0 * xy + i0 * ngh + j)] = rbuf[base_yz_back + b * yzgh * stencilSize + (st * yzgh + i0 * yz + j * ogh + k1)];
 
                             // Left back face - Write ghosts in the send left buffer from recv front buffer
-                            sbuf[base_xy_left + (st * xygh + k0 * xy + i1 * ngh + j) * blocksize + b] = rbuf[i0 * yz + (st * yzgh + j * ogh + k1) * blocksize + b];
+                            sbuf[base_xy_left + b * xygh * stencilSize + (st * xygh + k0 * xy + i1 * ngh + j)] = rbuf[b * yzgh * stencilSize + i0 * yz + (st * yzgh + j * ogh + k1)];
 
                             // Right front face - Write ghosts in the send right buffer from recv back buffer
-                            sbuf[base_xy_right + (st * xygh + k0 * xy + i0 * ngh + j) * blocksize + b] = rbuf[base_yz_back + (st * yzgh + i0 * yz + j * ogh + k2) * blocksize + b];
+                            sbuf[base_xy_right + b * xygh * stencilSize + (st * xygh + k0 * xy + i0 * ngh + j)] = rbuf[base_yz_back + b * yzgh * stencilSize + (st * yzgh + i0 * yz + j * ogh + k2)];
 
                             // Right back face - Write ghosts in the send right buffer from recv front buffer
-                            sbuf[base_xy_right + (st * xygh + k0 * xy + i1 * ngh + j) * blocksize + b] = rbuf[i0 * yz + (st * yzgh + j * ogh + k2) * blocksize + b];
+                            sbuf[base_xy_right + b * xygh * stencilSize + (st * xygh + k0 * xy + i1 * ngh + j)] = rbuf[b * yzgh * stencilSize + i0 * yz + (st * yzgh + j * ogh + k2)];
                         }
 
                 // Copying from xz planes (top bottom)
@@ -957,16 +1121,16 @@ namespace mgcl::mpi_util
                         for (int b = 0; b < blocksize; b++)
                         {
                             // Left top edge - Write ghosts in the send left buffer from recv bottom buffer
-                            sbuf[base_xy_left + (st * xygh + k0 * xy + i * ngh + j0) * blocksize + b] = rbuf[base_xz_bottom + (st * xzgh + j0 * xz + i * ogh + k1) * blocksize + b];
+                            sbuf[base_xy_left + b * xygh * stencilSize + (st * xygh + k0 * xy + i * ngh + j0)] = rbuf[base_xz_bottom + b * xzgh * stencilSize + (st * xzgh + j0 * xz + i * ogh + k1)];
 
                             // Left bottom edge - Write ghosts in the send left buffer from recv top buffer
-                            sbuf[base_xy_left + (st * xygh + k0 * xy + i * ngh + j1) * blocksize + b] = rbuf[base_xz_top + (st * xzgh + j0 * xz + i * ogh + k1) * blocksize + b];
+                            sbuf[base_xy_left + b * xygh * stencilSize + (st * xygh + k0 * xy + i * ngh + j1)] = rbuf[base_xz_top + b * xzgh * stencilSize + (st * xzgh + j0 * xz + i * ogh + k1)];
 
                             // Right top edge - Write ghosts in the send left buffer from recv bottom buffer
-                            sbuf[base_xy_right + (st * xygh + k0 * xy + i * ngh + j0) * blocksize + b] = rbuf[base_xz_bottom + (st * xzgh + j0 * xz + i * ogh + k2) * blocksize + b];
+                            sbuf[base_xy_right + b * xygh * stencilSize + (st * xygh + k0 * xy + i * ngh + j0)] = rbuf[base_xz_bottom + b * xzgh * stencilSize + (st * xzgh + j0 * xz + i * ogh + k2)];
 
                             // Right bottom face - Write ghosts in the send right buffer from recv top buffer
-                            sbuf[base_xy_right + (st * xygh + k0 * xy + i * ngh + j1) * blocksize + b] = rbuf[base_xz_top + (st * xzgh + j0 * xz + i * ogh + k2) * blocksize + b];
+                            sbuf[base_xy_right + b * xygh * stencilSize + (st * xygh + k0 * xy + i * ngh + j1)] = rbuf[base_xz_top + b * xzgh * stencilSize + (st * xzgh + j0 * xz + i * ogh + k2)];
                         }
             }
 
