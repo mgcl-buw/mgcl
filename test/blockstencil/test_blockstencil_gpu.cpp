@@ -43,7 +43,7 @@ TEST_CASE("BlockstencilGpu::updateGhosts")
         mgcl::BlockstencilGpu d_a(h_a, p.getContext(), p.getCommands(), p.getProgram());
 
         h_a.updateGhosts();
-        d_a.updateGhosts(p.getProgram(), p.getCommands(), &p.getKernelConfig(), p.getProfilingData());
+        d_a.updateGhostsLocally(p.getProgram(), p.getCommands(), &p.getKernelConfig(), p.getProfilingData());
 
         p.finish();
         // h_a.dumpToFile("ha.txt");
@@ -71,7 +71,7 @@ TEST_CASE("BlockstencilGpu::updateGhosts")
         mgcl::BlockstencilGpu d_a(h_a, p.getContext(), p.getCommands(), p.getProgram());
 
         h_a.updateGhosts();
-        d_a.updateGhosts(p.getProgram(), p.getCommands(), &p.getKernelConfig(), p.getProfilingData());
+        d_a.updateGhostsLocally(p.getProgram(), p.getCommands(), &p.getKernelConfig(), p.getProfilingData());
 
         REQUIRE(d_a.isEqualIncGhosts(p.getCommands(), h_a));
     }
@@ -101,7 +101,7 @@ TEST_CASE("BlockstencilGpu::updateGhosts")
         mgcl::BlockstencilGpu d_a(h_a, p.getContext(), p.getCommands(), p.getProgram());
 
         h_a.updateGhosts();
-        d_a.updateGhosts(p.getProgram(), p.getCommands(), &p.getKernelConfig(), p.getProfilingData());
+        d_a.updateGhostsLocally(p.getProgram(), p.getCommands(), &p.getKernelConfig(), p.getProfilingData());
     }
 }
 

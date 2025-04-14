@@ -1,10 +1,12 @@
 #include "blockstencil_gpu.hpp"
 #include "blockstencil.hpp"
 #include "mgcl.hpp"
+#include "mpi_util.hpp"
 #include "opencl_helper.hpp"
 #include "util.hpp"
 #include <CL/cl.h>
 #include <cassert>
+#include <iostream>
 #include <utility>
 
 namespace mgcl
@@ -185,7 +187,7 @@ namespace mgcl
      * @param queue
      * @param conf Kernel Config, i.e. determines the work-group size. If null, a default value is used.
      */
-    void BlockstencilGpu::updateGhosts(
+    void BlockstencilGpu::updateGhostsLocally(
         cl_program program, cl_command_queue queue,
         conf::KernelConfig* conf, ProfilingData* pd)
     {
@@ -246,6 +248,66 @@ namespace mgcl
 
         err = clReleaseKernel(kernel);
         mgclCheckError(err, "Releasing kernel update_ghosts_blockstencil");
+    }
+
+    /**
+     * @brief Updates ghosts of an OpenCL buffer respecting MPI usage. That is, the buffer is sent to host, ghosts
+     * are updated using MPI routines, and the updated buffer is sent back to the device.
+     * Waits for previous commands to finish before reading the buffer.
+     *
+     * @param program OpenCL program
+     * @param commands OpenCL command queue
+     * @param dPlanesBuf Device buffer for storing planes. Must be at least of size
+     *   (2 * yz * getGhostsM() + 2 * xz * getGhostsN() + 2 * xy * getGhostsO()) * blocksize^2 * stencilWidth^3
+     * @param hPlanesBufSend Host buffer for sending planes.
+     * @param hPlanesBufRecv Host buffer for receiving planes.
+     * @param mpiData Contains MPI topology data for the current level.
+     * @param forceLocal If true, ghosts will be updated locally without MPI routines.
+     * @param conf OpenCL Kernel launch config
+     * @param pd OpenCL profiling data
+     */
+    void BlockstencilGpu::updateGhostsOclMpi(cl_program program, cl_command_queue commands,
+                                             BufferGpu& dPlanesBuf,
+                                             std::vector<double>& hPlanesBufSend, std::vector<double>& hPlanesBufRecv,
+                                             MPILevelData& mpiData, bool forceLocal,
+                                             conf::KernelConfig* conf, mgcl::ProfilingData* pd)
+    {
+        if (forceLocal)
+        {
+            updateGhostsLocally(program, commands, conf, pd);
+            return;
+        }
+
+        // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
+        // TODO maybe disable check in UNSAFE mode
+        int yz = getNgh() * getOgh();
+        int xz = getMgh() * getOgh();
+        int xy = getMgh() * getNgh();
+        int ressize = (2 * yz * getGh() + 2 * xz * getGh() + 2 * xy * getGh()) * blocksize * blocksize * width * width * width;
+
+        if (dPlanesBuf.getSize() < ressize)
+            error("BlockstencilGpu::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf.getSize()));
+
+        if (hPlanesBufSend.size() < ressize || hPlanesBufRecv.size() < ressize)
+            throw "BlockstencilGpu::updateGhostsOclMpi: hPlanesBufSend or hPlanesBufRecv is too small. Need at least " +
+                std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend.size()) +
+                " (send) and " + std::to_string(hPlanesBufRecv.size()) + " (recv)";
+
+        // Extract border planes from the buffer
+        extractBorderPlanes(commands, program,
+                            dPlanesBuf, hPlanesBufSend,
+                            conf, pd);
+
+        // Send our planes to neighbours and receive their planes
+        mpi_util::sendBorderPlanesBlockstencil(getMgh(), getNgh(), getOgh(),
+                                               getGh(), getGh(), getGh(), width, blocksize,
+                                               hPlanesBufSend, hPlanesBufRecv, mpiData);
+
+        // Paste planes back into the buffer.
+        dPlanesBuf.write(commands, hPlanesBufRecv, false, ressize);
+        pasteGhostsFromBorderPlanes(commands, program,
+                                    dPlanesBuf,
+                                    conf, pd);
     }
 
     /**
@@ -331,7 +393,7 @@ namespace mgcl
         mgcl::mgclCheckError(err, "Releasing extract_border_planes_blockstencil kernel");
 
         // Read into h_target
-        d_target.read(commands, h_target.data(), false);
+        d_target.read(commands, h_target.data(), true);
     }
 
     /**

@@ -66,9 +66,14 @@ namespace mgcl
         bool isEqual(cl_command_queue queue, Blockstencil& bs, double tol = 1e-7);
         bool isEqualIncGhosts(cl_command_queue queue, Blockstencil& bs, double tol = 1e-7);
 
-        void updateGhosts(
+        void updateGhostsLocally(
             cl_program program, cl_command_queue queue,
             conf::KernelConfig* conf, ProfilingData* pd);
+        void updateGhostsOclMpi(cl_program program, cl_command_queue commands,
+                                BufferGpu& dPlanesBuf,
+                                std::vector<double>& hPlanesBufSend, std::vector<double>& hPlanesBufRecv,
+                                MPILevelData& mpiData, bool forceLocal,
+                                conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
         void extractBorderPlanes(cl_command_queue commands, cl_program program,
                                  BufferGpu& d_target, std::vector<double>& h_target,
