@@ -128,6 +128,7 @@ namespace mgcl
         int getGhostsDim4() const;
         int getGhostsDim5() const;
         int getGhostsDim6() const;
+        inline size_t getSize() const { return dim1gh * dim2gh * dim3gh * dim4gh * dim5gh * dim6gh; }
     };
 
     /**
