@@ -11,7 +11,7 @@
 #include "../../src/mgcl/multigrid_engine.hpp"
 #include "../../src/mgcl/stencil.hpp"
 
-TEST_CASE("Blockstencil::updateGhosts")
+TEST_CASE("Blockstencil::updateGhostsLocally")
 {
     SECTION("m,n,o >= gh")
     {
@@ -29,7 +29,7 @@ TEST_CASE("Blockstencil::updateGhosts")
 
         mgcl::Blockstencil a(m, n, o, width, blocksize, gh, gh, gh);
         a.fillRandomInt();
-        a.updateGhosts();
+        a.updateGhostsLocally();
 
         // check in z-direction
         for (int i = 0; i < gh; i++)
@@ -90,7 +90,7 @@ TEST_CASE("Blockstencil::updateGhosts")
 
         mgcl::Blockstencil a(m, n, o, width, blocksize, gh, gh, gh);
         a.fillRandomInt();
-        a.updateGhosts();
+        a.updateGhostsLocally();
 
         // check in z-direction
         for (int i = 0; i < gh; i++)
@@ -160,7 +160,7 @@ TEST_CASE("Blockstencil::updateGhosts")
         mgcl::Blockstencil a(m, n, o, width, blocksize, ghm, ghn, gho);
 
         a.fillRandomInt();
-        a.updateGhosts();
+        a.updateGhostsLocally();
 
         // check in z-direction
         for (int i = 0; i < ghm; i++)

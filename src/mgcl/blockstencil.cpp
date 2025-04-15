@@ -18,7 +18,7 @@ namespace mgcl
     }
 
     // updates ghost cells, respects periodic ghosts, i.e. when gh > m
-    void Blockstencil::updateGhosts()
+    void Blockstencil::updateGhostsLocally()
     {
         int m = getM();
         int n = getN();

@@ -42,7 +42,7 @@ TEST_CASE("BlockstencilGpu::updateGhosts")
         h_a.fillRandomInt();
         mgcl::BlockstencilGpu d_a(h_a, p.getContext(), p.getCommands(), p.getProgram());
 
-        h_a.updateGhosts();
+        h_a.updateGhostsLocally();
         d_a.updateGhostsLocally(p.getProgram(), p.getCommands(), &p.getKernelConfig(), p.getProfilingData());
 
         p.finish();
@@ -70,7 +70,7 @@ TEST_CASE("BlockstencilGpu::updateGhosts")
         h_a.fillRandomInt();
         mgcl::BlockstencilGpu d_a(h_a, p.getContext(), p.getCommands(), p.getProgram());
 
-        h_a.updateGhosts();
+        h_a.updateGhostsLocally();
         d_a.updateGhostsLocally(p.getProgram(), p.getCommands(), &p.getKernelConfig(), p.getProfilingData());
 
         REQUIRE(d_a.isEqualIncGhosts(p.getCommands(), h_a));
@@ -100,7 +100,7 @@ TEST_CASE("BlockstencilGpu::updateGhosts")
         h_a.fillRandomInt();
         mgcl::BlockstencilGpu d_a(h_a, p.getContext(), p.getCommands(), p.getProgram());
 
-        h_a.updateGhosts();
+        h_a.updateGhostsLocally();
         d_a.updateGhostsLocally(p.getProgram(), p.getCommands(), &p.getKernelConfig(), p.getProfilingData());
     }
 }

@@ -1021,7 +1021,7 @@ TEST_CASE("MPI_updateGhosts_ocl_Blockstencil_(n_processes)")
     //             }
 
     // Update ghosts of expected result locally, i.e. not using MPI routines.
-    cg.updateGhosts();
+    cg.updateGhostsLocally();
 
     // Create local slice of global data
     auto clptr = cg.slice(m_start, m_end, n_start, n_end, o_start, o_end);

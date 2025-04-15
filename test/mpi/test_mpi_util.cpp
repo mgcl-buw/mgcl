@@ -1864,7 +1864,7 @@ TEST_CASE("mpi_util::sendBorderPlanes_blockstencil")
     mgcl::mpi_util::sendBorderPlanesBlockstencil(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, stencilWidth, blocksize,
                                                  sbuf, rbuf, mpiData);
 
-    c.updateGhosts();
+    c.updateGhostsLocally();
 
     // Check against cuboid with updated ghosts
     // Edges in send buffers for top and down after sending to front and back
