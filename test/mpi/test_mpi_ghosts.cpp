@@ -12,6 +12,7 @@
 #include "../../src/mgcl/cuboid_bs.hpp"
 #include "../../src/mgcl/cuboid_bs_gpu.hpp"
 #include "../../src/mgcl/cuboid_gpu.hpp"
+#include "../../src/mgcl/mpi_util.hpp"
 #include "../../src/mgcl/multigrid_engine.hpp"
 #include "../../src/mgcl/problem.hpp"
 #include "../cli_args.hpp"
@@ -895,10 +896,10 @@ TEST_CASE("MPI-updateGhostsSeq-Blockstencil_(n_processes)")
 {
     using std::min;
 
-    // global grid sizes
-    int m = 8;
-    int n = 8;
-    int o = 8;
+    // global grid sizes. Don't go lower than mpiLevelThreshold allows!
+    int m = 4;
+    int n = 4;
+    int o = 4;
     int periodic = 1;
     int blocksize = 2;
     int width = 3;
@@ -921,12 +922,14 @@ TEST_CASE("MPI-updateGhostsSeq-Blockstencil_(n_processes)")
     int mpi_periods[3] = {periodic, periodic, periodic};
     int mpi_coords[3];
 
+    int err;
+
     /* Initialize cartesian process grid */
-    MPI_Comm_size(mpi_comm, &mpi_size);
-    MPI_Dims_create(mpi_size, 3, mpi_dims);
-    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
-    MPI_Comm_rank(mpi_comm, &mpi_rank);
-    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+    mgcl::mpi_util::mgclCheckMpiError(mpi_comm, MPI_Comm_size(mpi_comm, &mpi_size), "MPI_Comm_size");
+    mgcl::mpi_util::mgclCheckMpiError(mpi_comm, MPI_Dims_create(mpi_size, 3, mpi_dims), "MPI_Dims_create");
+    mgcl::mpi_util::mgclCheckMpiError(mpi_comm, MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm), "MPI_Cart_create");
+    mgcl::mpi_util::mgclCheckMpiError(mpi_comm, MPI_Comm_rank(mpi_comm, &mpi_rank), "MPI_Comm_rank");
+    mgcl::mpi_util::mgclCheckMpiError(mpi_comm, MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords), "MPI_Cart_coords");
 
     /* Initialize start and end for local grid */
     int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
@@ -977,6 +980,7 @@ TEST_CASE("MPI-updateGhostsSeq-Blockstencil_(n_processes)")
         mgcl::Problem p(ml, nl, ol, f, v, m, n, o);
         p.setGhosts(1);
         p.setMpiComm(mpi_comm);
+        p.setMpiMinGridPoints(2);
         p.init();
 
         // Check on level 0
