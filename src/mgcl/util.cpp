@@ -9,6 +9,12 @@
 namespace mgcl::util
 {
 
+    double sum(CuboidGpu& buf, cl_program program, cl_command_queue commands,
+               bool return_sum, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
+    {
+        return sum(buf.getBuffer(), buf.getSize(), program, commands, buf.getContext(), return_sum, conf, pd);
+    }
+
     /**
      * @brief Builds the sum of a buffer on device and returns it if return_sum is true.
      * First build partial sums, then build global sum so work-groups get synchronized.
@@ -20,12 +26,11 @@ namespace mgcl::util
      * @param conf
      * @param pd
      */
-    double sum(CuboidGpu& buf, cl_program program, cl_command_queue commands,
+    double sum(cl_mem buf, size_t size, cl_program program, cl_command_queue commands, cl_context context,
                bool return_sum, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
         int err;
-        size_t num_elements = buf.getSize();
-        cl_context context = buf.getContext();
+        size_t num_elements = size;
 
         const char* kernelNamePartials = "sum_partial_global_eq_x_num_elements";
 
@@ -68,7 +73,7 @@ namespace mgcl::util
         cl_kernel kernel_sum_partial = clCreateKernel(program, kernelNamePartials, &err);
         mgclCheckError(err, "Creating kernel sum_partial_global_eq_x_num_elements");
 
-        cl_mem rawbuf = buf.getBuffer();
+        cl_mem rawbuf = buf;
         int pos = 0;
         err = clSetKernelArg(kernel_sum_partial, pos, sizeof(cl_mem), &rawbuf);
         err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(cl_mem), &dPartialSums);
@@ -128,6 +133,12 @@ namespace mgcl::util
         return ret;
     }
 
+    double max(CuboidGpu& buf, cl_program program, cl_command_queue commands,
+               bool return_max, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
+    {
+        return max(buf.getBuffer(), buf.getSize(), program, commands, buf.getContext(), return_max, conf, pd);
+    }
+
     /**
      * @brief Finds the maximum value of a buffer on device and returns it if return_max is true.
      * First build partial maxima, then build global maximum so work-groups get synchronized.
@@ -138,12 +149,11 @@ namespace mgcl::util
      * @param program
      * @param commands
      */
-    double max(CuboidGpu& buf, cl_program program, cl_command_queue commands,
+    double max(cl_mem buf, size_t size, cl_program program, cl_command_queue commands, cl_context context,
                bool return_max, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
         int err;
-        size_t num_elements = buf.getSize();
-        cl_context context = buf.getContext();
+        size_t num_elements = size;
 
         const char* kernelNamePartials = "max_partial_global_eq_x_num_elements";
 
@@ -186,7 +196,7 @@ namespace mgcl::util
         cl_kernel kernel_max_partial = clCreateKernel(program, kernelNamePartials, &err);
         mgclCheckError(err, "Creating kernel max_partial_global_eq_x_num_elements");
 
-        cl_mem rawbuf = buf.getBuffer();
+        cl_mem rawbuf = buf;
         int pos = 0;
         err = clSetKernelArg(kernel_max_partial, pos, sizeof(cl_mem), &rawbuf);
         err |= clSetKernelArg(kernel_max_partial, ++pos, sizeof(cl_mem), &dPartialMax);
@@ -246,6 +256,12 @@ namespace mgcl::util
         return ret;
     }
 
+    double max_abs(CuboidGpu& buf, cl_program program, cl_command_queue commands,
+                   bool return_max, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
+    {
+        return max_abs(buf.getBuffer(), buf.getSize(), program, commands, buf.getContext(), return_max, conf, pd);
+    }
+
     /**
      * @brief Finds the maximum absolute value of a buffer on device and returns it if return_max is true.
      * First build partial maxima, then build global maximum so work-groups get synchronized.
@@ -256,12 +272,11 @@ namespace mgcl::util
      * @param program
      * @param commands
      */
-    double max_abs(CuboidGpu& buf, cl_program program, cl_command_queue commands,
+    double max_abs(cl_mem buf, size_t size, cl_program program, cl_command_queue commands, cl_context context,
                    bool return_max, mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
         int err;
-        size_t num_elements = buf.getSize();
-        cl_context context = buf.getContext();
+        size_t num_elements = size;
 
         const char* kernelNamePartials = "max_abs_partial_global_eq_x_num_elements";
 
@@ -304,7 +319,7 @@ namespace mgcl::util
         cl_kernel kernel_max_partial = clCreateKernel(program, kernelNamePartials, &err);
         mgclCheckError(err, "Creating kernel max_abs_partial_global_eq_x_num_elements");
 
-        cl_mem rawbuf = buf.getBuffer();
+        cl_mem rawbuf = buf;
         int pos = 0;
         err = clSetKernelArg(kernel_max_partial, pos, sizeof(cl_mem), &rawbuf);
         err |= clSetKernelArg(kernel_max_partial, ++pos, sizeof(cl_mem), &dPartialMax);
