@@ -697,8 +697,8 @@ namespace mgcl
         if (MPI_PROC_NULL != mpiData->right)
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ngh; j++)
-                    for (int b = 0; b < blocksize; b++)
-                        for (k = 0; k < ghostsO; k++)
+                    for (k = 0; k < ghostsO; k++)
+                        for (int b = 0; b < blocksize; b++)
                             cbuf[i][j][ogh - ghostsO + k][b] = rbuf[i][j][k][b];
 
         /* Sending data to the right */
