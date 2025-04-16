@@ -328,7 +328,7 @@ __kernel void residual_27point_blockstencil_block_first_v_block_first(
 }
 
 /* Calculates residual without dinv.
- * Layout: [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
+ * Layout: [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
  *
  * svGridSize = sv_mgh * sv_ngh * sv_ogh
  * svGridSizeCoeffs = 27 * svGridSize
