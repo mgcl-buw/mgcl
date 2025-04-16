@@ -2,7 +2,9 @@
 #define MGCL_MULTIGRID_ENGINE_HPP
 
 #include "blockstencil.hpp"
+#include "blockstencil_gpu.hpp"
 #include "cuboid_bs.hpp"
+#include "cuboid_bs_gpu.hpp"
 #include "kernel_config.hpp"
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -49,6 +51,35 @@ namespace mgcl
             int ooff = 0;
             MPILevelData* mpiData = nullptr;
         };
+
+        struct ResidualBSOclArgs
+        {
+            CuboidBSGpu& f;
+            CuboidBSGpu& v;
+            CuboidBSGpu& r;
+            MGCL_RESIDUAL_NORM resnorm;
+            BlockstencilGpu& bs;
+            CuboidBSGpu* dRsq;
+            bool returnResidualNorm;
+            bool periodic;
+            bool updateGhostsLocally;
+
+            BufferGpu* dPlanesBuf;
+            std::vector<double>* sendBuf;
+            std::vector<double>* recvBuf;
+
+            cl_program program;
+            cl_command_queue queue;
+            cl_context context;
+
+            int moff = 0;
+            int noff = 0;
+            int ooff = 0;
+            MPILevelData* mpiData = nullptr;
+
+            mgcl::conf::KernelConfig* conf = nullptr;
+            mgcl::ProfilingData* pd = nullptr;
+        };
     }
 
     /**
@@ -75,6 +106,7 @@ namespace mgcl
 
         static double residual(Problem& problem, Level& level, bool returnResidual,
                                int moff = 0, int noff = 0, int ooff = 0);
+        static double residual(args::ResidualBSOclArgs& args);
         static double residualSeq(Cuboid& f, Cuboid& v, Cuboid& r, MGCL_RESIDUAL_NORM resnorm,
                                   MGCL_STENCIL stencilType, double stencilFactor,
                                   VaryingStencil* stencilValues, FixedStencil* fixedStencil,

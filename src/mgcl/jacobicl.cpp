@@ -708,6 +708,191 @@ namespace mgcl
         return res;
     }
 
+    /* Calculates r = f - A*v using a Blockstencil and CuboidBS.
+     * m,n,o is the size of the real grid.
+     * v needs to have updated ghost cells if the problem is periodic!
+     * moff, noff and ooff can be used to change the size of the grid that the residual shall be calculated for.
+     *   Per default only real cells are considered (moff = 0), but with e.g. moff = -1, the first ghost cell border is
+     *   considered, too. Analogously, with moff = 1 the outermost set of real cells is ignored. The calculation
+     *   of the boundaries is e.g. istart = v.ghosts_m + moff.
+     *   moff,noff,ooff not supported yet!
+     */
+    double MultigridEngine::residual(args::ResidualBSOclArgs& args)
+    {
+        CuboidBSGpu& v = args.v;
+        CuboidBSGpu& f = args.f;
+        CuboidBSGpu& r = args.r;
+        double res = 0.0;
+        int err;
+
+        // check if off is too small (i.e. start < 0)
+        // if (moff <= -v.getGhostsM() || noff <= -v.getGhostsN() || ooff <= -v.getGhostsO())
+        //     error("moff, noff and ooff must not be <= -ghosts");
+
+        // // check if off is too large (i.e. start > end)
+        // if (moff * 2 >= v.getM() || noff * 2 >= v.getN() || ooff * 2 >= v.getO())
+        //     error("2*moff, 2*noff and 2*ooff must not be >= m, n or o");
+
+        if (v.getGhostsM() < 1 || v.getGhostsN() < 1 || v.getGhostsO() < 1)
+        {
+            error("v must have at least 1 ghost cell in each dimension");
+        }
+        if (f.getGhostsM() < 1 || f.getGhostsN() < 1 || f.getGhostsO() < 1)
+        {
+            error("f must have at least 1 ghost cell in each dimension");
+        }
+        if (r.getGhostsM() < 1 || r.getGhostsN() < 1 || r.getGhostsO() < 1)
+        {
+            error("r must have at least 1 ghost cell in each dimension");
+        }
+
+        const char* kernelName = "residual_27point_blockstencil_block_first_v_gp_first";
+
+        cl_event ev;
+
+        // Create the compute kernel from the program
+        cl_kernel kernel = clCreateKernel(args.program, kernelName, &err);
+        mgclCheckError(err, "Creating kernel");
+
+        // assign kernel arguments
+        int pos = 0;
+        cl_mem dVIn = v.getBuffer();
+        cl_mem dF = f.getBuffer();
+        cl_mem dR = r.getBuffer();
+        cl_mem svbuf = args.bs.getBuf();
+        int mgh = v.getMgh();
+        int ngh = v.getNgh();
+        int ogh = v.getOgh();
+        int ghosts = v.getGhostsM();
+        int svgh = args.bs.getGh();
+        int svmgh = args.bs.getMgh();
+        int svngh = args.bs.getNgh();
+        int svogh = args.bs.getOgh();
+        int svGridSize = svmgh * svngh * svogh;
+        int svGridSizeBlock = 27 * svGridSize;
+        int blocksize = v.getBlocksize();
+
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &svbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svmgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSizeBlock);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &blocksize);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.moff);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.noff);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ooff);
+
+        mgclCheckError(err, "Setting residual kernel arguments");
+
+        // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
+        size_t global = mgh * ngh * ogh;
+        size_t local = 32;
+        if (args.conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*args.conf, kernelName, global);
+            local = c[0];
+        }
+
+        if (global % local != 0)
+            global += local - (global % local);
+
+        err = clEnqueueNDRangeKernel(args.queue, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
+        mgclCheckError(err, "Enqueueing residual kernel");
+
+        if (args.pd)
+        {
+            args.pd->addMeasurement(args.queue, ev, kernelName,
+                                    {global, 0, 0},
+                                    {local, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+        return 0;
+
+        if (args.periodic)
+        {
+            // TODO args
+            r.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);
+        }
+
+        // calculate residual's 2-norm. Square elements on device and sum up on host
+        if (args.returnResidualNorm)
+        {
+            if (args.resnorm == MGCL_L2)
+            {
+                if (args.dRsq == nullptr)
+                {
+                    error("dRsq is null.");
+                }
+
+                // calculate 2-Norm
+                auto dRsquares = args.dRsq->getBuffer();
+                args.dRsq->fill(args.program, args.queue, 0.0, false, args.conf, args.pd); // reset to zero
+
+                // Create the compute kernel from the program
+                const char* kernelName = "residual_squared";
+                cl_kernel kernel_square = clCreateKernel(args.program, kernelName, &err);
+                mgclCheckError(err, "Creating residual squared kernel");
+
+                int m = r.getM();
+                int n = r.getN();
+                int o = r.getO();
+                pos = 0;
+                err = clSetKernelArg(kernel_square, pos, sizeof(cl_mem), &dR);
+                err |= clSetKernelArg(kernel_square, ++pos, sizeof(cl_mem), &dRsquares);
+                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &m);
+                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &n);
+                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &o);
+                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &ghosts);
+                mgclCheckError(err, "Setting residual squared kernel arguments");
+
+                size_t global = m * n * o;
+                size_t local_sq = 64;
+                if (args.pd)
+                {
+                    const auto& c_sq = conf::getWorkGroupSizeForKernelAndWiCount(*args.conf, kernelName, global);
+                    local_sq = c_sq[0];
+                }
+
+                if (global % local_sq != 0)
+                    global += local_sq - (global % local_sq);
+
+                cl_event ev;
+                err = clEnqueueNDRangeKernel(args.queue, kernel_square, 1, NULL, &global, &local_sq, 0, NULL, &ev);
+                mgclCheckError(err, "Enqueueing residual squared kernel");
+
+                if (args.pd)
+                {
+                    args.pd->addMeasurement(args.queue, ev, kernelName,
+                                            {global, 0, 0},
+                                            {local_sq, 1, 1});
+                }
+                mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+                // sum up residual squares
+                res = sqrt(util::sum(dRsquares, args.dRsq->getSize(), args.program, args.queue, args.context, true, args.conf, args.pd));
+
+                clReleaseKernel(kernel_square);
+            }
+            else
+            {
+                // calculate Infinity-Norm
+                res = util::max_abs(r.getBuffer(), r.getSize(), args.program, args.queue, args.context, true, args.conf, args.pd);
+            }
+        }
+
+        clReleaseKernel(kernel); // TODO maybe clFinish before release?
+        return res;
+    }
+
     /* Calculates r = f - A*v using 7-point, 19-point or 27-point stencil of 3D laplacian or a varying stencil.
      * m,n,o is the size of the real grid.
      * v needs to have updated ghost cells if the problem is periodic!
