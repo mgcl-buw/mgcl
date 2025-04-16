@@ -113,6 +113,7 @@ namespace mgcl
     public:
         VaryingStencilGpu(int m_, int n_, int o_, int width_, int gh_,
                           cl_context context, cl_command_queue queue, cl_program program);
+        VaryingStencilGpu(VaryingStencil& sv, cl_context context, cl_command_queue queue, cl_program program);
         VaryingStencilGpu(VaryingStencilGpu&&);
         VaryingStencilGpu& operator=(VaryingStencilGpu&&);
         ~VaryingStencilGpu();

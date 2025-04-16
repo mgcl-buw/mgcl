@@ -550,6 +550,12 @@ namespace mgcl
                          false, nullptr, nullptr);
     }
 
+    VaryingStencilGpu::VaryingStencilGpu(VaryingStencil& sv, cl_context context, cl_command_queue queue, cl_program program)
+        : mgcl::VaryingStencilGpu(sv.getM(), sv.getN(), sv.getO(), sv.getWidth(), sv.getGhostsM(), context, queue, program)
+    {
+        write(queue, true, sv);
+    }
+
     VaryingStencilGpu::VaryingStencilGpu(VaryingStencilGpu&& s)
         : m(std::exchange(s.m, 0)),
           n(std::exchange(s.n, 0)),
