@@ -689,15 +689,20 @@ namespace mgcl
      * @param pd OpenCL profiling data
      */
     void CuboidBSGpu::updateGhostsOclMpi(cl_program program, cl_command_queue commands,
-                                         BufferGpu& dPlanesBuf,
-                                         std::vector<double>& hPlanesBufSend, std::vector<double>& hPlanesBufRecv,
-                                         MPILevelData& mpiData, bool forceLocal,
+                                         BufferGpu* dPlanesBuf,
+                                         std::vector<double>* hPlanesBufSend, std::vector<double>* hPlanesBufRecv,
+                                         MPILevelData* mpiData, bool forceLocal,
                                          conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
-        if (forceLocal)
+        if (forceLocal || mpiData == nullptr)
         {
             updateGhostsLocally(program, commands, conf, pd);
             return;
+        }
+
+        if (!dPlanesBuf || !hPlanesBufSend || !hPlanesBufRecv)
+        {
+            error("MultigridEngine::updateGhostsOclMpi: dPlanesBuf, hPlanesBufSend or hPlanesBufRecv is null.");
         }
 
         // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
@@ -707,28 +712,28 @@ namespace mgcl
         int xy = getMgh() * getNgh();
         int ressize = (2 * yz * getGhostsM() + 2 * xz * getGhostsN() + 2 * xy * getGhostsO()) * blocksize;
 
-        if (dPlanesBuf.getSize() < ressize)
-            error("MultigridEngine::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf.getSize()));
+        if (dPlanesBuf->getSize() < ressize)
+            error("MultigridEngine::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf->getSize()));
 
-        if (hPlanesBufSend.size() < ressize || hPlanesBufRecv.size() < ressize)
+        if (hPlanesBufSend->size() < ressize || hPlanesBufRecv->size() < ressize)
             throw "MultigridEngine::updateGhostsOclMpi: hPlanesBufSend or hPlanesBufRecv is too small. Need at least " +
-                std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend.size()) +
-                " (send) and " + std::to_string(hPlanesBufRecv.size()) + " (recv)";
+                std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend->size()) +
+                " (send) and " + std::to_string(hPlanesBufRecv->size()) + " (recv)";
 
         // Extract border planes from the buffer
         extractBorderPlanes(commands, program,
-                            &dPlanesBuf, &hPlanesBufSend,
+                            dPlanesBuf, hPlanesBufSend,
                             conf, pd);
 
         // Send our planes to neighbours and receive their planes
         mpi_util::sendBorderPlanesCuboidBS(getMgh(), getNgh(), getOgh(),
                                            getGhostsM(), getGhostsN(), getGhostsO(), blocksize,
-                                           hPlanesBufSend, hPlanesBufRecv, mpiData);
+                                           *hPlanesBufSend, *hPlanesBufRecv, *mpiData);
 
         // Paste planes back into the buffer.
-        dPlanesBuf.write(commands, hPlanesBufRecv, false, ressize);
+        dPlanesBuf->write(commands, *hPlanesBufRecv, false, ressize);
         pasteGhostsFromBorderPlanes(context, commands, program,
-                                    &dPlanesBuf, nullptr,
+                                    dPlanesBuf, nullptr,
                                     conf, pd);
     }
 

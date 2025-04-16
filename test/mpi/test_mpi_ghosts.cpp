@@ -820,8 +820,8 @@ TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
 
     // Update ghosts of test data using MPI
     d_cl->updateGhostsOclMpi(p.getProgram(), p.getCommands(),
-                             dPlanesBuf, *hPlanesBufSend, *hPlanesBufRecv,
-                             *mpiData, false,
+                             &dPlanesBuf, hPlanesBufSend.get(), hPlanesBufRecv.get(),
+                             mpiData, false,
                              &p.getKernelConfig(), p.getProfilingData());
     p.finish();
 

@@ -67,9 +67,9 @@ namespace mgcl
         void updateGhostsLocally(cl_program program, cl_command_queue commands,
                                  conf::KernelConfig* conf, mgcl::ProfilingData* pd);
         void updateGhostsOclMpi(cl_program program, cl_command_queue commands,
-                                BufferGpu& dPlanesBuf,
-                                std::vector<double>& hPlanesBufSend, std::vector<double>& hPlanesBufRecv,
-                                MPILevelData& mpiData, bool forceLocal,
+                                BufferGpu* dPlanesBuf,
+                                std::vector<double>* hPlanesBufSend, std::vector<double>* hPlanesBufRecv,
+                                MPILevelData* mpiData, bool forceLocal,
                                 conf::KernelConfig* conf, mgcl::ProfilingData* pd);
         std::unique_ptr<std::vector<double>> extractBorderPlanes(cl_command_queue commands, cl_program program,
                                                                  BufferGpu* d_target, std::vector<double>* h_target,
