@@ -60,6 +60,74 @@ namespace mgcl
     };
 
     /**
+     * @brief Class for a 5d hypercube that has an underlying 1d double vector
+     *
+     */
+    class Hypercube5d
+    {
+    protected:
+        int dim1;
+        int dim2;
+        int dim3;
+        int dim4;
+        int dim5;
+        int dim1gh;
+        int dim2gh;
+        int dim3gh;
+        int dim4gh;
+        int dim5gh;
+        int ghostsDim1 = 0;
+        int ghostsDim2 = 0;
+        int ghostsDim3 = 0;
+        int ghostsDim4 = 0;
+        int ghostsDim5 = 0;
+        std::vector<double> field_1d;
+        double***** field_5d;
+        size_t size;
+
+    public:
+        Hypercube5d(int dim1_, int dim2_, int dim3_, int dim4_, int dim5_, double value = 0);
+        Hypercube5d(int dim1_, int dim2_, int dim3_, int dim4_, int dim5_,
+                    int ghostsDim1_, int ghostsDim2_, int ghostsDim3_, int ghostsDim4_,
+                    int ghostsDim5_, double value = 0);
+        Hypercube5d(const Hypercube5d& c) = delete;
+        Hypercube5d& operator=(const Hypercube5d&) = delete;
+        Hypercube5d(Hypercube5d&&);
+        Hypercube5d& operator=(Hypercube5d&&);
+        ~Hypercube5d();
+
+        void fillRandom(double low = 0, double high = 1);
+        void fillRandomInt(int low = 1, int high = 10, bool realCellsOnly = false);
+        void fill(double value, bool realCellsOnly = false);
+        void fill1dIndex(bool realCellsOnly);
+        bool isEqual(Hypercube5d& c, double tol = 1e-7);
+        bool isEqualIncGhosts(Hypercube5d& c, double tol = 1e-7);
+        void dumpToFile(std::string path, bool realCellsOnly = false);
+        void dumpToFileMatlab(std::string path, std::string varname, bool realCellsOnly = false);
+        void copyRealFrom(Hypercube5d& o);
+
+        inline std::vector<double>& field1d() { return field_1d; }
+        inline double***** getData() const { return field_5d; }
+        inline double**** operator[](int index) const { return field_5d[index]; }
+        inline int getDim1() const { return dim1; }
+        inline int getDim2() const { return dim2; }
+        inline int getDim3() const { return dim3; }
+        inline int getDim4() const { return dim4; }
+        inline int getDim5() const { return dim5; }
+        inline int getDim1gh() const { return dim1gh; }
+        inline int getDim2gh() const { return dim2gh; }
+        inline int getDim3gh() const { return dim3gh; }
+        inline int getDim4gh() const { return dim4gh; }
+        inline int getDim5gh() const { return dim5gh; }
+        inline int getGhostsDim1() const { return ghostsDim1; }
+        inline int getGhostsDim2() const { return ghostsDim2; }
+        inline int getGhostsDim3() const { return ghostsDim3; }
+        inline int getGhostsDim4() const { return ghostsDim4; }
+        inline int getGhostsDim5() const { return ghostsDim5; }
+        inline size_t getSize() const { return size; }
+    };
+
+    /**
      * @brief Class for a 6d hypercube that has an underlying 1d double vector
      *
      */
