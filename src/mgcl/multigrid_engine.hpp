@@ -80,6 +80,40 @@ namespace mgcl
             mgcl::conf::KernelConfig* conf = nullptr;
             mgcl::ProfilingData* pd = nullptr;
         };
+
+        struct JacobiBSOclArgs
+        {
+            CuboidBSGpu& f;
+            CuboidBSGpu& v_in;
+            CuboidBSGpu& v_out;
+            CuboidBSGpu& r;
+            MGCL_RESIDUAL_NORM resnorm;
+            BlockstencilGpu& bs;
+            CuboidBSGpu* dRsq;
+            bool returnResidualNorm;
+            bool periodic;
+            bool updateGhostsLocally;
+            int maxiter;
+            int stepsPerIter;
+            double h;
+            MGCL_STENCIL stencilType;
+
+            BufferGpu* dPlanesBuf;
+            std::vector<double>* sendBuf;
+            std::vector<double>* recvBuf;
+
+            cl_program program;
+            cl_command_queue queue;
+            cl_context context;
+
+            int moff = 0;
+            int noff = 0;
+            int ooff = 0;
+            MPILevelData* mpiData = nullptr;
+
+            mgcl::conf::KernelConfig* conf = nullptr;
+            mgcl::ProfilingData* pd = nullptr;
+        };
     }
 
     /**
@@ -120,6 +154,7 @@ namespace mgcl
                                 bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
                                 int stepsPerIter = 1, MPILevelData* mpiData = nullptr);
         static double jacobi(Problem& problem, Level& level, int maxiter, bool returnResidual, int stepsPerIter = 1);
+        static double jacobi(args::JacobiBSOclArgs& args);
 
         static std::unique_ptr<VaryingStencil> galerkinOptimized(VaryingStencil& a_h, int gh_a2h,
                                                                  int resm, int resn, int reso);

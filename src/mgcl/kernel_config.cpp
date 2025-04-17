@@ -74,7 +74,8 @@ namespace mgcl::conf
         ret["update_ghosts_blockstencil"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
         ret["extract_border_planes_blockstencil"] = KernelWorkgroupSizes{{1, {32, 1, 1}}};
         ret["paste_ghosts_from_border_planes_blockstencil"] = KernelWorkgroupSizes{{1, {32, 1, 1}}};
-        ret["residual_27point_blockstencil_block_first_v_gp_first"] = KernelWorkgroupSizes{{1, {32, 1, 1}}};
+        ret["residual_27point_blockstencil_block_first_v_gp_first"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
+        ret["jacobi_iter_27point_blockstencil_block_first_v_gp_first"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
 
         return ret;
     }

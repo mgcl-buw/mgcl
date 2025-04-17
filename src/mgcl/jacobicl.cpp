@@ -456,6 +456,215 @@ namespace mgcl
         return res;
     }
 
+    /* Runs jacobi method using OpenCL.
+     * Uses Blockstencil.
+     */
+    double MultigridEngine::jacobi(args::JacobiBSOclArgs& args)
+    {
+        int err;
+        int mgh = args.v_in.getMgh();
+        int ngh = args.v_in.getNgh();
+        int ogh = args.v_in.getOgh();
+        int store_res = 0;
+        double res = -1;
+        int idx_start = 0;
+
+        // decrease stepsPerIter if it's less than maxIter
+        if (args.maxiter < args.stepsPerIter)
+            args.stepsPerIter = args.maxiter;
+
+        // Ghosts only need to be updated in the periodic case, so set stepsPerIter = 1 for non-periodic.
+        // TODO adjust for MPI
+        if (!args.periodic)
+            args.stepsPerIter = 1;
+
+        // Check if amount of ghost cells is large enough
+        if (args.v_in.getGhostsM() < args.stepsPerIter)
+        {
+            error("#ghosts must be >= stepsPerIter!");
+        }
+
+        cl_event ev;
+
+        // double h2 = 1.0 / static_cast<double>((problem.getMGlobal() >> level.num) * (problem.getMGlobal() >> level.num));
+        double h2 = args.h * args.h;
+        double dinv = h2 / 6.0;
+        double h2inv = 1.0 / h2; // divisor of the stencil, inverted to use * instead of / in kernel
+        // TODO refactor stencilFactor
+
+        // Create the compute kernel from the program
+        const char* kernelName = "jacobi_iter_27point_blockstencil_block_first_v_gp_first";
+        cl_kernel kernel = clCreateKernel(args.program, kernelName, &err);
+        mgclCheckError(err, "Creating kernel");
+
+        cl_mem dVIn = args.v_in.getBuffer();
+        cl_mem dVOut = args.v_out.getBuffer();
+        cl_mem dF = args.f.getBuffer();
+        cl_mem dR = args.r.getBuffer();
+
+        // assign kernel arguments
+        int pos = 0;
+        int pos_idxstart = -1;
+        int pos_storeres = -1;
+
+        auto svbuf = level.stencilValuesGpu->getBuf();
+        int svgh = level.stencilValuesGpu->getGh();
+        int svmgh = level.stencilValuesGpu->getMgh();
+        int svngh = level.stencilValuesGpu->getNgh();
+        int svogh = level.stencilValuesGpu->getOgh();
+        int svGridSize = svmgh * svngh * svogh;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &svbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(double), &problem.omega);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svmgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
+        pos_idxstart = pos;
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
+        pos_storeres = pos;
+        mgclCheckError(err, "Setting kernel arguments");
+
+        // One work-item per cell (including ghost cells).
+        size_t global = static_cast<size_t>(mgh * ngh * ogh);
+        size_t local = static_cast<size_t>(128);
+        if (args.conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*args.conf, kernelName, 1);
+            local = c[0];
+        }
+
+        // Pad global sizes to fit to local sizes
+        int kernelDims = 1;
+        if (global % local != 0)
+            global += local - (global % local);
+
+        int globalIter = 0;
+        while (globalIter < args.maxiter)
+        {
+            // Update ghosts of current input v
+            if (globalIter % 2 == 1)
+            {
+                args.v_out.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);
+                // err = MultigridEngine::updateGhosts(problem, level.getDVOut(),
+                //                                     level.getMpiDataPtr(), level.isCalculatedLocally());
+                // mgclCheckError(err, "Updating ghosts");
+            }
+            else
+            {
+                args.v_in.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);
+                // err = MultigridEngine::updateGhosts(problem, level.getDVIn(),
+                //                                     level.getMpiDataPtr(), level.isCalculatedLocally());
+                // mgclCheckError(err, "Updating ghosts");
+            }
+
+            // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
+            for (int innerIter = 0; innerIter < args.stepsPerIter && globalIter < args.maxiter; innerIter++, globalIter++)
+            {
+                // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
+
+                // switch arguments dVIn -> dVOut to use latest values in next iteration
+                if (globalIter % 2 == 1)
+                {
+                    err = clSetKernelArg(kernel, 1, sizeof(cl_mem), &dVIn);
+                    err |= clSetKernelArg(kernel, 0, sizeof(cl_mem), &dVOut);
+                    mgclCheckError(err, "Setting kernel arguments");
+                }
+                else
+                {
+                    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &dVIn);
+                    err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &dVOut);
+                    mgclCheckError(err, "Setting kernel arguments");
+                }
+
+                // set flag to store residual in last iteration
+                if (globalIter == args.maxiter - 1)
+                {
+                    store_res = 1;
+                    err = clSetKernelArg(kernel, pos_storeres, sizeof(int), &store_res);
+                    mgclCheckError(err, "Setting kernel arguments");
+                }
+
+                // recalculate and set idx_start
+                idx_start = args.v_in.getGhostsM() - ((args.stepsPerIter - innerIter) - 1);
+                err = clSetKernelArg(kernel, pos_idxstart, sizeof(int), &idx_start);
+                mgclCheckError(err, "Setting kernel arguments");
+
+                err = clEnqueueNDRangeKernel(args.queue, kernel, kernelDims, NULL, &global, &local, 0, NULL, &ev);
+                mgclCheckError(err, "Enqueueing kernel");
+
+                if (args.pd)
+                {
+                    args.pd->addMeasurement(args.queue, ev, kernelName,
+                                            {global, 0, 0},
+                                            {local, 1, 1});
+                }
+                mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+            }
+        }
+
+        if (store_res)
+        {
+            // TODO check for mpi
+            args.r.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);
+            // err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
+            //                                     level.isCalculatedLocally());
+            // mgclCheckError(err, "Updating ghosts of dR");
+        }
+
+        // copy result into dVIn if needed
+        if (args.maxiter % 2 == 1)
+            args.v_out.copyTo(args.queue, args.v_in);
+
+        // Update ghosts of dVIn
+        args.v_in.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);
+        // err = MultigridEngine::updateGhosts(problem, level.getDVIn(),
+        //                                     level.getMpiDataPtr(), level.isCalculatedLocally());
+        // mgclCheckError(err, "Updating ghosts");
+
+        // calculate residual and its norm
+        if (args.returnResidualNorm)
+        {
+            // update residual to use current approximation v
+            args::ResidualBSOclArgs resargs{
+                args.f,
+                args.v_in,
+                args.r,
+                args.resnorm,
+                args.bs,
+                args.dRsq,
+                args.returnResidualNorm,
+                args.periodic,
+                args.updateGhostsLocally,
+                args.dPlanesBuf,
+                args.sendBuf,
+                args.recvBuf,
+                args.program,
+                args.queue,
+                args.context,
+                args.moff,
+                args.noff,
+                args.ooff,
+                args.mpiData,
+                args.conf,
+                args.pd};
+            res = MultigridEngine::residual(resargs);
+        }
+
+        clReleaseKernel(kernel);
+
+        return res;
+    }
+
     /* Calculates the residual using OpenCL.
      * Doesn't creates ocl buffers and doesn't copy data from host to device and vice versa
      * v, f and r must be of size [m][n][o] for periodic boundary condition.
