@@ -1,5 +1,5 @@
-#ifndef MGCL_BLOCKSTENCIL_HPP
-#define MGCL_BLOCKSTENCIL_HPP
+#ifndef MGCL_FIXED_BLOCKSTENCIL_HPP
+#define MGCL_FIXED_BLOCKSTENCIL_HPP
 
 #include "hypercube.hpp"
 #include "mpi_level_data.hpp"
@@ -39,4 +39,4 @@ namespace mgcl
 
 }
 
-#endif // MGCL_BLOCKSTENCIL_HPP
+#endif // MGCL_FIXED_BLOCKSTENCIL_HPP

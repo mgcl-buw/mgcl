@@ -5,6 +5,7 @@
 #include "blockstencil_gpu.hpp"
 #include "cuboid_bs.hpp"
 #include "cuboid_bs_gpu.hpp"
+#include "fixed_blockstencil.hpp"
 #include "kernel_config.hpp"
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -114,6 +115,20 @@ namespace mgcl
             mgcl::conf::KernelConfig* conf = nullptr;
             mgcl::ProfilingData* pd = nullptr;
         };
+
+        struct RestrictionBSSeqArgs
+        {
+            CuboidBS& fine;
+            CuboidBS& coarse;
+            FixedBlockstencil& rbs;
+
+            bool periodic;
+            bool updateFineGhostsLocally;
+            bool updateCoarseGhostsLocally;
+
+            MPILevelData* mpiDataFine = nullptr;
+            MPILevelData* mpiDataCoarse = nullptr;
+        };
     }
 
     /**
@@ -129,6 +144,7 @@ namespace mgcl
 
         static void restrictSeq(Level& fine, Level& coarse, Cuboid& fineVals, Cuboid& coarseVals);
         static void restrict(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values);
+        static void restrictSeqBlockstencil(args::RestrictionBSSeqArgs& args);
 
         static void prolongateSeq(Level& fine, Level& coarse, Cuboid& fineVals, Cuboid& coarseVals);
         static void prolongate(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values);

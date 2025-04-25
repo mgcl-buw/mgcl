@@ -145,4 +145,87 @@ namespace mgcl
 
         clReleaseKernel(kernel);
     }
+
+    /**
+     * Restricts residual to coarser grid using user-defined restriction operator defined by a blockstencil.
+     **/
+    void MultigridEngine::restrictSeqBlockstencil(args::RestrictionBSSeqArgs& args)
+    {
+        int ghosts = args.fine.getGhostsM();
+        // Shift fine levels instead of using coarse level directly since coarse might have different sizes when
+        // using mpi and coarse.num == mpiLevelThreshold.
+        int m = args.fine.getM() >> 1;
+        int n = args.fine.getN() >> 1;
+        int o = args.fine.getO() >> 1;
+
+        auto fraw = args.fine.getData();
+        auto bsraw = args.rbs.getData();
+
+        if (args.periodic)
+        {
+            args.fine.updateGhosts(args.mpiDataFine, args.updateFineGhostsLocally);
+        }
+
+        int ioff = 1;
+        for (int i = ghosts; i < m + ghosts; i++, ioff++)
+        {
+            int i2 = i + ioff; // == i*2+ghosts+1
+            int joff = 1;
+            for (int j = ghosts; j < n + ghosts; j++, joff++)
+            {
+                int j2 = j + joff;
+                int koff = 1;
+                for (int k = ghosts; k < o + ghosts; k++, koff++)
+                {
+                    int k2 = k + koff;
+
+                    for (int bi = 0; bi < args.rbs.getBlocksize(); bi++)
+                    {
+                        double stencilsum = 0;
+                        for (int bj = 0; bj < args.rbs.getBlocksize(); bj++)
+                        {
+                            // clang-format off
+                            stencilsum += bsraw[bi][bj][1][1][1] * fraw[i2][j2][k2][bj] // self
+                                + bsraw[bi][bj][1][1][0] * fraw[ i2 ][ j2 ][k2-1][bj]
+                                + bsraw[bi][bj][1][1][2] * fraw[ i2 ][ j2 ][k2+1][bj]
+                                + bsraw[bi][bj][1][0][1] * fraw[ i2 ][j2-1][ k2 ][bj]
+                                + bsraw[bi][bj][1][2][1] * fraw[ i2 ][j2+1][ k2 ][bj]
+                                + bsraw[bi][bj][0][1][1] * fraw[i2-1][ j2 ][ k2 ][bj]
+                                + bsraw[bi][bj][2][1][1] * fraw[i2+1][ j2 ][ k2 ][bj]
+                                
+                                + bsraw[bi][bj][1][0][0] * fraw[ i2 ][j2-1][k2-1][bj]
+                                + bsraw[bi][bj][1][0][2] * fraw[ i2 ][j2-1][k2+1][bj]
+                                + bsraw[bi][bj][1][2][0] * fraw[ i2 ][j2+1][k2-1][bj]
+                                + bsraw[bi][bj][1][2][2] * fraw[ i2 ][j2+1][k2+1][bj]
+                                + bsraw[bi][bj][0][1][0] * fraw[i2-1][ j2 ][k2-1][bj]
+                                + bsraw[bi][bj][0][1][2] * fraw[i2-1][ j2 ][k2+1][bj]
+                                + bsraw[bi][bj][2][1][0] * fraw[i2+1][ j2 ][k2-1][bj]
+                                + bsraw[bi][bj][2][1][2] * fraw[i2+1][ j2 ][k2+1][bj]
+                                + bsraw[bi][bj][0][0][1] * fraw[i2-1][j2-1][ k2 ][bj]
+                                + bsraw[bi][bj][0][2][1] * fraw[i2-1][j2+1][ k2 ][bj]
+                                + bsraw[bi][bj][2][0][1] * fraw[i2+1][j2-1][ k2 ][bj]
+                                + bsraw[bi][bj][2][2][1] * fraw[i2+1][j2+1][ k2 ][bj]
+                                
+                                + bsraw[bi][bj][0][0][0] * fraw[i2-1][j2-1][k2-1][bj]
+                                + bsraw[bi][bj][0][0][2] * fraw[i2-1][j2-1][k2+1][bj]
+                                + bsraw[bi][bj][0][2][0] * fraw[i2-1][j2+1][k2-1][bj]
+                                + bsraw[bi][bj][0][2][2] * fraw[i2-1][j2+1][k2+1][bj]
+                                + bsraw[bi][bj][2][0][0] * fraw[i2+1][j2-1][k2-1][bj]
+                                + bsraw[bi][bj][2][0][2] * fraw[i2+1][j2-1][k2+1][bj]
+                                + bsraw[bi][bj][2][2][0] * fraw[i2+1][j2+1][k2-1][bj]
+                                + bsraw[bi][bj][2][2][2] * fraw[i2+1][j2+1][k2+1][bj];
+                            // clang-format on
+                        }
+
+                        args.coarse[i][j][k][bi] = stencilsum;
+                    }
+                }
+            }
+        }
+
+        if (args.periodic)
+        {
+            args.coarse.updateGhosts(args.mpiDataCoarse, args.updateCoarseGhostsLocally);
+        }
+    }
 }
