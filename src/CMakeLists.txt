@@ -28,6 +28,7 @@ set(MGCL_PUBLIC_HEADERS
   mgcl/blockstencil.hpp
   mgcl/blockstencil_gpu.hpp
   mgcl/fixed_blockstencil.hpp
+  mgcl/fixed_blockstencil_gpu.hpp
 )
 
 set(SOURCES_LIB
@@ -61,6 +62,7 @@ set(SOURCES_LIB
   mgcl/blockstencil.cpp
   mgcl/blockstencil_gpu.cpp
   mgcl/fixed_blockstencil.cpp
+  mgcl/fixed_blockstencil_gpu.cpp
 )
 
 add_library(mgcl ${MGCL_PUBLIC_HEADERS} ${SOURCES_LIB})
