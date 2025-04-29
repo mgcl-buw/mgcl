@@ -155,6 +155,20 @@ namespace mgcl
             mgcl::conf::KernelConfig* conf = nullptr;
             mgcl::ProfilingData* pd = nullptr;
         };
+
+        struct ProlongationBSSeqArgs
+        {
+            CuboidBS& fine;
+            CuboidBS& coarse;
+            FixedBlockstencil& rbs;
+
+            bool periodic;
+            bool updateFineGhostsLocally;
+            bool updateCoarseGhostsLocally;
+
+            MPILevelData* mpiDataFine = nullptr;
+            MPILevelData* mpiDataCoarse = nullptr;
+        };
     }
 
     /**
@@ -175,6 +189,7 @@ namespace mgcl
 
         static void prolongateSeq(Level& fine, Level& coarse, Cuboid& fineVals, Cuboid& coarseVals);
         static void prolongate(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values);
+        static void prolongateSeqBlockstencil(args::ProlongationBSSeqArgs& args);
 
         static void updateGhostsSeq(Cuboid& c, MPILevelData* mpiData, bool periodic, bool forceLocal);
         static int updateGhosts(Problem& problem, CuboidGpu& dBuffer, MPILevelData* mpiData, bool forceLocal);

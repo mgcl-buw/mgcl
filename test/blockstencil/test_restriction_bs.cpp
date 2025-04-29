@@ -75,7 +75,7 @@ TEST_CASE("seq_restriction_single_point")
 
 // Tests restriction using a blockstencil and checks results against multiple restrictions using scalar stencils, while
 // the blockstencil only has entries on its diagonal, i.e. is only affecting one quantity at a time.
-TEST_CASE("seq_restriction_blockstencil_independent_quantities")
+TEST_CASE("restriction_blockstencil_independent_quantities")
 {
     int m = 16;
     int n = 16;

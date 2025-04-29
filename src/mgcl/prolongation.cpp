@@ -123,4 +123,60 @@ namespace mgcl
 
         clReleaseKernel(kernel);
     }
+
+    void MultigridEngine::prolongateSeqBlockstencil(args::ProlongationBSSeqArgs& args)
+    {
+        int ghosts = args.fine.getGhostsM();
+        int m = args.fine.getM();
+        int n = args.fine.getN();
+        int o = args.fine.getO();
+
+        // fine vals need to be init with 0!
+
+        auto fineVals = args.fine.getData();
+        auto coarseVals = args.coarse.getData();
+        auto bsraw = args.rbs.getData();
+
+        int ioff = 1, joff = 1, koff = 1; // offset grows by 1 for each step
+        int i2, j2, k2;
+        for (int i = ghosts; i < m / 2 + ghosts; i++, ioff++)
+        {
+            i2 = i + ioff; // == i*2+ghosts+1
+            joff = 1;
+            for (int j = ghosts; j < n / 2 + ghosts; j++, joff++)
+            {
+                j2 = j + joff;
+                koff = 1;
+                for (int k = ghosts; k < o / 2 + ghosts; k++, koff++)
+                {
+                    k2 = k + koff;
+
+                    for (int bi = 0; bi < args.rbs.getBlocksize(); bi++)
+                    {
+                        // double stencilsums[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+                        for (int bj = 0; bj < args.rbs.getBlocksize(); bj++)
+                        {
+                            fineVals[i2][j2][k2][bi] += bsraw[bi][bj][1][1][1] * coarseVals[i][j][k][bj];
+
+                            fineVals[i2][j2][k2 - 1][bi] += (bsraw[bi][bj][1][1][0] * coarseVals[i][j][k][bj] + bsraw[bi][bj][1][1][2] * coarseVals[i][j][k - 1][bj]);
+                            fineVals[i2][j2 - 1][k2][bi] += (bsraw[bi][bj][1][0][1] * coarseVals[i][j][k][bj] + bsraw[bi][bj][1][2][1] * coarseVals[i][j - 1][k][bj]);
+                            fineVals[i2 - 1][j2][k2][bi] += (bsraw[bi][bj][0][1][1] * coarseVals[i][j][k][bj] + bsraw[bi][bj][2][1][1] * coarseVals[i - 1][j][k][bj]);
+
+                            fineVals[i2][j2 - 1][k2 - 1][bi] +=
+                                (bsraw[bi][bj][1][0][0] * coarseVals[i][j][k][bj] + bsraw[bi][bj][1][0][2] * coarseVals[i][j][k - 1][bj] + bsraw[bi][bj][1][2][0] * coarseVals[i][j - 1][k][bj] + bsraw[bi][bj][1][2][2] * coarseVals[i][j - 1][k - 1][bj]);
+                            fineVals[i2 - 1][j2][k2 - 1][bi] +=
+                                (bsraw[bi][bj][0][1][0] * coarseVals[i][j][k][bj] + bsraw[bi][bj][0][1][2] * coarseVals[i][j][k - 1][bj] + bsraw[bi][bj][2][1][0] * coarseVals[i - 1][j][k][bj] + bsraw[bi][bj][2][1][2] * coarseVals[i - 1][j][k - 1][bj]);
+                            fineVals[i2 - 1][j2 - 1][k2][bi] +=
+                                (bsraw[bi][bj][0][0][1] * coarseVals[i][j][k][bj] + bsraw[bi][bj][0][2][1] * coarseVals[i][j - 1][k][bj] + bsraw[bi][bj][2][0][1] * coarseVals[i - 1][j][k][bj] + bsraw[bi][bj][2][2][1] * coarseVals[i - 1][j - 1][k][bj]);
+
+                            fineVals[i2 - 1][j2 - 1][k2 - 1][bi] +=
+                                (bsraw[bi][bj][2][2][2] * coarseVals[i][j][k][bj] + bsraw[bi][bj][2][2][0] * coarseVals[i][j][k - 1][bj] + bsraw[bi][bj][2][0][2] * coarseVals[i][j - 1][k][bj] + bsraw[bi][bj][2][0][0] * coarseVals[i][j - 1][k - 1][bj] +
+                                 bsraw[bi][bj][0][2][2] * coarseVals[i - 1][j][k][bj] + bsraw[bi][bj][0][2][0] * coarseVals[i - 1][j][k - 1][bj] + bsraw[bi][bj][0][0][2] * coarseVals[i - 1][j - 1][k][bj] +
+                                 bsraw[bi][bj][0][0][0] * coarseVals[i - 1][j - 1][k - 1][bj]);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
