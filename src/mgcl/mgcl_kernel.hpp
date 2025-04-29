@@ -1478,6 +1478,88 @@ __kernel void restrict_to_coarse(
     }
 }
 
+/* Restricts from fine to coarse grid using blockstencils.
+ * Needs to get called with m*n*o work-items.
+ *
+ * Layout: [mx][my][cx][cy][cz] for fbs, [gpx][gpy][gpz][m] for fine, coarse
+ *
+ * Arguments:
+ * * m,n,o is size of ghosted coarse grid.
+ * * fine and coarse must be of sizes of ghosted grids.
+ * * gh_vals_coarse must be sizes of coarse grid's cuboids. Most of the time its equal to m,n,o but for
+ *   the threshold-level when using MPI, the cuboid is bigger than the actual level would be.
+ * * fbs: Fixed restriction blockstencil
+ */
+__kernel void restrict_to_coarse_blockstencil(
+    __global double* restrict fine,
+    __global double* restrict coarse,
+    __global double* restrict fbs,
+    const int m, const int n, const int o, const int ghosts,
+    const int ngh_vals_coarse, const int ogh_vals_coarse,
+    const int blocksize)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
+    int g2 = 2 * ghosts;
+
+    if (i < m && j < n && k < o)
+    {
+        const int idx_c = (i + ghosts) * ngh_vals_coarse * ogh_vals_coarse * blocksize + (j + ghosts) * ogh_vals_coarse * blocksize + (k + ghosts) * blocksize;
+        const int nf = (n - g2) * 2 + g2, of = (o - g2) * 2 + g2;
+        const int i2 = i * 2 + ghosts + 1, j2 = j * 2 + ghosts + 1, k2 = k * 2 + ghosts + 1;
+        const int idx_f_self = i2 * nf * of * blocksize + j2 * of * blocksize + k2 * blocksize;
+        const int ioff_f = nf * of * blocksize;
+        const int joff_f = of * blocksize;
+        const int koff_f = blocksize;
+
+        for (int bi = 0; bi < blocksize; bi++)
+        {
+            double sum = 0;
+
+            for (int bj = 0; bj < blocksize; bj++)
+            {
+                int fbs_idx_self = bi * blocksize * 27 + bj * 27 + 1 * 9 + 1 * 3 + 1;
+                sum +=
+                    // 0.125 * fine[idx_f_self + bj] // self
+                    fbs[fbs_idx_self] * fine[idx_f_self + bj] + // self
+                    // direct neighbours
+                    fbs[fbs_idx_self - 9] * fine[idx_f_self - ioff_f + bj] +
+                    fbs[fbs_idx_self + 9] * fine[idx_f_self + ioff_f + bj] +
+                    fbs[fbs_idx_self - 3] * fine[idx_f_self - joff_f + bj] +
+                    fbs[fbs_idx_self + 3] * fine[idx_f_self + joff_f + bj] +
+                    fbs[fbs_idx_self - 1] * fine[idx_f_self - koff_f + bj] +
+                    fbs[fbs_idx_self + 1] * fine[idx_f_self + koff_f + bj] +
+                    // edge midpoints xy-plane
+                    fbs[fbs_idx_self - 9 - 3] * fine[idx_f_self - ioff_f - joff_f + bj] +
+                    fbs[fbs_idx_self - 9 + 3] * fine[idx_f_self - ioff_f + joff_f + bj] +
+                    fbs[fbs_idx_self + 9 - 3] * fine[idx_f_self + ioff_f - joff_f + bj] +
+                    fbs[fbs_idx_self + 9 + 3] * fine[idx_f_self + ioff_f + joff_f + bj] +
+                    // edge midpoints xz-plane
+                    fbs[fbs_idx_self - 9 - 1] * fine[idx_f_self - ioff_f - koff_f + bj] +
+                    fbs[fbs_idx_self - 9 + 1] * fine[idx_f_self - ioff_f + koff_f + bj] +
+                    fbs[fbs_idx_self + 9 - 1] * fine[idx_f_self + ioff_f - koff_f + bj] +
+                    fbs[fbs_idx_self + 9 + 1] * fine[idx_f_self + ioff_f + koff_f + bj] +
+                    // edge midpoints yz-plane
+                    fbs[fbs_idx_self - 3 - 1] * fine[idx_f_self - joff_f - koff_f + bj] +
+                    fbs[fbs_idx_self - 3 + 1] * fine[idx_f_self - joff_f + koff_f + bj] +
+                    fbs[fbs_idx_self + 3 - 1] * fine[idx_f_self + joff_f - koff_f + bj] +
+                    fbs[fbs_idx_self + 3 + 1] * fine[idx_f_self + joff_f + koff_f + bj] +
+                    // corners
+                    fbs[fbs_idx_self - 9 - 3 - 1] * fine[idx_f_self - ioff_f - joff_f - koff_f + bj] +
+                    fbs[fbs_idx_self - 9 - 3 + 1] * fine[idx_f_self - ioff_f - joff_f + koff_f + bj] +
+                    fbs[fbs_idx_self - 9 + 3 - 1] * fine[idx_f_self - ioff_f + joff_f - koff_f + bj] +
+                    fbs[fbs_idx_self - 9 + 3 + 1] * fine[idx_f_self - ioff_f + joff_f + koff_f + bj] +
+                    fbs[fbs_idx_self + 9 - 3 - 1] * fine[idx_f_self + ioff_f - joff_f - koff_f + bj] +
+                    fbs[fbs_idx_self + 9 - 3 + 1] * fine[idx_f_self + ioff_f - joff_f + koff_f + bj] +
+                    fbs[fbs_idx_self + 9 + 3 - 1] * fine[idx_f_self + ioff_f + joff_f - koff_f + bj] +
+                    fbs[fbs_idx_self + 9 + 3 + 1] * fine[idx_f_self + ioff_f + joff_f + koff_f + bj];
+            }
+            coarse[idx_c + bi] = sum;
+        }
+    }
+}
+
 /* Prolongates from coarse to fine grid.
  * Needs to get called with #work-items = #nodes of coarse grid.
  * m,n,o is size of ghosted fine grid.

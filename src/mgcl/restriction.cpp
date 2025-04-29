@@ -228,4 +228,90 @@ namespace mgcl
             args.coarse.updateGhosts(args.mpiDataCoarse, args.updateCoarseGhostsLocally);
         }
     }
+
+    void MultigridEngine::restrictBlockstencil(args::RestrictionBSOclArgs& args)
+    {
+        int err;
+        int mreal = args.fine.getM() >> 1;
+        int nreal = args.fine.getN() >> 1;
+        int oreal = args.fine.getO() >> 1;
+
+        // Create the compute kernel from the program
+        const char* kernelName = "restrict_to_coarse_blockstencil";
+        cl_kernel kernel = clCreateKernel(args.program, kernelName, &err);
+        mgclCheckError(err, "Creating kernel");
+
+        cl_mem buf_fine = args.fine.getBuffer();
+        cl_mem buf_coarse = args.coarse.getBuffer();
+        cl_mem buf_rbs = args.rbs.getBuf().getBuf();
+
+        // Shift fine levels instead of using coarse level directly since coarse might have different sizes when
+        // using mpi and coarse.num == mpiLevelThreshold.
+        int mcgh = mreal + 2 * args.coarse.getGhostsM();
+        int ncgh = nreal + 2 * args.coarse.getGhostsN();
+        int ocgh = oreal + 2 * args.coarse.getGhostsO();
+        int ngh_vals_coarse = args.coarse.getNgh();
+        int ogh_vals_coarse = args.coarse.getOgh();
+
+        // assign kernel arguments
+        int pos = 0;
+        int gh = args.coarse.getGhostsM();
+        int blocksize = args.coarse.getBlocksize();
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buf_fine);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &buf_coarse);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &buf_rbs);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mcgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ncgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ocgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh_vals_coarse);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh_vals_coarse);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &blocksize);
+        mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
+        size_t global[3] = {static_cast<size_t>(mreal), static_cast<size_t>(nreal), static_cast<size_t>(oreal)};
+        size_t local[3] = {4, 4, 4};
+        if (args.conf)
+        {
+
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*args.conf, kernelName, 1);
+            local[0] = c[0];
+            local[1] = c[1];
+            local[2] = c[2];
+        }
+
+        local[0] = static_cast<size_t>(mreal > local[0] ? local[0] : mreal);
+        local[0] = static_cast<size_t>(nreal > local[1] ? local[1] : nreal);
+        local[0] = static_cast<size_t>(oreal > local[2] ? local[2] : oreal);
+
+        for (int i = 0; i < 3; i++)
+            if (global[i] % local[i] != 0)
+                global[i] += local[i] - (global[i] % local[i]);
+
+        cl_event ev;
+
+        if (args.periodic)
+        {
+            args.fine.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiDataFine, args.updateFineGhostsLocally, args.conf, args.pd);
+        }
+
+        err = clEnqueueNDRangeKernel(args.queue, kernel, 3, NULL, global, local, 0, NULL, &ev);
+        mgclCheckError(err, "Enqueueing restriction kernel");
+
+        if (args.periodic)
+        {
+            args.coarse.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiDataCoarse, args.updateCoarseGhostsLocally, args.conf, args.pd);
+        }
+
+        if (args.pd)
+        {
+            args.pd->addMeasurement(args.queue, ev, kernelName,
+                                    {global[0], global[1], global[2]},
+                                    {local[0], local[1], local[2]});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        clReleaseKernel(kernel);
+    }
 }

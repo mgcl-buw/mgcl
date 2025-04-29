@@ -151,11 +151,11 @@ TEST_CASE("seq_restriction_blockstencil_independent_quantities")
         fbs[b][b][2][2][2] = 0.015625;
     }
 
-    SECTION("restrictSeq")
-    {
-        mgcl::MultigridEngine::restrictSeq(lv_fine1, lv_coarse1, c_fine1, c_coarse1);
-        mgcl::MultigridEngine::restrictSeq(lv_fine2, lv_coarse2, c_fine2, c_coarse2);
+    mgcl::MultigridEngine::restrictSeq(lv_fine1, lv_coarse1, c_fine1, c_coarse1);
+    mgcl::MultigridEngine::restrictSeq(lv_fine2, lv_coarse2, c_fine2, c_coarse2);
 
+    SECTION("seq")
+    {
         mgcl::args::RestrictionBSSeqArgs args{
             c_finebs,
             c_coarsebs,
@@ -166,33 +166,56 @@ TEST_CASE("seq_restriction_blockstencil_independent_quantities")
         mgcl::MultigridEngine::restrictSeqBlockstencil(args);
 
         // Check both components
-        for (int i = ghosts_m; i < m + ghosts_m; i++)
-            for (int j = ghosts_n; j < n + ghosts_n; j++)
-                for (int k = ghosts_o; k < o + ghosts_o; k++)
+        for (int i = ghosts_m; i < m / 2 + ghosts_m; i++)
+            for (int j = ghosts_n; j < n / 2 + ghosts_n; j++)
+                for (int k = ghosts_o; k < o / 2 + ghosts_o; k++)
                 {
                     CAPTURE(i, j, k);
-                    REQUIRE(c_fine1[i][j][k] == c_finebs[i][j][k][0]);
-                    REQUIRE(c_fine2[i][j][k] == c_finebs[i][j][k][1]);
+                    REQUIRE(c_coarse1[i][j][k] == c_coarsebs[i][j][k][0]);
+                    REQUIRE(c_coarse2[i][j][k] == c_coarsebs[i][j][k][1]);
                 }
     }
 
-    // SECTION("restrict OpenCL")
-    // {
-    //     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    // TODO test kernel with fixed R
 
-    //     p->setDeviceType(deviceType);
+    SECTION("ocl")
+    {
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
-    //     mgcl_test::TestUtility tu(p);
-    //     mgcl::CuboidGpu d_c_fine(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_fine);
-    //     mgcl::CuboidGpu d_c_coarse(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_coarse);
+        auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto p_dummy = std::make_shared<mgcl::Problem>(1, 1, 1, f_dummy, v_dummy);
+        p_dummy->setUseOpencl(true);
+        p_dummy->setDeviceType(deviceType);
+        p_dummy->setProfilingEnabled(true);
+        p_dummy->init();
 
-    //     mgcl::MultigridEngine::restrict(lv_fine, lv_coarse, d_c_fine, d_c_coarse);
-    //     tu.finish();
+        mgcl::CuboidBSGpu d_c_fine(p_dummy->getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_finebs);
+        mgcl::CuboidBSGpu d_c_coarse(p_dummy->getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_coarsebs);
+        mgcl::FixedBlockstencilGpu d_fbs(fbs, p_dummy->getContext(), p_dummy->getCommands());
 
-    //     auto c_fine_out = d_c_fine.read(tu.getCommands(), nullptr, true);
-    //     auto c_coarse_out = d_c_coarse.read(tu.getCommands(), nullptr, true);
+        // We don't need planebuf and send/recv bufs since we're not using MPI. So just nullptr.
+        mgcl::args::RestrictionBSOclArgs args{
+            d_c_fine, d_c_coarse, d_fbs,
+            periodic, true, true,
+            nullptr, nullptr, nullptr,
+            p_dummy->getProgram(), p_dummy->getCommands(), p_dummy->getContext(),
+            nullptr, nullptr,
+            &p_dummy->getKernelConfig(), p_dummy->getProfilingData()};
 
-    //     REQUIRE(c_fine_out->isEqual(*c_expected_fine));
-    //     REQUIRE(c_coarse_out->isEqual(*c_expected_coarse));
-    // }
+        mgcl::MultigridEngine::restrictBlockstencil(args);
+
+        p_dummy->finish();
+        d_c_coarse.read(p_dummy->getCommands(), &c_coarsebs, true);
+
+        // Check both components
+        for (int i = ghosts_m; i < m / 2 + ghosts_m; i++)
+            for (int j = ghosts_n; j < n / 2 + ghosts_n; j++)
+                for (int k = ghosts_o; k < o / 2 + ghosts_o; k++)
+                {
+                    CAPTURE(i, j, k);
+                    REQUIRE(c_coarse1[i][j][k] == c_coarsebs[i][j][k][0]);
+                    REQUIRE(c_coarse2[i][j][k] == c_coarsebs[i][j][k][1]);
+                }
+    }
 }
