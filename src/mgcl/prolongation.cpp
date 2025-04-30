@@ -170,9 +170,9 @@ namespace mgcl
                                 (bsraw[bi][bj][0][0][1] * coarseVals[i][j][k][bj] + bsraw[bi][bj][0][2][1] * coarseVals[i][j - 1][k][bj] + bsraw[bi][bj][2][0][1] * coarseVals[i - 1][j][k][bj] + bsraw[bi][bj][2][2][1] * coarseVals[i - 1][j - 1][k][bj]);
 
                             fineVals[i2 - 1][j2 - 1][k2 - 1][bi] +=
-                                (bsraw[bi][bj][2][2][2] * coarseVals[i][j][k][bj] + bsraw[bi][bj][2][2][0] * coarseVals[i][j][k - 1][bj] + bsraw[bi][bj][2][0][2] * coarseVals[i][j - 1][k][bj] + bsraw[bi][bj][2][0][0] * coarseVals[i][j - 1][k - 1][bj] +
-                                 bsraw[bi][bj][0][2][2] * coarseVals[i - 1][j][k][bj] + bsraw[bi][bj][0][2][0] * coarseVals[i - 1][j][k - 1][bj] + bsraw[bi][bj][0][0][2] * coarseVals[i - 1][j - 1][k][bj] +
-                                 bsraw[bi][bj][0][0][0] * coarseVals[i - 1][j - 1][k - 1][bj]);
+                                (bsraw[bi][bj][0][0][0] * coarseVals[i][j][k][bj] + bsraw[bi][bj][0][0][2] * coarseVals[i][j][k - 1][bj] + bsraw[bi][bj][0][2][0] * coarseVals[i][j - 1][k][bj] + bsraw[bi][bj][0][2][2] * coarseVals[i][j - 1][k - 1][bj] +
+                                 bsraw[bi][bj][2][0][0] * coarseVals[i - 1][j][k][bj] + bsraw[bi][bj][2][0][2] * coarseVals[i - 1][j][k - 1][bj] + bsraw[bi][bj][2][2][0] * coarseVals[i - 1][j - 1][k][bj] +
+                                 bsraw[bi][bj][2][2][2] * coarseVals[i - 1][j - 1][k - 1][bj]);
                         }
                     }
                 }

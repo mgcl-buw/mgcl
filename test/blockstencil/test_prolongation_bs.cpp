@@ -13,65 +13,87 @@
 #include "../test_results.hpp"
 #include "../test_utility.hpp"
 
-// Tests blokcstencil restriction one one c-point, i.e. from real grids 2x2x2 to 1x1x1
-// TEST_CASE("seq_prolongation_single_point")
-// {
-//     int mf = 2;
-//     int nf = 2;
-//     int of = 2;
-//     int mc = mf / 2;
-//     int nc = nf / 2;
-//     int oc = of / 2;
-//     int ghosts_m = 1;
-//     int ghosts_n = 1;
-//     int ghosts_o = 1;
-//     int mfgh = mf + 2 * ghosts_m;
-//     int nfgh = nf + 2 * ghosts_n;
-//     int ofgh = of + 2 * ghosts_o;
-//     int mcgh = mc + 2 * ghosts_m;
-//     int ncgh = nc + 2 * ghosts_n;
-//     int ocgh = oc + 2 * ghosts_o;
-//     int blocksize = 2;
-//     int width = 3;
+// Tests blokcstencil prolongation for one c-point, i.e. from real grids 4x4x4 to 8x8x8
+TEST_CASE("seq_prolongation_single_point")
+{
+    int mf = 8;
+    int nf = 8;
+    int of = 8;
+    int mc = mf / 2;
+    int nc = nf / 2;
+    int oc = of / 2;
+    int ghosts_m = 1;
+    int ghosts_n = 1;
+    int ghosts_o = 1;
+    int mfgh = mf + 2 * ghosts_m;
+    int nfgh = nf + 2 * ghosts_n;
+    int ofgh = of + 2 * ghosts_o;
+    int mcgh = mc + 2 * ghosts_m;
+    int ncgh = nc + 2 * ghosts_n;
+    int ocgh = oc + 2 * ghosts_o;
+    int blocksize = 2;
+    int width = 3;
 
-//     bool periodic = false;
+    bool periodic = false;
 
-//     mgcl::CuboidBS c_fine(mf, nf, of, ghosts_m, ghosts_n, ghosts_o, blocksize);
-//     mgcl::CuboidBS c_coarse(mc, nc, oc, ghosts_m, ghosts_n, ghosts_o, blocksize);
-//     c_fine.fill1dIndex(false);
-//     // c_fine.dumpToFile("c_fine.txt", false);
+    mgcl::CuboidBS c_fine(mf, nf, of, ghosts_m, ghosts_n, ghosts_o, blocksize);
+    mgcl::CuboidBS c_coarse(mc, nc, oc, ghosts_m, ghosts_n, ghosts_o, blocksize);
+    c_fine.fill(0.0);
+    int cnt = 0;
+    for (int i = ghosts_m; i < mc + ghosts_m; i++)
+        for (int j = ghosts_n; j < nc + ghosts_n; j++)
+            for (int k = ghosts_o; k < oc + ghosts_o; k++)
+                for (int b = 0; b < blocksize; b++)
+                {
+                    c_coarse[i][j][k][b] = cnt++;
+                }
+    // c_coarse.dumpToFile("c_coarse.txt", false);
 
-//     // fill diagonals with full-weighted restriction operator, which is the same as in the scalar case
-//     mgcl::FixedBlockstencil fbs(width, blocksize);
-//     fbs.fill(0.0);
+    // fill diagonals with full-weighted restriction operator, which is the same as in the scalar case
+    mgcl::FixedBlockstencil fbs(width, blocksize);
+    fbs.fill(0.0);
 
-//     // fill blockstencil for gp 1,1,1 with increasing values starting from 0
-//     int cnt = 0;
-//     for (int ci = 0; ci < width; ci++)
-//         for (int cj = 0; cj < width; cj++)
-//             for (int ck = 0; ck < width; ck++)
-//                 for (int bi = 0; bi < blocksize; bi++)
-//                     for (int bj = 0; bj < blocksize; bj++)
-//                     {
-//                         fbs[bi][bj][ci][cj][ck] = cnt++;
-//                     }
-//     // fbs.dumpToFile("fbs.txt", false);
+    // fill blockstencil for gp 1,1,1 with increasing values starting from 0
+    cnt = 0;
+    for (int ci = 0; ci < width; ci++)
+        for (int cj = 0; cj < width; cj++)
+            for (int ck = 0; ck < width; ck++)
+                for (int bi = 0; bi < blocksize; bi++)
+                    for (int bj = 0; bj < blocksize; bj++)
+                    {
+                        fbs[bi][bj][ci][cj][ck] = cnt++;
+                    }
+    // fbs.dumpToFile("fbs.txt", false);
 
-//     mgcl::args::RestrictionBSSeqArgs args{
-//         c_fine,
-//         c_coarse,
-//         fbs,
-//         periodic, true, true,
-//         nullptr, nullptr};
+    mgcl::args::ProlongationBSSeqArgs args{
+        c_fine,
+        c_coarse,
+        fbs,
+        periodic, true, true,
+        nullptr, nullptr};
 
-//     mgcl::MultigridEngine::restrictSeqBlockstencil(args);
+    mgcl::MultigridEngine::prolongateSeqBlockstencil(args);
 
-//     // c_coarse.dumpToFile("c_coarse.txt", false);
+    // c_fine.dumpToFile("c_fine.txt", false);
 
-//     // Check against manually calculated results
-//     REQUIRE(c_coarse[ghosts_m][ghosts_n][ghosts_o][0] == 284787);
-//     REQUIRE(c_coarse[ghosts_m][ghosts_n][ghosts_o][1] == 293913);
-// }
+    // Check against manually calculated results
+    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 3][ghosts_o + 3][0] == 4463); // self
+    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 3][ghosts_o + 3][1] == 4633);
+    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 3][ghosts_o + 2][0] == 8700); // left
+    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 3][ghosts_o + 2][1] == 9032);
+    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 2][ghosts_o + 3][0] == 7894); // top
+    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 2][ghosts_o + 3][1] == 8202);
+    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 3][ghosts_o + 3][0] == 3262); // front
+    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 3][ghosts_o + 3][1] == 3474);
+    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 2][ghosts_o + 2][0] == 15336); // top left
+    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 2][ghosts_o + 2][1] == 15936);
+    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 3][ghosts_o + 2][0] == 6072); // front left
+    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 3][ghosts_o + 2][1] == 6480);
+    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 2][ghosts_o + 3][0] == 4460); // front top
+    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 2][ghosts_o + 3][1] == 4820);
+    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 2][ghosts_o + 2][0] == 8016); // front top left
+    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 2][ghosts_o + 2][1] == 8704);
+}
 
 // Tests restriction using a blockstencil and checks results against multiple restrictions using scalar stencils, while
 // the blockstencil only has entries on its diagonal, i.e. is only affecting one quantity at a time.
