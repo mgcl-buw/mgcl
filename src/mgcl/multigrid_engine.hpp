@@ -169,6 +169,31 @@ namespace mgcl
             MPILevelData* mpiDataFine = nullptr;
             MPILevelData* mpiDataCoarse = nullptr;
         };
+
+        struct ProlongationBSOclArgs
+        {
+            CuboidBSGpu& fine;
+            CuboidBSGpu& coarse;
+            FixedBlockstencilGpu& rbs;
+
+            bool periodic;
+            bool updateFineGhostsLocally;
+            bool updateCoarseGhostsLocally;
+
+            BufferGpu* dPlanesBuf;
+            std::vector<double>* sendBuf;
+            std::vector<double>* recvBuf;
+
+            cl_program program;
+            cl_command_queue queue;
+            cl_context context;
+
+            MPILevelData* mpiDataFine = nullptr;
+            MPILevelData* mpiDataCoarse = nullptr;
+
+            mgcl::conf::KernelConfig* conf = nullptr;
+            mgcl::ProfilingData* pd = nullptr;
+        };
     }
 
     /**
@@ -190,6 +215,7 @@ namespace mgcl
         static void prolongateSeq(Level& fine, Level& coarse, Cuboid& fineVals, Cuboid& coarseVals);
         static void prolongate(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values);
         static void prolongateSeqBlockstencil(args::ProlongationBSSeqArgs& args);
+        static void prolongateBlockstencil(args::ProlongationBSOclArgs& args);
 
         static void updateGhostsSeq(Cuboid& c, MPILevelData* mpiData, bool periodic, bool forceLocal);
         static int updateGhosts(Problem& problem, CuboidGpu& dBuffer, MPILevelData* mpiData, bool forceLocal);

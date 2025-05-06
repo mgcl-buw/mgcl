@@ -1595,6 +1595,84 @@ __kernel void prolongate_to_fine(
     }
 }
 
+/* Prolongates from coarse to fine grid.
+ * Needs to get called with #work-items = #nodes of coarse grid.
+ * m,n,o is size of ghosted fine grid.
+ * fine and coarse must be of sizes of ghosted grids.
+ * gh_vals_coarse must be sizes of coarse grid's cuboids. Most of the time its equal to m/2,n/2,o/2 but for
+ * the threshold-level when using MPI, the cuboid is bigger than the actual level would be. */
+__kernel void prolongate_to_fine_blockstencil(
+    __global double* restrict fine,
+    __global double* restrict coarse,
+    __global double* restrict fbs,
+    const int mf, const int nf, const int of, const int ghosts,
+    const int ngh_vals_coarse, const int ogh_vals_coarse,
+    const int blocksize)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
+    int g2 = 2 * ghosts;
+
+    const int mc = (mf - g2) / 2 + g2;
+    const int nc = (nf - g2) / 2 + g2;
+    const int oc = (of - g2) / 2 + g2;
+
+    if (i > ghosts - 1 && i < mc - ghosts && j > ghosts - 1 && j < nc - ghosts && k > ghosts - 1 && k < oc - ghosts)
+    {
+        const int index_coarse = (i * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k) * blocksize;
+        const int i2 = i * 2 - (ghosts - 1), j2 = j * 2 - (ghosts - 1), k2 = k * 2 - (ghosts - 1);
+
+        const int ioff_f = nf * of * blocksize;
+        const int joff_f = of * blocksize;
+        const int koff_f = blocksize;
+        const int ioff_c = nc * oc * blocksize;
+        const int joff_c = oc * blocksize;
+        const int koff_c = blocksize;
+        const int index_fine_self = i2 * ioff_f + j2 * joff_f + k2 * koff_f;
+
+        for (int bi = 0; bi < blocksize; bi++)
+        {
+            double sums[8] = {0};
+            for (int bj = 0; bj < blocksize; bj++)
+            {
+                int fbs_idx_self = bi * blocksize * 27 + bj * 27 + 1 * 9 + 1 * 3 + 1;
+
+                sums[0] += fbs[fbs_idx_self] * coarse[index_coarse + bj];
+
+                sums[1] += fbs[fbs_idx_self - 1] * coarse[index_coarse + bj] + fbs[fbs_idx_self + 1] * coarse[index_coarse - koff_c + bj];
+
+                sums[2] += fbs[fbs_idx_self - 3] * coarse[index_coarse + bj] + fbs[fbs_idx_self + 3] * coarse[index_coarse - joff_c + bj];
+
+                sums[3] += fbs[fbs_idx_self - 9] * coarse[index_coarse + bj] + fbs[fbs_idx_self + 9] * coarse[index_coarse - ioff_c + bj];
+
+                sums[4] += fbs[fbs_idx_self - 3 - 1] * coarse[index_coarse + bj] + fbs[fbs_idx_self - 3 + 1] * coarse[index_coarse - koff_c + bj] + fbs[fbs_idx_self + 3 - 1] * coarse[index_coarse - joff_c + bj] + fbs[fbs_idx_self + 3 + 1] * coarse[index_coarse - joff_c - koff_c + bj];
+
+                sums[5] += fbs[fbs_idx_self - 9 - 1] * coarse[index_coarse + bj] + fbs[fbs_idx_self - 9 + 1] * coarse[index_coarse - koff_c + bj] + fbs[fbs_idx_self + 9 - 1] * coarse[index_coarse - ioff_c + bj] + fbs[fbs_idx_self + 9 + 1] * coarse[index_coarse - ioff_c - koff_c + bj];
+
+                sums[6] += fbs[fbs_idx_self - 9 - 3] * coarse[index_coarse + bj] + fbs[fbs_idx_self - 9 + 3] * coarse[index_coarse - joff_c + bj] + fbs[fbs_idx_self + 9 - 3] * coarse[index_coarse - ioff_c + bj] + fbs[fbs_idx_self + 9 + 3] * coarse[index_coarse - ioff_c - joff_c + bj];
+
+                sums[7] += fbs[fbs_idx_self - 9 - 3 - 1] * coarse[index_coarse + bj] +
+                           fbs[fbs_idx_self - 9 - 3 + 1] * coarse[index_coarse - koff_c + bj] +
+                           fbs[fbs_idx_self - 9 + 3 - 1] * coarse[index_coarse - joff_c + bj] +
+                           fbs[fbs_idx_self - 9 + 3 + 1] * coarse[index_coarse - joff_c - koff_c + bj] +
+                           fbs[fbs_idx_self + 9 - 3 - 1] * coarse[index_coarse - ioff_c + bj] +
+                           fbs[fbs_idx_self + 9 - 3 + 1] * coarse[index_coarse - ioff_c - koff_c + bj] +
+                           fbs[fbs_idx_self + 9 + 3 - 1] * coarse[index_coarse - ioff_c - joff_c + bj] +
+                           fbs[fbs_idx_self + 9 + 3 + 1] * coarse[index_coarse - ioff_c - joff_c - koff_c + bj];
+            }
+            fine[index_fine_self + bi] = sums[0];
+            fine[index_fine_self - koff_f + bi] = sums[1];
+            fine[index_fine_self - joff_f + bi] = sums[2];
+            fine[index_fine_self - ioff_f + bi] = sums[3];
+            fine[index_fine_self - joff_f - koff_f + bi] = sums[4];
+            fine[index_fine_self - ioff_f - koff_f + bi] = sums[5];
+            fine[index_fine_self - ioff_f - joff_f + bi] = sums[6];
+            fine[index_fine_self - ioff_f - joff_f - koff_f + bi] = sums[7];
+        }
+    }
+}
+
 /**
  * Updates ghosts of a varying stencil, respecting small grids, e.g. gh > m.
  * Needs to be called with one work-item per cell of ghosted grid.

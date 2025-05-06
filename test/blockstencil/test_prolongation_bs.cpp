@@ -14,7 +14,7 @@
 #include "../test_utility.hpp"
 
 // Tests blokcstencil prolongation for one c-point, i.e. from real grids 4x4x4 to 8x8x8
-TEST_CASE("seq_prolongation_single_point")
+TEST_CASE("prolongation_single_point")
 {
     int mf = 8;
     int nf = 8;
@@ -65,14 +65,48 @@ TEST_CASE("seq_prolongation_single_point")
                     }
     // fbs.dumpToFile("fbs.txt", false);
 
-    mgcl::args::ProlongationBSSeqArgs args{
-        c_fine,
-        c_coarse,
-        fbs,
-        periodic, true, true,
-        nullptr, nullptr};
+    SECTION("seq")
+    {
+        mgcl::args::ProlongationBSSeqArgs args{
+            c_fine,
+            c_coarse,
+            fbs,
+            periodic, true, true,
+            nullptr, nullptr};
 
-    mgcl::MultigridEngine::prolongateSeqBlockstencil(args);
+        mgcl::MultigridEngine::prolongateSeqBlockstencil(args);
+    }
+
+    SECTION("ocl")
+    {
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+        auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto p_dummy = std::make_shared<mgcl::Problem>(1, 1, 1, f_dummy, v_dummy);
+        p_dummy->setUseOpencl(true);
+        p_dummy->setDeviceType(deviceType);
+        p_dummy->setProfilingEnabled(true);
+        p_dummy->init();
+
+        mgcl::CuboidBSGpu d_c_fine(p_dummy->getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_fine);
+        mgcl::CuboidBSGpu d_c_coarse(p_dummy->getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_coarse);
+        mgcl::FixedBlockstencilGpu d_fbs(fbs, p_dummy->getContext(), p_dummy->getCommands());
+
+        // We don't need planebuf and send/recv bufs since we're not using MPI. So just nullptr.
+        mgcl::args::ProlongationBSOclArgs args{
+            d_c_fine, d_c_coarse, d_fbs,
+            periodic, true, true,
+            nullptr, nullptr, nullptr,
+            p_dummy->getProgram(), p_dummy->getCommands(), p_dummy->getContext(),
+            nullptr, nullptr,
+            &p_dummy->getKernelConfig(), p_dummy->getProfilingData()};
+
+        mgcl::MultigridEngine::prolongateBlockstencil(args);
+
+        p_dummy->finish();
+        d_c_fine.read(p_dummy->getCommands(), &c_fine, true);
+    }
 
     // c_fine.dumpToFile("c_fine.txt", false);
 
@@ -97,7 +131,7 @@ TEST_CASE("seq_prolongation_single_point")
 
 // Tests restriction using a blockstencil and checks results against multiple restrictions using scalar stencils, while
 // the blockstencil only has entries on its diagonal, i.e. is only affecting one quantity at a time.
-TEST_CASE("seq_prolongation_blockstencil_independent_quantities")
+TEST_CASE("prolongation_blockstencil_independent_quantities")
 {
     int mf = 16;
     int nf = 16;
@@ -206,44 +240,44 @@ TEST_CASE("seq_prolongation_blockstencil_independent_quantities")
 
     // TODO test kernel with fixed R
 
-    // SECTION("ocl")
-    // {
-    //     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    SECTION("ocl")
+    {
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
-    //     auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-    //     auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-    //     auto p_dummy = std::make_shared<mgcl::Problem>(1, 1, 1, f_dummy, v_dummy);
-    //     p_dummy->setUseOpencl(true);
-    //     p_dummy->setDeviceType(deviceType);
-    //     p_dummy->setProfilingEnabled(true);
-    //     p_dummy->init();
+        auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto p_dummy = std::make_shared<mgcl::Problem>(1, 1, 1, f_dummy, v_dummy);
+        p_dummy->setUseOpencl(true);
+        p_dummy->setDeviceType(deviceType);
+        p_dummy->setProfilingEnabled(true);
+        p_dummy->init();
 
-    //     mgcl::CuboidBSGpu d_c_fine(p_dummy->getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_finebs);
-    //     mgcl::CuboidBSGpu d_c_coarse(p_dummy->getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_coarsebs);
-    //     mgcl::FixedBlockstencilGpu d_fbs(fbs, p_dummy->getContext(), p_dummy->getCommands());
+        mgcl::CuboidBSGpu d_c_fine(p_dummy->getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_finebs);
+        mgcl::CuboidBSGpu d_c_coarse(p_dummy->getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_coarsebs);
+        mgcl::FixedBlockstencilGpu d_fbs(fbs, p_dummy->getContext(), p_dummy->getCommands());
 
-    //     // We don't need planebuf and send/recv bufs since we're not using MPI. So just nullptr.
-    //     mgcl::args::RestrictionBSOclArgs args{
-    //         d_c_fine, d_c_coarse, d_fbs,
-    //         periodic, true, true,
-    //         nullptr, nullptr, nullptr,
-    //         p_dummy->getProgram(), p_dummy->getCommands(), p_dummy->getContext(),
-    //         nullptr, nullptr,
-    //         &p_dummy->getKernelConfig(), p_dummy->getProfilingData()};
+        // We don't need planebuf and send/recv bufs since we're not using MPI. So just nullptr.
+        mgcl::args::ProlongationBSOclArgs args{
+            d_c_fine, d_c_coarse, d_fbs,
+            periodic, true, true,
+            nullptr, nullptr, nullptr,
+            p_dummy->getProgram(), p_dummy->getCommands(), p_dummy->getContext(),
+            nullptr, nullptr,
+            &p_dummy->getKernelConfig(), p_dummy->getProfilingData()};
 
-    //     mgcl::MultigridEngine::restrictBlockstencil(args);
+        mgcl::MultigridEngine::prolongateBlockstencil(args);
 
-    //     p_dummy->finish();
-    //     d_c_coarse.read(p_dummy->getCommands(), &c_coarsebs, true);
+        p_dummy->finish();
+        d_c_fine.read(p_dummy->getCommands(), &c_finebs, true);
 
-    //     // Check both components
-    //     for (int i = ghosts_m; i < m / 2 + ghosts_m; i++)
-    //         for (int j = ghosts_n; j < n / 2 + ghosts_n; j++)
-    //             for (int k = ghosts_o; k < o / 2 + ghosts_o; k++)
-    //             {
-    //                 CAPTURE(i, j, k);
-    //                 REQUIRE(c_coarse1[i][j][k] == c_coarsebs[i][j][k][0]);
-    //                 REQUIRE(c_coarse2[i][j][k] == c_coarsebs[i][j][k][1]);
-    //             }
-    // }
+        // Check both components
+        for (int i = ghosts_m; i < mf + ghosts_m; i++)
+            for (int j = ghosts_n; j < nf + ghosts_n; j++)
+                for (int k = ghosts_o; k < of + ghosts_o; k++)
+                {
+                    CAPTURE(i, j, k);
+                    REQUIRE(c_fine1[i][j][k] == c_finebs[i][j][k][0]);
+                    REQUIRE(c_fine2[i][j][k] == c_finebs[i][j][k][1]);
+                }
+    }
 }
