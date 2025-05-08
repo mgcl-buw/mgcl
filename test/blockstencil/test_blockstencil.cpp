@@ -830,7 +830,7 @@ TEST_CASE("Blockstencil::invertDiagonal")
         REQUIRE_THAT((*s2)[1][1][0][0][0][0][1][2], Catch::Matchers::WithinAbs(a012_inv[1][1], 1e-4));
     }
 
-    // Check that inversion for a singular matrix returns nullptr.
+    // Check that inversion of a singular matrix returns nullptr.
     SECTION("singular")
     {
         s[0][0][1][1][1][0][0][0] = 0;

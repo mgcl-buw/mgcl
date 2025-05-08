@@ -500,14 +500,15 @@ namespace mgcl
         int b = getBlocksize();
         int center = getWidth() / 2;
 
+        // Create the augmented matrix [A | I]
+        Matrix augmentedMatrix(b, b * 2);
+
         // Invert for each real grid point
         for (int gpi = getGhostsM(); gpi < getM() + getGhostsM(); gpi++)
             for (int gpj = getGhostsN(); gpj < getN() + getGhostsN(); gpj++)
                 for (int gpk = getGhostsO(); gpk < getO() + getGhostsO(); gpk++)
                 {
-
-                    // Create the augmented matrix [A | I]
-                    Matrix augmentedMatrix(b, b * 2);
+                    // Fill augmented matrix for current grid point
                     for (int i = 0; i < b; ++i)
                     {
                         for (int j = 0; j < b; ++j)
@@ -518,8 +519,9 @@ namespace mgcl
                     }
 
                     // Gauss-Jordan Elimination
+                    // Iterate through columns (pivot columns)
                     for (int j = 0; j < b; ++j)
-                    { // Iterate through columns (pivot columns)
+                    {
                         // 1. Pivot Selectiob (Partial Pivoting for numerical stability)
                         int pivotRow = j;
                         for (int i = j + 1; i < b; ++i)
@@ -535,8 +537,7 @@ namespace mgcl
 
                         // Check for singular matrix, i.e. if pivot element is too small
                         if (std::abs(augmentedMatrix[j][j]) < 1e-9)
-                        { // Use a small tolerance for floating point comparisob
-                          // std::cerr << "Error: Matrix is singular, inverse does not exist." << std::endl;
+                        {
                             return nullptr;
                         }
 
@@ -547,11 +548,12 @@ namespace mgcl
                             augmentedMatrix[j][k] /= pivotElement;
                         }
 
-                        // 3. Eliminate Below and Above the Pivot
+                        // 3. Eliminate below and above the Pivot
                         for (int i = 0; i < b; ++i)
                         {
+                            // Don't eliminate from the pivot row itself
                             if (i != j)
-                            { // Don't eliminate from the pivot row itself
+                            {
                                 double factor = augmentedMatrix[i][j];
                                 for (int k = 0; k < 2 * b; ++k)
                                 {
