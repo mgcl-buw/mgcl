@@ -117,6 +117,28 @@ namespace mgcl
             mgcl::ProfilingData* pd = nullptr;
         };
 
+        struct JacobiBSSeqArgs
+        {
+            CuboidBS& f;
+            CuboidBS& v;
+            CuboidBS& r;
+            MGCL_RESIDUAL_NORM resnorm;
+            Blockstencil& bs;
+            Blockstencil& bs_inv;
+
+            bool returnResidualNorm;
+            bool periodic;
+            bool updateGhostsLocally;
+            int maxiter;
+            int stepsPerIter;
+            double omega;
+
+            int moff = 0;
+            int noff = 0;
+            int ooff = 0;
+            MPILevelData* mpiData = nullptr;
+        };
+
         struct RestrictionBSSeqArgs
         {
             CuboidBS& fine;
@@ -237,6 +259,7 @@ namespace mgcl
                                 VaryingStencil* stencilValuesCuboid, FixedStencil* fixedStencil,
                                 bool returnResidualNorm, bool periodic, bool updateGhostsLocally,
                                 int stepsPerIter = 1, MPILevelData* mpiData = nullptr);
+        static double jacobiSeq(args::JacobiBSSeqArgs& args);
         static double jacobi(Problem& problem, Level& level, int maxiter, bool returnResidual, int stepsPerIter = 1);
         static double jacobi(args::JacobiBSOclArgs& args);
 

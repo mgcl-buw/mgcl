@@ -174,6 +174,125 @@ namespace mgcl
         return res;
     }
 
+    double MultigridEngine::jacobiSeq(args::JacobiBSSeqArgs& args)
+    {
+        double res = 0.0;
+        auto vraw = args.v.getData();
+        int stepsPerIter = args.stepsPerIter;
+
+        // decrease stepsPerIter if it's less than maxIter
+        if (args.maxiter < stepsPerIter)
+            stepsPerIter = args.maxiter;
+
+        // Ghosts only need to be updated in the periodic case, so set stepsPerIter = 1 for non-periodic.
+        // TODO adjust for MPI
+        if (!args.periodic)
+            stepsPerIter = 1;
+
+        // Check if amount of ghost cells is large enough
+        if (util::seq::min3(args.v.getGhostsM(), args.v.getGhostsN(), args.v.getGhostsO()) < stepsPerIter)
+        {
+            error("#ghosts of v must be >= stepsPerIter!");
+        }
+
+        if (util::seq::min3(args.r.getGhostsM(), args.r.getGhostsN(), args.r.getGhostsO()) < stepsPerIter - 1)
+        {
+            error("#ghosts of r must be >= stepsPerIter - 1!");
+        }
+
+        if (util::seq::min3(args.f.getGhostsM(), args.f.getGhostsN(), args.f.getGhostsO()) < stepsPerIter - 1)
+        {
+            error("#ghosts of f must be >= stepsPerIter - 1!");
+        }
+
+        if (args.bs_inv.getWidth() != 1)
+        {
+            error("width of bs_inv must be 1!");
+        }
+
+        for (int iter = 0; iter < args.maxiter; iter += stepsPerIter)
+        {
+            // update ghost cells for periodic boundary condition
+            if (args.periodic)
+                args.v.updateGhosts(args.mpiData, args.updateGhostsLocally);
+            // TODO else update only neighboring processes if using mpi
+
+            // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
+            for (int innerIter = 0; innerIter < stepsPerIter && iter + innerIter < args.maxiter; innerIter++)
+            {
+                // damped/weighted iteration formula: u_(m+1) = u_(m) + omega * D^-1 * r_(m)
+
+                int off = (stepsPerIter - innerIter) - 1;
+                int istart_v = args.v.getGhostsM() - off;
+                int jstart_v = args.v.getGhostsN() - off;
+                int kstart_v = args.v.getGhostsO() - off;
+                int iend_v = args.v.getMgh() - istart_v;
+                int jend_v = args.v.getNgh() - jstart_v;
+                int kend_v = args.v.getOgh() - kstart_v;
+                int istart_r = args.r.getGhostsM() - off;
+                int jstart_r = args.r.getGhostsN() - off;
+                int kstart_r = args.r.getGhostsO() - off;
+                int istart_sv = args.bs.getGhostsM() - off;
+                int jstart_sv = args.bs.getGhostsN() - off;
+                int kstart_sv = args.bs.getGhostsO() - off;
+
+                // r = f - A*v
+                // TODO move creation of args outside of loop?
+                args::ResidualBSSeqArgs residualArgs{
+                    args.f,
+                    args.v,
+                    args.r,
+                    args.resnorm,
+                    args.bs,
+                    args.returnResidualNorm,
+                    args.periodic,
+                    args.updateGhostsLocally,
+                    args.moff, args.noff, args.ooff,
+                    args.mpiData};
+                res = residualSeq(residualArgs);
+
+                for (int iv = istart_v, ir = istart_r, isv = istart_sv; iv < iend_v; iv++, ir++, isv++)
+                    for (int jv = jstart_v, jr = jstart_r, jsv = jstart_sv; jv < jend_v; jv++, jr++, jsv++)
+                        for (int kv = kstart_v, kr = kstart_r, ksv = kstart_sv; kv < kend_v; kv++, kr++, ksv++)
+                        {
+                            for (int bi = 0; bi < args.v.getBlocksize(); bi++)
+                            {
+                                double sum = 0;
+                                // calculate bs_inv * r first
+                                for (int bj = 0; bj < args.v.getBlocksize(); bj++)
+                                {
+                                    sum += args.bs_inv[bi][bj][0][0][0][isv][jsv][ksv] * args.r[ir][jr][kr][bj];
+                                }
+
+                                // update v, i.e. v_{i+1} = v_i + omega * bs_inv * r
+                                vraw[iv][jv][kv][bi] = vraw[iv][jv][kv][bi] + args.omega * sum;
+                            }
+                        }
+            }
+        }
+
+        if (args.periodic)
+            args.v.updateGhosts(args.mpiData, args.updateGhostsLocally);
+
+        if (args.returnResidualNorm)
+        {
+            args::ResidualBSSeqArgs residualArgs{
+                args.f,
+                args.v,
+                args.r,
+                args.resnorm,
+                args.bs,
+                args.returnResidualNorm,
+                args.periodic,
+                args.updateGhostsLocally,
+                args.moff, args.noff, args.ooff,
+                args.mpiData};
+            res = residualSeq(residualArgs);
+        }
+
+        return res;
+    }
+
     /* Runs jacobi method using OpenCL.
      * Doesn't creates ocl buffers and doesn't copy data from host to device and vice versa
      * v, f and r must be of size [m][n][o] for periodic boundary condition. Ghosts of v and f must be updated.
