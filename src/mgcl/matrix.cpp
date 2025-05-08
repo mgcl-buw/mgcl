@@ -47,6 +47,22 @@ namespace mgcl
             field_2d[d1] = &field_1d[d1 * dim2gh];
         }
     }
+
+    Matrix::Matrix(int dim1_, int dim2_, double* values)
+        : dim1(dim1_), dim2(dim2_), ghostsDim1(0), ghostsDim2(0),
+          dim1gh(dim1_), dim2gh(dim2_), size(dim1 * dim2)
+    {
+        field_1d.resize(size);
+        for (int i = 0; i < field_1d.size(); i++)
+            field_1d[i] = values[i];
+
+        field_2d = new double*[dim1gh];
+        for (int d1 = 0; d1 < dim1gh; d1++)
+        {
+            field_2d[d1] = &field_1d[d1 * dim2gh];
+        }
+    }
+
     Matrix::Matrix(Matrix&& o)
         : dim1(o.dim1),
           dim2(o.dim2),
@@ -344,5 +360,16 @@ namespace mgcl
                 (*this)[i][j] = o[id][jd];
             }
         // clang-format on
+    }
+
+    void Matrix::swapRows(int i, int j)
+    {
+        // for each column
+        for (size_t col = 0; col < dim2gh; col++)
+        {
+            auto tmp = (*this)[i][col];
+            (*this)[i][col] = (*this)[j][col];
+            (*this)[j][col] = tmp;
+        }
     }
 }

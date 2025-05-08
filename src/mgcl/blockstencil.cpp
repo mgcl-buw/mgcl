@@ -1,4 +1,5 @@
 #include "blockstencil.hpp"
+#include "matrix.hpp"
 #include "mgcl.hpp"
 #include "mpi_level_data.hpp"
 #include "mpi_util.hpp"
@@ -11,8 +12,8 @@ namespace mgcl
     Blockstencil::Blockstencil(int m, int n, int o, int _width, int blocksize, int ghosts_m, int ghosts_n, int ghosts_o)
         : Hypercube8d(blocksize, blocksize, _width, _width, _width, m, n, o, 0, 0, 0, 0, 0, ghosts_m, ghosts_n, ghosts_o)
     {
-        if (_width % 2 == 0 || _width < 3)
-            error("Blockstencil is only defined for odd width >= 3!");
+        if (_width % 2 == 0 || _width < 1)
+            error("Blockstencil is only defined for odd width >= 1!");
 
         if (blocksize < 1)
             error("Blockstencil is only defined for blocksize >= 1!");
@@ -485,4 +486,90 @@ namespace mgcl
         return os;
     }
 
+    /**
+     * @brief Inverts the Matrices on the diagonal, i.e. the center coefficient of each stencil.
+     * Returns a blockstencil of width 1. Uses the Gauss-Jordan algorithm to invert.
+     * It is assumed that the matrices are square and non-empty (blocksize > 0).
+     * If a matrix is singular, nullptr will be returned.
+     *
+     * @return std::unique_ptr<Blockstencil>
+     */
+    std::unique_ptr<Blockstencil> Blockstencil::invertDiagonal() const
+    {
+        auto ret = std::make_unique<Blockstencil>(getM(), getN(), getO(), 1, getBlocksize(), getGhostsM(), getGhostsN(), getGhostsO());
+        int b = getBlocksize();
+        int center = getWidth() / 2;
+
+        // Invert for each real grid point
+        for (int gpi = getGhostsM(); gpi < getM() + getGhostsM(); gpi++)
+            for (int gpj = getGhostsN(); gpj < getN() + getGhostsN(); gpj++)
+                for (int gpk = getGhostsO(); gpk < getO() + getGhostsO(); gpk++)
+                {
+
+                    // Create the augmented matrix [A | I]
+                    Matrix augmentedMatrix(b, b * 2);
+                    for (int i = 0; i < b; ++i)
+                    {
+                        for (int j = 0; j < b; ++j)
+                        {
+                            augmentedMatrix[i][j] = getData()[i][j][center][center][center][gpi][gpj][gpk];
+                        }
+                        augmentedMatrix[i][i + b] = 1.0; // Add identity matrix
+                    }
+
+                    // Gauss-Jordan Elimination
+                    for (int j = 0; j < b; ++j)
+                    { // Iterate through columns (pivot columns)
+                        // 1. Pivot Selectiob (Partial Pivoting for numerical stability)
+                        int pivotRow = j;
+                        for (int i = j + 1; i < b; ++i)
+                        {
+                            if (std::abs(augmentedMatrix[i][j]) > std::abs(augmentedMatrix[pivotRow][j]))
+                            {
+                                pivotRow = i;
+                            }
+                        }
+
+                        // Swap current row with pivot row
+                        augmentedMatrix.swapRows(j, pivotRow);
+
+                        // Check for singular matrix, i.e. if pivot element is too small
+                        if (std::abs(augmentedMatrix[j][j]) < 1e-9)
+                        { // Use a small tolerance for floating point comparisob
+                          // std::cerr << "Error: Matrix is singular, inverse does not exist." << std::endl;
+                            return nullptr;
+                        }
+
+                        // 2. Normalize the Pivot Row
+                        double pivotElement = augmentedMatrix[j][j];
+                        for (int k = 0; k < 2 * b; ++k)
+                        {
+                            augmentedMatrix[j][k] /= pivotElement;
+                        }
+
+                        // 3. Eliminate Below and Above the Pivot
+                        for (int i = 0; i < b; ++i)
+                        {
+                            if (i != j)
+                            { // Don't eliminate from the pivot row itself
+                                double factor = augmentedMatrix[i][j];
+                                for (int k = 0; k < 2 * b; ++k)
+                                {
+                                    augmentedMatrix[i][k] -= factor * augmentedMatrix[j][k];
+                                }
+                            }
+                        }
+                    }
+
+                    // Extract the inverse matrix
+                    for (int i = 0; i < b; ++i)
+                    {
+                        for (int j = 0; j < b; ++j)
+                        {
+                            (*ret)[i][j][0][0][0][gpi][gpj][gpk] = augmentedMatrix[i][j + b];
+                        }
+                    }
+                }
+        return ret;
+    }
 }

@@ -4,10 +4,12 @@
 #include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <iostream>
 #include <memory>
 
 #include "../../src/mgcl/blockstencil.hpp"
 #include "../../src/mgcl/cuboid.hpp"
+#include "../../src/mgcl/matrix.hpp"
 #include "../../src/mgcl/multigrid_engine.hpp"
 #include "../../src/mgcl/stencil.hpp"
 
@@ -726,4 +728,115 @@ TEST_CASE("Blockstencil::copyShallow")
     REQUIRE(s1.getGhostsDim7() == s2->getGhostsDim7());
     REQUIRE(s1.getGhostsDim8() == s2->getGhostsDim8());
     REQUIRE(s1.getSize() == s2->getSize());
+}
+
+TEST_CASE("Blockstencil::invertDiagonal")
+{
+    int m = 1;
+    int n = 2;
+    int o = 3;
+    int ghm = 0;
+    int ghn = 0;
+    int gho = 0;
+    int width = 3;
+    int blocksize = 2;
+
+    mgcl::Blockstencil s(m, n, o, width, blocksize, ghm, ghn, gho);
+    s.fill1dIndex(true);
+    // s.dumpToFile("s.txt");
+
+    SECTION("success")
+    {
+        // print center coeffs for Matlab
+        // for (int i = 0; i < m; i++)
+        //     for (int j = 0; j < n; j++)
+        //         for (int k = 0; k < o; k++)
+        //         {
+        //             std::cout << "a" << i << j << k << " = [";
+        //             for (int bi = 0; bi < blocksize; bi++)
+        //             {
+        //                 for (int bj = 0; bj < blocksize; bj++)
+        //                 {
+        //                     std::cout << s[bi][bj][width / 2][width / 2][width / 2][i][j][k] << " ";
+        //                 }
+
+        //                 if (bi != blocksize - 1)
+        //                     std::cout << " ; ";
+        //             }
+        //             std::cout << "]" << std::endl;
+        //         }
+
+        mgcl::Matrix a000_inv(blocksize, blocksize);
+        a000_inv[0][0] = -0.0107;
+        a000_inv[0][1] = 0.0046;
+        a000_inv[1][0] = 0.0077;
+        a000_inv[1][1] = -0.0015;
+
+        mgcl::Matrix a001_inv(blocksize, blocksize);
+        a001_inv[0][0] = -0.0108;
+        a001_inv[0][1] = 0.0046;
+        a001_inv[1][0] = 0.0077;
+        a001_inv[1][1] = -0.0015;
+
+        mgcl::Matrix a002_inv(blocksize, blocksize);
+        a002_inv[0][0] = -0.0108;
+        a002_inv[0][1] = 0.0046;
+        a002_inv[1][0] = 0.0077;
+        a002_inv[1][1] = -0.0015;
+
+        mgcl::Matrix a010_inv(blocksize, blocksize);
+        a010_inv[0][0] = -0.0108;
+        a010_inv[0][1] = 0.0046;
+        a010_inv[1][0] = 0.0077;
+        a010_inv[1][1] = -0.0015;
+
+        mgcl::Matrix a011_inv(blocksize, blocksize);
+        a011_inv[0][0] = -0.0108;
+        a011_inv[0][1] = 0.0046;
+        a011_inv[1][0] = 0.0077;
+        a011_inv[1][1] = -0.0016;
+
+        mgcl::Matrix a012_inv(blocksize, blocksize);
+        a012_inv[0][0] = -0.0108;
+        a012_inv[0][1] = 0.0047;
+        a012_inv[1][0] = 0.0078;
+        a012_inv[1][1] = -0.0016;
+
+        auto s2 = s.invertDiagonal();
+
+        REQUIRE_THAT((*s2)[0][0][0][0][0][0][0][0], Catch::Matchers::WithinAbs(a000_inv[0][0], 1e-4));
+        REQUIRE_THAT((*s2)[0][1][0][0][0][0][0][0], Catch::Matchers::WithinAbs(a000_inv[0][1], 1e-4));
+        REQUIRE_THAT((*s2)[1][0][0][0][0][0][0][0], Catch::Matchers::WithinAbs(a000_inv[1][0], 1e-4));
+        REQUIRE_THAT((*s2)[1][1][0][0][0][0][0][0], Catch::Matchers::WithinAbs(a000_inv[1][1], 1e-4));
+        REQUIRE_THAT((*s2)[0][0][0][0][0][0][0][1], Catch::Matchers::WithinAbs(a001_inv[0][0], 1e-4));
+        REQUIRE_THAT((*s2)[0][1][0][0][0][0][0][1], Catch::Matchers::WithinAbs(a001_inv[0][1], 1e-4));
+        REQUIRE_THAT((*s2)[1][0][0][0][0][0][0][1], Catch::Matchers::WithinAbs(a001_inv[1][0], 1e-4));
+        REQUIRE_THAT((*s2)[1][1][0][0][0][0][0][1], Catch::Matchers::WithinAbs(a001_inv[1][1], 1e-4));
+        REQUIRE_THAT((*s2)[0][0][0][0][0][0][0][2], Catch::Matchers::WithinAbs(a002_inv[0][0], 1e-4));
+        REQUIRE_THAT((*s2)[0][1][0][0][0][0][0][2], Catch::Matchers::WithinAbs(a002_inv[0][1], 1e-4));
+        REQUIRE_THAT((*s2)[1][0][0][0][0][0][0][2], Catch::Matchers::WithinAbs(a002_inv[1][0], 1e-4));
+        REQUIRE_THAT((*s2)[1][1][0][0][0][0][0][2], Catch::Matchers::WithinAbs(a002_inv[1][1], 1e-4));
+        REQUIRE_THAT((*s2)[0][0][0][0][0][0][1][0], Catch::Matchers::WithinAbs(a010_inv[0][0], 1e-4));
+        REQUIRE_THAT((*s2)[0][1][0][0][0][0][1][0], Catch::Matchers::WithinAbs(a010_inv[0][1], 1e-4));
+        REQUIRE_THAT((*s2)[1][0][0][0][0][0][1][0], Catch::Matchers::WithinAbs(a010_inv[1][0], 1e-4));
+        REQUIRE_THAT((*s2)[1][1][0][0][0][0][1][0], Catch::Matchers::WithinAbs(a010_inv[1][1], 1e-4));
+        REQUIRE_THAT((*s2)[0][0][0][0][0][0][1][1], Catch::Matchers::WithinAbs(a011_inv[0][0], 1e-4));
+        REQUIRE_THAT((*s2)[0][1][0][0][0][0][1][1], Catch::Matchers::WithinAbs(a011_inv[0][1], 1e-4));
+        REQUIRE_THAT((*s2)[1][0][0][0][0][0][1][1], Catch::Matchers::WithinAbs(a011_inv[1][0], 1e-4));
+        REQUIRE_THAT((*s2)[1][1][0][0][0][0][1][1], Catch::Matchers::WithinAbs(a011_inv[1][1], 1e-4));
+        REQUIRE_THAT((*s2)[0][0][0][0][0][0][1][2], Catch::Matchers::WithinAbs(a012_inv[0][0], 1e-4));
+        REQUIRE_THAT((*s2)[0][1][0][0][0][0][1][2], Catch::Matchers::WithinAbs(a012_inv[0][1], 1e-4));
+        REQUIRE_THAT((*s2)[1][0][0][0][0][0][1][2], Catch::Matchers::WithinAbs(a012_inv[1][0], 1e-4));
+        REQUIRE_THAT((*s2)[1][1][0][0][0][0][1][2], Catch::Matchers::WithinAbs(a012_inv[1][1], 1e-4));
+    }
+
+    // Check that inversion for a singular matrix returns nullptr.
+    SECTION("singular")
+    {
+        s[0][0][1][1][1][0][0][0] = 0;
+        s[0][1][1][1][1][0][0][0] = 0;
+
+        auto s2 = s.invertDiagonal();
+        REQUIRE(s2 == nullptr);
+    }
 }

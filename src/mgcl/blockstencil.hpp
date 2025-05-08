@@ -51,6 +51,8 @@ namespace mgcl
                                                      int o_start, int o_end);
         std::unique_ptr<Blockstencil> copyShallow();
 
+        std::unique_ptr<Blockstencil> invertDiagonal() const;
+
         friend std::ostream& operator<<(std::ostream& os, const Blockstencil& lv);
     };
 

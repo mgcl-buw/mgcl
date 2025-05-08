@@ -27,6 +27,7 @@ namespace mgcl
     public:
         Matrix(int dim1_, int dim2_, double value = 0);
         Matrix(int dim1_, int dim2_, int ghostsDim1_, int ghostsDim2_, double value = 0);
+        Matrix(int dim1_, int dim2_, double* values);
         Matrix(const Matrix& c) = delete;
         Matrix& operator=(const Matrix&) = delete;
         Matrix(Matrix&&);
@@ -42,6 +43,7 @@ namespace mgcl
         void dumpToFile(std::string path, bool realCellsOnly = false);
         void dumpToFileMatlab(std::string path, std::string varname, bool realCellsOnly = false);
         void copyRealFrom(Matrix& o);
+        void swapRows(int i, int j);
 
         inline std::vector<double>& field1d() { return field_1d; }
         inline double** getData() const { return field_2d; }
