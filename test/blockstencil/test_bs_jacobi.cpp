@@ -95,6 +95,8 @@ TEST_CASE("seq_bs_jacobi_independent_quantities")
 
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
 
+    // TODO test with ghosted bs
+
     mgcl::CuboidBS v(m, n, o, gh, gh, gh, blocksize);
     mgcl::CuboidBS r(m, n, o, gh, gh, gh, blocksize);
     mgcl::CuboidBS f(m, n, o, gh, gh, gh, blocksize);
@@ -160,26 +162,77 @@ TEST_CASE("seq_bs_jacobi_independent_quantities")
     mgcl::MultigridEngine::updateGhostsSeq(v1, nullptr, true, false);
     mgcl::MultigridEngine::updateGhostsSeq(v2, nullptr, true, false);
 
-    mgcl::args::JacobiBSSeqArgs args{
-        f,
-        v,
-        r,
-        resnorm,
-        bs,
-        bs_inv,
-        true,
-        periodic,
-        true, iters, stepsPerIter, omega,
-        0, 0, 0, nullptr};
-
-    double res = mgcl::MultigridEngine::jacobiSeq(args);
     double res1 = mgcl::MultigridEngine::jacobiSeq(v1, f1, r1, omega, 0, iters, resnorm, mgcl::MGCL_VARYING, 0, &sv1, nullptr,
                                                    true, true, true, stepsPerIter);
     double res2 = mgcl::MultigridEngine::jacobiSeq(v2, f2, r2, omega, 0, iters, resnorm, mgcl::MGCL_VARYING, 0, &sv2, nullptr,
                                                    true, true, true, stepsPerIter);
 
-    // r.dumpToFile("r.txt");
-    // r1.dumpToFile("r1.txt");
+    SECTION("seq")
+    {
+        mgcl::args::JacobiBSSeqArgs args{
+            f,
+            v,
+            r,
+            resnorm,
+            bs,
+            bs_inv,
+            true,
+            periodic,
+            true, iters, stepsPerIter, omega,
+            0, 0, 0, nullptr};
+
+        double res = mgcl::MultigridEngine::jacobiSeq(args);
+
+        // r.dumpToFile("r.txt");
+        // r1.dumpToFile("r1.txt");
+    }
+
+    SECTION("ocl")
+    {
+        // create dummy problem
+        auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
+        p.setUseOpencl(true);
+        p.setProfilingEnabled(true);
+        p.init();
+
+        mgcl::CuboidBSGpu d_v_in(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
+        mgcl::CuboidBSGpu d_v_out(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
+        mgcl::CuboidBSGpu d_r(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, r);
+        mgcl::CuboidBSGpu d_f(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, f);
+        mgcl::BlockstencilGpu d_bs(bs, p.getContext(), p.getCommands(), p.getProgram());
+        mgcl::BlockstencilGpu d_bs_inv(bs_inv, p.getContext(), p.getCommands(), p.getProgram());
+        mgcl::CuboidBSGpu dRSquares(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r);
+
+        mgcl::args::JacobiBSOclArgs args{
+            d_f,
+            d_v_in,
+            d_v_out,
+            d_r,
+            resnorm,
+            d_bs,
+            d_bs_inv,
+            &dRSquares,
+            true,
+            periodic,
+            true, iters, stepsPerIter, omega,
+            nullptr, nullptr, nullptr,
+            p.getProgram(), p.getCommands(), p.getContext(),
+            0, 0, 0, nullptr,
+            &p.getKernelConfig(),
+            p.getProfilingData()};
+
+        double res = mgcl::MultigridEngine::jacobi(args);
+
+        p.finish();
+
+        d_v_in.read(p.getCommands(), &v, true);
+        d_r.read(p.getCommands(), &r, true);
+
+        // r.dumpToFile("r.txt");
+        // r1.dumpToFile("r1.txt");
+    }
 
     // Check both r and v components
     for (int i = gh; i < m + gh; i++)

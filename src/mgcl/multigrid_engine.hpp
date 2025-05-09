@@ -91,14 +91,15 @@ namespace mgcl
             CuboidBSGpu& r;
             MGCL_RESIDUAL_NORM resnorm;
             BlockstencilGpu& bs;
+            BlockstencilGpu& bs_inv;
             CuboidBSGpu* dRsq;
+
             bool returnResidualNorm;
             bool periodic;
             bool updateGhostsLocally;
             int maxiter;
             int stepsPerIter;
-            double h;
-            MGCL_STENCIL stencilType;
+            double omega;
 
             BufferGpu* dPlanesBuf;
             std::vector<double>* sendBuf;

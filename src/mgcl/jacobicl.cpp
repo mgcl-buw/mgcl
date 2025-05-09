@@ -605,12 +605,6 @@ namespace mgcl
 
         cl_event ev;
 
-        // double h2 = 1.0 / static_cast<double>((problem.getMGlobal() >> level.num) * (problem.getMGlobal() >> level.num));
-        double h2 = args.h * args.h;
-        double dinv = h2 / 6.0;
-        double h2inv = 1.0 / h2; // divisor of the stencil, inverted to use * instead of / in kernel
-        // TODO refactor stencilFactor
-
         // Create the compute kernel from the program
         const char* kernelName = "jacobi_iter_27point_blockstencil_block_first_v_gp_first";
         cl_kernel kernel = clCreateKernel(args.program, kernelName, &err);
@@ -626,33 +620,39 @@ namespace mgcl
         int pos_idxstart = -1;
         int pos_storeres = -1;
 
-        // TODO
-        //  auto svbuf = level.stencilValuesGpu->getBuf();
-        //  int svgh = level.stencilValuesGpu->getGh();
-        //  int svmgh = level.stencilValuesGpu->getMgh();
-        //  int svngh = level.stencilValuesGpu->getNgh();
-        //  int svogh = level.stencilValuesGpu->getOgh();
-        //  int svGridSize = svmgh * svngh * svogh;
-        //  err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &svbuf);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(double), &problem.omega);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svmgh);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svngh);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svogh);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(int), &problem.ghosts);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
-        //  pos_idxstart = pos;
-        //  err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
-        //  pos_storeres = pos;
-        //  mgclCheckError(err, "Setting kernel arguments");
+        auto svbuf = args.bs.getBuf();
+        int svgh = args.bs.getGh();
+        int svmgh = args.bs.getMgh();
+        int svngh = args.bs.getNgh();
+        int svogh = args.bs.getOgh();
+        int svGridSize = svmgh * svngh * svogh;
+        int gh = args.v_in.getGhostsM();
+        auto bs_inv_buf = args.bs_inv.getBuf();
+        int svGridSizeBlock = 27 * svGridSize;
+        int blocksize = args.v_in.getBlocksize();
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &svbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &bs_inv_buf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(double), &args.omega);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svmgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSizeBlock);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
+        pos_idxstart = pos;
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
+        pos_storeres = pos;
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &blocksize);
+        mgclCheckError(err, "Setting kernel arguments");
 
         // One work-item per cell (including ghost cells).
         size_t global = static_cast<size_t>(mgh * ngh * ogh);
