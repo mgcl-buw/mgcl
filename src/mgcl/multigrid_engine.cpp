@@ -1,7 +1,9 @@
 #include "multigrid_engine.hpp"
+#include "blockstencil.hpp"
 #include "cuboid.hpp"    // for Cuboid
 #include "hypercube.hpp" // for Hypercube6d
 #include "level.hpp"     // for Level
+#include "matrix.hpp"
 #include "mgcl.hpp"
 #include "mpi_stencil.hpp"
 #include "mpi_util.hpp"
@@ -917,6 +919,204 @@ namespace mgcl
 
         err = clReleaseKernel(kernel);
         mgclCheckError(err, "Releasing galerkin_fixed_stencil kernel");
+
+        return a_2h;
+    }
+
+    /**
+     * @brief Calculates and sets the stencil (i.e. the matrix A) for the current level by applying the
+     * Galerkin operator, which is defined as A_2h = R * A_h * P with R being restriction and P being prolongation
+     * operators. Optimized version that calculated the end result directly, without intermediate stencils.
+     * a_h must have up-to-date ghosts.
+     *
+     * @param a_h The stencil of the finer grid.
+     * @param gh_a2h Amount of ghost cells to apply to the output stencil a_2h. Must be max(1, jacobiItersPerKernel).
+     * @param resm Size of resulting stencil's grid. Per default halve of a_h's size.
+     * @param resn Size of resulting stencil's grid. Per default halve of a_h's size.
+     * @param reso Size of resulting stencil's grid. Per default halve of a_h's size.
+     * @returns VaryingStencil The stencil to be applied on the coarser grid
+     */
+    std::unique_ptr<Blockstencil> MultigridEngine::galerkinOptimized(
+        Blockstencil& a_h, FixedBlockstencil& r, FixedBlockstencil& p,
+        int gh_a2h,
+        int resm, int resn, int reso)
+    {
+        // TODO respect problem::ghosts maybe
+        int blocksize = a_h.getBlocksize();
+
+        // Make sure a_h has two ghosts at each border for periodic bc.
+        if (a_h.getGhostsM() < 1 || a_h.getGhostsN() < 1 || a_h.getGhostsO() < 1)
+            error("galerkin: a_h needs to have at least 1 ghosts at each border for periodic bc!");
+
+        if (gh_a2h < 1)
+            error("galerkin: gh_a2h must be at least 1.");
+
+        // TODO sanity checks on resm, resn, reso?
+
+        auto a_2h = std::make_unique<Blockstencil>(resm, resn, reso, 3, blocksize, gh_a2h, gh_a2h, gh_a2h);
+
+        struct Interval
+        {
+            int start;
+            int end;
+            std::string toString() { return "[" + std::to_string(start) + "," + std::to_string(end) + "]"; }
+        };
+
+        // Returns the intersection of two intervals or [-1,-1] if they don't overlap
+        auto intersect = [](Interval a, Interval b) -> Interval
+        {
+            // Check if intervals overlap
+            if (a.start <= b.end && b.start <= a.end)
+            {
+                // Calculate start and end points of intersection
+                int start = (a.start > b.start) ? a.start : b.start;
+                int end = (a.end < b.end) ? a.end : b.end;
+                return Interval{start, end};
+            }
+            else
+            {
+                // Intervals do not overlap
+                return Interval{-1, -1};
+            }
+        };
+
+        struct Point
+        {
+            int x;
+            int y;
+            int z;
+            std::string toString() { return "(" + std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z) + ")"; }
+        };
+
+        // Returns the stencil entry indices of the stencil sitting at locationOfStencil that maps to mapsTo.
+        // No check is done, if the mapping is possible, i.e. the returned value might be outside of range [0,2].
+        // The result is just the difference of the indices plus one, since the stencil entry indices start at 0
+        // and not at -1.
+        auto stencilEntryThatMapsTo = [](Point locationOfStencil, Point mapsTo) -> Point
+        {
+            return {mapsTo.x - locationOfStencil.x + 1,
+                    mapsTo.y - locationOfStencil.y + 1,
+                    mapsTo.z - locationOfStencil.z + 1};
+        };
+
+        // Returns the grid point indices that is mapped to by the stencil entry of another point.
+        // stencilEntry must be 0-based, hence the substraction by 1.
+        auto pointMappedToByStencilEntry = [](Point locationOfStencil, Point stencilEntry) -> Point
+        {
+            return {locationOfStencil.x + (stencilEntry.x - 1),
+                    locationOfStencil.y + (stencilEntry.y - 1),
+                    locationOfStencil.z + (stencilEntry.z - 1)};
+        };
+
+        // Returns the point on the fine grid that is related to the coarse grid point, respecting ghost cells.
+        auto coarseToFine = [](Point p, int ghc, int ghf) -> Point
+        {
+            return {(p.x - ghc) * 2 + 1 + ghf, (p.y - ghc) * 2 + 1 + ghf, (p.z - ghc) * 2 + 1 + ghf};
+        };
+
+        // for each real resulting stencil and stencil entry...
+        // (only until a_h >> 1, since on root and on threshold level, a_2h has global size, but only local part can be filled.)
+        for (int i = a_2h->getGhostsM(); i < (a_h.getM() >> 1) + a_2h->getGhostsM(); i++)
+            for (int j = a_2h->getGhostsN(); j < (a_h.getN() >> 1) + a_2h->getGhostsN(); j++)
+                for (int k = a_2h->getGhostsO(); k < (a_h.getO() >> 1) + a_2h->getGhostsO(); k++)
+                    for (int ii = 0; ii < a_2h->getWidth(); ii++)
+                        for (int jj = 0; jj < a_2h->getWidth(); jj++)
+                            for (int kk = 0; kk < a_2h->getWidth(); kk++)
+                            {
+                                // calculate fine grid point indices
+                                Point gp_c = {i, j, k};
+                                Point gp_f = coarseToFine(gp_c, a_2h->getGhostsM(), a_h.getGhostsM());
+                                Point entry_gpf = coarseToFine(
+                                    pointMappedToByStencilEntry(gp_c, {ii, jj, kk}),
+                                    a_2h->getGhostsM(), a_h.getGhostsM());
+
+                                // find intersection S_P of neighbouring points for entry_gpf with reach=1 and gp_f with reach=2
+                                Interval S_P[3] = {
+                                    intersect(Interval{gp_f.x - 2, gp_f.x + 2}, Interval{entry_gpf.x - 1, entry_gpf.x + 1}),
+                                    intersect(Interval{gp_f.y - 2, gp_f.y + 2}, Interval{entry_gpf.y - 1, entry_gpf.y + 1}),
+                                    intersect(Interval{gp_f.z - 2, gp_f.z + 2}, Interval{entry_gpf.z - 1, entry_gpf.z + 1}),
+                                };
+
+                                // Start calc (R*A)*P
+                                Matrix res(blocksize, blocksize);
+
+                                // for each fine grid point gp_sp in S_P:
+                                for (int spi = S_P[0].start; spi <= S_P[0].end; spi++)
+                                    for (int spj = S_P[1].start; spj <= S_P[1].end; spj++)
+                                        for (int spk = S_P[2].start; spk <= S_P[2].end; spk++)
+                                        {
+                                            Point gp_sp = {spi, spj, spk};
+                                            // tmp_p <- in stencil P located at gp_sp: Find stencil entry entry_p that maps to entry_gpf. Since
+                                            // gp_sp is in S_P, it is ensured that the stencil has a stencil entry that maps to entry_gpf.
+                                            Point tmp_p_indices = stencilEntryThatMapsTo(gp_sp, entry_gpf);
+
+                                            // Start calc R*A
+                                            // find intersection S_R of neighbouring points for gp_f and gp_sp, both with reach=1
+                                            Interval S_R[3] = {
+                                                intersect(Interval{gp_f.x - 1, gp_f.x + 1}, Interval{spi - 1, spi + 1}),
+                                                intersect(Interval{gp_f.y - 1, gp_f.y + 1}, Interval{spj - 1, spj + 1}),
+                                                intersect(Interval{gp_f.z - 1, gp_f.z + 1}, Interval{spk - 1, spk + 1}),
+                                            };
+
+                                            // double sum = 0;
+                                            Matrix sum(blocksize, blocksize);
+                                            // for each fine grid point gp_sr in S_R:
+                                            for (int sri = S_R[0].start; sri <= S_R[0].end; sri++)
+                                                for (int srj = S_R[1].start; srj <= S_R[1].end; srj++)
+                                                    for (int srk = S_R[2].start; srk <= S_R[2].end; srk++)
+                                                    {
+                                                        Point gp_sr = {sri, srj, srk};
+                                                        // tmp_r <- in stencil R located at gp_f: Find stencil entry entry_r that maps to gp_sr
+                                                        Point tmp_r_indices = stencilEntryThatMapsTo(gp_f, gp_sr);
+                                                        // tmp_a <- in stencil A located at gp_sr: Find stencil entry that maps to gp_sp
+                                                        Point tmp_a_indices = stencilEntryThatMapsTo(gp_sr, gp_sp);
+
+                                                        // sum <- sum + tmp_r * tmp_a
+
+                                                        // TODO replace tmp_a and tmp_r. Block entries have bigger gap than 1!
+                                                        //  calculate r * a first
+                                                        //  TODO fuse loops?
+                                                        Matrix ra(blocksize, blocksize);
+                                                        for (size_t bi = 0; bi < blocksize; bi++)
+                                                            for (size_t bj = 0; bj < blocksize; bj++)
+                                                                for (size_t bk = 0; bk < blocksize; bk++)
+                                                                {
+                                                                    ra[bi][bj] += r[bi][bk][tmp_r_indices.x][tmp_r_indices.y][tmp_r_indices.z] * a_h[bk][bj][tmp_a_indices.x][tmp_a_indices.y][tmp_a_indices.z][gp_sr.x][gp_sr.y][gp_sr.z];
+                                                                }
+
+                                                        // calc sum += ra
+                                                        for (size_t bi = 0; bi < blocksize; bi++)
+                                                            for (size_t bj = 0; bj < blocksize; bj++)
+                                                            {
+                                                                sum[bi][bj] += ra[bi][bj];
+                                                            }
+                                                        // End calc R*A
+                                                    }
+
+                                            //   res <- res + sum * tmp_p
+                                            Matrix sum_mult_p(blocksize, blocksize);
+                                            for (size_t bi = 0; bi < blocksize; bi++)
+                                                for (size_t bj = 0; bj < blocksize; bj++)
+                                                    for (size_t bk = 0; bk < blocksize; bk++)
+                                                    {
+                                                        sum_mult_p[bi][bj] += sum[bi][bk] * p[bk][bj][tmp_p_indices.x][tmp_p_indices.y][tmp_p_indices.z];
+                                                    }
+
+                                            for (size_t bi = 0; bi < blocksize; bi++)
+                                                for (size_t bj = 0; bj < blocksize; bj++)
+                                                {
+                                                    res[bi][bj] += sum_mult_p[bi][bj];
+                                                }
+                                            // End calc (R*A)*P
+                                        }
+
+                                // store res in rap
+                                for (size_t bi = 0; bi < blocksize; bi++)
+                                    for (size_t bj = 0; bj < blocksize; bj++)
+                                    {
+                                        (*a_2h)[bi][bj][ii][jj][kk][i][j][k] = res[bi][bj];
+                                    }
+                            }
 
         return a_2h;
     }
