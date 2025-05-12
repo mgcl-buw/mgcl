@@ -496,7 +496,7 @@ namespace mgcl
      */
     std::unique_ptr<Blockstencil> Blockstencil::invertDiagonal() const
     {
-        auto ret = std::make_unique<Blockstencil>(getM(), getN(), getO(), 1, getBlocksize(), getGhostsM(), getGhostsN(), getGhostsO());
+        auto ret = std::make_unique<Blockstencil>(getM(), getN(), getO(), 1, getBlocksize(), 0, 0, 0);
         int b = getBlocksize();
         int center = getWidth() / 2;
 
