@@ -1312,7 +1312,7 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first(
         int ioff = blocksize * ngh * ogh;
         int joff = blocksize * ogh;
         int koff = blocksize;
-        int index = i * ioff + j * ogh + k;
+        int index = i * ioff + j * joff + k * koff;
         int gridsize = mgh * ngh * ogh;
 
         int svno = svngh * svogh;
@@ -1373,11 +1373,12 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first(
         }
 
         // TODO fuse loops?
+        int m = mgh - 2 * ghosts;
         int n = ngh - 2 * ghosts;
         int o = ogh - 2 * ghosts;
         // Assumption for index of bs_inv: No ghosts, width = 1
-        int gridSizeBsInv = (i - ghosts) * n * o + (j - ghosts) * o + (k - ghosts);
-        int idx_bs_inv = 0;
+        int gridSizeBsInv = m * n * o;
+        int idx_bs_inv = (i - ghosts) * n * o + (j - ghosts) * o + k - ghosts;
         for (int bi = 0; bi < blocksize; bi++)
         {
             double sum = 0;

@@ -210,6 +210,11 @@ namespace mgcl
             error("width of bs_inv must be 1!");
         }
 
+        if (args.bs_inv.getGhostsM() > 0 || args.bs_inv.getGhostsN() > 0 || args.bs_inv.getGhostsO() > 0)
+        {
+            error("#ghosts of bs_inv must be 0!");
+        }
+
         for (int iter = 0; iter < args.maxiter; iter += stepsPerIter)
         {
             // update ghost cells for periodic boundary condition
@@ -685,6 +690,11 @@ namespace mgcl
                 // err = MultigridEngine::updateGhosts(problem, level.getDVIn(),
                 //                                     level.getMpiDataPtr(), level.isCalculatedLocally());
                 // mgclCheckError(err, "Updating ghosts");
+            }
+
+            if (globalIter == 1)
+            {
+                args.v_out.dumpToFile(args.queue, "v_out.txt");
             }
 
             // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between

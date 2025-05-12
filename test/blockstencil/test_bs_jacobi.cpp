@@ -197,6 +197,8 @@ TEST_CASE("seq_bs_jacobi_independent_quantities")
         p.setProfilingEnabled(true);
         p.init();
 
+        // bs_inv.dumpToFile("bs_inv.txt");
+
         mgcl::CuboidBSGpu d_v_in(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
         mgcl::CuboidBSGpu d_v_out(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
         mgcl::CuboidBSGpu d_r(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, r);
