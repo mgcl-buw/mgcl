@@ -2500,7 +2500,7 @@ __kernel void galerkin_blockstencil(
                                             {
                                                 ra[bi * BLOCKSIZE + bj] +=
                                                     r[bi * 27 * BLOCKSIZE + bk * 27 + tmp_r_indices.x * 9 + tmp_r_indices.y * 3 + tmp_r_indices.z] *
-                                                    a_h[bk * BLOCKSIZE * 27 * mnogh_f + bj * 27 * mnogh_f + tmp_a_indices.x * 9 * mnogh_f + tmp_a_indices.y * 3 * mnogh_f + tmp_a_indices.z * mnogh_f + bi * nogh_f + bj * ogh_f + bk];
+                                                    a_h[bk * BLOCKSIZE * 27 * mnogh_f + bj * 27 * mnogh_f + tmp_a_indices.x * 9 * mnogh_f + tmp_a_indices.y * 3 * mnogh_f + tmp_a_indices.z * mnogh_f + gp_sr.x * nogh_f + gp_sr.y * ogh_f + gp_sr.z];
                                             }
 
                                     // calc sum += ra

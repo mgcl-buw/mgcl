@@ -20,7 +20,7 @@
 // Test calculating the Galerkin operator using blockstencils, which only have entries on the diagonal, i.e.
 // the quantities are independent.
 // Test against two calculations of scalar Galerkin operators.
-TEST_CASE("seq_bs_galerkin_independent_quantities")
+TEST_CASE("bs_galerkin_independent_quantities")
 {
     int m = 4; // GENERATE(2, 4, 8);
     int n = 4; // GENERATE(2, 4, 8);
@@ -92,6 +92,8 @@ TEST_CASE("seq_bs_galerkin_independent_quantities")
         mgcl::FixedBlockstencilGpu d_r(r, p_dummy.getContext(), p_dummy.getCommands());
         mgcl::FixedBlockstencilGpu d_p(p, p_dummy.getContext(), p_dummy.getCommands());
 
+        // d_a_h_bs.dumpToFile(p_dummy.getCommands(), "a.txt", false);
+        // d_r.dumpToFile(p_dummy.getCommands(), "r.txt", false);
         auto d_2h_bs = mgcl::MultigridEngine::galerkinOptimized(d_a_h_bs, d_r, d_p, gh_a2h, m >> 1, n >> 1, o >> 1,
                                                                 p_dummy.getProgram(), p_dummy.getCommands(), p_dummy.getContext(),
                                                                 &p_dummy.getKernelConfig(), p_dummy.getProfilingData());
