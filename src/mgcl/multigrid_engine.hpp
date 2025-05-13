@@ -283,6 +283,11 @@ namespace mgcl
         static std::unique_ptr<Blockstencil> galerkinOptimized(Blockstencil& a_h, FixedBlockstencil& r, FixedBlockstencil& p,
                                                                int gh_a2h,
                                                                int resm, int resn, int reso);
+        static std::unique_ptr<BlockstencilGpu> galerkinOptimized(BlockstencilGpu& a_h, FixedBlockstencilGpu& r, FixedBlockstencilGpu& p,
+                                                                  int gh_a2h,
+                                                                  int resm, int resn, int reso,
+                                                                  cl_program program, cl_command_queue queue, cl_context context,
+                                                                  conf::KernelConfig* kernelConfig, ProfilingData* pd);
 
         static void print7point(Cuboid& v, int i, int j, int k);
         static void print19point(Cuboid& v, int i, int j, int k);

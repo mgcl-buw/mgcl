@@ -78,6 +78,7 @@ namespace mgcl::conf
         ret["jacobi_iter_27point_blockstencil_block_first_v_gp_first"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         ret["restrict_to_coarse_blockstencil"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
         ret["prolongate_to_fine_blockstencil"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
+        ret["galerkin_blockstencil"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
 
         return ret;
     }

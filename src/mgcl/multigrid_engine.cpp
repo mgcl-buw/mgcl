@@ -1,5 +1,6 @@
 #include "multigrid_engine.hpp"
 #include "blockstencil.hpp"
+#include "blockstencil_gpu.hpp"
 #include "cuboid.hpp"    // for Cuboid
 #include "hypercube.hpp" // for Hypercube6d
 #include "level.hpp"     // for Level
@@ -1073,7 +1074,6 @@ namespace mgcl
 
                                                         // sum <- sum + tmp_r * tmp_a
 
-                                                        // TODO replace tmp_a and tmp_r. Block entries have bigger gap than 1!
                                                         //  calculate r * a first
                                                         //  TODO fuse loops?
                                                         Matrix ra(blocksize, blocksize);
@@ -1117,6 +1117,99 @@ namespace mgcl
                                         (*a_2h)[bi][bj][ii][jj][kk][i][j][k] = res[bi][bj];
                                     }
                             }
+
+        return a_2h;
+    }
+
+    std::unique_ptr<BlockstencilGpu> MultigridEngine::galerkinOptimized(BlockstencilGpu& a_h, FixedBlockstencilGpu& r, FixedBlockstencilGpu& p,
+                                                                        int gh_a2h,
+                                                                        int resm, int resn, int reso,
+                                                                        cl_program program, cl_command_queue queue, cl_context context,
+                                                                        conf::KernelConfig* kernelConfig, ProfilingData* pd)
+    {
+        // Make sure a_h has two ghosts at each border for periodic bc.
+        if (a_h.getGh() < 1 || a_h.getGh() < 1 || a_h.getGh() < 1)
+            error("galerkin: a_h needs to have at least 1 ghosts at each border for periodic bc!");
+
+        if (gh_a2h < 1)
+            error("galerkin: gh_a2h must be at least 1.");
+
+        // TODO sanity checks on resm, resn, reso?
+        size_t blocksize = a_h.getBlocksize();
+
+        auto a_2h = std::make_unique<BlockstencilGpu>(resm, resn, reso, 3, blocksize, gh_a2h, context, queue, program);
+
+        int err;
+
+        // Create the compute kernel from the program
+        const char* kernelName = "galerkin_blockstencil";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
+        mgclCheckError(err, "Creating kernel");
+
+        cl_mem a_h_raw = a_h.getBuf();
+        cl_mem a_2h_raw = a_2h->getBuf();
+        cl_mem r_raw = r.getBuf().getBuf();
+        cl_mem p_raw = p.getBuf().getBuf();
+
+        int mgh_f = a_h.getMgh();
+        int ngh_f = a_h.getNgh();
+        int ogh_f = a_h.getOgh();
+        int m_c_loc = a_h.getM() >> 1;
+        int n_c_loc = a_h.getN() >> 1;
+        int o_c_loc = a_h.getO() >> 1;
+        int gh_f = a_h.getGh();
+        int gh_c = a_2h->getGh();
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &a_h_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &a_2h_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &r_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &p_raw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh_f);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh_f);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh_f);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m_c_loc);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n_c_loc);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o_c_loc);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &resm);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &resn);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &reso);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh_f);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh_c);
+        mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per local real coarse grid point and coefficient.
+        size_t global = (a_h.getM() >> 1) * (a_h.getN() >> 1) * (a_h.getO() >> 1) * 27;
+        size_t local = 128;
+
+        // Apply kernel config, if available
+        if (kernelConfig)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*kernelConfig, kernelName, global);
+            local = static_cast<size_t>(global > c[0] ? c[0] : global);
+        }
+
+        // pad global size to fit multiple of local size
+        if (global % local != 0)
+            global += local - (global % local);
+
+        cl_event ev;
+
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
+        mgclCheckError(err, "Enqueueing galerkin_blockstencil kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(queue, ev, kernelName,
+                               {global, 0, 0},
+                               {local, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        err = clReleaseKernel(kernel);
+        mgclCheckError(err, "Releasing galerkin_blockstencil kernel");
 
         return a_2h;
     }

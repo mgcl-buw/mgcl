@@ -66,78 +66,42 @@ TEST_CASE("seq_bs_galerkin_independent_quantities")
     a_h1.updateGhosts();
     a_h2.updateGhosts();
 
-    auto a_2h_bs = mgcl::MultigridEngine::galerkinOptimized(a_h_bs, r, p, gh_a2h, m >> 1, n >> 1, o >> 1);
+    std::unique_ptr<mgcl::Blockstencil> a_2h_bs;
     auto a_2h1 = mgcl::MultigridEngine::galerkinOptimized(a_h1, gh_a2h, m >> 1, n >> 1, o >> 1);
     auto a_2h2 = mgcl::MultigridEngine::galerkinOptimized(a_h2, gh_a2h, m >> 1, n >> 1, o >> 1);
 
-    // SECTION("seq")
-    // {
-    //     mgcl::args::JacobiBSSeqArgs args{
-    //         f,
-    //         v,
-    //         r,
-    //         resnorm,
-    //         bs,
-    //         bs_inv,
-    //         true,
-    //         periodic,
-    //         true, iters, stepsPerIter, omega,
-    //         0, 0, 0, nullptr};
+    SECTION("seq")
+    {
+        a_2h_bs = mgcl::MultigridEngine::galerkinOptimized(a_h_bs, r, p, gh_a2h, m >> 1, n >> 1, o >> 1);
+    }
 
-    //     double res = mgcl::MultigridEngine::jacobiSeq(args);
+    SECTION("ocl")
+    {
+        // create dummy problem
+        auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        mgcl::Problem p_dummy(1, 1, 1, f_dummy, v_dummy);
+        p_dummy.setUseOpencl(true);
+        p_dummy.setProfilingEnabled(true);
+        p_dummy.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
+        p_dummy.init();
 
-    //     // r.dumpToFile("r.txt");
-    //     // r1.dumpToFile("r1.txt");
-    // }
+        // bs_inv.dumpToFile("bs_inv.txt");
 
-    // SECTION("ocl")
-    // {
-    //     // create dummy problem
-    //     auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-    //     auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-    //     mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
-    //     p.setUseOpencl(true);
-    //     p.setProfilingEnabled(true);
-    //     p.init();
+        mgcl::BlockstencilGpu d_a_h_bs(a_h_bs, p_dummy.getContext(), p_dummy.getCommands(), p_dummy.getProgram());
+        mgcl::FixedBlockstencilGpu d_r(r, p_dummy.getContext(), p_dummy.getCommands());
+        mgcl::FixedBlockstencilGpu d_p(p, p_dummy.getContext(), p_dummy.getCommands());
 
-    //     // bs_inv.dumpToFile("bs_inv.txt");
+        auto d_2h_bs = mgcl::MultigridEngine::galerkinOptimized(d_a_h_bs, d_r, d_p, gh_a2h, m >> 1, n >> 1, o >> 1,
+                                                                p_dummy.getProgram(), p_dummy.getCommands(), p_dummy.getContext(),
+                                                                &p_dummy.getKernelConfig(), p_dummy.getProfilingData());
 
-    //     mgcl::CuboidBSGpu d_v_in(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
-    //     mgcl::CuboidBSGpu d_v_out(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
-    //     mgcl::CuboidBSGpu d_r(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, r);
-    //     mgcl::CuboidBSGpu d_f(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, f);
-    //     mgcl::BlockstencilGpu d_bs(bs, p.getContext(), p.getCommands(), p.getProgram());
-    //     mgcl::BlockstencilGpu d_bs_inv(bs_inv, p.getContext(), p.getCommands(), p.getProgram());
-    //     mgcl::CuboidBSGpu dRSquares(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r);
+        p_dummy.finish();
 
-    //     mgcl::args::JacobiBSOclArgs args{
-    //         d_f,
-    //         d_v_in,
-    //         d_v_out,
-    //         d_r,
-    //         resnorm,
-    //         d_bs,
-    //         d_bs_inv,
-    //         &dRSquares,
-    //         true,
-    //         periodic,
-    //         true, iters, stepsPerIter, omega,
-    //         nullptr, nullptr, nullptr,
-    //         p.getProgram(), p.getCommands(), p.getContext(),
-    //         0, 0, 0, nullptr,
-    //         &p.getKernelConfig(),
-    //         p.getProfilingData()};
-
-    //     double res = mgcl::MultigridEngine::jacobi(args);
-
-    //     p.finish();
-
-    //     d_v_in.read(p.getCommands(), &v, true);
-    //     d_r.read(p.getCommands(), &r, true);
-
-    //     // r.dumpToFile("r.txt");
-    //     // r1.dumpToFile("r1.txt");
-    // }
+        a_2h_bs = d_2h_bs->read_ptr(p_dummy.getCommands(), true);
+        // r.dumpToFile("r.txt");
+        // r1.dumpToFile("r1.txt");
+    }
 
     // Check both blockstencil vs scalar
     for (int i = gh_a2h; i < (m >> 1) + gh_a2h; i++)
