@@ -91,6 +91,7 @@ set(SOURCES_TEST_MPI
     mpi/test_mpi_jacobi.cpp
     mpi/test_mpi_residual.cpp
     mpi/test_mpi_util.cpp
+    mpi/test_mpi_util_blockstencil.cpp
     mpi/test_mpi_vcycle.cpp
     mpi/test_mpi_galerkin.cpp
     mpi/test_mpi_stencil.cpp
