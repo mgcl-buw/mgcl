@@ -202,8 +202,14 @@ namespace mgcl
             mgclCheckError(err, "Creating program");
         }
 
+        std::string options = "-cl-fast-relaxed-math " + preprocessorConstantsToString();
+        if (!problem->silent)
+        {
+            std::cout << "mgcl: Building program with options: " << options << std::endl;
+        }
+
         // Build the program
-        err = clBuildProgram(program, 1, &deviceId, "-cl-fast-relaxed-math", nullptr, nullptr);
+        err = clBuildProgram(program, 1, &deviceId, options.c_str(), nullptr, nullptr);
         // err = clBuildProgram(program, 1, &deviceId, "-cl-fast-relaxed-math -cl-nv-arch sm_75", nullptr, nullptr);
         if (err != CL_SUCCESS || problem->isPrintKernelLog())
         {
@@ -860,5 +866,18 @@ namespace mgcl
     void OpenCLHelper::setDeviceId(const cl_device_id& deviceId_)
     {
         deviceId = deviceId_;
+    }
+
+    /**
+     * @brief Returns set preprocessor constants as a string, e.g. "-DBLOCKSIZE=2"
+     */
+    std::string OpenCLHelper::preprocessorConstantsToString()
+    {
+        std::string result = "";
+        for (auto it = preprocessorConstants.begin(); it != preprocessorConstants.end(); it++)
+        {
+            result += " -D" + it->first + "=" + it->second;
+        }
+        return result;
     }
 }

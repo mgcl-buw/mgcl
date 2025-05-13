@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cuboid.hpp"
+#include <map>
 #include <string>
 
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -38,6 +39,7 @@ namespace mgcl
         cl_program program = nullptr;                       /* compute program, only for internal purposes */
         cl_platform_id platformId = nullptr;                /* Cannot be set from outside, just to print platform name */
         std::string binaryFile = "";
+        std::map<std::string, std::string> preprocessorConstants;
 
         /* If true, kernel code is read from separate file, which is denoted by kernelFile. This allows
          * us to use a different kernel file for e.g. benchmarking. */
@@ -63,6 +65,19 @@ namespace mgcl
         void printBuffer(cl_mem d_buf, int m, int n, int o);
 
         void finish();
+
+        /**
+         * @brief Add a preprocessor constant.
+         * E.g. "setPreprocessorConstant(BLOCKSIZE, 2);" will be passed as "-DBLOCKSIZE=2".
+         *
+         * @param constantName Name of the constant, without "-D"
+         * @param value Value of the constant
+         */
+        inline void setPreprocessorConstant(std::string constantName, std::string value)
+        {
+            preprocessorConstants[constantName] = value;
+        }
+        std::string preprocessorConstantsToString();
 
         static std::string loadKernelSource(std::string file);
         int outputDeviceInfo();
