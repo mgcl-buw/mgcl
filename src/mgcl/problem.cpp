@@ -967,23 +967,6 @@ namespace mgcl
         jacobi_iterations_per_kernel = jacobiIterationsPerKernel;
     }
 
-    CuboidGpu& Problem::getDStencilValues() const
-    {
-        if (!dStencilValues)
-            error("dStencilValues is null!");
-        return *dStencilValues;
-    }
-
-    std::shared_ptr<CuboidGpu> Problem::getDStencilValuesPtr() const
-    {
-        return dStencilValues;
-    }
-
-    void Problem::setDStencilValues(std::shared_ptr<CuboidGpu> dStencilValues_)
-    {
-        dStencilValues = dStencilValues_;
-    }
-
     CuboidGpu& Problem::getDV() const
     {
         if (!dV)

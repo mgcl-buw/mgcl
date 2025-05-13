@@ -51,7 +51,6 @@ namespace mgcl
         /* Buffers for v and f. Only need to be set if buffers already exist on device and should be reused */
         std::shared_ptr<CuboidGpu> dV = nullptr;
         std::shared_ptr<CuboidGpu> dF = nullptr;
-        std::shared_ptr<CuboidGpu> dStencilValues = nullptr; // TODO remove or bugfix: VaryingStencilGpu instead of CuboidGpu
 
         // Temporary buffer for storing cuboid planes for ghost update. Must be greater or equal to the amount
         // of ghost cells of the cuboid that is being updated. It is initialized based on dVIn of level 0 and
@@ -293,10 +292,6 @@ namespace mgcl
 
         bool getUseOpencl() const;
         void setUseOpencl(bool useOpencl);
-
-        CuboidGpu& getDStencilValues() const;
-        std::shared_ptr<CuboidGpu> getDStencilValuesPtr() const;
-        void setDStencilValues(std::shared_ptr<CuboidGpu> dStencilValues);
 
         CuboidGpu& getDV() const;
         std::shared_ptr<CuboidGpu> getDVPtr() const;
