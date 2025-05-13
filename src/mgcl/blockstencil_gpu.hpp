@@ -60,6 +60,7 @@ namespace mgcl
 
         void fill(Blockstencil& f, cl_command_queue queue, bool blocking);
         Blockstencil read(cl_command_queue queue, bool blocking);
+        std::unique_ptr<Blockstencil> read_ptr(cl_command_queue queue, bool blocking);
         void read(cl_command_queue queue, bool blocking, Blockstencil& h_stencil);
         void write(cl_command_queue queue, bool blocking, Blockstencil& h_stencil);
 

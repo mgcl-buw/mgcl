@@ -120,6 +120,11 @@ namespace mgcl
         return ret;
     }
 
+    std::unique_ptr<Blockstencil> BlockstencilGpu::read_ptr(cl_command_queue queue, bool blocking)
+    {
+        return std::make_unique<Blockstencil>(read(queue, blocking));
+    }
+
     /**
      * Reads the gpu buffer into the supplied Blockstencil h_stencil.
      */
