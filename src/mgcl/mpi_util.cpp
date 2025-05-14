@@ -1,6 +1,7 @@
 #include "mpi_util.hpp"
 
 #include "blockstencil.hpp"
+#include "blockstencil_gpu.hpp"
 #include "cuboid.hpp"
 #include "mgcl.hpp"
 #include "mpi_level_data.hpp"
@@ -417,6 +418,21 @@ namespace mgcl::mpi_util
      * @param c Global grid for root process (rank 0), local grids for all other processes.
      */
     void gather(MPI_Comm comm, cl_command_queue commands, VaryingStencilGpu& c)
+    {
+        auto tmp = c.read(commands, true);
+        gather(comm, tmp);
+        c.fill(tmp, commands, true);
+    }
+
+    /**
+     * @brief Gathers all local grid blockstencils into one big grid blockstencil. Must be called from each process.
+     * On rank 0 c must have the size of the global grid, all other processes just need to send their local grid.
+     *
+     * @param comm MPI communicator.
+     * @param commands OpenCL command queue.
+     * @param c Global grid for root process (rank 0), local grids for all other processes.
+     */
+    void gather(MPI_Comm comm, cl_command_queue commands, BlockstencilGpu& c)
     {
         auto tmp = c.read(commands, true);
         gather(comm, tmp);
