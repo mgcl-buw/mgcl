@@ -162,7 +162,7 @@ namespace mgcl
 
         auto ptr = host_ptr ? host_ptr : ret.get();
         int err = clEnqueueReadBuffer(commands, buffer, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * size,
-                                      ptr->getData()[0][0][0], 0, NULL, NULL);
+                                      ptr->field1d().data(), 0, NULL, NULL);
         mgcl::mgclCheckError(err, "clEnqueueReadBuffer");
 
         return ret;
@@ -195,7 +195,7 @@ namespace mgcl
 
         auto ptr = host_ptr ? host_ptr : ret.get();
         int err = clEnqueueReadBuffer(commands, buffer, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * _size,
-                                      ptr->getData()[0][0][0], 0, NULL, NULL);
+                                      ptr->field1d().data(), 0, NULL, NULL);
         mgcl::mgclCheckError(err, "clEnqueueReadBuffer");
 
         return ret;
@@ -209,7 +209,7 @@ namespace mgcl
      * @param blocking Blocking Write, if true.
      * @throws string If Dimensions do not match.
      */
-    void CuboidBSGpu::write(cl_command_queue commands, const CuboidBS& host_data, bool blocking)
+    void CuboidBSGpu::write(cl_command_queue commands, CuboidBS& host_data, bool blocking)
     {
         if (host_data.getM() != m || host_data.getN() != n || host_data.getO() != o ||
             host_data.getGhostsM() != ghosts_m ||
@@ -219,7 +219,7 @@ namespace mgcl
             error("Dimensions do not match!");
 
         int err = clEnqueueWriteBuffer(commands, buffer, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * size,
-                                       host_data.getData()[0][0][0], 0, NULL, NULL);
+                                       host_data.field1d().data(), 0, NULL, NULL);
         mgcl::mgclCheckError(err, "clEnqueueReadBuffer");
     }
 
@@ -231,7 +231,7 @@ namespace mgcl
      * @param blocking Blocking Write, if true.
      * @throws string If Dimensions do not match.
      */
-    void CuboidBSGpu::write1d(cl_command_queue commands, int _size, const CuboidBS& host_data, bool blocking)
+    void CuboidBSGpu::write1d(cl_command_queue commands, int _size, CuboidBS& host_data, bool blocking)
     {
         if (host_data.getSize() < _size)
             error("CuboidBSGpu::write1d: Source host cuboid is too small!");
@@ -240,7 +240,7 @@ namespace mgcl
             error("CuboidBSGpu::write1d: Target device cuboid is too small!");
 
         int err = clEnqueueWriteBuffer(commands, buffer, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * _size,
-                                       host_data.getData()[0][0][0], 0, NULL, NULL);
+                                       host_data.field1d().data(), 0, NULL, NULL);
         mgcl::mgclCheckError(err, "clEnqueueReadBuffer");
     }
 
