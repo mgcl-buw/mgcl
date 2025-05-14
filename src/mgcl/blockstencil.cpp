@@ -492,7 +492,7 @@ namespace mgcl
      * It is assumed that the matrices are square and non-empty (blocksize > 0).
      * If a matrix is singular, nullptr will be returned.
      *
-     * @return std::unique_ptr<Blockstencil>
+     * @return std::unique_ptr<Blockstencil> inverted Blockstencil with width=1, m,n,o and blocksize same as this, ghosts=0
      */
     std::unique_ptr<Blockstencil> Blockstencil::invertDiagonal() const
     {
