@@ -6,6 +6,8 @@
 
 #include "blockstencil.hpp"
 #include "blockstencil_gpu.hpp"
+#include "cuboid_bs.hpp"
+#include "cuboid_bs_gpu.hpp"
 #include "mpi.h"
 
 #include "cuboid.hpp"
@@ -16,6 +18,8 @@ namespace mgcl::mpi_util
 {
     void gather(MPI_Comm comm, Cuboid& c);
     void gather(MPI_Comm comm, cl_command_queue commands, CuboidGpu& c);
+    void gather(MPI_Comm comm, CuboidBS& c);
+    void gather(MPI_Comm comm, cl_command_queue commands, CuboidBSGpu& c);
     void gather(MPI_Comm comm, VaryingStencil& c);
     void gather(MPI_Comm comm, cl_command_queue commands, VaryingStencilGpu& c);
     void gather(MPI_Comm comm, Blockstencil& c);
