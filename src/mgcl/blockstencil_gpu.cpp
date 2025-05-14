@@ -101,7 +101,7 @@ namespace mgcl
 
         int err = clEnqueueWriteBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0,
                                        sizeof(double) * getSize(),
-                                       f[0][0][0][0][0], 0, NULL, NULL);
+                                       f.field1d().data(), 0, NULL, NULL);
         mgclCheckError(err, "clEnqueueWriteBuffer");
     }
 
