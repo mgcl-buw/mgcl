@@ -535,6 +535,21 @@ namespace mgcl::mpi_util
     }
 
     /**
+     * @brief Gathers all local grids into one big grid. Must be called from each process. On rank 0 c must have the
+     *   size of the global grid, all other processes just need to send their local grid.
+     *
+     * @param comm MPI communicator.
+     * @param commands OpenCL command queue.
+     * @param c Global grid for root process (rank 0), local grids for all other processes.
+     */
+    void gather(MPI_Comm comm, cl_command_queue commands, CuboidBSGpu& c)
+    {
+        auto tmp = c.read(commands, nullptr, true);
+        gather(comm, *tmp);
+        c.write(commands, *tmp, true);
+    }
+
+    /**
      * @brief Gathers all local grid stencils into one big grid stencil. Must be called from each process.
      * On rank 0 c must have the size of the global grid, all other processes just need to send their local grid.
      *

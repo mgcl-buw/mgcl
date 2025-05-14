@@ -213,6 +213,7 @@ if [ "$TEST_UTIL" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 17 "$exe" "mpi_util::scatter-src-dest-different"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::scatter-src-dest-same-with-ghosts"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::gather-src-dest-same-stencil"
+    run_test --oversubscribe -n 17 "$exe" "mpi_util::gather-cuboidbs-src-dest-same"
     run_test --oversubscribe -n 17 "$exe" "mpi_util::gather-blockstencil-src-dest-same"
 
     run_test --oversubscribe -n 2 "$exe" "mpi_util::sendBorderPlanes_cuboid"
@@ -232,6 +233,7 @@ if [ "$TEST_UTIL" = true ] || [ "$TEST_ALL" = true ] ; then
       run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-GPU-src-dest-same-different-gh" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 17 "$exe" "mpi_util::scatter-GPU-src-dest-same-with-ghosts" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-GPU-src-dest-same-stencil" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-cuboidbs-src-dest-same-ocl" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 5 "$exe" "mpi_util::gather-blockstencil-src-dest-same-ocl" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
 fi
