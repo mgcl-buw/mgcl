@@ -1,11 +1,16 @@
 #ifndef MGCL_LEVEL_HPP
 #define MGCL_LEVEL_HPP
 
+#include "blockstencil.hpp"
+#include "blockstencil_gpu.hpp"
+#include "cuboid_bs.hpp"
+#include "cuboid_bs_gpu.hpp"
 #include "cuboid_gpu.hpp"
 #include "mgcl.hpp" // for MGCL_STENCIL
 #include "mpi_level_data.hpp"
 #include "stencil.hpp" // for VaryingStencil3x3x3
 
+#include <cassert>
 #include <memory> // for shared_ptr
 #include <ostream>
 
@@ -34,6 +39,9 @@ namespace mgcl
         std::shared_ptr<Cuboid> v = nullptr;
         std::shared_ptr<Cuboid> f = nullptr;
         std::shared_ptr<Cuboid> r = nullptr;
+        std::shared_ptr<CuboidBS> v_bs = nullptr;
+        std::shared_ptr<CuboidBS> f_bs = nullptr;
+        std::shared_ptr<CuboidBS> r_bs = nullptr;
 
         /* Stencil for this Level that will be applied on v */
         MGCL_STENCIL stencilType;
@@ -41,6 +49,10 @@ namespace mgcl
         std::shared_ptr<VaryingStencil> stencilValues = nullptr;
         std::shared_ptr<VaryingStencilGpu> stencilValuesGpu = nullptr;
         std::shared_ptr<FixedStencil> fixedStencil = nullptr;
+        std::shared_ptr<Blockstencil> blockstencil = nullptr;
+        std::shared_ptr<BlockstencilGpu> blockstencilGpu = nullptr;
+        std::shared_ptr<Blockstencil> blockstencilInv = nullptr;
+        std::shared_ptr<BlockstencilGpu> blockstencilGpuInv = nullptr;
 
         /* grid dimensions of local real grid */
         int m;
@@ -61,6 +73,11 @@ namespace mgcl
         std::shared_ptr<CuboidGpu> dF = nullptr;
         std::shared_ptr<CuboidGpu> dR = nullptr;
         std::shared_ptr<CuboidGpu> dRsq = nullptr; // temporary buffer for storing the squared residual
+        std::shared_ptr<CuboidBSGpu> dVIn_bs = nullptr;
+        std::shared_ptr<CuboidBSGpu> dVOut_bs = nullptr;
+        std::shared_ptr<CuboidBSGpu> dF_bs = nullptr;
+        std::shared_ptr<CuboidBSGpu> dR_bs = nullptr;
+        std::shared_ptr<CuboidBSGpu> dRsq_bs = nullptr; // temporary buffer for storing the squared residual
 
         /* MPI relevant data, e.g. neighbour process ranks. Null if Problem::useMpi is false. */
         std::unique_ptr<MPILevelData> mpiData = nullptr;
@@ -79,6 +96,8 @@ namespace mgcl
 
         bool init();
         int initOpenCLBuffers();
+        bool initBlockstencil();
+        int initOpenCLBuffersBlockstencil();
         int initMpiData();
 
         int getNum() const;
@@ -92,6 +111,32 @@ namespace mgcl
         Cuboid& getR() const;
         std::shared_ptr<Cuboid> getRPtr() const;
         void setR(const std::shared_ptr<Cuboid>& r_);
+
+        CuboidBS& getVBS() const;
+        std::shared_ptr<CuboidBS> getVBSPtr() const;
+        void setVBS(const std::shared_ptr<CuboidBS>& v_);
+        CuboidBS& getFBS() const;
+        std::shared_ptr<CuboidBS> getFBSPtr() const;
+        void setFBS(const std::shared_ptr<CuboidBS>& f_);
+        CuboidBS& getRBS() const;
+        std::shared_ptr<CuboidBS> getRBSPtr() const;
+        void setRBS(const std::shared_ptr<CuboidBS>& r_);
+
+        CuboidBSGpu& getDVBSIn() const;
+        std::shared_ptr<CuboidBSGpu> getDVBSInPtr() const;
+        void setDVBSIn(const std::shared_ptr<CuboidBSGpu>& v_);
+        CuboidBSGpu& getDVBSOut() const;
+        std::shared_ptr<CuboidBSGpu> getDVBSOutPtr() const;
+        void setDVBSOut(const std::shared_ptr<CuboidBSGpu>& v_);
+        CuboidBSGpu& getDFBS() const;
+        std::shared_ptr<CuboidBSGpu> getDFBSPtr() const;
+        void setDFBS(const std::shared_ptr<CuboidBSGpu>& f_);
+        CuboidBSGpu& getDRBS() const;
+        std::shared_ptr<CuboidBSGpu> getDRBSPtr() const;
+        void setDRBS(const std::shared_ptr<CuboidBSGpu>& r_);
+        std::shared_ptr<CuboidBSGpu> getDRsqBSPtr() const;
+        CuboidBSGpu& getDRsqBS() const;
+        void setDRsqBS(const std::shared_ptr<CuboidBSGpu> dR_);
 
         int getM() const;
         int getN() const;
@@ -133,11 +178,17 @@ namespace mgcl
 
         std::shared_ptr<VaryingStencil>& getStencilValues();
         std::shared_ptr<FixedStencil>& getFixedStencil();
+        std::shared_ptr<Blockstencil>& getBlockstencil() { return blockstencil; }
+        std::shared_ptr<Blockstencil>& getBlockstencilInv() { return blockstencilInv; }
 
         double getStencilFactor() const;
 
         std::shared_ptr<VaryingStencilGpu>& getStencilValuesGpu();
         void setStencilValuesGpu(std::shared_ptr<VaryingStencilGpu> sv);
+        inline std::shared_ptr<BlockstencilGpu>& getBlockstencilGpu() { return blockstencilGpu; }
+        inline void setBlockstencilGpu(std::shared_ptr<BlockstencilGpu> sv) { blockstencilGpu = sv; }
+        inline std::shared_ptr<BlockstencilGpu>& getBlockstencilGpuInv() { return blockstencilGpuInv; }
+        inline void setBlockstencilGpuInv(std::shared_ptr<BlockstencilGpu> sv) { blockstencilGpuInv = sv; }
 
         bool isCalculatedLocally() const;
 

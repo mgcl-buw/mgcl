@@ -1,4 +1,5 @@
 #include "level.hpp"
+#include "blockstencil.hpp"
 #include "cuboid.hpp" // for Cuboid
 #include "mgcl.hpp"
 #include "mpi_stencil.hpp"
@@ -71,6 +72,9 @@ namespace mgcl
         if (m <= 0 || n <= 0 || o <= 0)
             return true;
 
+        if (stencilType == MGCL_BLOCKSTENCIL)
+            return initBlockstencil();
+
         // First init MPI data to get information about neighbours and be able to update ghosts.
         initMpiData();
 
@@ -84,7 +88,7 @@ namespace mgcl
 
                 // TODO refactor updateGhosts local?
                 updateGhostsStencilMpi(*stencilValues, mpiData.get(), problem->isPeriodic(),
-                                       problem->getMpiLevelThreshold() == 0);
+                                       isCalculatedLocally()); // TODO test
             }
 
             // copy fixedStencil pointer from Problem to first Level
@@ -149,6 +153,96 @@ namespace mgcl
             }
 
             if (initOpenCLBuffers() != CL_SUCCESS)
+                return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @brief Initializes data for this level if stenciltype is blockstencil.
+     *
+     * @return true All good.
+     * @return false Something went wrong.
+     */
+    bool Level::initBlockstencil()
+    {
+        assert(stencilType == MGCL_BLOCKSTENCIL && "Level::initBlockstencil(): stencilType is not MGCL_BLOCKSTENCIL.");
+
+        if (m <= 0 || n <= 0 || o <= 0)
+            return true;
+
+        // First init MPI data to get information about neighbours and be able to update ghosts.
+        initMpiData();
+
+        // Always allocate data on level 0 so input data is copied and not left uninitialized.
+        if (num == 0)
+        {
+            // copy stencilsValues pointer from Problem to first Level and update ghosts
+            blockstencil = problem->blockstencil;
+
+            // TODO refactor updateGhosts local?
+            blockstencil->updateGhosts(mpiData.get(), isCalculatedLocally());
+
+            // create ghosted arrays for v and f on host if device buffer should not be reused
+            if (!problem->reuse_opencl_buffers && !problem->copy_buffer_data)
+            {
+                v_bs = std::make_shared<CuboidBS>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts, problem->getBlocksize());
+                f_bs = std::make_shared<CuboidBS>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts, problem->getBlocksize());
+
+                // copy initial input data from conf into mgcl data struct
+                for (int i = 0; i < problem->getVBS().getM(); i++)
+                    for (int j = 0; j < problem->getVBS().getN(); j++)
+                        for (int k = 0; k < problem->getVBS().getO(); k++)
+                            for (size_t b = 0; b < problem->getBlocksize(); b++)
+                            {
+                                getVBS()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts][b] =
+                                    problem->getVBS()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in][b];
+                                getFBS()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts][b] =
+                                    problem->getFBS()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in][b];
+                            }
+
+                // If mgcl is run with multiple processes, but already level 0 shall be calculated on only one process
+                // (i.e. mpiMinGridPoints > min(m_local,n_local,o_local)), gather data on rank 0.
+                if (problem->useMpi() && problem->mpiSize() > 1 && problem->getMpiLevelThreshold() <= 0)
+                {
+                    mpi_util::gather(problem->getMpiComm(), getVBS());
+                    mpi_util::gather(problem->getMpiComm(), getFBS());
+                    // TODO what to do when reuse_opencl_buffers?
+                }
+
+                if (problem->isPeriodic())
+                {
+                    getFBS().updateGhosts(mpiData.get(), isCalculatedLocally());
+                }
+            }
+
+            // r on host is only needed if opencl should not be used
+            if (!problem->use_opencl)
+            {
+                r_bs = std::make_shared<CuboidBS>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts, problem->getBlocksize());
+            }
+
+            // TODO check this with mpi
+            if (initOpenCLBuffersBlockstencil() != CL_SUCCESS)
+                return false;
+        }
+        // TODO revisit, maybe not worth the effort since coarse levels are small anyways
+        // else if (!problem->useMpi() || !isCalculatedLocally() || mpiData->rank == 0)
+        else
+        {
+            // Only allocate data on coarser levels, if
+            // 1. mgcl is run without MPI at all, or
+            // 2. mgcl is run with MPI and this level is below the level threshold (i.e. enough grid points), or
+            // 3. mgcl is run with MPI, this level is equal to or above the level threshold but the rank is 0.
+            if (!problem->use_opencl)
+            {
+                v_bs = std::make_shared<CuboidBS>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts, problem->getBlocksize());
+                f_bs = std::make_shared<CuboidBS>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts, problem->getBlocksize());
+                r_bs = std::make_shared<CuboidBS>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts, problem->getBlocksize());
+            }
+
+            if (initOpenCLBuffersBlockstencil() != CL_SUCCESS)
                 return false;
         }
 
@@ -241,6 +335,102 @@ namespace mgcl
 
         err = MultigridEngine::updateGhosts(*problem, *dF, mpiData.get(), isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts of d_f");
+
+        return CL_SUCCESS;
+    }
+
+    /**
+     * @brief Initializes OpenCL buffers for this level based on settings. Returns immediately if use_opencl is false.
+     *
+     * @return int error code from OpenCL calls.
+     */
+    int Level::initOpenCLBuffersBlockstencil()
+    {
+        assert(stencilType == MGCL_BLOCKSTENCIL && "Level::initOpenCLBuffersBlockstencil(): stencilType is not MGCL_BLOCKSTENCIL.");
+
+        if (!problem->getUseOpencl())
+            return CL_SUCCESS;
+
+        auto context = problem->getOpenCLHelper().getContext();
+        auto deviceType = problem->getOpenCLHelper().getDeviceType();
+
+        // create d_v_in and d_f buffers on level zero and copy data to it only if buffers should not be reused
+        if (num == 0)
+        {
+            // create gpu buffer for blockstencil if needed
+            // If level threshold is 0, blockstencil must have global sizes.
+            if (problem->getMpiLevelThreshold() == 0 && problem->mpiRank() == 0)
+            {
+                blockstencilGpu = std::make_shared<BlockstencilGpu>(
+                    problem->mGlobal, problem->nGlobal, problem->oGlobal, 3, blockstencil->getBlocksize(),
+                    std::max(1, problem->getJacobiIterationsPerKernel()),
+                    problem->getContext(), problem->getCommands(), problem->getProgram());
+            }
+            else
+            {
+                blockstencilGpu = std::make_shared<BlockstencilGpu>(
+                    m, n, o, 3, blockstencil->getBlocksize(),
+                    std::max(1, problem->getJacobiIterationsPerKernel()),
+                    problem->getContext(), problem->getCommands(), problem->getProgram());
+            }
+
+            // Fill stencil values on gpu on level 0 from input stencil
+            blockstencilGpu->fill(*blockstencil, problem->getCommands(), true);
+
+            // if (problem->getReuseOpenclBuffers())
+            // {
+            //     dVIn = problem->getDVPtr();
+            //     dF = problem->getDFPtr();
+
+            //     // TODO check with CuboidGpu
+            //     // // retain buffers (i.e. increase internal reference count so they won't be released by accident)
+            //     // err = clRetainMemObject(dVIn);
+            //     // mgclCheckError(err, "clRetainMemObject(dVIn)");
+            //     // err = clRetainMemObject(dF);
+            //     // mgclCheckError(err, "clRetainMemObject(dF)");
+            // }
+            // else if (problem->getCopyBufferData())
+            // {
+            //     dVIn = std::make_shared<CuboidGpu>(context, CL_MEM_READ_WRITE, m, n, o,
+            //                                        problem->getGhosts(), problem->getGhosts(), problem->getGhosts());
+            //     dF = std::make_shared<CuboidGpu>(context, CL_MEM_READ_WRITE, m, n, o,
+            //                                      problem->getGhosts(), problem->getGhosts(), problem->getGhosts());
+            //     problem->getOpenCLHelper().copyInputBuffers();
+            // }
+            // else
+            // {
+            int pointer_flag = deviceType == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
+            dVIn_bs = std::make_shared<CuboidBSGpu>(context, pointer_flag | CL_MEM_READ_WRITE, *v_bs);
+            dF_bs = std::make_shared<CuboidBSGpu>(context, pointer_flag | CL_MEM_READ_WRITE, *f_bs);
+            // }
+        }
+        else
+        {
+            dVIn_bs = std::make_shared<CuboidBSGpu>(context, CL_MEM_READ_WRITE, m, n, o,
+                                                    problem->getGhosts(), problem->getGhosts(), problem->getGhosts(),
+                                                    problem->getBlocksize());
+            dF_bs = std::make_shared<CuboidBSGpu>(context, CL_MEM_READ_WRITE, m, n, o,
+                                                  problem->getGhosts(), problem->getGhosts(), problem->getGhosts(),
+                                                  problem->getBlocksize());
+        }
+
+        dVOut_bs = std::make_shared<CuboidBSGpu>(context, CL_MEM_READ_WRITE, m, n, o,
+                                                 problem->getGhosts(), problem->getGhosts(), problem->getGhosts(),
+                                                 problem->getBlocksize());
+        dR_bs = std::make_shared<CuboidBSGpu>(context, CL_MEM_READ_WRITE, m, n, o,
+                                              problem->getGhosts(), problem->getGhosts(), problem->getGhosts(),
+                                              problem->getBlocksize());
+        dRsq_bs = std::make_shared<CuboidBSGpu>(context, CL_MEM_WRITE_ONLY, m, n, o, 0, 0, 0, problem->getBlocksize());
+
+        dVOut_bs->fill(problem->getProgram(), problem->getCommands(), 0.0, false, &problem->getKernelConfig(), problem->getProfilingData());
+        dR_bs->fill(problem->getProgram(), problem->getCommands(), 0.0, false, &problem->getKernelConfig(), problem->getProfilingData());
+        dRsq_bs->fill(problem->getProgram(), problem->getCommands(), 0.0, false, &problem->getKernelConfig(), problem->getProfilingData());
+
+        dF_bs->updateGhostsOclMpi(
+            problem->getProgram(), problem->getCommands(),
+            problem->getDPlanesBufPtr(), problem->getHPlanesBufSendPtr(), problem->getHPlanesBufRecvPtr(),
+            mpiData.get(), isCalculatedLocally(),
+            &problem->getKernelConfig(), problem->getProfilingData());
 
         return CL_SUCCESS;
     }
@@ -724,6 +914,142 @@ namespace mgcl
             return *mpiData;
         else
             error("mpiData is null.");
+    }
+
+    CuboidBS& Level::getVBS() const
+    {
+        if (!v_bs)
+            error("v_bs is null!");
+        return *v_bs;
+    }
+
+    std::shared_ptr<CuboidBS> Level::getVBSPtr() const
+    {
+        return v_bs;
+    }
+
+    void Level::setVBS(const std::shared_ptr<CuboidBS>& v_)
+    {
+        v_bs = v_;
+    }
+
+    CuboidBS& Level::getFBS() const
+    {
+        if (!f_bs)
+            error("f_bs is null!");
+        return *f_bs;
+    }
+
+    std::shared_ptr<CuboidBS> Level::getFBSPtr() const
+    {
+        return f_bs;
+    }
+
+    void Level::setFBS(const std::shared_ptr<CuboidBS>& f_)
+    {
+        f_bs = f_;
+    }
+
+    CuboidBS& Level::getRBS() const
+    {
+        if (!r_bs)
+            error("r_bs is null!");
+        return *r_bs;
+    }
+
+    std::shared_ptr<CuboidBS> Level::getRBSPtr() const
+    {
+        return r_bs;
+    }
+
+    void Level::setRBS(const std::shared_ptr<CuboidBS>& r_)
+    {
+        r_bs = r_;
+    }
+
+    CuboidBSGpu& Level::getDVBSIn() const
+    {
+        if (!dVIn_bs)
+            error("dVBS is null.");
+        return *dVIn_bs;
+    }
+
+    std::shared_ptr<CuboidBSGpu> Level::getDVBSInPtr() const
+    {
+        return dVIn_bs;
+    }
+
+    void Level::setDVBSIn(const std::shared_ptr<CuboidBSGpu>& v_)
+    {
+        dVIn_bs = v_;
+    }
+
+    CuboidBSGpu& Level::getDVBSOut() const
+    {
+        if (!dVOut_bs)
+            error("dVBS is null.");
+        return *dVOut_bs;
+    }
+
+    std::shared_ptr<CuboidBSGpu> Level::getDVBSOutPtr() const
+    {
+        return dVOut_bs;
+    }
+
+    void Level::setDVBSOut(const std::shared_ptr<CuboidBSGpu>& v_)
+    {
+        dVOut_bs = v_;
+    }
+
+    CuboidBSGpu& Level::getDFBS() const
+    {
+        if (!dF_bs)
+            error("dFBS is null.");
+        return *dF_bs;
+    }
+
+    std::shared_ptr<CuboidBSGpu> Level::getDFBSPtr() const
+    {
+        return dF_bs;
+    }
+
+    void Level::setDFBS(const std::shared_ptr<CuboidBSGpu>& f_)
+    {
+        dF_bs = f_;
+    }
+
+    CuboidBSGpu& Level::getDRBS() const
+    {
+        if (!dR_bs)
+            error("dRBS is null.");
+        return *dR_bs;
+    }
+
+    std::shared_ptr<CuboidBSGpu> Level::getDRBSPtr() const
+    {
+        return dR_bs;
+    }
+
+    void Level::setDRBS(const std::shared_ptr<CuboidBSGpu>& r_)
+    {
+        dR_bs = r_;
+    }
+
+    CuboidBSGpu& Level::getDRsqBS() const
+    {
+        if (!dRsq_bs)
+            error("dRsqBS is null.");
+        return *dRsq_bs;
+    }
+
+    std::shared_ptr<CuboidBSGpu> Level::getDRsqBSPtr() const
+    {
+        return dRsq_bs;
+    }
+
+    void Level::setDRsqBS(const std::shared_ptr<CuboidBSGpu> dR_)
+    {
+        dRsq_bs = dR_;
     }
 
     /**
