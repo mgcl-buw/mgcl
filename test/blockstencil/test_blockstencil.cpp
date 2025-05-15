@@ -735,14 +735,26 @@ TEST_CASE("Blockstencil::invertDiagonal")
     int m = 1;
     int n = 2;
     int o = 3;
-    int ghm = 0;
-    int ghn = 0;
-    int gho = 0;
+    int ghm = GENERATE(0, 1);
+    int ghn = 1;
+    int gho = 1;
     int width = 3;
     int blocksize = 2;
 
     mgcl::Blockstencil s(m, n, o, width, blocksize, ghm, ghn, gho);
-    s.fill1dIndex(true);
+    // fill with 1d real cell indices, as if there were no ghosts
+    int cnt = 0;
+    for (int d1 = s.getGhostsDim1(); d1 < s.getDim1() + s.getGhostsDim1(); d1++)
+        for (int d2 = s.getGhostsDim2(); d2 < s.getDim2() + s.getGhostsDim2(); d2++)
+            for (int d3 = s.getGhostsDim3(); d3 < s.getDim3() + s.getGhostsDim3(); d3++)
+                for (int d4 = s.getGhostsDim4(); d4 < s.getDim4() + s.getGhostsDim4(); d4++)
+                    for (int d5 = s.getGhostsDim5(); d5 < s.getDim5() + s.getGhostsDim5(); d5++)
+                        for (int d6 = s.getGhostsDim6(); d6 < s.getDim6() + s.getGhostsDim6(); d6++)
+                            for (int d7 = s.getGhostsDim7(); d7 < s.getDim7() + s.getGhostsDim7(); d7++)
+                                for (int d8 = s.getGhostsDim8(); d8 < s.getDim8() + s.getGhostsDim8(); d8++)
+                                {
+                                    s[d1][d2][d3][d4][d5][d6][d7][d8] = cnt++;
+                                }
     // s.dumpToFile("s.txt");
 
     SECTION("success")
@@ -833,8 +845,8 @@ TEST_CASE("Blockstencil::invertDiagonal")
     // Check that inversion of a singular matrix returns nullptr.
     SECTION("singular")
     {
-        s[0][0][1][1][1][0][0][0] = 0;
-        s[0][1][1][1][1][0][0][0] = 0;
+        s[0][0][1][1][1][ghm][ghn][gho] = 0;
+        s[0][1][1][1][1][ghm][ghn][gho] = 0;
 
         auto s2 = s.invertDiagonal();
         REQUIRE(s2 == nullptr);

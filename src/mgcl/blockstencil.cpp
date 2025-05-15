@@ -568,7 +568,7 @@ namespace mgcl
                     {
                         for (int j = 0; j < b; ++j)
                         {
-                            (*ret)[i][j][0][0][0][gpi][gpj][gpk] = augmentedMatrix[i][j + b];
+                            (*ret)[i][j][0][0][0][gpi - getGhostsM()][gpj - getGhostsN()][gpk - getGhostsO()] = augmentedMatrix[i][j + b];
                         }
                     }
                 }
