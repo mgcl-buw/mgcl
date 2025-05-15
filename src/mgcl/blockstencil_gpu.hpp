@@ -83,6 +83,8 @@ namespace mgcl
                                          BufferGpu& d_ghosts,
                                          mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
+        std::unique_ptr<BlockstencilGpu> invertDiagonal(cl_context context, cl_command_queue queue, cl_program program);
+
         void dumpToFile(cl_command_queue commands, std::string path, bool realCellsOnly);
 
         inline int getM() const { return m; }

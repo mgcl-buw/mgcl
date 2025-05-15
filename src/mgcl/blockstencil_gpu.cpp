@@ -483,6 +483,17 @@ namespace mgcl
         mgcl::mgclCheckError(err, "Releasing paste_ghosts_from_border_planes_blockstencil kernel");
     }
 
+    std::unique_ptr<BlockstencilGpu> BlockstencilGpu::invertDiagonal(cl_context context, cl_command_queue queue, cl_program program)
+    {
+        // TODO create native gpu implementation?
+        auto tmp = read(queue, true);
+        auto inv = tmp.invertDiagonal();
+        if (!inv)
+            error("BlockstencilGpu::invertDiagonal: At least one blockstencil is singular.");
+
+        return std::make_unique<BlockstencilGpu>(*inv, context, queue, program);
+    }
+
     std::ostream& operator<<(std::ostream& os, const BlockstencilGpu& v)
     {
         os << "BlockstencilGpu: " << std::endl

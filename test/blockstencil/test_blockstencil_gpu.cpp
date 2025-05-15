@@ -925,3 +925,39 @@ TEST_CASE("BlockstencilGpu::pasteGhostsFromBorderPlanes")
 
     checkResult(h_stencil, h_planes.data());
 }
+
+TEST_CASE("BlockstencilGpu::invertDiagonal")
+{
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    int m = 4;
+    int n = 4;
+    int o = 4;
+    int ghosts_m = 1;
+    int ghosts_n = 1;
+    int ghosts_o = 1;
+    int blocksize = 2;
+
+    // create dummy problem
+    auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
+    p.setUseOpencl(true);
+    p.setDeviceType(deviceType);
+    p.setProfilingEnabled(true);
+    p.init();
+
+    mgcl::Blockstencil bs(m, n, o, 3, blocksize, ghosts_m, ghosts_n, ghosts_o);
+    bs.fill1dIndex(true);
+    auto bs_inv = bs.invertDiagonal();
+    REQUIRE(bs_inv);
+
+    mgcl::BlockstencilGpu d_bs(bs, p.getContext(), p.getCommands(), p.getProgram());
+
+    auto d_bs_inv = d_bs.invertDiagonal(p.getContext(), p.getCommands(), p.getProgram());
+    p.finish();
+
+    auto d_bs_inv_test = d_bs_inv->read(p.getCommands(), true);
+
+    REQUIRE(d_bs_inv_test.isEqual(*bs_inv));
+}
