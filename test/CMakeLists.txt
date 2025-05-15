@@ -46,6 +46,7 @@ set(SOURCES_TEST
     blockstencil/test_fixed_blockstencil_gpu.cpp
     blockstencil/test_bs_jacobi.cpp
     blockstencil/test_bs_galerkin.cpp
+    blockstencil/test_bs_level.cpp
 )
 
 add_executable(tests ${SOURCES_TEST} ${BACKWARD_ENABLE})
