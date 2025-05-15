@@ -933,9 +933,7 @@ TEST_CASE("BlockstencilGpu::invertDiagonal")
     int m = 4;
     int n = 4;
     int o = 4;
-    int ghosts_m = 1;
-    int ghosts_n = 1;
-    int ghosts_o = 1;
+    int gh = 1;
     int blocksize = 2;
 
     // create dummy problem
@@ -947,7 +945,7 @@ TEST_CASE("BlockstencilGpu::invertDiagonal")
     p.setProfilingEnabled(true);
     p.init();
 
-    mgcl::Blockstencil bs(m, n, o, 3, blocksize, ghosts_m, ghosts_n, ghosts_o);
+    mgcl::Blockstencil bs(m, n, o, 3, blocksize, gh, gh, gh);
     bs.fill1dIndex(true);
     auto bs_inv = bs.invertDiagonal();
     REQUIRE(bs_inv);
