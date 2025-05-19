@@ -118,6 +118,136 @@ namespace mgcl
         return res;
     }
 
+    /* Runs V-cycle recursively and sequentially */
+    double MultigridEngine::vcycleSeqBlockstencil(Problem& problem, Level& level)
+    {
+
+        auto& levelAbove = problem.getLevelAt(level.num + 1);
+        // printf("level.getNum() = %d, m = %3.d\n", level.getNum(), level.m-2);
+        // problem.maxlevel = 7;
+        double res;
+
+        // reset initial guess of coarser grid
+        if (level.getNum() < problem.maxlevel && levelAbove.getVBSPtr() != nullptr)
+        {
+            levelAbove.getVBS().fill(0);
+        }
+
+        // relax nu1 times
+        args::JacobiBSSeqArgs jacobi_args1{
+            level.getFBS(), level.getVBS(), level.getRBS(),
+            problem.residual_norm,
+            *level.blockstencil, *level.blockstencilInv,
+            false, problem.isPeriodic(),
+            level.isCalculatedLocally(),
+            problem.nu1, problem.jacobi_iterations_per_kernel,
+            problem.omega,
+            level.getMpiDataPtr()};
+        MultigridEngine::jacobiSeq(jacobi_args1);
+
+        // update residual before restriction
+        args::ResidualBSSeqArgs residual_args{
+            level.getFBS(), level.getVBS(), level.getRBS(),
+            problem.residual_norm,
+            *level.blockstencil,
+            false, problem.isPeriodic(),
+            level.isCalculatedLocally(),
+            0, 0, 0,
+            level.getMpiDataPtr()};
+        residualSeq(residual_args);
+
+        // restrict residual as right hand side on coarser grid
+        // TODO do not update ghosts of coarse grid before gather (size too small)
+        args::RestrictionBSSeqArgs restriction_args{
+            level.getRBS(), levelAbove.getFBS(),
+            *problem.getRestrictionBlockstencil(),
+            problem.isPeriodic(),
+            level.isCalculatedLocally(),
+            levelAbove.isCalculatedLocally(),
+            level.getMpiDataPtr(), levelAbove.getMpiDataPtr()};
+        MultigridEngine::restrictSeqBlockstencil(restriction_args);
+
+        // If MPI is in use but minGridPoints is reached, gather rhs data to process 0 and perform calculations
+        // locally only, until we're reaching the threshold level moving downwards again.
+        if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
+        {
+            mpi_util::gather(problem.getMpiComm(), levelAbove.getFBS());
+
+            // Update ghosts of gathered
+            // TODO check Dirichlet
+            if (problem.isPeriodic() && problem.mpiRank() == 0)
+            {
+                levelAbove.getFBS().updateGhosts(levelAbove.getMpiDataPtr(), levelAbove.isCalculatedLocally());
+            }
+        }
+
+        // TODO update ghosts of levelABove.F here when using gh > 1
+
+        // Advance to coarser levels only if
+        // 1. not using MPI at all (or on only one process), or
+        // 2. coarser level is still calculated distributively, or
+        // 3. rank is 0
+        if (!problem.useMpi() || !levelAbove.isCalculatedLocally() || problem.mpiRank() == 0)
+        {
+            // start next v-cycle iteration if not at highest level
+            if (level.getNum() < problem.maxlevel - 1)
+                MultigridEngine::vcycleSeqBlockstencil(problem, levelAbove);
+            else
+            {
+                args::JacobiBSSeqArgs jacobi_args{
+                    levelAbove.getFBS(), levelAbove.getVBS(), levelAbove.getRBS(),
+                    problem.residual_norm,
+                    *levelAbove.blockstencil, *levelAbove.blockstencilInv,
+                    false, problem.isPeriodic(),
+                    levelAbove.isCalculatedLocally(),
+                    problem.nu1 + problem.nu2, problem.jacobi_iterations_per_kernel,
+                    problem.omega,
+                    levelAbove.getMpiDataPtr()};
+                MultigridEngine::jacobiSeq(jacobi_args);
+
+                // printf("post v[0] = %e, f[0] = %e\n", data[level.getNum()+1].getVBS()[1][1][1], data[level.getNum()+1].getFBS()[1][1][1]);
+            }
+        }
+
+        // If MPI is in use but minGridPoints is reached, scatter v data from process 0 to others and continue
+        // distributed calulcations.
+        if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
+            mpi_util::scatter_inplace_wgh(problem.getMpiComm(), levelAbove.getVBS());
+
+        // prolongate from coarser to finer grid
+        // r of this level is reused here and should actually be called e
+        args::ProlongationBSSeqArgs prolongation_args{
+            level.getRBS(), levelAbove.getVBS(),
+            *problem.getRestrictionBlockstencil(),
+            problem.isPeriodic(),
+            level.isCalculatedLocally(),
+            levelAbove.isCalculatedLocally(),
+            level.getMpiDataPtr(), levelAbove.getMpiDataPtr()};
+        MultigridEngine::prolongateSeqBlockstencil(prolongation_args);
+
+        // correct error
+        for (int i = problem.ghosts; i < level.m + problem.ghosts; i++)
+            for (int j = problem.ghosts; j < level.n + problem.ghosts; j++)
+                for (int k = problem.ghosts; k < level.o + problem.ghosts; k++)
+                    for (size_t b = 0; b < level.getVBS().getBlocksize(); b++)
+                        level.getVBS()[i][j][k][b] += level.getRBS()[i][j][k][b];
+
+        // relax nu2 times
+        args::JacobiBSSeqArgs jacobi_args2{
+            level.getFBS(), level.getVBS(), level.getRBS(),
+            problem.residual_norm,
+            *level.blockstencil, *level.blockstencilInv,
+            !problem.ignoreTol, problem.isPeriodic(),
+            level.isCalculatedLocally(),
+            problem.nu1, problem.jacobi_iterations_per_kernel,
+            problem.omega,
+            level.getMpiDataPtr()};
+        res = jacobiSeq(jacobi_args2);
+
+        // printf("res on level %d, downwards: %.17e\n", level.getNum(), res);
+        return res;
+    }
+
     /* Runs V-cycle recursively using ocl */
     double MultigridEngine::vcycle(Problem& problem, Level& level)
     {

@@ -252,7 +252,7 @@ namespace mgcl
                     args.returnResidualNorm,
                     args.periodic,
                     args.updateGhostsLocally,
-                    args.moff, args.noff, args.ooff,
+                    off, off, off,
                     args.mpiData};
                 res = residualSeq(residualArgs);
 
@@ -290,7 +290,7 @@ namespace mgcl
                 args.returnResidualNorm,
                 args.periodic,
                 args.updateGhostsLocally,
-                args.moff, args.noff, args.ooff,
+                0, 0, 0,
                 args.mpiData};
             res = residualSeq(residualArgs);
         }

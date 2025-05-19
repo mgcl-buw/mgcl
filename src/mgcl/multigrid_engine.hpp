@@ -134,9 +134,6 @@ namespace mgcl
             int stepsPerIter;
             double omega;
 
-            int moff = 0;
-            int noff = 0;
-            int ooff = 0;
             MPILevelData* mpiData = nullptr;
         };
 
@@ -227,6 +224,7 @@ namespace mgcl
     {
     public:
         static double vcycleSeq(Problem& problem, Level& level);
+        static double vcycleSeqBlockstencil(Problem& problem, Level& level);
         static double vcycle(Problem& problem, Level& level);
         static int correctError(Level& level);
 

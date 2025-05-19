@@ -179,7 +179,7 @@ TEST_CASE("seq_bs_jacobi_independent_quantities")
             true,
             periodic,
             true, iters, stepsPerIter, omega,
-            0, 0, 0, nullptr};
+            nullptr};
 
         double res = mgcl::MultigridEngine::jacobiSeq(args);
 

@@ -473,6 +473,258 @@ TEST_CASE("mpi_util::gather-blockstencil-src-dest-same-ocl")
     MPI_Barrier(mpi_comm);
 }
 
+// Checks that scattering is correct while rank 0 has the same globally sized buffer for sending and receiving,
+// while all other processes only receive local grids. Includes ghosts.
+// Uses mpi_util::scatter_inplace_wgh.
+// Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::scatter-cuboidbs-src-dest-same-with-ghosts"
+TEST_CASE("mpi_util::scatter-cuboidbs-src-dest-same-with-ghosts")
+{
+    using std::min;
+
+    int mloc = 8;
+    int nloc = 8;
+    int oloc = 8;
+    int gh = 1;
+    int periodic = 1;
+    int blocksize = 2;
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    // Calculate global sizes
+    int mglob = mloc * mpi_dims[0];
+    int nglob = nloc * mpi_dims[1];
+    int oglob = oloc * mpi_dims[2];
+    int mglobgh = mglob + 2 * gh;
+    int nglobgh = nglob + 2 * gh;
+    int oglobgh = oglob + 2 * gh;
+
+    /* Initialize start and end for local grid */
+    int m_start = mloc * mpi_coords[0] + min(mpi_coords[0], (mglob % mpi_dims[0]));
+    int m_end = mloc * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (mglob % mpi_dims[0])) - 1;
+    int n_start = nloc * mpi_coords[1] + min(mpi_coords[1], (nglob % mpi_dims[1]));
+    int n_end = nloc * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (nglob % mpi_dims[1])) - 1;
+    int o_start = oloc * mpi_coords[2] + min(mpi_coords[2], (oglob % mpi_dims[2]));
+    int o_end = oloc * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (oglob % mpi_dims[2])) - 1;
+
+    int ml = (m_end - m_start) + 1;
+    int nl = (n_end - n_start) + 1;
+    int ol = (o_end - o_start) + 1;
+    int mlgh = ml + 2 * gh;
+    int nlgh = nl + 2 * gh;
+    int olgh = ol + 2 * gh;
+
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (i == mpi_rank)
+    //     {
+    //         std::cout << "rank,ms,me,ns,ne,os,oe: "
+    //                   << mpi_rank << ","
+    //                   << m_start << "," << m_end << ","
+    //                   << n_start << "," << n_end << ","
+    //                   << o_start << "," << o_end << std::endl;
+    //         std::cout << "coords: " << mpi_coords[0] << "," << mpi_coords[1] << "," << mpi_coords[2] << std::endl;
+    //     }
+    // }
+
+    // Create test data (used on rank 0)
+    mgcl::CuboidBS cglob(mglob, nglob, oglob, gh, gh, gh, blocksize);
+    cglob.fill1dIndex(false);
+    auto cglob_exp = mgcl::CuboidBS::copyFrom(cglob);
+
+    // Local slice of data including ghosts, holds expected result
+    mgcl::CuboidBS cloc_exp(ml, nl, ol, gh, gh, gh, blocksize);
+    for (int i = 0; i < mlgh; i++)
+        for (int j = 0; j < nlgh; j++)
+            for (int k = 0; k < olgh; k++)
+                for (size_t b = 0; b < blocksize; b++)
+                {
+                    cloc_exp[i][j][k][b] = cglob[i + m_start][j + n_start][k + o_start][b];
+                }
+
+    // Local slice for actual result, reset with 0.
+    auto cloc_act = mgcl::CuboidBS::copyFrom(cloc_exp);
+    cloc_act.fill(0);
+
+    if (mpi_rank == 0)
+        mgcl::mpi_util::scatter_inplace_wgh(mpi_comm, cglob);
+    else
+        mgcl::mpi_util::scatter_inplace_wgh(mpi_comm, cloc_act);
+
+    // MPI_Barrier(mpi_comm);
+    // if (mpi_rank == 0)
+    // {
+    //     // CAPTURE(cglob_recv->getM(), cglob_recv->getN(), cglob_recv->getO());
+    //     // cglob_recv.dumpToFile("cglob_recv.txt");
+    //     // cglob.dumpToFile("cglob.txt");
+    // }
+
+    // cloc_act.dumpToFile(std::to_string(mpi_rank) + "cloc_act.txt");
+    // cloc_exp.dumpToFile(std::to_string(mpi_rank) + "cloc_exp.txt");
+
+    // Check result. On rank 0 the grid must be unchanged (at least the local portion of it).
+    // On other processes the local grid must be filled accordingly to global test data.
+    if (mpi_rank == 0)
+        REQUIRE(cglob.isEqualAllCells(cglob_exp));
+    else
+        REQUIRE(cloc_act.isEqualAllCells(cloc_exp));
+
+    MPI_Barrier(mpi_comm);
+}
+
+// Checks that scattering is correct while rank 0 has the same globally sized buffer for sending and receiving,
+// while all other processes only receive local grids. Includes ghosts.
+// Uses mpi_util::scatter_inplace_wgh.
+// Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::scatter-cuboidbs-GPU-src-dest-same-with-ghosts"
+TEST_CASE("mpi_util::scatter-cuboidbs-GPU-src-dest-same-with-ghosts")
+{
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    using std::min;
+
+    int mloc = 8;
+    int nloc = 8;
+    int oloc = 8;
+    int gh = 1;
+    int periodic = 1;
+    int blocksize = 2;
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    // Calculate global sizes
+    int mglob = mloc * mpi_dims[0];
+    int nglob = nloc * mpi_dims[1];
+    int oglob = oloc * mpi_dims[2];
+    int mglobgh = mglob + 2 * gh;
+    int nglobgh = nglob + 2 * gh;
+    int oglobgh = oglob + 2 * gh;
+
+    /* Initialize start and end for local grid */
+    int m_start = mloc * mpi_coords[0] + min(mpi_coords[0], (mglob % mpi_dims[0]));
+    int m_end = mloc * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (mglob % mpi_dims[0])) - 1;
+    int n_start = nloc * mpi_coords[1] + min(mpi_coords[1], (nglob % mpi_dims[1]));
+    int n_end = nloc * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (nglob % mpi_dims[1])) - 1;
+    int o_start = oloc * mpi_coords[2] + min(mpi_coords[2], (oglob % mpi_dims[2]));
+    int o_end = oloc * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (oglob % mpi_dims[2])) - 1;
+
+    int ml = (m_end - m_start) + 1;
+    int nl = (n_end - n_start) + 1;
+    int ol = (o_end - o_start) + 1;
+    int mlgh = ml + 2 * gh;
+    int nlgh = nl + 2 * gh;
+    int olgh = ol + 2 * gh;
+
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (i == mpi_rank)
+    //     {
+    //         std::cout << "rank,ms,me,ns,ne,os,oe: "
+    //                   << mpi_rank << ","
+    //                   << m_start << "," << m_end << ","
+    //                   << n_start << "," << n_end << ","
+    //                   << o_start << "," << o_end << std::endl;
+    //         std::cout << "coords: " << mpi_coords[0] << "," << mpi_coords[1] << "," << mpi_coords[2] << std::endl;
+    //     }
+    // }
+
+    // Create test data (used on rank 0)
+    mgcl::CuboidBS cglob(mglob, nglob, oglob, gh, gh, gh, blocksize);
+    cglob.fill1dIndex(false);
+    auto cglob_exp = mgcl::CuboidBS::copyFrom(cglob);
+
+    // Local slice of data including ghosts, holds expected result
+    mgcl::CuboidBS cloc_exp(ml, nl, ol, gh, gh, gh, blocksize);
+    for (int i = 0; i < mlgh; i++)
+        for (int j = 0; j < nlgh; j++)
+            for (int k = 0; k < olgh; k++)
+                for (size_t b = 0; b < blocksize; b++)
+                {
+                    cloc_exp[i][j][k][b] = cglob[i + m_start][j + n_start][k + o_start][b];
+                }
+
+    // Local slice for actual result, reset with 0.
+    auto cloc_act = mgcl::CuboidBS::copyFrom(cloc_exp);
+    cloc_act.fill(0);
+
+    mgcl_test::TestUtility tu(deviceType);
+
+    if (mpi_rank == 0)
+    {
+        mgcl::CuboidBSGpu d_c(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, cglob);
+        mgcl::mpi_util::scatter_inplace_wgh(mpi_comm, tu.getCommands(), d_c);
+        d_c.read(tu.getCommands(), &cglob, true);
+    }
+    else
+    {
+        mgcl::CuboidBSGpu d_c(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, cloc_act);
+        mgcl::mpi_util::scatter_inplace_wgh(mpi_comm, tu.getCommands(), d_c);
+        d_c.read(tu.getCommands(), &cloc_act, true);
+    }
+
+    // MPI_Barrier(mpi_comm);
+    // if (mpi_rank == 0)
+    // {
+    //     // CAPTURE(cglob_recv->getM(), cglob_recv->getN(), cglob_recv->getO());
+    //     // cglob_recv.dumpToFile("cglob_recv.txt");
+    //     // cglob.dumpToFile("cglob.txt");
+    // }
+
+    // cloc_act.dumpToFile(std::to_string(mpi_rank) + "cloc_act.txt");
+    // cloc_exp.dumpToFile(std::to_string(mpi_rank) + "cloc_exp.txt");
+
+    // Check result. On rank 0 the grid must be unchanged (at least the local portion of it).
+    // On other processes the local grid must be filled accordingly to global test data.
+    if (mpi_rank == 0)
+        REQUIRE(cglob.isEqualAllCells(cglob_exp));
+    else
+        REQUIRE(cloc_act.isEqualAllCells(cloc_exp));
+}
+
 // Checks that sending border planes of a CuboidBS is correct.
 // Run with e.g. mpiexec -n 8 tests_mpi "mpi_util::sendBorderPlanes_cuboidbs"
 TEST_CASE("mpi_util::sendBorderPlanes_cuboidbs")

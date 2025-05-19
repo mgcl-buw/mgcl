@@ -28,6 +28,8 @@ namespace mgcl::mpi_util
     void scatter_inplace(MPI_Comm comm, Cuboid& c);
     void scatter_inplace_wgh(MPI_Comm comm, Cuboid& c);
     void scatter_inplace_wgh(MPI_Comm comm, cl_command_queue commands, CuboidGpu& c);
+    void scatter_inplace_wgh(MPI_Comm comm, CuboidBS& c);
+    void scatter_inplace_wgh(MPI_Comm comm, cl_command_queue commands, CuboidBSGpu& c);
 
     void sendBorderPlanes(int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
                           int stencilWidth,
