@@ -317,6 +317,26 @@ void mgcl_test::fill7pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCe
             }
 }
 
+void mgcl_test::fill7pLaplace(mgcl::Blockstencil& v, double h, bool negativeCenter)
+{
+    double f = negativeCenter ? -1.0 : 1.0;
+    double h2inv = f * (1.0 / (h * h));
+    for (size_t b = 0; b < v.getBlocksize(); b++)
+        for (int i = 0; i < v.getMgh(); i++)
+            for (int j = 0; j < v.getNgh(); j++)
+                for (int k = 0; k < v.getOgh(); k++)
+                {
+                    // 7-point Laplace
+                    v[b][b][0][1][1][i][j][k] = h2inv * -1.0;
+                    v[b][b][1][0][1][i][j][k] = h2inv * -1.0;
+                    v[b][b][1][1][0][i][j][k] = h2inv * -1.0;
+                    v[b][b][1][1][1][i][j][k] = h2inv * 6.0;
+                    v[b][b][1][1][2][i][j][k] = h2inv * -1.0;
+                    v[b][b][1][2][1][i][j][k] = h2inv * -1.0;
+                    v[b][b][2][1][1][i][j][k] = h2inv * -1.0;
+                }
+}
+
 void mgcl_test::fill7pLaplace(mgcl::FixedStencil& v, double h, bool negativeCenter)
 {
     double f = negativeCenter ? -1.0 : 1.0;
