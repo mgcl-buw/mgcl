@@ -1,6 +1,8 @@
 #include "problem.hpp"
+#include "blockstencil.hpp"
 #include "cuboid.hpp" // for Cuboid
-#include "level.hpp"  // for Level
+#include "fixed_blockstencil.hpp"
+#include "level.hpp" // for Level
 #include "mgcl.hpp"
 #include "mpi_global_data.hpp"
 #include "mpi_stencil.hpp"
@@ -80,6 +82,31 @@ namespace mgcl
         calculateAndSetMaxLevel();
     }
 
+    Problem::Problem(int m_, int n_, int o_,
+                     std::shared_ptr<CuboidBS> f_, std::shared_ptr<CuboidBS> v_,
+                     int m_global_, int n_global_, int o_global_)
+        : m(m_), n(n_), o(o_), f_bs(f_), v_bs(v_), blocksize(v_->getBlocksize()),
+          mGlobal(m_global_ == -1 ? m_ : m_global_),
+          nGlobal(n_global_ == -1 ? n_ : n_global_),
+          oGlobal(o_global_ == -1 ? o_ : o_global_),
+          openCLHelper(this)
+    {
+        if (v_bs->getBlocksize() != f_bs->getBlocksize())
+        {
+            error("v and f must have the same blocksize!");
+        }
+
+        if (blocksize < 1)
+        {
+            error("blocksize must be > 0!");
+        }
+
+        setStencilType(MGCL_BLOCKSTENCIL);
+
+        checkGlobalDimensions();
+        calculateAndSetMaxLevel();
+    }
+
     // throws an exception if global dimensions are not a multiple of local dims.
     void Problem::checkGlobalDimensions()
     {
@@ -102,9 +129,14 @@ namespace mgcl
     bool Problem::checkParameters()
     {
         //  check mandatory config fields
-        if ((v == nullptr || f == nullptr) && (dV == nullptr || dF == nullptr))
+        if ((v == nullptr || f == nullptr) && (dV == nullptr || dF == nullptr) && (v_bs == nullptr || f_bs == nullptr))
         {
-            error("mgcl: supplied v or f and d_v or d_f is nullptr. Aborting.\n");
+            error("mgcl: supplied v or f and d_v or d_f and v_bs or f_bs is nullptr. Aborting.\n");
+        }
+
+        if (v_bs && f_bs && !v && !f && !dV && !dF && stencilType != MGCL_BLOCKSTENCIL)
+        {
+            error("mgcl: v_bs and f_bs are supplied but stencil is not blockstencil\n");
         }
 
         if (m < 1 || n < 1 || o < 1)
@@ -135,6 +167,14 @@ namespace mgcl
             // clang-format on
             error("ghosts_in is different than ghosts of v and/or f!");
 
+        // clang-format off
+        if (v_bs && f_bs && (
+            ghosts_in != v_bs->getGhostsM() || ghosts_in != v_bs->getGhostsN() || ghosts_in != v_bs->getGhostsO() ||
+            ghosts_in != f_bs->getGhostsM() || ghosts_in != f_bs->getGhostsN() || ghosts_in != f_bs->getGhostsO()
+            ))
+            // clang-format on
+            error("ghosts_in is different than ghosts of v_bs and/or f_bs!");
+
         if (mpiRank() == 0 && getMpiLevelThreshold() == 0 && stencilValues &&
             (stencilValues->getM() < mGlobal || stencilValues->getN() < nGlobal || stencilValues->getO() < oGlobal))
             error("Mpi threshold level is 0 but stencilValues has local size. Please use setMpiMinGridPoints before setStencilType!");
@@ -148,7 +188,22 @@ namespace mgcl
                               stencilValues->getGhostsO() < ghosts))
             error("Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!");
 
-        // error if there is a zero coefficient on the diagonal, since then the Jacobi result will be NaN
+        if (mpiRank() == 0 && getMpiLevelThreshold() == 0 && blockstencil &&
+            (blockstencil->getM() < mGlobal || blockstencil->getN() < nGlobal || blockstencil->getO() < oGlobal))
+            error("Mpi threshold level is 0 but blockstencil has local size. Please use setMpiMinGridPoints before setStencilType!");
+
+        if (mpiRank() == 0 && getMpiLevelThreshold() > 1 && blockstencil &&
+            (blockstencil->getM() > m || blockstencil->getN() > n || blockstencil->getO() > o))
+            error("Mpi threshold level is not 0 but blockstencil has global size. Please use setMpiMinGridPoints before setStencilType!");
+
+        // TODO Is this test needed?
+        // if (blockstencil && (blockstencil->getGhostsM() < ghosts ||
+        //                      blockstencil->getGhostsN() < ghosts ||
+        //                      blockstencil->getGhostsO() < ghosts))
+        //     error("Ghosts of blockstencil must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!");
+
+        // error if there is a zero coefficient on the diagonal, since then the Jacobi result will be NaN. For blockstencil,
+        // this will be checked for each level after inverting.
         if (stencilValues)
         {
             for (int i = ghosts; i < m + ghosts; i++)
@@ -219,7 +274,18 @@ namespace mgcl
             int yz = ngh * ogh;
             int xz = mgh * ogh;
             int xy = mgh * ngh;
-            upd(sizeof(double) * 2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts);
+
+            int ressize = (2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts);
+            if (stencilType == MGCL_VARYING)
+            {
+                ressize *= stencilValues->getWidth() * stencilValues->getWidth() * stencilValues->getWidth();
+            }
+            else if (stencilType == MGCL_BLOCKSTENCIL)
+            {
+                ressize *= blockstencil->getWidth() * blockstencil->getWidth() * blockstencil->getWidth() * blocksize * blocksize;
+            }
+
+            upd(sizeof(double) * ressize);
         }
 
         for (int l = 0; l <= maxlevel; l++)
@@ -233,13 +299,13 @@ namespace mgcl
 
             if ((l == 0 && !reuse_opencl_buffers) || l > 0)
             {
-                upd(sizeof(double) * mgh * ngh * ogh); // dVIn
-                upd(sizeof(double) * mgh * ngh * ogh); // dF
+                upd(sizeof(double) * mgh * ngh * ogh * (stencilType == MGCL_BLOCKSTENCIL ? blocksize : 1)); // dVIn
+                upd(sizeof(double) * mgh * ngh * ogh * (stencilType == MGCL_BLOCKSTENCIL ? blocksize : 1)); // dF
             }
 
-            upd(sizeof(double) * mgh * ngh * ogh); // dVOut
-            upd(sizeof(double) * mgh * ngh * ogh); // dR
-            upd(sizeof(double) * ml * nl * ol);    // dRsq
+            upd(sizeof(double) * mgh * ngh * ogh * (stencilType == MGCL_BLOCKSTENCIL ? blocksize : 1)); // dVOut
+            upd(sizeof(double) * mgh * ngh * ogh * (stencilType == MGCL_BLOCKSTENCIL ? blocksize : 1)); // dR
+            upd(sizeof(double) * ml * nl * ol * (stencilType == MGCL_BLOCKSTENCIL ? blocksize : 1));    // dRsq
 
             if (stencilType == MGCL_VARYING)
             {
@@ -250,6 +316,17 @@ namespace mgcl
                 // Temporary buffers created in galerkin
                 upd(sizeof(double) * 3 * 3 * 3); // full-weight restriction stencil
                 upd(sizeof(double) * 3 * 3 * 3); // bilinear prolongation stencil
+            }
+            else if (stencilType == MGCL_BLOCKSTENCIL)
+            {
+                // Ghost cell amount per border of blockstencil is 1 for each level
+                int gh = 1;
+                upd(sizeof(double) * blocksize * blocksize * (ml + 2 * gh) * (nl + 2 * gh) * (ol + 2 * gh) * 3 * 3 * 3); // blockstencil
+                upd(sizeof(double) * blocksize * blocksize * ml * nl * ol);                                              // blockstencil_inv
+
+                // Temporary buffers created in galerkin
+                upd(sizeof(double) * blocksize * blocksize * 3 * 3 * 3); // full-weight restriction stencil
+                upd(sizeof(double) * blocksize * blocksize * 3 * 3 * 3); // bilinear prolongation stencil
             }
 
             else if (stencilType == MGCL_FIXED)
@@ -389,15 +466,27 @@ namespace mgcl
                 int yz = ngh * ogh;
                 int xz = mgh * ogh;
                 int xy = mgh * ngh;
-                int ressize = (2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts) *
-                              (stencilType == MGCL_VARYING
-                                   ? stencilValues->getWidth() * stencilValues->getWidth() * stencilValues->getWidth()
-                                   : 1);
+                int ressize = (2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts);
+                if (stencilType == MGCL_VARYING)
+                {
+                    ressize *= stencilValues->getWidth() * stencilValues->getWidth() * stencilValues->getWidth();
+                }
+                else if (stencilType == MGCL_BLOCKSTENCIL)
+                {
+                    ressize *= blockstencil->getWidth() * blockstencil->getWidth() * blockstencil->getWidth() * blocksize * blocksize;
+                }
+
                 dPlanesBuf = std::make_shared<BufferGpu>(getContext(), CL_MEM_READ_WRITE, ressize);
 
                 // TODO not needing this much memory for these?
                 hPlanesBufSend = std::make_shared<std::vector<double>>(ressize);
                 hPlanesBufRecv = std::make_shared<std::vector<double>>(ressize);
+            }
+
+            if (stencilType == MGCL_BLOCKSTENCIL)
+            {
+                restrictionBlockstencilGpu = std::make_shared<FixedBlockstencilGpu>(*restrictionBlockstencil, getContext(), getCommands());
+                prolongationBlockstencilGpu = std::make_shared<FixedBlockstencilGpu>(*prolongationBlockstencil, getContext(), getCommands());
             }
         }
 
@@ -411,7 +500,6 @@ namespace mgcl
         // initialize levels
         // gathered flag needed for enforcing local ghost update after stencil values were gathered. If threshold is 0,
         // no gathering happens at all.
-        int gh_sv = stencilValues ? stencilValues->getGhostsM() : 0;
         for (int level = 0; level <= maxlevel; level++)
         {
             {
@@ -420,82 +508,167 @@ namespace mgcl
                 levels.back()->init();
             }
 
-            // Apply Galerkin operator if stencil is varying and we're not on level 0.
-            if (level >= 1 && getStencilType() == MGCL_VARYING &&
-                levels.back()->getM() > 0 && levels.back()->getN() > 0 && levels.back()->getO() > 0)
+            // Apply Galerkin operator if we're not on level 0, depending on stencil type.
+            if (levels.back()->getM() > 0 && levels.back()->getN() > 0 && levels.back()->getO() > 0)
             {
-                auto& lvFine = *levels[level - 1];
-                auto& lvCoarse = *levels[level];
-
-                // stencilValues of this level must be of global size on rank 0, if this level is at
-                // the threshold, since it is getting gathered into.
-                int svm = (mpiRank() == 0 && lvCoarse.getNum() >= getMpiLevelThreshold() ? (mGlobal >> level) : lvCoarse.getM());
-                int svn = (mpiRank() == 0 && lvCoarse.getNum() >= getMpiLevelThreshold() ? (nGlobal >> level) : lvCoarse.getN());
-                int svo = (mpiRank() == 0 && lvCoarse.getNum() >= getMpiLevelThreshold() ? (oGlobal >> level) : lvCoarse.getO());
-
-                bool updateGhostsLocally = !useMpi() || lvCoarse.getNum() >= getMpiLevelThreshold();
-
-                if (!use_opencl)
+                int gh_sv = stencilValues ? stencilValues->getGhostsM() : 0;
+                if (level >= 1 && getStencilType() == MGCL_VARYING)
                 {
-                    // Call Galerkin on each rank, if not above threshold, or else only on root.
-                    if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
-                        lvCoarse.stencilValues = MultigridEngine::galerkinHandcrafted(
-                            *lvFine.getStencilValues(), gh_sv,
-                            svm, svn, svo);
+                    auto& lvFine = *levels[level - 1];
+                    auto& lvCoarse = *levels[level];
 
-                    // Gather stencil values onto root if threshold is reached
-                    if (useMpi() && lvCoarse.getNum() == getMpiLevelThreshold())
-                        mpi_util::gather(getMpiComm(), *lvCoarse.getStencilValues());
+                    // stencilValues of this level must be of global size on rank 0, if this level is at
+                    // the threshold, since it is getting gathered into.
+                    int svm = (mpiRank() == 0 && lvCoarse.getNum() >= getMpiLevelThreshold() ? (mGlobal >> level) : lvCoarse.getM());
+                    int svn = (mpiRank() == 0 && lvCoarse.getNum() >= getMpiLevelThreshold() ? (nGlobal >> level) : lvCoarse.getN());
+                    int svo = (mpiRank() == 0 && lvCoarse.getNum() >= getMpiLevelThreshold() ? (oGlobal >> level) : lvCoarse.getO());
 
-                    // update ghosts of stencil values depending on threshold is reached or not
-                    if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
+                    bool updateGhostsLocally = !useMpi() || lvCoarse.getNum() >= getMpiLevelThreshold();
+
+                    if (!use_opencl)
                     {
-                        if (updateGhostsLocally)
-                            lvCoarse.getStencilValues()->updateGhosts();
-                        else
-                            updateGhostsStencilMpi(*lvCoarse.getStencilValues(), lvCoarse.getMpiDataPtr(), isPeriodic(), false);
+                        // Call Galerkin on each rank, if not above threshold, or else only on root.
+                        if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
+                            lvCoarse.stencilValues = MultigridEngine::galerkinHandcrafted(
+                                *lvFine.getStencilValues(), gh_sv,
+                                svm, svn, svo);
+
+                        // Gather stencil values onto root if threshold is reached
+                        if (useMpi() && lvCoarse.getNum() == getMpiLevelThreshold())
+                            mpi_util::gather(getMpiComm(), *lvCoarse.getStencilValues());
+
+                        // update ghosts of stencil values depending on threshold is reached or not
+                        if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
+                        {
+                            if (updateGhostsLocally)
+                                lvCoarse.getStencilValues()->updateGhosts();
+                            else
+                                updateGhostsStencilMpi(*lvCoarse.getStencilValues(), lvCoarse.getMpiDataPtr(), isPeriodic(), false);
+                        }
+                    }
+                    else
+                    {
+                        // Call Galerkin on each rank, if not above threshold, or else only on root.
+                        if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
+                            lvCoarse.stencilValuesGpu = MultigridEngine::galerkinHandcrafted(
+                                *lvFine.getStencilValuesGpu(), gh_sv,
+                                svm, svn, svo,
+                                getProgram(), getCommands(), getContext(),
+                                &getKernelConfig(), getProfilingData());
+
+                        // Gather stencil values onto root if threshold is reached
+                        if (useMpi() && lvCoarse.getNum() == getMpiLevelThreshold())
+                            mpi_util::gather(getMpiComm(), getCommands(), *lvCoarse.getStencilValuesGpu());
+
+                        // update ghosts of stencil values depending on threshold is reached or not
+                        if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
+                        {
+                            if (updateGhostsLocally)
+                                lvCoarse.getStencilValuesGpu()->updateGhosts(getProgram(), getCommands(), &getKernelConfig(), getProfilingData());
+                            else
+                                updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvCoarse.getStencilValuesGpu(),
+                                                          getDPlanesBuf(), getHPlanesBufSend(), getHPlanesBufRecv(),
+                                                          lvCoarse.getMpiDataPtr(), false,
+                                                          &getKernelConfig(), getProfilingData());
+                        }
                     }
                 }
-                else
+
+                else if (level >= 1 && getStencilType() == MGCL_BLOCKSTENCIL)
                 {
-                    // Call Galerkin on each rank, if not above threshold, or else only on root.
-                    if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
-                        lvCoarse.stencilValuesGpu = MultigridEngine::galerkinHandcrafted(
-                            *lvFine.getStencilValuesGpu(), gh_sv,
-                            svm, svn, svo,
-                            getProgram(), getCommands(), getContext(),
-                            &getKernelConfig(), getProfilingData());
+                    int gh_sv = blockstencil ? blockstencil->getGhostsM() : 0;
+                    auto& lvFine = *levels[level - 1];
+                    auto& lvCoarse = *levels[level];
 
-                    // Gather stencil values onto root if threshold is reached
-                    if (useMpi() && lvCoarse.getNum() == getMpiLevelThreshold())
-                        mpi_util::gather(getMpiComm(), getCommands(), *lvCoarse.getStencilValuesGpu());
+                    // stencilValues of this level must be of global size on rank 0, if this level is at
+                    // the threshold, since it is getting gathered into.
+                    int svm = (mpiRank() == 0 && lvCoarse.getNum() >= getMpiLevelThreshold() ? (mGlobal >> level) : lvCoarse.getM());
+                    int svn = (mpiRank() == 0 && lvCoarse.getNum() >= getMpiLevelThreshold() ? (nGlobal >> level) : lvCoarse.getN());
+                    int svo = (mpiRank() == 0 && lvCoarse.getNum() >= getMpiLevelThreshold() ? (oGlobal >> level) : lvCoarse.getO());
 
-                    // update ghosts of stencil values depending on threshold is reached or not
-                    if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
+                    bool updateGhostsLocally = !useMpi() || lvCoarse.getNum() >= getMpiLevelThreshold();
+
+                    assert(getRestrictionBlockstencil() && "Restriction blockstencil not set");
+                    assert(getProlongationBlockstencil() && "Prolongation blockstencil not set");
+
+                    if (!use_opencl)
                     {
-                        if (updateGhostsLocally)
-                            lvCoarse.getStencilValuesGpu()->updateGhosts(getProgram(), getCommands(), &getKernelConfig(), getProfilingData());
-                        else
-                            updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvCoarse.getStencilValuesGpu(),
-                                                      getDPlanesBuf(), getHPlanesBufSend(), getHPlanesBufRecv(),
-                                                      lvCoarse.getMpiDataPtr(), false,
-                                                      &getKernelConfig(), getProfilingData());
+                        assert(lvFine.getBlockstencil() && "Blockstencil on fine level not set");
+
+                        // Call Galerkin on each rank, if not above threshold, or else only on root.
+                        if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
+                            lvCoarse.blockstencil = MultigridEngine::galerkinOptimized(
+                                *lvFine.getBlockstencil(),
+                                *getRestrictionBlockstencil(),
+                                *getProlongationBlockstencil(),
+                                gh_sv,
+                                svm, svn, svo);
+
+                        // Gather stencil values onto root if threshold is reached
+                        if (useMpi() && lvCoarse.getNum() == getMpiLevelThreshold())
+                            mpi_util::gather(getMpiComm(), *lvCoarse.getBlockstencil());
+
+                        // update ghosts of stencil values depending on threshold is reached or not
+                        if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
+                        {
+                            if (updateGhostsLocally)
+                                lvCoarse.getBlockstencil()->updateGhostsLocally();
+                            else
+                                lvCoarse.getBlockstencil()->updateGhosts(lvCoarse.getMpiDataPtr(), false);
+                        }
+                        lvCoarse.getBlockstencil()->dumpToFile("bs_level_" + std::to_string(lvCoarse.getNum()) + ".txt");
+                        lvCoarse.blockstencilInv = lvCoarse.getBlockstencil()->invertDiagonal();
+                    }
+                    else
+                    {
+                        assert(lvFine.getBlockstencilGpu() && "BlockstencilGpu on fine level not set");
+                        assert(getRestrictionBlockstencilGpu() && "Restriction blockstencil GPU not set");
+                        assert(getProlongationBlockstencilGpu() && "Prolongation blockstencil GPU not set");
+
+                        // Call Galerkin on each rank, if not above threshold, or else only on root.
+                        if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
+                            lvCoarse.blockstencilGpu = MultigridEngine::galerkinOptimized(
+                                *lvFine.getBlockstencilGpu(),
+                                *getRestrictionBlockstencilGpu(),
+                                *getProlongationBlockstencilGpu(),
+                                gh_sv,
+                                svm, svn, svo,
+                                getProgram(), getCommands(), getContext(),
+                                &getKernelConfig(), getProfilingData());
+
+                        // Gather stencil values onto root if threshold is reached
+                        if (useMpi() && lvCoarse.getNum() == getMpiLevelThreshold())
+                            mpi_util::gather(getMpiComm(), getCommands(), *lvCoarse.getBlockstencilGpu());
+
+                        // update ghosts of stencil values depending on threshold is reached or not
+                        if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
+                        {
+                            if (updateGhostsLocally)
+                                lvCoarse.getBlockstencilGpu()->updateGhostsLocally(getProgram(), getCommands(), &getKernelConfig(), getProfilingData());
+                            else
+                                lvCoarse.getBlockstencilGpu()->updateGhostsOclMpi(
+                                    getProgram(), getCommands(),
+                                    getDPlanesBuf(), getHPlanesBufSend(), getHPlanesBufRecv(),
+                                    lvCoarse.getMpiData(), false,
+                                    &getKernelConfig(), getProfilingData());
+                        }
+
+                        lvCoarse.blockstencilGpuInv = lvCoarse.getBlockstencilGpu()->invertDiagonal(getContext(), getCommands(), getProgram());
                     }
                 }
-            }
 
-            // Apply Galerkin operator if stencil is fixed and we're not on level 0.
-            // No need for gathering required as for VaryingStencil, since coefficients do not differ per grid point.
-            // No need to differentiate between GPU and CPU, as FixedStencil is stored on Host only.
-            else if (level >= 1 && getStencilType() == MGCL_FIXED &&
-                     levels.back()->getM() > 0 && levels.back()->getN() > 0 && levels.back()->getO() > 0)
-            {
-                auto& lvFine = *levels[level - 1];
-                auto& lvCoarse = *levels[level];
+                // Apply Galerkin operator if stencil is fixed and we're not on level 0.
+                // No need for gathering required as for VaryingStencil, since coefficients do not differ per grid point.
+                // No need to differentiate between GPU and CPU, as FixedStencil is stored on Host only.
+                else if (level >= 1 && getStencilType() == MGCL_FIXED)
+                {
+                    auto& lvFine = *levels[level - 1];
+                    auto& lvCoarse = *levels[level];
 
-                // Call Galerkin on each rank, if not above threshold, or else only on root.
-                if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
-                    lvCoarse.fixedStencil = MultigridEngine::galerkinOptimized(*lvFine.getFixedStencil());
+                    // Call Galerkin on each rank, if not above threshold, or else only on root.
+                    if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
+                        lvCoarse.fixedStencil = MultigridEngine::galerkinOptimized(*lvFine.getFixedStencil());
+                }
             }
         }
 
@@ -537,6 +710,12 @@ namespace mgcl
      * were specified */
     int Problem::readResults()
     {
+        if (stencilType == MGCL_BLOCKSTENCIL)
+        {
+            readResultsBlockstencil();
+            return CL_SUCCESS;
+        }
+
         int err = clFinish(openCLHelper.getCommands());
         mgclCheckError(err, "Waiting for kernels to finish");
 
@@ -562,6 +741,34 @@ namespace mgcl
                 }
 
         return err;
+    }
+
+    void Problem::readResultsBlockstencil()
+    {
+        int err = clFinish(openCLHelper.getCommands());
+        mgclCheckError(err, "Waiting for kernels to finish");
+
+        // if (reuse_opencl_buffers || copy_buffer_data)
+        // {
+        //     levels[0]->setV(std::make_shared<Cuboid>(levels[0]->m, levels[0]->n, levels[0]->o, ghosts, ghosts, ghosts));
+        //     if (v == NULL)
+        //         v = std::make_shared<Cuboid>(m, n, o, ghosts_in, ghosts_in, ghosts_in);
+        // }
+
+        // read back results TODO: only for testing purposes, maybe define TESTING?
+        err = clEnqueueReadBuffer(openCLHelper.getCommands(), levels[0]->getDVBSIn().getBuffer(), CL_TRUE, 0,
+                                  sizeof(double) * levels[0]->getDVBSIn().getSize(), levels[0]->getVBS().field1d().data(), 0, NULL, NULL);
+        mgclCheckError(err, "Error: Failed to read output arrays from device!");
+
+        // copy result to initial v vector
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                for (int k = 0; k < o; k++)
+                    for (size_t b = 0; b < blocksize; b++)
+                    {
+                        (*v_bs)[i + ghosts_in][j + ghosts_in][k + ghosts_in][b] =
+                            levels[0]->getVBS()[i + ghosts][j + ghosts][k + ghosts][b];
+                    }
     }
 
     /**
@@ -823,6 +1030,8 @@ namespace mgcl
 
     Cuboid& Problem::getF() const
     {
+        if (!f)
+            error("f is null.");
         return *f;
     }
 
@@ -939,6 +1148,8 @@ namespace mgcl
 
     void Problem::setReuseOpenclBuffers(bool reuseOpenclBuffers)
     {
+        if (stencilType == MGCL_BLOCKSTENCIL)
+            error("resuing opencl buffers not yet supported for blockstencil");
         reuse_opencl_buffers = reuseOpenclBuffers;
     }
 
@@ -957,20 +1168,34 @@ namespace mgcl
         return jacobi_iterations_per_kernel;
     }
 
+    /**
+     * @brief Sets the amount of jacobi iterations per kernel call, i.e. without ghost update in-between. > 1 not recommended
+     * for multi-gpu case.
+     *
+     * @param jacobiIterationsPerKernel
+     */
     void Problem::setJacobiIterationsPerKernel(int jacobiIterationsPerKernel)
     {
+        // TODO change this like for blockstencil
         if (stencilValues && (stencilValues->getGhostsM() < jacobiIterationsPerKernel ||
                               stencilValues->getGhostsN() < jacobiIterationsPerKernel ||
                               stencilValues->getGhostsO() < jacobiIterationsPerKernel))
             error("Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!");
 
         jacobi_iterations_per_kernel = jacobiIterationsPerKernel;
+        ghosts = std::max(ghosts, jacobi_iterations_per_kernel);
+
+        if (stencilType == MGCL_BLOCKSTENCIL)
+        {
+            // recreate blockstencil with appropriate ghost amount
+            setStencilType(MGCL_BLOCKSTENCIL);
+        }
     }
 
     CuboidGpu& Problem::getDV() const
     {
         if (!dV)
-            error("dStencilValues is null!");
+            error("dV is null!");
         return *dV;
     }
 
@@ -1023,6 +1248,11 @@ namespace mgcl
                               stencilValues->getGhostsO() < ghosts_))
             error("Ghosts of stencilValues must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!");
 
+        // if (blockstencil && (blockstencil->getGhostsM() < ghosts_ ||
+        //                      blockstencil->getGhostsN() < ghosts_ ||
+        //                      blockstencil->getGhostsO() < ghosts_))
+        //     error("Ghosts of blockstencil must be >= ghosts. Make sure to call setGhosts and setJacobiIterationsPerKernel before setStencilType!");
+
         ghosts = ghosts_;
     }
 
@@ -1074,6 +1304,8 @@ namespace mgcl
 
     void Problem::setCopyBufferData(bool copyBufferData)
     {
+        if (stencilType == MGCL_BLOCKSTENCIL)
+            error("copy opencl buffers not yet supported for blockstencil");
         copy_buffer_data = copyBufferData;
     }
 
@@ -1200,6 +1432,9 @@ namespace mgcl
         if (stencilType == MGCL_VARYING)
         {
             fixedStencil = nullptr;
+            blockstencil = nullptr;
+            prolongationBlockstencil = nullptr;
+            restrictionBlockstencil = nullptr;
             calculateAndSetMpiLevelThreshold();
             int gh = std::max(1, jacobi_iterations_per_kernel);
             if (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) // TODO check
@@ -1211,7 +1446,27 @@ namespace mgcl
         {
             // No need for ghosts for fixed stencil as the coefficients would be the same for the ghost points
             stencilValues = nullptr;
+            blockstencil = nullptr;
+            prolongationBlockstencil = nullptr;
+            restrictionBlockstencil = nullptr;
             fixedStencil = std::make_shared<FixedStencil>(3);
+        }
+        else if (stencilType == MGCL_BLOCKSTENCIL)
+        {
+            fixedStencil = nullptr;
+            stencilValues = nullptr;
+            calculateAndSetMpiLevelThreshold();
+            int gh = std::max(1, jacobi_iterations_per_kernel);
+            if (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) // TODO check
+            {
+                blockstencil = std::make_shared<Blockstencil>(mGlobal, nGlobal, oGlobal, 3, blocksize, gh, gh, gh);
+            }
+            else
+            {
+                blockstencil = std::make_shared<Blockstencil>(m, n, o, 3, blocksize, gh, gh, gh);
+            }
+            restrictionBlockstencil = std::make_shared<FixedBlockstencil>(3, blocksize);
+            prolongationBlockstencil = std::make_shared<FixedBlockstencil>(3, blocksize);
         }
         else
         {
@@ -1238,6 +1493,45 @@ namespace mgcl
         return fixedStencil;
     }
 
+    std::shared_ptr<Blockstencil>& Problem::getBlockstencil()
+    {
+        if (stencilType != MGCL_BLOCKSTENCIL)
+        {
+            error("Problem::getBlockstencil: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
+        }
+        return blockstencil;
+    }
+
+    std::shared_ptr<FixedBlockstencil>& Problem::getRestrictionBlockstencil()
+    {
+        if (stencilType != MGCL_BLOCKSTENCIL)
+        {
+            error("Problem::getRestrictionBlockstencil: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
+        }
+        return restrictionBlockstencil;
+    }
+
+    std::shared_ptr<FixedBlockstencil>& Problem::getProlongationBlockstencil()
+    {
+        if (stencilType != MGCL_BLOCKSTENCIL)
+        {
+            error("Problem::getProlongationBlockstencil: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
+        }
+        return prolongationBlockstencil;
+    }
+
+    std::shared_ptr<FixedBlockstencilGpu>& Problem::getRestrictionBlockstencilGpu()
+    {
+        // TODO sanity check?
+        return restrictionBlockstencilGpu;
+    }
+
+    std::shared_ptr<FixedBlockstencilGpu>& Problem::getProlongationBlockstencilGpu()
+    {
+        // TODO sanity check?
+        return prolongationBlockstencilGpu;
+    }
+
     void Problem::setIgnoreTol(bool ignoreTol_)
     {
         ignoreTol = ignoreTol_;
@@ -1245,6 +1539,8 @@ namespace mgcl
 
     Cuboid& Problem::getV() const
     {
+        if (!v)
+            error("v is null!");
         return *v;
     }
 
@@ -1256,6 +1552,40 @@ namespace mgcl
     void Problem::setV(std::shared_ptr<Cuboid> v_)
     {
         v = v_;
+    }
+
+    CuboidBS& Problem::getVBS() const
+    {
+        if (!v_bs)
+            error("v_bs is null!");
+        return *v_bs;
+    }
+
+    std::shared_ptr<CuboidBS> Problem::getVBSPtr() const
+    {
+        return v_bs;
+    }
+
+    void Problem::setVBS(std::shared_ptr<CuboidBS> v_)
+    {
+        v_bs = v_;
+    }
+
+    CuboidBS& Problem::getFBS() const
+    {
+        if (!f_bs)
+            error("f_bs is null!");
+        return *f_bs;
+    }
+
+    std::shared_ptr<CuboidBS> Problem::getFBSPtr() const
+    {
+        return f_bs;
+    }
+
+    void Problem::setFBS(std::shared_ptr<CuboidBS> f_)
+    {
+        f_bs = f_;
     }
 
     /**

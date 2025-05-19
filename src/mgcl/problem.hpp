@@ -1,5 +1,9 @@
 #pragma once
 
+#include "blockstencil.hpp"
+#include "cuboid_bs.hpp"
+#include "fixed_blockstencil.hpp"
+#include "fixed_blockstencil_gpu.hpp"
 #include "profiling_data.hpp"
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -47,6 +51,9 @@ namespace mgcl
         /* initial solution and right hand side vectors */
         std::shared_ptr<Cuboid> v = nullptr; /* can be ommited if device buffers are supplied */
         std::shared_ptr<Cuboid> f = nullptr; /* can be ommited if device buffers are supplied */
+        std::shared_ptr<CuboidBS> v_bs = nullptr;
+        std::shared_ptr<CuboidBS> f_bs = nullptr;
+        size_t blocksize;
 
         /* Buffers for v and f. Only need to be set if buffers already exist on device and should be reused */
         std::shared_ptr<CuboidGpu> dV = nullptr;
@@ -111,7 +118,13 @@ namespace mgcl
         /* Stencil that will be used in Jacobi's method */
         MGCL_STENCIL stencilType = MGCL_LAPLACE_7POINT;
         std::shared_ptr<VaryingStencil> stencilValues = nullptr;
+        std::shared_ptr<Blockstencil> blockstencil = nullptr;
         std::shared_ptr<FixedStencil> fixedStencil = nullptr;
+
+        std::shared_ptr<FixedBlockstencil> restrictionBlockstencil = nullptr;
+        std::shared_ptr<FixedBlockstencil> prolongationBlockstencil = nullptr;
+        std::shared_ptr<FixedBlockstencilGpu> restrictionBlockstencilGpu = nullptr;
+        std::shared_ptr<FixedBlockstencilGpu> prolongationBlockstencilGpu = nullptr;
 
         /* Boundary condition that shall be used. Only affects whether ghosts are updated. Values need to be set
            in input v.
@@ -183,6 +196,9 @@ namespace mgcl
                 int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
         Problem(int m_, int n_, int o_, std::shared_ptr<CuboidGpu> d_f_, std::shared_ptr<CuboidGpu> d_v_,
                 int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
+        Problem(int m_, int n_, int o_,
+                std::shared_ptr<CuboidBS> f_, std::shared_ptr<CuboidBS> v_,
+                int m_global_ = -1, int n_global_ = -1, int o_global_ = -1);
         Problem(const Problem&) = delete;
         Problem& operator=(const Problem&) = delete;
         Problem(const Problem&&) = delete;
@@ -197,6 +213,7 @@ namespace mgcl
         void reuseOpenCL(cl_context context, cl_command_queue commandQueue, cl_device_id deviceId);
         void initOpenCL();
         int readResults();
+        void readResultsBlockstencil();
         void finish();
 
         void solve();
@@ -217,6 +234,8 @@ namespace mgcl
          * Getters and Setters
          ********************************/
 
+        inline size_t getBlocksize() const { return blocksize; }
+
         Cuboid& getV() const;
         std::shared_ptr<Cuboid> getVPtr() const;
         void setV(std::shared_ptr<Cuboid> v_);
@@ -224,6 +243,14 @@ namespace mgcl
         Cuboid& getF() const;
         std::shared_ptr<Cuboid> getFPtr() const;
         void setF(std::shared_ptr<Cuboid> f_);
+
+        CuboidBS& getVBS() const;
+        std::shared_ptr<CuboidBS> getVBSPtr() const;
+        void setVBS(std::shared_ptr<CuboidBS> v_);
+
+        CuboidBS& getFBS() const;
+        std::shared_ptr<CuboidBS> getFBSPtr() const;
+        void setFBS(std::shared_ptr<CuboidBS> f_);
 
         BufferGpu* getDPlanesBufPtr() const;
         BufferGpu& getDPlanesBuf() const;
@@ -341,6 +368,12 @@ namespace mgcl
 
         std::shared_ptr<VaryingStencil>& getStencilValues();
         std::shared_ptr<FixedStencil>& getFixedStencil();
+        std::shared_ptr<Blockstencil>& getBlockstencil();
+
+        std::shared_ptr<FixedBlockstencil>& getRestrictionBlockstencil();
+        std::shared_ptr<FixedBlockstencil>& getProlongationBlockstencil();
+        std::shared_ptr<FixedBlockstencilGpu>& getRestrictionBlockstencilGpu();
+        std::shared_ptr<FixedBlockstencilGpu>& getProlongationBlockstencilGpu();
 
         BC getBc() const;
         void setBc(const BC& bc_);

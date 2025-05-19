@@ -93,7 +93,10 @@ TEST_CASE("Level::initOpenCLBuffersBlockstencil")
         REQUIRE(level.getDFBSPtr());
         REQUIRE(level.getDRBSPtr());
         REQUIRE(level.getDRsqBSPtr());
-        REQUIRE(!level.getBlockstencilGpuInv()); // is only initialized after galerkin
+        if (levelNum > 0)
+            REQUIRE(!level.getBlockstencilGpuInv()); // is only initialized after galerkin
+        else
+            REQUIRE(level.getBlockstencilGpuInv()); // for lv 0 it is initialized right away
 
         if (levelNum == 0)
         {

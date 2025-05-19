@@ -184,6 +184,9 @@ namespace mgcl
             // TODO refactor updateGhosts local?
             blockstencil->updateGhosts(mpiData.get(), isCalculatedLocally());
 
+            // Create inverse for level 0. Coarser levels' inverse will be created after galerkin
+            blockstencilInv = blockstencil->invertDiagonal();
+
             // create ghosted arrays for v and f on host if device buffer should not be reused
             if (!problem->reuse_opencl_buffers && !problem->copy_buffer_data)
             {
@@ -376,6 +379,8 @@ namespace mgcl
 
             // Fill stencil values on gpu on level 0 from input stencil
             blockstencilGpu->fill(*blockstencil, problem->getCommands(), true);
+
+            blockstencilGpuInv = blockstencilGpu->invertDiagonal(problem->getContext(), problem->getCommands(), problem->getProgram());
 
             // if (problem->getReuseOpenclBuffers())
             // {
