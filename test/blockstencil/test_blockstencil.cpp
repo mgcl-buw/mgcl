@@ -848,7 +848,6 @@ TEST_CASE("Blockstencil::invertDiagonal")
         s[0][0][1][1][1][ghm][ghn][gho] = 0;
         s[0][1][1][1][1][ghm][ghn][gho] = 0;
 
-        auto s2 = s.invertDiagonal();
-        REQUIRE(s2 == nullptr);
+        REQUIRE_THROWS(s.invertDiagonal());
     }
 }

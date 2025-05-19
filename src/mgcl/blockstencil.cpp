@@ -490,7 +490,7 @@ namespace mgcl
      * @brief Inverts the Matrices on the diagonal, i.e. the center coefficient of each stencil.
      * Returns a blockstencil of width 1. Uses the Gauss-Jordan algorithm to invert.
      * It is assumed that the matrices are square and non-empty (blocksize > 0).
-     * If a matrix is singular, nullptr will be returned.
+     * If a matrix is singular, an exception will be thrown.
      *
      * @return std::unique_ptr<Blockstencil> inverted Blockstencil with width=1, m,n,o and blocksize same as this, ghosts=0
      */
@@ -538,7 +538,7 @@ namespace mgcl
                         // Check for singular matrix, i.e. if pivot element is too small
                         if (std::abs(augmentedMatrix[j][j]) < 1e-9)
                         {
-                            return nullptr;
+                            error("mgcl: Blockstencil is singular!");
                         }
 
                         // 2. Normalize the Pivot Row
