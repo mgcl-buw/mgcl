@@ -1654,4 +1654,73 @@ namespace mgcl
         printf(" sv * v[i+1][j+1][k+1] = %e * %e\n", sv[2][2][2][i_sv][j_sv][k_sv], v[i+1][j+1][k+1]);
         // clang-format on
     }
+
+    void MultigridEngine::print27point(Cuboid& v, int i, int j, int k, FixedStencil& sv)
+    {
+        // clang-format off
+        printf("27point stencil at %d,%d,%d:\n", i, j, k);
+        printf(" fs * v[    self     ] = %e * %e\n", sv[1][1][1], v[ i ][ j ][ k ]);
+        printf(" fs * v[ i ][ j ][k-1] = %e * %e\n", sv[1][1][0], v[ i ][ j ][k-1]);
+        printf(" fs * v[ i ][ j ][k+1] = %e * %e\n", sv[1][1][2], v[ i ][ j ][k+1]);
+        printf(" fs * v[ i ][j-1][ k ] = %e * %e\n", sv[1][0][1], v[ i ][j-1][ k ]);
+        printf(" fs * v[ i ][j+1][ k ] = %e * %e\n", sv[1][2][1], v[ i ][j+1][ k ]);
+        printf(" fs * v[i-1][ j ][ k ] = %e * %e\n", sv[0][1][1], v[i-1][ j ][ k ]);
+        printf(" fs * v[i+1][ j ][ k ] = %e * %e\n", sv[2][1][1], v[i+1][ j ][ k ]);
+        printf(" fs * v[ i ][j-1][k-1] = %e * %e\n", sv[1][0][0], v[ i ][j-1][k-1]);
+        printf(" fs * v[ i ][j-1][k+1] = %e * %e\n", sv[1][0][2], v[ i ][j-1][k+1]);
+        printf(" fs * v[ i ][j+1][k-1] = %e * %e\n", sv[1][2][0], v[ i ][j+1][k-1]);
+        printf(" fs * v[ i ][j+1][k+1] = %e * %e\n", sv[1][2][2], v[ i ][j+1][k+1]);
+        printf(" fs * v[i-1][ j ][k-1] = %e * %e\n", sv[0][1][0], v[i-1][ j ][k-1]);
+        printf(" fs * v[i-1][ j ][k+1] = %e * %e\n", sv[0][1][2], v[i-1][ j ][k+1]);
+        printf(" fs * v[i+1][ j ][k-1] = %e * %e\n", sv[2][1][0], v[i+1][ j ][k-1]);
+        printf(" fs * v[i+1][ j ][k+1] = %e * %e\n", sv[2][1][2], v[i+1][ j ][k+1]);
+        printf(" fs * v[i-1][j-1][ k ] = %e * %e\n", sv[0][0][1], v[i-1][j-1][ k ]);
+        printf(" fs * v[i-1][j+1][ k ] = %e * %e\n", sv[0][2][1], v[i-1][j+1][ k ]);
+        printf(" fs * v[i+1][j-1][ k ] = %e * %e\n", sv[2][0][1], v[i+1][j-1][ k ]);
+        printf(" fs * v[i+1][j+1][ k ] = %e * %e\n", sv[2][2][1], v[i+1][j+1][ k ]);
+        printf(" fs * v[i-1][j-1][k-1] = %e * %e\n", sv[0][0][0], v[i-1][j-1][k-1]);
+        printf(" fs * v[i-1][j-1][k+1] = %e * %e\n", sv[0][0][2], v[i-1][j-1][k+1]);
+        printf(" fs * v[i-1][j+1][k-1] = %e * %e\n", sv[0][2][0], v[i-1][j+1][k-1]);
+        printf(" fs * v[i-1][j+1][k+1] = %e * %e\n", sv[0][2][2], v[i-1][j+1][k+1]);
+        printf(" fs * v[i+1][j-1][k-1] = %e * %e\n", sv[2][0][0], v[i+1][j-1][k-1]);
+        printf(" fs * v[i+1][j-1][k+1] = %e * %e\n", sv[2][0][2], v[i+1][j-1][k+1]);
+        printf(" fs * v[i+1][j+1][k-1] = %e * %e\n", sv[2][2][0], v[i+1][j+1][k-1]);
+        printf(" fs * v[i+1][j+1][k+1] = %e * %e\n", sv[2][2][2], v[i+1][j+1][k+1]);
+        // clang-format on
+    }
+
+    void MultigridEngine::print27point(CuboidBS& v, int i, int j, int k,
+                                       const Blockstencil& sv, int i_sv, int j_sv, int k_sv, int bi, int bj)
+    {
+        // clang-format off
+        printf("27point stencil at %d,%d,%d for block entry %d,%d; grid point at %d,%d,%d\n", i_sv, j_sv, k_sv, bi, bj,i,j,k);
+        printf(" bs * v[    self     ] = %e * %e\n", sv[bi][bj][1][1][1][i_sv][j_sv][k_sv], v[ i ][ j ][ k ][bj]);
+        printf(" bs * v[ i ][ j ][k-1] = %e * %e\n", sv[bi][bj][1][1][0][i_sv][j_sv][k_sv], v[ i ][ j ][k-1][bj]);
+        printf(" bs * v[ i ][ j ][k+1] = %e * %e\n", sv[bi][bj][1][1][2][i_sv][j_sv][k_sv], v[ i ][ j ][k+1][bj]);
+        printf(" bs * v[ i ][j-1][ k ] = %e * %e\n", sv[bi][bj][1][0][1][i_sv][j_sv][k_sv], v[ i ][j-1][ k ][bj]);
+        printf(" bs * v[ i ][j+1][ k ] = %e * %e\n", sv[bi][bj][1][2][1][i_sv][j_sv][k_sv], v[ i ][j+1][ k ][bj]);
+        printf(" bs * v[i-1][ j ][ k ] = %e * %e\n", sv[bi][bj][0][1][1][i_sv][j_sv][k_sv], v[i-1][ j ][ k ][bj]);
+        printf(" bs * v[i+1][ j ][ k ] = %e * %e\n", sv[bi][bj][2][1][1][i_sv][j_sv][k_sv], v[i+1][ j ][ k ][bj]);
+        printf(" bs * v[ i ][j-1][k-1] = %e * %e\n", sv[bi][bj][1][0][0][i_sv][j_sv][k_sv], v[ i ][j-1][k-1][bj]);
+        printf(" bs * v[ i ][j-1][k+1] = %e * %e\n", sv[bi][bj][1][0][2][i_sv][j_sv][k_sv], v[ i ][j-1][k+1][bj]);
+        printf(" bs * v[ i ][j+1][k-1] = %e * %e\n", sv[bi][bj][1][2][0][i_sv][j_sv][k_sv], v[ i ][j+1][k-1][bj]);
+        printf(" bs * v[ i ][j+1][k+1] = %e * %e\n", sv[bi][bj][1][2][2][i_sv][j_sv][k_sv], v[ i ][j+1][k+1][bj]);
+        printf(" bs * v[i-1][ j ][k-1] = %e * %e\n", sv[bi][bj][0][1][0][i_sv][j_sv][k_sv], v[i-1][ j ][k-1][bj]);
+        printf(" bs * v[i-1][ j ][k+1] = %e * %e\n", sv[bi][bj][0][1][2][i_sv][j_sv][k_sv], v[i-1][ j ][k+1][bj]);
+        printf(" bs * v[i+1][ j ][k-1] = %e * %e\n", sv[bi][bj][2][1][0][i_sv][j_sv][k_sv], v[i+1][ j ][k-1][bj]);
+        printf(" bs * v[i+1][ j ][k+1] = %e * %e\n", sv[bi][bj][2][1][2][i_sv][j_sv][k_sv], v[i+1][ j ][k+1][bj]);
+        printf(" bs * v[i-1][j-1][ k ] = %e * %e\n", sv[bi][bj][0][0][1][i_sv][j_sv][k_sv], v[i-1][j-1][ k ][bj]);
+        printf(" bs * v[i-1][j+1][ k ] = %e * %e\n", sv[bi][bj][0][2][1][i_sv][j_sv][k_sv], v[i-1][j+1][ k ][bj]);
+        printf(" bs * v[i+1][j-1][ k ] = %e * %e\n", sv[bi][bj][2][0][1][i_sv][j_sv][k_sv], v[i+1][j-1][ k ][bj]);
+        printf(" bs * v[i+1][j+1][ k ] = %e * %e\n", sv[bi][bj][2][2][1][i_sv][j_sv][k_sv], v[i+1][j+1][ k ][bj]);
+        printf(" bs * v[i-1][j-1][k-1] = %e * %e\n", sv[bi][bj][0][0][0][i_sv][j_sv][k_sv], v[i-1][j-1][k-1][bj]);
+        printf(" bs * v[i-1][j-1][k+1] = %e * %e\n", sv[bi][bj][0][0][2][i_sv][j_sv][k_sv], v[i-1][j-1][k+1][bj]);
+        printf(" bs * v[i-1][j+1][k-1] = %e * %e\n", sv[bi][bj][0][2][0][i_sv][j_sv][k_sv], v[i-1][j+1][k-1][bj]);
+        printf(" bs * v[i-1][j+1][k+1] = %e * %e\n", sv[bi][bj][0][2][2][i_sv][j_sv][k_sv], v[i-1][j+1][k+1][bj]);
+        printf(" bs * v[i+1][j-1][k-1] = %e * %e\n", sv[bi][bj][2][0][0][i_sv][j_sv][k_sv], v[i+1][j-1][k-1][bj]);
+        printf(" bs * v[i+1][j-1][k+1] = %e * %e\n", sv[bi][bj][2][0][2][i_sv][j_sv][k_sv], v[i+1][j-1][k+1][bj]);
+        printf(" bs * v[i+1][j+1][k-1] = %e * %e\n", sv[bi][bj][2][2][0][i_sv][j_sv][k_sv], v[i+1][j+1][k-1][bj]);
+        printf(" bs * v[i+1][j+1][k+1] = %e * %e\n", sv[bi][bj][2][2][2][i_sv][j_sv][k_sv], v[i+1][j+1][k+1][bj]);
+        // clang-format on
+    }
 }
