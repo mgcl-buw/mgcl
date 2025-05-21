@@ -1,3 +1,4 @@
+#include "blockstencil.hpp"
 #include "cuboid.hpp"    // for Cuboid
 #include "hypercube.hpp" // for Hypercube6d
 #include "level.hpp"     // for Level
@@ -112,6 +113,8 @@ namespace mgcl
                                   false, periodic,
                                   updateGhostsLocally, -off, -off, -off, mpiData);
 
+                // r.dumpToFile("r_scalar.txt");
+
                 if (stencilType == MGCL_LAPLACE_7POINT || stencilType == MGCL_LAPLACE_19POINT || stencilType == MGCL_LAPLACE_27POINT)
                 {
                     for (int iv = istart_v, ir = istart_r; iv < iend_v; iv++, ir++)
@@ -157,7 +160,14 @@ namespace mgcl
                         for (int jv = jstart_v, jr = jstart_r, jsv = jstart_sv; jv < jend_v; jv++, jr++, jsv++)
                             for (int kv = kstart_v, kr = kstart_r, ksv = kstart_sv; kv < kend_v; kv++, kr++, ksv++)
                             {
+
                                 vraw[iv][jv][kv] = vraw[iv][jv][kv] + omega * (1.0 / (*fixedStencil)[1][1][1]) * r[ir][jr][kr];
+
+                                // if (iv >= 1 && iv <= 2 && jv >= 1 && jv <= 2 && kv >= 1 && kv <= 2)
+                                // {
+                                //     // print27point(v, iv, jv, kv, *fixedStencil);
+                                //     std::cout << "(1.0 / (*fixedStencil)[1][1][1]) * r[ir][jr][kr] = (" << 1.0 / (*fixedStencil)[1][1][1] << ") * " << r[ir][jr][kr] << " = " << (1.0 / (*fixedStencil)[1][1][1]) * r[ir][jr][kr] << std::endl;
+                                // }
                             }
                 }
             }
@@ -256,6 +266,8 @@ namespace mgcl
                     args.mpiData};
                 res = residualSeq(residualArgs);
 
+                // args.r.dumpToFile("r_vectorial.txt");
+
                 for (int iv = istart_v, ir = istart_r, isv = istart_sv; iv < iend_v; iv++, ir++, isv++)
                     for (int jv = jstart_v, jr = jstart_r, jsv = jstart_sv; jv < jend_v; jv++, jr++, jsv++)
                         for (int kv = kstart_v, kr = kstart_r, ksv = kstart_sv; kv < kend_v; kv++, kr++, ksv++)
@@ -267,10 +279,23 @@ namespace mgcl
                                 for (int bj = 0; bj < args.v.getBlocksize(); bj++)
                                 {
                                     sum += args.bs_inv[bi][bj][0][0][0][isv][jsv][ksv] * args.r[ir][jr][kr][bj];
+
+                                    // if (iv == 1 && jv == 1 && kv == 1)
+                                    // {
+                                    //     // print27point(v, iv, jv, kv, *fixedStencil);
+                                    //     std::cout << "bs_inv * r = " << args.bs_inv[bi][bj][0][0][0][isv][jsv][ksv] << " * " << args.r[ir][jr][kr][bj] << " = " << args.bs_inv[bi][bj][0][0][0][isv][jsv][ksv] * args.r[ir][jr][kr][bj] << std::endl;
+                                    // }
                                 }
+
+                                // if (iv == 1 && jv == 1 && kv == 1)
+                                // {
+                                //     // print27point(v, iv, jv, kv, *fixedStencil);
+                                //     std::cout << "sum = " << sum << std::endl;
+                                // }
 
                                 // update v, i.e. v_{i+1} = v_i + omega * bs_inv * r
                                 vraw[iv][jv][kv][bi] = vraw[iv][jv][kv][bi] + args.omega * sum;
+                                // vraw[iv][jv][kv][bi] = vraw[iv][jv][kv][bi] + args.omega * args.bs_inv[bi][bi][0][0][0][isv][jsv][ksv] * args.r[ir][jr][kr][bi];
                             }
                         }
             }
@@ -1380,6 +1405,12 @@ namespace mgcl
                             + fsRaw[2][2][0] * vraw[iv+1][jv+1][kv-1]
                             + fsRaw[2][2][2] * vraw[iv+1][jv+1][kv+1];
                         // clang-format on
+
+                        // if (iv >= 1 && iv <= 2 && jv >= 1 && jv <= 2 && kv >= 1 && kv <= 2)
+                        // {
+                        //     // print27point(v, iv, jv, kv, *fixedStencil);
+                        //     std::cout << "stencilsum: " << stencilsum << std::endl;
+                        // }
                     }
                     else if (stencilType == MGCL_VARYING)
                     {
@@ -1522,12 +1553,18 @@ namespace mgcl
                                 + bsraw[bi][bj][2][2][0][isv][jsv][ksv] * vraw[iv+1][jv+1][kv-1][bj]
                                 + bsraw[bi][bj][2][2][2][isv][jsv][ksv] * vraw[iv+1][jv+1][kv+1][bj];
                             // clang-format on
+
+                            // if (iv == 1 && jv == 1 && kv == 1)
+                            // // if (iv == 2 && jv == 2 && kv == 2 && bi == 6)
+                            // {
+                            //     // print27point(v, iv, jv, kv, args.bs, isv, jsv, ksv, bi, bj);
+                            //     // std::cout << "stencilsum: " << stencilsum << std::endl;
+                            // }
                         }
 
-                        // if (j == 2 && k == 2 && i == 2)
+                        // if (iv == 1 && jv == 1 && kv == 1)
                         // {
-                        //     printf("seq stencilsum = %e\n", stencilsum);
-                        //     print27point_sv(v, i, j, k, stencilValuesCuboid, isv, jsv, ksv);
+                        //     std::cout << "stencilsum: " << stencilsum << std::endl;
                         // }
 
                         // r = f - A*v

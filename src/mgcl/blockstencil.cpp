@@ -518,6 +518,8 @@ namespace mgcl
                         augmentedMatrix[i][i + b] = 1.0; // Add identity matrix
                     }
 
+                    // augmentedMatrix.dumpToFileMatlab("am.txt", "AM");
+
                     // Gauss-Jordan Elimination
                     // Iterate through columns (pivot columns)
                     for (int j = 0; j < b; ++j)
