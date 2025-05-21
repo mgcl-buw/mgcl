@@ -58,4 +58,5 @@ namespace mgcl_test
     void fill19pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCenter);
     void fill27pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCenter);
     void fill7pLaplace(mgcl::FixedStencil& v, double h, bool negativeCenter);
+    void fill27pLaplace(mgcl::FixedStencil& v, double h, bool negativeCenter);
 }
