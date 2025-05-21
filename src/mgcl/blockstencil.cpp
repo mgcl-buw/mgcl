@@ -500,14 +500,14 @@ namespace mgcl
         int b = getBlocksize();
         int center = getWidth() / 2;
 
-        // Create the augmented matrix [A | I]
-        Matrix augmentedMatrix(b, b * 2);
-
         // Invert for each real grid point
         for (int gpi = getGhostsM(); gpi < getM() + getGhostsM(); gpi++)
             for (int gpj = getGhostsN(); gpj < getN() + getGhostsN(); gpj++)
                 for (int gpk = getGhostsO(); gpk < getO() + getGhostsO(); gpk++)
                 {
+                    // Create the augmented matrix [A | I]
+                    Matrix augmentedMatrix(b, b * 2);
+
                     // Fill augmented matrix for current grid point
                     for (int i = 0; i < b; ++i)
                     {
@@ -522,7 +522,7 @@ namespace mgcl
                     // Iterate through columns (pivot columns)
                     for (int j = 0; j < b; ++j)
                     {
-                        // 1. Pivot Selectiob (Partial Pivoting for numerical stability)
+                        // 1. Pivot Selection (Partial Pivoting for numerical stability)
                         int pivotRow = j;
                         for (int i = j + 1; i < b; ++i)
                         {
