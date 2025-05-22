@@ -143,7 +143,7 @@ TEST_CASE("bs_jacobi_independent_quantities")
                             bs[1][0][ci][cj][ck][i][j][k] = 0;
                         }
 
-    auto bs_inv_ptr = bs.invertDiagonal();
+    auto bs_inv_ptr = bs.invertCenterMatrices();
     REQUIRE(bs_inv_ptr != nullptr);
     auto& bs_inv = *bs_inv_ptr;
 
@@ -624,7 +624,7 @@ TEST_CASE("bs_jacobi_combined_scalars")
                 bs[7][0][2][2][2][i][j][k] = bbr;
             }
 
-    auto bs_inv_ptr = bs.invertDiagonal();
+    auto bs_inv_ptr = bs.invertCenterMatrices(); // TODO change to diagonal
     REQUIRE(bs_inv_ptr != nullptr);
     auto& bs_inv = *bs_inv_ptr;
 

@@ -80,6 +80,7 @@ TEST_CASE("Level::initOpenCLBuffersBlockstencil")
     p->getBlockstencil()->fillRandom();
     p->getRestrictionBlockstencil()->fillRandom();
     p->getProlongationBlockstencil()->fillRandom();
+    p->setSmootherType(mgcl::MGCL_JACOBI_SCALAR);
     // REQUIRE(p->init());
     p->initOpenCL();
 
@@ -94,9 +95,9 @@ TEST_CASE("Level::initOpenCLBuffersBlockstencil")
         REQUIRE(level.getDRBSPtr());
         REQUIRE(level.getDRsqBSPtr());
         if (levelNum > 0)
-            REQUIRE(!level.getBlockstencilGpuInv()); // is only initialized after galerkin
+            REQUIRE_THROWS(level.getBlockstencilInvScalar()); // is only initialized after galerkin
         else
-            REQUIRE(level.getBlockstencilGpuInv()); // for lv 0 it is initialized right away
+            REQUIRE(level.getBlockstencilGpuInvScalar()); // for lv 0 it is initialized right away
 
         if (levelNum == 0)
         {

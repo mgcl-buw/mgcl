@@ -463,7 +463,9 @@ TEST_CASE("Problem::initBlockstencil")
     {
         // Checks if varying stencils are properly set for each level. Does not check actual values for validity, this
         // is done in an own galerkin test.
+        mgcl::MGCL_SMOOTHER smootherType = GENERATE(mgcl::MGCL_JACOBI_SCALAR, mgcl::MGCL_JACOBI_BLOCK);
 
+        p.setSmootherType(smootherType);
         p.init();
 
         // stencilValues defined in Problem is copied to level 0
@@ -476,7 +478,6 @@ TEST_CASE("Problem::initBlockstencil")
             auto& level = p.getLevelAt(lv);
 
             REQUIRE(level.getBlockstencil());
-            REQUIRE(level.getBlockstencilInv());
             auto& sv = *level.getBlockstencil();
 
             REQUIRE(sv.getM() == level.getM());
@@ -485,13 +486,27 @@ TEST_CASE("Problem::initBlockstencil")
             REQUIRE(sv.getWidth() == 3);
             REQUIRE(sv.getBlocksize() == blocksize);
 
-            auto& sv_inv = *level.getBlockstencilInv();
+            if (smootherType == mgcl::MGCL_JACOBI_BLOCK)
+            {
+                REQUIRE(level.getBlockstencilInvBlock());
+                auto& sv_inv = *level.getBlockstencilInvBlock();
 
-            REQUIRE(sv_inv.getM() == level.getM());
-            REQUIRE(sv_inv.getN() == level.getN());
-            REQUIRE(sv_inv.getO() == level.getO());
-            REQUIRE(sv_inv.getWidth() == 1);
-            REQUIRE(sv_inv.getBlocksize() == blocksize);
+                REQUIRE(sv_inv.getM() == level.getM());
+                REQUIRE(sv_inv.getN() == level.getN());
+                REQUIRE(sv_inv.getO() == level.getO());
+                REQUIRE(sv_inv.getWidth() == 1);
+                REQUIRE(sv_inv.getBlocksize() == blocksize);
+            }
+            else
+            {
+                REQUIRE(level.getBlockstencilInvScalar());
+                auto& sv_inv = *level.getBlockstencilInvScalar();
+
+                REQUIRE(sv_inv.getM() == level.getM());
+                REQUIRE(sv_inv.getN() == level.getN());
+                REQUIRE(sv_inv.getO() == level.getO());
+                REQUIRE(sv_inv.getBlocksize() == blocksize);
+            }
         }
     }
 }
@@ -734,7 +749,9 @@ TEST_CASE("Problem::init_oclBlockstencil")
     {
         // Checks if varying stencils are properly set for each level. Does not check actual values for validity, this
         // is done in an own galerkin test.
+        mgcl::MGCL_SMOOTHER smootherType = GENERATE(mgcl::MGCL_JACOBI_SCALAR, mgcl::MGCL_JACOBI_BLOCK);
 
+        p.setSmootherType(smootherType);
         p.init();
 
         // stencilValues defined in Problem is copied to level 0
@@ -754,14 +771,27 @@ TEST_CASE("Problem::init_oclBlockstencil")
             REQUIRE(sv.getWidth() == 3);
             REQUIRE(sv.getBlocksize() == blocksize);
 
-            REQUIRE(level.getBlockstencilGpuInv());
-            auto& sv_inv = *level.getBlockstencilGpuInv();
+            if (smootherType == mgcl::MGCL_JACOBI_BLOCK)
+            {
+                REQUIRE(level.getBlockstencilGpuInvBlock());
+                auto& sv_inv = *level.getBlockstencilGpuInvBlock();
 
-            REQUIRE(sv_inv.getM() == level.getM());
-            REQUIRE(sv_inv.getN() == level.getN());
-            REQUIRE(sv_inv.getO() == level.getO());
-            REQUIRE(sv_inv.getWidth() == 1);
-            REQUIRE(sv_inv.getBlocksize() == blocksize);
+                REQUIRE(sv_inv.getM() == level.getM());
+                REQUIRE(sv_inv.getN() == level.getN());
+                REQUIRE(sv_inv.getO() == level.getO());
+                REQUIRE(sv_inv.getWidth() == 1);
+                REQUIRE(sv_inv.getBlocksize() == blocksize);
+            }
+            else
+            {
+                REQUIRE(level.getBlockstencilGpuInvScalar());
+                auto& sv_inv = *level.getBlockstencilGpuInvScalar();
+
+                REQUIRE(sv_inv.getM() == level.getM());
+                REQUIRE(sv_inv.getN() == level.getN());
+                REQUIRE(sv_inv.getO() == level.getO());
+                REQUIRE(sv_inv.getBlocksize() == blocksize);
+            }
         }
     }
 }

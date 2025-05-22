@@ -57,6 +57,12 @@ namespace mgcl
         MGCL_BLOCKSTENCIL
     } MGCL_STENCIL;
 
+    typedef enum
+    {
+        MGCL_JACOBI_SCALAR,
+        MGCL_JACOBI_BLOCK
+    } MGCL_SMOOTHER;
+
     enum class BC
     {
         // TODO maybe add Hybrid antyime in the future, need do adjust ghosts_in logic then.

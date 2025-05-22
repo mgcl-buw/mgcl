@@ -137,7 +137,7 @@ namespace mgcl
         args::JacobiBSSeqArgs jacobi_args1{
             level.getFBS(), level.getVBS(), level.getRBS(),
             problem.residual_norm,
-            *level.blockstencil, *level.blockstencilInv,
+            *level.blockstencil, *level.getBlockstencilInvBlock(), // TODO change depending on smoother type
             false, problem.isPeriodic(),
             level.isCalculatedLocally(),
             problem.nu1, problem.jacobi_iterations_per_kernel,
@@ -197,7 +197,7 @@ namespace mgcl
                 args::JacobiBSSeqArgs jacobi_args{
                     levelAbove.getFBS(), levelAbove.getVBS(), levelAbove.getRBS(),
                     problem.residual_norm,
-                    *levelAbove.blockstencil, *levelAbove.blockstencilInv,
+                    *levelAbove.blockstencil, *levelAbove.getBlockstencilInvBlock(), // TODO change depending on smoother type
                     false, problem.isPeriodic(),
                     levelAbove.isCalculatedLocally(),
                     problem.nu1 + problem.nu2, problem.jacobi_iterations_per_kernel,
@@ -236,7 +236,7 @@ namespace mgcl
         args::JacobiBSSeqArgs jacobi_args2{
             level.getFBS(), level.getVBS(), level.getRBS(),
             problem.residual_norm,
-            *level.blockstencil, *level.blockstencilInv,
+            *level.blockstencil, *level.getBlockstencilInvBlock(), // TODO change depending on smoother type
             !problem.ignoreTol, problem.isPeriodic(),
             level.isCalculatedLocally(),
             problem.nu1, problem.jacobi_iterations_per_kernel,

@@ -1,6 +1,7 @@
 #include "level.hpp"
 #include "blockstencil.hpp"
 #include "cuboid.hpp" // for Cuboid
+#include "cuboid_bs.hpp"
 #include "mgcl.hpp"
 #include "mpi_stencil.hpp"
 #include "mpi_util.hpp"
@@ -185,7 +186,7 @@ namespace mgcl
             blockstencil->updateGhosts(mpiData.get(), isCalculatedLocally());
 
             // Create inverse for level 0. Coarser levels' inverse will be created after galerkin
-            blockstencilInv = blockstencil->invertDiagonal();
+            createInverseOfBlockstencilSeq();
 
             // create ghosted arrays for v and f on host if device buffer should not be reused
             if (!problem->reuse_opencl_buffers && !problem->copy_buffer_data)
@@ -380,7 +381,8 @@ namespace mgcl
             // Fill stencil values on gpu on level 0 from input stencil
             blockstencilGpu->fill(*blockstencil, problem->getCommands(), true);
 
-            blockstencilGpuInv = blockstencilGpu->invertDiagonal(problem->getContext(), problem->getCommands(), problem->getProgram());
+            // Create inverse for level 0. Coarser levels' inverse will be created after galerkin
+            createInverseOfBlockstencilGpu();
 
             // if (problem->getReuseOpenclBuffers())
             // {
@@ -1064,5 +1066,54 @@ namespace mgcl
     bool Level::isCalculatedLocally() const
     {
         return !problem->useMpi() || problem->mpiSize() == 1 || num >= problem->getMpiLevelThreshold();
+    }
+
+    /**
+     * @brief Creates the inverse of the blockstencil depending on smoother type.
+     *
+     */
+    void Level::createInverseOfBlockstencilSeq()
+    {
+        if (stencilType != MGCL_BLOCKSTENCIL)
+        {
+            error("Problem::createInverseOfBlockstencilSeq: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
+        }
+
+        // Create inverse for level 0. Coarser levels' inverse will be created after galerkin
+        if (problem->getSmootherType() == MGCL_JACOBI_SCALAR)
+        {
+            blockstencilInv = blockstencil->invertDiagonal();
+        }
+        else
+        {
+            blockstencilInv = blockstencil->invertCenterMatrices();
+        }
+    }
+
+    /**
+     * @brief Creates the inverse of the blockstencil for Gpu depending on smoother type.
+     *
+     */
+    void Level::createInverseOfBlockstencilGpu()
+    {
+        if (stencilType != MGCL_BLOCKSTENCIL)
+        {
+            error("Problem::createInverseOfBlockstencilGpu: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
+        }
+
+        if (!problem->getUseOpencl())
+        {
+            error("Problem::createInverseOfBlockstencilGpu: OpenCL is not enabled. Use Problem::setUseOpencl(true) first.");
+        }
+
+        // Create inverse for level 0. Coarser levels' inverse will be created after galerkin
+        if (problem->getSmootherType() == MGCL_JACOBI_SCALAR)
+        {
+            blockstencilInv = blockstencilGpu->invertDiagonal(problem->getContext(), problem->getCommands());
+        }
+        else
+        {
+            blockstencilInv = blockstencilGpu->invertCenterMatrices(problem->getContext(), problem->getCommands(), problem->getProgram());
+        }
     }
 }

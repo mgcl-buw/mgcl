@@ -126,6 +126,9 @@ namespace mgcl
         std::shared_ptr<FixedBlockstencilGpu> restrictionBlockstencilGpu = nullptr;
         std::shared_ptr<FixedBlockstencilGpu> prolongationBlockstencilGpu = nullptr;
 
+        /* Smoother that will be used. Defaults to MGCL_JACOBI_SCALAR. MGCL_JACOBI_BLOCK is only valid if stencilType is MGCL_BLOCKSTENCIL. */
+        MGCL_SMOOTHER smootherType = MGCL_JACOBI_SCALAR;
+
         /* Boundary condition that shall be used. Only affects whether ghosts are updated. Values need to be set
            in input v.
            If not using periodic, ghosts_in must be set appropriately, see readme. */
@@ -413,6 +416,9 @@ namespace mgcl
 
         inline bool isPrintKernelLog() const { return printKernelLog; }
         inline void setPrintKernelLog(bool _printKernelLog) { printKernelLog = _printKernelLog; }
+
+        inline MGCL_SMOOTHER getSmootherType() const { return smootherType; }
+        inline void setSmootherType(const MGCL_SMOOTHER& smootherType_) { smootherType = smootherType_; }
 
         friend std::ostream& operator<<(std::ostream& os, const Problem& lv);
     };

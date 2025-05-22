@@ -196,6 +196,11 @@ namespace mgcl
             (blockstencil->getM() > m || blockstencil->getN() > n || blockstencil->getO() > o))
             error("Mpi threshold level is not 0 but blockstencil has global size. Please use setMpiMinGridPoints before setStencilType!");
 
+        if (smootherType == MGCL_JACOBI_BLOCK && stencilType != MGCL_BLOCKSTENCIL)
+        {
+            error("smootherType is set to MGCL_JACOBI_BLOCK but stencilType is not MGCL_BLOCKSTENCIL!");
+        }
+
         // TODO Is this test needed?
         // if (blockstencil && (blockstencil->getGhostsM() < ghosts ||
         //                      blockstencil->getGhostsN() < ghosts ||
@@ -322,7 +327,10 @@ namespace mgcl
                 // Ghost cell amount per border of blockstencil is 1 for each level
                 int gh = 1;
                 upd(sizeof(double) * blocksize * blocksize * (ml + 2 * gh) * (nl + 2 * gh) * (ol + 2 * gh) * 3 * 3 * 3); // blockstencil
-                upd(sizeof(double) * blocksize * blocksize * ml * nl * ol);                                              // blockstencil_inv
+                if (smootherType == MGCL_JACOBI_BLOCK)
+                    upd(sizeof(double) * blocksize * blocksize * ml * nl * ol); // blockstencil_inv
+                else
+                    upd(sizeof(double) * blocksize * ml * nl * ol); // blockstencil_inv
 
                 // Temporary buffers created in galerkin
                 upd(sizeof(double) * blocksize * blocksize * 3 * 3 * 3); // full-weight restriction stencil
@@ -616,8 +624,9 @@ namespace mgcl
                             else
                                 lvCoarse.getBlockstencil()->updateGhosts(lvCoarse.getMpiDataPtr(), false);
                         }
-                        lvCoarse.getBlockstencil()->dumpToFile("bs_level_" + std::to_string(lvCoarse.getNum()) + ".txt");
-                        lvCoarse.blockstencilInv = lvCoarse.getBlockstencil()->invertDiagonal();
+
+                        // lvCoarse.getBlockstencil()->dumpToFile("bs_level_" + std::to_string(lvCoarse.getNum()) + ".txt");
+                        lvCoarse.createInverseOfBlockstencilSeq();
                     }
                     else
                     {
@@ -653,7 +662,7 @@ namespace mgcl
                                     &getKernelConfig(), getProfilingData());
                         }
 
-                        lvCoarse.blockstencilGpuInv = lvCoarse.getBlockstencilGpu()->invertDiagonal(getContext(), getCommands(), getProgram());
+                        lvCoarse.createInverseOfBlockstencilGpu();
                     }
                 }
 

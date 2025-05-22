@@ -13,6 +13,7 @@
 #include <cassert>
 #include <memory> // for shared_ptr
 #include <ostream>
+#include <variant>
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -51,8 +52,12 @@ namespace mgcl
         std::shared_ptr<FixedStencil> fixedStencil = nullptr;
         std::shared_ptr<Blockstencil> blockstencil = nullptr;
         std::shared_ptr<BlockstencilGpu> blockstencilGpu = nullptr;
-        std::shared_ptr<Blockstencil> blockstencilInv = nullptr;
-        std::shared_ptr<BlockstencilGpu> blockstencilGpuInv = nullptr;
+        std::variant<
+            std::shared_ptr<Blockstencil>,
+            std::shared_ptr<CuboidBS>,
+            std::shared_ptr<BlockstencilGpu>,
+            std::shared_ptr<CuboidBSGpu>>
+            blockstencilInv;
 
         /* grid dimensions of local real grid */
         int m;
@@ -101,6 +106,9 @@ namespace mgcl
         int initMpiData();
 
         int getNum() const;
+
+        void createInverseOfBlockstencilSeq();
+        void createInverseOfBlockstencilGpu();
 
         Cuboid& getV() const;
         std::shared_ptr<Cuboid> getVPtr() const;
@@ -179,7 +187,29 @@ namespace mgcl
         std::shared_ptr<VaryingStencil>& getStencilValues();
         std::shared_ptr<FixedStencil>& getFixedStencil();
         std::shared_ptr<Blockstencil>& getBlockstencil() { return blockstencil; }
-        std::shared_ptr<Blockstencil>& getBlockstencilInv() { return blockstencilInv; }
+        std::shared_ptr<Blockstencil>& getBlockstencilInvBlock()
+        {
+            if (std::holds_alternative<std::shared_ptr<Blockstencil>>(blockstencilInv))
+            {
+                return std::get<std::shared_ptr<Blockstencil>>(blockstencilInv);
+            }
+            else
+            {
+                throw "Level::getBlockstencilInvBlock: blockstencilInv does not have type Blockstencil. Check Jacobi type, maybe it's not set to JACOBI_BLOCK?";
+            }
+        }
+
+        std::shared_ptr<CuboidBS>& getBlockstencilInvScalar()
+        {
+            if (std::holds_alternative<std::shared_ptr<CuboidBS>>(blockstencilInv))
+            {
+                return std::get<std::shared_ptr<CuboidBS>>(blockstencilInv);
+            }
+            else
+            {
+                throw "Level::getBlockstencilInvScalar: blockstencilInv does not have type CuboidBS. Check Jacobi type, maybe it's not set to JACOBI_SCALAR?";
+            }
+        }
 
         double getStencilFactor() const;
 
@@ -187,8 +217,33 @@ namespace mgcl
         void setStencilValuesGpu(std::shared_ptr<VaryingStencilGpu> sv);
         inline std::shared_ptr<BlockstencilGpu>& getBlockstencilGpu() { return blockstencilGpu; }
         inline void setBlockstencilGpu(std::shared_ptr<BlockstencilGpu> sv) { blockstencilGpu = sv; }
-        inline std::shared_ptr<BlockstencilGpu>& getBlockstencilGpuInv() { return blockstencilGpuInv; }
-        inline void setBlockstencilGpuInv(std::shared_ptr<BlockstencilGpu> sv) { blockstencilGpuInv = sv; }
+
+        std::shared_ptr<BlockstencilGpu>& getBlockstencilGpuInvBlock()
+        {
+            if (std::holds_alternative<std::shared_ptr<BlockstencilGpu>>(blockstencilInv))
+            {
+                return std::get<std::shared_ptr<BlockstencilGpu>>(blockstencilInv);
+            }
+            else
+            {
+                throw "Level::getBlockstencilGpuInvBlock: blockstencilInv does not have type BlockstencilGpu. Check Jacobi type, maybe it's not set to JACOBI_BLOCK? Or OpenCL is not in use?";
+            }
+        }
+
+        std::shared_ptr<CuboidBSGpu>& getBlockstencilGpuInvScalar()
+        {
+            if (std::holds_alternative<std::shared_ptr<CuboidBSGpu>>(blockstencilInv))
+            {
+                return std::get<std::shared_ptr<CuboidBSGpu>>(blockstencilInv);
+            }
+            else
+            {
+                throw "Level::getBlockstencilInvBlock: blockstencilInv does not have type CuboidBSGpu. Check Jacobi type, maybe it's not set to JACOBI_SCALAR? Or OpenCL is not in use?";
+            }
+        }
+
+        inline void setBlockstencilGpuInvBlock(std::shared_ptr<BlockstencilGpu> sv) { blockstencilInv = sv; }
+        inline void setBlockstencilGpuInvScalar(std::shared_ptr<CuboidBSGpu> sv) { blockstencilInv = sv; }
 
         bool isCalculatedLocally() const;
 
