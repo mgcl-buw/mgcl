@@ -1,4 +1,5 @@
 
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
@@ -730,7 +731,7 @@ TEST_CASE("Blockstencil::copyShallow")
     REQUIRE(s1.getSize() == s2->getSize());
 }
 
-TEST_CASE("Blockstencil::invertDiagonal")
+TEST_CASE("Blockstencil::invertCenterMatrices")
 {
     int m = 1;
     int n = 2;
@@ -814,7 +815,7 @@ TEST_CASE("Blockstencil::invertDiagonal")
         a012_inv[1][0] = 0.0078;
         a012_inv[1][1] = -0.0016;
 
-        auto s2 = s.invertDiagonal();
+        auto s2 = s.invertCenterMatrices();
 
         REQUIRE_THAT((*s2)[0][0][0][0][0][0][0][0], Catch::Matchers::WithinAbs(a000_inv[0][0], 1e-4));
         REQUIRE_THAT((*s2)[0][1][0][0][0][0][0][0], Catch::Matchers::WithinAbs(a000_inv[0][1], 1e-4));
@@ -840,6 +841,63 @@ TEST_CASE("Blockstencil::invertDiagonal")
         REQUIRE_THAT((*s2)[0][1][0][0][0][0][1][2], Catch::Matchers::WithinAbs(a012_inv[0][1], 1e-4));
         REQUIRE_THAT((*s2)[1][0][0][0][0][0][1][2], Catch::Matchers::WithinAbs(a012_inv[1][0], 1e-4));
         REQUIRE_THAT((*s2)[1][1][0][0][0][0][1][2], Catch::Matchers::WithinAbs(a012_inv[1][1], 1e-4));
+    }
+
+    // Check that inversion of a singular matrix returns nullptr.
+    SECTION("singular")
+    {
+        s[0][0][1][1][1][ghm][ghn][gho] = 0;
+        s[0][1][1][1][1][ghm][ghn][gho] = 0;
+
+        REQUIRE_THROWS(s.invertCenterMatrices());
+    }
+}
+
+// TODO
+TEST_CASE("Blockstencil::invertDiagonal")
+{
+    int m = 1;
+    int n = 2;
+    int o = 3;
+    int ghm = GENERATE(0, 1);
+    int ghn = 1;
+    int gho = 1;
+    int width = 3;
+    int blocksize = 2;
+
+    mgcl::Blockstencil s(m, n, o, width, blocksize, ghm, ghn, gho);
+    // fill with 1d real cell indices, as if there were no ghosts
+    int cnt = 0;
+    for (int d1 = s.getGhostsDim1(); d1 < s.getDim1() + s.getGhostsDim1(); d1++)
+        for (int d2 = s.getGhostsDim2(); d2 < s.getDim2() + s.getGhostsDim2(); d2++)
+            for (int d3 = s.getGhostsDim3(); d3 < s.getDim3() + s.getGhostsDim3(); d3++)
+                for (int d4 = s.getGhostsDim4(); d4 < s.getDim4() + s.getGhostsDim4(); d4++)
+                    for (int d5 = s.getGhostsDim5(); d5 < s.getDim5() + s.getGhostsDim5(); d5++)
+                        for (int d6 = s.getGhostsDim6(); d6 < s.getDim6() + s.getGhostsDim6(); d6++)
+                            for (int d7 = s.getGhostsDim7(); d7 < s.getDim7() + s.getGhostsDim7(); d7++)
+                                for (int d8 = s.getGhostsDim8(); d8 < s.getDim8() + s.getGhostsDim8(); d8++)
+                                {
+                                    s[d1][d2][d3][d4][d5][d6][d7][d8] = cnt++;
+                                }
+    // s.dumpToFile("s.txt");
+
+    SECTION("success")
+    {
+        auto s2 = s.invertDiagonal();
+
+        REQUIRE(s2->getM() == m);
+        REQUIRE(s2->getN() == n);
+        REQUIRE(s2->getO() == o);
+        REQUIRE(s2->getBlocksize() == blocksize);
+
+        for (int i = ghm; i < m + ghm; i++)
+            for (int j = ghn; j < n + ghn; j++)
+                for (int k = gho; k < o + gho; k++)
+                    for (size_t b = 0; b < blocksize; b++)
+                    {
+                        CAPTURE(i, j, k, b);
+                        REQUIRE_THAT((*s2)[i - ghm][j - ghn][k - gho][b], Catch::Matchers::WithinAbs(1.0 / s[b][b][width / 2][width / 2][width / 2][i][j][k], 1e-4));
+                    }
     }
 
     // Check that inversion of a singular matrix returns nullptr.

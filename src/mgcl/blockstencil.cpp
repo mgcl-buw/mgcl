@@ -487,6 +487,32 @@ namespace mgcl
     }
 
     /**
+     * @brief Inverts only the diagonal elements of the center coefficient matrices, i.e. D^-1 = 1 / d_{i,i}.
+     * This is the equivalent of D^-1 in pointwise Jacobi.
+     *
+     * @return std::unique_ptr<CuboidBS> Containing the inverted diagonal elements, size m,n,o, blocksize 1, width 1.
+     */
+    std::unique_ptr<CuboidBS> Blockstencil::invertDiagonal() const
+    {
+        auto ret = std::make_unique<CuboidBS>(getM(), getN(), getO(), 0, 0, 0, getBlocksize());
+        int center = getWidth() / 2;
+
+        // Invert for each real grid point
+        for (int gpi = getGhostsM(); gpi < getM() + getGhostsM(); gpi++)
+            for (int gpj = getGhostsN(); gpj < getN() + getGhostsN(); gpj++)
+                for (int gpk = getGhostsO(); gpk < getO() + getGhostsO(); gpk++)
+                    for (size_t b = 0; b < getBlocksize(); b++)
+                    {
+                        if (getData()[b][b][center][center][center][gpi][gpj][gpk] == 0.0)
+                            throw "CuboidBS::invertDiagonal: Inversion of diagonal failed, entry on diagonal is 0!";
+
+                        ret->getData()[gpi - getGhostsM()][gpj - getGhostsN()][gpk - getGhostsO()][b] = 1.0 / getData()[b][b][center][center][center][gpi][gpj][gpk];
+                    }
+
+        return ret;
+    }
+
+    /**
      * @brief Inverts the Matrices on the diagonal, i.e. the center coefficient of each stencil.
      * Returns a blockstencil of width 1. Uses the Gauss-Jordan algorithm to invert.
      * It is assumed that the matrices are square and non-empty (blocksize > 0).
@@ -494,7 +520,7 @@ namespace mgcl
      *
      * @return std::unique_ptr<Blockstencil> inverted Blockstencil with width=1, m,n,o and blocksize same as this, ghosts=0
      */
-    std::unique_ptr<Blockstencil> Blockstencil::invertDiagonal() const
+    std::unique_ptr<Blockstencil> Blockstencil::invertCenterMatrices() const
     {
         auto ret = std::make_unique<Blockstencil>(getM(), getN(), getO(), 1, getBlocksize(), 0, 0, 0);
         int b = getBlocksize();

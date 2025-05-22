@@ -1,6 +1,7 @@
 #ifndef MGCL_BLOCKSTENCIL_HPP
 #define MGCL_BLOCKSTENCIL_HPP
 
+#include "cuboid_bs.hpp"
 #include "hypercube.hpp"
 #include "mpi_level_data.hpp"
 
@@ -51,7 +52,8 @@ namespace mgcl
                                                      int o_start, int o_end);
         std::unique_ptr<Blockstencil> copyShallow();
 
-        std::unique_ptr<Blockstencil> invertDiagonal() const;
+        std::unique_ptr<Blockstencil> invertCenterMatrices() const;
+        std::unique_ptr<CuboidBS> invertDiagonal() const;
 
         friend std::ostream& operator<<(std::ostream& os, const Blockstencil& lv);
     };
