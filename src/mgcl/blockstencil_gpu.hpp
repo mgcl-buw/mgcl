@@ -3,6 +3,7 @@
 
 #include "blockstencil.hpp"
 #include "buffer_gpu.hpp"
+#include "cuboid_bs_gpu.hpp"
 #include "kernel_config.hpp"
 #include "profiling_data.hpp"
 #include <ostream>
@@ -83,7 +84,8 @@ namespace mgcl
                                          BufferGpu& d_ghosts,
                                          mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
-        std::unique_ptr<BlockstencilGpu> invertDiagonal(cl_context context, cl_command_queue queue, cl_program program);
+        std::unique_ptr<BlockstencilGpu> invertCenterMatrices(cl_context context, cl_command_queue queue, cl_program program);
+        std::unique_ptr<CuboidBSGpu> invertDiagonal(cl_context context, cl_command_queue queue);
 
         void dumpToFile(cl_command_queue commands, std::string path, bool realCellsOnly);
 
