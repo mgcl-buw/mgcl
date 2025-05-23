@@ -145,7 +145,6 @@ namespace mgcl_bench_borderplanes_blockstencil
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ghosts_m);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ghosts_n);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ghosts_o);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.blocksize);
         mgcl::mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes

@@ -2,9 +2,9 @@
 #define NULL 0
 #endif
 
-// Blocksize for blockstencils, defaults to 2
+// BLOCKSIZE for blockstencils, defaults to 2
 #ifndef BLOCKSIZE
-#define BLOCKSIZE 2
+#define BLOCKSIZE 1
 #endif
 
 #ifndef BLOCKSIZE_POW_2
@@ -174,8 +174,7 @@ __kernel void update_ghosts_periodic(
 __kernel void update_ghosts_cuboidbs_periodic_blockstencil(
     __global double* restrict c,
     const int m, const int n, const int o,
-    const int ghm, const int ghn, const int gho,
-    const int blocksize)
+    const int ghm, const int ghn, const int gho)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
@@ -194,11 +193,11 @@ __kernel void update_ghosts_cuboidbs_periodic_blockstencil(
         int kreal = k + floor(((double)(gho - 1 - k)) / o + 1) * o;
 
         // 1d indices
-        int idx_gh_cell = i * ngh * ogh * blocksize + j * ogh * blocksize + k * blocksize;
-        int idx_real_cell = ireal * ngh * ogh * blocksize + jreal * ogh * blocksize + kreal * blocksize;
+        int idx_gh_cell = i * ngh * ogh * BLOCKSIZE + j * ogh * BLOCKSIZE + k * BLOCKSIZE;
+        int idx_real_cell = ireal * ngh * ogh * BLOCKSIZE + jreal * ogh * BLOCKSIZE + kreal * BLOCKSIZE;
 
         // update ghost cell
-        for (int b = 0; b < blocksize; b++)
+        for (int b = 0; b < BLOCKSIZE; b++)
             c[idx_gh_cell + b] = c[idx_real_cell + b];
     }
 }
@@ -645,7 +644,6 @@ __kernel void residual_27point_blockstencil_block_first_v_gp_first(
     const int svmgh, const int svngh, const int svogh,
     const int ghosts, const int ghosts_sv,
     const int svGridSize, const int svGridSizeCoeffs,
-    const int blocksize,
     const int moff, const int noff, const int ooff)
 
 {
@@ -667,9 +665,9 @@ __kernel void residual_27point_blockstencil_block_first_v_gp_first(
     // calculate residual only for relevant cells (off = 0: only real cells)
     if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
     {
-        int ioff = blocksize * ngh * ogh;
-        int joff = blocksize * ogh;
-        int koff = blocksize;
+        int ioff = BLOCKSIZE * ngh * ogh;
+        int joff = BLOCKSIZE * ogh;
+        int koff = BLOCKSIZE;
         int index = i * ioff + j * joff + k * koff;
         int gridsize = mgh * ngh * ogh;
 
@@ -684,11 +682,11 @@ __kernel void residual_27point_blockstencil_block_first_v_gp_first(
 
         // Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
         int idx_block = 0;
-        for (int bi = 0; bi < blocksize; bi++)
+        for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
             double stencilsum = 0;
 
-            for (int bj = 0; bj < blocksize; bj++)
+            for (int bj = 0; bj < BLOCKSIZE; bj++)
             {
                 // A*v
                 // clang-format off
@@ -1292,8 +1290,7 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacob
     const int svmgh, const int svngh, const int svogh,
     const int ghosts, const int ghosts_sv,
     const int svGridSize, const int svGridSizeCoeffs,
-    const int idx_start, const int store_residual,
-    const int blocksize)
+    const int idx_start, const int store_residual)
 {
     int idx = get_global_id(0);
     int no = ngh * ogh;
@@ -1304,9 +1301,9 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacob
     // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
     if (i >= idx_start && j >= idx_start && k >= idx_start && i < mgh - idx_start && j < ngh - idx_start && k < ogh - idx_start)
     {
-        int ioff = blocksize * ngh * ogh;
-        int joff = blocksize * ogh;
-        int koff = blocksize;
+        int ioff = BLOCKSIZE * ngh * ogh;
+        int joff = BLOCKSIZE * ogh;
+        int koff = BLOCKSIZE;
         int index = i * ioff + j * joff + k * koff;
         int gridsize = mgh * ngh * ogh;
 
@@ -1314,15 +1311,15 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacob
         // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
         int index_sv_gp = (i - ghosts + ghosts_sv) * svno + (j - ghosts + ghosts_sv) * svogh + (k - ghosts + ghosts_sv);
 
-        double res[4]; // TODO make it variable
+        double res[BLOCKSIZE]; // TODO make it variable
 
         // Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
         int idx_block = 0;
-        for (int bi = 0; bi < blocksize; bi++)
+        for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
             double stencilsum = 0;
 
-            for (int bj = 0; bj < blocksize; bj++)
+            for (int bj = 0; bj < BLOCKSIZE; bj++)
             {
                 // A*v
                 // clang-format off
@@ -1374,12 +1371,12 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacob
         // Assumption for index of bs_inv: No ghosts, width = 1
         int gridSizeBsInv = m * n * o;
         int idx_bs_inv = (i - ghosts) * n * o + (j - ghosts) * o + k - ghosts;
-        for (int bi = 0; bi < blocksize; bi++)
+        for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
             double sum = 0;
 
             // calculate bs_inv * r
-            for (int bj = 0; bj < blocksize; bj++)
+            for (int bj = 0; bj < BLOCKSIZE; bj++)
             {
                 sum += bs_inv[idx_bs_inv] * res[bj];
 
@@ -1423,8 +1420,7 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_scalarjaco
     const int svmgh, const int svngh, const int svogh,
     const int ghosts, const int ghosts_sv,
     const int svGridSize, const int svGridSizeCoeffs,
-    const int idx_start, const int store_residual,
-    const int blocksize)
+    const int idx_start, const int store_residual)
 {
     int idx = get_global_id(0);
     int no = ngh * ogh;
@@ -1435,9 +1431,9 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_scalarjaco
     // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
     if (i >= idx_start && j >= idx_start && k >= idx_start && i < mgh - idx_start && j < ngh - idx_start && k < ogh - idx_start)
     {
-        int ioff = blocksize * ngh * ogh;
-        int joff = blocksize * ogh;
-        int koff = blocksize;
+        int ioff = BLOCKSIZE * ngh * ogh;
+        int joff = BLOCKSIZE * ogh;
+        int koff = BLOCKSIZE;
         int index = i * ioff + j * joff + k * koff;
         int gridsize = mgh * ngh * ogh;
 
@@ -1449,15 +1445,15 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_scalarjaco
         int n = ngh - 2 * ghosts;
         int o = ogh - 2 * ghosts;
         // Assumption for index of bs_inv: No ghosts, width = 1
-        int idx_bs_inv = ((i - ghosts) * n * o + (j - ghosts) * o + k - ghosts) * blocksize;
+        int idx_bs_inv = ((i - ghosts) * n * o + (j - ghosts) * o + k - ghosts) * BLOCKSIZE;
 
         // Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
         int idx_block = 0;
-        for (int bi = 0; bi < blocksize; bi++)
+        for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
             double stencilsum = 0;
 
-            for (int bj = 0; bj < blocksize; bj++)
+            for (int bj = 0; bj < BLOCKSIZE; bj++)
             {
                 // A*v
                 // clang-format off
@@ -1580,8 +1576,7 @@ __kernel void restrict_to_coarse_blockstencil(
     __global double* restrict coarse,
     __global double* restrict fbs,
     const int m, const int n, const int o, const int ghosts,
-    const int ngh_vals_coarse, const int ogh_vals_coarse,
-    const int blocksize)
+    const int ngh_vals_coarse, const int ogh_vals_coarse)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
@@ -1590,21 +1585,21 @@ __kernel void restrict_to_coarse_blockstencil(
 
     if (i < m && j < n && k < o)
     {
-        const int idx_c = (i + ghosts) * ngh_vals_coarse * ogh_vals_coarse * blocksize + (j + ghosts) * ogh_vals_coarse * blocksize + (k + ghosts) * blocksize;
+        const int idx_c = (i + ghosts) * ngh_vals_coarse * ogh_vals_coarse * BLOCKSIZE + (j + ghosts) * ogh_vals_coarse * BLOCKSIZE + (k + ghosts) * BLOCKSIZE;
         const int nf = (n - g2) * 2 + g2, of = (o - g2) * 2 + g2;
         const int i2 = i * 2 + ghosts + 1, j2 = j * 2 + ghosts + 1, k2 = k * 2 + ghosts + 1;
-        const int idx_f_self = i2 * nf * of * blocksize + j2 * of * blocksize + k2 * blocksize;
-        const int ioff_f = nf * of * blocksize;
-        const int joff_f = of * blocksize;
-        const int koff_f = blocksize;
+        const int idx_f_self = i2 * nf * of * BLOCKSIZE + j2 * of * BLOCKSIZE + k2 * BLOCKSIZE;
+        const int ioff_f = nf * of * BLOCKSIZE;
+        const int joff_f = of * BLOCKSIZE;
+        const int koff_f = BLOCKSIZE;
 
-        for (int bi = 0; bi < blocksize; bi++)
+        for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
             double sum = 0;
 
-            for (int bj = 0; bj < blocksize; bj++)
+            for (int bj = 0; bj < BLOCKSIZE; bj++)
             {
-                int fbs_idx_self = bi * blocksize * 27 + bj * 27 + 1 * 9 + 1 * 3 + 1;
+                int fbs_idx_self = bi * BLOCKSIZE * 27 + bj * 27 + 1 * 9 + 1 * 3 + 1;
                 sum +=
                     // 0.125 * fine[idx_f_self + bj] // self
                     fbs[fbs_idx_self] * fine[idx_f_self + bj] + // self
@@ -1704,8 +1699,7 @@ __kernel void prolongate_to_fine_blockstencil(
     __global double* restrict coarse,
     __global double* restrict fbs,
     const int mf, const int nf, const int of, const int ghosts,
-    const int ngh_vals_coarse, const int ogh_vals_coarse,
-    const int blocksize)
+    const int ngh_vals_coarse, const int ogh_vals_coarse)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
@@ -1718,23 +1712,23 @@ __kernel void prolongate_to_fine_blockstencil(
 
     if (i > ghosts - 1 && i < mc - ghosts && j > ghosts - 1 && j < nc - ghosts && k > ghosts - 1 && k < oc - ghosts)
     {
-        const int index_coarse = (i * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k) * blocksize;
+        const int index_coarse = (i * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k) * BLOCKSIZE;
         const int i2 = i * 2 - (ghosts - 1), j2 = j * 2 - (ghosts - 1), k2 = k * 2 - (ghosts - 1);
 
-        const int ioff_f = nf * of * blocksize;
-        const int joff_f = of * blocksize;
-        const int koff_f = blocksize;
-        const int ioff_c = nc * oc * blocksize;
-        const int joff_c = oc * blocksize;
-        const int koff_c = blocksize;
+        const int ioff_f = nf * of * BLOCKSIZE;
+        const int joff_f = of * BLOCKSIZE;
+        const int koff_f = BLOCKSIZE;
+        const int ioff_c = nc * oc * BLOCKSIZE;
+        const int joff_c = oc * BLOCKSIZE;
+        const int koff_c = BLOCKSIZE;
         const int index_fine_self = i2 * ioff_f + j2 * joff_f + k2 * koff_f;
 
-        for (int bi = 0; bi < blocksize; bi++)
+        for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
             double sums[8] = {0};
-            for (int bj = 0; bj < blocksize; bj++)
+            for (int bj = 0; bj < BLOCKSIZE; bj++)
             {
-                int fbs_idx_self = bi * blocksize * 27 + bj * 27 + 1 * 9 + 1 * 3 + 1;
+                int fbs_idx_self = bi * BLOCKSIZE * 27 + bj * 27 + 1 * 9 + 1 * 3 + 1;
 
                 sums[0] += fbs[fbs_idx_self] * coarse[index_coarse + bj];
 
@@ -1815,7 +1809,7 @@ __kernel void update_ghosts_varying_stencil(
 __kernel void update_ghosts_blockstencil(
     __global double* restrict c,
     const int m, const int n, const int o,
-    const int width, const int blocksize, const int gh)
+    const int width, const int gh)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
@@ -1834,7 +1828,7 @@ __kernel void update_ghosts_blockstencil(
         int idx_real_cell = ireal * (n + 2 * gh) * (o + 2 * gh) + jreal * (o + 2 * gh) + kreal;
 
         // Iterate over every matrix entry and coefficient for the grid point this work-item maps to.
-        for (int b = 0; b < blocksize * blocksize; b++)
+        for (int b = 0; b < BLOCKSIZE_POW_2; b++)
         {
             for (int s = 0; s < width * width * width; s++)
             {
@@ -3525,15 +3519,14 @@ __kernel void paste_ghosts_from_border_planes_varying_stencil(
  * * m, n, o: Extents of buf_cuboid excluding ghost cells
  * * mgh, ngh, ogh: Extents of buf_cuboid including ghost cells
  * * ghosts_m, ghosts_n, ghosts_o: Ghost cell amount of buf_cuboid
- * * blocksize: Number of vector components
+ * * BLOCKSIZE: Number of vector components
  */
 __kernel void extract_border_planes_cuboidbs(
     __global double* buf_cuboid,
     __global double* buf_res,
     int m, int n, int o,
     int mgh, int ngh, int ogh,
-    int ghosts_m, int ghosts_n, int ghosts_o,
-    const int blocksize)
+    int ghosts_m, int ghosts_n, int ghosts_o)
 {
     // plane sizes
     int yz = ngh * ogh;
@@ -3549,10 +3542,10 @@ __kernel void extract_border_planes_cuboidbs(
         int i = idx / yz + ghosts_m;
         int j = (idx - (i - ghosts_m) * yz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
-        for (int bi = 0; bi < blocksize; bi++)
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_res[idx * blocksize + bi] = buf_cuboid[gp_base_idx + bi]; // store block entries for each grid point consecutively
+            buf_res[idx * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi]; // store block entries for each grid point consecutively
         }
     }
     // Back planes
@@ -3562,10 +3555,10 @@ __kernel void extract_border_planes_cuboidbs(
         int i = idx / yz + m;
         int j = (idx - (i - m) * yz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
-        for (int bi = 0; bi < blocksize; bi++)
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_res[(idx + ghosts_m * yz) * blocksize + bi] = buf_cuboid[gp_base_idx + bi];
+            buf_res[(idx + ghosts_m * yz) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi];
         }
     }
     // Top planes
@@ -3575,10 +3568,10 @@ __kernel void extract_border_planes_cuboidbs(
         int j = idx / xz + ghosts_n;
         int i = (idx - (j - ghosts_n) * xz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
-        for (int bi = 0; bi < blocksize; bi++)
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_res[(idx + 2 * ghosts_m * yz) * blocksize + bi] = buf_cuboid[gp_base_idx + bi];
+            buf_res[(idx + 2 * ghosts_m * yz) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi];
         }
     }
     // Bottom planes
@@ -3588,10 +3581,10 @@ __kernel void extract_border_planes_cuboidbs(
         int j = idx / xz + n;
         int i = (idx - (j - n) * xz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
-        for (int bi = 0; bi < blocksize; bi++)
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_res[(idx + 2 * ghosts_m * yz + ghosts_n * xz) * blocksize + bi] = buf_cuboid[gp_base_idx + bi];
+            buf_res[(idx + 2 * ghosts_m * yz + ghosts_n * xz) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi];
         }
     }
     // Left planes
@@ -3601,10 +3594,10 @@ __kernel void extract_border_planes_cuboidbs(
         int k = idx / xy + ghosts_o;
         int i = (idx - (k - ghosts_o) * xy) / ngh;
         int j = idx % ngh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
-        for (int bi = 0; bi < blocksize; bi++)
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_res[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz) * blocksize + bi] = buf_cuboid[gp_base_idx + bi];
+            buf_res[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi];
         }
     }
     // Right planes
@@ -3614,10 +3607,10 @@ __kernel void extract_border_planes_cuboidbs(
         int k = idx / xy + o;
         int i = (idx - (k - o) * xy) / ngh;
         int j = idx % ngh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
-        for (int bi = 0; bi < blocksize; bi++)
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_res[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * blocksize + bi] = buf_cuboid[gp_base_idx + bi];
+            buf_res[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi];
         }
     }
 }
@@ -3650,8 +3643,7 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
     __global double* buf_planes,
     const int m, const int n, const int o,
     const int mgh, const int ngh, const int ogh,
-    const int ghosts_m, const int ghosts_n, const int ghosts_o,
-    const int blocksize)
+    const int ghosts_m, const int ghosts_n, const int ghosts_o)
 {
     // plane sizes
     int yz = ngh * ogh;
@@ -3667,14 +3659,14 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
         int i = idx / yz + m + ghosts_m;
         int j = (idx - (i - (m + ghosts_m)) * yz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
 
         // No corners or edges, only ghosts directly adjacent to real back face
         if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
         {
-            for (int bi = 0; bi < blocksize; bi++)
+            for (int bi = 0; bi < BLOCKSIZE; bi++)
             {
-                buf_cuboid[gp_base_idx + bi] = buf_planes[idx * blocksize + bi];
+                buf_cuboid[gp_base_idx + bi] = buf_planes[idx * BLOCKSIZE + bi];
             }
         }
     }
@@ -3685,14 +3677,14 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
         int i = idx / yz;
         int j = (idx - i * yz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
 
         // No corners or edges, only ghosts directly adjacent to real front face
         if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
         {
-            for (int bi = 0; bi < blocksize; bi++)
+            for (int bi = 0; bi < BLOCKSIZE; bi++)
             {
-                buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + ghosts_m * yz) * blocksize + bi];
+                buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + ghosts_m * yz) * BLOCKSIZE + bi];
             }
         }
     }
@@ -3703,14 +3695,14 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
         int j = idx / xz + n + ghosts_n;
         int i = (idx - (j - (n + ghosts_n)) * xz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
 
         // Ignore left and right ghost cells, but include front and back ghosts
         if (k >= ghosts_o && k < o + ghosts_o)
         {
-            for (int bi = 0; bi < blocksize; bi++)
+            for (int bi = 0; bi < BLOCKSIZE; bi++)
             {
-                buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz) * blocksize + bi];
+                buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz) * BLOCKSIZE + bi];
             }
         }
     }
@@ -3721,14 +3713,14 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
         int j = idx / xz;
         int i = (idx - j * xz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
 
         // Ignore left and right ghost cells, but include front and back ghosts
         if (k >= ghosts_o && k < o + ghosts_o)
         {
-            for (int bi = 0; bi < blocksize; bi++)
+            for (int bi = 0; bi < BLOCKSIZE; bi++)
             {
-                buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz + ghosts_n * xz) * blocksize + bi];
+                buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz + ghosts_n * xz) * BLOCKSIZE + bi];
             }
         }
     }
@@ -3739,11 +3731,11 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
         int k = idx / xy + o + ghosts_o;
         int i = (idx - (k - (o + ghosts_o)) * xy) / ngh;
         int j = idx % ngh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
 
-        for (int bi = 0; bi < blocksize; bi++)
+        for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz) * blocksize + bi];
+            buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz) * BLOCKSIZE + bi];
         }
     }
     // Right planes (left ghosts)
@@ -3753,11 +3745,11 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
         int k = idx / xy;
         int i = (idx - k * xy) / ngh;
         int j = idx % ngh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * blocksize; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
 
-        for (int bi = 0; bi < blocksize; bi++)
+        for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * blocksize + bi];
+            buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * BLOCKSIZE + bi];
         }
     }
 }
@@ -3781,20 +3773,19 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
  * Hardcoded for a 27p blockstencil.
  * Memory layout blockstencil: [bi][bj][ci][cj][ck][x][y][z]
  * Arguments:
- * * buf_stencil: BlockstencilGpu of size mgh*ngh*ogh*27*blocksize^2
- * * buf_res: std::vector of size (ghosts_m*n*o * ghosts_n*m*o * ghosts_o*n*m) * 27 * blocksize^2
+ * * buf_stencil: BlockstencilGpu of size mgh*ngh*ogh*27*BLOCKSIZE^2
+ * * buf_res: std::vector of size (ghosts_m*n*o * ghosts_n*m*o * ghosts_o*n*m) * 27 * BLOCKSIZE^2
  * * m, n, o: Extents of buf_stencil excluding ghost cells
  * * mgh, ngh, ogh: Extents of buf_stencil including ghost cells
  * * ghosts_m, ghosts_n, ghosts_o: Ghost cell amount of buf_stencil
- * * blocksize: Size of block in one dimension
+ * * BLOCKSIZE: Size of block in one dimension
  */
 __kernel void extract_border_planes_blockstencil(
     __global double* buf_stencil,
     __global double* buf_res,
     const int m, const int n, const int o,
     const int mgh, const int ngh, const int ogh,
-    const int ghosts_m, const int ghosts_n, const int ghosts_o,
-    const int blocksize)
+    const int ghosts_m, const int ghosts_n, const int ghosts_o)
 {
     // plane sizes
     int yz = ngh * ogh;
@@ -3806,7 +3797,6 @@ __kernel void extract_border_planes_blockstencil(
 
     // size of 27pt stencil including ghosted grid
     int gridsizeStencil = gridsize * 27;
-    int blocksize2 = blocksize * blocksize;
 
     int yzgh = yz * ghosts_m;
     int xzgh = xz * ghosts_n;
@@ -3829,7 +3819,7 @@ __kernel void extract_border_planes_blockstencil(
         int i = idx_grid / yz + ghosts_m;
         int j = (idx_grid - (i - ghosts_m) * yz) / ogh;
         int k = idx_grid % ogh;
-        for (int b = 0; b < blocksize2; b++)
+        for (int b = 0; b < BLOCKSIZE_POW_2; b++)
         {
             // if (idx == 0)
             // {
@@ -3843,16 +3833,16 @@ __kernel void extract_border_planes_blockstencil(
     // Back planes
     else if (idx < 2 * ghosts_m * yz * 27)
     {
-        idx -= ghosts_m * yz * 27;                              // reset to 0 for index calculation
-        int idx_resbuf = ghosts_m * yz * 27 * blocksize2 + idx; // add resbuf offset to idx
-        int idx_coeff = idx / (ghosts_m * yz);                  // 1d index of the current coefficient
-        int idx_grid = idx - idx_coeff * (ghosts_m * yz);       // local index of the grid point inside the grid of one coefficient
+        idx -= ghosts_m * yz * 27;                                   // reset to 0 for index calculation
+        int idx_resbuf = ghosts_m * yz * 27 * BLOCKSIZE_POW_2 + idx; // add resbuf offset to idx
+        int idx_coeff = idx / (ghosts_m * yz);                       // 1d index of the current coefficient
+        int idx_grid = idx - idx_coeff * (ghosts_m * yz);            // local index of the grid point inside the grid of one coefficient
 
         int i = idx_grid / yz + m;
         int j = (idx_grid - (i - m) * yz) / ogh;
         int k = idx_grid % ogh;
 
-        for (int b = 0; b < blocksize2; b++)
+        for (int b = 0; b < BLOCKSIZE_POW_2; b++)
         {
             buf_res[idx_resbuf + b * yzRessizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
         }
@@ -3860,16 +3850,16 @@ __kernel void extract_border_planes_blockstencil(
     // Top planes
     else if (idx < (2 * ghosts_m * yz + ghosts_n * xz) * 27)
     {
-        idx -= 2 * ghosts_m * yz * 27;                                // reset to 0 for index calculation
-        int idx_resbuf = (2 * ghosts_m * yz * 27) * blocksize2 + idx; // add resbuf offset to idx
-        int idx_coeff = idx / (ghosts_n * xz);                        // 1d index of the current coefficient
-        int idx_grid = idx - idx_coeff * (ghosts_n * xz);             // local index of the grid point inside the grid of one coefficient
+        idx -= 2 * ghosts_m * yz * 27;                                     // reset to 0 for index calculation
+        int idx_resbuf = (2 * ghosts_m * yz * 27) * BLOCKSIZE_POW_2 + idx; // add resbuf offset to idx
+        int idx_coeff = idx / (ghosts_n * xz);                             // 1d index of the current coefficient
+        int idx_grid = idx - idx_coeff * (ghosts_n * xz);                  // local index of the grid point inside the grid of one coefficient
 
         int j = idx_grid / xz + ghosts_n;
         int i = (idx_grid - (j - ghosts_n) * xz) / ogh;
         int k = idx_grid % ogh;
 
-        for (int b = 0; b < blocksize2; b++)
+        for (int b = 0; b < BLOCKSIZE_POW_2; b++)
         {
             buf_res[idx_resbuf + b * xzRessizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
         }
@@ -3877,16 +3867,16 @@ __kernel void extract_border_planes_blockstencil(
     // Bottom planes
     else if (idx < (2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27)
     {
-        idx -= (2 * ghosts_m * yz + ghosts_n * xz) * 27;                                // reset to 0 for index calculation
-        int idx_resbuf = ((2 * ghosts_m * yz + ghosts_n * xz) * 27 * blocksize2) + idx; // add resbuf offset to idx
-        int idx_coeff = idx / (ghosts_n * xz);                                          // 1d index of the current coefficient
-        int idx_grid = idx - idx_coeff * (ghosts_n * xz);                               // local index of the grid point inside the grid of one coefficient
+        idx -= (2 * ghosts_m * yz + ghosts_n * xz) * 27;                                     // reset to 0 for index calculation
+        int idx_resbuf = ((2 * ghosts_m * yz + ghosts_n * xz) * 27 * BLOCKSIZE_POW_2) + idx; // add resbuf offset to idx
+        int idx_coeff = idx / (ghosts_n * xz);                                               // 1d index of the current coefficient
+        int idx_grid = idx - idx_coeff * (ghosts_n * xz);                                    // local index of the grid point inside the grid of one coefficient
 
         int j = idx_grid / xz + n;
         int i = (idx_grid - (j - n) * xz) / ogh;
         int k = idx_grid % ogh;
 
-        for (int b = 0; b < blocksize2; b++)
+        for (int b = 0; b < BLOCKSIZE_POW_2; b++)
         {
             buf_res[idx_resbuf + b * xzRessizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
         }
@@ -3894,16 +3884,16 @@ __kernel void extract_border_planes_blockstencil(
     // Left planes
     else if (idx < (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27)
     {
-        idx -= (2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27;                                // reset to 0 for index calculation
-        int idx_resbuf = ((2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27 * blocksize2) + idx; // add resbuf offset to idx
-        int idx_coeff = idx / (ghosts_o * xy);                                              // 1d index of the current coefficient
-        int idx_grid = idx - idx_coeff * (ghosts_o * xy);                                   // local index of the grid point inside the grid of one coefficient
+        idx -= (2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27;                                     // reset to 0 for index calculation
+        int idx_resbuf = ((2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27 * BLOCKSIZE_POW_2) + idx; // add resbuf offset to idx
+        int idx_coeff = idx / (ghosts_o * xy);                                                   // 1d index of the current coefficient
+        int idx_grid = idx - idx_coeff * (ghosts_o * xy);                                        // local index of the grid point inside the grid of one coefficient
 
         int k = idx_grid / xy + ghosts_o;
         int i = (idx_grid - (k - ghosts_o) * xy) / ngh;
         int j = idx_grid % ngh;
 
-        for (int b = 0; b < blocksize2; b++)
+        for (int b = 0; b < BLOCKSIZE_POW_2; b++)
         {
             buf_res[idx_resbuf + b * xyRessizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
         }
@@ -3911,16 +3901,16 @@ __kernel void extract_border_planes_blockstencil(
     // Right planes
     else if (idx < (2 * ghosts_m * yz + 2 * ghosts_n * xz + 2 * ghosts_o * xy) * 27)
     {
-        idx -= (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27;                                // reset to 0 for index calculation
-        int idx_resbuf = ((2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27 * blocksize2) + idx; // add resbuf offset to idx
-        int idx_coeff = idx / (ghosts_o * xy);                                                              // 1d index of the current coefficient
-        int idx_grid = idx - idx_coeff * (ghosts_o * xy);                                                   // local index of the grid point inside the grid of one coefficient
+        idx -= (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27;                                     // reset to 0 for index calculation
+        int idx_resbuf = ((2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27 * BLOCKSIZE_POW_2) + idx; // add resbuf offset to idx
+        int idx_coeff = idx / (ghosts_o * xy);                                                                   // 1d index of the current coefficient
+        int idx_grid = idx - idx_coeff * (ghosts_o * xy);                                                        // local index of the grid point inside the grid of one coefficient
 
         int k = idx_grid / xy + o;
         int i = (idx_grid - (k - o) * xy) / ngh;
         int j = idx_grid % ngh;
 
-        for (int b = 0; b < blocksize2; b++)
+        for (int b = 0; b < BLOCKSIZE_POW_2; b++)
         {
             buf_res[idx_resbuf + b * xyRessizeOneMatrixEntry] = buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k];
         }
@@ -3945,20 +3935,19 @@ __kernel void extract_border_planes_blockstencil(
  * work-items.
  * Memory layout: [bi][bj][ci][cj][ck][x][y][z]
  * Arguments:
- * * buf_cuboid: VaryingStencilGpu::buffer of size mgh*ngh*ogh*27*blocksize^2
- * * buf_ghosts BufferGpu::buffer of size (ghosts_m*n*o * ghosts_n*m*o * ghosts_o*n*m) * 27 * blocksize^2
+ * * buf_cuboid: VaryingStencilGpu::buffer of size mgh*ngh*ogh*27*BLOCKSIZE^2
+ * * buf_ghosts BufferGpu::buffer of size (ghosts_m*n*o * ghosts_n*m*o * ghosts_o*n*m) * 27 * BLOCKSIZE^2
  * * m, n, o: Extents of buf_cuboid excluding ghost cells
  * * mgh, ngh, ogh: Extents of buf_cuboid including ghost cells
  * * ghosts_m, ghosts_n, ghosts_o: Ghost cell amount of buf_cuboid
- * * blocksize: Size of block in one dimension
+ * * BLOCKSIZE: Size of block in one dimension
  */
 __kernel void paste_ghosts_from_border_planes_blockstencil(
     __global double* buf_stencil,
     __global double* buf_ghosts,
     const int m, const int n, const int o,
     const int mgh, const int ngh, const int ogh,
-    const int ghosts_m, const int ghosts_n, const int ghosts_o,
-    const int blocksize)
+    const int ghosts_m, const int ghosts_n, const int ghosts_o)
 {
     // plane sizes
     int yz = ngh * ogh;
@@ -3970,7 +3959,6 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
 
     // size of 27pt stencil including ghosted grid
     int gridsizeStencil = gridsize * 27;
-    int blocksize2 = blocksize * blocksize;
 
     int yzgh = yz * ghosts_m;
     int xzgh = xz * ghosts_n;
@@ -3996,7 +3984,7 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
 
         // No corners or edges, only ghosts directly adjacent to real back face
         if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
-            for (int b = 0; b < blocksize2; b++)
+            for (int b = 0; b < BLOCKSIZE_POW_2; b++)
             {
                 buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * yzRessizeOneMatrixEntry + idx];
             }
@@ -4014,9 +4002,9 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
 
         // No corners or edges, only ghosts directly adjacent to real front face
         if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
-            for (int b = 0; b < blocksize2; b++)
+            for (int b = 0; b < BLOCKSIZE_POW_2; b++)
             {
-                buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * yzRessizeOneMatrixEntry + idx + ghosts_m * yz * 27 * blocksize2];
+                buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * yzRessizeOneMatrixEntry + idx + ghosts_m * yz * 27 * BLOCKSIZE_POW_2];
             }
     }
     // Top planes (bottom ghosts)
@@ -4032,9 +4020,9 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
 
         // Ignore left and right ghost cells, but include front and back ghosts
         if (k >= ghosts_o && k < o + ghosts_o)
-            for (int b = 0; b < blocksize2; b++)
+            for (int b = 0; b < BLOCKSIZE_POW_2; b++)
             {
-                buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * xzRessizeOneMatrixEntry + idx + 2 * ghosts_m * yz * 27 * blocksize2];
+                buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * xzRessizeOneMatrixEntry + idx + 2 * ghosts_m * yz * 27 * BLOCKSIZE_POW_2];
             }
     }
     // Bottom planes (top ghosts)
@@ -4050,9 +4038,9 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
 
         // Ignore left and right ghost cells, but include front and back ghosts
         if (k >= ghosts_o && k < o + ghosts_o)
-            for (int b = 0; b < blocksize2; b++)
+            for (int b = 0; b < BLOCKSIZE_POW_2; b++)
             {
-                buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * xzRessizeOneMatrixEntry + idx + (2 * ghosts_m * yz + ghosts_n * xz) * 27 * blocksize2];
+                buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * xzRessizeOneMatrixEntry + idx + (2 * ghosts_m * yz + ghosts_n * xz) * 27 * BLOCKSIZE_POW_2];
             }
     }
     // Left planes (right ghosts)
@@ -4065,9 +4053,9 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
         int k = idx_grid / xy + o + ghosts_o;
         int i = (idx_grid - (k - (o + ghosts_o)) * xy) / ngh;
         int j = idx_grid % ngh;
-        for (int b = 0; b < blocksize2; b++)
+        for (int b = 0; b < BLOCKSIZE_POW_2; b++)
         {
-            buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * xyRessizeOneMatrixEntry + idx + (2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27 * blocksize2];
+            buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * xyRessizeOneMatrixEntry + idx + (2 * ghosts_m * yz + 2 * ghosts_n * xz) * 27 * BLOCKSIZE_POW_2];
         }
     }
     // Right planes (left ghosts)
@@ -4080,9 +4068,9 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
         int k = idx_grid / xy;
         int i = (idx_grid - k * xy) / ngh;
         int j = idx_grid % ngh;
-        for (int b = 0; b < blocksize2; b++)
+        for (int b = 0; b < BLOCKSIZE_POW_2; b++)
         {
-            buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * xyRessizeOneMatrixEntry + idx + (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27 * blocksize2];
+            buf_stencil[b * gridsizeStencil + idx_coeff * gridsize + i * ngh * ogh + j * ogh + k] = buf_ghosts[b * xyRessizeOneMatrixEntry + idx + (2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * 27 * BLOCKSIZE_POW_2];
         }
     }
 }

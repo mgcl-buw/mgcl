@@ -527,6 +527,7 @@ TEST_CASE("Problem::init_oclBlockstencil")
     v->fillRandom();
     f->fillRandom();
     p.setUseOpencl(true);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
 
     auto& s = *p.getBlockstencil();
 
@@ -810,6 +811,7 @@ TEST_CASE("Problem::readResultsBlockstencil")
     p.setGhostsIn(2);
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
 
     auto& s = *p.getBlockstencil();
 

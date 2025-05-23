@@ -199,6 +199,7 @@ TEST_CASE("bs_jacobi_independent_quantities")
         mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
         p.setUseOpencl(true);
         p.setProfilingEnabled(true);
+        p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
         p.init();
 
         // bs_inv.dumpToFile("bs_inv.txt");
@@ -699,6 +700,7 @@ TEST_CASE("bs_jacobi_combined_scalars")
         mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
         p.setUseOpencl(true);
         p.setProfilingEnabled(true);
+        p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
         p.init();
 
         // bs_inv.dumpToFile("bs_inv.txt");

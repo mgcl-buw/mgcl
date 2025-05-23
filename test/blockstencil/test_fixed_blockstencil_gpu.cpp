@@ -15,13 +15,14 @@
 
 TEST_CASE("FixedBlockstencilGpu_ctor")
 {
+    int blocksize = 2;
     auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
     auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
     mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
     p.setUseOpencl(true);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
     p.init();
 
-    int blocksize = 2;
     int width = 3;
     mgcl::FixedBlockstencilGpu fs(width, blocksize, p.getContext());
 
@@ -33,13 +34,14 @@ TEST_CASE("FixedBlockstencilGpu_ctor")
 
 TEST_CASE("FixedBlockstencilGpu_ctor_fs_given")
 {
+    int blocksize = 2;
     auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
     auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
     mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
     p.setUseOpencl(true);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
     p.init();
 
-    int blocksize = 2;
     int width = 3;
     mgcl::FixedBlockstencil h_fs(width, blocksize);
     h_fs.fill1dIndex(false);

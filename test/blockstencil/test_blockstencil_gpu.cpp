@@ -18,10 +18,12 @@
 
 TEST_CASE("BlockstencilGpu::updateGhosts")
 {
+    int blocksize = 2;
     std::shared_ptr<mgcl::Cuboid> v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
     std::shared_ptr<mgcl::Cuboid> f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
     mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
     p.setUseOpencl(true);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
     p.init();
 
     SECTION("m,n,o >= gh")
@@ -34,8 +36,7 @@ TEST_CASE("BlockstencilGpu::updateGhosts")
         // int n = GENERATE(2, 3, 4);
         // int o = GENERATE(2, 3, 4);
 
-        int gh = 1; // GENERATE(1, 2);
-        int blocksize = 2;
+        int gh = 1;    // GENERATE(1, 2);
         int width = 3; // GENERATE(3, 5);
 
         mgcl::Blockstencil h_a(m, n, o, width, blocksize, gh, gh, gh);
@@ -63,7 +64,6 @@ TEST_CASE("BlockstencilGpu::updateGhosts")
         // int o = GENERATE(1, 2, 3);
 
         int gh = GENERATE(4, 5);
-        int blocksize = 2;
         int width = GENERATE(3, 5);
 
         mgcl::Blockstencil h_a(m, n, o, width, blocksize, gh, gh, gh);
@@ -93,7 +93,6 @@ TEST_CASE("BlockstencilGpu::updateGhosts")
         // int ghn = GENERATE(1, 3, 5);
         // int gho = GENERATE(1, 3, 5);
 
-        int blocksize = 2;
         int width = GENERATE(3, 5);
 
         mgcl::Blockstencil h_a(m, n, o, width, blocksize, gh, gh, gh);
@@ -631,6 +630,7 @@ TEST_CASE("BlockstencilGpu::extract_border_planes")
 {
 
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    int blocksize = 2;
 
     // Create dummy problem
     auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
@@ -639,6 +639,7 @@ TEST_CASE("BlockstencilGpu::extract_border_planes")
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
     p.setProfilingEnabled(true);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
     p.init();
 
     int m = 3;
@@ -653,7 +654,6 @@ TEST_CASE("BlockstencilGpu::extract_border_planes")
     int yz = ngh * ogh;
     int xz = mgh * ogh;
     int xy = mgh * ngh;
-    int blocksize = 2;
     int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * 27 * blocksize * blocksize;
 
     mgcl::Blockstencil h_stencil(m, n, o, 3, blocksize, ghosts_m, ghosts_n, ghosts_o);
@@ -901,6 +901,7 @@ TEST_CASE("BlockstencilGpu::pasteGhostsFromBorderPlanes")
     mgcl::Problem p(1, 1, 1, f, v);
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
     p.init();
 
     mgcl::Blockstencil h_stencil(m, n, o, 3, blocksize, ghosts_m, ghosts_n, ghosts_o);
@@ -943,6 +944,7 @@ TEST_CASE("BlockstencilGpu::invertCenterMatrices")
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
     p.setProfilingEnabled(true);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
     p.init();
 
     mgcl::Blockstencil bs(m, n, o, 3, blocksize, gh, gh, gh);
@@ -977,6 +979,7 @@ TEST_CASE("BlockstencilGpu::invertDiagonal")
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
     p.setProfilingEnabled(true);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
     p.init();
 
     mgcl::Blockstencil bs(m, n, o, 3, blocksize, gh, gh, gh);

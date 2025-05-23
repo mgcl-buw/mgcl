@@ -170,7 +170,6 @@ namespace mgcl_bench_residual_blockstencil
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSizeBlock);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.blocksize);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.moff);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.noff);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ooff);

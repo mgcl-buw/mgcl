@@ -743,7 +743,6 @@ namespace mgcl
         pos_idxstart = pos;
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
         pos_storeres = pos;
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &blocksize);
         mgclCheckError(err, "Setting kernel arguments");
 
         // One work-item per cell (including ghost cells).
@@ -1212,7 +1211,6 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSizeBlock);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &blocksize);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.moff);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.noff);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ooff);

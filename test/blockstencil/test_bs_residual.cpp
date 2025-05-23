@@ -228,6 +228,7 @@ TEST_CASE("ocl_bs_residual_single_point")
     mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
     p.setUseOpencl(true);
     p.setProfilingEnabled(true);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
     p.init();
 
     mgcl::CuboidBSGpu d_v(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v);
@@ -388,6 +389,7 @@ TEST_CASE("ocl_bs_residual_independent_quantities")
     mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
     p.setUseOpencl(true);
     p.setProfilingEnabled(true);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
     p.init();
 
     // ********** Blockstencil args ***********

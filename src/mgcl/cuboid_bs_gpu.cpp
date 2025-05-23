@@ -475,7 +475,6 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_n);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &blocksize);
         mgcl::mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
@@ -573,7 +572,6 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_n);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &blocksize);
         mgcl::mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item for each border cell. Pad global sizes to fit to local sizes
@@ -631,7 +629,6 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_n);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &blocksize);
         mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes

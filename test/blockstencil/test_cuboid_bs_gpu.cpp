@@ -383,6 +383,7 @@ TEST_CASE("CuboidBSGpu::extract_border_planes", "[ocl]")
         mgcl::Problem p(1, 1, 1, f, v);
         p.setUseOpencl(true);
         p.setDeviceType(deviceType);
+        p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
         p.init();
 
         {
@@ -407,6 +408,7 @@ TEST_CASE("CuboidBSGpu::extract_border_planes", "[ocl]")
         mgcl::Problem p(1, 1, 1, f, v);
         p.setUseOpencl(true);
         p.setDeviceType(deviceType);
+        p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
         p.init();
 
         int m = 3;
@@ -421,7 +423,6 @@ TEST_CASE("CuboidBSGpu::extract_border_planes", "[ocl]")
         int yz = ngh * ogh;
         int xz = mgh * ogh;
         int xy = mgh * ngh;
-        int blocksize = 2;
         int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * blocksize;
 
         mgcl::CuboidBS h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o, blocksize);
@@ -521,6 +522,7 @@ TEST_CASE("CuboidBSGpu::extract_border_planes", "[ocl]")
 TEST_CASE("CuboidBSGpu::pasteGhostsFromBorderPlanes", "[ocl]")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    int blocksize = 2;
 
     SECTION("success")
     {
@@ -530,6 +532,7 @@ TEST_CASE("CuboidBSGpu::pasteGhostsFromBorderPlanes", "[ocl]")
         mgcl::Problem p(1, 1, 1, f, v);
         p.setUseOpencl(true);
         p.setDeviceType(deviceType);
+        p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
         p.init();
 
         int m = 3;
@@ -544,7 +547,6 @@ TEST_CASE("CuboidBSGpu::pasteGhostsFromBorderPlanes", "[ocl]")
         int yz = ngh * ogh;
         int xz = mgh * ogh;
         int xy = mgh * ngh;
-        int blocksize = 2;
         int ressize = (2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o) * blocksize;
 
         mgcl::CuboidBS h_cuboid(m, n, o, ghosts_m, ghosts_n, ghosts_o, blocksize);
@@ -679,6 +681,7 @@ TEST_CASE("CuboidBSGpu::updateGhosts gh < m")
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
     p.setProfilingEnabled(true);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
     p.init();
 
     auto d_c1 = std::make_shared<mgcl::CuboidBSGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
@@ -724,6 +727,7 @@ TEST_CASE("CuboidBSGpu::updateGhosts gh > m")
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
     p.setProfilingEnabled(true);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
     p.init();
 
     auto d_c1 = std::make_shared<mgcl::CuboidBSGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);

@@ -87,6 +87,7 @@ TEST_CASE("prolongation_single_point")
         p_dummy->setUseOpencl(true);
         p_dummy->setDeviceType(deviceType);
         p_dummy->setProfilingEnabled(true);
+        p_dummy->getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
         p_dummy->init();
 
         mgcl::CuboidBSGpu d_c_fine(p_dummy->getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_fine);
@@ -250,6 +251,7 @@ TEST_CASE("prolongation_blockstencil_independent_quantities")
         p_dummy->setUseOpencl(true);
         p_dummy->setDeviceType(deviceType);
         p_dummy->setProfilingEnabled(true);
+        p_dummy->getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
         p_dummy->init();
 
         mgcl::CuboidBSGpu d_c_fine(p_dummy->getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_finebs);
