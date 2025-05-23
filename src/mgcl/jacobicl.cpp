@@ -325,6 +325,11 @@ namespace mgcl
                                 {
                                     // update v, i.e. v_{i+1} = v_i + omega * bs_inv * r
                                     vraw[iv][jv][kv][bi] = vraw[iv][jv][kv][bi] + args.omega * bs_inv[isv][jsv][ksv][bi] * args.r[ir][jr][kr][bi];
+
+                                    // if (iv == 1 && jv == 1 && kv == 1)
+                                    // {
+                                    //     std::cout << "bs_inv * r[ir][jr][kr] = " << bs_inv[isv][jsv][ksv][bi] << " * " << args.r[ir][jr][kr][bi] << " = " << bs_inv[isv][jsv][ksv][bi] * args.r[ir][jr][kr][bi] << std::endl;
+                                    // }
                                 }
                 }
             }
@@ -1466,7 +1471,7 @@ namespace mgcl
                         // if (iv >= 1 && iv <= 2 && jv >= 1 && jv <= 2 && kv >= 1 && kv <= 2)
                         // {
                         //     // print27point(v, iv, jv, kv, *fixedStencil);
-                        //     std::cout << "stencilsum: " << stencilsum << std::endl;
+                        //     std::cout << "fs stencilsum: " << stencilsum << std::endl;
                         // }
                     }
                     else if (stencilType == MGCL_VARYING)
@@ -1615,7 +1620,7 @@ namespace mgcl
                             // // if (iv == 2 && jv == 2 && kv == 2 && bi == 6)
                             // {
                             //     // print27point(v, iv, jv, kv, args.bs, isv, jsv, ksv, bi, bj);
-                            //     // std::cout << "stencilsum: " << stencilsum << std::endl;
+                            //     std::cout << "bs stencilsum: " << stencilsum << std::endl;
                             // }
                         }
 

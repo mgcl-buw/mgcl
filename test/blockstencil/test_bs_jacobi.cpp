@@ -753,14 +753,14 @@ TEST_CASE("bs_jacobi_combined_scalars")
                 REQUIRE_THAT(v[i][j][k][5], Catch::Matchers::WithinAbs(v1[i2 + 1][j2][k2 + 1], 1e-4));
                 REQUIRE_THAT(v[i][j][k][6], Catch::Matchers::WithinAbs(v1[i2 + 1][j2 + 1][k2], 1e-4));
                 REQUIRE_THAT(v[i][j][k][7], Catch::Matchers::WithinAbs(v1[i2 + 1][j2 + 1][k2 + 1], 1e-4));
-                REQUIRE_THAT(r[i][j][k][0], Catch::Matchers::WithinAbs(v1[i2][j2][k2], 1e-4));
-                REQUIRE_THAT(r[i][j][k][1], Catch::Matchers::WithinAbs(v1[i2][j2][k2 + 1], 1e-4));
-                REQUIRE_THAT(r[i][j][k][2], Catch::Matchers::WithinAbs(v1[i2][j2 + 1][k2], 1e-4));
-                REQUIRE_THAT(r[i][j][k][3], Catch::Matchers::WithinAbs(v1[i2][j2 + 1][k2 + 1], 1e-4));
-                REQUIRE_THAT(r[i][j][k][4], Catch::Matchers::WithinAbs(v1[i2 + 1][j2][k2], 1e-4));
-                REQUIRE_THAT(r[i][j][k][5], Catch::Matchers::WithinAbs(v1[i2 + 1][j2][k2 + 1], 1e-4));
-                REQUIRE_THAT(r[i][j][k][6], Catch::Matchers::WithinAbs(v1[i2 + 1][j2 + 1][k2], 1e-4));
-                REQUIRE_THAT(r[i][j][k][7], Catch::Matchers::WithinAbs(v1[i2 + 1][j2 + 1][k2 + 1], 1e-4));
+                REQUIRE_THAT(r[i][j][k][0], Catch::Matchers::WithinAbs(r1[i2][j2][k2], 1e-4));
+                REQUIRE_THAT(r[i][j][k][1], Catch::Matchers::WithinAbs(r1[i2][j2][k2 + 1], 1e-4));
+                REQUIRE_THAT(r[i][j][k][2], Catch::Matchers::WithinAbs(r1[i2][j2 + 1][k2], 1e-4));
+                REQUIRE_THAT(r[i][j][k][3], Catch::Matchers::WithinAbs(r1[i2][j2 + 1][k2 + 1], 1e-4));
+                REQUIRE_THAT(r[i][j][k][4], Catch::Matchers::WithinAbs(r1[i2 + 1][j2][k2], 1e-4));
+                REQUIRE_THAT(r[i][j][k][5], Catch::Matchers::WithinAbs(r1[i2 + 1][j2][k2 + 1], 1e-4));
+                REQUIRE_THAT(r[i][j][k][6], Catch::Matchers::WithinAbs(r1[i2 + 1][j2 + 1][k2], 1e-4));
+                REQUIRE_THAT(r[i][j][k][7], Catch::Matchers::WithinAbs(r1[i2 + 1][j2 + 1][k2 + 1], 1e-4));
             }
 }
 
