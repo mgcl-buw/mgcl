@@ -632,6 +632,7 @@ TEST_CASE("bs_jacobi_combined_scalars")
 
     mgcl::TBlockstencilInv bs_inv_variant = bs.invertDiagonal();
     REQUIRE(std::holds_alternative<std::shared_ptr<mgcl::CuboidBS>>(bs_inv_variant));
+    auto& bs_inv = std::get<std::shared_ptr<mgcl::CuboidBS>>(bs_inv_variant);
 
     // bs_inv.dumpToFile("bs_inv.txt");
     // bs.dumpToFile("bs.txt");
@@ -690,54 +691,55 @@ TEST_CASE("bs_jacobi_combined_scalars")
         // r1.dumpToFile("r1.txt");
     }
 
-    // SECTION("ocl")
-    // {
-    //     // create dummy problem
-    //     auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-    //     auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
-    //     mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
-    //     p.setUseOpencl(true);
-    //     p.setProfilingEnabled(true);
-    //     p.init();
+    SECTION("ocl")
+    {
+        // create dummy problem
+        auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
+        p.setUseOpencl(true);
+        p.setProfilingEnabled(true);
+        p.init();
 
-    //     // bs_inv.dumpToFile("bs_inv.txt");
+        // bs_inv.dumpToFile("bs_inv.txt");
 
-    //     mgcl::CuboidBSGpu d_v_in(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
-    //     mgcl::CuboidBSGpu d_v_out(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
-    //     mgcl::CuboidBSGpu d_r(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, r);
-    //     mgcl::CuboidBSGpu d_f(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, f);
-    //     mgcl::BlockstencilGpu d_bs(bs, p.getContext(), p.getCommands(), p.getProgram());
-    //     mgcl::BlockstencilGpu d_bs_inv(bs_inv, p.getContext(), p.getCommands(), p.getProgram());
-    //     mgcl::CuboidBSGpu dRSquares(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r);
+        mgcl::CuboidBSGpu d_v_in(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
+        mgcl::CuboidBSGpu d_v_out(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
+        mgcl::CuboidBSGpu d_r(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, r);
+        mgcl::CuboidBSGpu d_f(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, f);
+        mgcl::BlockstencilGpu d_bs(bs, p.getContext(), p.getCommands(), p.getProgram());
+        auto d_bs_inv = std::make_shared<mgcl::CuboidBSGpu>(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *bs_inv);
+        mgcl::TBlockstencilInv d_bs_inv_variant = d_bs_inv;
+        mgcl::CuboidBSGpu dRSquares(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r);
 
-    //     mgcl::args::JacobiBSOclArgs args{
-    //         d_f,
-    //         d_v_in,
-    //         d_v_out,
-    //         d_r,
-    //         resnorm,
-    //         d_bs,
-    //         d_bs_inv,
-    //         &dRSquares,
-    //         true,
-    //         periodic,
-    //         true, iters, stepsPerIter, omega,
-    //         nullptr, nullptr, nullptr,
-    //         p.getProgram(), p.getCommands(), p.getContext(),
-    //         0, 0, 0, nullptr,
-    //         &p.getKernelConfig(),
-    //         p.getProfilingData()};
+        mgcl::args::JacobiBSOclArgs args{
+            d_f,
+            d_v_in,
+            d_v_out,
+            d_r,
+            resnorm,
+            d_bs,
+            d_bs_inv_variant,
+            &dRSquares,
+            true,
+            periodic,
+            true, iters, stepsPerIter, omega,
+            nullptr, nullptr, nullptr,
+            p.getProgram(), p.getCommands(), p.getContext(),
+            0, 0, 0, nullptr,
+            &p.getKernelConfig(),
+            p.getProfilingData()};
 
-    //     double res = mgcl::MultigridEngine::jacobi(args);
+        double res = mgcl::MultigridEngine::jacobi(args);
 
-    //     p.finish();
+        p.finish();
 
-    //     d_v_in.read(p.getCommands(), &v, true);
-    //     d_r.read(p.getCommands(), &r, true);
+        d_v_in.read(p.getCommands(), &v, true);
+        d_r.read(p.getCommands(), &r, true);
 
-    //     // r.dumpToFile("r.txt");
-    //     // r1.dumpToFile("r1.txt");
-    // }
+        // r.dumpToFile("r.txt");
+        // r1.dumpToFile("r1.txt");
+    }
 
     // Check both r and v components
     for (int i = gh, i2 = gh; i < mc + gh; i++, i2 += 2)
