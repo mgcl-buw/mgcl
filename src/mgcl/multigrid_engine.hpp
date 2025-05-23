@@ -27,6 +27,7 @@
 #include "problem.hpp"
 #include "profiling_data.hpp"
 #include "stencil.hpp"
+#include "types.hpp"
 
 namespace mgcl
 {
@@ -91,7 +92,7 @@ namespace mgcl
             CuboidBSGpu& r;
             MGCL_RESIDUAL_NORM resnorm;
             BlockstencilGpu& bs;
-            BlockstencilGpu& bs_inv;
+            TBlockstencilInv& bs_inv;
             CuboidBSGpu* dRsq;
 
             bool returnResidualNorm;
@@ -125,7 +126,7 @@ namespace mgcl
             CuboidBS& r;
             MGCL_RESIDUAL_NORM resnorm;
             Blockstencil& bs;
-            Blockstencil& bs_inv;
+            TBlockstencilInv& bs_inv;
 
             bool returnResidualNorm;
             bool periodic;

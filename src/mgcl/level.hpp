@@ -9,6 +9,7 @@
 #include "mgcl.hpp" // for MGCL_STENCIL
 #include "mpi_level_data.hpp"
 #include "stencil.hpp" // for VaryingStencil3x3x3
+#include "types.hpp"
 
 #include <cassert>
 #include <memory> // for shared_ptr
@@ -52,12 +53,7 @@ namespace mgcl
         std::shared_ptr<FixedStencil> fixedStencil = nullptr;
         std::shared_ptr<Blockstencil> blockstencil = nullptr;
         std::shared_ptr<BlockstencilGpu> blockstencilGpu = nullptr;
-        std::variant<
-            std::shared_ptr<Blockstencil>,
-            std::shared_ptr<CuboidBS>,
-            std::shared_ptr<BlockstencilGpu>,
-            std::shared_ptr<CuboidBSGpu>>
-            blockstencilInv;
+        TBlockstencilInv blockstencilInv;
 
         /* grid dimensions of local real grid */
         int m;
@@ -187,6 +183,7 @@ namespace mgcl
         std::shared_ptr<VaryingStencil>& getStencilValues();
         std::shared_ptr<FixedStencil>& getFixedStencil();
         std::shared_ptr<Blockstencil>& getBlockstencil() { return blockstencil; }
+        TBlockstencilInv& getBlockstencilInvVariant() { return blockstencilInv; }
         std::shared_ptr<Blockstencil>& getBlockstencilInvBlock()
         {
             if (std::holds_alternative<std::shared_ptr<Blockstencil>>(blockstencilInv))

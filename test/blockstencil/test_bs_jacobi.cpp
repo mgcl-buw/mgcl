@@ -7,6 +7,7 @@
 #include <cmath>
 #include <iostream>
 #include <memory>
+#include <variant>
 
 #include "../../src/mgcl/blockstencil.hpp"
 #include "../../src/mgcl/cuboid_bs.hpp"
@@ -143,9 +144,12 @@ TEST_CASE("bs_jacobi_independent_quantities")
                             bs[1][0][ci][cj][ck][i][j][k] = 0;
                         }
 
-    auto bs_inv_ptr = bs.invertCenterMatrices();
-    REQUIRE(bs_inv_ptr != nullptr);
-    auto& bs_inv = *bs_inv_ptr;
+    mgcl::TBlockstencilInv bs_inv_variant = bs.invertDiagonal();
+    REQUIRE(std::holds_alternative<std::shared_ptr<mgcl::CuboidBS>>(bs_inv_variant));
+    auto& bs_inv = std::get<std::shared_ptr<mgcl::CuboidBS>>(bs_inv_variant);
+    // auto bs_inv_ptr = bs.invertCenterMatrices();
+    // REQUIRE(bs_inv_ptr != nullptr);
+    // auto& bs_inv = *bs_inv_ptr;
 
     // fill v1 and v2 with values of v, vice versa for f
     for (int i = 0; i < mgh; i++)
@@ -175,7 +179,7 @@ TEST_CASE("bs_jacobi_independent_quantities")
             r,
             resnorm,
             bs,
-            bs_inv,
+            bs_inv_variant,
             true,
             periodic,
             true, iters, stepsPerIter, omega,
@@ -204,7 +208,9 @@ TEST_CASE("bs_jacobi_independent_quantities")
         mgcl::CuboidBSGpu d_r(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, r);
         mgcl::CuboidBSGpu d_f(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, f);
         mgcl::BlockstencilGpu d_bs(bs, p.getContext(), p.getCommands(), p.getProgram());
-        mgcl::BlockstencilGpu d_bs_inv(bs_inv, p.getContext(), p.getCommands(), p.getProgram());
+        // mgcl::BlockstencilGpu d_bs_inv(*bs_inv, p.getContext(), p.getCommands(), p.getProgram());
+        auto d_bs_inv = std::make_shared<mgcl::CuboidBSGpu>(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *bs_inv);
+        mgcl::TBlockstencilInv d_bs_inv_variant = d_bs_inv;
         mgcl::CuboidBSGpu dRSquares(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r);
 
         mgcl::args::JacobiBSOclArgs args{
@@ -214,7 +220,7 @@ TEST_CASE("bs_jacobi_independent_quantities")
             d_r,
             resnorm,
             d_bs,
-            d_bs_inv,
+            d_bs_inv_variant,
             &dRSquares,
             true,
             periodic,
@@ -624,12 +630,11 @@ TEST_CASE("bs_jacobi_combined_scalars")
                 bs[7][0][2][2][2][i][j][k] = bbr;
             }
 
-    auto bs_inv_ptr = bs.invertCenterMatrices(); // TODO change to diagonal
-    REQUIRE(bs_inv_ptr != nullptr);
-    auto& bs_inv = *bs_inv_ptr;
+    mgcl::TBlockstencilInv bs_inv_variant = bs.invertDiagonal();
+    REQUIRE(std::holds_alternative<std::shared_ptr<mgcl::CuboidBS>>(bs_inv_variant));
 
-    bs_inv.dumpToFile("bs_inv.txt");
-    bs.dumpToFile("bs.txt");
+    // bs_inv.dumpToFile("bs_inv.txt");
+    // bs.dumpToFile("bs.txt");
 
     // fill v with values of v1 and v2, vice versa for f
     for (int i = gh, i2 = gh; i < mc + gh; i++, i2 += 2)
@@ -673,7 +678,7 @@ TEST_CASE("bs_jacobi_combined_scalars")
             r,
             resnorm,
             bs,
-            bs_inv,
+            bs_inv_variant,
             true,
             periodic,
             true, iters, stepsPerIter, omega,

@@ -15,6 +15,8 @@
 // #include <iostream>
 #include <iostream>
 #include <math.h> // for fabs, sqrt, ceil
+#include <memory>
+#include <variant>
 
 #ifdef __APPLE__
 #include <OpenCL/cl.h>          // for clSetKernelArg, _cl_mem, cl_mem, clE...
@@ -215,14 +217,23 @@ namespace mgcl
             error("#ghosts of f must be >= stepsPerIter - 1!");
         }
 
-        if (args.bs_inv.getWidth() != 1)
+        if (!std::holds_alternative<std::shared_ptr<CuboidBS>>(args.bs_inv) && !std::holds_alternative<std::shared_ptr<Blockstencil>>(args.bs_inv))
         {
-            error("width of bs_inv must be 1!");
+            error("bs_inv must be a shared_ptr to either CuboidBS or Blockstencil!");
         }
 
-        if (args.bs_inv.getGhostsM() > 0 || args.bs_inv.getGhostsN() > 0 || args.bs_inv.getGhostsO() > 0)
+        if (auto bs_inv_ptr = std::get_if<std::shared_ptr<Blockstencil>>(&args.bs_inv))
         {
-            error("#ghosts of bs_inv must be 0!");
+            auto& bs_inv = *bs_inv_ptr->get();
+            if (bs_inv.getWidth() != 1)
+            {
+                error("width of bs_inv must be 1!");
+            }
+
+            if (bs_inv.getGhostsM() > 0 || bs_inv.getGhostsN() > 0 || bs_inv.getGhostsO() > 0)
+            {
+                error("#ghosts of bs_inv must be 0!");
+            }
         }
 
         for (int iter = 0; iter < args.maxiter; iter += stepsPerIter)
@@ -268,36 +279,54 @@ namespace mgcl
 
                 // args.r.dumpToFile("r_vectorial.txt");
 
-                for (int iv = istart_v, ir = istart_r, isv = istart_sv; iv < iend_v; iv++, ir++, isv++)
-                    for (int jv = jstart_v, jr = jstart_r, jsv = jstart_sv; jv < jend_v; jv++, jr++, jsv++)
-                        for (int kv = kstart_v, kr = kstart_r, ksv = kstart_sv; kv < kend_v; kv++, kr++, ksv++)
-                        {
-                            for (int bi = 0; bi < args.v.getBlocksize(); bi++)
+                // smoother type is Jacobi_Block: bs_inv is a matrix
+                if (auto bs_inv_ptr = std::get_if<std::shared_ptr<Blockstencil>>(&args.bs_inv))
+                {
+                    auto& bs_inv = *bs_inv_ptr->get();
+                    for (int iv = istart_v, ir = istart_r, isv = istart_sv; iv < iend_v; iv++, ir++, isv++)
+                        for (int jv = jstart_v, jr = jstart_r, jsv = jstart_sv; jv < jend_v; jv++, jr++, jsv++)
+                            for (int kv = kstart_v, kr = kstart_r, ksv = kstart_sv; kv < kend_v; kv++, kr++, ksv++)
                             {
-                                double sum = 0;
-                                // calculate bs_inv * r first
-                                for (int bj = 0; bj < args.v.getBlocksize(); bj++)
+                                for (int bi = 0; bi < args.v.getBlocksize(); bi++)
                                 {
-                                    sum += args.bs_inv[bi][bj][0][0][0][isv][jsv][ksv] * args.r[ir][jr][kr][bj];
+                                    double sum = 0;
+                                    // calculate bs_inv * r first
+                                    for (int bj = 0; bj < args.v.getBlocksize(); bj++)
+                                    {
+                                        sum += bs_inv[bi][bj][0][0][0][isv][jsv][ksv] * args.r[ir][jr][kr][bj];
+
+                                        // if (iv == 1 && jv == 1 && kv == 1)
+                                        // {
+                                        //     // print27point(v, iv, jv, kv, *fixedStencil);
+                                        //     std::cout << "bs_inv * r = " << args.bs_inv[bi][bj][0][0][0][isv][jsv][ksv] << " * " << args.r[ir][jr][kr][bj] << " = " << args.bs_inv[bi][bj][0][0][0][isv][jsv][ksv] * args.r[ir][jr][kr][bj] << std::endl;
+                                        // }
+                                    }
 
                                     // if (iv == 1 && jv == 1 && kv == 1)
                                     // {
                                     //     // print27point(v, iv, jv, kv, *fixedStencil);
-                                    //     std::cout << "bs_inv * r = " << args.bs_inv[bi][bj][0][0][0][isv][jsv][ksv] << " * " << args.r[ir][jr][kr][bj] << " = " << args.bs_inv[bi][bj][0][0][0][isv][jsv][ksv] * args.r[ir][jr][kr][bj] << std::endl;
+                                    //     std::cout << "sum = " << sum << std::endl;
                                     // }
+
+                                    // update v, i.e. v_{i+1} = v_i + omega * bs_inv * r
+                                    vraw[iv][jv][kv][bi] = vraw[iv][jv][kv][bi] + args.omega * sum;
+                                    // vraw[iv][jv][kv][bi] = vraw[iv][jv][kv][bi] + args.omega * args.bs_inv[bi][bi][0][0][0][isv][jsv][ksv] * args.r[ir][jr][kr][bi];
                                 }
-
-                                // if (iv == 1 && jv == 1 && kv == 1)
-                                // {
-                                //     // print27point(v, iv, jv, kv, *fixedStencil);
-                                //     std::cout << "sum = " << sum << std::endl;
-                                // }
-
-                                // update v, i.e. v_{i+1} = v_i + omega * bs_inv * r
-                                vraw[iv][jv][kv][bi] = vraw[iv][jv][kv][bi] + args.omega * sum;
-                                // vraw[iv][jv][kv][bi] = vraw[iv][jv][kv][bi] + args.omega * args.bs_inv[bi][bi][0][0][0][isv][jsv][ksv] * args.r[ir][jr][kr][bi];
                             }
-                        }
+                }
+                else
+                {
+                    // smoother type is Jacobi_Scalar: bs_inv is scalar
+                    auto& bs_inv = *std::get_if<std::shared_ptr<CuboidBS>>(&args.bs_inv)->get();
+                    for (int iv = istart_v, ir = istart_r, isv = istart_sv; iv < iend_v; iv++, ir++, isv++)
+                        for (int jv = jstart_v, jr = jstart_r, jsv = jstart_sv; jv < jend_v; jv++, jr++, jsv++)
+                            for (int kv = kstart_v, kr = kstart_r, ksv = kstart_sv; kv < kend_v; kv++, kr++, ksv++)
+                                for (int bi = 0; bi < args.v.getBlocksize(); bi++)
+                                {
+                                    // update v, i.e. v_{i+1} = v_i + omega * bs_inv * r
+                                    vraw[iv][jv][kv][bi] = vraw[iv][jv][kv][bi] + args.omega * bs_inv[isv][jsv][ksv][bi] * args.r[ir][jr][kr][bi];
+                                }
+                }
             }
         }
 
@@ -633,11 +662,31 @@ namespace mgcl
             error("#ghosts must be >= stepsPerIter!");
         }
 
+        if (!std::holds_alternative<std::shared_ptr<CuboidBSGpu>>(args.bs_inv) && !std::holds_alternative<std::shared_ptr<BlockstencilGpu>>(args.bs_inv))
+        {
+            error("bs_inv must be a shared_ptr to either CuboidBSGpu or BlockstencilGpu!");
+        }
+
+        std::string kernelName = "jacobi_iter_27point_blockstencil_block_first_v_gp_first_scalarjacobi";
+        if (auto bs_inv_ptr = std::get_if<std::shared_ptr<BlockstencilGpu>>(&args.bs_inv))
+        {
+            auto& bs_inv = *bs_inv_ptr->get();
+            if (bs_inv.getWidth() != 1)
+            {
+                error("width of bs_inv must be 1!");
+            }
+
+            if (bs_inv.getGh() > 0)
+            {
+                error("#ghosts of bs_inv must be 0!");
+            }
+            kernelName = "jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacobi";
+        }
+
         cl_event ev;
 
         // Create the compute kernel from the program
-        const char* kernelName = "jacobi_iter_27point_blockstencil_block_first_v_gp_first";
-        cl_kernel kernel = clCreateKernel(args.program, kernelName, &err);
+        cl_kernel kernel = clCreateKernel(args.program, kernelName.c_str(), &err);
         mgclCheckError(err, "Creating kernel");
 
         cl_mem dVIn = args.v_in.getBuffer();
@@ -657,7 +706,15 @@ namespace mgcl
         int svogh = args.bs.getOgh();
         int svGridSize = svmgh * svngh * svogh;
         int gh = args.v_in.getGhostsM();
-        auto bs_inv_buf = args.bs_inv.getBuf();
+        cl_mem bs_inv_buf;
+        if (auto bs_inv_ptr = std::get_if<std::shared_ptr<BlockstencilGpu>>(&args.bs_inv))
+        {
+            bs_inv_buf = bs_inv_ptr->get()->getBuf();
+        }
+        else
+        {
+            bs_inv_buf = std::get<std::shared_ptr<CuboidBSGpu>>(args.bs_inv)->getBuffer();
+        }
         int svGridSizeBlock = 27 * svGridSize;
         int blocksize = args.v_in.getBlocksize();
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);

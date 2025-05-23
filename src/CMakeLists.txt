@@ -30,6 +30,7 @@ set(MGCL_PUBLIC_HEADERS
   mgcl/fixed_blockstencil.hpp
   mgcl/fixed_blockstencil_gpu.hpp
   mgcl/matrix.hpp
+  mgcl/types.hpp
 )
 
 set(SOURCES_LIB
