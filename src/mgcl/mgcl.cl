@@ -1311,7 +1311,7 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacob
         // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
         int index_sv_gp = (i - ghosts + ghosts_sv) * svno + (j - ghosts + ghosts_sv) * svogh + (k - ghosts + ghosts_sv);
 
-        double res[BLOCKSIZE]; // TODO make it variable
+        double res[BLOCKSIZE];
 
         // Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
         int idx_block = 0;
