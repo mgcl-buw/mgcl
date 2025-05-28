@@ -2,6 +2,7 @@
 
 #include "../src/mgcl/mgcl.hpp"
 
+#include <cmath>
 #include <iostream>
 #include <stdexcept>
 
@@ -545,4 +546,92 @@ double mgcl_test::calculateErrorNorm(double h, mgcl::Cuboid& error)
             }
 
     return sqrt(sum * h * h * h);
+}
+
+/**
+ * @brief Creates and returns a fixed 3d full-weight restriction stencil (27p).
+ *
+ * @return std::unique_ptr<FixedStencil>
+ */
+void mgcl_test::fill3dFullWeightRestrictionBlockstencil(mgcl::FixedBlockstencil& bs)
+{
+    double factor1 = 1.0 / 64.0; // corner
+    double factor2 = 2.0 / 64.0; // diagonally off
+    double factor4 = 4.0 / 64.0; // adjacent
+    double factor8 = 8.0 / 64.0; // center
+
+    for (size_t b = 0; b < bs.getBlocksize(); b++)
+    {
+        bs[b][b][0][0][0] = factor1;
+        bs[b][b][0][0][1] = factor2;
+        bs[b][b][0][0][2] = factor1;
+        bs[b][b][0][1][0] = factor2;
+        bs[b][b][0][1][1] = factor4;
+        bs[b][b][0][1][2] = factor2;
+        bs[b][b][0][2][0] = factor1;
+        bs[b][b][0][2][1] = factor2;
+        bs[b][b][0][2][2] = factor1;
+        bs[b][b][1][0][0] = factor2;
+        bs[b][b][1][0][1] = factor4;
+        bs[b][b][1][0][2] = factor2;
+        bs[b][b][1][1][0] = factor4;
+        bs[b][b][1][1][1] = factor8;
+        bs[b][b][1][1][2] = factor4;
+        bs[b][b][1][2][0] = factor2;
+        bs[b][b][1][2][1] = factor4;
+        bs[b][b][1][2][2] = factor2;
+        bs[b][b][2][0][0] = factor1;
+        bs[b][b][2][0][1] = factor2;
+        bs[b][b][2][0][2] = factor1;
+        bs[b][b][2][1][0] = factor2;
+        bs[b][b][2][1][1] = factor4;
+        bs[b][b][2][1][2] = factor2;
+        bs[b][b][2][2][0] = factor1;
+        bs[b][b][2][2][1] = factor2;
+        bs[b][b][2][2][2] = factor1;
+    }
+}
+
+/**
+ * @brief Creates and returns a fixed 3d bilinear prolongation stencil (27p).
+ *
+ * @return std::unique_ptr<FixedStencil>
+ */
+void mgcl_test::fill3dBilinearProlongationBlockstencil(mgcl::FixedBlockstencil& bs)
+{
+    double factor1 = 1.0 / 8.0; // corner
+    double factor2 = 1.0 / 4.0; // diagonally off
+    double factor4 = 1.0 / 2.0; // adjacent
+    double factor8 = 1.0;       // center
+
+    for (size_t b = 0; b < bs.getBlocksize(); b++)
+    {
+        bs[b][b][0][0][0] = factor1;
+        bs[b][b][0][0][1] = factor2;
+        bs[b][b][0][0][2] = factor1;
+        bs[b][b][0][1][0] = factor2;
+        bs[b][b][0][1][1] = factor4;
+        bs[b][b][0][1][2] = factor2;
+        bs[b][b][0][2][0] = factor1;
+        bs[b][b][0][2][1] = factor2;
+        bs[b][b][0][2][2] = factor1;
+        bs[b][b][1][0][0] = factor2;
+        bs[b][b][1][0][1] = factor4;
+        bs[b][b][1][0][2] = factor2;
+        bs[b][b][1][1][0] = factor4;
+        bs[b][b][1][1][1] = factor8;
+        bs[b][b][1][1][2] = factor4;
+        bs[b][b][1][2][0] = factor2;
+        bs[b][b][1][2][1] = factor4;
+        bs[b][b][1][2][2] = factor2;
+        bs[b][b][2][0][0] = factor1;
+        bs[b][b][2][0][1] = factor2;
+        bs[b][b][2][0][2] = factor1;
+        bs[b][b][2][1][0] = factor2;
+        bs[b][b][2][1][1] = factor4;
+        bs[b][b][2][1][2] = factor2;
+        bs[b][b][2][2][0] = factor1;
+        bs[b][b][2][2][1] = factor2;
+        bs[b][b][2][2][2] = factor1;
+    }
 }

@@ -63,4 +63,7 @@ namespace mgcl_test
     std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid& solution, mgcl::Cuboid& approximation);
     double calculateMaxError(mgcl::Cuboid& error);
     double calculateErrorNorm(double h, mgcl::Cuboid& error);
+
+    void fill3dFullWeightRestrictionBlockstencil(mgcl::FixedBlockstencil& bs);
+    void fill3dBilinearProlongationBlockstencil(mgcl::FixedBlockstencil& bs);
 }
