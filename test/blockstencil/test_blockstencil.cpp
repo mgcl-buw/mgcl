@@ -817,30 +817,30 @@ TEST_CASE("Blockstencil::invertCenterMatrices")
 
         auto s2 = s.invertCenterMatrices();
 
-        REQUIRE_THAT((*s2)[0][0][0][0][0][0][0][0], Catch::Matchers::WithinAbs(a000_inv[0][0], 1e-4));
-        REQUIRE_THAT((*s2)[0][1][0][0][0][0][0][0], Catch::Matchers::WithinAbs(a000_inv[0][1], 1e-4));
-        REQUIRE_THAT((*s2)[1][0][0][0][0][0][0][0], Catch::Matchers::WithinAbs(a000_inv[1][0], 1e-4));
-        REQUIRE_THAT((*s2)[1][1][0][0][0][0][0][0], Catch::Matchers::WithinAbs(a000_inv[1][1], 1e-4));
-        REQUIRE_THAT((*s2)[0][0][0][0][0][0][0][1], Catch::Matchers::WithinAbs(a001_inv[0][0], 1e-4));
-        REQUIRE_THAT((*s2)[0][1][0][0][0][0][0][1], Catch::Matchers::WithinAbs(a001_inv[0][1], 1e-4));
-        REQUIRE_THAT((*s2)[1][0][0][0][0][0][0][1], Catch::Matchers::WithinAbs(a001_inv[1][0], 1e-4));
-        REQUIRE_THAT((*s2)[1][1][0][0][0][0][0][1], Catch::Matchers::WithinAbs(a001_inv[1][1], 1e-4));
-        REQUIRE_THAT((*s2)[0][0][0][0][0][0][0][2], Catch::Matchers::WithinAbs(a002_inv[0][0], 1e-4));
-        REQUIRE_THAT((*s2)[0][1][0][0][0][0][0][2], Catch::Matchers::WithinAbs(a002_inv[0][1], 1e-4));
-        REQUIRE_THAT((*s2)[1][0][0][0][0][0][0][2], Catch::Matchers::WithinAbs(a002_inv[1][0], 1e-4));
-        REQUIRE_THAT((*s2)[1][1][0][0][0][0][0][2], Catch::Matchers::WithinAbs(a002_inv[1][1], 1e-4));
-        REQUIRE_THAT((*s2)[0][0][0][0][0][0][1][0], Catch::Matchers::WithinAbs(a010_inv[0][0], 1e-4));
-        REQUIRE_THAT((*s2)[0][1][0][0][0][0][1][0], Catch::Matchers::WithinAbs(a010_inv[0][1], 1e-4));
-        REQUIRE_THAT((*s2)[1][0][0][0][0][0][1][0], Catch::Matchers::WithinAbs(a010_inv[1][0], 1e-4));
-        REQUIRE_THAT((*s2)[1][1][0][0][0][0][1][0], Catch::Matchers::WithinAbs(a010_inv[1][1], 1e-4));
-        REQUIRE_THAT((*s2)[0][0][0][0][0][0][1][1], Catch::Matchers::WithinAbs(a011_inv[0][0], 1e-4));
-        REQUIRE_THAT((*s2)[0][1][0][0][0][0][1][1], Catch::Matchers::WithinAbs(a011_inv[0][1], 1e-4));
-        REQUIRE_THAT((*s2)[1][0][0][0][0][0][1][1], Catch::Matchers::WithinAbs(a011_inv[1][0], 1e-4));
-        REQUIRE_THAT((*s2)[1][1][0][0][0][0][1][1], Catch::Matchers::WithinAbs(a011_inv[1][1], 1e-4));
-        REQUIRE_THAT((*s2)[0][0][0][0][0][0][1][2], Catch::Matchers::WithinAbs(a012_inv[0][0], 1e-4));
-        REQUIRE_THAT((*s2)[0][1][0][0][0][0][1][2], Catch::Matchers::WithinAbs(a012_inv[0][1], 1e-4));
-        REQUIRE_THAT((*s2)[1][0][0][0][0][0][1][2], Catch::Matchers::WithinAbs(a012_inv[1][0], 1e-4));
-        REQUIRE_THAT((*s2)[1][1][0][0][0][0][1][2], Catch::Matchers::WithinAbs(a012_inv[1][1], 1e-4));
+        REQUIRE_THAT((*s2)[0][0][0][0][0][ghm + 0][ghn + 0][gho + 0], Catch::Matchers::WithinAbs(a000_inv[0][0], 1e-4));
+        REQUIRE_THAT((*s2)[0][1][0][0][0][ghm + 0][ghn + 0][gho + 0], Catch::Matchers::WithinAbs(a000_inv[0][1], 1e-4));
+        REQUIRE_THAT((*s2)[1][0][0][0][0][ghm + 0][ghn + 0][gho + 0], Catch::Matchers::WithinAbs(a000_inv[1][0], 1e-4));
+        REQUIRE_THAT((*s2)[1][1][0][0][0][ghm + 0][ghn + 0][gho + 0], Catch::Matchers::WithinAbs(a000_inv[1][1], 1e-4));
+        REQUIRE_THAT((*s2)[0][0][0][0][0][ghm + 0][ghn + 0][gho + 1], Catch::Matchers::WithinAbs(a001_inv[0][0], 1e-4));
+        REQUIRE_THAT((*s2)[0][1][0][0][0][ghm + 0][ghn + 0][gho + 1], Catch::Matchers::WithinAbs(a001_inv[0][1], 1e-4));
+        REQUIRE_THAT((*s2)[1][0][0][0][0][ghm + 0][ghn + 0][gho + 1], Catch::Matchers::WithinAbs(a001_inv[1][0], 1e-4));
+        REQUIRE_THAT((*s2)[1][1][0][0][0][ghm + 0][ghn + 0][gho + 1], Catch::Matchers::WithinAbs(a001_inv[1][1], 1e-4));
+        REQUIRE_THAT((*s2)[0][0][0][0][0][ghm + 0][ghn + 0][gho + 2], Catch::Matchers::WithinAbs(a002_inv[0][0], 1e-4));
+        REQUIRE_THAT((*s2)[0][1][0][0][0][ghm + 0][ghn + 0][gho + 2], Catch::Matchers::WithinAbs(a002_inv[0][1], 1e-4));
+        REQUIRE_THAT((*s2)[1][0][0][0][0][ghm + 0][ghn + 0][gho + 2], Catch::Matchers::WithinAbs(a002_inv[1][0], 1e-4));
+        REQUIRE_THAT((*s2)[1][1][0][0][0][ghm + 0][ghn + 0][gho + 2], Catch::Matchers::WithinAbs(a002_inv[1][1], 1e-4));
+        REQUIRE_THAT((*s2)[0][0][0][0][0][ghm + 0][ghn + 1][gho + 0], Catch::Matchers::WithinAbs(a010_inv[0][0], 1e-4));
+        REQUIRE_THAT((*s2)[0][1][0][0][0][ghm + 0][ghn + 1][gho + 0], Catch::Matchers::WithinAbs(a010_inv[0][1], 1e-4));
+        REQUIRE_THAT((*s2)[1][0][0][0][0][ghm + 0][ghn + 1][gho + 0], Catch::Matchers::WithinAbs(a010_inv[1][0], 1e-4));
+        REQUIRE_THAT((*s2)[1][1][0][0][0][ghm + 0][ghn + 1][gho + 0], Catch::Matchers::WithinAbs(a010_inv[1][1], 1e-4));
+        REQUIRE_THAT((*s2)[0][0][0][0][0][ghm + 0][ghn + 1][gho + 1], Catch::Matchers::WithinAbs(a011_inv[0][0], 1e-4));
+        REQUIRE_THAT((*s2)[0][1][0][0][0][ghm + 0][ghn + 1][gho + 1], Catch::Matchers::WithinAbs(a011_inv[0][1], 1e-4));
+        REQUIRE_THAT((*s2)[1][0][0][0][0][ghm + 0][ghn + 1][gho + 1], Catch::Matchers::WithinAbs(a011_inv[1][0], 1e-4));
+        REQUIRE_THAT((*s2)[1][1][0][0][0][ghm + 0][ghn + 1][gho + 1], Catch::Matchers::WithinAbs(a011_inv[1][1], 1e-4));
+        REQUIRE_THAT((*s2)[0][0][0][0][0][ghm + 0][ghn + 1][gho + 2], Catch::Matchers::WithinAbs(a012_inv[0][0], 1e-4));
+        REQUIRE_THAT((*s2)[0][1][0][0][0][ghm + 0][ghn + 1][gho + 2], Catch::Matchers::WithinAbs(a012_inv[0][1], 1e-4));
+        REQUIRE_THAT((*s2)[1][0][0][0][0][ghm + 0][ghn + 1][gho + 2], Catch::Matchers::WithinAbs(a012_inv[1][0], 1e-4));
+        REQUIRE_THAT((*s2)[1][1][0][0][0][ghm + 0][ghn + 1][gho + 2], Catch::Matchers::WithinAbs(a012_inv[1][1], 1e-4));
     }
 
     // Check that inversion of a singular matrix returns nullptr.
@@ -888,6 +888,9 @@ TEST_CASE("Blockstencil::invertDiagonal")
         REQUIRE(s2->getM() == m);
         REQUIRE(s2->getN() == n);
         REQUIRE(s2->getO() == o);
+        REQUIRE(s2->getGhostsM() == ghm);
+        REQUIRE(s2->getGhostsN() == ghn);
+        REQUIRE(s2->getGhostsO() == gho);
         REQUIRE(s2->getBlocksize() == blocksize);
 
         for (int i = ghm; i < m + ghm; i++)
@@ -896,7 +899,7 @@ TEST_CASE("Blockstencil::invertDiagonal")
                     for (size_t b = 0; b < blocksize; b++)
                     {
                         CAPTURE(i, j, k, b);
-                        REQUIRE_THAT((*s2)[i - ghm][j - ghn][k - gho][b], Catch::Matchers::WithinAbs(1.0 / s[b][b][width / 2][width / 2][width / 2][i][j][k], 1e-4));
+                        REQUIRE_THAT((*s2)[i][j][k][b], Catch::Matchers::WithinAbs(1.0 / s[b][b][width / 2][width / 2][width / 2][i][j][k], 1e-4));
                     }
     }
 

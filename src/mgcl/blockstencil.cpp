@@ -490,11 +490,11 @@ namespace mgcl
      * @brief Inverts only the diagonal elements of the center coefficient matrices, i.e. D^-1 = 1 / d_{i,i}.
      * This is the equivalent of D^-1 in pointwise Jacobi.
      *
-     * @return std::unique_ptr<CuboidBS> Containing the inverted diagonal elements, size m,n,o, blocksize 1, width 1.
+     * @return std::unique_ptr<CuboidBS> Containing the inverted diagonal elements, size m,n,o, blocksize 1, width 1, ghosts same as this.
      */
     std::unique_ptr<CuboidBS> Blockstencil::invertDiagonal() const
     {
-        auto ret = std::make_unique<CuboidBS>(getM(), getN(), getO(), 0, 0, 0, getBlocksize());
+        auto ret = std::make_unique<CuboidBS>(getM(), getN(), getO(), getGhostsM(), getGhostsN(), getGhostsO(), getBlocksize());
         int center = getWidth() / 2;
 
         // Invert for each real grid point
@@ -506,7 +506,7 @@ namespace mgcl
                         if (getData()[b][b][center][center][center][gpi][gpj][gpk] == 0.0)
                             throw "CuboidBS::invertDiagonal: Inversion of diagonal failed, entry on diagonal is 0!";
 
-                        ret->getData()[gpi - getGhostsM()][gpj - getGhostsN()][gpk - getGhostsO()][b] = 1.0 / getData()[b][b][center][center][center][gpi][gpj][gpk];
+                        ret->getData()[gpi][gpj][gpk][b] = 1.0 / getData()[b][b][center][center][center][gpi][gpj][gpk];
                     }
 
         return ret;
@@ -518,11 +518,11 @@ namespace mgcl
      * It is assumed that the matrices are square and non-empty (blocksize > 0).
      * If a matrix is singular, an exception will be thrown.
      *
-     * @return std::unique_ptr<Blockstencil> inverted Blockstencil with width=1, m,n,o and blocksize same as this, ghosts=0
+     * @return std::unique_ptr<Blockstencil> inverted Blockstencil with width=1, m,n,o, blocksize and ghosts same as this
      */
     std::unique_ptr<Blockstencil> Blockstencil::invertCenterMatrices() const
     {
-        auto ret = std::make_unique<Blockstencil>(getM(), getN(), getO(), 1, getBlocksize(), 0, 0, 0);
+        auto ret = std::make_unique<Blockstencil>(getM(), getN(), getO(), 1, getBlocksize(), getGhostsM(), getGhostsN(), getGhostsO());
         int b = getBlocksize();
         int center = getWidth() / 2;
 
@@ -596,7 +596,7 @@ namespace mgcl
                     {
                         for (int j = 0; j < b; ++j)
                         {
-                            (*ret)[i][j][0][0][0][gpi - getGhostsM()][gpj - getGhostsN()][gpk - getGhostsO()] = augmentedMatrix[i][j + b];
+                            (*ret)[i][j][0][0][0][gpi][gpj][gpk] = augmentedMatrix[i][j + b];
                         }
                     }
                 }
