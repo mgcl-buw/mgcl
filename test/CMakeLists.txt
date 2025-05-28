@@ -62,6 +62,7 @@ target_link_libraries(tests PRIVATE mgcl)
 # MPI
 set(SOURCES_TEST_SOLVING
     test_problem_solve.cpp
+    blockstencil/test_bs_problem_solve.cpp
     test_utility.hpp
     test_utility.cpp
     matrix2d.hpp
