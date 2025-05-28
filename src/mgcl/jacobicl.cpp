@@ -229,11 +229,6 @@ namespace mgcl
             {
                 error("width of bs_inv must be 1!");
             }
-
-            if (bs_inv.getGhostsM() > 0 || bs_inv.getGhostsN() > 0 || bs_inv.getGhostsO() > 0)
-            {
-                error("#ghosts of bs_inv must be 0!");
-            }
         }
 
         for (int iter = 0; iter < args.maxiter; iter += stepsPerIter)
