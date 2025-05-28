@@ -974,9 +974,9 @@ namespace mgcl
                 elapsedIterations++;
                 auto tstart = std::chrono::steady_clock::now();
                 if (getVPtr())
-                    res = MultigridEngine::vcycleSeq(*this, *levels[0]);
+                    res = MultigridEngine::vcycleSeq(*this, lv0);
                 else
-                    res = MultigridEngine::vcycleSeqBlockstencil(*this, *levels[0]);
+                    res = MultigridEngine::vcycleSeqBlockstencil(*this, lv0);
                 auto tend = mgcl_since(tstart).count();
 
                 if (!ignoreTol)
