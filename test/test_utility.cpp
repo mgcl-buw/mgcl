@@ -674,6 +674,21 @@ void mgcl_test::copyCuboidBSToCuboid(mgcl::CuboidBS& src, mgcl::Cuboid& dst)
             }
 }
 
+void mgcl_test::fillVaryingStencilFromFixedStencil(mgcl::VaryingStencil& bs, mgcl::FixedStencil& fs)
+{
+    for (int i = bs.getGhostsM(); i < bs.getM() + bs.getGhostsM(); i++)
+        for (int j = bs.getGhostsN(); j < bs.getN() + bs.getGhostsN(); j++)
+            for (int k = bs.getGhostsO(); k < bs.getO() + bs.getGhostsO(); k++)
+                for (int ii = 0; ii < fs.getWidth(); ii++)
+                    for (int jj = 0; jj < fs.getWidth(); jj++)
+                        for (int kk = 0; kk < fs.getWidth(); kk++)
+                        {
+                            bs[ii][jj][kk][i][j][k] = fs[ii][jj][kk];
+                        }
+    {
+    }
+}
+
 void mgcl_test::fillBlockstencilFromFixedStencil(mgcl::Blockstencil& bs, mgcl::FixedStencil& fs)
 {
     double ftl = fs[0][0][0];
@@ -984,4 +999,313 @@ void mgcl_test::fillBlockstencilFromFixedStencil(mgcl::Blockstencil& bs, mgcl::F
             }
 
     bs.updateGhostsLocally();
+}
+
+void mgcl_test::fillFixedStencilFromBlockstencil(mgcl::Blockstencil& bs, mgcl::FixedStencil& fs)
+{
+    double* ftl = &fs[0][0][0];
+    double* ftc = &fs[0][0][1];
+    double* ftr = &fs[0][0][2];
+    double* fcl = &fs[0][1][0];
+    double* fcc = &fs[0][1][1];
+    double* fcr = &fs[0][1][2];
+    double* fbl = &fs[0][2][0];
+    double* fbc = &fs[0][2][1];
+    double* fbr = &fs[0][2][2];
+    double* ctl = &fs[1][0][0];
+    double* ctc = &fs[1][0][1];
+    double* ctr = &fs[1][0][2];
+    double* ccl = &fs[1][1][0];
+    double* ccc = &fs[1][1][1];
+    double* ccr = &fs[1][1][2];
+    double* cbl = &fs[1][2][0];
+    double* cbc = &fs[1][2][1];
+    double* cbr = &fs[1][2][2];
+    double* btl = &fs[2][0][0];
+    double* btc = &fs[2][0][1];
+    double* btr = &fs[2][0][2];
+    double* bcl = &fs[2][1][0];
+    double* bcc = &fs[2][1][1];
+    double* bcr = &fs[2][1][2];
+    double* bbl = &fs[2][2][0];
+    double* bbc = &fs[2][2][1];
+    double* bbr = &fs[2][2][2];
+
+    // fill blockstencil with values from fs1
+    int i = bs.getGhostsM();
+    int j = bs.getGhostsN();
+    int k = bs.getGhostsO();
+
+    // ***** front *****
+    // b_ftl
+    *ftl = bs[0][7][0][0][0][i][j][k];
+
+    // b_ftc
+    *ftc = bs[0][6][0][0][1][i][j][k];
+    *ftr = bs[0][7][0][0][1][i][j][k];
+    *ftl = bs[1][6][0][0][1][i][j][k];
+    *ftc = bs[1][7][0][0][1][i][j][k];
+
+    // b_ftr
+    *ftr = bs[1][6][0][0][2][i][j][k];
+
+    // b_fcl
+    *fcl = bs[0][5][0][1][0][i][j][k];
+    *fbl = bs[0][7][0][1][0][i][j][k];
+    *ftl = bs[2][5][0][1][0][i][j][k];
+    *fcl = bs[2][7][0][1][0][i][j][k];
+
+    // b_fcc
+    *fcc = bs[0][4][0][1][1][i][j][k];
+    *fcr = bs[0][5][0][1][1][i][j][k];
+    *fbc = bs[0][6][0][1][1][i][j][k];
+    *fbr = bs[0][7][0][1][1][i][j][k];
+    *fcl = bs[1][4][0][1][1][i][j][k];
+    *fcc = bs[1][5][0][1][1][i][j][k];
+    *fbl = bs[1][6][0][1][1][i][j][k];
+    *fbc = bs[1][7][0][1][1][i][j][k];
+    *ftc = bs[2][4][0][1][1][i][j][k];
+    *ftr = bs[2][5][0][1][1][i][j][k];
+    *fcc = bs[2][6][0][1][1][i][j][k];
+    *fcr = bs[2][7][0][1][1][i][j][k];
+    *ftl = bs[3][4][0][1][1][i][j][k];
+    *ftc = bs[3][5][0][1][1][i][j][k];
+    *fcl = bs[3][6][0][1][1][i][j][k];
+    *fcc = bs[3][7][0][1][1][i][j][k];
+
+    // b_fcr
+    *fcr = bs[1][4][0][1][2][i][j][k];
+    *fbr = bs[1][6][0][1][2][i][j][k];
+    *ftr = bs[3][4][0][1][2][i][j][k];
+    *fcr = bs[3][6][0][1][2][i][j][k];
+
+    // b_fbl
+    *fbl = bs[2][5][0][2][0][i][j][k];
+
+    // b_fbc
+    *fbc = bs[2][4][0][2][1][i][j][k];
+    *fbr = bs[2][5][0][2][1][i][j][k];
+    *fbl = bs[3][4][0][2][1][i][j][k];
+    *fbc = bs[3][5][0][2][1][i][j][k];
+
+    // b_fbr
+    *fbr = bs[3][4][0][2][2][i][j][k];
+
+    // ***** center *****
+    // b_ctl
+    *ctl = bs[0][3][1][0][0][i][j][k];
+    *btl = bs[0][7][1][0][0][i][j][k];
+    *ftl = bs[4][3][1][0][0][i][j][k];
+    *ctl = bs[4][7][1][0][0][i][j][k];
+
+    // b_ctc
+    *ctc = bs[0][2][1][0][1][i][j][k];
+    *ctr = bs[0][3][1][0][1][i][j][k];
+    *btc = bs[0][6][1][0][1][i][j][k];
+    *btr = bs[0][7][1][0][1][i][j][k];
+    *ctl = bs[1][2][1][0][1][i][j][k];
+    *ctc = bs[1][3][1][0][1][i][j][k];
+    *btl = bs[1][6][1][0][1][i][j][k];
+    *btc = bs[1][7][1][0][1][i][j][k];
+    *ftc = bs[4][2][1][0][1][i][j][k];
+    *ftr = bs[4][3][1][0][1][i][j][k];
+    *ctc = bs[4][6][1][0][1][i][j][k];
+    *ctr = bs[4][7][1][0][1][i][j][k];
+    *ftl = bs[5][2][1][0][1][i][j][k];
+    *ftc = bs[5][3][1][0][1][i][j][k];
+    *ctl = bs[5][6][1][0][1][i][j][k];
+    *ctc = bs[5][7][1][0][1][i][j][k];
+
+    // b_ctr
+    *ctr = bs[1][2][1][0][2][i][j][k];
+    *btr = bs[1][6][1][0][2][i][j][k];
+    *ftr = bs[5][2][1][0][2][i][j][k];
+    *ctr = bs[5][6][1][0][2][i][j][k];
+
+    // b_ccl
+    *ccl = bs[0][1][1][1][0][i][j][k];
+    *cbl = bs[0][3][1][1][0][i][j][k];
+    *bcl = bs[0][5][1][1][0][i][j][k];
+    *bbl = bs[0][7][1][1][0][i][j][k];
+    *ctl = bs[2][1][1][1][0][i][j][k];
+    *ccl = bs[2][3][1][1][0][i][j][k];
+    *btl = bs[2][5][1][1][0][i][j][k];
+    *bcl = bs[2][7][1][1][0][i][j][k];
+    *fcl = bs[4][1][1][1][0][i][j][k];
+    *fbl = bs[4][3][1][1][0][i][j][k];
+    *ccl = bs[4][5][1][1][0][i][j][k];
+    *cbl = bs[4][7][1][1][0][i][j][k];
+    *ftl = bs[6][1][1][1][0][i][j][k];
+    *fcl = bs[6][3][1][1][0][i][j][k];
+    *ctl = bs[6][5][1][1][0][i][j][k];
+    *ccl = bs[6][7][1][1][0][i][j][k];
+
+    // b_ccc
+    *ccc = bs[0][0][1][1][1][i][j][k];
+    *ccr = bs[0][1][1][1][1][i][j][k];
+    *cbc = bs[0][2][1][1][1][i][j][k];
+    *cbr = bs[0][3][1][1][1][i][j][k];
+    *bcc = bs[0][4][1][1][1][i][j][k];
+    *bcr = bs[0][5][1][1][1][i][j][k];
+    *bbc = bs[0][6][1][1][1][i][j][k];
+    *bbr = bs[0][7][1][1][1][i][j][k];
+    *ccl = bs[1][0][1][1][1][i][j][k];
+    *ccc = bs[1][1][1][1][1][i][j][k];
+    *cbl = bs[1][2][1][1][1][i][j][k];
+    *cbc = bs[1][3][1][1][1][i][j][k];
+    *bcl = bs[1][4][1][1][1][i][j][k];
+    *bcc = bs[1][5][1][1][1][i][j][k];
+    *bbl = bs[1][6][1][1][1][i][j][k];
+    *bbc = bs[1][7][1][1][1][i][j][k];
+    *ctc = bs[2][0][1][1][1][i][j][k];
+    *ctr = bs[2][1][1][1][1][i][j][k];
+    *ccc = bs[2][2][1][1][1][i][j][k];
+    *ccr = bs[2][3][1][1][1][i][j][k];
+    *btc = bs[2][4][1][1][1][i][j][k];
+    *btr = bs[2][5][1][1][1][i][j][k];
+    *bcc = bs[2][6][1][1][1][i][j][k];
+    *bcr = bs[2][7][1][1][1][i][j][k];
+    *ctl = bs[3][0][1][1][1][i][j][k];
+    *ctc = bs[3][1][1][1][1][i][j][k];
+    *ccl = bs[3][2][1][1][1][i][j][k];
+    *ccc = bs[3][3][1][1][1][i][j][k];
+    *btl = bs[3][4][1][1][1][i][j][k];
+    *btc = bs[3][5][1][1][1][i][j][k];
+    *bcl = bs[3][6][1][1][1][i][j][k];
+    *bcc = bs[3][7][1][1][1][i][j][k];
+    *fcc = bs[4][0][1][1][1][i][j][k];
+    *fcr = bs[4][1][1][1][1][i][j][k];
+    *fbc = bs[4][2][1][1][1][i][j][k];
+    *fbr = bs[4][3][1][1][1][i][j][k];
+    *ccc = bs[4][4][1][1][1][i][j][k];
+    *ccr = bs[4][5][1][1][1][i][j][k];
+    *cbc = bs[4][6][1][1][1][i][j][k];
+    *cbr = bs[4][7][1][1][1][i][j][k];
+    *fcl = bs[5][0][1][1][1][i][j][k];
+    *fcc = bs[5][1][1][1][1][i][j][k];
+    *fbl = bs[5][2][1][1][1][i][j][k];
+    *fbc = bs[5][3][1][1][1][i][j][k];
+    *ccl = bs[5][4][1][1][1][i][j][k];
+    *ccc = bs[5][5][1][1][1][i][j][k];
+    *cbl = bs[5][6][1][1][1][i][j][k];
+    *cbc = bs[5][7][1][1][1][i][j][k];
+    *ftc = bs[6][0][1][1][1][i][j][k];
+    *ftr = bs[6][1][1][1][1][i][j][k];
+    *fcc = bs[6][2][1][1][1][i][j][k];
+    *fcr = bs[6][3][1][1][1][i][j][k];
+    *ctc = bs[6][4][1][1][1][i][j][k];
+    *ctr = bs[6][5][1][1][1][i][j][k];
+    *ccc = bs[6][6][1][1][1][i][j][k];
+    *ccr = bs[6][7][1][1][1][i][j][k];
+    *ftl = bs[7][0][1][1][1][i][j][k];
+    *ftc = bs[7][1][1][1][1][i][j][k];
+    *fcl = bs[7][2][1][1][1][i][j][k];
+    *fcc = bs[7][3][1][1][1][i][j][k];
+    *ctl = bs[7][4][1][1][1][i][j][k];
+    *ctc = bs[7][5][1][1][1][i][j][k];
+    *ccl = bs[7][6][1][1][1][i][j][k];
+    *ccc = bs[7][7][1][1][1][i][j][k];
+
+    // b_ccr
+    *ccr = bs[1][0][1][1][2][i][j][k];
+    *ctr = bs[3][0][1][1][2][i][j][k];
+    *fcr = bs[5][0][1][1][2][i][j][k];
+    *ftr = bs[7][0][1][1][2][i][j][k];
+    *cbr = bs[1][2][1][1][2][i][j][k];
+    *ccr = bs[3][2][1][1][2][i][j][k];
+    *fbr = bs[5][2][1][1][2][i][j][k];
+    *fcr = bs[7][2][1][1][2][i][j][k];
+    *bcr = bs[1][4][1][1][2][i][j][k];
+    *btr = bs[3][4][1][1][2][i][j][k];
+    *ccr = bs[5][4][1][1][2][i][j][k];
+    *ctr = bs[7][4][1][1][2][i][j][k];
+    *bbr = bs[1][6][1][1][2][i][j][k];
+    *bcr = bs[3][6][1][1][2][i][j][k];
+    *cbr = bs[5][6][1][1][2][i][j][k];
+    *ccr = bs[7][6][1][1][2][i][j][k];
+
+    // b_cbl
+    *cbl = bs[2][1][1][2][0][i][j][k];
+    *bbl = bs[2][5][1][2][0][i][j][k];
+    *fbl = bs[6][1][1][2][0][i][j][k];
+    *cbl = bs[6][5][1][2][0][i][j][k];
+
+    // b_cbc
+    *cbc = bs[2][0][1][2][1][i][j][k];
+    *cbr = bs[2][1][1][2][1][i][j][k];
+    *bbc = bs[2][4][1][2][1][i][j][k];
+    *bbr = bs[2][5][1][2][1][i][j][k];
+    *cbr = bs[3][0][1][2][1][i][j][k];
+    *cbc = bs[3][1][1][2][1][i][j][k];
+    *bbr = bs[3][4][1][2][1][i][j][k];
+    *bbc = bs[3][5][1][2][1][i][j][k];
+    *fbc = bs[6][0][1][2][1][i][j][k];
+    *fbr = bs[6][1][1][2][1][i][j][k];
+    *cbc = bs[6][4][1][2][1][i][j][k];
+    *cbr = bs[6][5][1][2][1][i][j][k];
+    *fbr = bs[7][0][1][2][1][i][j][k];
+    *fbc = bs[7][1][1][2][1][i][j][k];
+    *cbr = bs[7][4][1][2][1][i][j][k];
+    *cbc = bs[7][5][1][2][1][i][j][k];
+
+    // b_cbr
+    *cbr = bs[3][0][1][2][2][i][j][k];
+    *bbr = bs[3][4][1][2][2][i][j][k];
+    *fbr = bs[7][0][1][2][2][i][j][k];
+    *cbr = bs[7][4][1][2][2][i][j][k];
+
+    // **** back ****
+    // b_btl
+    *btl = bs[4][3][2][0][0][i][j][k];
+
+    // b_btc
+    *btc = bs[4][2][2][0][1][i][j][k];
+    *btr = bs[4][3][2][0][1][i][j][k];
+    *btl = bs[5][2][2][0][1][i][j][k];
+    *btc = bs[5][3][2][0][1][i][j][k];
+
+    // b_btr
+    *btr = bs[5][2][2][0][2][i][j][k];
+
+    // b_bcl
+    *bcl = bs[4][1][2][1][0][i][j][k];
+    *bbl = bs[4][3][2][1][0][i][j][k];
+    *btl = bs[6][1][2][1][0][i][j][k];
+    *bcl = bs[6][3][2][1][0][i][j][k];
+
+    // b_bcc
+    *bcc = bs[4][0][2][1][1][i][j][k];
+    *bcr = bs[4][1][2][1][1][i][j][k];
+    *bbc = bs[4][2][2][1][1][i][j][k];
+    *bbr = bs[4][3][2][1][1][i][j][k];
+    *bcl = bs[5][0][2][1][1][i][j][k];
+    *bcc = bs[5][1][2][1][1][i][j][k];
+    *bbl = bs[5][2][2][1][1][i][j][k];
+    *bbc = bs[5][3][2][1][1][i][j][k];
+    *btc = bs[6][0][2][1][1][i][j][k];
+    *btr = bs[6][1][2][1][1][i][j][k];
+    *bcc = bs[6][2][2][1][1][i][j][k];
+    *bcr = bs[6][3][2][1][1][i][j][k];
+    *btl = bs[7][0][2][1][1][i][j][k];
+    *btc = bs[7][1][2][1][1][i][j][k];
+    *bcl = bs[7][2][2][1][1][i][j][k];
+    *bcc = bs[7][3][2][1][1][i][j][k];
+
+    // b_bcr
+    *bcr = bs[5][0][2][1][2][i][j][k];
+    *bbr = bs[5][2][2][1][2][i][j][k];
+    *btr = bs[7][0][2][1][2][i][j][k];
+    *bcr = bs[7][2][2][1][2][i][j][k];
+
+    // b_bbr
+    *bbl = bs[6][1][2][2][0][i][j][k];
+
+    // b_bbc
+    *bbc = bs[6][0][2][2][1][i][j][k];
+    *bbr = bs[6][1][2][2][1][i][j][k];
+    *bbl = bs[7][0][2][2][1][i][j][k];
+    *bbc = bs[7][1][2][2][1][i][j][k];
+
+    // b_bbr
+    *bbr = bs[7][0][2][2][2][i][j][k];
 }
