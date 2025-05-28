@@ -925,19 +925,43 @@ namespace mgcl
         // Edge case: Do nothing if mpi is used but level threshold is 0 (i.e. all work is done on proc 0).
         if (!(useMpi() && getMpiLevelThreshold() <= 0 && mpiRank() > 0))
         {
+            auto& lv0 = *levels[0];
+            double initres;
 
-            // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
-            if (isPeriodic())
-                MultigridEngine::updateGhostsSeq(levels[0]->getV(), levels[0]->getMpiDataPtr(), isPeriodic(),
-                                                 levels[0]->isCalculatedLocally());
+            if (getVPtr())
+            {
+                // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
+                if (isPeriodic())
+                    MultigridEngine::updateGhostsSeq(lv0.getV(), lv0.getMpiDataPtr(), isPeriodic(),
+                                                     levels[0]->isCalculatedLocally());
 
-            double initres = MultigridEngine::residualSeq(levels[0]->getF(), levels[0]->getV(), levels[0]->getR(),
-                                                          residual_norm, stencilType, levels[0]->stencilFactor,
-                                                          levels[0]->stencilValues.get(),
-                                                          levels[0]->fixedStencil.get(),
-                                                          !ignoreTol, isPeriodic(),
-                                                          levels[0]->isCalculatedLocally(),
-                                                          0, 0, 0, getLevelAt(0).getMpiDataPtr());
+                initres = MultigridEngine::residualSeq(lv0.getF(), lv0.getV(), lv0.getR(),
+                                                       residual_norm, stencilType, lv0.stencilFactor,
+                                                       lv0.stencilValues.get(),
+                                                       lv0.fixedStencil.get(),
+                                                       !ignoreTol, isPeriodic(),
+                                                       lv0.isCalculatedLocally(),
+                                                       0, 0, 0, lv0.getMpiDataPtr());
+            }
+            else
+            {
+                // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
+                if (isPeriodic())
+                {
+                    lv0.getVBS().updateGhosts(lv0.getMpiDataPtr(), lv0.isCalculatedLocally());
+                }
+
+                args::ResidualBSSeqArgs residual_args{
+                    lv0.getFBS(), lv0.getVBS(), lv0.getRBS(),
+                    residual_norm,
+                    *lv0.getBlockstencil(),
+                    true, isPeriodic(),
+                    lv0.isCalculatedLocally(),
+                    0, 0, 0,
+                    lv0.getMpiDataPtr()};
+                initres = MultigridEngine::residualSeq(residual_args);
+            }
+
             if (!silent && !ignoreTol)
                 printf("Starting mgcl with initres = %e\n", initres);
 
@@ -949,7 +973,10 @@ namespace mgcl
             {
                 elapsedIterations++;
                 auto tstart = std::chrono::steady_clock::now();
-                res = MultigridEngine::vcycleSeq(*this, *levels[0]);
+                if (getVPtr())
+                    res = MultigridEngine::vcycleSeq(*this, *levels[0]);
+                else
+                    res = MultigridEngine::vcycleSeqBlockstencil(*this, *levels[0]);
                 auto tend = mgcl_since(tstart).count();
 
                 if (!ignoreTol)
