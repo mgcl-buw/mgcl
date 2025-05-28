@@ -14,10 +14,6 @@
 #include "device_type_generator.hpp"
 #include "test_utility.hpp"
 
-std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid& solution, mgcl::Cuboid& approximation);
-double calculateMaxError(mgcl::Cuboid& error);
-double calculateErrorNorm(double h, mgcl::Cuboid& error);
-
 /**
  * @brief Tests if solving works correctly for u = x^4 * (x-1)^4.
  *
@@ -96,9 +92,9 @@ TEST_CASE("solve_periodic")
             REQUIRE(v->isEqual(p.getV()));
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -136,9 +132,9 @@ TEST_CASE("solve_periodic")
             REQUIRE(v->isEqual(p.getV()));
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -162,9 +158,9 @@ TEST_CASE("solve_periodic")
             REQUIRE(v->isEqual(p.getV()));
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -202,9 +198,9 @@ TEST_CASE("solve_periodic")
             REQUIRE(v->isEqual(p.getV()));
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -236,9 +232,9 @@ TEST_CASE("solve_periodic")
             p.solve();
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             std::cout
                 << "ocl " << oclDeviceType << " Laplace 7p" << std::endl
@@ -269,9 +265,9 @@ TEST_CASE("solve_periodic")
             p.solve();
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -291,9 +287,9 @@ TEST_CASE("solve_periodic")
             p.solve();
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             std::cout
                 << "ocl " << oclDeviceType << " Laplace 27p" << std::endl
@@ -315,9 +311,9 @@ TEST_CASE("solve_periodic")
             p.solve();
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -382,9 +378,9 @@ TEST_CASE("solve_periodic")
                           1, nu1, nu2, omega, size, values, xoff, yoff, zoff, mpi_comm_cart, 0, maxlevel + 1);
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             std::cout
                 << "pmg" << std::endl
@@ -500,9 +496,9 @@ TEST_CASE("solve_dirichlet")
             REQUIRE(v->isEqual(p.getV()));
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -532,9 +528,9 @@ TEST_CASE("solve_dirichlet")
             REQUIRE(v->isEqual(p.getV()));
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -558,9 +554,9 @@ TEST_CASE("solve_dirichlet")
             REQUIRE(v->isEqual(p.getV()));
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -590,9 +586,9 @@ TEST_CASE("solve_dirichlet")
             REQUIRE(v->isEqual(p.getV()));
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -624,9 +620,9 @@ TEST_CASE("solve_dirichlet")
             p.solve();
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             std::cout
                 << "ocl " << oclDeviceType << " Laplace 7p" << std::endl
@@ -649,9 +645,9 @@ TEST_CASE("solve_dirichlet")
             p.solve();
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -671,9 +667,9 @@ TEST_CASE("solve_dirichlet")
             p.solve();
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             std::cout
                 << "ocl " << oclDeviceType << " Laplace 27p" << std::endl
@@ -696,9 +692,9 @@ TEST_CASE("solve_dirichlet")
             p.solve();
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -792,9 +788,9 @@ TEST_CASE("solve_dirichlet")
             // fpmg.dumpToFile("fpmg.txt");
 
             // check if solution is good
-            auto err = calculateError(solutionpmg, vpmg);
-            auto errNorm = calculateErrorNorm(1.0 / (double)Norig, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solutionpmg, vpmg);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)Norig, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             std::cout
                 << "pmg" << std::endl
@@ -897,9 +893,9 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
             REQUIRE(v->isEqual(p.getV()));
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -938,9 +934,9 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
             REQUIRE(v->isEqual(p.getV()));
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -972,9 +968,9 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
             p.solve();
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             std::cout
                 << "ocl " << oclDeviceType << " Laplace" << std::endl
@@ -1006,9 +1002,9 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
             p.solve();
 
             // check if solution is good
-            auto err = calculateError(solution, *v);
-            auto errNorm = calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = calculateMaxError(*err);
+            auto err = mgcl_test::calculateError(solution, *v);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");
@@ -1262,69 +1258,4 @@ TEST_CASE("solve_fixed_vs_varying_stencil")
 
         REQUIRE(v_fixed->isEqual(*v_varying));
     }
-}
-
-/**
- * @brief Calculates error for each cell, e.g. difference between solution and approximation. Dimensions must match.
- *
- * @param solution
- * @param approximation
- * @return std::shared_ptr<mgcl::Cuboid>
- */
-std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid& solution, mgcl::Cuboid& approximation)
-{
-    if (solution.getM() != approximation.getM() ||
-        solution.getN() != approximation.getN() ||
-        solution.getO() != approximation.getO())
-        throw std::invalid_argument("Dimensions do not match.");
-
-    auto ret = std::make_shared<mgcl::Cuboid>(solution.getM(), solution.getN(), solution.getO());
-    for (int i = 0, is = solution.getGhostsM(), ia = approximation.getGhostsM(); is < solution.getMgh(); i++, is++, ia++)
-        for (int j = 0, js = solution.getGhostsN(), ja = approximation.getGhostsN(); js < solution.getNgh(); j++, js++, ja++)
-            for (int k = 0, ks = solution.getGhostsO(), ka = approximation.getGhostsO(); ks < solution.getOgh(); k++, ks++, ka++)
-            {
-                (*ret)[i][j][k] = fabs(solution[is][js][ks] - approximation[ia][ja][ka]);
-            }
-
-    return ret;
-}
-
-/**
- * @brief Returns the maximum absolute error. calculateError should have been called first.
- *
- * @param error
- * @return double
- */
-double calculateMaxError(mgcl::Cuboid& error)
-{
-    double max = 0;
-    for (int i = 0; i < error.getM(); i++)
-        for (int j = 0; j < error.getN(); j++)
-            for (int k = 0; k < error.getO(); k++)
-            {
-                if (max < error[i][j][k])
-                    max = error[i][j][k];
-            }
-    return max;
-}
-
-/**
- * @brief Returns the 2-norm of the given error. calculateError should have been called first.
- *
- * @param h width of one cell
- * @param error precalculated error per cell
- * @return double Error norm of form ||e||_2 * h^3
- */
-double calculateErrorNorm(double h, mgcl::Cuboid& error)
-{
-    double sum = 0;
-
-    for (int i = 0; i < error.getM(); i++)
-        for (int j = 0; j < error.getN(); j++)
-            for (int k = 0; k < error.getO(); k++)
-            {
-                sum += error[i][j][k] * error[i][j][k];
-            }
-
-    return sqrt(sum * h * h * h);
 }
