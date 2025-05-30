@@ -463,3 +463,130 @@ TEST_CASE("ocl_bs_residual_independent_quantities")
                 REQUIRE(r2[i][j][k] == r[i][j][k][1]);
             }
 }
+
+// Calculates residual on combined scalar values and compares it to result of scalar residual
+TEST_CASE("seq_bs_residual_combined_scalars")
+{
+    int mf = 8;
+    int nf = 8;
+    int of = 8;
+    int mc = mf / 2;
+    int nc = nf / 2;
+    int oc = of / 2;
+    int gh = 1;
+    int blocksize = 8;
+    int width = 3;
+    int mfgh = mf + 2 * gh;
+    int nfgh = nf + 2 * gh;
+    int ofgh = of + 2 * gh;
+    int mcgh = mc + 2 * gh;
+    int ncgh = nc + 2 * gh;
+    int ocgh = oc + 2 * gh;
+
+    bool periodic = true;
+
+    mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+
+    mgcl::CuboidBS v(mc, nc, oc, gh, gh, gh, blocksize);
+    mgcl::CuboidBS r(mc, nc, oc, gh, gh, gh, blocksize);
+    mgcl::CuboidBS f(mc, nc, oc, gh, gh, gh, blocksize);
+    mgcl::Blockstencil bs(mc, nc, oc, width, blocksize, 0, 0, 0);
+
+    mgcl::Cuboid v1(mf, nf, of, gh, gh, gh);
+    mgcl::Cuboid f1(mf, nf, of, gh, gh, gh);
+    mgcl::Cuboid r1(mf, nf, of, gh, gh, gh);
+    // mgcl::VaryingStencil sv1(mf, nf, of, width, 0, 0, 0);
+    // mgcl::VaryingStencil sv2(mf, nf, of, width, 0, 0, 0);
+    mgcl::FixedStencil fs1(width);
+
+    // v1.fill1dIndex(false);
+    v1.fillRandom();
+    f1.fill1dIndex(false);
+
+    // fill with 4th order periodic Problem
+    double hm = 1.0 / (double)mf;
+    double hn = 1.0 / (double)nf;
+    double ho = 1.0 / (double)of;
+    for (int i = 0; i < mf; i++)
+        for (int j = 0; j < nf; j++)
+            for (int k = 0; k < of; k++)
+            {
+                double zs = i * ho;
+                double ys = j * hn;
+                double xs = k * hm;
+                double xs2 = xs * xs;
+                double ys2 = ys * ys;
+                double zs2 = zs * zs;
+                double xsm1_2 = (xs - 1) * (xs - 1);
+                double ysm1_2 = (ys - 1) * (ys - 1);
+                double zsm1_2 = (zs - 1) * (zs - 1);
+                double xs3 = xs * xs * xs;
+                double ys3 = ys * ys * ys;
+                double zs3 = zs * zs * zs;
+                double xsm1_3 = (xs - 1) * (xs - 1) * (xs - 1);
+                double ysm1_3 = (ys - 1) * (ys - 1) * (ys - 1);
+                double zsm1_3 = (zs - 1) * (zs - 1) * (zs - 1);
+                double xs4 = xs * xs * xs * xs;
+                double ys4 = ys * ys * ys * ys;
+                double zs4 = zs * zs * zs * zs;
+                double xsm1_4 = (xs - 1) * (xs - 1) * (xs - 1) * (xs - 1);
+                double ysm1_4 = (ys - 1) * (ys - 1) * (ys - 1) * (ys - 1);
+                double zsm1_4 = (zs - 1) * (zs - 1) * (zs - 1) * (zs - 1);
+                v1[i][j][k] = 0;
+                // solutionsc[i][j][k] = 1000000 * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) *
+                //                       (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) *
+                //                       (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1));
+                f1[i][j][k] =
+                    -1000000 *
+                    (12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_2 + 12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_2 * zsm1_4 +
+                     12 * xs4 * ys4 * zs4 * xsm1_2 * ysm1_4 * zsm1_4 + 32 * xs4 * ys4 * zs3 * xsm1_4 * ysm1_4 * zsm1_3 +
+                     12 * xs4 * ys4 * zs2 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs4 * ys3 * zs4 * xsm1_4 * ysm1_3 * zsm1_4 +
+                     12 * xs4 * ys2 * zs4 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs3 * ys4 * zs4 * xsm1_3 * ysm1_4 * zsm1_4 +
+                     12 * xs2 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_4);
+            }
+
+    mgcl_test::fill7pLaplace(fs1, 1.0 / (double)mf, false);
+    mgcl_test::fillBlockstencilFromFixedStencil(bs, fs1);
+
+    mgcl_test::copyCuboidToCuboidBS(v1, v);
+    mgcl_test::copyCuboidToCuboidBS(f1, f);
+
+    v.updateGhosts(nullptr, true);
+    mgcl::MultigridEngine::updateGhostsSeq(v1, nullptr, true, false);
+    f.updateGhosts(nullptr, true);
+    mgcl::MultigridEngine::updateGhostsSeq(f1, nullptr, true, false);
+
+    mgcl::args::ResidualBSSeqArgs args{
+        f,
+        v,
+        r,
+        resnorm,
+        bs,
+        true,
+        periodic,
+        true, 0, 0, 0, nullptr
+
+    };
+
+    double res = mgcl::MultigridEngine::residualSeq(args);
+    double res1 = mgcl::MultigridEngine::residualSeq(f1, v1, r1, resnorm, mgcl::MGCL_FIXED, 0, nullptr, &fs1, true, true, true);
+
+    // r.dumpToFile("r.txt");
+    // r1.dumpToFile("r1.txt");
+
+    // Check r
+    for (int i = gh, i2 = gh; i < mc + gh; i++, i2 += 2)
+        for (int j = gh, j2 = gh; j < nc + gh; j++, j2 += 2)
+            for (int k = gh, k2 = gh; k < oc + gh; k++, k2 += 2)
+            {
+                CAPTURE(i, j, k, i2, j2, k2);
+                REQUIRE_THAT(r[i][j][k][0], Catch::Matchers::WithinAbs(r1[i2][j2][k2], 1e-4));
+                REQUIRE_THAT(r[i][j][k][1], Catch::Matchers::WithinAbs(r1[i2][j2][k2 + 1], 1e-4));
+                REQUIRE_THAT(r[i][j][k][2], Catch::Matchers::WithinAbs(r1[i2][j2 + 1][k2], 1e-4));
+                REQUIRE_THAT(r[i][j][k][3], Catch::Matchers::WithinAbs(r1[i2][j2 + 1][k2 + 1], 1e-4));
+                REQUIRE_THAT(r[i][j][k][4], Catch::Matchers::WithinAbs(r1[i2 + 1][j2][k2], 1e-4));
+                REQUIRE_THAT(r[i][j][k][5], Catch::Matchers::WithinAbs(r1[i2 + 1][j2][k2 + 1], 1e-4));
+                REQUIRE_THAT(r[i][j][k][6], Catch::Matchers::WithinAbs(r1[i2 + 1][j2 + 1][k2], 1e-4));
+                REQUIRE_THAT(r[i][j][k][7], Catch::Matchers::WithinAbs(r1[i2 + 1][j2 + 1][k2 + 1], 1e-4));
+            }
+}
