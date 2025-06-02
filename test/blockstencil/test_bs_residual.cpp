@@ -473,35 +473,32 @@ TEST_CASE("seq_bs_residual_combined_scalars")
     int mc = mf / 2;
     int nc = nf / 2;
     int oc = of / 2;
-    int gh = 1;
     int blocksize = 8;
     int width = 3;
-    int mfgh = mf + 2 * gh;
-    int nfgh = nf + 2 * gh;
-    int ofgh = of + 2 * gh;
-    int mcgh = mc + 2 * gh;
-    int ncgh = nc + 2 * gh;
-    int ocgh = oc + 2 * gh;
+    int gh_sc = GENERATE(1, 2);
+    int gh_bs = GENERATE(1, 2);
+    int mfgh = mf + 2 * gh_sc;
+    int nfgh = nf + 2 * gh_sc;
+    int ofgh = of + 2 * gh_sc;
+    int mcgh = mc + 2 * gh_bs;
+    int ncgh = nc + 2 * gh_bs;
+    int ocgh = oc + 2 * gh_bs;
 
     bool periodic = true;
 
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
 
-    mgcl::CuboidBS v(mc, nc, oc, gh, gh, gh, blocksize);
-    mgcl::CuboidBS r(mc, nc, oc, gh, gh, gh, blocksize);
-    mgcl::CuboidBS f(mc, nc, oc, gh, gh, gh, blocksize);
-    mgcl::Blockstencil bs(mc, nc, oc, width, blocksize, 0, 0, 0);
+    mgcl::CuboidBS v(mc, nc, oc, gh_bs, gh_bs, gh_bs, blocksize);
+    mgcl::CuboidBS r(mc, nc, oc, gh_bs, gh_bs, gh_bs, blocksize);
+    mgcl::CuboidBS f(mc, nc, oc, gh_bs, gh_bs, gh_bs, blocksize);
+    mgcl::Blockstencil bs(mc, nc, oc, width, blocksize, gh_bs, gh_bs, gh_bs);
 
-    mgcl::Cuboid v1(mf, nf, of, gh, gh, gh);
-    mgcl::Cuboid f1(mf, nf, of, gh, gh, gh);
-    mgcl::Cuboid r1(mf, nf, of, gh, gh, gh);
+    mgcl::Cuboid v1(mf, nf, of, gh_sc, gh_sc, gh_sc);
+    mgcl::Cuboid f1(mf, nf, of, gh_sc, gh_sc, gh_sc);
+    mgcl::Cuboid r1(mf, nf, of, gh_sc, gh_sc, gh_sc);
     // mgcl::VaryingStencil sv1(mf, nf, of, width, 0, 0, 0);
     // mgcl::VaryingStencil sv2(mf, nf, of, width, 0, 0, 0);
     mgcl::FixedStencil fs1(width);
-
-    // v1.fill1dIndex(false);
-    v1.fillRandom();
-    f1.fill1dIndex(false);
 
     // fill with 4th order periodic Problem
     double hm = 1.0 / (double)mf;
@@ -575,9 +572,14 @@ TEST_CASE("seq_bs_residual_combined_scalars")
     // r1.dumpToFile("r1.txt");
 
     // Check r
-    for (int i = gh, i2 = gh; i < mc + gh; i++, i2 += 2)
-        for (int j = gh, j2 = gh; j < nc + gh; j++, j2 += 2)
-            for (int k = gh, k2 = gh; k < oc + gh; k++, k2 += 2)
+    auto r_bs_as_sc_ptr = r1.copyShallow();
+    auto& r_bs_as_sc = *r_bs_as_sc_ptr;
+    mgcl_test::copyCuboidBSToCuboid(r, r_bs_as_sc);
+    REQUIRE(r1.isEqual(r_bs_as_sc));
+
+    for (int i = gh_bs, i2 = gh_sc; i < mc + gh_bs; i++, i2 += 2)
+        for (int j = gh_bs, j2 = gh_sc; j < nc + gh_bs; j++, j2 += 2)
+            for (int k = gh_bs, k2 = gh_sc; k < oc + gh_bs; k++, k2 += 2)
             {
                 CAPTURE(i, j, k, i2, j2, k2);
                 REQUIRE_THAT(r[i][j][k][0], Catch::Matchers::WithinAbs(r1[i2][j2][k2], 1e-4));
