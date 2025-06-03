@@ -5,6 +5,7 @@
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 
 mgcl_test::TestUtility::TestUtility()
 {
@@ -639,6 +640,11 @@ void mgcl_test::fill3dBilinearProlongationBlockstencil(mgcl::FixedBlockstencil& 
 // Only for blocksize = 8 yet
 void mgcl_test::copyCuboidToCuboidBS(mgcl::Cuboid& src, mgcl::CuboidBS& dst)
 {
+    if (src.getM() != dst.getM() * 2 || src.getN() != dst.getN() * 2 || src.getO() != dst.getO() * 2)
+    {
+        throw "mgcl_test::copyCuboidBSToCuboid(): Cuboid dimensions do not match!\n  src m,n,o: " + std::to_string(src.getM()) + "," + std::to_string(src.getN()) + "," + std::to_string(src.getO()) + "\n  dst m,n,o: " + std::to_string(dst.getM()) + "," + std::to_string(dst.getN()) + "," + std::to_string(dst.getO());
+    }
+
     // fill v with values of v1 and v2, vice versa for f
     for (int i = dst.getGhostsM(), i2 = src.getGhostsM(); i < dst.getM() + dst.getGhostsM(); i++, i2 += 2)
         for (int j = dst.getGhostsN(), j2 = src.getGhostsN(); j < dst.getN() + dst.getGhostsN(); j++, j2 += 2)
@@ -658,6 +664,11 @@ void mgcl_test::copyCuboidToCuboidBS(mgcl::Cuboid& src, mgcl::CuboidBS& dst)
 // Only for blocksize = 8 yet
 void mgcl_test::copyCuboidBSToCuboid(mgcl::CuboidBS& src, mgcl::Cuboid& dst)
 {
+    if (src.getM() * 2 != dst.getM() || src.getN() * 2 != dst.getN() || src.getO() * 2 != dst.getO())
+    {
+        throw "mgcl_test::copyCuboidBSToCuboid(): Cuboid dimensions do not match!\n  src m,n,o: " + std::to_string(src.getM()) + "," + std::to_string(src.getN()) + "," + std::to_string(src.getO()) + "\n  dst m,n,o: " + std::to_string(dst.getM()) + "," + std::to_string(dst.getN()) + "," + std::to_string(dst.getO());
+    }
+
     // fill v with values of v1 and v2, vice versa for f
     for (int i = src.getGhostsM(), i2 = dst.getGhostsM(); i < src.getM() + src.getGhostsM(); i++, i2 += 2)
         for (int j = src.getGhostsN(), j2 = dst.getGhostsN(); j < src.getN() + src.getGhostsN(); j++, j2 += 2)
