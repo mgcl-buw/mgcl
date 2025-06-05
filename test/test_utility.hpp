@@ -69,6 +69,7 @@ namespace mgcl_test
 
     void fillVaryingStencilFromFixedStencil(mgcl::VaryingStencil& bs, mgcl::FixedStencil& fs);
     void fillBlockstencilFromFixedStencil(mgcl::Blockstencil& bs, mgcl::FixedStencil& fs);
+    void fillFixedBlockstencilFromFixedStencil(mgcl::FixedBlockstencil& bs, mgcl::FixedStencil& fs);
     void fillFixedStencilFromBlockstencil(mgcl::Blockstencil& bs, mgcl::FixedStencil& fs);
     void copyCuboidToCuboidBS(mgcl::Cuboid& src, mgcl::CuboidBS& dst);
     void copyCuboidBSToCuboid(mgcl::CuboidBS& src, mgcl::Cuboid& dst);
