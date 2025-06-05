@@ -1088,6 +1088,24 @@ namespace mgcl
         {
             blockstencilInv = blockstencil->invertCenterMatrices();
         }
+
+        if (auto bsi = std::get_if<std::shared_ptr<Blockstencil>>(&blockstencilInv))
+        {
+            bsi->get()->updateGhosts(mpiData.get(), isCalculatedLocally());
+        }
+        else if (auto bsi = std::get_if<std::shared_ptr<CuboidBS>>(&blockstencilInv))
+        {
+            bsi->get()->updateGhosts(mpiData.get(), isCalculatedLocally());
+        }
+        // else if (auto bsi = std::get_if<std::shared_ptr<BlockstencilGpu>>(&blockstencilInv))
+        // {
+        //     bsi->get()->updateGhosts(mpiData.get(), isCalculatedLocally());
+        // }
+        // else if (auto bsi = std::get_if<std::shared_ptr<CuboidBSGpu>>(&blockstencilInv))
+        // {
+        //     bsi->get()->updateGhosts(mpiData.get(), isCalculatedLocally());
+        // }
+        // TODO gpu variants
     }
 
     /**
