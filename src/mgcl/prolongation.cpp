@@ -153,7 +153,16 @@ namespace mgcl
 
                     for (int bi = 0; bi < args.rbs.getBlocksize(); bi++)
                     {
-                        // double stencilsums[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+                        // set values for current bi to 0 first
+                        fineVals[i2][j2][k2][bi] = 0;
+                        fineVals[i2][j2][k2 - 1][bi] = 0;
+                        fineVals[i2][j2 - 1][k2][bi] = 0;
+                        fineVals[i2 - 1][j2][k2][bi] = 0;
+                        fineVals[i2][j2 - 1][k2 - 1][bi] = 0;
+                        fineVals[i2 - 1][j2][k2 - 1][bi] = 0;
+                        fineVals[i2 - 1][j2 - 1][k2][bi] = 0;
+                        fineVals[i2 - 1][j2 - 1][k2 - 1][bi] = 0;
+
                         for (int bj = 0; bj < args.rbs.getBlocksize(); bj++)
                         {
                             fineVals[i2][j2][k2][bi] += bsraw[bi][bj][1][1][1] * coarseVals[i][j][k][bj];

@@ -38,7 +38,7 @@ TEST_CASE("prolongation_single_point")
 
     mgcl::CuboidBS c_fine(mf, nf, of, ghosts_m, ghosts_n, ghosts_o, blocksize);
     mgcl::CuboidBS c_coarse(mc, nc, oc, ghosts_m, ghosts_n, ghosts_o, blocksize);
-    c_fine.fill(0.0);
+    c_fine.fillRandom();
     int cnt = 0;
     for (int i = ghosts_m; i < mc + ghosts_m; i++)
         for (int j = ghosts_n; j < nc + ghosts_n; j++)
@@ -169,6 +169,10 @@ TEST_CASE("prolongation_blockstencil_independent_quantities")
     mgcl::CuboidBS c_finebs(mf, nf, of, ghosts_m, ghosts_n, ghosts_o, blocksize);
     mgcl::CuboidBS c_coarsebs(c_coarse1.getM(), c_coarse1.getN(), c_coarse1.getO(), ghosts_m, ghosts_n, ghosts_o, blocksize);
     c_coarsebs.fill1dIndex(false);
+
+    // Fill random values for fine cuboids to make sure it won't have an effect
+    c_fine1.fillRandom();
+    c_fine2.fillRandom();
 
     // Fill scalar cuboids with values of block cuboid
     for (int i = 0; i < mghc; i++)
