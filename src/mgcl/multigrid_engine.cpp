@@ -52,9 +52,14 @@ namespace mgcl
                     level.stencilFactor, level.stencilValues.get(), level.fixedStencil.get(), false, problem.isPeriodic(),
                     level.isCalculatedLocally(), 0, 0, 0, level.getMpiDataPtr());
 
+        // level.getV().dumpToFile("v_" + std::to_string(level.getNum()) + ".txt");
+        // level.getR().dumpToFile("r_" + std::to_string(level.getNum()) + ".txt");
+
         // restrict residual as right hand side on coarser grid
         // TODO do not update ghosts of coarse grid before gather (size too small)
         MultigridEngine::restrictSeq(level, levelAbove, level.getR(), levelAbove.getF());
+
+        // levelAbove.getF().dumpToFile("f_" + std::to_string(levelAbove.getNum()) + ".txt");
 
         // If MPI is in use but minGridPoints is reached, gather rhs data to process 0 and perform calculations
         // locally only, until we're reaching the threshold level moving downwards again.
@@ -101,6 +106,9 @@ namespace mgcl
         // prolongate from coarser to finer grid
         // r of this level is reused here and should actually be called e
         MultigridEngine::prolongateSeq(level, levelAbove, level.getR(), levelAbove.getV());
+
+        // levelAbove.getV().dumpToFile("v_" + std::to_string(levelAbove.getNum()) + ".txt");
+        // level.getR().dumpToFile("r_" + std::to_string(level.getNum()) + ".txt");
 
         // correct error
         for (int i = problem.ghosts; i < level.m + problem.ghosts; i++)
@@ -156,6 +164,9 @@ namespace mgcl
             level.getMpiDataPtr()};
         residualSeq(residual_args);
 
+        // level.getVBS().dumpToFile("vbs_" + std::to_string(level.getNum()) + ".txt");
+        // level.getRBS().dumpToFile("rbs_" + std::to_string(level.getNum()) + ".txt");
+
         // restrict residual as right hand side on coarser grid
         // TODO do not update ghosts of coarse grid before gather (size too small)
         args::RestrictionBSSeqArgs restriction_args{
@@ -166,6 +177,8 @@ namespace mgcl
             levelAbove.isCalculatedLocally(),
             level.getMpiDataPtr(), levelAbove.getMpiDataPtr()};
         MultigridEngine::restrictSeqBlockstencil(restriction_args);
+
+        // levelAbove.getFBS().dumpToFile("fbs_" + std::to_string(levelAbove.getNum()) + ".txt");
 
         // If MPI is in use but minGridPoints is reached, gather rhs data to process 0 and perform calculations
         // locally only, until we're reaching the threshold level moving downwards again.
@@ -218,12 +231,15 @@ namespace mgcl
         // r of this level is reused here and should actually be called e
         args::ProlongationBSSeqArgs prolongation_args{
             level.getRBS(), levelAbove.getVBS(),
-            *problem.getRestrictionBlockstencil(),
+            *problem.getProlongationBlockstencil(),
             problem.isPeriodic(),
             level.isCalculatedLocally(),
             levelAbove.isCalculatedLocally(),
             level.getMpiDataPtr(), levelAbove.getMpiDataPtr()};
         MultigridEngine::prolongateSeqBlockstencil(prolongation_args);
+
+        // levelAbove.getVBS().dumpToFile("vbs_" + std::to_string(levelAbove.getNum()) + ".txt");
+        // level.getRBS().dumpToFile("rbs_" + std::to_string(level.getNum()) + ".txt");
 
         // correct error
         for (int i = problem.ghosts; i < level.m + problem.ghosts; i++)
@@ -239,7 +255,7 @@ namespace mgcl
             *level.blockstencil, level.getBlockstencilInvVariant(),
             !problem.ignoreTol, problem.isPeriodic(),
             level.isCalculatedLocally(),
-            problem.nu1, problem.jacobi_iterations_per_kernel,
+            problem.nu2, problem.jacobi_iterations_per_kernel,
             problem.omega,
             level.getMpiDataPtr()};
         res = jacobiSeq(jacobi_args2);
