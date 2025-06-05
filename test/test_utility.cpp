@@ -637,51 +637,79 @@ void mgcl_test::fill3dBilinearProlongationBlockstencil(mgcl::FixedBlockstencil& 
     }
 }
 
-// Only for blocksize = 8 yet
-void mgcl_test::copyCuboidToCuboidBS(mgcl::Cuboid& src, mgcl::CuboidBS& dst)
+/**
+ * @brief Copies values of a Cuboid into a CuboidBS, where the scaling factors determine the scaling between both inputs.
+ * E.g.
+ * scale{m,n,o} = 1: Cuboid m,n,o = CuboidBS m,n,o (blocksize 1)
+ * scale{m,n,o} = 2: Cuboid m,n,o = 1/2 CuboidBS m,n,o (blocksize 8)
+ * scale{m,n,o} = 4: Cuboid m,n,o = 1/4 CuboidBS m,n,o (blocksize 64)
+ * scalem = 2, scalen = 1, scaleo = 4: Cuboid m = 1/2 CuboidBS m; Cuboid n = CuboidBS n; Cuboid o = 1/4 CuboidBS o; blocksize = 2*1*4=8
+ *
+ * Fills only real cells.
+ *
+ * @param src
+ * @param dst
+ * @param scalem
+ * @param scalen
+ * @param scaleo
+ */
+void mgcl_test::copyCuboidToCuboidBS(mgcl::Cuboid& src, mgcl::CuboidBS& dst, int scalem, int scalen, int scaleo)
 {
-    if (src.getM() != dst.getM() * 2 || src.getN() != dst.getN() * 2 || src.getO() != dst.getO() * 2)
+    if (src.getM() != dst.getM() * scalem || src.getN() != dst.getN() * scalen || src.getO() != dst.getO() * scaleo)
     {
-        throw "mgcl_test::copyCuboidBSToCuboid(): Cuboid dimensions do not match!\n  src m,n,o: " + std::to_string(src.getM()) + "," + std::to_string(src.getN()) + "," + std::to_string(src.getO()) + "\n  dst m,n,o: " + std::to_string(dst.getM()) + "," + std::to_string(dst.getN()) + "," + std::to_string(dst.getO());
+        throw "mgcl_test::copyCuboidToCuboidBS(): Cuboid dimensions do not match!\n  src m,n,o: " + std::to_string(src.getM()) + "," + std::to_string(src.getN()) + "," + std::to_string(src.getO()) + "\n  dst m,n,o: " + std::to_string(dst.getM()) + "," + std::to_string(dst.getN()) + "," + std::to_string(dst.getO());
     }
 
     // fill v with values of v1 and v2, vice versa for f
-    for (int i = dst.getGhostsM(), i2 = src.getGhostsM(); i < dst.getM() + dst.getGhostsM(); i++, i2 += 2)
-        for (int j = dst.getGhostsN(), j2 = src.getGhostsN(); j < dst.getN() + dst.getGhostsN(); j++, j2 += 2)
-            for (int k = dst.getGhostsO(), k2 = src.getGhostsO(); k < dst.getO() + dst.getGhostsO(); k++, k2 += 2)
+    for (int i = dst.getGhostsM(), i2 = src.getGhostsM(); i < dst.getM() + dst.getGhostsM(); i++, i2 += scalem)
+        for (int j = dst.getGhostsN(), j2 = src.getGhostsN(); j < dst.getN() + dst.getGhostsN(); j++, j2 += scalen)
+            for (int k = dst.getGhostsO(), k2 = src.getGhostsO(); k < dst.getO() + dst.getGhostsO(); k++, k2 += scaleo)
             {
-                dst[i][j][k][0] = src[i2][j2][k2];
-                dst[i][j][k][1] = src[i2][j2][k2 + 1];
-                dst[i][j][k][2] = src[i2][j2 + 1][k2];
-                dst[i][j][k][3] = src[i2][j2 + 1][k2 + 1];
-                dst[i][j][k][4] = src[i2 + 1][j2][k2];
-                dst[i][j][k][5] = src[i2 + 1][j2][k2 + 1];
-                dst[i][j][k][6] = src[i2 + 1][j2 + 1][k2];
-                dst[i][j][k][7] = src[i2 + 1][j2 + 1][k2 + 1];
+                int b = 0;
+                for (int ii = 0; ii < scalem; ii++)
+                    for (int jj = 0; jj < scalen; jj++)
+                        for (int kk = 0; kk < scaleo; kk++)
+                        {
+                            dst[i][j][k][b++] = src[i2 + ii][j2 + jj][k2 + kk];
+                        }
             }
 }
 
-// Only for blocksize = 8 yet
-void mgcl_test::copyCuboidBSToCuboid(mgcl::CuboidBS& src, mgcl::Cuboid& dst)
+/**
+ * @brief Copies values of a CuboidBS into a Cuboid, where the scaling factors determine the scaling between both inputs.
+ * E.g.
+ * scale{m,n,o} = 1: Cuboid m,n,o = CuboidBS m,n,o (blocksize 1)
+ * scale{m,n,o} = 2: Cuboid m,n,o = 1/2 CuboidBS m,n,o (blocksize 8)
+ * scale{m,n,o} = 4: Cuboid m,n,o = 1/4 CuboidBS m,n,o (blocksize 64)
+ * scalem = 2, scalen = 1, scaleo = 4: Cuboid m = 1/2 CuboidBS m; Cuboid n = CuboidBS n; Cuboid o = 1/4 CuboidBS o; blocksize = 2*1*4=8
+ *
+ * Fills only real cells.
+ *
+ * @param src
+ * @param dst
+ * @param scalem
+ * @param scalen
+ * @param scaleo
+ */
+void mgcl_test::copyCuboidBSToCuboid(mgcl::CuboidBS& src, mgcl::Cuboid& dst, int scalem, int scalen, int scaleo)
 {
-    if (src.getM() * 2 != dst.getM() || src.getN() * 2 != dst.getN() || src.getO() * 2 != dst.getO())
+    if (src.getM() * scalem != dst.getM() || src.getN() * scalen != dst.getN() || src.getO() * scaleo != dst.getO())
     {
         throw "mgcl_test::copyCuboidBSToCuboid(): Cuboid dimensions do not match!\n  src m,n,o: " + std::to_string(src.getM()) + "," + std::to_string(src.getN()) + "," + std::to_string(src.getO()) + "\n  dst m,n,o: " + std::to_string(dst.getM()) + "," + std::to_string(dst.getN()) + "," + std::to_string(dst.getO());
     }
 
     // fill v with values of v1 and v2, vice versa for f
-    for (int i = src.getGhostsM(), i2 = dst.getGhostsM(); i < src.getM() + src.getGhostsM(); i++, i2 += 2)
-        for (int j = src.getGhostsN(), j2 = dst.getGhostsN(); j < src.getN() + src.getGhostsN(); j++, j2 += 2)
-            for (int k = src.getGhostsO(), k2 = dst.getGhostsO(); k < src.getO() + src.getGhostsO(); k++, k2 += 2)
+    for (int i = src.getGhostsM(), i2 = dst.getGhostsM(); i < src.getM() + src.getGhostsM(); i++, i2 += scalem)
+        for (int j = src.getGhostsN(), j2 = dst.getGhostsN(); j < src.getN() + src.getGhostsN(); j++, j2 += scalen)
+            for (int k = src.getGhostsO(), k2 = dst.getGhostsO(); k < src.getO() + src.getGhostsO(); k++, k2 += scaleo)
             {
-                dst[i2][j2][k2] = src[i][j][k][0];
-                dst[i2][j2][k2 + 1] = src[i][j][k][1];
-                dst[i2][j2 + 1][k2] = src[i][j][k][2];
-                dst[i2][j2 + 1][k2 + 1] = src[i][j][k][3];
-                dst[i2 + 1][j2][k2] = src[i][j][k][4];
-                dst[i2 + 1][j2][k2 + 1] = src[i][j][k][5];
-                dst[i2 + 1][j2 + 1][k2] = src[i][j][k][6];
-                dst[i2 + 1][j2 + 1][k2 + 1] = src[i][j][k][7];
+                int b = 0;
+                for (int ii = 0; ii < scalem; ii++)
+                    for (int jj = 0; jj < scalen; jj++)
+                        for (int kk = 0; kk < scaleo; kk++)
+                        {
+                            dst[i2 + ii][j2 + jj][k2 + kk] = src[i][j][k][b++];
+                        }
             }
 }
 
