@@ -545,7 +545,7 @@ TEST_CASE("solve_bs_periodic_blocksize1")
     int nu1 = 2;
     int nu2 = 2;
     double omega = 0.8;
-    int maxIterVCycles = 10;
+    int maxIterVCycles = 5;
     int maxlevel = 10;
 
     auto vsc = std::make_shared<mgcl::Cuboid>(N, N, N);
@@ -637,7 +637,7 @@ TEST_CASE("solve_bs_periodic_blocksize1")
             // mgcl::Blockstencil bs(Nblockstencil, Nblockstencil, Nblockstencil, 3, blocksize, 0, 0, 0);
             mgcl::FixedStencil fs(3);
 
-            mgcl_test::fill7pLaplace(fs, h, false);
+            mgcl_test::fill27pLaplace(fs, h, false);
 
             // bs_inv.dumpToFile("bs_inv.txt");
             // bs.dumpToFile("bs.txt");
