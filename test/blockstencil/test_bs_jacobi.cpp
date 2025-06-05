@@ -333,8 +333,8 @@ TEST_CASE("bs_jacobi_combined_scalars")
     // bs_inv.dumpToFile("bs_inv.txt");
     // bs.dumpToFile("bs.txt");
 
-    mgcl_test::copyCuboidToCuboidBS(v1, v);
-    mgcl_test::copyCuboidToCuboidBS(f1, f);
+    mgcl_test::copyCuboidToCuboidBS(v1, v, 2, 2, 2);
+    mgcl_test::copyCuboidToCuboidBS(f1, f, 2, 2, 2);
 
     v.updateGhosts(nullptr, true);
     mgcl::MultigridEngine::updateGhostsSeq(v1, nullptr, true, false);

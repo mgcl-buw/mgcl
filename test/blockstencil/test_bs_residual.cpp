@@ -545,8 +545,8 @@ TEST_CASE("seq_bs_residual_combined_scalars")
     mgcl_test::fill7pLaplace(fs1, 1.0 / (double)mf, false);
     mgcl_test::fillBlockstencilFromFixedStencil(bs, fs1);
 
-    mgcl_test::copyCuboidToCuboidBS(v1, v);
-    mgcl_test::copyCuboidToCuboidBS(f1, f);
+    mgcl_test::copyCuboidToCuboidBS(v1, v, 2, 2, 2);
+    mgcl_test::copyCuboidToCuboidBS(f1, f, 2, 2, 2);
 
     v.updateGhosts(nullptr, true);
     mgcl::MultigridEngine::updateGhostsSeq(v1, nullptr, true, false);
@@ -574,7 +574,7 @@ TEST_CASE("seq_bs_residual_combined_scalars")
     // Check r
     auto r_bs_as_sc_ptr = r1.copyShallow();
     auto& r_bs_as_sc = *r_bs_as_sc_ptr;
-    mgcl_test::copyCuboidBSToCuboid(r, r_bs_as_sc);
+    mgcl_test::copyCuboidBSToCuboid(r, r_bs_as_sc, 2, 2, 2);
     REQUIRE(r1.isEqual(r_bs_as_sc));
 
     for (int i = gh_bs, i2 = gh_sc; i < mc + gh_bs; i++, i2 += 2)
