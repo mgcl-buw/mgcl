@@ -339,6 +339,57 @@ void mgcl_test::fill7pLaplace(mgcl::Blockstencil& v, double h, bool negativeCent
                 }
 }
 
+// 27p Laplace stencil taken from "A Family of Large-Stencil Discrete Laplacian Approximations in
+// Three Dimensions", O'Reilly and Beck, 2006
+void mgcl_test::fill27pLaplace(mgcl::Blockstencil& v, double h, bool negativeCenter)
+{
+    double factor = 1.0 / (26.0 * h * h); // TODO use actual hs
+    if (negativeCenter)
+        factor *= -1.0;
+
+    for (size_t b = 0; b < v.getBlocksize(); b++)
+        for (int i = 0; i < v.getMgh(); i++)
+            for (int j = 0; j < v.getNgh(); j++)
+                for (int k = 0; k < v.getOgh(); k++)
+                {
+                    // 27-point Laplace
+                    // center
+                    v[b][b][1][1][1][i][j][k] = factor * 88.0;
+
+                    // adjacent to center
+                    v[b][b][0][1][1][i][j][k] = factor * -6.0;
+                    v[b][b][1][0][1][i][j][k] = factor * -6.0;
+                    v[b][b][1][1][0][i][j][k] = factor * -6.0;
+                    v[b][b][1][1][2][i][j][k] = factor * -6.0;
+                    v[b][b][1][2][1][i][j][k] = factor * -6.0;
+                    v[b][b][2][1][1][i][j][k] = factor * -6.0;
+
+                    // diagonally adjacent to center
+                    v[b][b][1][0][0][i][j][k] = -3.0 * factor;
+                    v[b][b][1][0][2][i][j][k] = -3.0 * factor;
+                    v[b][b][1][2][0][i][j][k] = -3.0 * factor;
+                    v[b][b][1][2][2][i][j][k] = -3.0 * factor;
+                    v[b][b][0][1][0][i][j][k] = -3.0 * factor;
+                    v[b][b][0][1][2][i][j][k] = -3.0 * factor;
+                    v[b][b][2][1][0][i][j][k] = -3.0 * factor;
+                    v[b][b][2][1][2][i][j][k] = -3.0 * factor;
+                    v[b][b][0][0][1][i][j][k] = -3.0 * factor;
+                    v[b][b][0][2][1][i][j][k] = -3.0 * factor;
+                    v[b][b][2][0][1][i][j][k] = -3.0 * factor;
+                    v[b][b][2][2][1][i][j][k] = -3.0 * factor;
+
+                    // corners
+                    v[b][b][0][0][0][i][j][k] = -2.0 * factor;
+                    v[b][b][0][0][2][i][j][k] = -2.0 * factor;
+                    v[b][b][0][2][0][i][j][k] = -2.0 * factor;
+                    v[b][b][0][2][2][i][j][k] = -2.0 * factor;
+                    v[b][b][2][0][0][i][j][k] = -2.0 * factor;
+                    v[b][b][2][0][2][i][j][k] = -2.0 * factor;
+                    v[b][b][2][2][0][i][j][k] = -2.0 * factor;
+                    v[b][b][2][2][2][i][j][k] = -2.0 * factor;
+                }
+}
+
 void mgcl_test::fill7pLaplace(mgcl::FixedStencil& v, double h, bool negativeCenter)
 {
     double f = negativeCenter ? -1.0 : 1.0;

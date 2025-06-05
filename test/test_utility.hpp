@@ -54,11 +54,12 @@ namespace mgcl_test
 
     void create4hOrderPeriodicProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl::Cuboid& solution);
     void fill7pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCenter);
-    void fill7pLaplace(mgcl::Blockstencil& v, double h, bool negativeCenter);
     void fill19pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCenter);
     void fill27pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCenter);
     void fill7pLaplace(mgcl::FixedStencil& v, double h, bool negativeCenter);
     void fill27pLaplace(mgcl::FixedStencil& v, double h, bool negativeCenter);
+    void fill7pLaplace(mgcl::Blockstencil& v, double h, bool negativeCenter);
+    void fill27pLaplace(mgcl::Blockstencil& v, double h, bool negativeCenter);
 
     std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid& solution, mgcl::Cuboid& approximation);
     double calculateMaxError(mgcl::Cuboid& error);
