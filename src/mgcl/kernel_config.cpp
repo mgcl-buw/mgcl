@@ -80,6 +80,7 @@ namespace mgcl::conf
         ret["restrict_to_coarse_blockstencil"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
         ret["prolongate_to_fine_blockstencil"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
         ret["galerkin_blockstencil"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
+        ret["correct_error_blockstencil"] = KernelWorkgroupSizes{{1, {4, 4, 4}}};
 
         return ret;
     }

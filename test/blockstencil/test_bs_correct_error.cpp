@@ -40,7 +40,7 @@ TEST_CASE("correct_error_bs")
     mgcl::args::CorrectErrorBsOclArgs args{
         v, e,
         p.getProgram(), p.getCommands(), p.getContext(),
-        nullptr, nullptr};
+        &p.getKernelConfig(), p.getProfilingData()};
 
     mgcl::MultigridEngine::correctErrorBlockstencil(args);
     p.finish();
