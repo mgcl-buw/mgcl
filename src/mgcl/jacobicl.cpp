@@ -1184,7 +1184,6 @@ namespace mgcl
         int svogh = args.bs.getOgh();
         int svGridSize = svmgh * svngh * svogh;
         int svGridSizeBlock = 27 * svGridSize;
-        int blocksize = v.getBlocksize();
 
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
@@ -1228,7 +1227,6 @@ namespace mgcl
                                     {local, 1, 1});
         }
         mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
-        return 0;
 
         if (args.periodic)
         {
@@ -1246,14 +1244,16 @@ namespace mgcl
                     error("dRsq is null.");
                 }
 
+                assert(args.dRsq->getGhostsM() == 0 && args.dRsq->getGhostsN() == 0 && args.dRsq->getGhostsO() == 0 && "dRsq bs must not have ghost cells");
+
                 // calculate 2-Norm
                 auto dRsquares = args.dRsq->getBuffer();
                 args.dRsq->fill(args.program, args.queue, 0.0, false, args.conf, args.pd); // reset to zero
 
                 // Create the compute kernel from the program
-                const char* kernelName = "residual_squared";
+                const char* kernelName = "residual_squared_blockstencil";
                 cl_kernel kernel_square = clCreateKernel(args.program, kernelName, &err);
-                mgclCheckError(err, "Creating residual squared kernel");
+                mgclCheckError(err, "Creating residual_squared_blockstencil kernel");
 
                 int m = r.getM();
                 int n = r.getN();
@@ -1265,7 +1265,7 @@ namespace mgcl
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &n);
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &o);
                 err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &ghosts);
-                mgclCheckError(err, "Setting residual squared kernel arguments");
+                mgclCheckError(err, "Setting residual_squared_blockstencil kernel arguments");
 
                 size_t global = m * n * o;
                 size_t local_sq = 64;
@@ -1280,7 +1280,7 @@ namespace mgcl
 
                 cl_event ev;
                 err = clEnqueueNDRangeKernel(args.queue, kernel_square, 1, NULL, &global, &local_sq, 0, NULL, &ev);
-                mgclCheckError(err, "Enqueueing residual squared kernel");
+                mgclCheckError(err, "Enqueueing residual_squared_blockstencil kernel");
 
                 if (args.pd)
                 {

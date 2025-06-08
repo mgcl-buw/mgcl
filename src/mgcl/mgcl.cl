@@ -770,21 +770,52 @@ __kernel void residual_27point_blockstencil_block_first_v_gp_first(
 __kernel void residual_squared(
     __global double* restrict r,
     __global double* restrict rsquares,
-    const int mgh, const int ngh, const int ogh, const int ghosts)
+    const int m, const int n, const int o, const int ghosts)
 {
     int idx = get_global_id(0);
-    int no = ngh * ogh;
+    int no = n * o;
     int i = idx / no;
-    int j = (idx - i * no) / ogh;
-    int k = idx % ogh;
+    int j = (idx - i * no) / o;
+    int k = idx % o;
 
     // account for padding
-    if (i < mgh && j < ngh && k < ogh)
+    if (i < m && j < n && k < o)
     {
-        int index = i * (ngh + 2 * ghosts) * (ogh + 2 * ghosts) + j * (ogh + 2 * ghosts) + k;
-        int index_sq = i * ngh * ogh + j * ogh + k;
+        int index = i * (n + 2 * ghosts) * (o + 2 * ghosts) + j * (o + 2 * ghosts) + k;
+        int index_sq = i * n * o + j * o + k;
         double ridx = r[index];
         rsquares[index_sq] = ridx * ridx;
+    }
+}
+
+/* Calculates the squares of the residual.
+ * r is ghosted, rsquares must be only real cells.
+ * m, n and o must be real grid size.
+ * ghosts is amount of ghost cells at one border for r.
+ * Kernel must be called with m x n x o work-items.
+ */
+__kernel void residual_squared_blockstencil(
+    __global double* restrict r,
+    __global double* restrict rsquares,
+    const int m, const int n, const int o, const int ghosts)
+{
+    int idx = get_global_id(0);
+    int no = n * o;
+    int i = idx / no;
+    int j = (idx - i * no) / o;
+    int k = idx % o;
+
+    // account for padding
+    if (i < m && j < n && k < o)
+    {
+        int index = (i * (n + 2 * ghosts) * (o + 2 * ghosts) + j * (o + 2 * ghosts) + k) * BLOCKSIZE;
+        int index_sq = (i * n * o + j * o + k) * BLOCKSIZE;
+
+        for (size_t b = 0; b < BLOCKSIZE; b++)
+        {
+            double ridx = r[index + b];
+            rsquares[index_sq + b] = ridx * ridx;
+        }
     }
 }
 

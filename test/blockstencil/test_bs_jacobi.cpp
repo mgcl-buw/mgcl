@@ -213,7 +213,7 @@ TEST_CASE("bs_jacobi_independent_quantities")
         // mgcl::BlockstencilGpu d_bs_inv(*bs_inv, p.getContext(), p.getCommands(), p.getProgram());
         auto d_bs_inv = std::make_shared<mgcl::CuboidBSGpu>(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *bs_inv);
         mgcl::TBlockstencilInv d_bs_inv_variant = d_bs_inv;
-        mgcl::CuboidBSGpu dRSquares(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r);
+        mgcl::CuboidBSGpu dRSquares(p.getContext(), CL_MEM_READ_WRITE, m, n, o, 0, 0, 0, blocksize);
 
         mgcl::args::JacobiBSOclArgs args{
             d_f,
