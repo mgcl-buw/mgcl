@@ -337,6 +337,158 @@ namespace mgcl
         return res;
     }
 
+    /* Runs V-cycle recursively using ocl */
+    double MultigridEngine::vcycleOclBlockstencil(Problem& problem, Level& level)
+    {
+        auto& levelAbove = problem.getLevelAt(level.num + 1);
+        // printf("level.getNum() = %d, m = %3.d\n", level.getNum(), level.m-2);
+        // problem.maxlevel = 3;
+        double res;
+
+        if (level.getNum() < problem.maxlevel) // if not at highest level
+        {
+            // reset v to zero for coarser grids (for another possible v-cycle)
+            levelAbove.getDVBSIn().fill(problem.getProgram(), problem.getCommands(), 0.0, false, &problem.getKernelConfig(), problem.getProfilingData());
+        }
+
+        // relax nu1 times
+        args::JacobiBSOclArgs jacobi_args1{
+            level.getDFBS(), level.getDVBSIn(), level.getDVBSOut(), level.getDRBS(),
+            problem.residual_norm,
+            *level.blockstencilGpu, level.getBlockstencilInvVariant(),
+            level.getDRsqBSPtr().get(),
+            false, problem.isPeriodic(),
+            level.isCalculatedLocally(),
+            problem.nu1, problem.jacobi_iterations_per_kernel,
+            problem.omega,
+            problem.getDPlanesBufPtr(), problem.getHPlanesBufSendPtr(), problem.getHPlanesBufRecvPtr(),
+            problem.getProgram(), problem.getCommands(), problem.getContext(),
+            0, 0, 0,
+            level.getMpiDataPtr(),
+            &problem.getKernelConfig(), problem.getProfilingData()};
+        MultigridEngine::jacobi(jacobi_args1);
+
+        // update residual before restriction
+        // relax nu1 times
+        args::ResidualBSOclArgs residual_args{
+            level.getDFBS(), level.getDVBSIn(), level.getDRBS(),
+            problem.residual_norm,
+            *level.blockstencilGpu,
+            level.getDRsqBSPtr().get(),
+            false, problem.isPeriodic(),
+            level.isCalculatedLocally(),
+            problem.getDPlanesBufPtr(), problem.getHPlanesBufSendPtr(), problem.getHPlanesBufRecvPtr(),
+            problem.getProgram(), problem.getCommands(), problem.getContext(),
+            0, 0, 0,
+            level.getMpiDataPtr(),
+            &problem.getKernelConfig(), problem.getProfilingData()};
+        residual(residual_args);
+        // printf("res on level.getNum() %d, upwards: %e\n", level.getNum(), res);
+
+        // restrict to coarser grid
+        args::RestrictionBSOclArgs restriction_args{
+            level.getDRBS(), levelAbove.getDFBS(),
+            *problem.getRestrictionBlockstencilGpu(),
+            problem.isPeriodic(),
+            level.isCalculatedLocally(),
+            levelAbove.isCalculatedLocally(),
+            problem.getDPlanesBufPtr(), problem.getHPlanesBufSendPtr(), problem.getHPlanesBufRecvPtr(),
+            problem.getProgram(), problem.getCommands(), problem.getContext(),
+            level.getMpiDataPtr(), levelAbove.getMpiDataPtr(),
+            &problem.getKernelConfig(), problem.getProfilingData()};
+        MultigridEngine::restrictBlockstencil(restriction_args);
+
+        // If MPI is in use but minGridPoints is reached, gather rhs data to process 0 and perform calculations
+        // locally only, until we're reaching the threshold level moving downwards again.
+        if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
+        {
+            mpi_util::gather(problem.getMpiComm(), problem.getCommands(), levelAbove.getDFBS());
+
+            // Update ghosts of gathered
+            // TODO check Dirichlet
+            if (problem.isPeriodic() && problem.mpiRank() == 0)
+                levelAbove.getDFBS().updateGhostsOclMpi(problem.getProgram(), problem.getCommands(),
+                                                        problem.getDPlanesBufPtr(), problem.getHPlanesBufSendPtr(), problem.getHPlanesBufRecvPtr(),
+                                                        levelAbove.getMpiDataPtr(), levelAbove.isCalculatedLocally(),
+                                                        &problem.getKernelConfig(), problem.getProfilingData());
+        }
+
+        // Advance to coarser levels only if
+        // 1. not using MPI at all (or on only one process), or
+        // 2. coarser level is still calculated distributively, or
+        // 3. rank is 0
+        if (!problem.useMpi() || !levelAbove.isCalculatedLocally() || problem.mpiRank() == 0)
+        {
+            // start next v-cycle iteration if not at highest level
+            if (level.getNum() < problem.maxlevel - 1)
+                vcycleOclBlockstencil(problem, levelAbove);
+            else
+            {
+                // relax nu1+nu2 times
+                args::JacobiBSOclArgs jacobi_args1{
+                    levelAbove.getDFBS(), levelAbove.getDVBSIn(), levelAbove.getDVBSOut(), levelAbove.getDRBS(),
+                    problem.residual_norm,
+                    *levelAbove.blockstencilGpu, levelAbove.getBlockstencilInvVariant(),
+                    levelAbove.getDRsqBSPtr().get(),
+                    false, problem.isPeriodic(),
+                    levelAbove.isCalculatedLocally(),
+                    problem.nu1 + problem.nu2, problem.jacobi_iterations_per_kernel,
+                    problem.omega,
+                    problem.getDPlanesBufPtr(), problem.getHPlanesBufSendPtr(), problem.getHPlanesBufRecvPtr(),
+                    problem.getProgram(), problem.getCommands(), problem.getContext(),
+                    0, 0, 0,
+                    levelAbove.getMpiDataPtr(),
+                    &problem.getKernelConfig(), problem.getProfilingData()};
+                MultigridEngine::jacobi(jacobi_args1);
+            }
+        }
+
+        // If MPI is in use but minGridPoints is reached, scatter v data from process 0 to others and continue
+        // distributed calulcations.
+        if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
+            mpi_util::scatter_inplace_wgh(problem.getMpiComm(), problem.getCommands(), levelAbove.getDVBSIn());
+
+        // prolongate from coarser to finer grid
+        // r of this level.getNum() is reused here and should actually be called e
+        // restrict to coarser grid
+        args::ProlongationBSOclArgs prolongation_args{
+            level.getDRBS(), levelAbove.getDVBSIn(),
+            *problem.getProlongationBlockstencilGpu(),
+            problem.isPeriodic(),
+            level.isCalculatedLocally(),
+            levelAbove.isCalculatedLocally(),
+            problem.getDPlanesBufPtr(), problem.getHPlanesBufSendPtr(), problem.getHPlanesBufRecvPtr(),
+            problem.getProgram(), problem.getCommands(), problem.getContext(),
+            level.getMpiDataPtr(), levelAbove.getMpiDataPtr(),
+            &problem.getKernelConfig(), problem.getProfilingData()};
+        MultigridEngine::prolongateBlockstencil(prolongation_args);
+
+        // correct error
+        correctError(level);
+
+        // relax nu2 times
+        args::JacobiBSOclArgs jacobi_args2{
+            level.getDFBS(), level.getDVBSIn(), level.getDVBSOut(), level.getDRBS(),
+            problem.residual_norm,
+            *level.blockstencilGpu, level.getBlockstencilInvVariant(),
+            level.getDRsqBSPtr().get(),
+            true, problem.isPeriodic(),
+            level.isCalculatedLocally(),
+            problem.nu2, problem.jacobi_iterations_per_kernel,
+            problem.omega,
+            problem.getDPlanesBufPtr(), problem.getHPlanesBufSendPtr(), problem.getHPlanesBufRecvPtr(),
+            problem.getProgram(), problem.getCommands(), problem.getContext(),
+            0, 0, 0,
+            level.getMpiDataPtr(),
+            &problem.getKernelConfig(), problem.getProfilingData()};
+        res = MultigridEngine::jacobi(jacobi_args1);
+
+        // calculate residual again for the norm TODO in jacobi
+        // res = residual(problem, level, 1);
+        // printf("res on level.getNum() %d, downwards: %e\n", level.getNum(), res);
+        return res;
+    }
+
     /**
      * @brief Starts kernel to correct the error, i.e. v = v + e.
      *

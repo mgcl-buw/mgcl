@@ -227,6 +227,7 @@ namespace mgcl
         static double vcycleSeq(Problem& problem, Level& level);
         static double vcycleSeqBlockstencil(Problem& problem, Level& level);
         static double vcycle(Problem& problem, Level& level);
+        static double vcycleOclBlockstencil(Problem& problem, Level& level);
         static int correctError(Level& level);
 
         static void restrictSeq(Level& fine, Level& coarse, Cuboid& fineVals, Cuboid& coarseVals);
