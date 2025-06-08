@@ -249,22 +249,45 @@ __kernel void copy_output_data(__global double* v_output, __global double* v_in,
 
 /* Corrects error by adding e to v, whereas both have the same size.
  * 3d kernel that needs to be started with m x n x o work-items.
- * m, n and o are dimensions of ghosted grid. */
+ * mgh, ngh and ogh are dimensions of ghosted grid. */
 __kernel void correct_error(
     __global double* restrict v,
     __global double* restrict e,
-    const int m, const int n, const int o,
+    const int mgh, const int ngh, const int ogh,
     const int ghosts)
 {
     int i = get_global_id(0) + ghosts;
     int j = get_global_id(1) + ghosts;
     int k = get_global_id(2) + ghosts;
-    int idx = i * n * o + j * o + k;
+    int idx = i * ngh * ogh + j * ogh + k;
 
     // only for real cells
-    if (i >= ghosts && j >= ghosts && k >= ghosts && i < m - ghosts && j < n - ghosts && k < o - ghosts)
+    if (i >= ghosts && j >= ghosts && k >= ghosts && i < mgh - ghosts && j < ngh - ghosts && k < ogh - ghosts)
     {
         v[idx] += e[idx];
+    }
+}
+
+/**
+ * Same as correct_error but for blockstencil
+ */
+__kernel void correct_error_blockstencil(
+    __global double* restrict v,
+    __global double* restrict e,
+    const int mgh, const int ngh, const int ogh,
+    const int ghosts)
+{
+    int i = get_global_id(0) + ghosts;
+    int j = get_global_id(1) + ghosts;
+    int k = get_global_id(2) + ghosts;
+    int idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE;
+
+    // only for real cells
+    if (i >= ghosts && j >= ghosts && k >= ghosts && i < mgh - ghosts && j < ngh - ghosts && k < ogh - ghosts)
+    {
+
+        for (size_t b = 0; b < BLOCKSIZE; b++)
+            v[idx + b] += e[idx + b];
     }
 }
 

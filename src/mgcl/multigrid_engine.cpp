@@ -547,6 +547,70 @@ namespace mgcl
         return err;
     }
 
+    void MultigridEngine::correctErrorBlockstencil(args::CorrectErrorBsOclArgs& args)
+    {
+        int err;
+
+        // Create the compute kernel from the program
+        const char* kernelName = "correct_error_blockstencil";
+        cl_kernel kernel = clCreateKernel(args.program, kernelName, &err);
+        mgclCheckError(err, "Creating kernel");
+
+        cl_mem dvraw = args.v.getBuffer();
+        cl_mem deraw = args.e.getBuffer();
+        int m = args.v.getM();
+        int n = args.v.getN();
+        int o = args.v.getO();
+        int mgh = args.v.getMgh();
+        int ngh = args.v.getNgh();
+        int ogh = args.v.getOgh();
+        int ghosts = args.v.getGhostsM();
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dvraw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &deraw);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts);
+        mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
+        size_t global[3] = {static_cast<size_t>(m), static_cast<size_t>(n), static_cast<size_t>(o)};
+        size_t local[3] = {
+            static_cast<size_t>(m > 4 ? 4 : m),
+            static_cast<size_t>(n > 4 ? 4 : n),
+            static_cast<size_t>(o > 4 ? 4 : o)};
+
+        if (args.conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*args.conf, kernelName, 1);
+            local[0] = static_cast<size_t>(m > c[0] ? c[0] : m);
+            local[1] = static_cast<size_t>(n > c[1] ? c[1] : n);
+            local[2] = static_cast<size_t>(o > c[2] ? c[2] : o);
+        }
+
+        for (int i = 0; i < 3; i++)
+            if (global[i] % local[i] != 0)
+                global[i] += local[i] - (global[i] % local[i]);
+
+        cl_event ev;
+
+        err = clEnqueueNDRangeKernel(args.queue, kernel, 3, NULL, global, local, 0, NULL, &ev);
+        mgclCheckError(err, "Enqueueing kernel");
+
+        if (args.pd)
+        {
+            args.pd->addMeasurement(args.queue, ev, kernelName,
+                                    {global[0], global[1], global[2]},
+                                    {local[0], local[1], local[2]});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        mgclCheckError(clReleaseKernel(kernel), "clReleaseKernel");
+    }
+
     /**
      * @brief Calculates and sets the stencil (i.e. the matrix A) for the current level by applying the
      * Galerkin operator, which is defined as A_2h = R * A_h * P with R being restriction and P being prolongation

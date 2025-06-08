@@ -215,6 +215,19 @@ namespace mgcl
             mgcl::conf::KernelConfig* conf = nullptr;
             mgcl::ProfilingData* pd = nullptr;
         };
+
+        struct CorrectErrorBsOclArgs
+        {
+            CuboidBSGpu& v;
+            CuboidBSGpu& e;
+
+            cl_program program;
+            cl_command_queue queue;
+            cl_context context;
+
+            mgcl::conf::KernelConfig* conf = nullptr;
+            mgcl::ProfilingData* pd = nullptr;
+        };
     }
 
     /**
@@ -229,6 +242,7 @@ namespace mgcl
         static double vcycle(Problem& problem, Level& level);
         static double vcycleOclBlockstencil(Problem& problem, Level& level);
         static int correctError(Level& level);
+        static void correctErrorBlockstencil(args::CorrectErrorBsOclArgs& args);
 
         static void restrictSeq(Level& fine, Level& coarse, Cuboid& fineVals, Cuboid& coarseVals);
         static void restrict(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values);

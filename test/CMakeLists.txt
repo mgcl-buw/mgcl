@@ -48,6 +48,7 @@ set(SOURCES_TEST
     blockstencil/test_bs_galerkin.cpp
     blockstencil/test_bs_level.cpp
     blockstencil/test_bs_problem_conf.cpp
+    blockstencil/test_bs_correct_error.cpp
 )
 
 add_executable(tests ${SOURCES_TEST} ${BACKWARD_ENABLE})
