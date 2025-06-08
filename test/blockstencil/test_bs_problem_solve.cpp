@@ -596,6 +596,140 @@ TEST_CASE("solve_bs_periodic_blocksize1")
         }
     }
 
+    SECTION("OpenCL")
+    {
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+        std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
+
+        SECTION("Galerkin_27p")
+        {
+            mgcl::Problem psc(N, N, N, fsc, vsc);
+            psc.setMaxiterVcycles(maxIterVCycles);
+            psc.setTol(tol);
+            psc.setNu1(nu1);
+            psc.setNu2(nu2);
+            psc.setOmega(omega);
+            psc.setMaxlevel(maxlevel);
+            psc.setUseOpencl(true);
+            psc.setReadResults(true);
+            psc.setDeviceType(deviceType);
+            // p.setDeviceName("Quadro");
+
+            psc.setStencilType(mgcl::MGCL_VARYING);
+            auto& s = *psc.getStencilValues();
+            mgcl_test::fill27pLaplace(s, h, false);
+
+            psc.solve();
+
+            // check if solution is good
+            auto err = mgcl_test::calculateError(solutionsc, *vsc);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
+
+            // solution.dumpToFile("out_solution.txt");
+            // (*v).dumpToFile("out_v.txt");
+
+            std::cout
+                << "ocl Galerkin 27p" << std::endl
+                << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
+        }
+
+        SECTION("block")
+        {
+            int blocksize = 1;
+            std::shared_ptr<mgcl::CuboidBS> vbs = std::make_shared<mgcl::CuboidBS>(N, N, N, 0, 0, 0, blocksize);
+            std::shared_ptr<mgcl::CuboidBS> fbs = std::make_shared<mgcl::CuboidBS>(N, N, N, 0, 0, 0, blocksize);
+            // mgcl::Blockstencil bs(Nblockstencil, Nblockstencil, Nblockstencil, 3, blocksize, 0, 0, 0);
+            mgcl::FixedStencil fs(3);
+
+            mgcl_test::fill27pLaplace(fs, h, false);
+
+            // bs_inv.dumpToFile("bs_inv.txt");
+            // bs.dumpToFile("bs.txt");
+
+            // fill v with values of v1 and v2, vice versa for f
+            mgcl_test::copyCuboidToCuboidBS(*vsc, *vbs, 1, 1, 1);
+            mgcl_test::copyCuboidToCuboidBS(*fsc, *fbs, 1, 1, 1);
+
+            mgcl::Problem pbs(N, N, N, fbs, vbs);
+            // pbs.setIgnoreTol(true);
+            pbs.setMaxiterVcycles(maxIterVCycles);
+            pbs.setTol(tol);
+            pbs.setNu1(nu1);
+            pbs.setNu2(nu2);
+            pbs.setOmega(omega);
+            pbs.setMaxlevel(maxlevel);
+            pbs.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
+            pbs.setUseOpencl(true);
+            pbs.setReadResults(true);
+            pbs.setDeviceType(deviceType);
+            // pbs.setDeviceName("Quadro");
+
+            auto bs = pbs.getBlockstencil();
+            mgcl_test::fill27pLaplace(*bs, h, false);
+            // bs->dumpToFile("bs.txt");
+            auto r = pbs.getRestrictionBlockstencil();
+            auto p = pbs.getProlongationBlockstencil();
+            mgcl_test::fill3dFullWeightRestrictionBlockstencil(*r);
+            mgcl_test::fill3dBilinearProlongationBlockstencil(*p);
+
+            SECTION("Blockstencil_Jacobiscalar")
+            {
+                pbs.setSmootherType(mgcl::MGCL_JACOBI_SCALAR);
+
+                pbs.solve();
+
+                mgcl_test::copyCuboidBSToCuboid(*vbs, *vsc, 1, 1, 1);
+
+                // check if solution is good
+                auto err = mgcl_test::calculateError(solutionsc, *vsc);
+                auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+                auto errMax = mgcl_test::calculateMaxError(*err);
+
+                // solution.dumpToFile("out_solution.txt");
+                // (*v).dumpToFile("out_v.txt");
+
+                std::cout
+                    << "ocl Blockstencil scalar Jacobi" << std::endl
+                    << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+                    << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+                CHECK(errNorm < 1e-2);
+                CHECK(errMax < 1e-2);
+            }
+
+            SECTION("Blockstencil_Jacobiblock")
+            {
+                pbs.setSmootherType(mgcl::MGCL_JACOBI_BLOCK);
+
+                pbs.solve();
+
+                mgcl_test::copyCuboidBSToCuboid(*vbs, *vsc, 1, 1, 1);
+
+                // check if solution is good
+                auto err = mgcl_test::calculateError(solutionsc, *vsc);
+                auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+                auto errMax = mgcl_test::calculateMaxError(*err);
+
+                // solution.dumpToFile("out_solution.txt");
+                // (*v).dumpToFile("out_v.txt");
+
+                std::cout
+                    << "ocl Blockstencil block Jacobi" << std::endl
+                    << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+                    << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+                CHECK(errNorm < 1e-2);
+                CHECK(errMax < 1e-2);
+            }
+        }
+    }
+
     // SECTION("OpenCL")
     // {
     //     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
