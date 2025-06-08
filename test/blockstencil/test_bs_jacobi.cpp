@@ -83,6 +83,7 @@ TEST_CASE("bs_jacobi_independent_quantities")
     int n = 4;
     int o = 4;
     int gh = 1;
+    int gh_bs = 1;
     int blocksize = 2;
     int width = 3;
     int mgh = m + 2 * gh;
@@ -101,7 +102,7 @@ TEST_CASE("bs_jacobi_independent_quantities")
     mgcl::CuboidBS v(m, n, o, gh, gh, gh, blocksize);
     mgcl::CuboidBS r(m, n, o, gh, gh, gh, blocksize);
     mgcl::CuboidBS f(m, n, o, gh, gh, gh, blocksize);
-    mgcl::Blockstencil bs(m, n, o, width, blocksize, 0, 0, 0);
+    mgcl::Blockstencil bs(m, n, o, width, blocksize, gh_bs, gh_bs, gh_bs);
 
     mgcl::Cuboid v1(m, n, o, gh, gh, gh);
     mgcl::Cuboid f1(m, n, o, gh, gh, gh);
@@ -138,13 +139,13 @@ TEST_CASE("bs_jacobi_independent_quantities")
                     for (int j = 0; j < n; j++)
                         for (int k = 0; k < o; k++)
                         {
-                            bs[0][0][ci][cj][ck][i][j][k] = sv1[ci][cj][ck][i][j][k];
-                            bs[1][1][ci][cj][ck][i][j][k] = sv2[ci][cj][ck][i][j][k];
-                            bs[0][1][ci][cj][ck][i][j][k] = 0;
-                            bs[1][0][ci][cj][ck][i][j][k] = 0;
+                            bs[0][0][ci][cj][ck][i + gh_bs][j + gh_bs][k + gh_bs] = sv1[ci][cj][ck][i][j][k];
+                            bs[1][1][ci][cj][ck][i + gh_bs][j + gh_bs][k + gh_bs] = sv2[ci][cj][ck][i][j][k];
+                            bs[0][1][ci][cj][ck][i + gh_bs][j + gh_bs][k + gh_bs] = 0;
+                            bs[1][0][ci][cj][ck][i + gh_bs][j + gh_bs][k + gh_bs] = 0;
                         }
 
-    mgcl::TBlockstencilInv bs_inv_variant = bs.invertDiagonal();
+    mgcl::TBlockstencilInv bs_inv_variant = bs.invertDiagonal(); // scalar Jacobi will be used
     REQUIRE(std::holds_alternative<std::shared_ptr<mgcl::CuboidBS>>(bs_inv_variant));
     auto& bs_inv = std::get<std::shared_ptr<mgcl::CuboidBS>>(bs_inv_variant);
     // auto bs_inv_ptr = bs.invertCenterMatrices();
@@ -269,6 +270,7 @@ TEST_CASE("bs_jacobi_combined_scalars")
     int nc = nf / 2;
     int oc = of / 2;
     int gh = 1;
+    int gh_bs = 1;
     int blocksize = 8;
     int width = 3;
     int mfgh = mf + 2 * gh;
@@ -290,7 +292,7 @@ TEST_CASE("bs_jacobi_combined_scalars")
     mgcl::CuboidBS v(mc, nc, oc, gh, gh, gh, blocksize);
     mgcl::CuboidBS r(mc, nc, oc, gh, gh, gh, blocksize);
     mgcl::CuboidBS f(mc, nc, oc, gh, gh, gh, blocksize);
-    mgcl::Blockstencil bs(mc, nc, oc, width, blocksize, 0, 0, 0);
+    mgcl::Blockstencil bs(mc, nc, oc, width, blocksize, gh_bs, gh_bs, gh_bs);
 
     mgcl::Cuboid v1(mf, nf, of, gh, gh, gh);
     mgcl::Cuboid f1(mf, nf, of, gh, gh, gh);

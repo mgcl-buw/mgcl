@@ -1391,9 +1391,9 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacob
         int m = mgh - 2 * ghosts;
         int n = ngh - 2 * ghosts;
         int o = ogh - 2 * ghosts;
-        // Assumption for index of bs_inv: No ghosts, width = 1
+        // Assumption for index of bs_inv: Same ghosts as sv
         int gridSizeBsInv = m * n * o;
-        int idx_bs_inv = (i - ghosts) * n * o + (j - ghosts) * o + k - ghosts;
+        int idx_bs_inv = index_sv_gp;
         for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
             double sum = 0;
@@ -1467,8 +1467,8 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_scalarjaco
         int m = mgh - 2 * ghosts;
         int n = ngh - 2 * ghosts;
         int o = ogh - 2 * ghosts;
-        // Assumption for index of bs_inv: No ghosts, width = 1
-        int idx_bs_inv = ((i - ghosts) * n * o + (j - ghosts) * o + k - ghosts) * BLOCKSIZE;
+        // Assumption for index of bs_inv: Same ghosts as blockstencil
+        int idx_bs_inv = index_sv_gp * BLOCKSIZE;
 
         // Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
         int idx_block = 0;

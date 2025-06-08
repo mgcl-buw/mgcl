@@ -675,11 +675,6 @@ namespace mgcl
             {
                 error("width of bs_inv must be 1!");
             }
-
-            if (bs_inv.getGh() > 0)
-            {
-                error("#ghosts of bs_inv must be 0!");
-            }
             kernelName = "jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacobi";
         }
 
@@ -716,7 +711,6 @@ namespace mgcl
             bs_inv_buf = std::get<std::shared_ptr<CuboidBSGpu>>(args.bs_inv)->getBuffer();
         }
         int svGridSizeBlock = 27 * svGridSize;
-        int blocksize = args.v_in.getBlocksize();
         err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
         err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
