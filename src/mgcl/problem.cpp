@@ -712,7 +712,13 @@ namespace mgcl
     void Problem::initOpenCL()
     {
         if (!openCLHelper.isInitialized())
+        {
+            if (getVBSPtr())
+            {
+                openCLHelper.setPreprocessorConstant("BLOCKSIZE", std::to_string(getVBS().getBlocksize()));
+            }
             openCLHelper.init();
+        }
     }
 
     /* Waits for all running OpenCL kernels to finish and reads back results from device. Creates arrays on host if none
@@ -826,8 +832,31 @@ namespace mgcl
         {
             residuals.clear();
 
+            double initres;
+            auto& lv0 = *levels[0];
+
             // calculate initial residual
-            double initres = MultigridEngine::residual(*this, *levels[0], !ignoreTol);
+            if (getVPtr())
+            {
+                initres = MultigridEngine::residual(*this, lv0, !ignoreTol);
+            }
+            else
+            {
+                args::ResidualBSOclArgs residual_args{
+                    lv0.getDFBS(), lv0.getDVBSIn(), lv0.getDRBS(),
+                    residual_norm,
+                    *lv0.blockstencilGpu,
+                    lv0.getDRsqBSPtr().get(),
+                    true, isPeriodic(),
+                    lv0.isCalculatedLocally(),
+                    getDPlanesBufPtr(), getHPlanesBufSendPtr(), getHPlanesBufRecvPtr(),
+                    getProgram(), getCommands(), getContext(),
+                    0, 0, 0,
+                    lv0.getMpiDataPtr(),
+                    &getKernelConfig(), getProfilingData()};
+                initres = MultigridEngine::residual(residual_args);
+            }
+
             if (!silent && !ignoreTol)
                 printf("Starting mgcl with initres = %e\n", initres);
 
@@ -838,7 +867,14 @@ namespace mgcl
             {
                 elapsedIterations++;
                 auto tstart = std::chrono::steady_clock::now();
-                res = MultigridEngine::vcycle(*this, *levels[0]);
+                if (getVPtr())
+                {
+                    res = MultigridEngine::vcycle(*this, lv0);
+                }
+                else
+                {
+                    res = MultigridEngine::vcycleOclBlockstencil(*this, lv0);
+                }
                 auto tend = mgcl_since(tstart).count();
 
                 if (!ignoreTol)
@@ -891,7 +927,8 @@ namespace mgcl
         }
 
         // copy resulting v to d_v on device
-        if (copy_buffer_data)
+        if (copy_buffer_data && getVPtr())
+
             openCLHelper.copyOutputBuffers();
 
         // write result into v on host
