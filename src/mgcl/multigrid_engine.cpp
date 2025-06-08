@@ -464,7 +464,11 @@ namespace mgcl
         MultigridEngine::prolongateBlockstencil(prolongation_args);
 
         // correct error
-        correctError(level);
+        args::CorrectErrorBsOclArgs correctError_args{
+            level.getDVBSIn(), levelAbove.getDRBS(),
+            problem.getProgram(), problem.getCommands(), problem.getContext(),
+            &problem.getKernelConfig(), problem.getProfilingData()};
+        MultigridEngine::correctErrorBlockstencil(correctError_args);
 
         // relax nu2 times
         args::JacobiBSOclArgs jacobi_args2{
