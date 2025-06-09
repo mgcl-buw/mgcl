@@ -729,195 +729,6 @@ TEST_CASE("solve_bs_periodic_blocksize1")
             }
         }
     }
-
-    // SECTION("OpenCL")
-    // {
-    //     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
-
-    //     std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
-
-    //     psc.setUseOpencl(true);
-    //     psc.setDeviceType(CL_DEVICE_TYPE_GPU);
-    //     psc.setReadResults(true);
-    //     psc.setDeviceType(deviceType);
-    //     // p.setDeviceName("Quadro");
-
-    //     SECTION("Laplace_7p")
-    //     {
-    //         psc.solve();
-
-    //         // check if solution is good
-    //         auto err = mgcl_test::calculateError(solutionsc, *vsc);
-    //         auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
-    //         auto errMax = mgcl_test::calculateMaxError(*err);
-
-    //         std::cout
-    //             << "ocl " << oclDeviceType << " Laplace 7p" << std::endl
-    //             << std::scientific << "  ||e||_2 = " << errNorm << std::endl
-    //             << std::scientific << "  e_max = " << errMax << std::endl;
-
-    //         CHECK(errNorm < 1e-2);
-    //         CHECK(errMax < 1e-2);
-
-    //         // check if error is equal to old mgcl implementation (problem params must match)
-    //         if (psc.getMaxiterVcycles() == 10 && N == 32 && psc.getTol() == 1e-14 &&
-    //             psc.getNu1() == 2 && psc.getNu2() == 2 && psc.getOmega() == 0.8 &&
-    //             psc.getDeviceName() == "Quadro" && psc.getDeviceType() == CL_DEVICE_TYPE_GPU)
-    //         {
-    //             CHECK(fabs(errNorm - 3.93115528889612358e-03) < 1e-14);
-    //             CHECK(fabs(errMax - 3.95723982871536324e-03) < 1e-14);
-    //         }
-    //     }
-
-    //     SECTION("Galerkin_7p")
-    //     {
-    //         psc.setStencilType(mgcl::MGCL_VARYING);
-    //         auto& s = *psc.getStencilValues();
-
-    //         double h = 1.0 / static_cast<double>(N);
-    //         mgcl_test::fill7pLaplace(s, h, false);
-
-    //         psc.solve();
-
-    //         // check if solution is good
-    //         auto err = mgcl_test::calculateError(solutionsc, *vsc);
-    //         auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
-    //         auto errMax = mgcl_test::calculateMaxError(*err);
-
-    //         // solution.dumpToFile("out_solution.txt");
-    //         // (*v).dumpToFile("out_v.txt");
-
-    //         std::cout
-    //             << "ocl " << oclDeviceType << " Galerkin 7p" << std::endl
-    //             << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
-    //             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
-
-    //         CHECK(errNorm < 1e-2);
-    //         CHECK(errMax < 1e-2);
-    //     }
-
-    //     SECTION("Laplace_27p")
-    //     {
-    //         psc.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
-    //         psc.solve();
-
-    //         // check if solution is good
-    //         auto err = mgcl_test::calculateError(solutionsc, *vsc);
-    //         auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
-    //         auto errMax = mgcl_test::calculateMaxError(*err);
-
-    //         std::cout
-    //             << "ocl " << oclDeviceType << " Laplace 27p" << std::endl
-    //             << std::scientific << "  ||e||_2 = " << errNorm << std::endl
-    //             << std::scientific << "  e_max = " << errMax << std::endl;
-
-    //         CHECK(errNorm < 1e-2);
-    //         CHECK(errMax < 1e-2);
-    //     }
-
-    //     SECTION("Galerkin_27p")
-    //     {
-    //         psc.setStencilType(mgcl::MGCL_VARYING);
-    //         auto& s = *psc.getStencilValues();
-
-    //         double h = 1.0 / static_cast<double>(N);
-    //         mgcl_test::fill27pLaplace(s, h, false);
-
-    //         psc.solve();
-
-    //         // check if solution is good
-    //         auto err = mgcl_test::calculateError(solutionsc, *vsc);
-    //         auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
-    //         auto errMax = mgcl_test::calculateMaxError(*err);
-
-    //         // solution.dumpToFile("out_solution.txt");
-    //         // (*v).dumpToFile("out_v.txt");
-
-    //         std::cout
-    //             << "ocl " << oclDeviceType << " Galerkin 27p" << std::endl
-    //             << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
-    //             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
-
-    //         CHECK(errNorm < 1e-2);
-    //         CHECK(errMax < 1e-2);
-    //     }
-    // }
-
-    // SECTION("pmg")
-    // {
-    //     // pmg
-
-    //     // setup MPI
-    //     MPI_Comm mpi_comm_cart = *init_mpi_for_pmg();
-
-    //     if (mpi_comm_cart == MPI_COMM_NULL)
-    //     {
-    //         std::cout << "mpi_comm_cart is null! Cannot test against pmg." << std::endl;
-    //     }
-    //     else
-    //     {
-    //         // auto v = std::make_shared<mgcl::Cuboid>(N, N, N);
-
-    //         // init 7-point stencil for pmg's jacobi
-    //         int size = 7;
-    //         double h2 = 1.0 / (double)(N * N);
-    //         double* values = new double[size]();
-    //         int* xoff = new int[size]();
-    //         int* yoff = new int[size]();
-    //         int* zoff = new int[size]();
-
-    //         values[0] = 6.0 / h2;
-    //         for (int i = 1; i <= 6; i++)
-    //             values[i] = (-1.0) / h2;
-
-    //         xoff[0] = 0;
-    //         xoff[1] = 1;
-    //         xoff[2] = -1;
-    //         for (int i = 3; i <= 6; i++)
-    //             xoff[i] = 0;
-
-    //         for (int i = 0; i <= 2; i++)
-    //             yoff[i] = 0;
-    //         yoff[3] = 1;
-    //         yoff[4] = -1;
-    //         yoff[5] = 0;
-    //         yoff[6] = 0;
-
-    //         for (int i = 0; i <= 4; i++)
-    //             zoff[i] = 0;
-    //         zoff[5] = 1;
-    //         zoff[6] = -1;
-
-    //         // run with a tolerance that will never be reached thus all vcycle iters are executed
-    //         mg_with_maxlv(vsc->getData(), fsc->getData(), maxIterVCycles, tol, N, N, N, 0, N - 1, 0, N - 1, 0, N - 1,
-    //                       1, nu1, nu2, omega, size, values, xoff, yoff, zoff, mpi_comm_cart, 0, maxlevel + 1);
-
-    //         // check if solution is good
-    //         auto err = mgcl_test::calculateError(solutionsc, *vsc);
-    //         auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
-    //         auto errMax = mgcl_test::calculateMaxError(*err);
-
-    //         std::cout
-    //             << "pmg" << std::endl
-    //             << std::scientific << "  ||e||_2 = " << errNorm << std::endl
-    //             << std::scientific << "  e_max = " << errMax << std::endl;
-
-    //         CHECK(errNorm < 1e-2);
-    //         CHECK(errMax < 1e-2);
-
-    //         // check if error is equal to old mgcl implementation (problem params must match)
-    //         if (psc.getMaxiterVcycles() == 10 && N == 32 && psc.getTol() == 1e-14 &&
-    //             psc.getNu1() == 2 && psc.getNu2() == 2 && psc.getOmega() == 0.8 &&
-    //             psc.getDeviceName() == "Quadro" && psc.getDeviceType() == CL_DEVICE_TYPE_GPU)
-    //         {
-    //             CHECK(fabs(errNorm - 3.93115528889612358e-03) < 1e-14);
-    //             CHECK(fabs(errMax - 3.95723982871536324e-03) < 1e-14);
-    //         }
-    //     }
-
-    //     // Gets called in custom catch2 main
-    //     // MPI_Finalize();
-    // }
 }
 
 /**
@@ -989,7 +800,7 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
 
     SECTION("Sequential")
     {
-        SECTION("Galerkin_27p vs blockstencil with scalar Jacobi")
+        SECTION("Galerkin_27p vs blockstencil")
         {
             // *** setup of block problem ***
             int blocksize = 2;
@@ -1039,18 +850,21 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
             double h = 1.0 / static_cast<double>(N);
             mgcl_test::fill27pLaplace(s, h, false);
 
-            psc.solveSeq();
-
             SECTION("Jacobi scalar")
             {
+                std::cout << std::endl
+                          << "**** seq Galerkin27p vs blockstencil scalar Jacobi ****" << std::endl;
                 pbs.setSmootherType(mgcl::MGCL_JACOBI_SCALAR);
             }
 
-            SECTION("Jacobi scalar")
+            SECTION("Jacobi block")
             {
+                std::cout << std::endl
+                          << "**** seq Galerkin27p vs blockstencil block Jacobi ****" << std::endl;
                 pbs.setSmootherType(mgcl::MGCL_JACOBI_BLOCK);
             }
 
+            psc.solveSeq();
             pbs.solveSeq();
 
             // check if input v is equal to the v stored in Problem instance
@@ -1085,194 +899,118 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
         }
     }
 
-    // SECTION("OpenCL")
-    // {
-    //     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    SECTION("OpenCL")
+    {
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
-    //     std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
+        std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
 
-    //     psc.setUseOpencl(true);
-    //     psc.setDeviceType(CL_DEVICE_TYPE_GPU);
-    //     psc.setReadResults(true);
-    //     psc.setDeviceType(deviceType);
-    //     // p.setDeviceName("Quadro");
+        SECTION("Galerkin_27p vs blockstencil")
+        {
+            // *** setup of block problem ***
+            int blocksize = 2;
+            std::shared_ptr<mgcl::CuboidBS> vbs = std::make_shared<mgcl::CuboidBS>(N, N, N, 0, 0, 0, blocksize);
+            std::shared_ptr<mgcl::CuboidBS> fbs = std::make_shared<mgcl::CuboidBS>(N, N, N, 0, 0, 0, blocksize);
+            // mgcl::Blockstencil bs(Nblockstencil, Nblockstencil, Nblockstencil, 3, blocksize, 0, 0, 0);
+            mgcl::FixedStencil fs(3);
 
-    //     SECTION("Laplace_7p")
-    //     {
-    //         psc.solve();
+            mgcl_test::fill27pLaplace(fs, h, false);
 
-    //         // check if solution is good
-    //         auto err = mgcl_test::calculateError(solutionsc, *vsc);
-    //         auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)Nscalar, *err);
-    //         auto errMax = mgcl_test::calculateMaxError(*err);
+            // bs_inv.dumpToFile("bs_inv.txt");
+            // bs.dumpToFile("bs.txt");
 
-    //         std::cout
-    //             << "ocl " << oclDeviceType << " Laplace 7p" << std::endl
-    //             << std::scientific << "  ||e||_2 = " << errNorm << std::endl
-    //             << std::scientific << "  e_max = " << errMax << std::endl;
+            // copy scalar Cuboid into both CuboidBS vector slots, for both v and f
+            for (int i = 0; i < N; i++)
+                for (int j = 0; j < N; j++)
+                    for (int k = 0; k < N; k++)
+                    {
+                        (*vbs)[i][j][k][0] = (*vsc)[i][j][k];
+                        (*fbs)[i][j][k][0] = (*fsc)[i][j][k];
+                        (*vbs)[i][j][k][1] = (*vsc)[i][j][k];
+                        (*fbs)[i][j][k][1] = (*fsc)[i][j][k];
+                    }
 
-    //         CHECK(errNorm < 1e-2);
-    //         CHECK(errMax < 1e-2);
+            mgcl::Problem pbs(N, N, N, fbs, vbs);
+            // pbs.setIgnoreTol(true);
+            pbs.setMaxiterVcycles(maxIterVCycles);
+            pbs.setTol(tol);
+            pbs.setNu1(nu1);
+            pbs.setNu2(nu2);
+            pbs.setOmega(omega);
+            pbs.setMaxlevel(maxlevel);
+            pbs.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
+            pbs.setUseOpencl(true);
+            pbs.setReadResults(true);
+            pbs.setDeviceType(deviceType);
 
-    //         // check if error is equal to old mgcl implementation (problem params must match)
-    //         if (psc.getMaxiterVcycles() == 10 && Nscalar == 32 && psc.getTol() == 1e-14 &&
-    //             psc.getNu1() == 2 && psc.getNu2() == 2 && psc.getOmega() == 0.8 &&
-    //             psc.getDeviceName() == "Quadro" && psc.getDeviceType() == CL_DEVICE_TYPE_GPU)
-    //         {
-    //             CHECK(fabs(errNorm - 3.93115528889612358e-03) < 1e-14);
-    //             CHECK(fabs(errMax - 3.95723982871536324e-03) < 1e-14);
-    //         }
-    //     }
+            psc.setUseOpencl(true);
+            psc.setReadResults(true);
+            psc.setDeviceType(deviceType);
+            // p.setDeviceName("Quadro");
 
-    //     SECTION("Galerkin_7p")
-    //     {
-    //         psc.setStencilType(mgcl::MGCL_VARYING);
-    //         auto& s = *psc.getStencilValues();
+            auto bs = pbs.getBlockstencil();
+            mgcl_test::fill27pLaplace(*bs, h, false);
+            // bs->dumpToFile("bs.txt");
+            auto r = pbs.getRestrictionBlockstencil();
+            auto p = pbs.getProlongationBlockstencil();
+            mgcl_test::fill3dFullWeightRestrictionBlockstencil(*r);
+            mgcl_test::fill3dBilinearProlongationBlockstencil(*p);
 
-    //         double h = 1.0 / static_cast<double>(Nscalar);
-    //         mgcl_test::fill7pLaplace(s, h, false);
+            // *** setup of scalar problem ***
+            psc.setStencilType(mgcl::MGCL_VARYING);
+            auto& s = *psc.getStencilValues();
 
-    //         psc.solve();
+            double h = 1.0 / static_cast<double>(N);
+            mgcl_test::fill27pLaplace(s, h, false);
 
-    //         // check if solution is good
-    //         auto err = mgcl_test::calculateError(solutionsc, *vsc);
-    //         auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)Nscalar, *err);
-    //         auto errMax = mgcl_test::calculateMaxError(*err);
+            SECTION("Jacobi scalar")
+            {
+                std::cout << std::endl
+                          << "**** ocl Galerkin27p vs blockstencil scalar Jacobi ****" << std::endl;
+                pbs.setSmootherType(mgcl::MGCL_JACOBI_SCALAR);
+            }
 
-    //         // solution.dumpToFile("out_solution.txt");
-    //         // (*v).dumpToFile("out_v.txt");
+            SECTION("Jacobi block")
+            {
+                std::cout << std::endl
+                          << "**** ocl Galerkin27p vs blockstencil block Jacobi ****" << std::endl;
+                pbs.setSmootherType(mgcl::MGCL_JACOBI_BLOCK);
+            }
 
-    //         std::cout
-    //             << "ocl " << oclDeviceType << " Galerkin 7p" << std::endl
-    //             << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
-    //             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+            psc.solve();
+            pbs.solve();
 
-    //         CHECK(errNorm < 1e-2);
-    //         CHECK(errMax < 1e-2);
-    //     }
+            // check if input v is equal to the v stored in Problem instance
+            REQUIRE(vsc.get() == psc.getVPtr().get());
+            REQUIRE(vsc->isEqual(psc.getV()));
+            REQUIRE(vbs.get() == pbs.getVBSPtr().get());
+            REQUIRE(vbs->isEqual(pbs.getVBS()));
 
-    //     SECTION("Laplace_27p")
-    //     {
-    //         psc.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
-    //         psc.solve();
+            // check if solution is good
+            auto err = mgcl_test::calculateError(solutionsc, *vsc);
+            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+            auto errMax = mgcl_test::calculateMaxError(*err);
 
-    //         // check if solution is good
-    //         auto err = mgcl_test::calculateError(solutionsc, *vsc);
-    //         auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)Nscalar, *err);
-    //         auto errMax = mgcl_test::calculateMaxError(*err);
+            // solution.dumpToFile("out_solution.txt");
+            // (*v).dumpToFile("out_v.txt");
 
-    //         std::cout
-    //             << "ocl " << oclDeviceType << " Laplace 27p" << std::endl
-    //             << std::scientific << "  ||e||_2 = " << errNorm << std::endl
-    //             << std::scientific << "  e_max = " << errMax << std::endl;
+            std::cout
+                << "ocl Galerkin 27p" << std::endl
+                << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+                << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
-    //         CHECK(errNorm < 1e-2);
-    //         CHECK(errMax < 1e-2);
-    //     }
+            CHECK(errNorm < 1e-2);
+            CHECK(errMax < 1e-2);
 
-    //     SECTION("Galerkin_27p")
-    //     {
-    //         psc.setStencilType(mgcl::MGCL_VARYING);
-    //         auto& s = *psc.getStencilValues();
-
-    //         double h = 1.0 / static_cast<double>(Nscalar);
-    //         mgcl_test::fill27pLaplace(s, h, false);
-
-    //         psc.solve();
-
-    //         // check if solution is good
-    //         auto err = mgcl_test::calculateError(solutionsc, *vsc);
-    //         auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)Nscalar, *err);
-    //         auto errMax = mgcl_test::calculateMaxError(*err);
-
-    //         // solution.dumpToFile("out_solution.txt");
-    //         // (*v).dumpToFile("out_v.txt");
-
-    //         std::cout
-    //             << "ocl " << oclDeviceType << " Galerkin 27p" << std::endl
-    //             << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
-    //             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
-
-    //         CHECK(errNorm < 1e-2);
-    //         CHECK(errMax < 1e-2);
-    //     }
-    // }
-
-    // SECTION("pmg")
-    // {
-    //     // pmg
-
-    //     // setup MPI
-    //     MPI_Comm mpi_comm_cart = *init_mpi_for_pmg();
-
-    //     if (mpi_comm_cart == MPI_COMM_NULL)
-    //     {
-    //         std::cout << "mpi_comm_cart is null! Cannot test against pmg." << std::endl;
-    //     }
-    //     else
-    //     {
-    //         // auto v = std::make_shared<mgcl::Cuboid>(N, N, N);
-
-    //         // init 7-point stencil for pmg's jacobi
-    //         int size = 7;
-    //         double h2 = 1.0 / (double)(Nscalar * Nscalar);
-    //         double* values = new double[size]();
-    //         int* xoff = new int[size]();
-    //         int* yoff = new int[size]();
-    //         int* zoff = new int[size]();
-
-    //         values[0] = 6.0 / h2;
-    //         for (int i = 1; i <= 6; i++)
-    //             values[i] = (-1.0) / h2;
-
-    //         xoff[0] = 0;
-    //         xoff[1] = 1;
-    //         xoff[2] = -1;
-    //         for (int i = 3; i <= 6; i++)
-    //             xoff[i] = 0;
-
-    //         for (int i = 0; i <= 2; i++)
-    //             yoff[i] = 0;
-    //         yoff[3] = 1;
-    //         yoff[4] = -1;
-    //         yoff[5] = 0;
-    //         yoff[6] = 0;
-
-    //         for (int i = 0; i <= 4; i++)
-    //             zoff[i] = 0;
-    //         zoff[5] = 1;
-    //         zoff[6] = -1;
-
-    //         // run with a tolerance that will never be reached thus all vcycle iters are executed
-    //         mg_with_maxlv(vsc->getData(), fsc->getData(), maxIterVCycles, tol, Nscalar, Nscalar, Nscalar, 0, Nscalar - 1, 0, Nscalar - 1, 0, Nscalar - 1,
-    //                       1, nu1, nu2, omega, size, values, xoff, yoff, zoff, mpi_comm_cart, 0, maxlevel + 1);
-
-    //         // check if solution is good
-    //         auto err = mgcl_test::calculateError(solutionsc, *vsc);
-    //         auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)Nscalar, *err);
-    //         auto errMax = mgcl_test::calculateMaxError(*err);
-
-    //         std::cout
-    //             << "pmg" << std::endl
-    //             << std::scientific << "  ||e||_2 = " << errNorm << std::endl
-    //             << std::scientific << "  e_max = " << errMax << std::endl;
-
-    //         CHECK(errNorm < 1e-2);
-    //         CHECK(errMax < 1e-2);
-
-    //         // check if error is equal to old mgcl implementation (problem params must match)
-    //         if (psc.getMaxiterVcycles() == 10 && Nscalar == 32 && psc.getTol() == 1e-14 &&
-    //             psc.getNu1() == 2 && psc.getNu2() == 2 && psc.getOmega() == 0.8 &&
-    //             psc.getDeviceName() == "Quadro" && psc.getDeviceType() == CL_DEVICE_TYPE_GPU)
-    //         {
-    //             CHECK(fabs(errNorm - 3.93115528889612358e-03) < 1e-14);
-    //             CHECK(fabs(errMax - 3.95723982871536324e-03) < 1e-14);
-    //         }
-    //     }
-
-    //     // Gets called in custom catch2 main
-    //     // MPI_Finalize();
-    // }
+            for (int i = 0; i < N; i++)
+                for (int j = 0; j < N; j++)
+                    for (int k = 0; k < N; k++)
+                    {
+                        REQUIRE_THAT((*vbs)[i][j][k][0], Catch::Matchers::WithinAbs((*vsc)[i][j][k], 1e-14));
+                        REQUIRE_THAT((*vbs)[i][j][k][1], Catch::Matchers::WithinAbs((*vsc)[i][j][k], 1e-14));
+                    }
+        }
+    }
 }
 
 // TEST_CASE("solve_dirichlet")
