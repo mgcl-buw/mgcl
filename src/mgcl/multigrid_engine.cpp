@@ -285,8 +285,14 @@ namespace mgcl
         residual(problem, level, false);
         // printf("res on level.getNum() %d, upwards: %e\n", level.getNum(), res);
 
+        // level.getDF().dumpToFile(problem.getCommands(), "dfsc_" + std::to_string(level.getNum()) + ".txt");
+
         // restrict to coarser grid
         restrict(level, levelAbove, level.getDR(), levelAbove.getDF());
+
+        // levelAbove.getDF().dumpToFile(problem.getCommands(), "dfsc_" + std::to_string(levelAbove.getNum()) + ".txt");
+        // level.getDVIn().dumpToFile(problem.getCommands(), "dvsc_" + std::to_string(level.getNum()) + ".txt");
+        // level.getDR().dumpToFile(problem.getCommands(), "drsc_" + std::to_string(level.getNum()) + ".txt");
 
         // If MPI is in use but minGridPoints is reached, gather rhs data to process 0 and perform calculations
         // locally only, until we're reaching the threshold level moving downwards again.
@@ -313,6 +319,8 @@ namespace mgcl
             else
             {
                 jacobi(problem, levelAbove, problem.nu1 + problem.nu2, false, problem.getJacobiIterationsPerKernel());
+                // levelAbove.getDVIn().dumpToFile(problem.getCommands(), "dvsc_" + std::to_string(levelAbove.getNum()) + ".txt");
+                // levelAbove.getDR().dumpToFile(problem.getCommands(), "drsc_" + std::to_string(levelAbove.getNum()) + ".txt");
             }
         }
 
@@ -321,12 +329,20 @@ namespace mgcl
         if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
             mpi_util::scatter_inplace_wgh(problem.getMpiComm(), problem.getCommands(), levelAbove.getDVIn());
 
+        // levelAbove.getDF().dumpToFile(problem.getCommands(), "dfsc_" + std::to_string(levelAbove.getNum()) + ".txt");
+        // levelAbove.getDVIn().dumpToFile(problem.getCommands(), "dvsc_" + std::to_string(levelAbove.getNum()) + ".txt");
+        // levelAbove.getDR().dumpToFile(problem.getCommands(), "drsc_" + std::to_string(levelAbove.getNum()) + ".txt");
+
         // prolongate from coarser to finer grid
         // r of this level.getNum() is reused here and should actually be called e
         prolongate(level, levelAbove, level.getDR(), levelAbove.getDVIn());
 
+        // level.getDR().dumpToFile(problem.getCommands(), "drsc_" + std::to_string(level.getNum()) + ".txt");
+
         // correct error
         correctError(level);
+
+        // level.getDVIn().dumpToFile(problem.getCommands(), "dvsc_" + std::to_string(level.getNum()) + ".txt");
 
         // relax nu2 times
         res = jacobi(problem, level, problem.nu2, !problem.ignoreTol, problem.getJacobiIterationsPerKernel());
@@ -398,6 +414,10 @@ namespace mgcl
             &problem.getKernelConfig(), problem.getProfilingData()};
         MultigridEngine::restrictBlockstencil(restriction_args);
 
+        // levelAbove.getDFBS().dumpToFile(problem.getCommands(), "dfbs_" + std::to_string(levelAbove.getNum()) + ".txt");
+        // level.getDVBSIn().dumpToFile(problem.getCommands(), "dvbs_" + std::to_string(level.getNum()) + ".txt");
+        // level.getDRBS().dumpToFile(problem.getCommands(), "drbs_" + std::to_string(level.getNum()) + ".txt");
+
         // If MPI is in use but minGridPoints is reached, gather rhs data to process 0 and perform calculations
         // locally only, until we're reaching the threshold level moving downwards again.
         if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
@@ -424,8 +444,9 @@ namespace mgcl
                 vcycleOclBlockstencil(problem, levelAbove);
             else
             {
+
                 // relax nu1+nu2 times
-                args::JacobiBSOclArgs jacobi_args1{
+                args::JacobiBSOclArgs jacobi_args{
                     levelAbove.getDFBS(), levelAbove.getDVBSIn(), levelAbove.getDVBSOut(), levelAbove.getDRBS(),
                     problem.residual_norm,
                     *levelAbove.blockstencilGpu, levelAbove.getBlockstencilInvVariant(),
@@ -439,7 +460,10 @@ namespace mgcl
                     0, 0, 0,
                     levelAbove.getMpiDataPtr(),
                     &problem.getKernelConfig(), problem.getProfilingData()};
-                MultigridEngine::jacobi(jacobi_args1);
+                MultigridEngine::jacobi(jacobi_args);
+
+                // levelAbove.getDVBSIn().dumpToFile(problem.getCommands(), "dvbs_" + std::to_string(levelAbove.getNum()) + ".txt");
+                // levelAbove.getDRBS().dumpToFile(problem.getCommands(), "drbs_" + std::to_string(levelAbove.getNum()) + ".txt");
             }
         }
 
@@ -447,6 +471,10 @@ namespace mgcl
         // distributed calulcations.
         if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
             mpi_util::scatter_inplace_wgh(problem.getMpiComm(), problem.getCommands(), levelAbove.getDVBSIn());
+
+        // levelAbove.getDFBS().dumpToFile(problem.getCommands(), "dfbs_" + std::to_string(levelAbove.getNum()) + ".txt");
+        // levelAbove.getDVBSIn().dumpToFile(problem.getCommands(), "dvbs_" + std::to_string(levelAbove.getNum()) + ".txt");
+        // levelAbove.getDRBS().dumpToFile(problem.getCommands(), "drbs_" + std::to_string(levelAbove.getNum()) + ".txt");
 
         // prolongate from coarser to finer grid
         // r of this level.getNum() is reused here and should actually be called e
@@ -463,12 +491,16 @@ namespace mgcl
             &problem.getKernelConfig(), problem.getProfilingData()};
         MultigridEngine::prolongateBlockstencil(prolongation_args);
 
+        // level.getDRBS().dumpToFile(problem.getCommands(), "drbs_" + std::to_string(level.getNum()) + ".txt");
+
         // correct error
         args::CorrectErrorBsOclArgs correctError_args{
-            level.getDVBSIn(), levelAbove.getDRBS(),
+            level.getDVBSIn(), level.getDRBS(),
             problem.getProgram(), problem.getCommands(), problem.getContext(),
             &problem.getKernelConfig(), problem.getProfilingData()};
         MultigridEngine::correctErrorBlockstencil(correctError_args);
+
+        // level.getDVBSIn().dumpToFile(problem.getCommands(), "dvbs_" + std::to_string(level.getNum()) + ".txt");
 
         // relax nu2 times
         args::JacobiBSOclArgs jacobi_args2{
@@ -485,7 +517,7 @@ namespace mgcl
             0, 0, 0,
             level.getMpiDataPtr(),
             &problem.getKernelConfig(), problem.getProfilingData()};
-        res = MultigridEngine::jacobi(jacobi_args1);
+        res = MultigridEngine::jacobi(jacobi_args2);
 
         // calculate residual again for the norm TODO in jacobi
         // res = residual(problem, level, 1);
