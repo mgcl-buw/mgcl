@@ -32,6 +32,7 @@
 using namespace std::chrono_literals;
 
 #include "../src/mgcl/cuboid.hpp"
+#include "../src/mgcl/multigrid_engine.hpp"
 #include "../src/mgcl/problem.hpp"
 #include "cli_args.hpp"
 
@@ -557,10 +558,11 @@ namespace mgcl_bench_residual_blockstencil
 
     enum class SEQ_LAYOUT
     {
-        COEFFS_FIRST_V_GP_FIRST,    // [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
-        COEFFS_FIRST_V_BLOCK_FIRST, // [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
-        BLOCK_FIRST_V_GP_FIRST,     // [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
-        BLOCK_FIRST_V_BLOCK_FIRST   // [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
+        COEFFS_FIRST_V_GP_FIRST,      // [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
+        COEFFS_FIRST_V_BLOCK_FIRST,   // [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
+        BLOCK_FIRST_V_GP_FIRST,       // [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
+        BLOCK_FIRST_V_BLOCK_FIRST,    // [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
+        BS_GP_COEFFS_BLOCK_V_GP_FIRST // [gpx][gpy][gpz][cx][cy][cz][bi][bj] for coeffs, [gpx][gpy][gpz][m] for v, f, r
     };
 
     // forward decl and use variant for cuboids with different layouts
@@ -715,8 +717,42 @@ namespace mgcl_bench_residual_blockstencil
         inline int getBlocksize() const { return dim4; }
     };
 
+    // Layout for this one: [gpx][gpy][gpz][cx][cy][cz][bi][bj]
+    class BlockstencilGPCoeffsBlock : public mgcl::Hypercube8d
+    {
+    public:
+        BlockstencilGPCoeffsBlock(int m, int n, int o, int _width, int blocksize, int ghosts_m, int ghosts_n, int ghosts_o)
+            : Hypercube8d(m, n, o, _width, _width, _width, blocksize, blocksize, ghosts_m, ghosts_n, ghosts_o, 0, 0, 0, 0, 0)
+        {
+            if (_width % 2 == 0 || _width < 1)
+                error("Blockstencil is only defined for odd width >= 1!");
+
+            if (blocksize < 1)
+                error("Blockstencil is only defined for blocksize >= 1!");
+        }
+        BlockstencilGPCoeffsBlock(BlockstencilGPCoeffsBlock&) = delete;
+        BlockstencilGPCoeffsBlock& operator=(const BlockstencilGPCoeffsBlock&) = delete;
+        BlockstencilGPCoeffsBlock(BlockstencilGPCoeffsBlock&& o) : Hypercube8d(std::move(o)) {}
+        BlockstencilGPCoeffsBlock& operator=(BlockstencilGPCoeffsBlock&& o)
+        {
+            Hypercube8d::operator=(std::move(o));
+            return *this;
+        }
+        inline int getM() const { return dim1; }
+        inline int getN() const { return dim2; }
+        inline int getO() const { return dim3; }
+        inline int getGhostsM() const { return ghostsDim1; }
+        inline int getGhostsN() const { return ghostsDim2; }
+        inline int getGhostsO() const { return ghostsDim3; }
+        inline int getMgh() const { return dim1 + 2 * ghostsDim1; }
+        inline int getNgh() const { return dim2 + 2 * ghostsDim2; }
+        inline int getOgh() const { return dim3 + 2 * ghostsDim3; }
+        inline int getWidth() const { return dim3; }
+        inline int getBlocksize() const { return dim7; }
+    };
+
     using ResidualBSSeqCuboidVariant = std::variant<mgcl::CuboidBS, CuboidBSBlockFirst>;
-    using ResidualBSSeqBlockstencilVariant = std::variant<mgcl::Blockstencil, BlockstencilCoeffsFirst>;
+    using ResidualBSSeqBlockstencilVariant = std::variant<mgcl::Blockstencil, BlockstencilCoeffsFirst, BlockstencilGPCoeffsBlock>;
 
     struct ResidualBSSeqArgsBench
     {
@@ -1108,6 +1144,99 @@ namespace mgcl_bench_residual_blockstencil
                         }
                     }
         }
+        else if (args.layout == SEQ_LAYOUT::BS_GP_COEFFS_BLOCK_V_GP_FIRST)
+        {
+            mgcl::CuboidBS& v = std::get<mgcl::CuboidBS>(args.v);
+            mgcl::CuboidBS& f = std::get<mgcl::CuboidBS>(args.f);
+            mgcl::CuboidBS& r = std::get<mgcl::CuboidBS>(args.r);
+            auto& bs = std::get<BlockstencilGPCoeffsBlock>(args.bs);
+            double**** vraw = v.getData();
+            double******** bsraw = bs.getData();
+
+            int istart_v = v.getGhostsM() + args.moff;
+            int jstart_v = v.getGhostsN() + args.noff;
+            int kstart_v = v.getGhostsO() + args.ooff;
+            int iend_v = v.getMgh() - v.getGhostsM() - args.moff;
+            int jend_v = v.getNgh() - v.getGhostsN() - args.noff;
+            int kend_v = v.getOgh() - v.getGhostsO() - args.ooff;
+            int istart_r = r.getGhostsM() + args.moff;
+            int jstart_r = r.getGhostsN() + args.noff;
+            int kstart_r = r.getGhostsO() + args.ooff;
+            int istart_f = f.getGhostsM() + args.moff;
+            int jstart_f = f.getGhostsN() + args.noff;
+            int kstart_f = f.getGhostsO() + args.ooff;
+            int istart_sv = bs.getGhostsM() + args.moff;
+            int jstart_sv = bs.getGhostsN() + args.noff;
+            int kstart_sv = bs.getGhostsO() + args.ooff;
+
+            for (int iv = istart_v, ir = istart_r, fi = istart_f, isv = istart_sv; iv < iend_v; iv++, ir++, fi++, isv++)
+                for (int jv = jstart_v, jr = jstart_r, fj = jstart_f, jsv = jstart_sv; jv < jend_v; jv++, jr++, fj++, jsv++)
+                    for (int kv = kstart_v, kr = kstart_r, fk = kstart_f, ksv = kstart_sv; kv < kend_v; kv++, kr++, fk++, ksv++)
+                    {
+                        for (int bi = 0; bi < bs.getBlocksize(); bi++)
+                        {
+                            double stencilsum = 0;
+                            for (int bj = 0; bj < bs.getBlocksize(); bj++)
+                            {
+
+                                // clang-format off
+                                stencilsum += bsraw[isv][jsv][ksv][1][1][1][bi][bj] * vraw[iv][jv][kv][bj]
+                                    + bsraw[isv][jsv][ksv][1][1][0][bi][bj] * vraw[ iv ][ jv ][kv-1][bj]
+                                    + bsraw[isv][jsv][ksv][1][1][2][bi][bj] * vraw[ iv ][ jv ][kv+1][bj]
+                                    + bsraw[isv][jsv][ksv][1][0][1][bi][bj] * vraw[ iv ][jv-1][ kv ][bj]
+                                    + bsraw[isv][jsv][ksv][1][2][1][bi][bj] * vraw[ iv ][jv+1][ kv ][bj]
+                                    + bsraw[isv][jsv][ksv][0][1][1][bi][bj] * vraw[iv-1][ jv ][ kv ][bj]
+                                    + bsraw[isv][jsv][ksv][2][1][1][bi][bj] * vraw[iv+1][ jv ][ kv ][bj]
+                                    
+                                    + bsraw[isv][jsv][ksv][1][0][0][bi][bj] * vraw[ iv ][jv-1][kv-1][bj]
+                                    + bsraw[isv][jsv][ksv][1][0][2][bi][bj] * vraw[ iv ][jv-1][kv+1][bj]
+                                    + bsraw[isv][jsv][ksv][1][2][0][bi][bj] * vraw[ iv ][jv+1][kv-1][bj]
+                                    + bsraw[isv][jsv][ksv][1][2][2][bi][bj] * vraw[ iv ][jv+1][kv+1][bj]
+                                    + bsraw[isv][jsv][ksv][0][1][0][bi][bj] * vraw[iv-1][ jv ][kv-1][bj]
+                                    + bsraw[isv][jsv][ksv][0][1][2][bi][bj] * vraw[iv-1][ jv ][kv+1][bj]
+                                    + bsraw[isv][jsv][ksv][2][1][0][bi][bj] * vraw[iv+1][ jv ][kv-1][bj]
+                                    + bsraw[isv][jsv][ksv][2][1][2][bi][bj] * vraw[iv+1][ jv ][kv+1][bj]
+                                    + bsraw[isv][jsv][ksv][0][0][1][bi][bj] * vraw[iv-1][jv-1][ kv ][bj]
+                                    + bsraw[isv][jsv][ksv][0][2][1][bi][bj] * vraw[iv-1][jv+1][ kv ][bj]
+                                    + bsraw[isv][jsv][ksv][2][0][1][bi][bj] * vraw[iv+1][jv-1][ kv ][bj]
+                                    + bsraw[isv][jsv][ksv][2][2][1][bi][bj] * vraw[iv+1][jv+1][ kv ][bj]
+                                    
+                                    + bsraw[isv][jsv][ksv][0][0][0][bi][bj] * vraw[iv-1][jv-1][kv-1][bj]
+                                    + bsraw[isv][jsv][ksv][0][0][2][bi][bj] * vraw[iv-1][jv-1][kv+1][bj]
+                                    + bsraw[isv][jsv][ksv][0][2][0][bi][bj] * vraw[iv-1][jv+1][kv-1][bj]
+                                    + bsraw[isv][jsv][ksv][0][2][2][bi][bj] * vraw[iv-1][jv+1][kv+1][bj]
+                                    + bsraw[isv][jsv][ksv][2][0][0][bi][bj] * vraw[iv+1][jv-1][kv-1][bj]
+                                    + bsraw[isv][jsv][ksv][2][0][2][bi][bj] * vraw[iv+1][jv-1][kv+1][bj]
+                                    + bsraw[isv][jsv][ksv][2][2][0][bi][bj] * vraw[iv+1][jv+1][kv-1][bj]
+                                    + bsraw[isv][jsv][ksv][2][2][2][bi][bj] * vraw[iv+1][jv+1][kv+1][bj];
+                                // clang-format on
+
+                                // if (iv == 1 && jv == 1 && kv == 1)
+                                // // if (iv == 2 && jv == 2 && kv == 2 && bi == 6)
+                                // {
+                                //     // print27point(v, iv, jv, kv, args.bs, isv, jsv, ksv, bi, bj);
+                                //     std::cout << "bs stencilsum: " << stencilsum << std::endl;
+                                // }
+                            }
+
+                            // if (iv == 1 && jv == 1 && kv == 1)
+                            // {
+                            //     std::cout << "stencilsum: " << stencilsum << std::endl;
+                            // }
+
+                            // r = f - A*v
+                            r[ir][jr][kr][bi] = f[fi][fj][fk][bi] - stencilsum;
+
+                            if (args.returnResidualNorm)
+                            {
+                                if (args.resnorm == mgcl::MGCL_L2)
+                                    res += r[ir][jr][kr][bi] * r[ir][jr][kr][bi];
+                                else if (fabs(r[ir][jr][kr][bi]) > res)
+                                    res = fabs(r[ir][jr][kr][bi]);
+                            }
+                        }
+                    }
+        }
 
         // if (args.periodic)
         // {
@@ -1325,6 +1454,51 @@ namespace mgcl_bench_residual_blockstencil
                     SEQ_LAYOUT::COEFFS_FIRST_V_BLOCK_FIRST};
 
                 std::string name = std::string("residual_seq_blockstencil_coeffs_first_v_block_first_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    bench_residualSeq(args);
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+
+                // if (CLI_ARGS::checkResults)
+                // {
+                //     r_out_bs_coeffs_first_v_block_first = args.c_dR.read(args.commands, nullptr, true);
+                // }
+            }
+
+            {
+                ResidualBSSeqBlockstencilVariant bs(BlockstencilGPCoeffsBlock(m, n, o, 3, blocksize, ghosts, ghosts, ghosts));
+                ResidualBSSeqCuboidVariant v(mgcl::CuboidBS(m, n, o, ghosts, ghosts, ghosts, blocksize, 0));
+                ResidualBSSeqCuboidVariant f(mgcl::CuboidBS(m, n, o, ghosts, ghosts, ghosts, blocksize, 0));
+                ResidualBSSeqCuboidVariant r(mgcl::CuboidBS(m, n, o, ghosts, ghosts, ghosts, blocksize, 0));
+
+                ResidualBSSeqArgsBench args{
+                    f, v, r,
+                    resnorm,
+                    bs,
+                    returnResidualNorm,
+                    periodic,
+                    updateGhostsLocally,
+                    moff, noff, ooff,
+                    nullptr,
+                    SEQ_LAYOUT::BS_GP_COEFFS_BLOCK_V_GP_FIRST};
+
+                std::string name = std::string("residual_seq_blockstencil_gp_coeffs_block_")
                                        .append(std::to_string(m))
                                        .append("_")
                                        .append(std::to_string(n))
