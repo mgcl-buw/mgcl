@@ -10,7 +10,7 @@
  * are copied here.
  *
  * 09.06.2025:
- * Added sequential residual tests for different layouts.
+ * Added sequential residual tests for different layouts. BS_GP_BLOCK_COEFFS_V_GP_FIRST is fastest yet!
  */
 
 #include "bench_util.hpp"
@@ -30,6 +30,10 @@
 #include <variant>
 #include <vector>
 using namespace std::chrono_literals;
+
+#ifdef MGCL_HAVE_AVX2
+#include <immintrin.h>
+#endif
 
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/multigrid_engine.hpp"
@@ -1378,6 +1382,199 @@ namespace mgcl_bench_residual_blockstencil
         return (args.returnResidualNorm && args.resnorm == mgcl::MGCL_L2) ? sqrt(res) : res;
     }
 
+#ifdef MGCL_HAVE_AVX2
+    __attribute__((target("avx2"))) double bench_residualSeq_avx2(ResidualBSSeqArgsBench& args)
+    {
+        double res = 0.0;
+
+// Applies one stencil coeff in a vectorized fashion (4 doubles at the same time)
+#define MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(di, dj, dk)                                    \
+    do                                                                                       \
+    {                                                                                        \
+        __m256d bs = _mm256_loadu_pd(&bsraw[isv][jsv][ksv][di][dj][dk][bi][bj]);             \
+        __m256d v = _mm256_loadu_pd(&vraw[iv + (di - 1)][jv + (dj - 1)][kv + (dk - 1)][bj]); \
+        sum = _mm256_fmadd_pd(bs, v, sum);                                                   \
+    } while (0)
+
+        if (args.layout == SEQ_LAYOUT::BS_GP_COEFFS_BLOCK_V_GP_FIRST)
+        {
+            mgcl::CuboidBS& v = std::get<mgcl::CuboidBS>(args.v);
+            mgcl::CuboidBS& f = std::get<mgcl::CuboidBS>(args.f);
+            mgcl::CuboidBS& r = std::get<mgcl::CuboidBS>(args.r);
+            auto& bs = std::get<BlockstencilGPCoeffsBlock>(args.bs);
+            double**** vraw = v.getData();
+            double******** bsraw = bs.getData();
+
+            int istart_v = v.getGhostsM() + args.moff;
+            int jstart_v = v.getGhostsN() + args.noff;
+            int kstart_v = v.getGhostsO() + args.ooff;
+            int iend_v = v.getMgh() - v.getGhostsM() - args.moff;
+            int jend_v = v.getNgh() - v.getGhostsN() - args.noff;
+            int kend_v = v.getOgh() - v.getGhostsO() - args.ooff;
+            int istart_r = r.getGhostsM() + args.moff;
+            int jstart_r = r.getGhostsN() + args.noff;
+            int kstart_r = r.getGhostsO() + args.ooff;
+            int istart_f = f.getGhostsM() + args.moff;
+            int jstart_f = f.getGhostsN() + args.noff;
+            int kstart_f = f.getGhostsO() + args.ooff;
+            int istart_sv = bs.getGhostsM() + args.moff;
+            int jstart_sv = bs.getGhostsN() + args.noff;
+            int kstart_sv = bs.getGhostsO() + args.ooff;
+
+            for (int iv = istart_v, ir = istart_r, fi = istart_f, isv = istart_sv; iv < iend_v; iv++, ir++, fi++, isv++)
+                for (int jv = jstart_v, jr = jstart_r, fj = jstart_f, jsv = jstart_sv; jv < jend_v; jv++, jr++, fj++, jsv++)
+                    for (int kv = kstart_v, kr = kstart_r, fk = kstart_f, ksv = kstart_sv; kv < kend_v; kv++, kr++, fk++, ksv++)
+                    {
+                        // assume blocksize is divisible by 4
+                        for (int bi = 0; bi < bs.getBlocksize(); ++bi)
+                        {
+                            __m256d sum = _mm256_setzero_pd();
+
+                            for (int bj = 0; bj < bs.getBlocksize(); bj += 4)
+                            {
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(0, 0, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(0, 0, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(0, 0, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(0, 1, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(0, 1, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(0, 1, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(0, 2, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(0, 2, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(0, 2, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(1, 0, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(1, 0, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(1, 0, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(1, 1, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(1, 1, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(1, 1, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(1, 2, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(1, 2, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(1, 2, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(2, 0, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(2, 0, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(2, 0, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(2, 1, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(2, 1, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(2, 1, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(2, 2, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(2, 2, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_COEFFS_BLOCK(2, 2, 2);
+                            }
+
+                            // Horizontal sum of AVX vector
+                            double temp[4];
+                            _mm256_storeu_pd(temp, sum);
+                            double stencilsum = temp[0] + temp[1] + temp[2] + temp[3];
+
+                            // r = f - A*v
+                            r[ir][jr][kr][bi] = f[fi][fj][fk][bi] - stencilsum;
+
+                            if (args.returnResidualNorm)
+                            {
+                                if (args.resnorm == mgcl::MGCL_L2)
+                                    res += r[ir][jr][kr][bi] * r[ir][jr][kr][bi];
+                                else if (fabs(r[ir][jr][kr][bi]) > res)
+                                    res = fabs(r[ir][jr][kr][bi]);
+                            }
+                        }
+                    }
+        }
+// Applies one stencil coeff in a vectorized fashion (4 doubles at the same time)
+#define MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(di, dj, dk)                                    \
+    do                                                                                       \
+    {                                                                                        \
+        __m256d bs = _mm256_loadu_pd(&bsraw[isv][jsv][ksv][bi][bj][di][dj][dk]);             \
+        __m256d v = _mm256_loadu_pd(&vraw[iv + (di - 1)][jv + (dj - 1)][kv + (dk - 1)][bj]); \
+        sum = _mm256_fmadd_pd(bs, v, sum);                                                   \
+    } while (0)
+
+        else if (args.layout == SEQ_LAYOUT::BS_GP_BLOCK_COEFFS_V_GP_FIRST)
+        {
+            mgcl::CuboidBS& v = std::get<mgcl::CuboidBS>(args.v);
+            mgcl::CuboidBS& f = std::get<mgcl::CuboidBS>(args.f);
+            mgcl::CuboidBS& r = std::get<mgcl::CuboidBS>(args.r);
+            auto& bs = std::get<BlockstencilGPBlockCoeffs>(args.bs);
+            double**** vraw = v.getData();
+            double******** bsraw = bs.getData();
+
+            int istart_v = v.getGhostsM() + args.moff;
+            int jstart_v = v.getGhostsN() + args.noff;
+            int kstart_v = v.getGhostsO() + args.ooff;
+            int iend_v = v.getMgh() - v.getGhostsM() - args.moff;
+            int jend_v = v.getNgh() - v.getGhostsN() - args.noff;
+            int kend_v = v.getOgh() - v.getGhostsO() - args.ooff;
+            int istart_r = r.getGhostsM() + args.moff;
+            int jstart_r = r.getGhostsN() + args.noff;
+            int kstart_r = r.getGhostsO() + args.ooff;
+            int istart_f = f.getGhostsM() + args.moff;
+            int jstart_f = f.getGhostsN() + args.noff;
+            int kstart_f = f.getGhostsO() + args.ooff;
+            int istart_sv = bs.getGhostsM() + args.moff;
+            int jstart_sv = bs.getGhostsN() + args.noff;
+            int kstart_sv = bs.getGhostsO() + args.ooff;
+
+            for (int iv = istart_v, ir = istart_r, fi = istart_f, isv = istart_sv; iv < iend_v; iv++, ir++, fi++, isv++)
+                for (int jv = jstart_v, jr = jstart_r, fj = jstart_f, jsv = jstart_sv; jv < jend_v; jv++, jr++, fj++, jsv++)
+                    for (int kv = kstart_v, kr = kstart_r, fk = kstart_f, ksv = kstart_sv; kv < kend_v; kv++, kr++, fk++, ksv++)
+                    {
+                        // assume blocksize is divisible by 4
+                        for (int bi = 0; bi < bs.getBlocksize(); ++bi)
+                        {
+                            __m256d sum = _mm256_setzero_pd();
+
+                            for (int bj = 0; bj < bs.getBlocksize(); bj += 4)
+                            {
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(0, 0, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(0, 0, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(0, 0, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(0, 1, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(0, 1, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(0, 1, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(0, 2, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(0, 2, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(0, 2, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(1, 0, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(1, 0, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(1, 0, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(1, 1, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(1, 1, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(1, 1, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(1, 2, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(1, 2, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(1, 2, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(2, 0, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(2, 0, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(2, 0, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(2, 1, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(2, 1, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(2, 1, 2);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(2, 2, 0);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(2, 2, 1);
+                                MGCL_STENCIL_ACCUM_BS_GP_BLOCK_COEFFS(2, 2, 2);
+                            }
+
+                            // Horizontal sum of AVX vector
+                            double temp[4];
+                            _mm256_storeu_pd(temp, sum);
+                            double stencilsum = temp[0] + temp[1] + temp[2] + temp[3];
+
+                            // r = f - A*v
+                            r[ir][jr][kr][bi] = f[fi][fj][fk][bi] - stencilsum;
+
+                            if (args.returnResidualNorm)
+                            {
+                                if (args.resnorm == mgcl::MGCL_L2)
+                                    res += r[ir][jr][kr][bi] * r[ir][jr][kr][bi];
+                                else if (fabs(r[ir][jr][kr][bi]) > res)
+                                    res = fabs(r[ir][jr][kr][bi]);
+                            }
+                        }
+                    }
+        }
+        return (args.returnResidualNorm && args.resnorm == mgcl::MGCL_L2) ? sqrt(res) : res;
+    }
+#endif
+
     // Benchs the various residual fixed stencil kernel versions
     TEST_CASE("seq_residualBlockstencilLayouts")
     {
@@ -1702,6 +1899,100 @@ namespace mgcl_bench_residual_blockstencil
                 //     r_out_bs_coeffs_first_v_block_first = args.c_dR.read(args.commands, nullptr, true);
                 // }
             }
+
+#ifdef MGCL_HAVE_AVX2
+            if (__builtin_cpu_supports("avx2"))
+            {
+                ResidualBSSeqBlockstencilVariant bs(BlockstencilGPCoeffsBlock(m, n, o, 3, blocksize, ghosts, ghosts, ghosts));
+                ResidualBSSeqCuboidVariant v(mgcl::CuboidBS(m, n, o, ghosts, ghosts, ghosts, blocksize, 0));
+                ResidualBSSeqCuboidVariant f(mgcl::CuboidBS(m, n, o, ghosts, ghosts, ghosts, blocksize, 0));
+                ResidualBSSeqCuboidVariant r(mgcl::CuboidBS(m, n, o, ghosts, ghosts, ghosts, blocksize, 0));
+
+                ResidualBSSeqArgsBench args{
+                    f, v, r,
+                    resnorm,
+                    bs,
+                    returnResidualNorm,
+                    periodic,
+                    updateGhostsLocally,
+                    moff, noff, ooff,
+                    nullptr,
+                    SEQ_LAYOUT::BS_GP_COEFFS_BLOCK_V_GP_FIRST};
+
+                std::string name = std::string("residual_seq_blockstencil_gp_coeffs_block_avx2_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    bench_residualSeq_avx2(args);
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+
+                // if (CLI_ARGS::checkResults)
+                // {
+                //     r_out_bs_coeffs_first_v_block_first = args.c_dR.read(args.commands, nullptr, true);
+                // }
+            }
+
+            if (__builtin_cpu_supports("avx2"))
+            {
+                ResidualBSSeqBlockstencilVariant bs(BlockstencilGPBlockCoeffs(m, n, o, 3, blocksize, ghosts, ghosts, ghosts));
+                ResidualBSSeqCuboidVariant v(mgcl::CuboidBS(m, n, o, ghosts, ghosts, ghosts, blocksize, 0));
+                ResidualBSSeqCuboidVariant f(mgcl::CuboidBS(m, n, o, ghosts, ghosts, ghosts, blocksize, 0));
+                ResidualBSSeqCuboidVariant r(mgcl::CuboidBS(m, n, o, ghosts, ghosts, ghosts, blocksize, 0));
+
+                ResidualBSSeqArgsBench args{
+                    f, v, r,
+                    resnorm,
+                    bs,
+                    returnResidualNorm,
+                    periodic,
+                    updateGhostsLocally,
+                    moff, noff, ooff,
+                    nullptr,
+                    SEQ_LAYOUT::BS_GP_BLOCK_COEFFS_V_GP_FIRST};
+
+                std::string name = std::string("residual_seq_blockstencil_gp_block_coeffs_avx2_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    bench_residualSeq_avx2(args);
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+
+                // if (CLI_ARGS::checkResults)
+                // {
+                //     r_out_bs_coeffs_first_v_block_first = args.c_dR.read(args.commands, nullptr, true);
+                // }
+            }
+#endif
 
             {
                 int m2 = m * 2;

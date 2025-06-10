@@ -38,6 +38,13 @@ set(SOURCES_BENCH
 
 add_executable(benchmarks ${SOURCES_BENCH})
 
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag("-mavx2 -mfma" MGCL_HAVE_AVX2)
+if (MGCL_HAVE_AVX2)
+  add_compile_definitions(MGCL_HAVE_AVX2)
+  target_compile_options(benchmarks PRIVATE -mavx2 -mfma)
+endif()
+
 find_package(MPI REQUIRED)
 # target_include_directories(benchmarks SYSTEM PRIVATE ${MPI_INCLUDE_PATH})
 # add_definitions(-DOMPI_SKIP_MPICXX)
