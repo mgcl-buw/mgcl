@@ -1352,6 +1352,43 @@ namespace mgcl_bench_residual_blockstencil
                 // }
             }
 
+            {
+                int m2 = m * 2;
+                int n2 = n * 2;
+                int o2 = o * 2;
+                mgcl::VaryingStencil sv(m2, n2, o2, 3, ghosts, ghosts, ghosts);
+                mgcl::Cuboid v(m2, n2, o2, ghosts, ghosts, ghosts, 0);
+                mgcl::Cuboid f(m2, n2, o2, ghosts, ghosts, ghosts, 0);
+                mgcl::Cuboid r(m2, n2, o2, ghosts, ghosts, ghosts, 0);
+
+                std::string name = std::string("residual_seq_scalar_")
+                                       .append(std::to_string(m2))
+                                       .append("_")
+                                       .append(std::to_string(n2))
+                                       .append("_")
+                                       .append(std::to_string(o2));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    mgcl::MultigridEngine::residualSeq(f, v, r, resnorm, mgcl::MGCL_VARYING, 0, &sv, nullptr, returnResidualNorm, periodic, updateGhostsLocally, moff, noff, ooff, nullptr);
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m2;
+                res.n = n2;
+                res.o = o2;
+                results.push_back(res);
+
+                // if (CLI_ARGS::checkResults)
+                // {
+                //     r_out_bs_coeffs_first_v_block_first = args.c_dR.read(args.commands, nullptr, true);
+                // }
+            }
+
             // // Check results for kernels that it is valid for
             // if (CLI_ARGS::checkResults)
             // {
