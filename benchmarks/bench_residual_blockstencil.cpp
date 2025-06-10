@@ -44,10 +44,14 @@ namespace mgcl_bench_residual_blockstencil
 {
     enum class KernelVersion
     {
-        COEFFS_FIRST_V_GP_FIRST,    // [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
-        COEFFS_FIRST_V_BLOCK_FIRST, // [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
-        BLOCK_FIRST_V_GP_FIRST,     // [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
-        BLOCK_FIRST_V_BLOCK_FIRST   // [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
+        COEFFS_FIRST_V_GP_FIRST,       // [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
+        COEFFS_FIRST_V_BLOCK_FIRST,    // [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
+        BLOCK_FIRST_V_GP_FIRST,        // [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
+        BLOCK_FIRST_V_BLOCK_FIRST,     // [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
+        BS_GP_COEFFS_BLOCK_V_GP_BLOCK, // [gpx][gpy][gpz][cx][cy][cz][bi][bj] for coeffs, [gpx][gpy][gpz][m] for v, f, r
+        BS_GP_BLOCK_COEFFS_V_GP_BLOCK, // [gpx][gpy][gpz][bi][bj][cx][cy][cz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
+        BS_GP_COEFFS_BLOCK_V_BLOCK_GP, // [gpx][gpy][gpz][cx][cy][cz][bi][bj] for coeffs, [m][gpx][gpy][gpz] for v, f, r
+        BS_GP_BLOCK_COEFFS_V_BLOCK_GP  // [gpx][gpy][gpz][bi][bj][cx][cy][cz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
     };
 
     using size_t3 = struct
@@ -136,6 +140,22 @@ namespace mgcl_bench_residual_blockstencil
         {
             kernelName = "residual_27point_blockstencil_block_first_v_gp_first";
         }
+        else if (args.kernelVersion == KernelVersion::BS_GP_COEFFS_BLOCK_V_BLOCK_GP)
+        {
+            kernelName = "residual_27point_blockstencil_gp_coeffs_block_v_block_gp";
+        }
+        else if (args.kernelVersion == KernelVersion::BS_GP_BLOCK_COEFFS_V_BLOCK_GP)
+        {
+            kernelName = "residual_27point_blockstencil_gp_block_coeffs_v_block_gp";
+        }
+        else if (args.kernelVersion == KernelVersion::BS_GP_COEFFS_BLOCK_V_GP_BLOCK)
+        {
+            kernelName = "residual_27point_blockstencil_gp_coeffs_block_v_gp_block";
+        }
+        else if (args.kernelVersion == KernelVersion::BS_GP_BLOCK_COEFFS_V_GP_BLOCK)
+        {
+            kernelName = "residual_27point_blockstencil_gp_block_coeffs_v_gp_block";
+        }
 
         cl_event ev;
 
@@ -180,6 +200,7 @@ namespace mgcl_bench_residual_blockstencil
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSizeBlock);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.blocksize);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.moff);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.noff);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ooff);
@@ -382,14 +403,18 @@ namespace mgcl_bench_residual_blockstencil
                 .relative(false);
 
             // checkResults does not make sense for this test yet
-            // std::unique_ptr<std::vector<double>> r_out_bs_coeffs_first_v_block_first = nullptr;
-            // std::unique_ptr<std::vector<double>> r_out_bs_coeffs_first_v_gp_first = nullptr;
-            // std::unique_ptr<std::vector<double>> r_out_bs_block_first_v_block_first = nullptr;
-            // std::unique_ptr<std::vector<double>> r_out_bs_block_first_v_gp_first = nullptr;
-            // if (CLI_ARGS::checkResults)
-            // {
-            //     bench.epochs(1).epochIterations(1);
-            // }
+            std::unique_ptr<std::vector<double>> r_out_bs_coeffs_first_v_block_first = nullptr;
+            std::unique_ptr<std::vector<double>> r_out_bs_coeffs_first_v_gp_first = nullptr;
+            std::unique_ptr<std::vector<double>> r_out_bs_block_first_v_block_first = nullptr;
+            std::unique_ptr<std::vector<double>> r_out_bs_block_first_v_gp_first = nullptr;
+            std::unique_ptr<std::vector<double>> r_out_bs_gp_coeffs_block_v_gp_block = nullptr;
+            std::unique_ptr<std::vector<double>> r_out_bs_gp_block_coeffs_v_gp_block = nullptr;
+            std::unique_ptr<std::vector<double>> r_out_bs_gp_coeffs_block_v_block_gp = nullptr;
+            std::unique_ptr<std::vector<double>> r_out_bs_gp_block_coeffs_v_block_gp = nullptr;
+            if (CLI_ARGS::checkResults)
+            {
+                bench.epochs(1).epochIterations(1);
+            }
 
             {
                 // reset r to zero
@@ -419,10 +444,10 @@ namespace mgcl_bench_residual_blockstencil
                 res.o = o;
                 results.push_back(res);
 
-                // if (CLI_ARGS::checkResults)
-                // {
-                //     r_out_bs_coeffs_first_v_block_first = args.c_dR.read(args.commands, nullptr, true);
-                // }
+                if (CLI_ARGS::checkResults)
+                {
+                    r_out_bs_coeffs_first_v_block_first = args.c_dR.read(args.commands, nullptr, true);
+                }
             }
 
             {
@@ -453,10 +478,10 @@ namespace mgcl_bench_residual_blockstencil
                 res.o = o;
                 results.push_back(res);
 
-                // if (CLI_ARGS::checkResults)
-                // {
-                //     r_out_bs_coeffs_first_v_gp_first = args.c_dR.read(args.commands, nullptr, true);
-                // }
+                if (CLI_ARGS::checkResults)
+                {
+                    r_out_bs_coeffs_first_v_gp_first = args.c_dR.read(args.commands, nullptr, true);
+                }
             }
 
             {
@@ -487,10 +512,10 @@ namespace mgcl_bench_residual_blockstencil
                 res.o = o;
                 results.push_back(res);
 
-                // if (CLI_ARGS::checkResults)
-                // {
-                //     r_out_bs_block_first_v_gp_first = args.c_dR.read(args.commands, nullptr, true);
-                // }
+                if (CLI_ARGS::checkResults)
+                {
+                    r_out_bs_block_first_v_gp_first = args.c_dR.read(args.commands, nullptr, true);
+                }
             }
 
             {
@@ -521,31 +546,184 @@ namespace mgcl_bench_residual_blockstencil
                 res.o = o;
                 results.push_back(res);
 
-                // if (CLI_ARGS::checkResults)
-                // {
-                //     r_out_bs_block_first_v_gp_first = args.c_dR.read(args.commands, nullptr, true);
-                // }
+                if (CLI_ARGS::checkResults)
+                {
+                    r_out_bs_block_first_v_block_first = args.c_dR.read(args.commands, nullptr, true);
+                }
             }
 
-            // // Check results for kernels that it is valid for
-            // if (CLI_ARGS::checkResults)
-            // {
-            //     REQUIRE(r_out_bs_coeffs_first_v_block_first);
-            //     REQUIRE(r_out_bs_coeffs_first_v_gp_first);
-            //     REQUIRE(r_out_bs_block_first_v_gp_first);
-            //     REQUIRE(r_out_bs_block_first_v_gp_first);
+            {
+                // reset r to zero
+                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
 
-            //     REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_coeffs_first_v_gp_first->size());
-            //     REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_block_first_v_gp_first->size());
-            //     REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_block_first_v_gp_first->size());
+                args.kernelVersion = KernelVersion::BS_GP_COEFFS_BLOCK_V_GP_BLOCK;
+                std::string name = std::string("residual_blockstencil_gp_coeffs_block_v_gp_block_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
 
-            //     for (int i = 0; i < r_out_bs_coeffs_first_v_block_first->size(); i++)
-            //     {
-            //         REQUIRE((*r_out_bs_coeffs_first_v_block_first)[i] == (*r_out_bs_coeffs_first_v_gp_first)[i]);
-            //         REQUIRE((*r_out_bs_coeffs_first_v_block_first)[i] == (*r_out_bs_block_first_v_gp_first)[i]);
-            //         REQUIRE((*r_out_bs_coeffs_first_v_block_first)[i] == (*r_out_bs_block_first_v_block_first)[i]);
-            //     }
-            // }
+                bench.run(std::string(name).c_str(), [&] { //
+                    residual(args);
+                    p.finish();
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+
+                if (CLI_ARGS::checkResults)
+                {
+                    r_out_bs_gp_coeffs_block_v_gp_block = args.c_dR.read(args.commands, nullptr, true);
+                }
+            }
+
+            {
+                // reset r to zero
+                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+
+                args.kernelVersion = KernelVersion::BS_GP_BLOCK_COEFFS_V_GP_BLOCK;
+                std::string name = std::string("residual_blockstencil_gp_block_coeffs_v_gp_block_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    residual(args);
+                    p.finish();
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+
+                if (CLI_ARGS::checkResults)
+                {
+                    r_out_bs_gp_block_coeffs_v_gp_block = args.c_dR.read(args.commands, nullptr, true);
+                }
+            }
+
+            {
+                // reset r to zero
+                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+
+                args.kernelVersion = KernelVersion::BS_GP_COEFFS_BLOCK_V_BLOCK_GP;
+                std::string name = std::string("residual_blockstencil_gp_coeffs_block_v_block_gp_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    residual(args);
+                    p.finish();
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+
+                if (CLI_ARGS::checkResults)
+                {
+                    r_out_bs_gp_coeffs_block_v_block_gp = args.c_dR.read(args.commands, nullptr, true);
+                }
+            }
+
+            {
+                // reset r to zero
+                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+
+                args.kernelVersion = KernelVersion::BS_GP_BLOCK_COEFFS_V_BLOCK_GP;
+                std::string name = std::string("residual_blockstencil_gp_block_coeffs_v_block_gp_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    residual(args);
+                    p.finish();
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+
+                if (CLI_ARGS::checkResults)
+                {
+                    r_out_bs_gp_block_coeffs_v_block_gp = args.c_dR.read(args.commands, nullptr, true);
+                }
+            }
+
+            // Check results for kernels that it is valid for
+            if (CLI_ARGS::checkResults)
+            {
+                REQUIRE(r_out_bs_coeffs_first_v_block_first);
+                REQUIRE(r_out_bs_coeffs_first_v_gp_first);
+                REQUIRE(r_out_bs_block_first_v_gp_first);
+                REQUIRE(r_out_bs_block_first_v_gp_first);
+                REQUIRE(r_out_bs_gp_block_coeffs_v_block_gp);
+                REQUIRE(r_out_bs_gp_block_coeffs_v_gp_block);
+                REQUIRE(r_out_bs_gp_coeffs_block_v_block_gp);
+                REQUIRE(r_out_bs_gp_coeffs_block_v_gp_block);
+
+                REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_coeffs_first_v_gp_first->size());
+                REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_block_first_v_gp_first->size());
+                REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_block_first_v_gp_first->size());
+                REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_gp_block_coeffs_v_block_gp->size());
+                REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_gp_coeffs_block_v_block_gp->size());
+                REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_gp_block_coeffs_v_gp_block->size());
+                REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_gp_coeffs_block_v_gp_block->size());
+
+                int gridsize = mgh * ngh * ogh;
+                for (int i = ghosts; i < m + ghosts; i++)
+                    for (int j = ghosts; j < n + ghosts; j++)
+                        for (int k = ghosts; k < o + ghosts; k++)
+                            for (size_t b = 0; b < blocksize; b++)
+                            {
+                                CAPTURE(i, j, k, b);
+                                REQUIRE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize] == r_out_bs_coeffs_first_v_gp_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
+                                REQUIRE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize] == r_out_bs_block_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize]);
+                                REQUIRE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize] == r_out_bs_block_first_v_gp_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
+                                REQUIRE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize] == r_out_bs_gp_block_coeffs_v_block_gp->data()[i * ngh * ogh + j * ogh + k + b * gridsize]);
+                                REQUIRE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize] == r_out_bs_gp_coeffs_block_v_block_gp->data()[i * ngh * ogh + j * ogh + k + b * gridsize]);
+                                REQUIRE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize] == r_out_bs_gp_block_coeffs_v_gp_block->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
+                                REQUIRE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize] == r_out_bs_gp_coeffs_block_v_gp_block->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
+                            }
+            }
         }
 
         bench_util::printCsvFormat(results);
