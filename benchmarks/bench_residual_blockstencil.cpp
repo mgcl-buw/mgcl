@@ -73,10 +73,10 @@ namespace mgcl_bench_residual_blockstencil
         cl_command_queue commands;
         size_t3 wgsize;
 
-        mgcl::BufferGpu& c_dVIn;
-        mgcl::BufferGpu& c_dF;
-        mgcl::BufferGpu& c_dR;
-        mgcl::BufferGpu& c_blockStencil;
+        mgcl::BufferGpu* c_dVIn;
+        mgcl::BufferGpu* c_dF;
+        mgcl::BufferGpu* c_dR;
+        mgcl::BufferGpu* c_blockStencil;
 
         mgcl::ProfilingData* pd;
 
@@ -86,6 +86,34 @@ namespace mgcl_bench_residual_blockstencil
 
         KernelVersion kernelVersion;
     };
+
+    void fillBs(std::vector<double>& bs, KernelVersion kernelVersion, int mgh, int ngh, int ogh, int ghosts, int blocksize)
+    {
+        int gridsize = mgh * ngh * ogh;
+        int cnt = 0;
+        for (int i = 0; i < mgh; i++)
+            for (int j = 0; j < ngh; j++)
+                for (int k = 0; k < ogh; k++)
+                    for (int ii = 0; ii < 3; ii++)
+                        for (int jj = 0; jj < 3; jj++)
+                            for (int kk = 0; kk < 3; kk++)
+                                for (int bi = 0; bi < blocksize; bi++)
+                                    for (int bj = 0; bj < blocksize; bj++)
+                                    {
+                                        int blocksize2 = blocksize * blocksize;
+                                        int gridAndBlockSize = blocksize2 * gridsize;
+                                        int gridAndCoeffsSize = 27 * gridsize;
+                                        int coeffsAndBlockSize = blocksize2 * 27;
+                                        if (kernelVersion == KernelVersion::COEFFS_FIRST_V_GP_FIRST || kernelVersion == KernelVersion::COEFFS_FIRST_V_BLOCK_FIRST)
+                                            bs[(i * ngh * ogh + j * ogh + k) + (bj + bi * blocksize) * gridsize + (kk + jj * 3 + ii * 9) * gridAndBlockSize] = cnt++;
+                                        else if (kernelVersion == KernelVersion::BLOCK_FIRST_V_BLOCK_FIRST || kernelVersion == KernelVersion::BLOCK_FIRST_V_GP_FIRST)
+                                            bs[(i * ngh * ogh + j * ogh + k) + (bj + bi * blocksize) * gridAndCoeffsSize + (kk + jj * 3 + ii * 9) * gridsize] = cnt++;
+                                        else if (kernelVersion == KernelVersion::BS_GP_BLOCK_COEFFS_V_BLOCK_GP || kernelVersion == KernelVersion::BS_GP_BLOCK_COEFFS_V_GP_BLOCK)
+                                            bs[(i * ngh * ogh + j * ogh + k) * coeffsAndBlockSize + (bj + bi * blocksize) * 27 + (kk + jj * 3 + ii * 9) * 1] = cnt++;
+                                        else if (kernelVersion == KernelVersion::BS_GP_COEFFS_BLOCK_V_BLOCK_GP || kernelVersion == KernelVersion::BS_GP_COEFFS_BLOCK_V_GP_BLOCK)
+                                            bs[(i * ngh * ogh + j * ogh + k) * coeffsAndBlockSize + (bj + bi * blocksize) * 1 + (kk + jj * 3 + ii * 9) * blocksize2] = cnt++;
+                                    }
+    }
 
     /* Calculates the residual using OpenCL.
      * Doesn't creates ocl buffers and doesn't copy data from host to device and vice versa
@@ -163,10 +191,10 @@ namespace mgcl_bench_residual_blockstencil
         cl_kernel kernel = clCreateKernel(args.program, kernelName, &err);
         mgcl::mgclCheckError(err, "Creating kernel");
 
-        cl_mem dVIn = args.c_dVIn.getBuf();
-        cl_mem dF = args.c_dF.getBuf();
-        cl_mem dR = args.c_dR.getBuf();
-        cl_mem svbuf = args.c_blockStencil.getBuf();
+        cl_mem dVIn = args.c_dVIn->getBuf();
+        cl_mem dF = args.c_dF->getBuf();
+        cl_mem dR = args.c_dR->getBuf();
+        cl_mem svbuf = args.c_blockStencil->getBuf();
 
         // Assumption: sv grid has equal ghost amount as v
         int svmgh = args.mgh;
@@ -333,6 +361,8 @@ namespace mgcl_bench_residual_blockstencil
         int blocksize = 3;
         int blocksize2 = blocksize * blocksize;
 
+        std::cout << "blocksize: " << blocksize << std::endl;
+
         for (auto gr : gridsTBT)
         {
             int m = gr[0];
@@ -343,24 +373,35 @@ namespace mgcl_bench_residual_blockstencil
             int ogh = o + 2 * ghosts;
 
             // TODO
-            std::vector<double> vin(mgh * ngh * ogh * blocksize);
-            std::vector<double> f(mgh * ngh * ogh * blocksize);
+            std::vector<double> vin_block_first(mgh * ngh * ogh * blocksize);
+            std::vector<double> vin_gp_first(mgh * ngh * ogh * blocksize);
+            std::vector<double> f_block_first(mgh * ngh * ogh * blocksize);
+            std::vector<double> f_gp_first(mgh * ngh * ogh * blocksize);
             std::vector<double> bs(mgh * ngh * ogh * blocksize2 * 27);
-            for (int i = 0; i < vin.size(); i++)
+            for (int i = 0; i < vin_block_first.size(); i++)
             {
-                vin[i] = i;
-                f[i] = i;
+                vin_block_first[i] = i;
+                f_block_first[i] = i;
             }
-            for (int i = 0; i < bs.size(); i++)
-            {
-                bs[i] = 0.1 * (double)i;
-            }
-            mgcl::BufferGpu d_vin(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, vin);
-            mgcl::BufferGpu d_f(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f);
-            mgcl::BufferGpu d_r(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f); // careful, init with f
-            mgcl::BufferGpu d_bs(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
+            // copy to gp first to have same input
+            int gridsize = mgh * ngh * ogh;
+            for (int i = 0; i < mgh; i++)
+                for (int j = 0; j < ngh; j++)
+                    for (int k = 0; k < ogh; k++)
+                        for (size_t b = 0; b < blocksize; b++)
+                        {
+                            vin_gp_first[(i * ngh * ogh + j * ogh + k) * blocksize + b] = vin_block_first[i * ngh * ogh + j * ogh + k + b * gridsize];
+                            f_gp_first[(i * ngh * ogh + j * ogh + k) * blocksize + b] = f_block_first[i * ngh * ogh + j * ogh + k + b * gridsize];
+                        }
 
-            d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+            auto d_vin_block_first = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, vin_block_first);
+            auto d_f_block_first = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_block_first);
+            auto d_vin_gp_first = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, vin_gp_first);
+            auto d_f_gp_first = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_gp_first);
+            auto d_r = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_block_first); // careful, init with f
+            std::unique_ptr<mgcl::BufferGpu> d_bs;
+
+            d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
 
             // auto v_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
             // auto f_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
@@ -385,10 +426,10 @@ namespace mgcl_bench_residual_blockstencil
                 .program = p.getProgram(),
                 .commands = p.getCommands(),
                 .wgsize = {128, 1, 1},
-                .c_dVIn = d_vin,
-                .c_dF = d_f,
-                .c_dR = d_r,
-                .c_blockStencil = d_bs,
+                .c_dVIn = d_vin_block_first.get(),
+                .c_dF = d_f_block_first.get(),
+                .c_dR = d_r.get(),
+                .c_blockStencil = d_bs.get(),
                 .pd = p.getProfilingData(),
                 .moff = 0,
                 .noff = 0,
@@ -402,7 +443,7 @@ namespace mgcl_bench_residual_blockstencil
                 .epochIterations(CLI_ARGS::bench_iterations)
                 .relative(false);
 
-            // checkResults does not make sense for this test yet
+            // vectors for checking results
             std::unique_ptr<std::vector<double>> r_out_bs_coeffs_first_v_block_first = nullptr;
             std::unique_ptr<std::vector<double>> r_out_bs_coeffs_first_v_gp_first = nullptr;
             std::unique_ptr<std::vector<double>> r_out_bs_block_first_v_block_first = nullptr;
@@ -418,9 +459,15 @@ namespace mgcl_bench_residual_blockstencil
 
             {
                 // reset r to zero
-                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                args.c_dVIn = d_vin_block_first.get();
+                args.c_dF = d_f_block_first.get();
 
                 args.kernelVersion = KernelVersion::COEFFS_FIRST_V_BLOCK_FIRST;
+                fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
+                auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
+                args.c_blockStencil = tmp.get();
+
                 std::string name = std::string("residual_blockstencil_coeff_first_v_block_first_")
                                        .append(std::to_string(m))
                                        .append("_")
@@ -446,15 +493,21 @@ namespace mgcl_bench_residual_blockstencil
 
                 if (CLI_ARGS::checkResults)
                 {
-                    r_out_bs_coeffs_first_v_block_first = args.c_dR.read(args.commands, nullptr, true);
+                    r_out_bs_coeffs_first_v_block_first = args.c_dR->read(args.commands, nullptr, true);
                 }
             }
 
             {
                 // reset r to zero
-                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                args.c_dVIn = d_vin_gp_first.get();
+                args.c_dF = d_f_gp_first.get();
 
                 args.kernelVersion = KernelVersion::COEFFS_FIRST_V_GP_FIRST;
+                fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
+                auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
+                args.c_blockStencil = tmp.get();
+
                 std::string name = std::string("residual_blockstencil_coeff_first_v_gp_first_")
                                        .append(std::to_string(m))
                                        .append("_")
@@ -480,15 +533,21 @@ namespace mgcl_bench_residual_blockstencil
 
                 if (CLI_ARGS::checkResults)
                 {
-                    r_out_bs_coeffs_first_v_gp_first = args.c_dR.read(args.commands, nullptr, true);
+                    r_out_bs_coeffs_first_v_gp_first = args.c_dR->read(args.commands, nullptr, true);
                 }
             }
 
             {
                 // reset r to zero
-                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                args.c_dVIn = d_vin_gp_first.get();
+                args.c_dF = d_f_gp_first.get();
 
                 args.kernelVersion = KernelVersion::BLOCK_FIRST_V_GP_FIRST;
+                fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
+                auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
+                args.c_blockStencil = tmp.get();
+
                 std::string name = std::string("residual_blockstencil_block_first_v_gp_first_")
                                        .append(std::to_string(m))
                                        .append("_")
@@ -514,15 +573,21 @@ namespace mgcl_bench_residual_blockstencil
 
                 if (CLI_ARGS::checkResults)
                 {
-                    r_out_bs_block_first_v_gp_first = args.c_dR.read(args.commands, nullptr, true);
+                    r_out_bs_block_first_v_gp_first = args.c_dR->read(args.commands, nullptr, true);
                 }
             }
 
             {
                 // reset r to zero
-                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                args.c_dVIn = d_vin_block_first.get();
+                args.c_dF = d_f_block_first.get();
 
                 args.kernelVersion = KernelVersion::BLOCK_FIRST_V_BLOCK_FIRST;
+                fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
+                auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
+                args.c_blockStencil = tmp.get();
+
                 std::string name = std::string("residual_blockstencil_block_first_v_block_first_")
                                        .append(std::to_string(m))
                                        .append("_")
@@ -548,15 +613,21 @@ namespace mgcl_bench_residual_blockstencil
 
                 if (CLI_ARGS::checkResults)
                 {
-                    r_out_bs_block_first_v_block_first = args.c_dR.read(args.commands, nullptr, true);
+                    r_out_bs_block_first_v_block_first = args.c_dR->read(args.commands, nullptr, true);
                 }
             }
 
             {
                 // reset r to zero
-                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                args.c_dVIn = d_vin_gp_first.get();
+                args.c_dF = d_f_gp_first.get();
 
                 args.kernelVersion = KernelVersion::BS_GP_COEFFS_BLOCK_V_GP_BLOCK;
+                fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
+                auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
+                args.c_blockStencil = tmp.get();
+
                 std::string name = std::string("residual_blockstencil_gp_coeffs_block_v_gp_block_")
                                        .append(std::to_string(m))
                                        .append("_")
@@ -582,15 +653,21 @@ namespace mgcl_bench_residual_blockstencil
 
                 if (CLI_ARGS::checkResults)
                 {
-                    r_out_bs_gp_coeffs_block_v_gp_block = args.c_dR.read(args.commands, nullptr, true);
+                    r_out_bs_gp_coeffs_block_v_gp_block = args.c_dR->read(args.commands, nullptr, true);
                 }
             }
 
             {
                 // reset r to zero
-                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                args.c_dVIn = d_vin_gp_first.get();
+                args.c_dF = d_f_gp_first.get();
 
                 args.kernelVersion = KernelVersion::BS_GP_BLOCK_COEFFS_V_GP_BLOCK;
+                fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
+                auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
+                args.c_blockStencil = tmp.get();
+
                 std::string name = std::string("residual_blockstencil_gp_block_coeffs_v_gp_block_")
                                        .append(std::to_string(m))
                                        .append("_")
@@ -616,15 +693,21 @@ namespace mgcl_bench_residual_blockstencil
 
                 if (CLI_ARGS::checkResults)
                 {
-                    r_out_bs_gp_block_coeffs_v_gp_block = args.c_dR.read(args.commands, nullptr, true);
+                    r_out_bs_gp_block_coeffs_v_gp_block = args.c_dR->read(args.commands, nullptr, true);
                 }
             }
 
             {
                 // reset r to zero
-                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                args.c_dVIn = d_vin_block_first.get();
+                args.c_dF = d_f_block_first.get();
 
                 args.kernelVersion = KernelVersion::BS_GP_COEFFS_BLOCK_V_BLOCK_GP;
+                fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
+                auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
+                args.c_blockStencil = tmp.get();
+
                 std::string name = std::string("residual_blockstencil_gp_coeffs_block_v_block_gp_")
                                        .append(std::to_string(m))
                                        .append("_")
@@ -650,15 +733,21 @@ namespace mgcl_bench_residual_blockstencil
 
                 if (CLI_ARGS::checkResults)
                 {
-                    r_out_bs_gp_coeffs_block_v_block_gp = args.c_dR.read(args.commands, nullptr, true);
+                    r_out_bs_gp_coeffs_block_v_block_gp = args.c_dR->read(args.commands, nullptr, true);
                 }
             }
 
             {
                 // reset r to zero
-                d_r.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                args.c_dVIn = d_vin_block_first.get();
+                args.c_dF = d_f_block_first.get();
 
                 args.kernelVersion = KernelVersion::BS_GP_BLOCK_COEFFS_V_BLOCK_GP;
+                fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
+                auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
+                args.c_blockStencil = tmp.get();
+
                 std::string name = std::string("residual_blockstencil_gp_block_coeffs_v_block_gp_")
                                        .append(std::to_string(m))
                                        .append("_")
@@ -684,7 +773,7 @@ namespace mgcl_bench_residual_blockstencil
 
                 if (CLI_ARGS::checkResults)
                 {
-                    r_out_bs_gp_block_coeffs_v_block_gp = args.c_dR.read(args.commands, nullptr, true);
+                    r_out_bs_gp_block_coeffs_v_block_gp = args.c_dR->read(args.commands, nullptr, true);
                 }
             }
 
@@ -693,7 +782,7 @@ namespace mgcl_bench_residual_blockstencil
             {
                 REQUIRE(r_out_bs_coeffs_first_v_block_first);
                 REQUIRE(r_out_bs_coeffs_first_v_gp_first);
-                REQUIRE(r_out_bs_block_first_v_gp_first);
+                REQUIRE(r_out_bs_block_first_v_block_first);
                 REQUIRE(r_out_bs_block_first_v_gp_first);
                 REQUIRE(r_out_bs_gp_block_coeffs_v_block_gp);
                 REQUIRE(r_out_bs_gp_block_coeffs_v_gp_block);
@@ -701,7 +790,7 @@ namespace mgcl_bench_residual_blockstencil
                 REQUIRE(r_out_bs_gp_coeffs_block_v_gp_block);
 
                 REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_coeffs_first_v_gp_first->size());
-                REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_block_first_v_gp_first->size());
+                REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_block_first_v_block_first->size());
                 REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_block_first_v_gp_first->size());
                 REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_gp_block_coeffs_v_block_gp->size());
                 REQUIRE(r_out_bs_coeffs_first_v_block_first->size() == r_out_bs_gp_coeffs_block_v_block_gp->size());
@@ -715,13 +804,26 @@ namespace mgcl_bench_residual_blockstencil
                             for (size_t b = 0; b < blocksize; b++)
                             {
                                 CAPTURE(i, j, k, b);
-                                REQUIRE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize] == r_out_bs_coeffs_first_v_gp_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
-                                REQUIRE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize] == r_out_bs_block_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize]);
-                                REQUIRE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize] == r_out_bs_block_first_v_gp_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
-                                REQUIRE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize] == r_out_bs_gp_block_coeffs_v_block_gp->data()[i * ngh * ogh + j * ogh + k + b * gridsize]);
-                                REQUIRE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize] == r_out_bs_gp_coeffs_block_v_block_gp->data()[i * ngh * ogh + j * ogh + k + b * gridsize]);
-                                REQUIRE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize] == r_out_bs_gp_block_coeffs_v_gp_block->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
-                                REQUIRE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize] == r_out_bs_gp_coeffs_block_v_gp_block->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
+
+                                // CAPTURE(r_out_bs_block_first_v_gp_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
+                                // CAPTURE(r_out_bs_block_first_v_block_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
+                                // CAPTURE(r_out_bs_coeffs_first_v_gp_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
+                                // CAPTURE(r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize]);
+                                // CAPTURE(r_out_bs_gp_block_coeffs_v_block_gp->data()[i * ngh * ogh + j * ogh + k + b * gridsize]);
+                                // CAPTURE(r_out_bs_gp_coeffs_block_v_block_gp->data()[i * ngh * ogh + j * ogh + k + b * gridsize]);
+                                // CAPTURE(r_out_bs_gp_block_coeffs_v_gp_block->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
+                                // CAPTURE(r_out_bs_gp_coeffs_block_v_gp_block->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
+
+                                // compare to r_out_bs_block_first_v_gp_first, which is the version tested in unit tests
+                                REQUIRE(vin_gp_first[(i * ngh * ogh + j * ogh + k) * blocksize + b] == vin_block_first[i * ngh * ogh + j * ogh + k + b * gridsize]);
+                                REQUIRE(f_gp_first[(i * ngh * ogh + j * ogh + k) * blocksize + b] == f_block_first[i * ngh * ogh + j * ogh + k + b * gridsize]);
+                                REQUIRE(r_out_bs_block_first_v_gp_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b] == r_out_bs_coeffs_first_v_gp_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
+                                REQUIRE(r_out_bs_block_first_v_gp_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b] == r_out_bs_block_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize]);
+                                REQUIRE(r_out_bs_block_first_v_gp_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b] == r_out_bs_coeffs_first_v_block_first->data()[i * ngh * ogh + j * ogh + k + b * gridsize]);
+                                REQUIRE(r_out_bs_block_first_v_gp_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b] == r_out_bs_gp_block_coeffs_v_block_gp->data()[i * ngh * ogh + j * ogh + k + b * gridsize]);
+                                REQUIRE(r_out_bs_block_first_v_gp_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b] == r_out_bs_gp_coeffs_block_v_block_gp->data()[i * ngh * ogh + j * ogh + k + b * gridsize]);
+                                REQUIRE(r_out_bs_block_first_v_gp_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b] == r_out_bs_gp_block_coeffs_v_gp_block->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
+                                REQUIRE(r_out_bs_block_first_v_gp_first->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b] == r_out_bs_gp_coeffs_block_v_gp_block->data()[(i * ngh * ogh + j * ogh + k) * blocksize + b]);
                             }
             }
         }
@@ -2232,5 +2334,4 @@ namespace mgcl_bench_residual_blockstencil
 
         bench_util::printCsvFormat(results);
     }
-
 }
