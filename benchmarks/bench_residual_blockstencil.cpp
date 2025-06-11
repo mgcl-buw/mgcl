@@ -358,7 +358,7 @@ namespace mgcl_bench_residual_blockstencil
         p.init();
 
         int ghosts = 1;
-        int blocksize = 3;
+        int blocksize = CLI_ARGS::blocksize;
         int blocksize2 = blocksize * blocksize;
 
         std::cout << "blocksize: " << blocksize << std::endl;

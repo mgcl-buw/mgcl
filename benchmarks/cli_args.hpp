@@ -20,6 +20,7 @@ namespace CLI_ARGS
 
     extern int nu1;
     extern int nu2;
+    extern int blocksize;
 
     extern std::vector<int> jacobiIters;
     extern std::vector<int> jacobiStepsPerIter;

@@ -16,6 +16,7 @@ std::vector<int> CLI_ARGS::gridsMin{0, 0, 0};    // e.g. {4,4,4}
 std::vector<int> CLI_ARGS::gridsMax{-1, -1, -1}; // e.g. {64,64,32}
 int CLI_ARGS::nu1 = 2;
 int CLI_ARGS::nu2 = 2;
+int CLI_ARGS::blocksize = 3;
 std::vector<int> CLI_ARGS::jacobiIters;
 std::vector<int> CLI_ARGS::jacobiStepsPerIter;
 std::vector<int> CLI_ARGS::elements;
@@ -59,8 +60,9 @@ int main(int argc, char* argv[])
     int bench_epochs = CLI_ARGS::bench_epochs;
     int bench_iterations = CLI_ARGS::bench_iterations;
 
-    int nu1 = 2;
-    int nu2 = 2;
+    int nu1 = CLI_ARGS::nu1;
+    int nu2 = CLI_ARGS::nu2;
+    int blocksize = CLI_ARGS::blocksize;
 
     // Build a new parser on top of Catch2's
     using namespace Catch::Clara;
@@ -89,13 +91,17 @@ int main(int argc, char* argv[])
                      ["--outputPath"]                                                 // the option names it will respond to
                ("specify a path where any output should be written to. Default is .") // description string for the help output
 
-               | Opt(vCycleIterations, "nu1")        // bind variable to a new option, with a hint string
+               | Opt(nu1, "nu1")                     // bind variable to a new option, with a hint string
                      ["--nu1"]                       // the option names it will respond to
                ("pre-smoothing steps, 2 is default") // description string for the help output
 
-               | Opt(vCycleIterations, "nu2")         // bind variable to a new option, with a hint string
+               | Opt(nu2, "nu2")                      // bind variable to a new option, with a hint string
                      ["--nu2"]                        // the option names it will respond to
                ("post-smoothing steps, 2 is default") // description string for the help output
+
+               | Opt(blocksize, "blocksize")                // bind variable to a new option, with a hint string
+                     ["--blocksize"]                        // the option names it will respond to
+               ("blocksize (for blockstencil benchs only)") // description string for the help output
 
                | Opt(CLI_ARGS::checkResults)                                       // bind variable to a new option, with a hint string
                      ["--checkResults"]                                            // the option names it will respond to
@@ -206,6 +212,10 @@ int main(int argc, char* argv[])
             std::cout << "nu2: " << nu2 << std::endl;
         CLI_ARGS::nu2 = nu2;
     }
+
+    if (mpi_rank == 0)
+        std::cout << "blocksize: " << blocksize << std::endl;
+    CLI_ARGS::blocksize = blocksize;
 
     if (!outputPath.empty() && outputPath != ".")
     {
