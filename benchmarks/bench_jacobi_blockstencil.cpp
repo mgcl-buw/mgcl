@@ -302,7 +302,7 @@ namespace mgcl_bench_jacobi_blockstencil
         return res;
     }
 
-    // Benchs the various residual fixed stencil kernel versions
+    // Benchs Jacobi scalar vs vector-valued problem
     TEST_CASE("bench_ocl_jacobi_bs_scalar_vs_vector")
     {
         using std::min;
@@ -366,6 +366,7 @@ namespace mgcl_bench_jacobi_blockstencil
                 mgcl::Problem p(m, n, o, f_in, v_in);
                 p.setGhostsIn(ghosts_in);
                 p.setUseOpencl(true);
+                p.setSilent(true);
                 p.setStencilType(mgcl::MGCL_VARYING);
                 p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
                 p.setSmootherType(mgcl::MGCL_JACOBI_SCALAR);
@@ -502,11 +503,118 @@ namespace mgcl_bench_jacobi_blockstencil
                             &p.getKernelConfig(), p.getProfilingData()};
 
                         std::string name = std::string("jacobi_vectorproblem_pointwiseJacobi_")
-                                               .append(std::to_string(m))
+                                               .append(std::to_string(mbs))
                                                .append("x")
-                                               .append(std::to_string(n))
+                                               .append(std::to_string(nbs))
                                                .append("x")
-                                               .append(std::to_string(o));
+                                               .append(std::to_string(obs))
+                                               .append("_blocksize_")
+                                               .append(std::to_string(blocksize));
+
+                        bench.run(std::string(name).c_str(), [&] { //
+                            mgcl::MultigridEngine::jacobi(args);
+                            p.finish();
+                        });
+
+                        bench_util::ResultJacobiBlockstencil res;
+                        res.name = name;
+                        res.minTime = bench_util::getMinTime(bench, name);
+                        res.medianTime = bench_util::getMedianTime(bench, name);
+                        res.avgTime = bench_util::getAvgTime(bench, name);
+                        res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                        res.m = m;
+                        res.n = n;
+                        res.o = o;
+                        res.iters = iters;
+                        res.spi = stepsPerIter;
+                        res.blocksize = 1;
+                        results.push_back(res);
+                    }
+            }
+
+            // vector-valued Problem, blocksize 2^3, block-Jacobi
+            {
+                int mbs = m / 2;
+                int nbs = n / 2;
+                int obs = o / 2;
+                int blocksize = 8;
+                auto v_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
+                auto f_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
+                auto r_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
+                // v_in->fill1dIndex(true);
+                // f_in->fill1dIndex(true);
+                v_in->fillRandom();
+                f_in->fillRandom();
+
+                mgcl::Problem p(mbs, nbs, obs, f_in, v_in);
+                p.setGhostsIn(ghosts_in);
+                p.setUseOpencl(true);
+                p.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
+                p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
+                p.setSmootherType(mgcl::MGCL_JACOBI_BLOCK);
+                p.setSilent(true);
+                // p.setJacobiIterationsPerKernel(1);
+                // p.setKernelFile("kernel_optimizations.cl");
+                if (CLI_ARGS::useBinaryFile)
+                {
+                    p.setBinaryFile("jacobiBenchBlockstencilScalarProblem.bin");
+                }
+                p.setDeviceType(CL_DEVICE_TYPE_GPU);
+
+                auto sv = p.getBlockstencil();
+                mgcl::FixedStencil fs1(3);
+                mgcl_test::fill27pLaplace(fs1, 1.0 / (double)(mbs), false);
+                mgcl_test::fillBlockstencilFromFixedStencil(*sv, fs1);
+
+                // sv->dumpToFile("sv.txt");
+
+                auto rbs = p.getRestrictionBlockstencil();
+                auto pbs = p.getProlongationBlockstencil();
+                mgcl_test::fill3dFullWeightRestrictionBlockstencil(*rbs);
+                mgcl_test::fill3dBilinearProlongationBlockstencil(*pbs);
+
+                p.init();
+
+                auto& lv0 = p.getLevelAt(0);
+
+                ankerl::nanobench::Bench bench;
+                bench.timeUnit(1ms, "ms")
+                    .epochs(CLI_ARGS::bench_epochs)
+                    .epochIterations(CLI_ARGS::bench_iterations)
+                    .relative(false);
+
+                for (int iters : CLI_ARGS::jacobiIters)
+                    for (int stepsPerIter : CLI_ARGS::jacobiStepsPerIter)
+                    {
+                        if (stepsPerIter > iters)
+                        {
+                            continue;
+                        }
+
+                        mgcl::args::JacobiBSOclArgs args{
+                            lv0.getDFBS(),
+                            lv0.getDVBSIn(),
+                            lv0.getDVBSOut(),
+                            lv0.getDRBS(),
+                            resnorm,
+                            *lv0.getBlockstencilGpu(),
+                            lv0.getBlockstencilInvVariant(),
+                            lv0.getDRsqBSPtr().get(),
+                            returnResidualNorm, periodic,
+                            true, iters, stepsPerIter, omega,
+                            nullptr, nullptr, nullptr,
+                            p.getProgram(), p.getCommands(), p.getContext(),
+                            0, 0, 0, nullptr,
+                            &p.getKernelConfig(), p.getProfilingData()};
+
+                        std::string name = std::string("jacobi_vectorproblem_pointwiseJacobi_")
+                                               .append(std::to_string(mbs))
+                                               .append("x")
+                                               .append(std::to_string(nbs))
+                                               .append("x")
+                                               .append(std::to_string(obs))
+                                               .append("_blocksize_")
+                                               .append(std::to_string(blocksize));
 
                         bench.run(std::string(name).c_str(), [&] { //
                             mgcl::MultigridEngine::jacobi(args);
