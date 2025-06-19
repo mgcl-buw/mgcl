@@ -32,6 +32,8 @@ namespace mgcl
 #define error(msg) throw msg
 #endif
 
+#define warning(msg) printf("mgcl warning: %s\n", msg);
+
     template <
         class result_t = std::chrono::milliseconds,
         class clock_t = std::chrono::steady_clock,
