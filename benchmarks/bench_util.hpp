@@ -218,7 +218,7 @@ namespace bench_util
         ss << std::endl;
         ss << "***DATASTART***" << std::endl;
         // ss << "gpus;spi;iters;name;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
-        ss << "name;m;n;o;iters;spi;blocksize;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+        ss << "name;m;n;o;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
         for (auto r : results)
         {
             ss << r.name << ";"
@@ -242,7 +242,7 @@ namespace bench_util
         ss << std::endl;
         ss << "***DATASTART***" << std::endl;
         // ss << "gpus;spi;iters;name;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
-        ss << "name;m;n;o;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+        ss << "name;m;n;o;iters;spi;blocksize;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
         for (auto r : results)
         {
             ss << r.name << ";"

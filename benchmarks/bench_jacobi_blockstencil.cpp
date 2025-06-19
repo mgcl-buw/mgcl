@@ -315,9 +315,15 @@ namespace mgcl_bench_jacobi_blockstencil
             throw "Need to specify jacobiIters, e.g. --jacobiIters 1,2,3";
         }
 
-        if (CLI_ARGS::jacobiStepsPerIter.empty())
+        // if (CLI_ARGS::jacobiStepsPerIter.empty())
+        // {
+        //     throw "Need to specify jacobiStepsPerIter, e.g. --spi 1,2,3";
+        // }
+
+        if (!CLI_ARGS::jacobiStepsPerIter.empty())
         {
-            throw "Need to specify jacobiStepsPerIter, e.g. --spi 1,2,3";
+            std::cout << "Currently only for 1 jacobiStepsPerIter! --spi ignored." << std::endl;
+            CLI_ARGS::jacobiStepsPerIter = {1};
         }
 
         // build grids to be tested from CLI args
@@ -332,7 +338,7 @@ namespace mgcl_bench_jacobi_blockstencil
 
         std::vector<bench_util::ResultJacobiBlockstencil> results;
 
-        int ghosts = 1;
+        int ghosts_in = 1;
         bool returnResidualNorm = false;
         bool periodic = false;
 
@@ -342,10 +348,6 @@ namespace mgcl_bench_jacobi_blockstencil
             int n = gr[1];
             int o = gr[2];
 
-            int mgh = m + 2 * ghosts;
-            int ngh = n + 2 * ghosts;
-            int ogh = o + 2 * ghosts;
-
             double omega = 0.8;
             double h2 = 1.0 / (double)(m * m);
             mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
@@ -353,16 +355,16 @@ namespace mgcl_bench_jacobi_blockstencil
 
             // scalar Problem, point-wise Jacobi
             {
-                auto v_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                auto f_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                auto r_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                auto v_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_in, ghosts_in, ghosts_in);
+                auto f_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_in, ghosts_in, ghosts_in);
+                auto r_in = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_in, ghosts_in, ghosts_in);
                 // v_in->fill1dIndex(true);
                 // f_in->fill1dIndex(true);
                 v_in->fillRandom();
                 f_in->fillRandom();
 
                 mgcl::Problem p(m, n, o, f_in, v_in);
-                p.setGhostsIn(ghosts);
+                p.setGhostsIn(ghosts_in);
                 p.setUseOpencl(true);
                 p.setStencilType(mgcl::MGCL_VARYING);
                 p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
@@ -430,16 +432,16 @@ namespace mgcl_bench_jacobi_blockstencil
                 int nbs = n / 2;
                 int obs = o / 2;
                 int blocksize = 8;
-                auto v_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
-                auto f_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
-                auto r_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
+                auto v_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
+                auto f_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
+                auto r_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
                 // v_in->fill1dIndex(true);
                 // f_in->fill1dIndex(true);
                 v_in->fillRandom();
                 f_in->fillRandom();
 
                 mgcl::Problem p(mbs, nbs, obs, f_in, v_in);
-                p.setGhostsIn(ghosts);
+                p.setGhostsIn(ghosts_in);
                 p.setUseOpencl(true);
                 p.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
                 p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
