@@ -504,7 +504,7 @@ namespace mgcl
                     for (size_t b = 0; b < getBlocksize(); b++)
                     {
                         if (getData()[b][b][center][center][center][gpi][gpj][gpk] == 0.0)
-                            throw "CuboidBS::invertDiagonal: Inversion of diagonal failed, entry on diagonal is 0!";
+                            throw "Blockstencil::invertDiagonal: Inversion of diagonal failed, entry on diagonal is 0! At bi,bj,ci,cj,ck,gpi,gpj,gpk: " + std::to_string(b) + "," + std::to_string(b) + "," + std::to_string(center) + "," + std::to_string(center) + "," + std::to_string(center) + "," + std::to_string(gpi) + "," + std::to_string(gpj) + "," + std::to_string(gpk);
 
                         ret->getData()[gpi][gpj][gpk][b] = 1.0 / getData()[b][b][center][center][center][gpi][gpj][gpk];
                     }
