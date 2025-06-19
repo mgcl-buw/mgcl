@@ -323,8 +323,8 @@ namespace mgcl_bench_jacobi_blockstencil
         if (!CLI_ARGS::jacobiStepsPerIter.empty())
         {
             std::cout << "Currently only for 1 jacobiStepsPerIter! --spi ignored." << std::endl;
-            CLI_ARGS::jacobiStepsPerIter = {1};
         }
+        CLI_ARGS::jacobiStepsPerIter = {1};
 
         // build grids to be tested from CLI args
         std::vector<std::vector<int>> gridsTBT;
@@ -427,12 +427,28 @@ namespace mgcl_bench_jacobi_blockstencil
                     }
             }
 
+            int ghosts = 1;
+            int width = 3;
+            int ghosts_bs = 1;
+
             // vector-valued Problem, blocksize 2^3, point-wise Jacobi
             {
                 int mbs = m / 2;
                 int nbs = n / 2;
                 int obs = o / 2;
                 int blocksize = 8;
+
+                // create dummy problem
+                auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+                auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+                mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
+                p.setUseOpencl(true);
+                p.setSilent(true);
+                p.setDeviceType(CL_DEVICE_TYPE_GPU);
+                p.setProfilingEnabled(true);
+                p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
+                p.init();
+
                 auto v_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
                 auto f_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
                 auto r_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
@@ -441,36 +457,20 @@ namespace mgcl_bench_jacobi_blockstencil
                 v_in->fillRandom();
                 f_in->fillRandom();
 
-                mgcl::Problem p(mbs, nbs, obs, f_in, v_in);
-                p.setGhostsIn(ghosts_in);
-                p.setUseOpencl(true);
-                p.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
-                p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
-                p.setSmootherType(mgcl::MGCL_JACOBI_SCALAR);
-                p.setSilent(true);
-                // p.setJacobiIterationsPerKernel(1);
-                // p.setKernelFile("kernel_optimizations.cl");
-                if (CLI_ARGS::useBinaryFile)
-                {
-                    p.setBinaryFile("jacobiBenchBlockstencilScalarProblem.bin");
-                }
-                p.setDeviceType(CL_DEVICE_TYPE_GPU);
+                mgcl::CuboidBS v(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
+                mgcl::CuboidBS r(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
+                mgcl::CuboidBS f(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
+                mgcl::Blockstencil bs(mbs, nbs, obs, width, blocksize, ghosts_bs, ghosts_bs, ghosts_bs);
+                mgcl::CuboidBS bs_inv(mbs, nbs, obs, ghosts_bs, ghosts_bs, ghosts_bs, blocksize);
 
-                auto sv = p.getBlockstencil();
-                mgcl::FixedStencil fs1(3);
-                mgcl_test::fill27pLaplace(fs1, 1.0 / (double)(mbs), false);
-                mgcl_test::fillBlockstencilFromFixedStencil(*sv, fs1);
-
-                // sv->dumpToFile("sv.txt");
-
-                auto rbs = p.getRestrictionBlockstencil();
-                auto pbs = p.getProlongationBlockstencil();
-                mgcl_test::fill3dFullWeightRestrictionBlockstencil(*rbs);
-                mgcl_test::fill3dBilinearProlongationBlockstencil(*pbs);
-
-                p.init();
-
-                auto& lv0 = p.getLevelAt(0);
+                mgcl::CuboidBSGpu d_v_in(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
+                mgcl::CuboidBSGpu d_v_out(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
+                mgcl::CuboidBSGpu d_r(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, r);
+                mgcl::CuboidBSGpu d_f(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, f);
+                mgcl::BlockstencilGpu d_bs(bs, p.getContext(), p.getCommands(), p.getProgram());
+                auto d_bs_inv = std::make_shared<mgcl::CuboidBSGpu>(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, bs_inv);
+                mgcl::TBlockstencilInv d_bs_inv_variant = d_bs_inv;
+                mgcl::CuboidBSGpu dRSquares(p.getContext(), CL_MEM_READ_WRITE, mbs, nbs, obs, 0, 0, 0, blocksize);
 
                 ankerl::nanobench::Bench bench;
                 bench.timeUnit(1ms, "ms")
@@ -486,21 +486,23 @@ namespace mgcl_bench_jacobi_blockstencil
                             continue;
                         }
 
-                        mgcl::args::JacobiBSOclArgs args{
-                            lv0.getDFBS(),
-                            lv0.getDVBSIn(),
-                            lv0.getDVBSOut(),
-                            lv0.getDRBS(),
+                        JacobiBSOclArgs args{
+                            d_f,
+                            d_v_in,
+                            d_v_out,
+                            d_r,
                             resnorm,
-                            *lv0.getBlockstencilGpu(),
-                            lv0.getBlockstencilInvVariant(),
-                            lv0.getDRsqBSPtr().get(),
-                            returnResidualNorm, periodic,
+                            d_bs,
+                            d_bs_inv_variant,
+                            &dRSquares,
+                            true,
+                            periodic,
                             true, iters, stepsPerIter, omega,
                             nullptr, nullptr, nullptr,
                             p.getProgram(), p.getCommands(), p.getContext(),
                             0, 0, 0, nullptr,
-                            &p.getKernelConfig(), p.getProfilingData()};
+                            &p.getKernelConfig(),
+                            p.getProfilingData()};
 
                         std::string name = std::string("jacobi_vectorproblem_pointwiseJacobi_")
                                                .append(std::to_string(mbs))
@@ -512,7 +514,7 @@ namespace mgcl_bench_jacobi_blockstencil
                                                .append(std::to_string(blocksize));
 
                         bench.run(std::string(name).c_str(), [&] { //
-                            mgcl::MultigridEngine::jacobi(args);
+                            jacobi(args);
                             p.finish();
                         });
 
@@ -532,12 +534,24 @@ namespace mgcl_bench_jacobi_blockstencil
                     }
             }
 
-            // vector-valued Problem, blocksize 2^3, block-Jacobi
+            // vector-valued Problem, blocksize 2^3, block Jacobi
             {
                 int mbs = m / 2;
                 int nbs = n / 2;
                 int obs = o / 2;
                 int blocksize = 8;
+
+                // create dummy problem
+                auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+                auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+                mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
+                p.setUseOpencl(true);
+                p.setSilent(true);
+                p.setDeviceType(CL_DEVICE_TYPE_GPU);
+                p.setProfilingEnabled(true);
+                p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
+                p.init();
+
                 auto v_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
                 auto f_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
                 auto r_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
@@ -546,36 +560,20 @@ namespace mgcl_bench_jacobi_blockstencil
                 v_in->fillRandom();
                 f_in->fillRandom();
 
-                mgcl::Problem p(mbs, nbs, obs, f_in, v_in);
-                p.setGhostsIn(ghosts_in);
-                p.setUseOpencl(true);
-                p.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
-                p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
-                p.setSmootherType(mgcl::MGCL_JACOBI_BLOCK);
-                p.setSilent(true);
-                // p.setJacobiIterationsPerKernel(1);
-                // p.setKernelFile("kernel_optimizations.cl");
-                if (CLI_ARGS::useBinaryFile)
-                {
-                    p.setBinaryFile("jacobiBenchBlockstencilScalarProblem.bin");
-                }
-                p.setDeviceType(CL_DEVICE_TYPE_GPU);
+                mgcl::CuboidBS v(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
+                mgcl::CuboidBS r(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
+                mgcl::CuboidBS f(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
+                mgcl::Blockstencil bs(mbs, nbs, obs, width, blocksize, ghosts_bs, ghosts_bs, ghosts_bs);
+                mgcl::Blockstencil bs_inv(mbs, nbs, obs, 1, blocksize, ghosts_bs, ghosts_bs, ghosts_bs);
 
-                auto sv = p.getBlockstencil();
-                mgcl::FixedStencil fs1(3);
-                mgcl_test::fill27pLaplace(fs1, 1.0 / (double)(mbs), false);
-                mgcl_test::fillBlockstencilFromFixedStencil(*sv, fs1);
-
-                // sv->dumpToFile("sv.txt");
-
-                auto rbs = p.getRestrictionBlockstencil();
-                auto pbs = p.getProlongationBlockstencil();
-                mgcl_test::fill3dFullWeightRestrictionBlockstencil(*rbs);
-                mgcl_test::fill3dBilinearProlongationBlockstencil(*pbs);
-
-                p.init();
-
-                auto& lv0 = p.getLevelAt(0);
+                mgcl::CuboidBSGpu d_v_in(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
+                mgcl::CuboidBSGpu d_v_out(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
+                mgcl::CuboidBSGpu d_r(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, r);
+                mgcl::CuboidBSGpu d_f(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, f);
+                mgcl::BlockstencilGpu d_bs(bs, p.getContext(), p.getCommands(), p.getProgram());
+                auto d_bs_inv = std::make_shared<mgcl::BlockstencilGpu>(bs_inv, p.getContext(), p.getCommands(), p.getProgram());
+                mgcl::TBlockstencilInv d_bs_inv_variant = d_bs_inv;
+                mgcl::CuboidBSGpu dRSquares(p.getContext(), CL_MEM_READ_WRITE, mbs, nbs, obs, 0, 0, 0, blocksize);
 
                 ankerl::nanobench::Bench bench;
                 bench.timeUnit(1ms, "ms")
@@ -591,21 +589,125 @@ namespace mgcl_bench_jacobi_blockstencil
                             continue;
                         }
 
-                        mgcl::args::JacobiBSOclArgs args{
-                            lv0.getDFBS(),
-                            lv0.getDVBSIn(),
-                            lv0.getDVBSOut(),
-                            lv0.getDRBS(),
+                        JacobiBSOclArgs args{
+                            d_f,
+                            d_v_in,
+                            d_v_out,
+                            d_r,
                             resnorm,
-                            *lv0.getBlockstencilGpu(),
-                            lv0.getBlockstencilInvVariant(),
-                            lv0.getDRsqBSPtr().get(),
-                            returnResidualNorm, periodic,
+                            d_bs,
+                            d_bs_inv_variant,
+                            &dRSquares,
+                            true,
+                            periodic,
                             true, iters, stepsPerIter, omega,
                             nullptr, nullptr, nullptr,
                             p.getProgram(), p.getCommands(), p.getContext(),
                             0, 0, 0, nullptr,
-                            &p.getKernelConfig(), p.getProfilingData()};
+                            &p.getKernelConfig(),
+                            p.getProfilingData()};
+
+                        std::string name = std::string("jacobi_vectorproblem_blockJacobi_")
+                                               .append(std::to_string(mbs))
+                                               .append("x")
+                                               .append(std::to_string(nbs))
+                                               .append("x")
+                                               .append(std::to_string(obs))
+                                               .append("_blocksize_")
+                                               .append(std::to_string(blocksize));
+
+                        bench.run(std::string(name).c_str(), [&] { //
+                            jacobi(args);
+                            p.finish();
+                        });
+
+                        bench_util::ResultJacobiBlockstencil res;
+                        res.name = name;
+                        res.minTime = bench_util::getMinTime(bench, name);
+                        res.medianTime = bench_util::getMedianTime(bench, name);
+                        res.avgTime = bench_util::getAvgTime(bench, name);
+                        res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                        res.m = m;
+                        res.n = n;
+                        res.o = o;
+                        res.iters = iters;
+                        res.spi = stepsPerIter;
+                        res.blocksize = 1;
+                        results.push_back(res);
+                    }
+            }
+            // vector-valued Problem, blocksize 4^3, point-wise Jacobi
+            {
+                int mbs = m / 4;
+                int nbs = n / 4;
+                int obs = o / 4;
+                int blocksize = 64;
+
+                // create dummy problem
+                auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+                auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+                mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
+                p.setUseOpencl(true);
+                p.setSilent(true);
+                p.setDeviceType(CL_DEVICE_TYPE_GPU);
+                p.setProfilingEnabled(true);
+                p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
+                p.init();
+
+                auto v_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
+                auto f_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
+                auto r_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
+                // v_in->fill1dIndex(true);
+                // f_in->fill1dIndex(true);
+                v_in->fillRandom();
+                f_in->fillRandom();
+
+                mgcl::CuboidBS v(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
+                mgcl::CuboidBS r(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
+                mgcl::CuboidBS f(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
+                mgcl::Blockstencil bs(mbs, nbs, obs, width, blocksize, ghosts_bs, ghosts_bs, ghosts_bs);
+                mgcl::CuboidBS bs_inv(mbs, nbs, obs, ghosts_bs, ghosts_bs, ghosts_bs, blocksize);
+
+                mgcl::CuboidBSGpu d_v_in(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
+                mgcl::CuboidBSGpu d_v_out(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
+                mgcl::CuboidBSGpu d_r(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, r);
+                mgcl::CuboidBSGpu d_f(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, f);
+                mgcl::BlockstencilGpu d_bs(bs, p.getContext(), p.getCommands(), p.getProgram());
+                auto d_bs_inv = std::make_shared<mgcl::CuboidBSGpu>(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, bs_inv);
+                mgcl::TBlockstencilInv d_bs_inv_variant = d_bs_inv;
+                mgcl::CuboidBSGpu dRSquares(p.getContext(), CL_MEM_READ_WRITE, mbs, nbs, obs, 0, 0, 0, blocksize);
+
+                ankerl::nanobench::Bench bench;
+                bench.timeUnit(1ms, "ms")
+                    .epochs(CLI_ARGS::bench_epochs)
+                    .epochIterations(CLI_ARGS::bench_iterations)
+                    .relative(false);
+
+                for (int iters : CLI_ARGS::jacobiIters)
+                    for (int stepsPerIter : CLI_ARGS::jacobiStepsPerIter)
+                    {
+                        if (stepsPerIter > iters)
+                        {
+                            continue;
+                        }
+
+                        JacobiBSOclArgs args{
+                            d_f,
+                            d_v_in,
+                            d_v_out,
+                            d_r,
+                            resnorm,
+                            d_bs,
+                            d_bs_inv_variant,
+                            &dRSquares,
+                            true,
+                            periodic,
+                            true, iters, stepsPerIter, omega,
+                            nullptr, nullptr, nullptr,
+                            p.getProgram(), p.getCommands(), p.getContext(),
+                            0, 0, 0, nullptr,
+                            &p.getKernelConfig(),
+                            p.getProfilingData()};
 
                         std::string name = std::string("jacobi_vectorproblem_pointwiseJacobi_")
                                                .append(std::to_string(mbs))
@@ -617,7 +719,110 @@ namespace mgcl_bench_jacobi_blockstencil
                                                .append(std::to_string(blocksize));
 
                         bench.run(std::string(name).c_str(), [&] { //
-                            mgcl::MultigridEngine::jacobi(args);
+                            jacobi(args);
+                            p.finish();
+                        });
+
+                        bench_util::ResultJacobiBlockstencil res;
+                        res.name = name;
+                        res.minTime = bench_util::getMinTime(bench, name);
+                        res.medianTime = bench_util::getMedianTime(bench, name);
+                        res.avgTime = bench_util::getAvgTime(bench, name);
+                        res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                        res.m = m;
+                        res.n = n;
+                        res.o = o;
+                        res.iters = iters;
+                        res.spi = stepsPerIter;
+                        res.blocksize = 1;
+                        results.push_back(res);
+                    }
+            }
+
+            // vector-valued Problem, blocksize 4^3, block Jacobi
+            {
+                int mbs = m / 4;
+                int nbs = n / 4;
+                int obs = o / 4;
+                int blocksize = 64;
+
+                // create dummy problem
+                auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+                auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+                mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
+                p.setUseOpencl(true);
+                p.setSilent(true);
+                p.setDeviceType(CL_DEVICE_TYPE_GPU);
+                p.setProfilingEnabled(true);
+                p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
+                p.init();
+
+                auto v_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
+                auto f_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
+                auto r_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
+                // v_in->fill1dIndex(true);
+                // f_in->fill1dIndex(true);
+                v_in->fillRandom();
+                f_in->fillRandom();
+
+                mgcl::CuboidBS v(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
+                mgcl::CuboidBS r(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
+                mgcl::CuboidBS f(mbs, nbs, obs, ghosts, ghosts, ghosts, blocksize);
+                mgcl::Blockstencil bs(mbs, nbs, obs, width, blocksize, ghosts_bs, ghosts_bs, ghosts_bs);
+                mgcl::Blockstencil bs_inv(mbs, nbs, obs, 1, blocksize, ghosts_bs, ghosts_bs, ghosts_bs);
+
+                mgcl::CuboidBSGpu d_v_in(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
+                mgcl::CuboidBSGpu d_v_out(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, v);
+                mgcl::CuboidBSGpu d_r(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, r);
+                mgcl::CuboidBSGpu d_f(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, f);
+                mgcl::BlockstencilGpu d_bs(bs, p.getContext(), p.getCommands(), p.getProgram());
+                auto d_bs_inv = std::make_shared<mgcl::BlockstencilGpu>(bs_inv, p.getContext(), p.getCommands(), p.getProgram());
+                mgcl::TBlockstencilInv d_bs_inv_variant = d_bs_inv;
+                mgcl::CuboidBSGpu dRSquares(p.getContext(), CL_MEM_READ_WRITE, mbs, nbs, obs, 0, 0, 0, blocksize);
+
+                ankerl::nanobench::Bench bench;
+                bench.timeUnit(1ms, "ms")
+                    .epochs(CLI_ARGS::bench_epochs)
+                    .epochIterations(CLI_ARGS::bench_iterations)
+                    .relative(false);
+
+                for (int iters : CLI_ARGS::jacobiIters)
+                    for (int stepsPerIter : CLI_ARGS::jacobiStepsPerIter)
+                    {
+                        if (stepsPerIter > iters)
+                        {
+                            continue;
+                        }
+
+                        JacobiBSOclArgs args{
+                            d_f,
+                            d_v_in,
+                            d_v_out,
+                            d_r,
+                            resnorm,
+                            d_bs,
+                            d_bs_inv_variant,
+                            &dRSquares,
+                            true,
+                            periodic,
+                            true, iters, stepsPerIter, omega,
+                            nullptr, nullptr, nullptr,
+                            p.getProgram(), p.getCommands(), p.getContext(),
+                            0, 0, 0, nullptr,
+                            &p.getKernelConfig(),
+                            p.getProfilingData()};
+
+                        std::string name = std::string("jacobi_vectorproblem_blockJacobi_")
+                                               .append(std::to_string(mbs))
+                                               .append("x")
+                                               .append(std::to_string(nbs))
+                                               .append("x")
+                                               .append(std::to_string(obs))
+                                               .append("_blocksize_")
+                                               .append(std::to_string(blocksize));
+
+                        bench.run(std::string(name).c_str(), [&] { //
+                            jacobi(args);
                             p.finish();
                         });
 
