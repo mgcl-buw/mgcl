@@ -20,6 +20,21 @@ namespace bench_util
         int o;
     };
 
+    struct ResultJacobiBlockstencil
+    {
+        std::string name;
+        double minTime;
+        double medianTime;
+        double avgTime;
+        double medianAbsolutePercentError;
+        int m;
+        int n;
+        int o;
+        int spi; // steps per iteration
+        int iters;
+        int blocksize;
+    };
+
     struct ResultJacobiTempBlock
     {
         std::string name;
@@ -203,11 +218,36 @@ namespace bench_util
         ss << std::endl;
         ss << "***DATASTART***" << std::endl;
         // ss << "gpus;spi;iters;name;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+        ss << "name;m;n;o;iters;spi;blocksize;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+        for (auto r : results)
+        {
+            ss << r.name << ";"
+               << r.m << ";" << r.n << ";" << r.o
+               << ";" << std::setprecision(17) << r.minTime
+               << ";" << std::setprecision(17) << r.medianTime
+               << ";" << std::setprecision(17) << r.avgTime
+               << ";" << std::setprecision(4) << r.medianAbsolutePercentError << "%"
+               << std::endl;
+        }
+        ss << "***DATAEND***" << std::endl;
+        std::string output = ss.str();
+        std::replace(output.begin(), output.end(), '.', ',');
+        std::cout << output;
+    }
+
+    inline void printCsvFormat(std::vector<ResultJacobiBlockstencil> results)
+    {
+        // print min times
+        std::stringstream ss;
+        ss << std::endl;
+        ss << "***DATASTART***" << std::endl;
+        // ss << "gpus;spi;iters;name;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
         ss << "name;m;n;o;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
         for (auto r : results)
         {
             ss << r.name << ";"
                << r.m << ";" << r.n << ";" << r.o
+               << ";" << r.iters << ";" << r.spi << ";" << r.blocksize
                << ";" << std::setprecision(17) << r.minTime
                << ";" << std::setprecision(17) << r.medianTime
                << ";" << std::setprecision(17) << r.avgTime
