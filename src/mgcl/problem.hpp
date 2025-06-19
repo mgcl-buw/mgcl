@@ -126,6 +126,11 @@ namespace mgcl
         std::shared_ptr<FixedBlockstencilGpu> restrictionBlockstencilGpu = nullptr;
         std::shared_ptr<FixedBlockstencilGpu> prolongationBlockstencilGpu = nullptr;
 
+        // Helper variables that get set to true once getRestrictionBlockstencil() is called by user, s.t.
+        // he can be remembered if not done.
+        bool restrictionBlockstencilAccessed = false;
+        bool prolongationBlockstencilAccessed = false;
+
         /* Smoother that will be used. Defaults to MGCL_JACOBI_SCALAR. MGCL_JACOBI_BLOCK is only valid if stencilType is MGCL_BLOCKSTENCIL. */
         MGCL_SMOOTHER smootherType = MGCL_JACOBI_SCALAR;
 

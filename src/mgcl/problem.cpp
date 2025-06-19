@@ -201,6 +201,11 @@ namespace mgcl
             error("smootherType is set to MGCL_JACOBI_BLOCK but stencilType is not MGCL_BLOCKSTENCIL!");
         }
 
+        if (stencilType == MGCL_BLOCKSTENCIL && (!restrictionBlockstencilAccessed || !prolongationBlockstencilAccessed))
+        {
+            warning("stencilType is set to MGCL_BLOCKSTENCIL but restrictionBlockstencil or prolongationBlockstencil do not seem to be set!");
+        }
+
         // TODO Is this test needed?
         // if (blockstencil && (blockstencil->getGhostsM() < ghosts ||
         //                      blockstencil->getGhostsN() < ghosts ||
@@ -1595,6 +1600,7 @@ namespace mgcl
         {
             error("Problem::getRestrictionBlockstencil: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
         }
+        restrictionBlockstencilAccessed = true;
         return restrictionBlockstencil;
     }
 
@@ -1604,6 +1610,7 @@ namespace mgcl
         {
             error("Problem::getProlongationBlockstencil: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
         }
+        prolongationBlockstencilAccessed = true;
         return prolongationBlockstencil;
     }
 
