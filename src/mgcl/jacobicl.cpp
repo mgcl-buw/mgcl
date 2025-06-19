@@ -767,11 +767,6 @@ namespace mgcl
                 // mgclCheckError(err, "Updating ghosts");
             }
 
-            if (globalIter == 1)
-            {
-                args.v_out.dumpToFile(args.queue, "v_out.txt");
-            }
-
             // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
             for (int innerIter = 0; innerIter < args.stepsPerIter && globalIter < args.maxiter; innerIter++, globalIter++)
             {

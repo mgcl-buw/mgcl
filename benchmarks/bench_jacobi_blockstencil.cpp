@@ -199,11 +199,6 @@ namespace mgcl_bench_jacobi_blockstencil
                 // mgclCheckError(err, "Updating ghosts");
             }
 
-            if (globalIter == 1)
-            {
-                args.v_out.dumpToFile(args.queue, "v_out.txt");
-            }
-
             // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
             for (int innerIter = 0; innerIter < args.stepsPerIter && globalIter < args.maxiter; innerIter++, globalIter++)
             {
@@ -303,6 +298,7 @@ namespace mgcl_bench_jacobi_blockstencil
     }
 
     // Benchs Jacobi scalar vs vector-valued problem
+    // run with e.g. ./benchmarks bench_ocl_jacobi_bs_scalar_vs_vector --grids 8 --jacobiIters 1,2
     TEST_CASE("bench_ocl_jacobi_bs_scalar_vs_vector")
     {
         using std::min;
@@ -404,7 +400,9 @@ namespace mgcl_bench_jacobi_blockstencil
                                                .append("x")
                                                .append(std::to_string(n))
                                                .append("x")
-                                               .append(std::to_string(o));
+                                               .append(std::to_string(o))
+                                               .append("_iters")
+                                               .append(std::to_string(iters));
 
                         bench.run(std::string(name).c_str(), [&] { //
                             mgcl::MultigridEngine::jacobi(p, lv0, iters, false, stepsPerIter);
@@ -511,7 +509,9 @@ namespace mgcl_bench_jacobi_blockstencil
                                                .append("x")
                                                .append(std::to_string(obs))
                                                .append("_blocksize_")
-                                               .append(std::to_string(blocksize));
+                                               .append(std::to_string(blocksize))
+                                               .append("_iters")
+                                               .append(std::to_string(iters));
 
                         bench.run(std::string(name).c_str(), [&] { //
                             jacobi(args);
@@ -614,7 +614,9 @@ namespace mgcl_bench_jacobi_blockstencil
                                                .append("x")
                                                .append(std::to_string(obs))
                                                .append("_blocksize_")
-                                               .append(std::to_string(blocksize));
+                                               .append(std::to_string(blocksize))
+                                               .append("_iters")
+                                               .append(std::to_string(iters));
 
                         bench.run(std::string(name).c_str(), [&] { //
                             jacobi(args);
@@ -716,7 +718,9 @@ namespace mgcl_bench_jacobi_blockstencil
                                                .append("x")
                                                .append(std::to_string(obs))
                                                .append("_blocksize_")
-                                               .append(std::to_string(blocksize));
+                                               .append(std::to_string(blocksize))
+                                               .append("_iters")
+                                               .append(std::to_string(iters));
 
                         bench.run(std::string(name).c_str(), [&] { //
                             jacobi(args);
@@ -819,7 +823,9 @@ namespace mgcl_bench_jacobi_blockstencil
                                                .append("x")
                                                .append(std::to_string(obs))
                                                .append("_blocksize_")
-                                               .append(std::to_string(blocksize));
+                                               .append(std::to_string(blocksize))
+                                               .append("_iters")
+                                               .append(std::to_string(iters));
 
                         bench.run(std::string(name).c_str(), [&] { //
                             jacobi(args);
