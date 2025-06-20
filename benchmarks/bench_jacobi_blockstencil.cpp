@@ -715,7 +715,7 @@ namespace mgcl_bench_jacobi_blockstencil
                         res.o = obs;
                         res.iters = iters;
                         res.spi = stepsPerIter;
-                        res.blocksize = 1;
+                        res.blocksize = blocksize;
                         results.push_back(res);
                     }
             }
@@ -820,7 +820,7 @@ namespace mgcl_bench_jacobi_blockstencil
                         res.o = obs;
                         res.iters = iters;
                         res.spi = stepsPerIter;
-                        res.blocksize = 1;
+                        res.blocksize = blocksize;
                         results.push_back(res);
                     }
             }
@@ -924,7 +924,7 @@ namespace mgcl_bench_jacobi_blockstencil
                         res.o = obs;
                         res.iters = iters;
                         res.spi = stepsPerIter;
-                        res.blocksize = 1;
+                        res.blocksize = blocksize;
                         results.push_back(res);
                     }
             }
@@ -1029,7 +1029,7 @@ namespace mgcl_bench_jacobi_blockstencil
                         res.o = obs;
                         res.iters = iters;
                         res.spi = stepsPerIter;
-                        res.blocksize = 1;
+                        res.blocksize = blocksize;
                         results.push_back(res);
                     }
             }
@@ -1236,7 +1236,7 @@ namespace mgcl_bench_jacobi_blockstencil
                         res.o = obs;
                         res.iters = iters;
                         res.spi = stepsPerIter;
-                        res.blocksize = 1;
+                        res.blocksize = blocksize;
                         results.push_back(res);
                     }
             }
@@ -1315,7 +1315,7 @@ namespace mgcl_bench_jacobi_blockstencil
                         res.o = obs;
                         res.iters = iters;
                         res.spi = stepsPerIter;
-                        res.blocksize = 1;
+                        res.blocksize = blocksize;
                         results.push_back(res);
                     }
             }
@@ -1394,7 +1394,7 @@ namespace mgcl_bench_jacobi_blockstencil
                         res.o = obs;
                         res.iters = iters;
                         res.spi = stepsPerIter;
-                        res.blocksize = 1;
+                        res.blocksize = blocksize;
                         results.push_back(res);
                     }
             }
@@ -1473,7 +1473,7 @@ namespace mgcl_bench_jacobi_blockstencil
                         res.o = obs;
                         res.iters = iters;
                         res.spi = stepsPerIter;
-                        res.blocksize = 1;
+                        res.blocksize = blocksize;
                         results.push_back(res);
                     }
             }
