@@ -119,9 +119,6 @@ TEST_CASE("solve_bs_periodic_blocksize1")
             std::shared_ptr<mgcl::CuboidBS> vbs = std::make_shared<mgcl::CuboidBS>(N, N, N, 0, 0, 0, blocksize);
             std::shared_ptr<mgcl::CuboidBS> fbs = std::make_shared<mgcl::CuboidBS>(N, N, N, 0, 0, 0, blocksize);
             // mgcl::Blockstencil bs(Nblockstencil, Nblockstencil, Nblockstencil, 3, blocksize, 0, 0, 0);
-            mgcl::FixedStencil fs(3);
-
-            mgcl_test::fill27pLaplace(fs, h, false);
 
             // bs_inv.dumpToFile("bs_inv.txt");
             // bs.dumpToFile("bs.txt");

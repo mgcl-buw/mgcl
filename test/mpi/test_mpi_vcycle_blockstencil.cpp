@@ -1,0 +1,1585 @@
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
+
+#include <algorithm>
+#include <cmath>
+#include <iomanip>
+#include <iostream>
+#include <memory>
+
+#include "../../src/mgcl/cuboid.hpp"
+#include "../../src/mgcl/mpi_level_data.hpp"
+#include "../../src/mgcl/mpi_util.hpp"
+#include "../../src/mgcl/problem.hpp"
+#include "../cli_args.hpp"
+#include "../device_type_generator.hpp"
+#include "../test_utility.hpp"
+
+#include "mpi.h"
+
+std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid& solution, mgcl::Cuboid& approximation);
+double calculateMaxError(mgcl::Cuboid& error);
+double calculateErrorNorm(double h, mgcl::Cuboid& error);
+
+// Tests if vcycle is correct for multiple processes but everything is actually done on one process, i.e.
+// gathering and scattering happens on level 0.
+// With 1 process mgcl should detect that MPI is actually not used, thus this test should behave like the solve tests.
+// Uses only 1 blockstencil component, so this should be equal to scalar case.
+// Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_GPU_immediate_gather_scatter_blockstencil_size1
+TEST_CASE("MPI_vcycle_GPU_immediate_gather_scatter_blockstencil_size1")
+{
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    using std::min;
+
+    // global grid sizes
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    int periodic = 1;
+    int gh = 1;
+    int blocksize = 1;
+    double h = 1.0 / (double)m;
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    // REQUIRE(mpi_size == 8);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    std::cout << "mpi rank: " << mpi_rank << std::endl;
+
+    /* Initialize start and end for local grid */
+    int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+    int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+    int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+    int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+    int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+    int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+    int ml = (m_end - m_start) + 1;
+    int nl = (n_end - n_start) + 1;
+    int ol = (o_end - o_start) + 1;
+
+    CAPTURE(ml, nl, ol);
+
+    // print coords and boundaries per rank
+    // if (mpi_rank == 0)
+    //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+    // for (int i = 0; i < mpi_size; i++)
+    // {
+    //     MPI_Barrier(mpi_comm);
+    //     if (mpi_rank == i)
+    //     {
+    //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+    //                   << m_start << ";" << m_end << ";"
+    //                   << n_start << ";" << n_end << ";"
+    //                   << o_start << ";" << o_end << std::endl;
+    //     }
+    // }
+
+    REQUIRE(ml > 0);
+    REQUIRE(ml <= m);
+    REQUIRE(nl > 0);
+    REQUIRE(nl <= n);
+    REQUIRE(ol > 0);
+    REQUIRE(ol <= o);
+
+    // Set up 4th order periodic problem
+    int ghin = 0; // TODO check with ghin > 0
+    auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+    auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+    auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+    mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+
+    // Create local slices
+    std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+    std::shared_ptr<mgcl::Cuboid> floc(f->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+    std::shared_ptr<mgcl::Cuboid> solutionloc(solution->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+
+    std::shared_ptr<mgcl::CuboidBS> vbs = std::make_shared<mgcl::CuboidBS>(m, n, o, 0, 0, 0, blocksize);
+    std::shared_ptr<mgcl::CuboidBS> fbs = std::make_shared<mgcl::CuboidBS>(m, n, o, 0, 0, 0, blocksize);
+
+    // fill v with values of v1 and v2, vice versa for f
+    mgcl_test::copyCuboidToCuboidBS(*v, *vbs, 1, 1, 1);
+    mgcl_test::copyCuboidToCuboidBS(*f, *fbs, 1, 1, 1);
+
+    std::shared_ptr<mgcl::CuboidBS> vbsloc(vbs->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+    std::shared_ptr<mgcl::CuboidBS> fbsloc(fbs->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+
+    // Create local problem
+    mgcl::Problem p(ml, nl, ol, fbsloc, vbsloc, m, n, o);
+    // p.setIgnoreTol(true);
+    // p.setMaxiterVcycles(maxIterVCycles);
+    // p.setTol(tol);
+    // p.setNu1(nu1);
+    // p.setNu2(nu2);
+    // p.setOmega(omega);
+    // p.setMaxlevel(maxlevel);
+    p.setDeviceType(deviceType);
+    p.setUseOpencl(true);
+    p.setReadResults(true);
+    p.setGhosts(gh);
+    p.setGhostsIn(ghin);
+    p.setMpiLevelThreshold(0);
+    p.setMpiComm(mpi_comm);
+    p.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
+
+    auto bs = p.getBlockstencil();
+    mgcl_test::fill7pLaplace(*bs, h, false);
+    // bs->dumpToFile("bs.txt");
+    auto restr = p.getRestrictionBlockstencil();
+    auto prol = p.getProlongationBlockstencil();
+    mgcl_test::fill3dFullWeightRestrictionBlockstencil(*restr);
+    mgcl_test::fill3dBilinearProlongationBlockstencil(*prol);
+
+    p.solve();
+
+    mgcl_test::copyCuboidBSToCuboid(*vbsloc, *vloc, 1, 1, 1);
+
+    // Gather local approximations on rank 0 for checking.
+    if (mpi_rank > 0)
+        mgcl::mpi_util::gather(p.getMpiComm(), *vloc);
+    else
+    {
+        // copy from vloc to v first
+        for (int i = vloc->getGhostsM(); i < vloc->getM() + vloc->getGhostsM(); i++)
+            for (int j = vloc->getGhostsN(); j < vloc->getN() + vloc->getGhostsN(); j++)
+                for (int k = vloc->getGhostsO(); k < vloc->getO() + vloc->getGhostsO(); k++)
+                {
+                    (*v)[i][j][k] = (*vloc)[i][j][k];
+                }
+
+        // Gather into v from other processes
+        if (mpi_size > 1)
+            mgcl::mpi_util::gather(p.getMpiComm(), *v); // TODO check with different ghost amounts
+
+        // check if solution is good
+        auto err = calculateError(*solution, *v);
+        auto errNorm = calculateErrorNorm(1.0 / (double)m, *err);
+        auto errMax = calculateMaxError(*err);
+
+        std::cout << "seq MPI Blockstencil size 1" << std::endl;
+        std::cout << "rank 0: " << std::endl;
+        std::cout
+            << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+            << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+        // Running this with 1 proc yields
+        // ||e||_2 = 4.62293179000930129e-03
+        // e_max = 9.00816189282011015e-03
+        // which should be equal to the global result when run with multiple processors.
+
+        REQUIRE(errNorm < 1e-2);
+        REQUIRE(errMax < 1e-2);
+        REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(4.62293179000930129e-03));
+        REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(9.00816189282011015e-03));
+    }
+}
+
+// // Tests if vcycle is correct for multiple processes but everything is actually done on one process, i.e.
+// // gathering and scattering happens on level 0.
+// // With 1 process mgcl should detect that MPI is actually not used, thus this test should behave like the solve tests.
+// // Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_immediate_gather_scatter
+// TEST_CASE("MPI_vcycle_immediate_gather_scatter_Varying27p")
+// {
+//     using std::min;
+
+//     // global grid sizes
+//     int m = 16;
+//     int n = 16;
+//     int o = 16;
+//     int periodic = 1;
+//     int gh = 1;
+
+//     // Problem parameters
+//     double tol = 1e-7;
+//     int nu1 = 2;
+//     int nu2 = 2;
+//     double omega = 0.8;
+//     int maxIterVCycles = 5;
+
+//     // check if mpi is initialized
+//     int isInitialized = 0;
+//     MPI_Initialized(&isInitialized);
+//     REQUIRE(isInitialized);
+
+//     MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+//     // check number of processes
+//     int mpi_size = -1;
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     // REQUIRE(mpi_size == 8);
+
+//     // MPI_Comm_set_errhandler(mpi_comm, MPI_ERRORS_RETURN);
+
+//     /* MPI variables */
+//     int mpi_rank;
+//     int mpi_dims[3] = {0, 0, 0};
+//     int mpi_periods[3] = {periodic, periodic, periodic};
+//     int mpi_coords[3];
+
+//     /* Initialize cartesian process grid */
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     MPI_Dims_create(mpi_size, 3, mpi_dims);
+//     MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+//     MPI_Comm_rank(mpi_comm, &mpi_rank);
+//     MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+//     /* Initialize start and end for local grid */
+//     int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+//     int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+//     int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+//     int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+//     int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+//     int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+//     int ml = (m_end - m_start) + 1;
+//     int nl = (n_end - n_start) + 1;
+//     int ol = (o_end - o_start) + 1;
+
+//     CAPTURE(ml, nl, ol);
+
+//     // print coords and boundaries per rank
+//     // if (mpi_rank == 0)
+//     //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+//     // for (int i = 0; i < mpi_size; i++)
+//     // {
+//     //     MPI_Barrier(mpi_comm);
+//     //     if (mpi_rank == i)
+//     //     {
+//     //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+//     //                   << m_start << ";" << m_end << ";"
+//     //                   << n_start << ";" << n_end << ";"
+//     //                   << o_start << ";" << o_end << std::endl;
+//     //     }
+//     // }
+
+//     REQUIRE(ml > 0);
+//     REQUIRE(ml <= m);
+//     REQUIRE(nl > 0);
+//     REQUIRE(nl <= n);
+//     REQUIRE(ol > 0);
+//     REQUIRE(ol <= o);
+
+//     // Set up 4th order periodic problem
+//     int ghin = 0; // TODO check with ghin > 0
+//     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+
+//     // Create local slices
+//     std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> floc(f->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> solutionloc(solution->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+
+//     // Create local problem
+//     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
+//     p.setMaxiterVcycles(maxIterVCycles);
+//     p.setOmega(omega);
+//     p.setNu1(nu1);
+//     p.setNu2(nu2);
+//     p.setTol(tol);
+//     p.setGhosts(gh);
+//     p.setGhostsIn(ghin);
+//     p.setMpiLevelThreshold(0);
+//     p.setMpiComm(mpi_comm);
+
+//     p.setStencilType(mgcl::MGCL_VARYING);
+//     auto& sv = *p.getStencilValues();
+
+//     if (mpi_rank == 0)
+//     {
+//         REQUIRE(sv.getM() == m);
+//         REQUIRE(sv.getM() == n);
+//         REQUIRE(sv.getM() == o);
+//     }
+
+//     double h = 1.0 / static_cast<double>(m);
+//     mgcl_test::fill7pLaplace(sv, h, false);
+
+//     p.solveSeq();
+
+//     // Gather local approximations on rank 0 for checking.
+//     if (mpi_rank > 0)
+//         mgcl::mpi_util::gather(p.getMpiComm(), *vloc);
+//     else
+//     {
+//         // copy from vloc to v first
+//         for (int i = vloc->getGhostsM(); i < vloc->getM() + vloc->getGhostsM(); i++)
+//             for (int j = vloc->getGhostsN(); j < vloc->getN() + vloc->getGhostsN(); j++)
+//                 for (int k = vloc->getGhostsO(); k < vloc->getO() + vloc->getGhostsO(); k++)
+//                 {
+//                     (*v)[i][j][k] = (*vloc)[i][j][k];
+//                 }
+
+//         // Gather into v from other processes
+//         if (mpi_size > 1)
+//             mgcl::mpi_util::gather(p.getMpiComm(), *v); // TODO check with different ghost amounts
+
+//         // check if solution is good
+//         auto err = calculateError(*solution, *v);
+//         auto errNorm = calculateErrorNorm(1.0 / (double)m, *err);
+//         auto errMax = calculateMaxError(*err);
+
+//         std::cout << "seq MPI Varying27p" << std::endl;
+//         std::cout << "rank 0: " << std::endl;
+//         std::cout
+//             << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+//             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+//         // Running this with 1 proc yields
+//         // ||e||_2 = 2.79451354429798363e-03
+//         // e_max = 2.89860791352128345e-03
+//         // which should be equal to the global result when run with multiple processors.
+
+//         REQUIRE(errNorm < 1e-2);
+//         REQUIRE(errMax < 1e-2);
+//         REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(2.79451354429798363e-03));
+//         REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(2.89860791352128345e-03));
+//     }
+// }
+
+// // Tests if vcycle is correct for multiple processes with mpiLevelThreshold = 1, so stencil values are gathered
+// // for level 1 from level 0, which is a special case regarding the setup.
+// // Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_threshold_eq_1_Varying27p
+// TEST_CASE("MPI_vcycle_threshold_eq_1_Varying27p")
+// {
+//     using std::min;
+
+//     // global grid sizes
+//     int m = 16;
+//     int n = 16;
+//     int o = 16;
+//     int periodic = 1;
+//     int gh = 1;
+
+//     // Problem parameters
+//     double tol = 1e-7;
+//     int nu1 = 2;
+//     int nu2 = 2;
+//     double omega = 0.8;
+//     int maxIterVCycles = 5;
+
+//     // check if mpi is initialized
+//     int isInitialized = 0;
+//     MPI_Initialized(&isInitialized);
+//     REQUIRE(isInitialized);
+
+//     MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+//     // check number of processes
+//     int mpi_size = -1;
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     // REQUIRE(mpi_size == 8);
+
+//     /* MPI variables */
+//     int mpi_rank;
+//     int mpi_dims[3] = {0, 0, 0};
+//     int mpi_periods[3] = {periodic, periodic, periodic};
+//     int mpi_coords[3];
+
+//     /* Initialize cartesian process grid */
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     MPI_Dims_create(mpi_size, 3, mpi_dims);
+//     MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+//     MPI_Comm_rank(mpi_comm, &mpi_rank);
+//     MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+//     /* Initialize start and end for local grid */
+//     int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+//     int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+//     int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+//     int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+//     int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+//     int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+//     int ml = (m_end - m_start) + 1;
+//     int nl = (n_end - n_start) + 1;
+//     int ol = (o_end - o_start) + 1;
+
+//     CAPTURE(ml, nl, ol);
+
+//     // print coords and boundaries per rank
+//     // if (mpi_rank == 0)
+//     //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+//     // for (int i = 0; i < mpi_size; i++)
+//     // {
+//     //     MPI_Barrier(mpi_comm);
+//     //     if (mpi_rank == i)
+//     //     {
+//     //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+//     //                   << m_start << ";" << m_end << ";"
+//     //                   << n_start << ";" << n_end << ";"
+//     //                   << o_start << ";" << o_end << std::endl;
+//     //     }
+//     // }
+
+//     REQUIRE(ml > 0);
+//     REQUIRE(ml <= m);
+//     REQUIRE(nl > 0);
+//     REQUIRE(nl <= n);
+//     REQUIRE(ol > 0);
+//     REQUIRE(ol <= o);
+
+//     // Set up 4th order periodic problem
+//     int ghin = 0; // TODO check with ghin > 0
+//     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+
+//     // Create local slices
+//     std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> floc(f->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> solutionloc(solution->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+
+//     // Create local problem
+//     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
+//     p.setMaxiterVcycles(maxIterVCycles);
+//     p.setOmega(omega);
+//     p.setNu1(nu1);
+//     p.setNu2(nu2);
+//     p.setTol(tol);
+//     p.setGhosts(gh);
+//     p.setGhostsIn(ghin);
+//     p.setMpiLevelThreshold(1);
+//     p.setMpiComm(mpi_comm);
+
+//     p.setStencilType(mgcl::MGCL_VARYING);
+//     auto& sv = *p.getStencilValues();
+
+//     if (mpi_rank == 0)
+//     {
+//         // For threshold level 0, stencilValues must have global sizes, else local sizes.
+//         REQUIRE(p.getMpiLevelThreshold() == 1);
+//         REQUIRE(sv.getM() == ml);
+//         REQUIRE(sv.getN() == nl);
+//         REQUIRE(sv.getO() == ol);
+//     }
+
+//     double h = 1.0 / static_cast<double>(m);
+//     mgcl_test::fill7pLaplace(sv, h, false);
+
+//     p.solveSeq();
+
+//     // Gather local approximations on rank 0 for checking.
+//     if (mpi_rank > 0)
+//         mgcl::mpi_util::gather(p.getMpiComm(), *vloc);
+//     else
+//     {
+//         // copy from vloc to v first
+//         for (int i = vloc->getGhostsM(); i < vloc->getM() + vloc->getGhostsM(); i++)
+//             for (int j = vloc->getGhostsN(); j < vloc->getN() + vloc->getGhostsN(); j++)
+//                 for (int k = vloc->getGhostsO(); k < vloc->getO() + vloc->getGhostsO(); k++)
+//                 {
+//                     (*v)[i][j][k] = (*vloc)[i][j][k];
+//                 }
+
+//         // Gather into v from other processes
+//         if (mpi_size > 1)
+//             mgcl::mpi_util::gather(p.getMpiComm(), *v); // TODO check with different ghost amounts
+//     }
+
+//     // dump local grids
+//     // if (mpi_rank > 0)
+//     // {
+//     //     vloc->dumpToFile("vloc" + std::to_string(mpi_rank) + ".txt", true);
+//     // }
+//     // else
+//     // {
+//     //     solution->dumpToFile("solution" + std::to_string(mpi_rank) + ".txt", true);
+//     //     v->dumpToFile("v" + std::to_string(mpi_rank) + ".txt", true);
+//     // }
+
+//     if (mpi_rank == 0)
+//     {
+
+//         // check if solution is good
+//         auto err = calculateError(*solution, *v);
+//         auto errNorm = calculateErrorNorm(1.0 / (double)m, *err);
+//         auto errMax = calculateMaxError(*err);
+
+//         std::cout << "seq MPI Varying27p" << std::endl;
+//         std::cout << "rank 0: " << std::endl;
+//         std::cout
+//             << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+//             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+//         // Running this with 1 proc yields
+//         // ||e||_2 = 2.79451354429798363e-03
+//         // e_max = 2.89860791352128345e-03
+//         // which should be equal to the global result when run with multiple processors.
+
+//         REQUIRE(errNorm < 1e-2);
+//         REQUIRE(errMax < 1e-2);
+//         REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(2.79451354429798363e-03));
+//         REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(2.89860791352128345e-03));
+//     }
+// }
+
+// // Tests if vcycle is correct for multiple processes with mpiLevelThreshold = 2, so stencil values are gathered
+// // for level 2 from level 1. StencilValues on level 1 on rank 0 must have halve of global sizes.
+// // Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_threshold_eq_2_Varying27p
+// TEST_CASE("MPI_vcycle_threshold_eq_2_Varying27p")
+// {
+//     using std::min;
+
+//     // global grid sizes
+//     int m = 16;
+//     int n = 16;
+//     int o = 16;
+//     int periodic = 1;
+//     int gh = 1;
+
+//     // Problem parameters
+//     double tol = 1e-7;
+//     int nu1 = 2;
+//     int nu2 = 2;
+//     double omega = 0.8;
+//     int maxIterVCycles = 5;
+
+//     // check if mpi is initialized
+//     int isInitialized = 0;
+//     MPI_Initialized(&isInitialized);
+//     REQUIRE(isInitialized);
+
+//     MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+//     // check number of processes
+//     int mpi_size = -1;
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     // REQUIRE(mpi_size == 8);
+
+//     /* MPI variables */
+//     int mpi_rank;
+//     int mpi_dims[3] = {0, 0, 0};
+//     int mpi_periods[3] = {periodic, periodic, periodic};
+//     int mpi_coords[3];
+
+//     /* Initialize cartesian process grid */
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     MPI_Dims_create(mpi_size, 3, mpi_dims);
+//     MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+//     MPI_Comm_rank(mpi_comm, &mpi_rank);
+//     MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+//     /* Initialize start and end for local grid */
+//     int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+//     int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+//     int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+//     int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+//     int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+//     int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+//     int ml = (m_end - m_start) + 1;
+//     int nl = (n_end - n_start) + 1;
+//     int ol = (o_end - o_start) + 1;
+
+//     CAPTURE(ml, nl, ol);
+
+//     // print coords and boundaries per rank
+//     // if (mpi_rank == 0)
+//     //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+//     // for (int i = 0; i < mpi_size; i++)
+//     // {
+//     //     MPI_Barrier(mpi_comm);
+//     //     if (mpi_rank == i)
+//     //     {
+//     //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+//     //                   << m_start << ";" << m_end << ";"
+//     //                   << n_start << ";" << n_end << ";"
+//     //                   << o_start << ";" << o_end << std::endl;
+//     //     }
+//     // }
+
+//     REQUIRE(ml > 0);
+//     REQUIRE(ml <= m);
+//     REQUIRE(nl > 0);
+//     REQUIRE(nl <= n);
+//     REQUIRE(ol > 0);
+//     REQUIRE(ol <= o);
+
+//     // Set up 4th order periodic problem
+//     int ghin = 0; // TODO check with ghin > 0
+//     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+
+//     // Create local slices
+//     std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> floc(f->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> solutionloc(solution->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+
+//     // Create local problem
+//     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
+//     p.setMaxiterVcycles(maxIterVCycles);
+//     p.setOmega(omega);
+//     p.setNu1(nu1);
+//     p.setNu2(nu2);
+//     p.setTol(tol);
+//     p.setGhosts(gh);
+//     p.setGhostsIn(ghin);
+//     p.setMpiLevelThreshold(2);
+//     p.setMpiComm(mpi_comm);
+
+//     p.setStencilType(mgcl::MGCL_VARYING);
+//     auto& sv = *p.getStencilValues();
+
+//     if (mpi_rank == 0)
+//     {
+//         // For threshold level 0, stencilValues must have global sizes, else local sizes.
+//         REQUIRE(p.getMpiLevelThreshold() == 2);
+//         REQUIRE(sv.getM() == ml);
+//         REQUIRE(sv.getN() == nl);
+//         REQUIRE(sv.getO() == ol);
+//     }
+
+//     double h = 1.0 / static_cast<double>(m);
+//     mgcl_test::fill7pLaplace(sv, h, false);
+
+//     p.solveSeq();
+
+//     // Gather local approximations on rank 0 for checking.
+//     if (mpi_rank > 0)
+//         mgcl::mpi_util::gather(p.getMpiComm(), *vloc);
+//     else
+//     {
+//         // copy from vloc to v first
+//         for (int i = vloc->getGhostsM(); i < vloc->getM() + vloc->getGhostsM(); i++)
+//             for (int j = vloc->getGhostsN(); j < vloc->getN() + vloc->getGhostsN(); j++)
+//                 for (int k = vloc->getGhostsO(); k < vloc->getO() + vloc->getGhostsO(); k++)
+//                 {
+//                     (*v)[i][j][k] = (*vloc)[i][j][k];
+//                 }
+
+//         // Gather into v from other processes
+//         if (mpi_size > 1)
+//             mgcl::mpi_util::gather(p.getMpiComm(), *v); // TODO check with different ghost amounts
+
+//         // check if solution is good
+//         auto err = calculateError(*solution, *v);
+//         auto errNorm = calculateErrorNorm(1.0 / (double)m, *err);
+//         auto errMax = calculateMaxError(*err);
+
+//         std::cout << "seq MPI Varying27p" << std::endl;
+//         std::cout << "rank 0: " << std::endl;
+//         std::cout
+//             << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+//             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+//         // Running this with 1 proc yields
+//         // ||e||_2 = 2.79451354429798363e-03
+//         // e_max = 2.89860791352128345e-03
+//         // which should be equal to the global result when run with multiple processors.
+
+//         REQUIRE(errNorm < 1e-2);
+//         REQUIRE(errMax < 1e-2);
+//         REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(2.79451354429798363e-03));
+//         REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(2.89860791352128345e-03));
+//     }
+// }
+
+// // Tests if vcycle is correct for multiple processes using OCL with mpiLevelThreshold = 1, so
+// //  stencil values are gathered for level 1 from level 0, which is a special case regarding the setup.
+// // Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_GPU_threshold_eq_1_Varying27p
+// TEST_CASE("MPI_vcycle_GPU_threshold_eq_1_Varying27p")
+// {
+//     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+//     using std::min;
+
+//     // global grid sizes
+//     int m = 16;
+//     int n = 16;
+//     int o = 16;
+//     int periodic = 1;
+//     int gh = 1;
+
+//     // Problem parameters
+//     double tol = 1e-7;
+//     int nu1 = 2;
+//     int nu2 = 2;
+//     double omega = 0.8;
+//     int maxIterVCycles = 5;
+
+//     // check if mpi is initialized
+//     int isInitialized = 0;
+//     MPI_Initialized(&isInitialized);
+//     REQUIRE(isInitialized);
+
+//     MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+//     // check number of processes
+//     int mpi_size = -1;
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     // REQUIRE(mpi_size == 8);
+
+//     /* MPI variables */
+//     int mpi_rank;
+//     int mpi_dims[3] = {0, 0, 0};
+//     int mpi_periods[3] = {periodic, periodic, periodic};
+//     int mpi_coords[3];
+
+//     /* Initialize cartesian process grid */
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     MPI_Dims_create(mpi_size, 3, mpi_dims);
+//     MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+//     MPI_Comm_rank(mpi_comm, &mpi_rank);
+//     MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+//     /* Initialize start and end for local grid */
+//     int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+//     int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+//     int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+//     int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+//     int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+//     int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+//     int ml = (m_end - m_start) + 1;
+//     int nl = (n_end - n_start) + 1;
+//     int ol = (o_end - o_start) + 1;
+
+//     CAPTURE(ml, nl, ol);
+
+//     // print coords and boundaries per rank
+//     // if (mpi_rank == 0)
+//     //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+//     // for (int i = 0; i < mpi_size; i++)
+//     // {
+//     //     MPI_Barrier(mpi_comm);
+//     //     if (mpi_rank == i)
+//     //     {
+//     //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+//     //                   << m_start << ";" << m_end << ";"
+//     //                   << n_start << ";" << n_end << ";"
+//     //                   << o_start << ";" << o_end << std::endl;
+//     //     }
+//     // }
+
+//     REQUIRE(ml > 0);
+//     REQUIRE(ml <= m);
+//     REQUIRE(nl > 0);
+//     REQUIRE(nl <= n);
+//     REQUIRE(ol > 0);
+//     REQUIRE(ol <= o);
+
+//     // Set up 4th order periodic problem
+//     int ghin = 0; // TODO check with ghin > 0
+//     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+
+//     // Create local slices
+//     std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> floc(f->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> solutionloc(solution->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+
+//     // Create local problem
+//     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
+//     p.setMaxiterVcycles(maxIterVCycles);
+//     p.setDeviceType(deviceType);
+//     p.setUseOpencl(true);
+//     p.setReadResults(true);
+//     p.setOmega(omega);
+//     p.setNu1(nu1);
+//     p.setNu2(nu2);
+//     p.setTol(tol);
+//     p.setGhosts(gh);
+//     p.setGhostsIn(ghin);
+//     p.setMpiLevelThreshold(1);
+//     p.setMpiComm(mpi_comm);
+
+//     p.setStencilType(mgcl::MGCL_VARYING);
+//     auto& sv = *p.getStencilValues();
+
+//     if (mpi_rank == 0)
+//     {
+//         // For threshold level 0, stencilValues must have global sizes, else local sizes.
+//         REQUIRE(p.getMpiLevelThreshold() == 1);
+//         REQUIRE(sv.getM() == ml);
+//         REQUIRE(sv.getN() == nl);
+//         REQUIRE(sv.getO() == ol);
+//     }
+
+//     double h = 1.0 / static_cast<double>(m);
+//     mgcl_test::fill7pLaplace(sv, h, false);
+
+//     p.solve();
+
+//     // Gather local approximations on rank 0 for checking.
+//     if (mpi_rank > 0)
+//         mgcl::mpi_util::gather(p.getMpiComm(), *vloc);
+//     else
+//     {
+//         // copy from vloc to v first
+//         for (int i = vloc->getGhostsM(); i < vloc->getM() + vloc->getGhostsM(); i++)
+//             for (int j = vloc->getGhostsN(); j < vloc->getN() + vloc->getGhostsN(); j++)
+//                 for (int k = vloc->getGhostsO(); k < vloc->getO() + vloc->getGhostsO(); k++)
+//                 {
+//                     (*v)[i][j][k] = (*vloc)[i][j][k];
+//                 }
+
+//         // Gather into v from other processes
+//         if (mpi_size > 1)
+//             mgcl::mpi_util::gather(p.getMpiComm(), *v); // TODO check with different ghost amounts
+
+//         // check if solution is good
+//         auto err = calculateError(*solution, *v);
+//         auto errNorm = calculateErrorNorm(1.0 / (double)m, *err);
+//         auto errMax = calculateMaxError(*err);
+
+//         std::cout << "ocl MPI Varying27p" << std::endl;
+//         std::cout << "rank 0: " << std::endl;
+//         std::cout
+//             << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+//             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+//         // Running this with 1 proc yields
+//         // ||e||_2 = 2.79451354429819309e-03
+//         // e_max = 2.89860791352150159e-03
+//         // which should be equal to the global result when run with multiple processors.
+
+//         REQUIRE(errNorm < 1e-2);
+//         REQUIRE(errMax < 1e-2);
+//         REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(2.79451354429819309e-03, 1e-10));
+//         REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(2.89860791352150159e-03, 1e-10));
+//     }
+// }
+
+// // Tests if vcycle is correct for multiple processes using OCL with mpiLevelThreshold = 2,
+// // so stencil values are gathered for level 2 from level 1.
+// // StencilValues on level 1 on rank 0 must have halve of global sizes.
+// // Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_GPU_threshold_eq_2_Varying27p
+// TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
+// {
+//     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+//     using std::min;
+
+//     // global grid sizes
+//     int m = 16;
+//     int n = 16;
+//     int o = 16;
+//     int periodic = 1;
+//     int gh = 1;
+
+//     // Problem parameters
+//     double tol = 1e-7;
+//     int nu1 = 2;
+//     int nu2 = 2;
+//     double omega = 0.8;
+//     int maxIterVCycles = 5;
+
+//     // check if mpi is initialized
+//     int isInitialized = 0;
+//     MPI_Initialized(&isInitialized);
+//     REQUIRE(isInitialized);
+
+//     MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+//     // check number of processes
+//     int mpi_size = -1;
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     // REQUIRE(mpi_size == 8);
+
+//     /* MPI variables */
+//     int mpi_rank;
+//     int mpi_dims[3] = {0, 0, 0};
+//     int mpi_periods[3] = {periodic, periodic, periodic};
+//     int mpi_coords[3];
+
+//     /* Initialize cartesian process grid */
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     MPI_Dims_create(mpi_size, 3, mpi_dims);
+//     MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+//     MPI_Comm_rank(mpi_comm, &mpi_rank);
+//     MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+//     /* Initialize start and end for local grid */
+//     int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+//     int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+//     int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+//     int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+//     int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+//     int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+//     int ml = (m_end - m_start) + 1;
+//     int nl = (n_end - n_start) + 1;
+//     int ol = (o_end - o_start) + 1;
+
+//     CAPTURE(ml, nl, ol);
+
+//     // print coords and boundaries per rank
+//     // if (mpi_rank == 0)
+//     //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+//     // for (int i = 0; i < mpi_size; i++)
+//     // {
+//     //     MPI_Barrier(mpi_comm);
+//     //     if (mpi_rank == i)
+//     //     {
+//     //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+//     //                   << m_start << ";" << m_end << ";"
+//     //                   << n_start << ";" << n_end << ";"
+//     //                   << o_start << ";" << o_end << std::endl;
+//     //     }
+//     // }
+
+//     REQUIRE(ml > 0);
+//     REQUIRE(ml <= m);
+//     REQUIRE(nl > 0);
+//     REQUIRE(nl <= n);
+//     REQUIRE(ol > 0);
+//     REQUIRE(ol <= o);
+
+//     // Set up 4th order periodic problem
+//     int ghin = 0; // TODO check with ghin > 0
+//     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+
+//     // Create local slices
+//     std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> floc(f->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> solutionloc(solution->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+
+//     // Create local problem
+//     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
+//     p.setMaxiterVcycles(maxIterVCycles);
+//     p.setDeviceType(deviceType);
+//     p.setUseOpencl(true);
+//     p.setReadResults(true);
+//     p.setOmega(omega);
+//     p.setNu1(nu1);
+//     p.setNu2(nu2);
+//     p.setTol(tol);
+//     p.setGhosts(gh);
+//     p.setGhostsIn(ghin);
+//     p.setMpiLevelThreshold(2);
+//     p.setMpiComm(mpi_comm);
+
+//     p.setStencilType(mgcl::MGCL_VARYING);
+//     auto& sv = *p.getStencilValues();
+
+//     if (mpi_rank == 0)
+//     {
+//         // For threshold level 0, stencilValues must have global sizes, else local sizes.
+//         REQUIRE(p.getMpiLevelThreshold() == 2);
+//         REQUIRE(sv.getM() == ml);
+//         REQUIRE(sv.getN() == nl);
+//         REQUIRE(sv.getO() == ol);
+//     }
+
+//     double h = 1.0 / static_cast<double>(m);
+//     mgcl_test::fill7pLaplace(sv, h, false);
+//     // mgcl_test::fill27pLaplace(sv, h, false);
+
+//     p.solve();
+
+//     // Gather local approximations on rank 0 for checking.
+//     if (mpi_rank > 0)
+//         mgcl::mpi_util::gather(p.getMpiComm(), *vloc);
+//     else
+//     {
+//         // copy from vloc to v first
+//         for (int i = vloc->getGhostsM(); i < vloc->getM() + vloc->getGhostsM(); i++)
+//             for (int j = vloc->getGhostsN(); j < vloc->getN() + vloc->getGhostsN(); j++)
+//                 for (int k = vloc->getGhostsO(); k < vloc->getO() + vloc->getGhostsO(); k++)
+//                 {
+//                     (*v)[i][j][k] = (*vloc)[i][j][k];
+//                 }
+
+//         // Gather into v from other processes
+//         if (mpi_size > 1)
+//             mgcl::mpi_util::gather(p.getMpiComm(), *v); // TODO check with different ghost amounts
+
+//         // check if solution is good
+//         auto err = calculateError(*solution, *v);
+//         auto errNorm = calculateErrorNorm(1.0 / (double)m, *err);
+//         auto errMax = calculateMaxError(*err);
+
+//         std::cout << "ocl MPI Varying27p" << std::endl;
+//         std::cout << "rank 0: " << std::endl;
+//         std::cout
+//             << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+//             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+//         // Running this with 1 proc yields
+//         // ||e||_2 = 2.79451354429819309e-03
+//         // e_max = 2.89860791352150159e-03
+//         // which should be equal to the global result when run with multiple processors.
+
+//         REQUIRE(errNorm < 1e-2);
+//         REQUIRE(errMax < 1e-2);
+//         REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(2.79451354429819309e-03, 1e-10));
+//         REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(2.89860791352150159e-03, 1e-10));
+//     }
+// }
+
+// // Tests if vcycle is correct for multiple processes using OCL with mpiLevelThreshold = 2,
+// // so stencil values are gathered for level 2 from level 1.
+// // Also uses different amounts of jacobi iterations without ghost update in-between.
+// // StencilValues on level 1 on rank 0 must have halve of global sizes.
+// // Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters
+// TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters")
+// {
+//     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+//     using std::min;
+
+//     // global grid sizes
+//     int m = 16;
+//     int n = 16;
+//     int o = 16;
+//     int periodic = 1;
+
+//     // Problem parameters
+//     double tol = 1e-7;
+//     int nu1 = 2;
+//     int nu2 = 2;
+//     double omega = 0.8;
+//     int maxIterVCycles = 5;
+//     int jacobiItersPerKernel = 3;
+//     int gh = jacobiItersPerKernel;
+
+//     // check if mpi is initialized
+//     int isInitialized = 0;
+//     MPI_Initialized(&isInitialized);
+//     REQUIRE(isInitialized);
+
+//     MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+//     // check number of processes
+//     int mpi_size = -1;
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     // REQUIRE(mpi_size == 8);
+
+//     /* MPI variables */
+//     int mpi_rank;
+//     int mpi_dims[3] = {0, 0, 0};
+//     int mpi_periods[3] = {periodic, periodic, periodic};
+//     int mpi_coords[3];
+
+//     /* Initialize cartesian process grid */
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     MPI_Dims_create(mpi_size, 3, mpi_dims);
+//     MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+//     MPI_Comm_rank(mpi_comm, &mpi_rank);
+//     MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+//     /* Initialize start and end for local grid */
+//     int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+//     int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+//     int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+//     int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+//     int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+//     int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+//     int ml = (m_end - m_start) + 1;
+//     int nl = (n_end - n_start) + 1;
+//     int ol = (o_end - o_start) + 1;
+
+//     CAPTURE(ml, nl, ol);
+
+//     // print coords and boundaries per rank
+//     // if (mpi_rank == 0)
+//     //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+//     // for (int i = 0; i < mpi_size; i++)
+//     // {
+//     //     MPI_Barrier(mpi_comm);
+//     //     if (mpi_rank == i)
+//     //     {
+//     //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+//     //                   << m_start << ";" << m_end << ";"
+//     //                   << n_start << ";" << n_end << ";"
+//     //                   << o_start << ";" << o_end << std::endl;
+//     //     }
+//     // }
+
+//     REQUIRE(ml > 0);
+//     REQUIRE(ml <= m);
+//     REQUIRE(nl > 0);
+//     REQUIRE(nl <= n);
+//     REQUIRE(ol > 0);
+//     REQUIRE(ol <= o);
+
+//     // Set up 4th order periodic problem
+//     int ghin = 0; // TODO check with ghin > 0
+//     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+
+//     // Create local slices
+//     std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> floc(f->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> solutionloc(solution->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+
+//     // Create local problem
+//     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
+//     p.setMaxiterVcycles(maxIterVCycles);
+//     p.setDeviceType(deviceType);
+//     p.setUseOpencl(true);
+//     p.setReadResults(true);
+//     p.setOmega(omega);
+//     p.setNu1(nu1);
+//     p.setNu2(nu2);
+//     p.setTol(tol);
+//     p.setGhosts(gh);
+//     p.setGhostsIn(ghin);
+//     p.setMpiLevelThreshold(2);
+//     p.setMpiComm(mpi_comm);
+//     p.setJacobiIterationsPerKernel(jacobiItersPerKernel);
+
+//     p.setStencilType(mgcl::MGCL_VARYING);
+//     auto& sv = *p.getStencilValues();
+
+//     if (mpi_rank == 0)
+//     {
+//         // For threshold level 0 or 1, stencilValues must have global sizes, else local sizes.
+//         REQUIRE(p.getMpiLevelThreshold() == 2);
+//         REQUIRE(sv.getM() == ml);
+//         REQUIRE(sv.getN() == nl);
+//         REQUIRE(sv.getO() == ol);
+//     }
+
+//     double h = 1.0 / static_cast<double>(m);
+//     mgcl_test::fill7pLaplace(sv, h, false);
+
+//     p.solve();
+
+//     // Gather local approximations on rank 0 for checking.
+//     if (mpi_rank > 0)
+//         mgcl::mpi_util::gather(p.getMpiComm(), *vloc);
+//     else
+//     {
+//         // copy from vloc to v first
+//         for (int i = vloc->getGhostsM(); i < vloc->getM() + vloc->getGhostsM(); i++)
+//             for (int j = vloc->getGhostsN(); j < vloc->getN() + vloc->getGhostsN(); j++)
+//                 for (int k = vloc->getGhostsO(); k < vloc->getO() + vloc->getGhostsO(); k++)
+//                 {
+//                     (*v)[i][j][k] = (*vloc)[i][j][k];
+//                 }
+
+//         // Gather into v from other processes
+//         if (mpi_size > 1)
+//             mgcl::mpi_util::gather(p.getMpiComm(), *v); // TODO check with different ghost amounts
+
+//         // check if solution is good
+//         auto err = calculateError(*solution, *v);
+//         auto errNorm = calculateErrorNorm(1.0 / (double)m, *err);
+//         auto errMax = calculateMaxError(*err);
+
+//         std::cout << "seq MPI Varying27p" << std::endl;
+//         std::cout << "rank 0: " << std::endl;
+//         std::cout
+//             << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+//             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+
+//         // Running this with 1 proc yields
+//         // ||e||_2 = 2.79451354429819309e-03
+//         // e_max = 2.89860791352150159e-03
+//         // which should be equal to the global result when run with multiple processors.
+
+//         REQUIRE(errNorm < 1e-2);
+//         REQUIRE(errMax < 1e-2);
+//         REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(2.79451354429819309e-03, 1e-10));
+//         REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(2.89860791352150159e-03, 1e-10));
+//     }
+// }
+
+// // Tests if calling solve multiple times does not result in any MPI process to freeze.
+// // This is not a problem on the Laptop but apparently on Pleiades as of 03-2024.
+// // Checks both, sequential run and using OpenCL.
+// // Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_multiple_solve_calls
+// TEST_CASE("MPI_vcycle_multiple_solve_calls")
+// {
+//     using std::min;
+
+//     // global grid sizes
+//     int m = 16;
+//     int n = 16;
+//     int o = 16;
+//     int periodic = 1;
+//     int gh = 1;
+
+//     // check if mpi is initialized
+//     int isInitialized = 0;
+//     MPI_Initialized(&isInitialized);
+//     REQUIRE(isInitialized);
+
+//     MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+//     // check number of processes
+//     int mpi_size = -1;
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     // REQUIRE(mpi_size == 8);
+
+//     /* MPI variables */
+//     int mpi_rank;
+//     int mpi_dims[3] = {0, 0, 0};
+//     int mpi_periods[3] = {periodic, periodic, periodic};
+//     int mpi_coords[3];
+
+//     /* Initialize cartesian process grid */
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     MPI_Dims_create(mpi_size, 3, mpi_dims);
+//     MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+//     MPI_Comm_rank(mpi_comm, &mpi_rank);
+//     MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+//     /* Initialize start and end for local grid */
+//     int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+//     int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+//     int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+//     int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+//     int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+//     int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+//     int ml = (m_end - m_start) + 1;
+//     int nl = (n_end - n_start) + 1;
+//     int ol = (o_end - o_start) + 1;
+
+//     CAPTURE(ml, nl, ol);
+
+//     // print coords and boundaries per rank
+//     // if (mpi_rank == 0)
+//     //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+//     // for (int i = 0; i < mpi_size; i++)
+//     // {
+//     //     MPI_Barrier(mpi_comm);
+//     //     if (mpi_rank == i)
+//     //     {
+//     //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+//     //                   << m_start << ";" << m_end << ";"
+//     //                   << n_start << ";" << n_end << ";"
+//     //                   << o_start << ";" << o_end << std::endl;
+//     //     }
+//     // }
+
+//     REQUIRE(ml > 0);
+//     REQUIRE(ml <= m);
+//     REQUIRE(nl > 0);
+//     REQUIRE(nl <= n);
+//     REQUIRE(ol > 0);
+//     REQUIRE(ol <= o);
+
+//     int threshold = 1;
+//     CAPTURE(threshold);
+
+//     // Set up 4th order periodic problem
+//     int ghin = 0; // TODO check with ghin > 0
+//     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+
+//     // Create local slices
+//     std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> floc(f->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> solutionloc(solution->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+
+//     // Create local problem on host (not using OpenCL)
+//     mgcl::Problem p_seq(ml, nl, ol, floc, vloc, m, n, o);
+//     // p_seq.setMaxiterVcycles(1);
+//     p_seq.setUseOpencl(false);
+//     p_seq.setReadResults(true);
+//     p_seq.setGhosts(gh);
+//     p_seq.setGhostsIn(ghin);
+//     p_seq.setMpiLevelThreshold(threshold);
+//     p_seq.setMpiComm(mpi_comm);
+
+//     std::cout << "Seq First call on rank " << mpi_rank << " ..." << std::endl;
+//     p_seq.solve();
+//     MPI_Barrier(mpi_comm);
+//     std::cout << "Seq Second call on rank " << mpi_rank << " ..." << std::endl;
+//     p_seq.solve(true);
+//     MPI_Barrier(mpi_comm);
+//     std::cout << "Seq Done on rank " << mpi_rank << std::endl;
+
+//     // Create local problem using OpenCL
+//     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
+//     // p.setMaxiterVcycles(1);
+//     p.setDeviceType(CL_DEVICE_TYPE_GPU);
+//     p.setUseOpencl(true);
+//     p.setDeviceType(CL_DEVICE_TYPE_GPU);
+//     p.setReadResults(true);
+//     p.setGhosts(gh);
+//     p.setGhostsIn(ghin);
+//     p.setMpiLevelThreshold(threshold);
+//     p.setMpiComm(mpi_comm);
+
+//     std::cout << "OCL First call on rank " << mpi_rank << " ..." << std::endl;
+//     p.solve();
+//     MPI_Barrier(mpi_comm);
+//     std::cout << "OCL Second call on rank " << mpi_rank << " ..." << std::endl;
+//     p.solve(true);
+//     MPI_Barrier(mpi_comm);
+//     std::cout << "OCL Done on rank " << mpi_rank << std::endl;
+// }
+
+// // Checks if no process will freeze if one is already below tolerance while another is not, i.e.
+// // if global relres the same for each process.
+// // Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_different_relres
+// TEST_CASE("MPI_vcycle_different_relres")
+// {
+//     using std::min;
+
+//     // global grid sizes
+//     int m = 16;
+//     int n = 16;
+//     int o = 16;
+//     int periodic = 1;
+//     int gh = 1;
+
+//     double tol = 1e-1;
+//     int maxIterVCycles = 10;
+
+//     // check if mpi is initialized
+//     int isInitialized = 0;
+//     MPI_Initialized(&isInitialized);
+//     REQUIRE(isInitialized);
+
+//     MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+//     // check number of processes
+//     int mpi_size = -1;
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     // REQUIRE(mpi_size == 8);
+
+//     /* MPI variables */
+//     int mpi_rank;
+//     int mpi_dims[3] = {0, 0, 0};
+//     int mpi_periods[3] = {periodic, periodic, periodic};
+//     int mpi_coords[3];
+
+//     /* Initialize cartesian process grid */
+//     MPI_Comm_size(mpi_comm, &mpi_size);
+//     MPI_Dims_create(mpi_size, 3, mpi_dims);
+//     MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+//     MPI_Comm_rank(mpi_comm, &mpi_rank);
+//     MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+//     /* Initialize start and end for local grid */
+//     int m_start = (m / mpi_dims[0]) * mpi_coords[0] + min(mpi_coords[0], (m % mpi_dims[0]));
+//     int m_end = (m / mpi_dims[0]) * (mpi_coords[0] + 1) + min(mpi_coords[0] + 1, (m % mpi_dims[0])) - 1;
+//     int n_start = (n / mpi_dims[1]) * mpi_coords[1] + min(mpi_coords[1], (n % mpi_dims[1]));
+//     int n_end = (n / mpi_dims[1]) * (mpi_coords[1] + 1) + min(mpi_coords[1] + 1, (n % mpi_dims[1])) - 1;
+//     int o_start = (o / mpi_dims[2]) * mpi_coords[2] + min(mpi_coords[2], (o % mpi_dims[2]));
+//     int o_end = (o / mpi_dims[2]) * (mpi_coords[2] + 1) + min(mpi_coords[2] + 1, (o % mpi_dims[2])) - 1;
+
+//     int ml = (m_end - m_start) + 1;
+//     int nl = (n_end - n_start) + 1;
+//     int ol = (o_end - o_start) + 1;
+
+//     CAPTURE(ml, nl, ol);
+
+//     // print coords and boundaries per rank
+//     // if (mpi_rank == 0)
+//     //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+//     // for (int i = 0; i < mpi_size; i++)
+//     // {
+//     //     MPI_Barrier(mpi_comm);
+//     //     if (mpi_rank == i)
+//     //     {
+//     //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+//     //                   << m_start << ";" << m_end << ";"
+//     //                   << n_start << ";" << n_end << ";"
+//     //                   << o_start << ";" << o_end << std::endl;
+//     //     }
+//     // }
+
+//     REQUIRE(ml > 0);
+//     REQUIRE(ml <= m);
+//     REQUIRE(nl > 0);
+//     REQUIRE(nl <= n);
+//     REQUIRE(ol > 0);
+//     REQUIRE(ol <= o);
+
+//     int threshold = 1;
+//     CAPTURE(threshold);
+//     int ghin = 0; // TODO check with ghin > 0
+//     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+//     mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+
+//     // Create local slices
+//     std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> floc(f->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+//     std::shared_ptr<mgcl::Cuboid> solutionloc(solution->slice(m_start, m_end, n_start, n_end, o_start, o_end));
+
+//     // Set rhs to zero, s.t. local relres = 0 in the first v-cycle iteration on all non-root processes
+//     if (mpi_rank > 0)
+//     {
+//         for (int i = 0; i < floc->field1d().size(); i++)
+//         {
+//             floc->field1d()[i] = 0;
+//         }
+//     }
+
+//     // Create local problem on host (not using OpenCL)
+//     mgcl::Problem p_seq(ml, nl, ol, floc, vloc, m, n, o);
+//     // p_seq.setMaxiterVcycles(1);
+//     p_seq.setMaxiterVcycles(maxIterVCycles);
+//     p_seq.setTol(tol);
+//     p_seq.setUseOpencl(false);
+//     p_seq.setReadResults(true);
+//     p_seq.setGhosts(gh);
+//     p_seq.setGhostsIn(ghin);
+//     p_seq.setMpiLevelThreshold(threshold);
+//     p_seq.setMpiComm(mpi_comm);
+//     p_seq.setSilent(false);
+
+//     p_seq.solve();
+
+//     // make sure tolerance is just right, s.t. maxIterVCycles is not reached
+//     REQUIRE(p_seq.getElapsedIterations() < maxIterVCycles);
+
+//     // Gather elapsed iterations from all processes and check if all are the same.
+//     std::vector<int> vecElapsedIters(mpi_size);
+//     int elapsedIters = p_seq.getElapsedIterations();
+//     MPI_Allgather(&elapsedIters, 1, MPI_INT, vecElapsedIters.data(), 1, MPI_INT, MPI_COMM_WORLD);
+//     for (int i = 0; i < mpi_size; i++)
+//         REQUIRE(vecElapsedIters[i] == elapsedIters);
+
+//     // Reset initial guess v.
+//     for (int i = 0; i < vloc->field1d().size(); i++)
+//     {
+//         vloc->field1d()[i] = 0;
+//     }
+
+//     // Set rhs to zero, s.t. relres = 0 in the first v-cycle iteration on all non-root processes
+//     if (mpi_rank > 0)
+//     {
+//         for (int i = 0; i < floc->field1d().size(); i++)
+//         {
+//             floc->field1d()[i] = 0;
+//         }
+//     }
+
+//     // Create local problem using OpenCL
+//     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
+//     // p.setMaxiterVcycles(1);
+//     p.setMaxiterVcycles(maxIterVCycles);
+//     p.setTol(tol);
+//     p.setDeviceType(CL_DEVICE_TYPE_GPU);
+//     p.setUseOpencl(true);
+//     p.setDeviceType(CL_DEVICE_TYPE_GPU);
+//     p.setReadResults(true);
+//     p.setGhosts(gh);
+//     p.setGhostsIn(ghin);
+//     p.setMpiLevelThreshold(threshold);
+//     p.setMpiComm(mpi_comm);
+//     p.setSilent(false);
+
+//     p.solve();
+
+//     // make sure tolerance is just right, s.t. maxIterVCycles is not reached
+//     REQUIRE(p_seq.getElapsedIterations() < maxIterVCycles);
+
+//     // Gather elapsed iterations from all processes and check if all are the same.
+//     std::vector<int> vecElapsedIters2(mpi_size);
+//     int elapsedIters2 = p_seq.getElapsedIterations();
+//     MPI_Allgather(&elapsedIters2, 1, MPI_INT, vecElapsedIters2.data(), 1, MPI_INT, MPI_COMM_WORLD);
+//     for (int i = 0; i < mpi_size; i++)
+//         REQUIRE(vecElapsedIters2[i] == elapsedIters2);
+// }
+
+// /**
+//  * @brief Calculates error for each cell, e.g. difference between solution and approximation. Dimensions must match.
+//  *
+//  * @param solution
+//  * @param approximation
+//  * @return std::shared_ptr<mgcl::Cuboid>
+//  */
+// std::shared_ptr<mgcl::Cuboid> calculateError(mgcl::Cuboid& solution, mgcl::Cuboid& approximation)
+// {
+//     if (solution.getM() != approximation.getM() ||
+//         solution.getN() != approximation.getN() ||
+//         solution.getO() != approximation.getO())
+//         throw std::invalid_argument("Dimensions do not match.");
+
+//     auto ret = std::make_shared<mgcl::Cuboid>(solution.getM(), solution.getN(), solution.getO());
+//     for (int i = 0, is = solution.getGhostsM(), ia = approximation.getGhostsM(); is < solution.getMgh() - solution.getGhostsM(); i++, is++, ia++)
+//         for (int j = 0, js = solution.getGhostsN(), ja = approximation.getGhostsN(); js < solution.getNgh() - solution.getGhostsN(); j++, js++, ja++)
+//             for (int k = 0, ks = solution.getGhostsO(), ka = approximation.getGhostsO(); ks < solution.getOgh() - solution.getGhostsO(); k++, ks++, ka++)
+//             {
+//                 (*ret)[i][j][k] = fabs(solution[is][js][ks] - approximation[ia][ja][ka]);
+//             }
+
+//     return ret;
+// }
+
+// /**
+//  * @brief Returns the maximum absolute error. calculateError should have been called first.
+//  *
+//  * @param error
+//  * @return double
+//  */
+// double calculateMaxError(mgcl::Cuboid& error)
+// {
+//     double max = 0;
+//     for (int i = 0; i < error.getM(); i++)
+//         for (int j = 0; j < error.getN(); j++)
+//             for (int k = 0; k < error.getO(); k++)
+//             {
+//                 if (max < error[i][j][k])
+//                     max = error[i][j][k];
+//             }
+//     return max;
+// }
+
+// /**
+//  * @brief Returns the 2-norm of the given error. calculateError should have been called first.
+//  *
+//  * @param h width of one cell
+//  * @param error precalculated error per cell
+//  * @return double Error norm of form ||e||_2 * h^3
+//  */
+// double calculateErrorNorm(double h, mgcl::Cuboid& error)
+// {
+//     double sum = 0;
+
+//     for (int i = 0; i < error.getM(); i++)
+//         for (int j = 0; j < error.getN(); j++)
+//             for (int k = 0; k < error.getO(); k++)
+//             {
+//                 sum += error[i][j][k] * error[i][j][k];
+//             }
+
+//     return sqrt(sum * h * h * h);
+// }

@@ -601,22 +601,22 @@ namespace mgcl
 
                     bool updateGhostsLocally = !useMpi() || lvCoarse.getNum() >= getMpiLevelThreshold();
 
-                    assert(getRestrictionBlockstencil() && "Restriction blockstencil not set");
-                    assert(getProlongationBlockstencil() && "Prolongation blockstencil not set");
-
                     if (!use_opencl)
                     {
-                        assert(lvFine.getBlockstencil() && "Blockstencil on fine level not set");
-
                         // Call Galerkin on each rank, if not above threshold, or else only on root.
                         if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
+                        {
+                            assert(lvFine.getBlockstencil() && "Blockstencil on fine level not set");
+                            assert(getRestrictionBlockstencil() && "Restriction blockstencil not set");
+                            assert(getProlongationBlockstencil() && "Prolongation blockstencil not set");
+
                             lvCoarse.blockstencil = MultigridEngine::galerkinOptimized(
                                 *lvFine.getBlockstencil(),
                                 *getRestrictionBlockstencil(),
                                 *getProlongationBlockstencil(),
                                 gh_sv,
                                 svm, svn, svo);
-
+                        }
                         // Gather stencil values onto root if threshold is reached
                         if (useMpi() && lvCoarse.getNum() == getMpiLevelThreshold())
                             mpi_util::gather(getMpiComm(), *lvCoarse.getBlockstencil());
@@ -628,19 +628,20 @@ namespace mgcl
                                 lvCoarse.getBlockstencil()->updateGhostsLocally();
                             else
                                 lvCoarse.getBlockstencil()->updateGhosts(lvCoarse.getMpiDataPtr(), false);
-                        }
 
-                        // lvCoarse.getBlockstencil()->dumpToFile("bs_level_" + std::to_string(lvCoarse.getNum()) + ".txt");
-                        lvCoarse.createInverseOfBlockstencilSeq();
+                            // lvCoarse.getBlockstencil()->dumpToFile("bs_level_" + std::to_string(lvCoarse.getNum()) + ".txt");
+                            lvCoarse.createInverseOfBlockstencilSeq();
+                        }
                     }
                     else
                     {
-                        assert(lvFine.getBlockstencilGpu() && "BlockstencilGpu on fine level not set");
-                        assert(getRestrictionBlockstencilGpu() && "Restriction blockstencil GPU not set");
-                        assert(getProlongationBlockstencilGpu() && "Prolongation blockstencil GPU not set");
-
                         // Call Galerkin on each rank, if not above threshold, or else only on root.
                         if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
+                        {
+                            assert(lvFine.getBlockstencilGpu() && "BlockstencilGpu on fine level not set");
+                            assert(getRestrictionBlockstencilGpu() && "Restriction blockstencil GPU not set");
+                            assert(getProlongationBlockstencilGpu() && "Prolongation blockstencil GPU not set");
+
                             lvCoarse.blockstencilGpu = MultigridEngine::galerkinOptimized(
                                 *lvFine.getBlockstencilGpu(),
                                 *getRestrictionBlockstencilGpu(),
@@ -649,6 +650,7 @@ namespace mgcl
                                 svm, svn, svo,
                                 getProgram(), getCommands(), getContext(),
                                 &getKernelConfig(), getProfilingData());
+                        }
 
                         // Gather stencil values onto root if threshold is reached
                         if (useMpi() && lvCoarse.getNum() == getMpiLevelThreshold())
@@ -665,9 +667,9 @@ namespace mgcl
                                     getDPlanesBuf(), getHPlanesBufSend(), getHPlanesBufRecv(),
                                     lvCoarse.getMpiData(), false,
                                     &getKernelConfig(), getProfilingData());
-                        }
 
-                        lvCoarse.createInverseOfBlockstencilGpu();
+                            lvCoarse.createInverseOfBlockstencilGpu();
+                        }
                     }
                 }
 
@@ -928,17 +930,32 @@ namespace mgcl
         // TODO check mpiSize > 1 maybe
         if (useMpi() && getMpiLevelThreshold() == 0)
         {
-            mpi_util::scatter_inplace_wgh(mpiGlobalData->getComm(), getCommands(), getLevelAt(0).getDVIn());
+            if (getVPtr())
+            {
+                mpi_util::scatter_inplace_wgh(mpiGlobalData->getComm(), getCommands(), getLevelAt(0).getDVIn());
+            }
+            else
+            {
+                mpi_util::scatter_inplace_wgh(mpiGlobalData->getComm(), getCommands(), getLevelAt(0).getDVBSIn());
+            }
         }
 
         // copy resulting v to d_v on device
         if (copy_buffer_data && getVPtr())
-
             openCLHelper.copyOutputBuffers();
 
         // write result into v on host
         if (read_results)
-            readResults();
+        {
+            if (getVPtr())
+            {
+                readResults();
+            }
+            else
+            {
+                readResultsBlockstencil();
+            }
+        }
     }
 
     /**
