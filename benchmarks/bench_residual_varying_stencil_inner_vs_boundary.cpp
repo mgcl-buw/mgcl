@@ -33,6 +33,7 @@ namespace mgcl_bench_residual_varying_inner_vs_boundary
     {
         INNER,
         BOUNDARY,
+        BOUNDARY_NO_REDUNDANT_WIS,
         DEFAULT
     };
 
@@ -131,6 +132,10 @@ namespace mgcl_bench_residual_varying_inner_vs_boundary
         {
             kernelName = "residual_27point_varying_stencil_boundary";
         }
+        else if (args.kernelVersion == KernelVersion::BOUNDARY_NO_REDUNDANT_WIS)
+        {
+            kernelName = "residual_27point_varying_stencil_boundary_no_redundant_wis";
+        }
         else if (args.kernelVersion == KernelVersion::DEFAULT)
         {
             kernelName = "residual_27point_varying_stencil";
@@ -194,6 +199,12 @@ namespace mgcl_bench_residual_varying_inner_vs_boundary
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
         size_t global = args.mgh * args.ngh * args.ogh;
+
+        if (args.kernelVersion == KernelVersion::BOUNDARY_NO_REDUNDANT_WIS)
+        {
+            global = 2 * args.mgh * args.ngh + 2 * args.mgh * args.ogh + 2 * args.ngh * args.ogh;
+        }
+
         // const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
         size_t local = args.wgsize.x; // c[0];
 
@@ -369,6 +380,7 @@ namespace mgcl_bench_residual_varying_inner_vs_boundary
             std::unique_ptr<mgcl::Cuboid> r_out_default = nullptr;
             std::unique_ptr<mgcl::Cuboid> r_out_inner = nullptr;
             std::unique_ptr<mgcl::Cuboid> r_out_boundary = nullptr;
+            std::unique_ptr<mgcl::Cuboid> r_out_boundary_no_redundant_wis = nullptr;
             if (CLI_ARGS::checkResults)
             {
                 bench.epochs(1).epochIterations(1);
@@ -438,6 +450,38 @@ namespace mgcl_bench_residual_varying_inner_vs_boundary
                 }
             }
 
+            {
+                args.kernelVersion = KernelVersion::BOUNDARY_NO_REDUNDANT_WIS;
+                std::string name = std::string("residual_varying_stencil_boundary_no_redundant_wis_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    residual(args);
+                    p.finish();
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+
+                if (CLI_ARGS::checkResults)
+                {
+                    r_out_boundary_no_redundant_wis = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                    args.c_dR.read(args.commands, r_out_boundary_no_redundant_wis.get(), true);
+                }
+            }
+
             // if (CLI_ARGS::checkResults)
             {
                 args.kernelVersion = KernelVersion::DEFAULT;
@@ -489,6 +533,7 @@ namespace mgcl_bench_residual_varying_inner_vs_boundary
                                      k == ghosts || k == o + ghosts - 1)
                             {
                                 REQUIRE((*r_out_default)[i][j][k] == (*r_out_boundary)[i][j][k]);
+                                REQUIRE((*r_out_default)[i][j][k] == (*r_out_boundary_no_redundant_wis)[i][j][k]);
                             }
                         }
             }

@@ -189,7 +189,7 @@ __kernel void residual_27point_varying_stencil_inner(
 /**
  * Calculates residual for boundary points only. Ghosts = 1 for now.
  *
- * Must be called with mgh*ngh*ogh work-items.
+ * Must be called with mgh*ngh*ogh work-items. Most work-items do nothing.
  */
 __kernel void residual_27point_varying_stencil_boundary(
     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
@@ -209,18 +209,157 @@ __kernel void residual_27point_varying_stencil_boundary(
     int j = (idx - i * no) / ogh;
     int k = idx % ogh;
 
-    // loop boundaries
-    // TODO maybe refactor to use v_ghm, etc.?
-    int istart_v = ghosts + moff;
-    int jstart_v = ghosts + noff;
-    int kstart_v = ghosts + ooff;
-    int iend_v = mgh - ghosts - moff;
-    int jend_v = ngh - ghosts - noff;
-    int kend_v = ogh - ghosts - ooff;
-
     // calculate residual only for relevant cells (off = 0: only real cells)
     // if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
     if (i == ghosts || j == ghosts || k == ghosts || i == mgh - ghosts - 1 || j == ngh - ghosts - 1 || k == ogh - ghosts - 1)
+    {
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
+        int index = i * ioff + j * ogh + k;
+
+        int svno = svngh * svogh;
+        // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
+        int index_sv = (i - ghosts + ghosts_sv) * svno + (j - ghosts + ghosts_sv) * svogh + (k - ghosts + ghosts_sv);
+
+        // if (i == 2 && j == 2 && k == 2)
+        // {
+        //     printf("i,j,k,mgh,ngh,ogh,gh,gh_sv,index_sv,gridsize: %d,%d,%d,%d,%d,%d,%d,%d,%d,%d\ngh", i, j, k, mgh, ngh, ogh, ghosts, ghosts_sv, index_sv, gridsize);
+        // }
+
+        // A*v
+        // clang-format off
+        double stencilsum = stencilValues[index_sv + (9 + 3 + 1) * svGridSize] * v_in[index]
+            + stencilValues[index_sv + (9 + 3) * svGridSize]      * v_in[index - 1]
+            + stencilValues[index_sv + (9 + 3 + 2) * svGridSize]  * v_in[index + 1]
+            + stencilValues[index_sv + (9 + 1) * svGridSize]      * v_in[index - joff]
+            + stencilValues[index_sv + (9 + 6 + 1) * svGridSize]  * v_in[index + joff]
+            + stencilValues[index_sv + (3 + 1) * svGridSize]      * v_in[index - ioff]
+            + stencilValues[index_sv + (18 + 3 + 1) * svGridSize] * v_in[index + ioff]
+            
+            + stencilValues[index_sv + (9) * svGridSize]          * v_in[index - joff - koff]
+            + stencilValues[index_sv + (9 + 2) * svGridSize]      * v_in[index - joff + koff]
+            + stencilValues[index_sv + (9 + 6) * svGridSize]      * v_in[index + joff - koff]
+            + stencilValues[index_sv + (9 + 6 + 2) * svGridSize]  * v_in[index + joff + koff]
+            + stencilValues[svGridSize * 3 + index_sv]            * v_in[index - ioff - koff]
+            + stencilValues[index_sv + (3 + 2) * svGridSize]      * v_in[index - ioff + koff]
+            + stencilValues[index_sv + (18 + 3) * svGridSize]     * v_in[index + ioff - koff]
+            + stencilValues[index_sv + (18 + 3 + 2) * svGridSize] * v_in[index + ioff + koff]
+            + stencilValues[svGridSize + index_sv]                * v_in[index - ioff - joff]
+            + stencilValues[index_sv + (6 + 1) * svGridSize]      * v_in[index - ioff + joff]
+            + stencilValues[index_sv + (18 + 1) * svGridSize]     * v_in[index + ioff - joff]
+            + stencilValues[index_sv + (18 + 6 + 1) * svGridSize] * v_in[index + ioff + joff]
+
+            + stencilValues[index_sv]                           * v_in[index - ioff - joff - koff]
+            + stencilValues[svGridSize * 2 + index_sv]            * v_in[index - ioff - joff + koff]
+            + stencilValues[index_sv + (6) * svGridSize]          * v_in[index - ioff + joff - koff]
+            + stencilValues[index_sv + (6 + 2) * svGridSize]      * v_in[index - ioff + joff + koff]
+            + stencilValues[index_sv + (18) * svGridSize]         * v_in[index + ioff - joff - koff]
+            + stencilValues[index_sv + (18 + 2) * svGridSize]     * v_in[index + ioff - joff + koff]
+            + stencilValues[index_sv + (18 + 6) * svGridSize]     * v_in[index + ioff + joff - koff]
+            + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * v_in[index + ioff + joff + koff];
+        // clang-format on
+
+        // if (i == 2 && j == 2 && k == 2)
+        // {
+        //     printf("ocl stencilsum = %e\n", stencilsum);
+        //     print27point_sv(v_in, index, ioff, joff, koff, stencilValues, index_sv);
+        // }
+
+        // r = f - A*v
+        r[index] = f[index] - stencilsum;
+    }
+}
+
+/**
+ * Calculates residual for boundary points only. Ghosts = 1 for now.
+ *
+ * Must be called with #boundaryPoints = 2*mgh*ngh + 2*ngh*ogh + 2*mgh*ogh work-items.
+ * Index calculation is the same as in extractBorderPlanes kernel.
+ */
+__kernel void residual_27point_varying_stencil_boundary_no_redundant_wis(
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict f,
+    __global double* restrict r,
+    __global double* restrict stencilValues,
+    const int mgh, const int ngh, const int ogh,
+    const int svmgh, const int svngh, const int svogh,
+    const int ghosts, const int ghosts_sv,
+    const int svGridSize,
+    const int moff, const int noff, const int ooff)
+
+{
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+
+    int m = mgh - 2 * ghosts;
+    int n = ngh - 2 * ghosts;
+    int o = ogh - 2 * ghosts;
+
+    // plane sizes
+    int yz = ngh * ogh;
+    int xz = mgh * ogh;
+    int xy = mgh * ngh;
+
+    int i = -1;
+    int j = -1;
+    int k = -1;
+
+    // Front planes
+    if (idx < ghosts * yz)
+    {
+        i = idx / yz + ghosts;
+        j = (idx - (i - ghosts) * yz) / ogh;
+        k = idx % ogh;
+    }
+    // Back planes
+    else if (idx < 2 * ghosts * yz)
+    {
+        idx -= ghosts * yz; // reset to 0 for index calculation
+        i = idx / yz + m;
+        j = (idx - (i - m) * yz) / ogh;
+        k = idx % ogh;
+    }
+    // Top planes
+    else if (idx < 2 * ghosts * yz + ghosts * xz)
+    {
+        idx -= 2 * ghosts * yz; // reset to 0 for index calculation
+        j = idx / xz + ghosts;
+        i = (idx - (j - ghosts) * xz) / ogh;
+        k = idx % ogh;
+    }
+    // Bottom planes
+    else if (idx < 2 * ghosts * yz + 2 * ghosts * xz)
+    {
+        idx -= 2 * ghosts * yz + ghosts * xz; // reset to 0 for index calculation
+        j = idx / xz + n;
+        i = (idx - (j - n) * xz) / ogh;
+        k = idx % ogh;
+    }
+    // Left planes
+    else if (idx < 2 * ghosts * yz + 2 * ghosts * xz + ghosts * xy)
+    {
+        idx -= 2 * ghosts * yz + 2 * ghosts * xz; // reset to 0 for index calculation
+        k = idx / xy + ghosts;
+        i = (idx - (k - ghosts) * xy) / ngh;
+        j = idx % ngh;
+    }
+    // Right planes
+    else if (idx < 2 * ghosts * yz + 2 * ghosts * xz + 2 * ghosts * xy)
+    {
+        idx -= 2 * ghosts * yz + 2 * ghosts * xz + ghosts * xy; // reset to 0 for index calculation
+        k = idx / xy + o;
+        i = (idx - (k - o) * xy) / ngh;
+        j = idx % ngh;
+    }
+    else
+    {
+        return; // Do nothing for padded work-items
+    }
+
+    // calculate residual only for relevant cells (off = 0: only real cells)
+    // if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
+    // if (i == ghosts || j == ghosts || k == ghosts || i == mgh - ghosts - 1 || j == ngh - ghosts - 1 || k == ogh - ghosts - 1)
     {
         int ioff = ngh * ogh;
         int joff = ogh;
