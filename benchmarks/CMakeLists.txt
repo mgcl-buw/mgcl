@@ -34,6 +34,7 @@ set(SOURCES_BENCH
     bench_residual_blockstencil.cpp
     bench_borderplanes_blockstencil.cpp
     bench_jacobi_blockstencil.cpp
+    bench_residual_varying_stencil_inner_vs_boundary.cpp
     cli_args.hpp
     catch2_main_benchs.cpp)
 
@@ -99,3 +100,21 @@ add_custom_target(
 # Whenever target 'benchmarks' is requested, the custom target will be
 # evaluated.
 add_dependencies(benchmarks copy_blockstencil_kernels)
+
+# copy kernel file to build directory
+add_custom_command(
+  OUTPUT "${CMAKE_BINARY_DIR}/benchmarks/residual_kernels_inner_vs_boundary.cl"
+  COMMAND
+    ${CMAKE_COMMAND} -E copy
+    "${CMAKE_CURRENT_SOURCE_DIR}/residual_kernels_inner_vs_boundary.cl"
+    "${CMAKE_BINARY_DIR}/benchmarks"
+  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/residual_kernels_inner_vs_boundary.cl")
+
+# Custom target for activate the custom command above
+add_custom_target(
+  copy_residual_kernels_inner_vs_boundary
+  DEPENDS "${CMAKE_BINARY_DIR}/benchmarks/residual_kernels_inner_vs_boundary.cl")
+
+# Whenever target 'benchmarks' is requested, the custom target will be
+# evaluated.
+add_dependencies(benchmarks copy_residual_kernels_inner_vs_boundary)
