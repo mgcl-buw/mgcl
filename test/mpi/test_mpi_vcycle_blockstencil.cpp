@@ -34,13 +34,20 @@ TEST_CASE("MPI_vcycle_GPU_immediate_gather_scatter_blockstencil_size1")
     using std::min;
 
     // global grid sizes
-    int m = 8;
-    int n = 8;
-    int o = 8;
+    int m = 16;
+    int n = 16;
+    int o = 16;
     int periodic = 1;
     int gh = 1;
     int blocksize = 1;
     double h = 1.0 / (double)m;
+
+    // Problem parameters
+    double tol = 1e-7;
+    int nu1 = 2;
+    int nu2 = 2;
+    double omega = 0.8;
+    int maxIterVCycles = 5;
 
     // check if mpi is initialized
     int isInitialized = 0;
@@ -138,6 +145,11 @@ TEST_CASE("MPI_vcycle_GPU_immediate_gather_scatter_blockstencil_size1")
     // p.setOmega(omega);
     // p.setMaxlevel(maxlevel);
     p.setDeviceType(deviceType);
+    p.setMaxiterVcycles(maxIterVCycles);
+    p.setOmega(omega);
+    p.setNu1(nu1);
+    p.setNu2(nu2);
+    p.setTol(tol);
     p.setUseOpencl(true);
     p.setReadResults(true);
     p.setGhosts(gh);
@@ -193,8 +205,8 @@ TEST_CASE("MPI_vcycle_GPU_immediate_gather_scatter_blockstencil_size1")
 
         REQUIRE(errNorm < 1e-2);
         REQUIRE(errMax < 1e-2);
-        REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(4.62293179000930129e-03));
-        REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(9.00816189282011015e-03));
+        REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(2.79451354429798363e-03));
+        REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(2.89860791352128345e-03));
     }
 }
 

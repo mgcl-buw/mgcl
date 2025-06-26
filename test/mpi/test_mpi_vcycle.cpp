@@ -178,6 +178,13 @@ TEST_CASE("MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p")
     int periodic = 1;
     int gh = 1;
 
+    // Problem parameters
+    double tol = 1e-7;
+    int nu1 = 2;
+    int nu2 = 2;
+    double omega = 0.8;
+    int maxIterVCycles = 1;
+
     // check if mpi is initialized
     int isInitialized = 0;
     MPI_Initialized(&isInitialized);
@@ -254,7 +261,11 @@ TEST_CASE("MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p")
 
     // Create local problem
     mgcl::Problem p(ml, nl, ol, floc, vloc, m, n, o);
-    // p.setMaxiterVcycles(5);
+    p.setMaxiterVcycles(maxIterVCycles);
+    p.setOmega(omega);
+    p.setNu1(nu1);
+    p.setNu2(nu2);
+    p.setTol(tol);
     p.setDeviceType(deviceType);
     p.setUseOpencl(true);
     p.setReadResults(true);
@@ -308,7 +319,7 @@ TEST_CASE("MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p")
 // Tests if vcycle is correct for multiple processes but everything is actually done on one process, i.e.
 // gathering and scattering happens on level 0.
 // With 1 process mgcl should detect that MPI is actually not used, thus this test should behave like the solve tests.
-// Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_immediate_gather_scatter
+// Run with e.g. mpiexec -n 2 tests_mpi MPI_vcycle_immediate_gather_scatter_Varying27p
 TEST_CASE("MPI_vcycle_immediate_gather_scatter_Varying27p")
 {
     using std::min;
