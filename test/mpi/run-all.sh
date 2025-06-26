@@ -255,6 +255,7 @@ if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_threshold_eq_2_Varying27p"
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_threshold_eq_2_Varying27p"
     run_test --oversubscribe -n 2 "$exe" "MPI_vcycle_seq_immediate_gather_scatter_blockstencil_size1"
+    run_test --oversubscribe -n 2 "$exe" "MPI_vcycle_seq_treshold_gt_0_blockstencil_size1"
     if [ "$NO_OCL" = false ] ; then
       run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p" --deviceTypes "$OCL_DEVICE_TYPES"
@@ -266,7 +267,8 @@ if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
       run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_FixedStencil_multiple_jacobi_iters" --deviceTypes "$OCL_DEVICE_TYPES"
-    run_test --oversubscribe -n 2 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_blockstencil_size1" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 2 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_blockstencil_size1" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 2 "$exe" "MPI_vcycle_GPU_treshold_gt_0_blockstencil_size1" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_multiple_solve_calls"
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_different_relres"
