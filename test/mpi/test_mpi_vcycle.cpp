@@ -183,7 +183,7 @@ TEST_CASE("MPI_vcycle_GPU_immediate_gather_scatter_Laplace7p")
     int nu1 = 2;
     int nu2 = 2;
     double omega = 0.8;
-    int maxIterVCycles = 1;
+    int maxIterVCycles = 5;
 
     // check if mpi is initialized
     int isInitialized = 0;
