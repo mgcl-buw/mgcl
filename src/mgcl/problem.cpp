@@ -1084,7 +1084,10 @@ namespace mgcl
         // TODO check mpiSize > 1 maybe
         if (useMpi() && getMpiLevelThreshold() == 0)
         {
-            mpi_util::scatter_inplace(mpiGlobalData->getComm(), getLevelAt(0).getV());
+            if (getVPtr())
+                mpi_util::scatter_inplace_wgh(mpiGlobalData->getComm(), getLevelAt(0).getV());
+            else
+                mpi_util::scatter_inplace_wgh(mpiGlobalData->getComm(), getLevelAt(0).getVBS());
         }
 
         // write data to output
