@@ -66,74 +66,9 @@ target_link_libraries(benchmarks PRIVATE mgcl_c)
 # target_compile_options(benchmarks PUBLIC -fsanitize=address -fno-omit-frame-pointer)
 # target_link_options(benchmarks PUBLIC -fsanitize=address)
 
-# copy kernel file to build directory
-add_custom_command(
-  OUTPUT "${CMAKE_BINARY_DIR}/benchmarks/kernel_optimizations.cl"
-  COMMAND
-    ${CMAKE_COMMAND} -E copy
-    "${CMAKE_CURRENT_SOURCE_DIR}/kernel_optimizations.cl"
-    "${CMAKE_BINARY_DIR}/benchmarks"
-  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/kernel_optimizations.cl")
-
-# Custom target for activate the custom command above
-add_custom_target(
-  copy_kernel_optimizations
-  DEPENDS "${CMAKE_BINARY_DIR}/benchmarks/kernel_optimizations.cl")
-
-# Whenever target 'benchmarks' is requested, the custom target will be
-# evaluated.
-add_dependencies(benchmarks copy_kernel_optimizations)
-
-# copy kernel file to build directory
-add_custom_command(
-  OUTPUT "${CMAKE_BINARY_DIR}/benchmarks/blockstencil_kernels.cl"
-  COMMAND
-    ${CMAKE_COMMAND} -E copy
-    "${CMAKE_CURRENT_SOURCE_DIR}/blockstencil_kernels.cl"
-    "${CMAKE_BINARY_DIR}/benchmarks"
-  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/blockstencil_kernels.cl")
-
-# Custom target for activate the custom command above
-add_custom_target(
-  copy_blockstencil_kernels
-  DEPENDS "${CMAKE_BINARY_DIR}/benchmarks/blockstencil_kernels.cl")
-
-# Whenever target 'benchmarks' is requested, the custom target will be
-# evaluated.
-add_dependencies(benchmarks copy_blockstencil_kernels)
-
-# copy kernel file to build directory
-add_custom_command(
-  OUTPUT "${CMAKE_BINARY_DIR}/benchmarks/residual_kernels_inner_vs_boundary.cl"
-  COMMAND
-    ${CMAKE_COMMAND} -E copy
-    "${CMAKE_CURRENT_SOURCE_DIR}/residual_kernels_inner_vs_boundary.cl"
-    "${CMAKE_BINARY_DIR}/benchmarks"
-  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/residual_kernels_inner_vs_boundary.cl")
-
-# Custom target for activate the custom command above
-add_custom_target(
-  copy_residual_kernels_inner_vs_boundary
-  DEPENDS "${CMAKE_BINARY_DIR}/benchmarks/residual_kernels_inner_vs_boundary.cl")
-
-# Whenever target 'benchmarks' is requested, the custom target will be
-# evaluated.
-add_dependencies(benchmarks copy_residual_kernels_inner_vs_boundary)
-
-# copy kernel file to build directory
-add_custom_command(
-  OUTPUT "${CMAKE_BINARY_DIR}/benchmarks/borderplanes_kernels.cl"
-  COMMAND
-    ${CMAKE_COMMAND} -E copy
-    "${CMAKE_CURRENT_SOURCE_DIR}/borderplanes_kernels.cl"
-    "${CMAKE_BINARY_DIR}/benchmarks"
-  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/borderplanes_kernels.cl")
-
-# Custom target for activate the custom command above
-add_custom_target(
-  copy_borderplanes_kernels
-  DEPENDS "${CMAKE_BINARY_DIR}/benchmarks/borderplanes_kernels.cl")
-
-# Whenever target 'benchmarks' is requested, the custom target will be
-# evaluated.
-add_dependencies(benchmarks copy_borderplanes_kernels)
+# Copy kernel files to build dir
+include(../cmake/util.cmake)
+mgcl_copy_kernel_file(benchmarks kernel_optimizations.cl)
+mgcl_copy_kernel_file(benchmarks blockstencil_kernels.cl)
+mgcl_copy_kernel_file(benchmarks residual_kernels_inner_vs_boundary.cl)
+mgcl_copy_kernel_file(benchmarks borderplanes_kernels.cl)

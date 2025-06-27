@@ -30,3 +30,30 @@ function (target_add_iwyu target)
         )
     endif()
 endfunction()
+
+# Copies a kernel file to the build directory.
+# 
+# This function creates a custom target that copies a kernel file from the source
+# directory to the build directory. The custom target is then added as a dependency
+# of the specified dependency target.
+# 
+# @param dependency_target The target that depends on the copied kernel file.
+# @param filename The name of the kernel file to copy.
+# 
+function(mgcl_copy_kernel_file dependency_target filename)
+  add_custom_command(
+    OUTPUT "${CMAKE_BINARY_DIR}/benchmarks/${filename}"
+    COMMAND
+      ${CMAKE_COMMAND} -E copy
+      "${CMAKE_CURRENT_SOURCE_DIR}/${filename}"
+      "${CMAKE_BINARY_DIR}/benchmarks"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${filename}"
+  )
+
+  add_custom_target(
+    copy_${filename}
+    DEPENDS "${CMAKE_BINARY_DIR}/benchmarks/${filename}"
+  )
+
+  add_dependencies(${dependency_target} copy_${filename})
+endfunction()
