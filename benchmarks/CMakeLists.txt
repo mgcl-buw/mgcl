@@ -35,6 +35,7 @@ set(SOURCES_BENCH
     bench_borderplanes_blockstencil.cpp
     bench_jacobi_blockstencil.cpp
     bench_residual_varying_stencil_inner_vs_boundary.cpp
+    bench_borderplanes.cpp
     cli_args.hpp
     catch2_main_benchs.cpp)
 

@@ -596,7 +596,7 @@ namespace mgcl
         bool createdDTmp = false;
         if (d_tmp == nullptr)
         {
-            d_tmp = new BufferGpu(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, ressize);
+            d_tmp = new BufferGpu(context, CL_MEM_READ_WRITE, ressize);
             d_tmp->write(commands, *h_source, true);
             createdDTmp = true;
         }

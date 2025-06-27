@@ -2,7 +2,6 @@
 
 #include "mgcl.hpp"
 #include "opencl_helper.hpp"
-#include <CL/cl.h>
 #include <cstddef>
 #include <memory>
 #include <vector>
