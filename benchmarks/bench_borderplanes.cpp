@@ -61,6 +61,11 @@ TEST_CASE("bench_borderplanes")
         mgcl::Problem p(m, n, o, f, v);
         p.setUseOpencl(true);
         p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setKernelFile("borderplanes_kernels.cl");
+        if (CLI_ARGS::useBinaryFile)
+        {
+            p.setBinaryFile("benchBorderPlanes.bin");
+        }
         p.setGhosts(ghosts);
         p.setSilent(true);
         p.init();

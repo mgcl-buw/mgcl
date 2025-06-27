@@ -119,3 +119,21 @@ add_custom_target(
 # Whenever target 'benchmarks' is requested, the custom target will be
 # evaluated.
 add_dependencies(benchmarks copy_residual_kernels_inner_vs_boundary)
+
+# copy kernel file to build directory
+add_custom_command(
+  OUTPUT "${CMAKE_BINARY_DIR}/benchmarks/borderplanes_kernels.cl"
+  COMMAND
+    ${CMAKE_COMMAND} -E copy
+    "${CMAKE_CURRENT_SOURCE_DIR}/borderplanes_kernels.cl"
+    "${CMAKE_BINARY_DIR}/benchmarks"
+  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/borderplanes_kernels.cl")
+
+# Custom target for activate the custom command above
+add_custom_target(
+  copy_borderplanes_kernels
+  DEPENDS "${CMAKE_BINARY_DIR}/benchmarks/borderplanes_kernels.cl")
+
+# Whenever target 'benchmarks' is requested, the custom target will be
+# evaluated.
+add_dependencies(benchmarks copy_borderplanes_kernels)
