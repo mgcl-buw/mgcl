@@ -44,6 +44,21 @@ TEST_CASE("bench_borderplanes")
 
     std::vector<bench_util::Result> results;
 
+    // Create a dummy problem
+    auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    mgcl::Problem p(1, 1, 1, f, v);
+    p.setUseOpencl(true);
+    p.setDeviceType(CL_DEVICE_TYPE_GPU);
+    p.setKernelFile("borderplanes_kernels.cl");
+    if (CLI_ARGS::useBinaryFile)
+    {
+        p.setBinaryFile("benchBorderPlanes.bin");
+    }
+    p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
+    p.setSilent(true);
+    p.init();
+
     bool printedGpu = false;
     for (auto gr : gridsTBT)
     {
@@ -55,27 +70,12 @@ TEST_CASE("bench_borderplanes")
         int ngh = n + 2 * ghosts;
         int ogh = o + 2 * ghosts;
 
-        // Create a dummy problem
-        auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
-        auto f = std::make_shared<mgcl::Cuboid>(m, n, o);
-        mgcl::Problem p(m, n, o, f, v);
-        p.setUseOpencl(true);
-        p.setDeviceType(CL_DEVICE_TYPE_GPU);
-        p.setKernelFile("borderplanes_kernels.cl");
-        if (CLI_ARGS::useBinaryFile)
-        {
-            p.setBinaryFile("benchBorderPlanes.bin");
-        }
-        p.setGhosts(ghosts);
-        p.setSilent(true);
-        p.init();
-
         int err;
 
         // actual test buffers
-        mgcl::Cuboid& c_h = p.getLevelAt(0).getV();
+        mgcl::Cuboid c_h(m, n, o, ghosts, ghosts, ghosts);
         c_h.fillRandom();
-        mgcl::CuboidGpu& c_d = p.getLevelAt(0).getDVIn();
+        mgcl::CuboidGpu c_d(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c_h);
 
         int yz = c_d.getNgh() * c_d.getOgh();
         int xz = c_d.getMgh() * c_d.getOgh();
@@ -99,7 +99,7 @@ TEST_CASE("bench_borderplanes")
                                    .append(std::to_string(ghosts));
 
             bench.run(std::string(name).c_str(), [&] { //
-                auto sbuf_ptr = c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, nullptr, nullptr, nullptr);
+                auto sbuf_ptr = c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, nullptr, nullptr, p.getProfilingData());
                 p.getOpenCLHelper().finish();
             });
 
@@ -127,7 +127,7 @@ TEST_CASE("bench_borderplanes")
                                    .append(std::to_string(ghosts));
 
             bench.run(std::string(name).c_str(), [&] { //
-                c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, &h_planesbuf, nullptr, nullptr);
+                c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, &h_planesbuf, nullptr, p.getProfilingData());
                 p.getOpenCLHelper().finish();
             });
 
@@ -155,7 +155,7 @@ TEST_CASE("bench_borderplanes")
                                    .append(std::to_string(ghosts));
 
             bench.run(std::string(name).c_str(), [&] { //
-                c_d.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), nullptr, &rbuf, nullptr, nullptr);
+                c_d.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), nullptr, &rbuf, nullptr, p.getProfilingData());
                 p.getOpenCLHelper().finish();
             });
 
@@ -182,7 +182,7 @@ TEST_CASE("bench_borderplanes")
                                    .append(std::to_string(ghosts));
 
             bench.run(std::string(name).c_str(), [&] { //
-                c_d.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), &d_planesbuf, nullptr, nullptr, nullptr);
+                c_d.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(), &d_planesbuf, nullptr, nullptr, p.getProfilingData());
                 p.getOpenCLHelper().finish();
             });
 
@@ -200,4 +200,9 @@ TEST_CASE("bench_borderplanes")
     }
 
     bench_util::printCsvFormat(results);
+
+    if (CLI_ARGS::enableKernelProfiling)
+    {
+        p.getProfilingData()->printBestTimingsPerKernel();
+    }
 }
