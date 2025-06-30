@@ -150,25 +150,27 @@ TEST_CASE("bench_data_transfer_host_device")
             results.push_back(res2);
         }
 
-        {
-            std::string name = std::string("host_to_device_newbuf_els")
-                                   .append(std::to_string(el));
-            bench.run(std::string(name).c_str(), [&] { //
-                ankerl::nanobench::doNotOptimizeAway(
-                    mgcl::CuboidGpu(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, c_h));
-                p.getOpenCLHelper().finish();
-            });
+        // {
+        //     // Careful: The buffer seems to be lazily created, i.e. only once it is access. Thus results of this are
+        //     // not reliable.
+        //     std::string name = std::string("host_to_device_newbuf_els")
+        //                            .append(std::to_string(el));
+        //     bench.run(std::string(name).c_str(), [&] { //
+        //         ankerl::nanobench::doNotOptimizeAway(
+        //             mgcl::CuboidGpu(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, c_h));
+        //         p.getOpenCLHelper().finish();
+        //     });
 
-            bench_util::ResultDataTransferMpi res;
-            res.name = name;
-            res.minTime = bench_util::getMinTime(bench, name);
-            res.medianTime = bench_util::getMedianTime(bench, name);
-            res.avgTime = bench_util::getAvgTime(bench, name);
-            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-            res.elements = el;
-            res.gpus = mpi_size;
-            results.push_back(res);
-        }
+        //     bench_util::ResultDataTransferMpi res;
+        //     res.name = name;
+        //     res.minTime = bench_util::getMinTime(bench, name);
+        //     res.medianTime = bench_util::getMedianTime(bench, name);
+        //     res.avgTime = bench_util::getAvgTime(bench, name);
+        //     res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+        //     res.elements = el;
+        //     res.gpus = mpi_size;
+        //     results.push_back(res);
+        // }
 
         {
             std::string name = std::string("device_to_host_newbuf_els")
