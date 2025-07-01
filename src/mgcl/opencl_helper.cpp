@@ -188,7 +188,8 @@ namespace mgcl
             const char* ksc;
             if (readKernelFromFile)
             {
-                std::cout << "mgcl: Info: Building kernel from file: " << kernelFile << std::endl;
+                if (!problem->silent)
+                    std::cout << "mgcl: Info: Building kernel from file: " << kernelFile << std::endl;
                 kernelSource = loadKernelSource(kernelFile);
                 ksc = kernelSource.c_str();
             }

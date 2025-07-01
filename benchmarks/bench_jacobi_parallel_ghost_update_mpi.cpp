@@ -1122,6 +1122,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
                     // Create dummy problem to initialize OpenCL
                     mgcl::Problem p(ml, nl, ol, f_in, v_in, mglob, nglob, oglob);
+                    p.setSilent(true);
                     p.setKernelFile("residual_kernels_inner_vs_boundary.cl");
                     if (CLI_ARGS::useBinaryFile)
                     {
@@ -1254,7 +1255,6 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
                     if (CLI_ARGS::enableKernelProfiling)
                     {
-                        kernelProfilesStream << "rank: " << mpi_rank << std::endl;
                         p.getProfilingData()->printBestTimingsPerKernel(kernelProfilesStream);
                     }
                 }
@@ -1264,6 +1264,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
         if (CLI_ARGS::enableKernelProfiling)
         {
+            kernelProfilesStream << "rank: " << mpi_rank << std::endl;
             std::cout << kernelProfilesStream.str() << std::endl;
         }
     }
