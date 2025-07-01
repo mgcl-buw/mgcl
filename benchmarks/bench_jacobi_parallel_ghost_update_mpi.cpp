@@ -775,6 +775,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
                 // calculate boundary points first
                 overlapped_helpers::jacobiBoundary(problem, level, dVIn, dVOut, store_res, problem.getCommands());
+                problem.finish();
 
                 // now calculate inner points whilst updating ghosts. Inner jacobi uses second queue.
                 overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2);
@@ -1202,8 +1203,8 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
                         if (CLI_ARGS::checkResults)
                         {
-                            r_out_default = std::make_unique<mgcl::Cuboid>(mglob, nglob, oglob, ghosts, ghosts, ghosts);
-                            lv0.getDR().read(p.getCommands(), r_out_default.get(), true);
+                            r_out_default = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                            lv0.getDVIn().read(p.getCommands(), r_out_default.get(), true);
                         }
                     }
 
@@ -1242,8 +1243,8 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
                         if (CLI_ARGS::checkResults)
                         {
-                            r_out_overlapped = std::make_unique<mgcl::Cuboid>(mglob, nglob, oglob, ghosts, ghosts, ghosts);
-                            lv0.getDR().read(p.getCommands(), r_out_overlapped.get(), true);
+                            r_out_overlapped = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                            lv0.getDVIn().read(p.getCommands(), r_out_overlapped.get(), true);
                         }
                     }
 
