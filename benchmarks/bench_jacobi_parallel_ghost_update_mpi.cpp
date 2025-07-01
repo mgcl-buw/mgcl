@@ -1177,6 +1177,8 @@ namespace mgcl_bench_jacobi_varying_overlapped
                         lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0, true, nullptr, nullptr);
 
                         std::string name = std::string("jacobi_default_")
+                                               .append(std::to_string(maxiter))
+                                               .append("iters_")
                                                .append(std::to_string(mglob))
                                                .append("_")
                                                .append(std::to_string(nglob))
@@ -1217,6 +1219,8 @@ namespace mgcl_bench_jacobi_varying_overlapped
                         mgcl::mgclCheckError(err, "Creating command queue");
 
                         std::string name = std::string("jacobi_overlapped_")
+                                               .append(std::to_string(maxiter))
+                                               .append("iters_")
                                                .append(std::to_string(mglob))
                                                .append("_")
                                                .append(std::to_string(nglob))
