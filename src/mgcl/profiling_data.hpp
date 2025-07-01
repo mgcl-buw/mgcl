@@ -12,6 +12,7 @@
  */
 
 #include <array>
+#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
@@ -57,7 +58,7 @@ namespace mgcl
                             std::string kernelName,
                             std::array<size_t, 3> global, std::array<size_t, 3> local);
 
-        void printBestTimingsPerKernel();
+        void printBestTimingsPerKernel(std::ostream& os = std::cout);
 
         friend std::ostream& operator<<(std::ostream& os, const ProfilingData& pd);
     };

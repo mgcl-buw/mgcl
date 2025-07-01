@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <ostream>
 #include <string>
 
 namespace mgcl
@@ -57,7 +58,7 @@ namespace mgcl
      * work-group sizes or different work-item counts.
      *
      */
-    void ProfilingData::printBestTimingsPerKernel()
+    void ProfilingData::printBestTimingsPerKernel(std::ostream& os)
     {
         size_t maxKernelNameLength = 0;
         size_t maxElapsedLength = std::string("time [ns]").length();
@@ -76,11 +77,11 @@ namespace mgcl
             }
         }
 
-        std::cout << std::setw(maxKernelNameLength + 2) << "kernel"
-                  << std::setw(maxElapsedLength + 2) << "time [ns]"
-                  << std::setw(maxQueueLength + 2) << "queue [ns]"
-                  << std::setw(maxWiLength + 2) << "work-items"
-                  << std::setw(maxWgLength + 2) << "work-group" << std::endl;
+        os << std::setw(maxKernelNameLength + 2) << "kernel"
+           << std::setw(maxElapsedLength + 2) << "time [ns]"
+           << std::setw(maxQueueLength + 2) << "queue [ns]"
+           << std::setw(maxWiLength + 2) << "work-items"
+           << std::setw(maxWgLength + 2) << "work-group" << std::endl;
 
         // Iterate over all measurements per kernel
         for (const auto& entry : measurements)
@@ -101,12 +102,12 @@ namespace mgcl
                         return a.elapsed < b.elapsed;
                     });
 
-                std::cout << std::setw(maxKernelNameLength + 2) << entry.first
-                          << std::setw(maxElapsedLength + 2) << it->elapsed
-                          << std::setw(maxQueueLength + 2) << it->inQueue
-                          << std::setw(maxWiLength + 2) << std::to_string(it->work_items[0]).append(",").append(std::to_string(it->work_items[1])).append(",").append(std::to_string(it->work_items[2]))
-                          << std::setw(maxWgLength + 2) << std::to_string(it->work_group[0]).append(",").append(std::to_string(it->work_group[1])).append(",").append(std::to_string(it->work_group[2]))
-                          << std::endl;
+                os << std::setw(maxKernelNameLength + 2) << entry.first
+                   << std::setw(maxElapsedLength + 2) << it->elapsed
+                   << std::setw(maxQueueLength + 2) << it->inQueue
+                   << std::setw(maxWiLength + 2) << std::to_string(it->work_items[0]).append(",").append(std::to_string(it->work_items[1])).append(",").append(std::to_string(it->work_items[2]))
+                   << std::setw(maxWgLength + 2) << std::to_string(it->work_group[0]).append(",").append(std::to_string(it->work_group[1])).append(",").append(std::to_string(it->work_group[2]))
+                   << std::endl;
             }
         }
     }
