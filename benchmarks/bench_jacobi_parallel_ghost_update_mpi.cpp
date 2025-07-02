@@ -19,6 +19,7 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
+#include <mpi.h>
 #include <sstream>
 #include <vector>
 using namespace std::chrono_literals;
@@ -1219,9 +1220,12 @@ namespace mgcl_bench_jacobi_varying_overlapped
                         res.medianTime = bench_util::getMedianTime(bench, name);
                         res.avgTime = bench_util::getAvgTime(bench, name);
                         res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                        res.m = mglob;
-                        res.n = nglob;
-                        res.o = oglob;
+                        res.m = ml;
+                        res.n = nl;
+                        res.o = ol;
+                        res.mglob = mglob;
+                        res.nglob = nglob;
+                        res.oglob = oglob;
                         res.gpus = mpi_size;
                         res.LT = -1;
                         results.push_back(res);
@@ -1261,9 +1265,12 @@ namespace mgcl_bench_jacobi_varying_overlapped
                         res.medianTime = bench_util::getMedianTime(bench, name);
                         res.avgTime = bench_util::getAvgTime(bench, name);
                         res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                        res.m = mglob;
-                        res.n = nglob;
-                        res.o = oglob;
+                        res.m = ml;
+                        res.n = nl;
+                        res.o = ol;
+                        res.mglob = mglob;
+                        res.nglob = nglob;
+                        res.oglob = oglob;
                         res.gpus = mpi_size;
                         res.LT = -1;
                         results.push_back(res);
@@ -1290,12 +1297,15 @@ namespace mgcl_bench_jacobi_varying_overlapped
                 }
         }
 
+        MPI_Barrier(mpi_comm);
         bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
+        MPI_Barrier(mpi_comm);
 
         if (CLI_ARGS::enableKernelProfiling)
         {
             kernelProfilesStream << "rank: " << mpi_rank << std::endl;
             std::cout << kernelProfilesStream.str() << std::endl;
         }
+        MPI_Barrier(mpi_comm);
     }
 }
