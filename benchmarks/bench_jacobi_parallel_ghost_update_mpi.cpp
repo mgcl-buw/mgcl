@@ -1097,97 +1097,97 @@ namespace mgcl_bench_jacobi_varying_overlapped
         MPI_Comm_rank(mpi_comm, &mpi_rank);
         MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
 
-        for (auto maxiter : CLI_ARGS::jacobiIters)
-            for (auto stepsPerIter : CLI_ARGS::jacobiStepsPerIter)
+        for (auto gr : gridsTBT)
+        {
+            int ml = gr[0];
+            int nl = gr[1];
+            int ol = gr[2];
+            int mglob = ml * mpi_dims[0];
+            int nglob = nl * mpi_dims[1];
+            int oglob = ol * mpi_dims[2];
+
+            CAPTURE(ml, nl, ol, mglob, nglob, oglob);
+
+            // print coords and boundaries per rank
+            // if (mpi_rank == 0)
+            //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+            // for (int i = 0; i < mpi_size; i++)
+            // {
+            //     MPI_Barrier(mpi_comm);
+            //     if (mpi_rank == i)
+            //     {
+            //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+            //                   << m_start << ";" << m_end << ";"
+            //                   << n_start << ";" << n_end << ";"
+            //                   << o_start << ";" << o_end << std::endl;
+            //     }
+            // }
+
+            REQUIRE(ml > 0);
+            REQUIRE(ml <= mglob);
+            REQUIRE(nl > 0);
+            REQUIRE(nl <= nglob);
+            REQUIRE(ol > 0);
+            REQUIRE(ol <= oglob);
+
+            auto v_in = std::make_shared<mgcl::Cuboid>(ml, nl, ol, 0, 0, 0);
+            auto f_in = std::make_shared<mgcl::Cuboid>(ml, nl, ol, 0, 0, 0);
+            // v_in->fill1dIndex(true);
+            // f_in->fill1dIndex(true);
+            v_in->fillRandom();
+            f_in->fillRandom();
+
+            // Create dummy problem to initialize OpenCL
+            mgcl::Problem p(ml, nl, ol, f_in, v_in, mglob, nglob, oglob);
+            p.setSilent(true);
+            p.setKernelFile("residual_kernels_inner_vs_boundary.cl");
+            if (CLI_ARGS::useBinaryFile)
             {
-                if (stepsPerIter > maxiter)
-                    continue;
+                p.setBinaryFile("residualInnerVsBoundary.bin");
+            }
+            p.setUseOpencl(true);
+            p.setGhosts(ghosts);
+            p.setStencilType(mgcl::MGCL_VARYING);
+            p.setDeviceType(CL_DEVICE_TYPE_GPU);
+            p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
+            auto sv = p.getStencilValues();
+            mgcl_test::fill27pLaplace(*sv, 1.0 / static_cast<double>(mglob), false);
+            p.setMpiComm(mpi_comm);
 
-                for (auto gr : gridsTBT)
+            auto& conf = p.getKernelConfig();
+            // Jacobi kernels
+            conf["jacobi_iter_27point_varying_stencil_1d_boundary"] = mgcl::conf::KernelWorkgroupSizes{{1, {128, 1, 1}}};
+            conf["jacobi_iter_27point_fixed_stencil_1d_boundary"] = mgcl::conf::KernelWorkgroupSizes{{1, {128, 1, 1}}};
+            conf["jacobi_iter_7point_boundary"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
+            conf["jacobi_iter_19point_boundary"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
+            conf["jacobi_iter_27point_boundary"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
+            conf["jacobi_iter_27point_varying_stencil_1d_inner"] = mgcl::conf::KernelWorkgroupSizes{{1, {128, 1, 1}}};
+            conf["jacobi_iter_27point_fixed_stencil_1d_inner"] = mgcl::conf::KernelWorkgroupSizes{{1, {128, 1, 1}}};
+            conf["jacobi_iter_7point_inner"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
+            conf["jacobi_iter_19point_inner"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
+            conf["jacobi_iter_27point_inner"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
+            p.init();
+
+            if (CLI_ARGS::enableKernelProfiling)
+                p.getProfilingData()->getMeasurements().clear();
+
+            auto& lv0 = p.getLevelAt(0);
+
+            ankerl::nanobench::Bench bench;
+            bench.timeUnit(1ms, "ms")
+                .epochs(CLI_ARGS::bench_epochs)
+                .epochIterations(CLI_ARGS::bench_iterations)
+                .relative(false);
+
+            if (mpi_rank > 0)
+                bench.output(nullptr);
+
+            for (auto maxiter : CLI_ARGS::jacobiIters)
+                for (auto stepsPerIter : CLI_ARGS::jacobiStepsPerIter)
                 {
-                    int ml = gr[0];
-                    int nl = gr[1];
-                    int ol = gr[2];
-                    int mglob = ml * mpi_dims[0];
-                    int nglob = nl * mpi_dims[1];
-                    int oglob = ol * mpi_dims[2];
-
-                    CAPTURE(ml, nl, ol, mglob, nglob, oglob);
-
-                    // print coords and boundaries per rank
-                    // if (mpi_rank == 0)
-                    //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
-
-                    // for (int i = 0; i < mpi_size; i++)
-                    // {
-                    //     MPI_Barrier(mpi_comm);
-                    //     if (mpi_rank == i)
-                    //     {
-                    //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
-                    //                   << m_start << ";" << m_end << ";"
-                    //                   << n_start << ";" << n_end << ";"
-                    //                   << o_start << ";" << o_end << std::endl;
-                    //     }
-                    // }
-
-                    REQUIRE(ml > 0);
-                    REQUIRE(ml <= mglob);
-                    REQUIRE(nl > 0);
-                    REQUIRE(nl <= nglob);
-                    REQUIRE(ol > 0);
-                    REQUIRE(ol <= oglob);
-
-                    auto v_in = std::make_shared<mgcl::Cuboid>(ml, nl, ol, 0, 0, 0);
-                    auto f_in = std::make_shared<mgcl::Cuboid>(ml, nl, ol, 0, 0, 0);
-                    // v_in->fill1dIndex(true);
-                    // f_in->fill1dIndex(true);
-                    v_in->fillRandom();
-                    f_in->fillRandom();
-
-                    // Create dummy problem to initialize OpenCL
-                    mgcl::Problem p(ml, nl, ol, f_in, v_in, mglob, nglob, oglob);
-                    p.setSilent(true);
-                    p.setKernelFile("residual_kernels_inner_vs_boundary.cl");
-                    if (CLI_ARGS::useBinaryFile)
-                    {
-                        p.setBinaryFile("residualInnerVsBoundary.bin");
-                    }
-                    p.setUseOpencl(true);
-                    p.setGhosts(ghosts);
-                    p.setStencilType(mgcl::MGCL_VARYING);
-                    p.setDeviceType(CL_DEVICE_TYPE_GPU);
-                    p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
-                    auto sv = p.getStencilValues();
-                    mgcl_test::fill27pLaplace(*sv, 1.0 / static_cast<double>(mglob), false);
-                    p.setMpiComm(mpi_comm);
-
-                    auto& conf = p.getKernelConfig();
-                    // Jacobi kernels
-                    conf["jacobi_iter_27point_varying_stencil_1d_boundary"] = mgcl::conf::KernelWorkgroupSizes{{1, {128, 1, 1}}};
-                    conf["jacobi_iter_27point_fixed_stencil_1d_boundary"] = mgcl::conf::KernelWorkgroupSizes{{1, {128, 1, 1}}};
-                    conf["jacobi_iter_7point_boundary"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
-                    conf["jacobi_iter_19point_boundary"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
-                    conf["jacobi_iter_27point_boundary"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
-                    conf["jacobi_iter_27point_varying_stencil_1d_inner"] = mgcl::conf::KernelWorkgroupSizes{{1, {128, 1, 1}}};
-                    conf["jacobi_iter_27point_fixed_stencil_1d_inner"] = mgcl::conf::KernelWorkgroupSizes{{1, {128, 1, 1}}};
-                    conf["jacobi_iter_7point_inner"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
-                    conf["jacobi_iter_19point_inner"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
-                    conf["jacobi_iter_27point_inner"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
-                    p.init();
-
-                    if (CLI_ARGS::enableKernelProfiling)
-                        p.getProfilingData()->getMeasurements().clear();
-
-                    auto& lv0 = p.getLevelAt(0);
-
-                    ankerl::nanobench::Bench bench;
-                    bench.timeUnit(1ms, "ms")
-                        .epochs(CLI_ARGS::bench_epochs)
-                        .epochIterations(CLI_ARGS::bench_iterations)
-                        .relative(false);
-
-                    if (mpi_rank > 0)
-                        bench.output(nullptr);
+                    if (stepsPerIter > maxiter)
+                        continue;
 
                     std::unique_ptr<mgcl::Cuboid> r_out_default = nullptr;
                     std::unique_ptr<mgcl::Cuboid> r_out_overlapped = nullptr;
@@ -1238,7 +1238,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
                         int err;
                         cl_command_queue_properties props = p.isProfilingEnabled() ? CL_QUEUE_PROFILING_ENABLE : 0;
-                        cl_command_queue queue2 = clCreateCommandQueue(p.getContext(), p.getOpenCLHelper().getDeviceId(), props, &err);
+                        cl_command_queue queue2 = clCreateCommandQueueWithProperties(p.getContext(), p.getOpenCLHelper().getDeviceId(), &props, &err);
                         mgcl::mgclCheckError(err, "Creating command queue");
 
                         std::string name = std::string("jacobi_overlapped_")
@@ -1278,6 +1278,8 @@ namespace mgcl_bench_jacobi_varying_overlapped
                     // Check results for kernels that it is valid for
                     if (CLI_ARGS::checkResults)
                     {
+                        // r_out_default->dumpToFile("r_out_default_" + std::to_string(mpi_rank) + ".txt", true);
+                        // r_out_overlapped->dumpToFile("r_out_overlapped_" + std::to_string(mpi_rank) + ".txt", true);
                         REQUIRE(r_out_default->isEqual(*r_out_overlapped));
                     }
 
@@ -1286,7 +1288,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
                         p.getProfilingData()->printBestTimingsPerKernel(kernelProfilesStream);
                     }
                 }
-            }
+        }
 
         bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
 
