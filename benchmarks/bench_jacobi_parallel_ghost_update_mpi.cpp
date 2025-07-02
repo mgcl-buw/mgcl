@@ -370,7 +370,9 @@ namespace mgcl_bench_jacobi_varying_overlapped
         // No ghost update included. No final residual calculation included.
         double jacobiBoundary(mgcl::Problem& problem, mgcl::Level& level,
                               cl_mem dVIn, cl_mem dVOut, int store_res,
-                              cl_command_queue queue)
+                              cl_command_queue queue, cl_kernel kernel,
+                              size_t global[3], size_t local[3],
+                              std::string kernelName)
         {
             int err;
             int mgh = level.getMgh();
@@ -387,30 +389,14 @@ namespace mgcl_bench_jacobi_varying_overlapped
             // TODO refactor stencilFactor
 
             // Create the compute kernel from the program
-            const char* kernelName;
-            if (problem.getStencilType() == mgcl::MGCL_LAPLACE_7POINT)
-                kernelName = "jacobi_iter_7point_boundary";
-            else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_19POINT)
+            if (problem.getStencilType() == mgcl::MGCL_LAPLACE_19POINT)
             {
-                kernelName = "jacobi_iter_19point_boundary";
                 dinv = (6.0 * h2) / 24.0;
             }
             else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_27POINT)
             {
-                kernelName = "jacobi_iter_27point_boundary";
                 dinv = (26.0 * h2) / 88.0;
             }
-            else if (problem.getStencilType() == mgcl::MGCL_VARYING)
-            {
-                kernelName = "jacobi_iter_27point_varying_stencil_1d_boundary";
-            }
-            else if (problem.getStencilType() == mgcl::MGCL_FIXED)
-            {
-                kernelName = "jacobi_iter_27point_fixed_stencil_1d_boundary";
-            }
-
-            cl_kernel kernel = clCreateKernel(problem.getProgram(), kernelName, &err);
-            mgcl::mgclCheckError(err, "Creating kernel");
 
             // cl_mem dVIn = level.getDVIn().getBuffer();
             // cl_mem dVOut = level.getDVOut().getBuffer();
@@ -509,27 +495,9 @@ namespace mgcl_bench_jacobi_varying_overlapped
             }
             mgcl::mgclCheckError(err, "Setting kernel arguments");
 
-            // One work-item per cell (including ghost cells).
-            size_t global[2] = {static_cast<size_t>(mgh * ngh * ogh), static_cast<size_t>(0)};
-            const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, 1);
-            size_t local[2] = {c[0], c[1]};
-
-            // kernels that use constant Laplace stencils are 2d and need different global and local sizes
-            if (problem.getStencilType() != mgcl::MGCL_VARYING && problem.getStencilType() != mgcl::MGCL_FIXED)
-            {
-                global[0] = static_cast<size_t>(ngh);
-                global[1] = static_cast<size_t>(ogh);
-                // local[0] = static_cast<size_t>(1);
-                // local[1] = static_cast<size_t>(64);
-            }
-
-            // Pad global sizes to fit to local sizes
-            int kernelDims = (problem.getStencilType() == mgcl::MGCL_VARYING || problem.getStencilType() == mgcl::MGCL_FIXED) ? 1 : 2;
-            for (int i = 0; i < kernelDims; i++)
-                if (global[i] % local[i] != 0)
-                {
-                    global[i] += local[i] - (global[i] % local[i]);
-                }
+            int kernelDims = 2;
+            if (problem.getStencilType() == mgcl::MGCL_VARYING || problem.getStencilType() == mgcl::MGCL_FIXED)
+                kernelDims = 1;
 
             err = clEnqueueNDRangeKernel(queue, kernel, kernelDims, NULL, global, local, 0, NULL, &ev);
             mgcl::mgclCheckError(err, "Enqueueing kernel");
@@ -541,8 +509,6 @@ namespace mgcl_bench_jacobi_varying_overlapped
                                                            {local[0], local[1], 1});
             }
             mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
-
-            clReleaseKernel(kernel);
 
             return res;
         }
@@ -551,7 +517,9 @@ namespace mgcl_bench_jacobi_varying_overlapped
         // No ghost update included. No final residual calculation included.
         double jacobiInner(mgcl::Problem& problem, mgcl::Level& level,
                            cl_mem dVIn, cl_mem dVOut, int store_res,
-                           cl_command_queue queue)
+                           cl_command_queue queue, cl_kernel kernel,
+                           size_t global[3], size_t local[3],
+                           std::string kernelName)
         {
             int err;
             int mgh = level.getMgh();
@@ -568,30 +536,14 @@ namespace mgcl_bench_jacobi_varying_overlapped
             // TODO refactor stencilFactor
 
             // Create the compute kernel from the program
-            const char* kernelName;
-            if (problem.getStencilType() == mgcl::MGCL_LAPLACE_7POINT)
-                kernelName = "jacobi_iter_7point_inner";
-            else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_19POINT)
+            if (problem.getStencilType() == mgcl::MGCL_LAPLACE_19POINT)
             {
-                kernelName = "jacobi_iter_19point_inner";
                 dinv = (6.0 * h2) / 24.0;
             }
             else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_27POINT)
             {
-                kernelName = "jacobi_iter_27point_inner";
                 dinv = (26.0 * h2) / 88.0;
             }
-            else if (problem.getStencilType() == mgcl::MGCL_VARYING)
-            {
-                kernelName = "jacobi_iter_27point_varying_stencil_1d_inner";
-            }
-            else if (problem.getStencilType() == mgcl::MGCL_FIXED)
-            {
-                kernelName = "jacobi_iter_27point_fixed_stencil_1d_inner";
-            }
-
-            cl_kernel kernel = clCreateKernel(problem.getProgram(), kernelName, &err);
-            mgcl::mgclCheckError(err, "Creating kernel");
 
             // cl_mem dVIn = level.getDVIn().getBuffer();
             // cl_mem dVOut = level.getDVOut().getBuffer();
@@ -690,27 +642,9 @@ namespace mgcl_bench_jacobi_varying_overlapped
             }
             mgcl::mgclCheckError(err, "Setting kernel arguments");
 
-            // One work-item per cell (including ghost cells).
-            size_t global[2] = {static_cast<size_t>(mgh * ngh * ogh), static_cast<size_t>(0)};
-            const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, 1);
-            size_t local[2] = {c[0], c[1]};
-
-            // kernels that use constant Laplace stencils are 2d and need different global and local sizes
-            if (problem.getStencilType() != mgcl::MGCL_VARYING && problem.getStencilType() != mgcl::MGCL_FIXED)
-            {
-                global[0] = static_cast<size_t>(ngh);
-                global[1] = static_cast<size_t>(ogh);
-                // local[0] = static_cast<size_t>(1);
-                // local[1] = static_cast<size_t>(64);
-            }
-
-            // Pad global sizes to fit to local sizes
-            int kernelDims = (problem.getStencilType() == mgcl::MGCL_VARYING || problem.getStencilType() == mgcl::MGCL_FIXED) ? 1 : 2;
-            for (int i = 0; i < kernelDims; i++)
-                if (global[i] % local[i] != 0)
-                {
-                    global[i] += local[i] - (global[i] % local[i]);
-                }
+            int kernelDims = 2;
+            if (problem.getStencilType() == mgcl::MGCL_VARYING || problem.getStencilType() == mgcl::MGCL_FIXED)
+                kernelDims = 1;
 
             err = clEnqueueNDRangeKernel(queue, kernel, kernelDims, NULL, global, local, 0, NULL, &ev);
             mgcl::mgclCheckError(err, "Enqueueing kernel");
@@ -722,8 +656,6 @@ namespace mgcl_bench_jacobi_varying_overlapped
                                                            {local[0], local[1], 1});
             }
             mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
-
-            clReleaseKernel(kernel);
 
             return res;
         }
@@ -763,6 +695,92 @@ namespace mgcl_bench_jacobi_varying_overlapped
         cl_mem dVIn = level.getDVIn().getBuffer();
         cl_mem dVOut = level.getDVOut().getBuffer();
 
+        int mgh = level.getMgh();
+        int ngh = level.getNgh();
+        int ogh = level.getOgh();
+        int idx_start = level.getDVIn().getGhostsM(); // only inner gps.
+
+        cl_event ev;
+
+        double h2 = 1.0 / static_cast<double>((problem.getMGlobal() >> level.getNum()) * (problem.getMGlobal() >> level.getNum()));
+        double dinv = h2 / 6.0;
+        double h2inv = level.getStencilFactor(); // divisor of the stencil, inverted to use * instead of / in kernel
+        // TODO refactor stencilFactor
+
+        /********************** create boundary kernel *********************/
+        const char* kernelNameBoundary;
+        if (problem.getStencilType() == mgcl::MGCL_LAPLACE_7POINT)
+            kernelNameBoundary = "jacobi_iter_7point_boundary";
+        else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_19POINT)
+        {
+            kernelNameBoundary = "jacobi_iter_19point_boundary";
+            dinv = (6.0 * h2) / 24.0;
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_27POINT)
+        {
+            kernelNameBoundary = "jacobi_iter_27point_boundary";
+            dinv = (26.0 * h2) / 88.0;
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_VARYING)
+        {
+            kernelNameBoundary = "jacobi_iter_27point_varying_stencil_1d_boundary";
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_FIXED)
+        {
+            kernelNameBoundary = "jacobi_iter_27point_fixed_stencil_1d_boundary";
+        }
+        cl_kernel boundaryKernel = clCreateKernel(problem.getProgram(), kernelNameBoundary, &err);
+        mgcl::mgclCheckError(err, "Creating boundaryKernel");
+
+        /********************** create boundary kernel *********************/
+        const char* kernelNameInner;
+        if (problem.getStencilType() == mgcl::MGCL_LAPLACE_7POINT)
+            kernelNameInner = "jacobi_iter_7point_boundary";
+        else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_19POINT)
+        {
+            kernelNameInner = "jacobi_iter_19point_boundary";
+            dinv = (6.0 * h2) / 24.0;
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_27POINT)
+        {
+            kernelNameInner = "jacobi_iter_27point_boundary";
+            dinv = (26.0 * h2) / 88.0;
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_VARYING)
+        {
+            kernelNameInner = "jacobi_iter_27point_varying_stencil_1d_boundary";
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_FIXED)
+        {
+            kernelNameInner = "jacobi_iter_27point_fixed_stencil_1d_boundary";
+        }
+        cl_kernel innerKernel = clCreateKernel(problem.getProgram(), kernelNameInner, &err);
+        mgcl::mgclCheckError(err, "Creating innerKernel");
+
+        // NOTE: using the same conf for inner and boundary kernels
+
+        // One work-item per cell (including ghost cells).
+        size_t global[3] = {static_cast<size_t>(mgh * ngh * ogh), static_cast<size_t>(0), static_cast<size_t>(0)};
+        const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelNameBoundary, 1);
+        size_t local[3] = {c[0], c[1], c[2]};
+
+        // kernels that use constant Laplace stencils are 2d and need different global and local sizes
+        if (problem.getStencilType() != mgcl::MGCL_VARYING && problem.getStencilType() != mgcl::MGCL_FIXED)
+        {
+            global[0] = static_cast<size_t>(ngh);
+            global[1] = static_cast<size_t>(ogh);
+            // local[0] = static_cast<size_t>(1);
+            // local[1] = static_cast<size_t>(64);
+        }
+
+        // Pad global sizes to fit to local sizes
+        int kernelDims = (problem.getStencilType() == mgcl::MGCL_VARYING || problem.getStencilType() == mgcl::MGCL_FIXED) ? 1 : 2;
+        for (int i = 0; i < kernelDims; i++)
+            if (global[i] % local[i] != 0)
+            {
+                global[i] += local[i] - (global[i] % local[i]);
+            }
+
         int globalIter = 0;
         while (globalIter < maxiter)
         {
@@ -774,11 +792,11 @@ namespace mgcl_bench_jacobi_varying_overlapped
                 store_res = globalIter == maxiter - 1;
 
                 // calculate boundary points first
-                overlapped_helpers::jacobiBoundary(problem, level, dVIn, dVOut, store_res, problem.getCommands());
+                overlapped_helpers::jacobiBoundary(problem, level, dVIn, dVOut, store_res, problem.getCommands(), boundaryKernel, global, local, kernelNameBoundary);
                 problem.finish();
 
                 // now calculate inner points whilst updating ghosts. Inner jacobi uses second queue.
-                overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2);
+                overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2, innerKernel, global, local, kernelNameInner);
 
                 // Update ghosts use the default command queue of the problem instance
                 err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVIn(),
@@ -794,6 +812,9 @@ namespace mgcl_bench_jacobi_varying_overlapped
                 dVIn = tmp;
             }
         }
+
+        mgcl::mgclCheckError(clReleaseKernel(boundaryKernel), "Releasing boundaryKernel");
+        mgcl::mgclCheckError(clReleaseKernel(innerKernel), "Releasing innerKernel");
 
         if (store_res)
         {
@@ -1015,6 +1036,8 @@ namespace mgcl_bench_jacobi_varying_overlapped
     // }
 
     // Benchs the various residual fixed stencil kernel versions
+    // Note that, while kernel profiling works and reports adequate timings, it needs to wait for each kernel to be finished before starting the next one,
+    // which might hurt performance, even when using two queues.
     TEST_CASE("benchJacobiOverlappedGhostUpdate")
     {
         using std::min;
