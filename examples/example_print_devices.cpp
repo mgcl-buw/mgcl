@@ -85,10 +85,13 @@ int main(int argc, char** argv)
         std::string deviceStrategyStr = input.getCmdOption("--device-strategy");
         if (deviceStrategyStr == "first")
             deviceStrategy = mgcl::OCL_DEVICE_STRATEGY::ALWAYS_FIRST;
-        else if (deviceStrategyStr == "gpu")
+        else if (deviceStrategyStr == "distribute")
             deviceStrategy = mgcl::OCL_DEVICE_STRATEGY::DISTRIBUTE_EVENLY;
         else
-            throw "Invalid device strategy. Must be 'first' or 'distribute'";
+        {
+            std::cerr << "Invalid device strategy. Must be 'first' or 'distribute'" << std::endl;
+            return 1;
+        }
     }
 
     int N = 16;
