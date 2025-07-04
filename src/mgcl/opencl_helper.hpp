@@ -47,7 +47,7 @@ namespace mgcl
         bool readKernelFromFile = false;
 
         // How ocl devices shall be selected. See mgcl.hpp for further information.
-        OCL_DEVICE_STRATEGY deviceStrategy = OCL_DEVICE_STRATEGY::ALWAYS_FIRST;
+        OCL_DEVICE_STRATEGY deviceStrategy = OCL_DEVICE_STRATEGY::DISTRIBUTE_EVENLY;
 
         friend class Problem;
 

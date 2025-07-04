@@ -75,14 +75,14 @@ namespace mgcl
     enum class OCL_DEVICE_STRATEGY
     {
         /**
-         * Always use the first device that matches device type and name. This is the default.
+         * Always use the first device that matches device type and name.
          */
         ALWAYS_FIRST,
 
         /**
          * If multiple devices are available and mgcl is run with MPI, distribute devices evenly accross the processes.
          * rank 0 gets device 0, rank 1 device 1 etc. If #ranks > #devices, rank #devices gets device 0 again,
-         * rank #devices+1 gets device 1 etc.
+         * rank #devices+1 gets device 1 etc. This is the default.
          *
          */
         DISTRIBUTE_EVENLY
