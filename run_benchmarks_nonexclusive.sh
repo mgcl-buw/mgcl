@@ -9,12 +9,14 @@
 #SBATCH --gpus-per-task 1
 #SBATCH --cpus-per-task 1
 
+outputSuffix=$MGCL_SUFFIX
+
 current_time=$(date "+%Y.%m.%d-%H.%M.%S")
 
 cd "$HOME"/projects/mgcl/build/benchmarks || exit
 
 # run e.g. with 
 # sbatch --chdir /beegfs/shoffmann/projects/mgcl/build/ run_benchmarks.sh [solve][console]
-"$HOME"/projects/mgcl/build/benchmarks/benchmarks "$@" > ~/output/"$current_time"-mgcl-bench.txt
+"$HOME"/projects/mgcl/build/benchmarks/benchmarks "$@" > ~/output/"$current_time"-mgcl-bench${outputSuffix}.txt
 
 cd "$HOME"/projects/mgcl || exit
