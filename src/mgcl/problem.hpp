@@ -347,6 +347,9 @@ namespace mgcl
         cl_device_type getDeviceType() const;
         void setDeviceType(const cl_device_type& deviceType_);
 
+        OCL_DEVICE_STRATEGY getDeviceStrategy() const;
+        void setDeviceStrategy(const OCL_DEVICE_STRATEGY deviceStrategy);
+
         cl_device_id getDeviceId() const;
 
         cl_context getContext() const;

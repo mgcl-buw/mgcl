@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cuboid.hpp"
+#include "mgcl.hpp"
 #include <map>
 #include <string>
 
@@ -45,6 +46,9 @@ namespace mgcl
          * us to use a different kernel file for e.g. benchmarking. */
         bool readKernelFromFile = false;
 
+        // How ocl devices shall be selected. See mgcl.hpp for further information.
+        OCL_DEVICE_STRATEGY deviceStrategy = OCL_DEVICE_STRATEGY::ALWAYS_FIRST;
+
         friend class Problem;
 
     public:
@@ -55,8 +59,9 @@ namespace mgcl
         OpenCLHelper& operator=(OpenCLHelper&&) = delete;
         ~OpenCLHelper();
 
-        void init();
+        void init(int mpi_rank = 0);
         void release();
+        cl_device_id selectDevice(cl_platform_id platform_id, int mpi_rank = 0);
         bool isInitialized();
         bool checkParameters();
         int copyInputBuffers();
@@ -65,6 +70,7 @@ namespace mgcl
         void printBuffer(cl_mem d_buf, int m, int n, int o);
         std::string availableDevicesInfo();
         std::string deviceTypeToString(cl_device_type dt);
+        bool supportsDoublePrecision(cl_device_id _device_id);
 
         void finish();
 
@@ -115,6 +121,9 @@ namespace mgcl
 
         std::string getBinaryFile() const;
         void setBinaryFile(const std::string& binaryFile_);
+
+        inline OCL_DEVICE_STRATEGY getDeviceStrategy() const { return deviceStrategy; }
+        inline void setDeviceStrategy(const OCL_DEVICE_STRATEGY& deviceStrategy_) { deviceStrategy = deviceStrategy_; }
     };
 
 #define mgclCheckError(E, S) OpenCLHelper::mgcl_check_error(E, S, __FILE__, __LINE__)

@@ -46,6 +46,8 @@ private:
  * Arguments:
  * --device-name <name> Name of the device to use. If not set, the first available device will be used.
  * --device-type <(cpu|gpu)> Type of OpenCL device to use. Optional.
+ * --device-strategy <(first|distribute)> How the OpenCL device shall be selected. distribute means that each mpi
+ *    process gets its own device. Defaults to first.
  */
 int main(int argc, char** argv)
 {
@@ -62,6 +64,7 @@ int main(int argc, char** argv)
     InputParser input(argc, argv);
     std::string deviceName = "";
     cl_device_type deviceType = CL_DEVICE_TYPE_DEFAULT;
+    mgcl::OCL_DEVICE_STRATEGY deviceStrategy = mgcl::OCL_DEVICE_STRATEGY::ALWAYS_FIRST;
 
     if (input.cmdOptionExists("--device-name"))
         deviceName = input.getCmdOption("--device-name");
@@ -77,6 +80,17 @@ int main(int argc, char** argv)
             throw "Invalid device type. Must be 'cpu' or 'gpu'";
     }
 
+    if (input.cmdOptionExists("--device-strategy"))
+    {
+        std::string deviceStrategyStr = input.getCmdOption("--device-strategy");
+        if (deviceStrategyStr == "first")
+            deviceStrategy = mgcl::OCL_DEVICE_STRATEGY::ALWAYS_FIRST;
+        else if (deviceStrategyStr == "gpu")
+            deviceStrategy = mgcl::OCL_DEVICE_STRATEGY::DISTRIBUTE_EVENLY;
+        else
+            throw "Invalid device strategy. Must be 'first' or 'distribute'";
+    }
+
     int N = 16;
 
     auto f = std::make_shared<mgcl::Cuboid>(N, N, N);
@@ -85,6 +99,7 @@ int main(int argc, char** argv)
     p.setUseOpencl(true);
     p.setDeviceName(deviceName);
     p.setDeviceType(deviceType);
+    p.setDeviceStrategy(deviceStrategy);
 
     for (int i = 0; i < mpi_size; i++)
     {

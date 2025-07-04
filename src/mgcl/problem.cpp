@@ -708,7 +708,7 @@ namespace mgcl
         openCLHelper.setDeviceId(deviceId);
         setUseOpencl(true);
 
-        openCLHelper.init();
+        openCLHelper.init(useMpi() ? mpiRank() : 0);
     }
 
     /**
@@ -724,7 +724,7 @@ namespace mgcl
             {
                 openCLHelper.setPreprocessorConstant("BLOCKSIZE", std::to_string(getVBS().getBlocksize()));
             }
-            openCLHelper.init();
+            openCLHelper.init(useMpi() ? mpiRank() : 0);
         }
     }
 
@@ -1834,5 +1834,16 @@ namespace mgcl
            << " mpiMinGridPoints: " << p.mpiMinGridPoints << std::endl;
 
         return os;
+    }
+
+    OCL_DEVICE_STRATEGY Problem::getDeviceStrategy() const
+    {
+        return openCLHelper.getDeviceStrategy();
+    }
+
+    void Problem::setDeviceStrategy(const OCL_DEVICE_STRATEGY deviceStrategy)
+    {
+        assert(!openCLHelper.isInitialized() && "OpenCLHelper is already initialized!");
+        openCLHelper.setDeviceStrategy(deviceStrategy);
     }
 }
