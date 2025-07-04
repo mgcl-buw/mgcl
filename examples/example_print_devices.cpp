@@ -106,11 +106,23 @@ int main(int argc, char** argv)
         MPI_Barrier(MPI_COMM_WORLD);
         if (i == mpi_rank)
         {
-            std::cout << "on rank " << i << ": " << std::endl;
+            std::cout << "available devices on rank " << i << ": " << std::endl;
             std::cout << "  > dims: " << mpi_dims[0] << "," << mpi_dims[1] << "," << mpi_dims[2] << std::endl
                       << "  > " << p.getOpenCLHelper().availableDevicesInfo()
                       << "-----" << std::endl;
             // p.getOpenCLHelper().init();
+            std::cout << std::flush;
+        }
+    }
+
+    for (int i = 0; i < mpi_size; i++)
+    {
+        MPI_Barrier(MPI_COMM_WORLD);
+        if (i == mpi_rank)
+        {
+            std::cout << "initializing OpenCLHelper on rank " << i << ": " << std::endl;
+            std::cout << "  > " << std::endl;
+            p.getOpenCLHelper().init();
             std::cout << std::flush;
         }
     }
