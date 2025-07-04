@@ -8,6 +8,7 @@
 #include <CL/cl.h>
 #include <cassert>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 
 #include <cstdio>  // for printf, size_t, NULL, fprintf, fclose, fopen
@@ -146,7 +147,7 @@ namespace mgcl
 
         // Update device type that is in use
         err = clGetDeviceInfo(deviceId, CL_DEVICE_TYPE, sizeof(deviceType), &deviceType, nullptr);
-        mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
+        mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_TYPE)");
 
         // if binaryPath is set, check if it exists and use it instead of recompiling
         std::ifstream fbin(binaryFile, std::ios::binary | std::ios::in);
@@ -880,5 +881,132 @@ namespace mgcl
             result += " -D" + it->first + "=" + it->second;
         }
         return result;
+    }
+
+    std::string OpenCLHelper::deviceTypeToString(cl_device_type dt)
+    {
+        if (dt == CL_DEVICE_TYPE_GPU)
+            return "CL_DEVICE_TYPE_GPU";
+        else if (dt == CL_DEVICE_TYPE_CPU)
+            return "CL_DEVICE_TYPE_CPU";
+        else if (dt == CL_DEVICE_TYPE_ACCELERATOR)
+            return "CL_DEVICE_TYPE_ACCELERATOR";
+        else if (dt == CL_DEVICE_TYPE_DEFAULT)
+            return "CL_DEVICE_TYPE_DEFAULT";
+        else if (dt == CL_DEVICE_TYPE_ALL)
+            return "CL_DEVICE_TYPE_ALL";
+        else
+            return "UNKNOWN DEVICE TYPE";
+    }
+
+    /**
+     * @brief Searches all platforms and devices and prints them
+     *
+     */
+    std::string OpenCLHelper::availableDevicesInfo()
+    {
+        int err;
+        cl_uint numPlatforms;
+        cl_uint numDevices;
+        cl_device_id* device_ids;
+        cl_device_type _device_type = CL_DEVICE_TYPE_ALL;
+
+        // Find number of platforms
+        err = clGetPlatformIDs(0, nullptr, &numPlatforms);
+        mgclCheckError(err, "Finding platforms");
+        if (numPlatforms == 0)
+        {
+            std::cout << "No OpenCL platform found." << std::endl;
+            return "";
+        }
+
+        std::stringstream ss;
+
+        // Get all platforms
+        cl_platform_id platforms[numPlatforms];
+        err = clGetPlatformIDs(numPlatforms, platforms, nullptr);
+        mgclCheckError(err, "Getting platforms");
+
+        char device_name_available[1024] = {0}; // string to hold name of compute device
+
+        // take first device that conforms given device_type and name
+        for (cl_uint i = 0; i < numPlatforms; i++)
+        {
+            // Get platform name
+            char platform_name[1024] = {0};
+            err = clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, sizeof(platform_name), platform_name, nullptr);
+            mgclCheckError(err, "Getting platform name");
+            ss << "Platform " << i << ": " << platform_name << std::endl;
+
+            // Find number of devices for a platform
+            err = clGetDeviceIDs(platforms[i], _device_type, 0, nullptr, &numDevices);
+            if (err == CL_DEVICE_NOT_FOUND)
+            {
+                continue; // no device with given type found in current platform
+            }
+            mgcl::mgclCheckError(err, "Finding devices using clGetDeviceIDs");
+
+            device_ids = new cl_device_id[numDevices];
+            err = clGetDeviceIDs(platforms[i], _device_type, numDevices, device_ids, nullptr);
+            mgclCheckError(err, "clGetDeviceIDs");
+
+            // Loop over all devices for a given plattform
+            for (cl_uint j{0}; j < numDevices; ++j)
+            {
+
+                err = clGetDeviceInfo(device_ids[j], CL_DEVICE_NAME,
+                                      sizeof(device_name_available), &device_name_available,
+                                      nullptr);
+                mgclCheckError(err, "Finding device name using clGetDeviceInfo(CL_DEVICE_NAME)");
+
+                cl_device_type dt;
+                err = clGetDeviceInfo(device_ids[j], CL_DEVICE_TYPE, sizeof(cl_device_type), &dt, nullptr);
+                mgclCheckError(err, "Finding device type using clGetDeviceInfo(CL_DEVICE_TYPE)");
+
+#ifdef CL_DEVICE_UUID_KHR
+                cl_uchar uuid[CL_UUID_SIZE_KHR];
+                bool uuid_available = false;
+                err = clGetDeviceInfo(deviceId, CL_DEVICE_UUID_KHR, sizeof(cl_uchar) * CL_UUID_SIZE_KHR,
+                                      &uuid, nullptr);
+                uuid_available = err == CL_SUCCESS;
+                std::string uuid_str = "uuid: ";
+                if (uuid_available)
+                {
+                    std::stringstream ss2;
+                    ss2 << std::hex << std::setfill('0');
+                    ss2 << std::setw(2) << static_cast<int>(uuid[0])
+                        << std::setw(2) << static_cast<int>(uuid[1])
+                        << std::setw(2) << static_cast<int>(uuid[2])
+                        << std::setw(2) << static_cast<int>(uuid[3]) << '-'
+                        << std::setw(2) << static_cast<int>(uuid[4])
+                        << std::setw(2) << static_cast<int>(uuid[5]) << '-'
+                        << std::setw(2) << static_cast<int>(uuid[6])
+                        << std::setw(2) << static_cast<int>(uuid[7]) << '-'
+                        << std::setw(2) << static_cast<int>(uuid[8])
+                        << std::setw(2) << static_cast<int>(uuid[9]) << '-'
+                        << std::setw(2) << static_cast<int>(uuid[10])
+                        << std::setw(2) << static_cast<int>(uuid[11])
+                        << std::setw(2) << static_cast<int>(uuid[12])
+                        << std::setw(2) << static_cast<int>(uuid[13])
+                        << std::setw(2) << static_cast<int>(uuid[14])
+                        << std::setw(2) << static_cast<int>(uuid[15]);
+
+                    uuid_str += ss2.str(); // result holds the formatted UUID string
+                }
+                else
+                {
+                    uuid_str += "N/A";
+                }
+#else
+                std::string uuid_str;
+#endif
+
+                ss << "- Device id " << j << ": " << device_name_available << ", " << deviceTypeToString(dt) << ", " << uuid_str << std::endl;
+            }
+
+            delete[] device_ids;
+        }
+
+        return ss.str();
     }
 }

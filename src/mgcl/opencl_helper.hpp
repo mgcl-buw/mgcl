@@ -63,6 +63,8 @@ namespace mgcl
         int copyOutputBuffers();
         Cuboid readBuffer(cl_mem d_buf, int m, int n, int o);
         void printBuffer(cl_mem d_buf, int m, int n, int o);
+        std::string availableDevicesInfo();
+        std::string deviceTypeToString(cl_device_type dt);
 
         void finish();
 
