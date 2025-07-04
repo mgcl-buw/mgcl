@@ -125,7 +125,7 @@ int main(int argc, char** argv)
         {
             std::cout << "initializing OpenCLHelper on rank " << i << ": " << std::endl;
             std::cout << "  > " << std::endl;
-            p.getOpenCLHelper().init();
+            p.getOpenCLHelper().init(mpi_rank);
             std::cout << std::flush;
         }
     }
