@@ -966,7 +966,7 @@ namespace mgcl
 #ifdef CL_DEVICE_UUID_KHR
                 cl_uchar uuid[CL_UUID_SIZE_KHR];
                 bool uuid_available = false;
-                err = clGetDeviceInfo(deviceId, CL_DEVICE_UUID_KHR, sizeof(cl_uchar) * CL_UUID_SIZE_KHR,
+                err = clGetDeviceInfo(device_ids[j], CL_DEVICE_UUID_KHR, sizeof(cl_uchar) * CL_UUID_SIZE_KHR,
                                       &uuid, nullptr);
                 uuid_available = err == CL_SUCCESS;
                 std::string uuid_str = "uuid: ";
