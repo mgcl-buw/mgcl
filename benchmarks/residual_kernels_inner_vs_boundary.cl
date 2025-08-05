@@ -2616,3 +2616,22 @@ __kernel void max_abs_partial_global_eq_x_num_elements(
         }
     }
 }
+
+/**
+ * Fill buffer with its 1d index as value.
+ * Arguments:
+ *   buf: Buffer to fill.
+ *   size: Number of elements in the buffer.
+ *   idx_offset: Offset for the index, useful if ghosts shall be skipped.
+       Only cells in [idx_offset, size - idx_offset) are filled.
+ */
+__kernel void fill_1d_index(
+    __global double* buf,
+    int size,
+    int idx_offset)
+{
+    int idx = get_global_id(0);
+    int end = size - idx_offset < size ? size - idx_offset : size;
+    if (idx >= idx_offset && idx < end)
+        buf[idx] = idx;
+}

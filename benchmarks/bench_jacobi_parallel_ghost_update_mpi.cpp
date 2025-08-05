@@ -1199,7 +1199,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
                     }
 
                     {
-                        lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0, true, nullptr, nullptr);
+                        lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, false, nullptr, nullptr);
 
                         std::string name = std::string("jacobi_default_")
                                                .append(std::to_string(maxiter))
@@ -1239,7 +1239,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
                     }
 
                     {
-                        lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0, true, nullptr, nullptr);
+                        lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, false, nullptr, nullptr);
 
                         int err;
                         cl_command_queue_properties props = p.isProfilingEnabled() ? CL_QUEUE_PROFILING_ENABLE : 0;
