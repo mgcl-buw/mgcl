@@ -733,27 +733,27 @@ namespace mgcl_bench_jacobi_varying_overlapped
         cl_kernel boundaryKernel = clCreateKernel(problem.getProgram(), kernelNameBoundary, &err);
         mgcl::mgclCheckError(err, "Creating boundaryKernel");
 
-        /********************** create boundary kernel *********************/
+        /********************** create inner kernel *********************/
         const char* kernelNameInner;
         if (problem.getStencilType() == mgcl::MGCL_LAPLACE_7POINT)
-            kernelNameInner = "jacobi_iter_7point_boundary";
+            kernelNameInner = "jacobi_iter_7point_inner";
         else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_19POINT)
         {
-            kernelNameInner = "jacobi_iter_19point_boundary";
+            kernelNameInner = "jacobi_iter_19point_inner";
             dinv = (6.0 * h2) / 24.0;
         }
         else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_27POINT)
         {
-            kernelNameInner = "jacobi_iter_27point_boundary";
+            kernelNameInner = "jacobi_iter_27point_inner";
             dinv = (26.0 * h2) / 88.0;
         }
         else if (problem.getStencilType() == mgcl::MGCL_VARYING)
         {
-            kernelNameInner = "jacobi_iter_27point_varying_stencil_1d_boundary";
+            kernelNameInner = "jacobi_iter_27point_varying_stencil_1d_inner";
         }
         else if (problem.getStencilType() == mgcl::MGCL_FIXED)
         {
-            kernelNameInner = "jacobi_iter_27point_fixed_stencil_1d_boundary";
+            kernelNameInner = "jacobi_iter_27point_fixed_stencil_1d_inner";
         }
         cl_kernel innerKernel = clCreateKernel(problem.getProgram(), kernelNameInner, &err);
         mgcl::mgclCheckError(err, "Creating innerKernel");
@@ -1289,6 +1289,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
                         // r_out_default->dumpToFile("r_out_default_" + std::to_string(mpi_rank) + ".txt", true);
                         // r_out_overlapped->dumpToFile("r_out_overlapped_" + std::to_string(mpi_rank) + ".txt", true);
                         REQUIRE(r_out_default->isEqual(*r_out_overlapped));
+                        std::cout << "Results seem good on rank " << mpi_rank << std::endl;
                     }
 
                     if (CLI_ARGS::enableKernelProfiling)
