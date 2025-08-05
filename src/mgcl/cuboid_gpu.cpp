@@ -302,6 +302,84 @@ namespace mgcl
     }
 
     /**
+     * @brief Fills the buffer with the given value.
+     *
+     * @param commands OpenCL command queue
+     * @param blocking If true, the write will be blocking.
+     * @param realCellsOnly If true, only the real cells will be filled, i.e. ghosts will be skipped.
+     */
+    void CuboidGpu::fill1dIndex(cl_program program, cl_command_queue commands,
+                                bool blocking, bool realCellsOnly,
+                                conf::KernelConfig* conf, mgcl::ProfilingData* pd)
+    {
+        // int err = clEnqueueFillBuffer(commands, buffer, &value, sizeof(double), 0, sizeof(double) * size,
+        //                               0, nullptr, nullptr);
+        // mgcl::mgclCheckError(err, "clEnqueueFillBuffer");
+        // if (blocking)
+        //     mgcl::mgclCheckError(clFinish(commands), "clFinish");
+
+        // Create the compute kernel from the program
+        int err;
+        const char* kernelName = "fill_1d_index";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
+        mgcl::mgclCheckError(err, "clCreateKernel fill_1d_index");
+
+        int rco = static_cast<int>(realCellsOnly);
+        int mgh = getMgh();
+        int ngh = getNgh();
+        int ogh = getOgh();
+        int ghm = getGhostsM();
+        int ghn = getGhostsN();
+        int gho = getGhostsO();
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buffer);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &size);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghm);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghn);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gho);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &rco);
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
+        size_t global = size;
+        size_t local = 64;
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, global);
+            local = c[0];
+        }
+
+        if (global % local != 0)
+            global += local - (global % local);
+
+        cl_event ev;
+
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing fill_1d_index kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(commands, ev, kernelName,
+                               {global, 0, 0},
+                               {local, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        if (blocking)
+            mgcl::mgclCheckError(clFinish(commands), "clFinish");
+
+        err = clReleaseKernel(kernel);
+        mgcl::mgclCheckError(err, "Releasing fill_1d_index kernel");
+    }
+
+    /**
      * @brief Retains the buffer using clRetainMemObject.
      */
     void CuboidGpu::retain()

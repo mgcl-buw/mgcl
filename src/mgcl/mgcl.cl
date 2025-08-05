@@ -4131,7 +4131,10 @@ __kernel void paste_ghosts_from_border_planes_blockstencil(
 
 /**
  * Fill buffer with value, equivalent to clEnqueueFillBuffer.
- * size is the number of elements in the buffer.
+ * Arguments:
+ *   buf: Buffer to fill.
+ *   value: Value to fill the buffer with.
+ *   size is the number of elements in the buffer.
  */
 __kernel void fill_buffer(
     __global double* buf,
@@ -4141,4 +4144,31 @@ __kernel void fill_buffer(
     int idx = get_global_id(0);
     if (idx < size)
         buf[idx] = value;
+}
+
+/**
+ * Fill buffer with its 1d index as value.
+ * Arguments:
+ *   buf: Buffer to fill.
+ *   size: Number of elements in the buffer.
+ *   realCellsOnly: If true, only fill the real cells, i.e. skip ghost cells.
+ */
+__kernel void fill_1d_index(
+    __global double* buf,
+    int size,
+    int mgh, int ngh, int ogh,
+    int ghosts_m, int ghosts_n, int ghosts_o,
+    int realCellsOnly)
+{
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
+
+    if (idx < size)
+    {
+        if (!realCellsOnly || (realCellsOnly && i >= ghosts_m && i < mgh - ghosts_m && j >= ghosts_n && j < ngh - ghosts_n && k >= ghosts_o && k < ogh - ghosts_o))
+            buf[idx] = idx;
+    }
 }

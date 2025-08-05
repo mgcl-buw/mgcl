@@ -56,6 +56,9 @@ namespace mgcl
         void fill(cl_program program, cl_command_queue commands,
                   double value, bool blocking,
                   conf::KernelConfig* conf, mgcl::ProfilingData* pd);
+        void fill1dIndex(cl_program program, cl_command_queue commands,
+                         bool blocking, bool realCellsOnly,
+                         conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
         void retain();
         int refCount();

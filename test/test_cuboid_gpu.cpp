@@ -992,3 +992,35 @@ TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes", "[ocl]")
                 }
     }
 }
+
+TEST_CASE("CuboidGpu::fill1dIndex")
+{
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    int m = 3;
+    int n = 5;
+    int o = 7;
+    int ghosts_m = 1;
+    int ghosts_n = 2;
+    int ghosts_o = 3;
+
+    bool realCellsOnly = GENERATE(true, false);
+
+    // create dummy problem
+    auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    mgcl::Problem p(1, 1, 1, f, v);
+    p.setUseOpencl(true);
+    p.setDeviceType(deviceType);
+    p.setSilent(true);
+    p.init();
+
+    mgcl::Cuboid c_h(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+    mgcl::CuboidGpu c_d(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, c_h);
+
+    c_h.fill1dIndex(realCellsOnly);
+    c_d.fill1dIndex(p.getProgram(), p.getCommands(), true, realCellsOnly, &p.getKernelConfig(), p.getProfilingData());
+
+    auto c_d_ret = c_d.read(p.getCommands(), nullptr, true);
+
+    REQUIRE(c_h.isEqualAllCells(*c_d_ret, realCellsOnly));
+}

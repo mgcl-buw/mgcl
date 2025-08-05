@@ -66,6 +66,7 @@ namespace mgcl::conf
         // c["max_finish"] = KernelWorkgroupSizes{{1, {4, 4, 4}}}; // Launches only 1 wi
         ret["max_abs_partial_global_eq_x_num_elements"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         ret["fill_buffer"] = KernelWorkgroupSizes{{1, {64, 1, 1}}};
+        ret["fill_1d_index"] = KernelWorkgroupSizes{{1, {64, 1, 1}}};
 
         // blockstencil kernels
         ret["extract_border_planes_cuboidbs"] = KernelWorkgroupSizes{{1, {32, 1, 1}}};
