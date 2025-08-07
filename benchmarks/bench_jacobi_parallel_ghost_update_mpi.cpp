@@ -782,14 +782,23 @@ namespace mgcl_bench_jacobi_varying_overlapped
                 global[i] += local[i] - (global[i] % local[i]);
             }
 
+        // Update ghosts use the default command queue of the problem instance
+        err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVIn(),
+                                                  level.getMpiDataPtr(), level.isCalculatedLocally());
+        mgcl::mgclCheckError(err, "Updating ghosts");
+
         int globalIter = 0;
+        auto ptr_dvin_wrapper = &level.getDVIn();
+        auto ptr_dvout_wrapper = &level.getDVOut();
+        auto tmp = ptr_dvin_wrapper;
         while (globalIter < maxiter)
         {
-            cl_mem tmp;
-
             // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
             for (int innerIter = 0; innerIter < stepsPerIter && globalIter < maxiter; innerIter++, globalIter++)
             {
+                auto dVIn = ptr_dvin_wrapper->getBuffer();
+                auto dVOut = ptr_dvout_wrapper->getBuffer();
+
                 store_res = globalIter == maxiter - 1;
 
                 // calculate boundary points first
@@ -800,7 +809,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
                 overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2, innerKernel, global, local, kernelNameInner);
 
                 // Update ghosts use the default command queue of the problem instance
-                err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVIn(),
+                err = mgcl::MultigridEngine::updateGhosts(problem, *ptr_dvout_wrapper,
                                                           level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgcl::mgclCheckError(err, "Updating ghosts");
 
@@ -808,9 +817,9 @@ namespace mgcl_bench_jacobi_varying_overlapped
                 mgcl::mgclCheckError(clFinish(queue2), "clFinish queue2");
 
                 // swap dVIn and dVOut for next iteration
-                tmp = dVOut;
-                dVOut = dVIn;
-                dVIn = tmp;
+                tmp = ptr_dvout_wrapper;
+                ptr_dvout_wrapper = ptr_dvin_wrapper;
+                ptr_dvin_wrapper = tmp;
             }
         }
 
@@ -830,9 +839,9 @@ namespace mgcl_bench_jacobi_varying_overlapped
             level.getDVOut().copyTo(problem.getOpenCLHelper().getCommands(), level.getDVIn());
 
         // Update ghosts of dVIn
-        err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVIn(),
-                                                  level.getMpiDataPtr(), level.isCalculatedLocally());
-        mgcl::mgclCheckError(err, "Updating ghosts");
+        // err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVIn(),
+        //                                           level.getMpiDataPtr(), level.isCalculatedLocally());
+        // mgcl::mgclCheckError(err, "Updating ghosts");
 
         // calculate residual and its norm
         if (return_residual)
@@ -1134,10 +1143,10 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
             auto v_in = std::make_shared<mgcl::Cuboid>(ml, nl, ol, 0, 0, 0);
             auto f_in = std::make_shared<mgcl::Cuboid>(ml, nl, ol, 0, 0, 0);
-            // v_in->fill1dIndex(true);
-            // f_in->fill1dIndex(true);
-            v_in->fillRandom();
-            f_in->fillRandom();
+            v_in->fill1dIndex(true);
+            f_in->fill1dIndex(true);
+            // v_in->fillRandom();
+            // f_in->fillRandom();
 
             // Create dummy problem to initialize OpenCL
             mgcl::Problem p(ml, nl, ol, f_in, v_in, mglob, nglob, oglob);
@@ -1185,21 +1194,23 @@ namespace mgcl_bench_jacobi_varying_overlapped
             if (mpi_rank > 0)
                 bench.output(nullptr);
 
+            if (CLI_ARGS::checkResults)
+            {
+                bench.epochs(1).epochIterations(1);
+            }
+
             for (auto maxiter : CLI_ARGS::jacobiIters)
                 for (auto stepsPerIter : CLI_ARGS::jacobiStepsPerIter)
                 {
                     if (stepsPerIter > maxiter)
                         continue;
 
-                    std::unique_ptr<mgcl::Cuboid> r_out_default = nullptr;
-                    std::unique_ptr<mgcl::Cuboid> r_out_overlapped = nullptr;
-                    if (CLI_ARGS::checkResults)
-                    {
-                        bench.epochs(1).epochIterations(1);
-                    }
+                    std::unique_ptr<mgcl::Cuboid> v_out_default = nullptr;
+                    std::unique_ptr<mgcl::Cuboid> v_out_overlapped = nullptr;
 
                     {
-                        lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, false, nullptr, nullptr);
+                        lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
+                        lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
 
                         std::string name = std::string("jacobi_default_")
                                                .append(std::to_string(maxiter))
@@ -1233,13 +1244,14 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
                         if (CLI_ARGS::checkResults)
                         {
-                            r_out_default = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
-                            lv0.getDVIn().read(p.getCommands(), r_out_default.get(), true);
+                            v_out_default = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                            lv0.getDVIn().read(p.getCommands(), v_out_default.get(), true);
                         }
                     }
 
                     {
-                        lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, false, nullptr, nullptr);
+                        lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
+                        lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
 
                         int err;
                         cl_command_queue_properties props = p.isProfilingEnabled() ? CL_QUEUE_PROFILING_ENABLE : 0;
@@ -1278,8 +1290,8 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
                         if (CLI_ARGS::checkResults)
                         {
-                            r_out_overlapped = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
-                            lv0.getDVIn().read(p.getCommands(), r_out_overlapped.get(), true);
+                            v_out_overlapped = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                            lv0.getDVIn().read(p.getCommands(), v_out_overlapped.get(), true);
                         }
                     }
 
@@ -1288,7 +1300,9 @@ namespace mgcl_bench_jacobi_varying_overlapped
                     {
                         // r_out_default->dumpToFile("r_out_default_" + std::to_string(mpi_rank) + ".txt", true);
                         // r_out_overlapped->dumpToFile("r_out_overlapped_" + std::to_string(mpi_rank) + ".txt", true);
-                        REQUIRE(r_out_default->isEqual(*r_out_overlapped));
+                        v_out_default->dumpToFile("v_out_default_" + std::to_string(mpi_rank) + ".txt", false);
+                        v_out_overlapped->dumpToFile("v_out_overlapped_" + std::to_string(mpi_rank) + ".txt", false);
+                        REQUIRE(v_out_default->isEqual(*v_out_overlapped));
                         std::cout << "Results seem good on rank " << mpi_rank << std::endl;
                     }
 

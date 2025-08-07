@@ -2,6 +2,17 @@
 #define NULL 0
 #endif
 
+// Returns true, if index (i,j,k) is on the real boundary of the grid. E.g. for 1d with m=8 and gh=2,
+// grid points at 2,3,6,7 are considered to be on the boundary.
+int is_on_real_boundary(int i, int j, int k, int mgh, int ngh, int ogh, int ghosts)
+{
+    // real border of grid
+    int front_back_torus = ((i >= ghosts && i < 2 * ghosts) || (i >= mgh - 2 * ghosts && i < mgh - ghosts)) && j >= ghosts && j < ngh - ghosts && k >= ghosts && k < ogh - ghosts;
+    int top_bottom_torus = ((j >= ghosts && j < 2 * ghosts) || (j >= ngh - 2 * ghosts && j < ngh - ghosts)) && i >= ghosts && i < mgh - ghosts && k >= ghosts && k < ogh - ghosts;
+    int left_right_torus = ((k >= ghosts && k < 2 * ghosts) || (k >= ogh - 2 * ghosts && k < ogh - ghosts)) && i >= ghosts && i < mgh - ghosts && j >= ghosts && j < ngh - ghosts;
+    return front_back_torus || top_bottom_torus || left_right_torus;
+}
+
 /**
  * This is the default residual kernel as in production code.
  */
@@ -1384,7 +1395,7 @@ __kernel void jacobi_iter_27point_boundary(
     int j = get_global_id(0);
     int k = get_global_id(1);
 
-    // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
+    // calculate residual for real cells plus some ghost cells if stepsPerIter > 1. TOOO fix only on real boundary
     if (j >= ghosts && k >= ghosts && j < 2 * ghosts && k < 2 * ghosts)
     {
         int ioff = ngh * ogh;
@@ -1464,7 +1475,7 @@ __kernel void jacobi_iter_27point_varying_stencil_1d_boundary(
     int j = (idx - i * no) / ogh;
     int k = idx % ogh;
 
-    if (i >= ghosts && j >= ghosts && k >= ghosts && i < 2 * ghosts && j < 2 * ghosts && k < 2 * ghosts)
+    if (is_on_real_boundary(i, j, k, mgh, ngh, ogh, ghosts))
     {
         int ioff = ngh * ogh;
         int joff = ogh;
@@ -1585,7 +1596,7 @@ __kernel void jacobi_iter_27point_fixed_stencil_1d_boundary(
     int j = (idx - i * no) / ogh;
     int k = idx % ogh;
 
-    if (i >= ghosts && j >= ghosts && k >= ghosts && i < 2 * ghosts && j < 2 * ghosts && k < 2 * ghosts)
+    if (is_on_real_boundary(i, j, k, mgh, ngh, ogh, ghosts))
     {
         int ioff = ngh * ogh;
         int joff = ogh;
@@ -2622,16 +2633,26 @@ __kernel void max_abs_partial_global_eq_x_num_elements(
  * Arguments:
  *   buf: Buffer to fill.
  *   size: Number of elements in the buffer.
- *   idx_offset: Offset for the index, useful if ghosts shall be skipped.
-       Only cells in [idx_offset, size - idx_offset) are filled.
+ *   mgh, ngh, ogh: Extents of the buffer including ghost cells.
+ *   ghosts_m, ghosts_n, ghosts_o: Ghost cell amount of the buffer.
+ *   realCellsOnly: If true, only fill the real cells, i.e. skip ghost cells.
  */
 __kernel void fill_1d_index(
     __global double* buf,
     int size,
-    int idx_offset)
+    int mgh, int ngh, int ogh,
+    int ghosts_m, int ghosts_n, int ghosts_o,
+    int realCellsOnly)
 {
     int idx = get_global_id(0);
-    int end = size - idx_offset < size ? size - idx_offset : size;
-    if (idx >= idx_offset && idx < end)
-        buf[idx] = idx;
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
+
+    if (idx < size)
+    {
+        if (!realCellsOnly || (realCellsOnly && i >= ghosts_m && i < mgh - ghosts_m && j >= ghosts_n && j < ngh - ghosts_n && k >= ghosts_o && k < ogh - ghosts_o))
+            buf[idx] = idx;
+    }
 }
