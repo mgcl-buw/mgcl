@@ -801,18 +801,17 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
                 store_res = globalIter == maxiter - 1;
 
-                // calculate boundary points first
+                // calculate boundary points and inner points in separate queues concurrently
                 overlapped_helpers::jacobiBoundary(problem, level, dVIn, dVOut, store_res, problem.getCommands(), boundaryKernel, global, local, kernelNameBoundary);
-                problem.finish();
-
-                // now calculate inner points whilst updating ghosts. Inner jacobi uses second queue.
                 overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2, innerKernel, global, local, kernelNameInner);
 
-                // Update ghosts use the default command queue of the problem instance
+                // Wait for boundary kernel to finish, then update ghosts using the first queue
+                problem.finish();
                 err = mgcl::MultigridEngine::updateGhosts(problem, *ptr_dvout_wrapper,
                                                           level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgcl::mgclCheckError(err, "Updating ghosts");
 
+                // Wait for inner kernel and ghost update to finish
                 mgcl::mgclCheckError(clFinish(problem.getCommands()), "clFinish queue1");
                 mgcl::mgclCheckError(clFinish(queue2), "clFinish queue2");
 
