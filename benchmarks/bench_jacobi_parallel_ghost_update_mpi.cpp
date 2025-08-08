@@ -1255,7 +1255,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
                         int err;
                         cl_command_queue_properties props = p.isProfilingEnabled() ? CL_QUEUE_PROFILING_ENABLE : 0;
-                        cl_command_queue queue2 = clCreateCommandQueueWithProperties(p.getContext(), p.getOpenCLHelper().getDeviceId(), &props, &err);
+                        cl_command_queue queue2 = clCreateCommandQueue(p.getContext(), p.getOpenCLHelper().getDeviceId(), props, &err);
                         mgcl::mgclCheckError(err, "Creating command queue");
 
                         std::string name = std::string("jacobi_overlapped_")
@@ -1298,10 +1298,8 @@ namespace mgcl_bench_jacobi_varying_overlapped
                     // Check results for kernels that it is valid for
                     if (CLI_ARGS::checkResults)
                     {
-                        // r_out_default->dumpToFile("r_out_default_" + std::to_string(mpi_rank) + ".txt", true);
-                        // r_out_overlapped->dumpToFile("r_out_overlapped_" + std::to_string(mpi_rank) + ".txt", true);
-                        v_out_default->dumpToFile("v_out_default_" + std::to_string(mpi_rank) + ".txt", false);
-                        v_out_overlapped->dumpToFile("v_out_overlapped_" + std::to_string(mpi_rank) + ".txt", false);
+                        // v_out_default->dumpToFile("v_out_default_" + std::to_string(mpi_rank) + ".txt", false);
+                        // v_out_overlapped->dumpToFile("v_out_overlapped_" + std::to_string(mpi_rank) + ".txt", false);
                         REQUIRE(v_out_default->isEqual(*v_out_overlapped));
                         std::cout << "Results seem good on rank " << mpi_rank << std::endl;
                     }
