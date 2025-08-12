@@ -155,8 +155,8 @@ void checkResidual(
         auto mintime = std::min_element(pd->getMeasurements()[kernelName].begin(),
                                         pd->getMeasurements()[kernelName].end(),
                                         [](const auto& a, const auto& b)
-                                        { return a.elapsed < b.elapsed; })
-                           ->elapsed;
+                                        { return a.start_to_end < b.start_to_end; })
+                           ->start_to_end;
         bestTimePerWg[wg] = mintime;
 
         // reset profiling data for next wg
@@ -202,8 +202,8 @@ void checkJacobi(
         auto mintime = std::min_element(pd->getMeasurements()[kernelName].begin(),
                                         pd->getMeasurements()[kernelName].end(),
                                         [](const auto& a, const auto& b)
-                                        { return a.elapsed < b.elapsed; })
-                           ->elapsed;
+                                        { return a.start_to_end < b.start_to_end; })
+                           ->start_to_end;
         bestTimePerWg[wg] = mintime;
 
         // reset profiling data for next wg

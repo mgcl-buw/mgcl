@@ -22,10 +22,11 @@ namespace mgcl
             os << kernelName << std::endl;
             for (const auto& m : entry.second)
             {
-                os << "* kernel runtime in ns: " << m.elapsed << std::endl;
-                os << "   time in queue in ns: " << m.inQueue << std::endl;
-                os << "            work-items: " << m.work_items[0] << "," << m.work_items[1] << "," << m.work_items[2] << std::endl;
-                os << "            work-group: " << m.work_group[0] << "," << m.work_group[1] << "," << m.work_group[2] << std::endl;
+                os << "* queued to submit [ns]: " << m.queue_to_submit << std::endl;
+                os << "   queued to start [ns]: " << m.submit_to_start << std::endl;
+                os << "      start to end [ns]: " << m.start_to_end << std::endl;
+                os << "             work-items: " << m.work_items[0] << "," << m.work_items[1] << "," << m.work_items[2] << std::endl;
+                os << "             work-group: " << m.work_group[0] << "," << m.work_group[1] << "," << m.work_group[2] << std::endl;
             }
         }
         return os;
@@ -37,18 +38,16 @@ namespace mgcl
     {
         clFinish(commands);
 
-        cl_ulong start_time, end_time;
-        mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start_time, NULL), "clGetEventProfilingInfo");
-        mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end_time, NULL), "clGetEventProfilingInfo");
-        cl_ulong execution_time_ns = end_time - start_time;
-
-        mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_QUEUED, sizeof(cl_ulong), &start_time, NULL), "clGetEventProfilingInfo");
-        mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &end_time, NULL), "clGetEventProfilingInfo");
-        cl_ulong queue_time_in_ns = end_time - start_time;
+        cl_ulong start, end, queued, submit;
+        mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_QUEUED, sizeof(cl_ulong), &queued, NULL), "clGetEventProfilingInfo");
+        mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_SUBMIT, sizeof(cl_ulong), &submit, NULL), "clGetEventProfilingInfo");
+        mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start, NULL), "clGetEventProfilingInfo");
+        mgclCheckError(clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end, NULL), "clGetEventProfilingInfo");
 
         measurements[kernelName].push_back(ProfilingMeasurement{
-            execution_time_ns,
-            queue_time_in_ns,
+            submit - queued, // Time from QUEUED to SUBMIT
+            start - submit,  // Time from SUBMIT to START
+            end - start,     // Time from START to END
             {global[0], global[1], global[2]},
             {local[0], local[1], local[2]}});
     }
@@ -61,8 +60,9 @@ namespace mgcl
     void ProfilingData::printBestTimingsPerKernel(std::ostream& os)
     {
         size_t maxKernelNameLength = 0;
-        size_t maxElapsedLength = std::string("time [ns]").length();
-        size_t maxQueueLength = std::string("queue [ns]").length();
+        size_t maxQueueLength = std::string("queue to submit [ns]").length();
+        size_t maxSubmitLength = std::string("submit to start [ns]").length();
+        size_t maxElapsedLength = std::string("start to end [ns]").length();
         size_t maxWiLength = std::string("work-items").length();
         size_t maxWgLength = std::string("work-group").length();
         for (const auto& entry : measurements)
@@ -70,16 +70,18 @@ namespace mgcl
             maxKernelNameLength = std::max(maxKernelNameLength, entry.first.length());
             for (const auto& m : entry.second)
             {
-                maxElapsedLength = std::max(maxElapsedLength, std::to_string(m.elapsed).length());
-                maxQueueLength = std::max(maxQueueLength, std::to_string(m.inQueue).length());
+                maxElapsedLength = std::max(maxElapsedLength, std::to_string(m.start_to_end).length());
+                maxQueueLength = std::max(maxQueueLength, std::to_string(m.queue_to_submit).length());
+                maxSubmitLength = std::max(maxSubmitLength, std::to_string(m.submit_to_start).length());
                 maxWiLength = std::max(maxWiLength, std::to_string(m.work_items[0]).append(",").append(std::to_string(m.work_items[1]).append(",").append(std::to_string(m.work_items[2]))).length());
                 maxWgLength = std::max(maxWgLength, std::to_string(m.work_group[0]).append(",").append(std::to_string(m.work_group[1]).append(",").append(std::to_string(m.work_group[2]))).length());
             }
         }
 
         os << std::setw(maxKernelNameLength + 2) << "kernel"
-           << std::setw(maxElapsedLength + 2) << "time [ns]"
-           << std::setw(maxQueueLength + 2) << "queue [ns]"
+           << std::setw(maxQueueLength + 2) << "queue to submit [ns]"
+           << std::setw(maxSubmitLength + 2) << "submit to start [ns]"
+           << std::setw(maxElapsedLength + 2) << "start to end [ns]"
            << std::setw(maxWiLength + 2) << "work-items"
            << std::setw(maxWgLength + 2) << "work-group" << std::endl;
 
@@ -99,12 +101,13 @@ namespace mgcl
                     m.second.end(),
                     [](const ProfilingMeasurement& a, const ProfilingMeasurement& b)
                     {
-                        return a.elapsed < b.elapsed;
+                        return a.start_to_end < b.start_to_end;
                     });
 
                 os << std::setw(maxKernelNameLength + 2) << entry.first
-                   << std::setw(maxElapsedLength + 2) << it->elapsed
-                   << std::setw(maxQueueLength + 2) << it->inQueue
+                   << std::setw(maxQueueLength + 2) << it->queue_to_submit
+                   << std::setw(maxSubmitLength + 2) << it->submit_to_start
+                   << std::setw(maxElapsedLength + 2) << it->start_to_end
                    << std::setw(maxWiLength + 2) << std::to_string(it->work_items[0]).append(",").append(std::to_string(it->work_items[1])).append(",").append(std::to_string(it->work_items[2]))
                    << std::setw(maxWgLength + 2) << std::to_string(it->work_group[0]).append(",").append(std::to_string(it->work_group[1])).append(",").append(std::to_string(it->work_group[2]))
                    << std::endl;

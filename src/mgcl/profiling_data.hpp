@@ -27,11 +27,19 @@ namespace mgcl
 {
     /**
      * @brief Holds results of one profiled kernel call.
+     * There are four Profiling ticks in OpenCL: CL_PROFILING_COMMAND_*
+     * - QUEUED: Time when the command was enqueued using OpenCL API
+     * - SUBMIT: Time when the command was submitted to the device
+     * - START: Time when the command started executing on the device
+     * - END: Time when the command finished executing on the device
+     * So, the process goes as: QUEUED -> SUBMIT -> START -> END.
+     * @arg item-description
      */
     struct ProfilingMeasurement
     {
-        cl_ulong elapsed; // Elapsed time from kernel begin to end in ns
-        cl_ulong inQueue; // Time spent from enqueuing to kernel start in ns
+        cl_ulong queue_to_submit; // SUBMIT - QUEUED in ns
+        cl_ulong submit_to_start; // START - SUBMIT in ns
+        cl_ulong start_to_end;    // END - START in ns
         size_t work_items[3];
         size_t work_group[3];
     };

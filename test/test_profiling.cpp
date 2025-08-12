@@ -43,8 +43,9 @@ void checkResult(mgcl::Problem& p, std::string kernelName, std::array<int, 3> gl
     REQUIRE(measurements.size() == measurementCount);
     for (auto el : measurements)
     {
-        REQUIRE(el.elapsed > 0);
-        REQUIRE(el.inQueue > 0);
+        REQUIRE(el.start_to_end > 0);
+        REQUIRE(el.submit_to_start > 0);
+        REQUIRE(el.queue_to_submit > 0);
         REQUIRE(el.work_group[0] == wg[0]);
         REQUIRE(el.work_group[1] == wg[1]);
         REQUIRE(el.work_group[2] == wg[2]);
