@@ -805,8 +805,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
                 overlapped_helpers::jacobiBoundary(problem, level, dVIn, dVOut, store_res, problem.getCommands(), boundaryKernel, global, local, kernelNameBoundary);
                 overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2, innerKernel, global, local, kernelNameInner);
 
-                // Wait for boundary kernel to finish, then update ghosts using the first queue
-                problem.finish();
+                // No need for waiting for the boundary kernel to finish, because extractBorderPlanes is in same in-order queue
                 err = mgcl::MultigridEngine::updateGhosts(problem, *ptr_dvout_wrapper,
                                                           level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgcl::mgclCheckError(err, "Updating ghosts");
