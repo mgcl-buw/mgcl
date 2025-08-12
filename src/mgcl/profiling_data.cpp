@@ -78,12 +78,19 @@ namespace mgcl
             }
         }
 
-        os << std::setw(maxKernelNameLength + 2) << "kernel"
-           << std::setw(maxQueueLength + 2) << "queue to submit [ns]"
-           << std::setw(maxSubmitLength + 2) << "submit to start [ns]"
-           << std::setw(maxElapsedLength + 2) << "start to end [ns]"
-           << std::setw(maxWiLength + 2) << "work-items"
-           << std::setw(maxWgLength + 2) << "work-group" << std::endl;
+        os << "| " << std::setw(maxKernelNameLength) << "kernel"
+           << " | " << std::setw(maxQueueLength) << "queue to submit [ns]"
+           << " | " << std::setw(maxSubmitLength) << "submit to start [ns]"
+           << " | " << std::setw(maxElapsedLength) << "start to end [ns]"
+           << " | " << std::setw(maxWiLength) << "work-items"
+           << " | " << std::setw(maxWgLength) << "work-group"
+           << " |" << std::endl;
+        os << "|--" << std::string(maxKernelNameLength, '-')
+           << "|--" << std::string(maxQueueLength, '-')
+           << "|--" << std::string(maxSubmitLength, '-')
+           << "|--" << std::string(maxElapsedLength, '-')
+           << "|--" << std::string(maxWiLength, '-')
+           << "|--" << std::string(maxWgLength, '-') << "|" << std::endl;
 
         // Iterate over all measurements per kernel
         for (const auto& entry : measurements)
@@ -104,13 +111,13 @@ namespace mgcl
                         return a.start_to_end < b.start_to_end;
                     });
 
-                os << std::setw(maxKernelNameLength + 2) << entry.first
-                   << std::setw(maxQueueLength + 2) << it->queue_to_submit
-                   << std::setw(maxSubmitLength + 2) << it->submit_to_start
-                   << std::setw(maxElapsedLength + 2) << it->start_to_end
-                   << std::setw(maxWiLength + 2) << std::to_string(it->work_items[0]).append(",").append(std::to_string(it->work_items[1])).append(",").append(std::to_string(it->work_items[2]))
-                   << std::setw(maxWgLength + 2) << std::to_string(it->work_group[0]).append(",").append(std::to_string(it->work_group[1])).append(",").append(std::to_string(it->work_group[2]))
-                   << std::endl;
+                os << "| " << std::setw(maxKernelNameLength) << entry.first
+                   << " | " << std::setw(maxQueueLength) << it->queue_to_submit
+                   << " | " << std::setw(maxSubmitLength) << it->submit_to_start
+                   << " | " << std::setw(maxElapsedLength) << it->start_to_end
+                   << " | " << std::setw(maxWiLength) << std::to_string(it->work_items[0]).append(",").append(std::to_string(it->work_items[1])).append(",").append(std::to_string(it->work_items[2]))
+                   << " | " << std::setw(maxWgLength) << std::to_string(it->work_group[0]).append(",").append(std::to_string(it->work_group[1])).append(",").append(std::to_string(it->work_group[2]))
+                   << " |" << std::endl;
             }
         }
     }
