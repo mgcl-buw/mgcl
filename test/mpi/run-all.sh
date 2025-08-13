@@ -185,6 +185,8 @@ if [ "$TEST_JACOBI" = true ] || [ "$TEST_ALL" = true ] ; then
       run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_Laplace_n_processes" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 1 "$exe" "MPI_jacobi_ocl_VaryingStencil_n_processes" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 8 "$exe" "MPI_jacobi_ocl_VaryingStencil_n_processes" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 1 "$exe" "MPI_jacobiOverlapped_ocl_VaryingStencil_n_processes" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 8 "$exe" "MPI_jacobiOverlapped_ocl_VaryingStencil_n_processes" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
 fi
 

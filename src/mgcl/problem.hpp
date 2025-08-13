@@ -190,6 +190,16 @@ namespace mgcl
         /* If true, the log of clBuildProgram will be printed even if the function returns CL_SUCCESS. */
         bool printKernelLog = false;
 
+        /* This level threshold determines at which levels the overlapped Jacobi and ghost update shall be used.
+         * On all levels between 0 and the value of this variable, the overlapped variant is used. Has only an effect
+         * in multi-gpu scenario, i.e. when useMpi() returns true and useOpencl is true.
+         * Enabling this is probably only useful for fine levels. It can be checked using the corresponding benchmark
+         * `benchJacobiOverlappedGhostUpdate`.
+         * Defaults to -1, i.e. use standard Jacobi and ghost update on each level.
+         * Not yet available for Blockstencils. */
+
+        int overlappedJacobiGhostUpdateMaxLevel = -1;
+
         void checkGlobalDimensions();
         bool useMpi();
 
@@ -355,6 +365,7 @@ namespace mgcl
         cl_context getContext() const;
 
         cl_command_queue getCommands() const;
+        cl_command_queue getCommands2() const;
 
         cl_program getProgram() const;
 
@@ -427,6 +438,9 @@ namespace mgcl
 
         inline MGCL_SMOOTHER getSmootherType() const { return smootherType; }
         inline void setSmootherType(const MGCL_SMOOTHER& smootherType_) { smootherType = smootherType_; }
+
+        int getOverlappedJacobiGhostUpdateMaxLevel() const { return overlappedJacobiGhostUpdateMaxLevel; }
+        void setOverlappedJacobiGhostUpdateMaxLevel(int overlappedJacobiGhostUpdateMaxLevel_) { overlappedJacobiGhostUpdateMaxLevel = overlappedJacobiGhostUpdateMaxLevel_; }
 
         friend std::ostream& operator<<(std::ostream& os, const Problem& lv);
     };

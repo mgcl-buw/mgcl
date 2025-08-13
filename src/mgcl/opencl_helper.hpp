@@ -37,6 +37,7 @@ namespace mgcl
         cl_device_id deviceId = nullptr;                    /* must be set if a specific device should be reused */
         cl_context context = nullptr;                       /* must be set if a specific context/device/buffers should be reused */
         cl_command_queue commands = nullptr;                /* must be set if a specific context/device/buffers should be reused */
+        cl_command_queue commands2 = nullptr;               /* If overlapped Jacobi shall be used, this will be set. */
         cl_program program = nullptr;                       /* compute program, only for internal purposes */
         cl_platform_id platformId = nullptr;                /* Cannot be set from outside, just to print platform name */
         std::string binaryFile = "";
@@ -104,6 +105,9 @@ namespace mgcl
 
         cl_command_queue getCommands() const;
         void setCommands(const cl_command_queue& commands_);
+
+        cl_command_queue getCommands2() const { return commands2; }
+        void setCommands2(const cl_command_queue& commands2_) { commands2 = commands2_; }
 
         cl_context getContext() const;
         void setContext(const cl_context& context_);

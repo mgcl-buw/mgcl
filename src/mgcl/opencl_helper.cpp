@@ -86,6 +86,13 @@ namespace mgcl
             cl_command_queue_properties props = problem->isProfilingEnabled() ? CL_QUEUE_PROFILING_ENABLE : 0;
             commands = clCreateCommandQueue(context, deviceId, props, &err);
             mgclCheckError(err, "Creating command queue");
+
+            // Create second command queue if overlapped Jacobi ghost update is used
+            if (problem->getOverlappedJacobiGhostUpdateMaxLevel() >= 0)
+            {
+                commands2 = clCreateCommandQueue(context, deviceId, props, &err);
+                mgclCheckError(err, "Creating second command queue for overlapped Jacobi ghost update");
+            }
         }
         else
         {
@@ -95,6 +102,12 @@ namespace mgcl
 
             err = clRetainCommandQueue(commands);
             mgclCheckError(err, "clRetainCommandQueue");
+
+            if (commands2)
+            {
+                err = clRetainCommandQueue(commands2);
+                mgclCheckError(err, "clRetainCommandQueue");
+            }
 
             err = clRetainDevice(deviceId);
             mgclCheckError(err, "clRetainDevice");

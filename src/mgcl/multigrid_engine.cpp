@@ -279,7 +279,14 @@ namespace mgcl
         }
 
         // relax nu1 times
-        jacobi(problem, level, problem.nu1, false, problem.getJacobiIterationsPerKernel());
+        if (level.getNum() <= problem.getOverlappedJacobiGhostUpdateMaxLevel())
+        {
+            jacobiOverlapped(problem, level, problem.nu1, false, problem.getJacobiIterationsPerKernel(), problem.getCommands2());
+        }
+        else
+        {
+            jacobi(problem, level, problem.nu1, false, problem.getJacobiIterationsPerKernel());
+        }
 
         // update residual before restriction
         residual(problem, level, false);
@@ -318,7 +325,14 @@ namespace mgcl
                 vcycle(problem, levelAbove);
             else
             {
-                jacobi(problem, levelAbove, problem.nu1 + problem.nu2, false, problem.getJacobiIterationsPerKernel());
+                if (level.getNum() <= problem.getOverlappedJacobiGhostUpdateMaxLevel())
+                {
+                    jacobiOverlapped(problem, levelAbove, problem.nu1 + problem.nu2, false, problem.getJacobiIterationsPerKernel(), problem.getCommands2());
+                }
+                else
+                {
+                    jacobi(problem, levelAbove, problem.nu1 + problem.nu2, false, problem.getJacobiIterationsPerKernel());
+                }
                 // levelAbove.getDVIn().dumpToFile(problem.getCommands(), "dvsc_" + std::to_string(levelAbove.getNum()) + ".txt");
                 // levelAbove.getDR().dumpToFile(problem.getCommands(), "drsc_" + std::to_string(levelAbove.getNum()) + ".txt");
             }
@@ -345,7 +359,15 @@ namespace mgcl
         // level.getDVIn().dumpToFile(problem.getCommands(), "dvsc_" + std::to_string(level.getNum()) + ".txt");
 
         // relax nu2 times
-        res = jacobi(problem, level, problem.nu2, !problem.ignoreTol, problem.getJacobiIterationsPerKernel());
+
+        if (level.getNum() <= problem.getOverlappedJacobiGhostUpdateMaxLevel())
+        {
+            res = jacobiOverlapped(problem, level, problem.nu2, !problem.ignoreTol, problem.getJacobiIterationsPerKernel(), problem.getCommands2());
+        }
+        else
+        {
+            res = jacobi(problem, level, problem.nu2, !problem.ignoreTol, problem.getJacobiIterationsPerKernel());
+        }
 
         // calculate residual again for the norm TODO in jacobi
         // res = residual(problem, level, 1);

@@ -24,6 +24,28 @@ namespace mgcl
 #define BLOCKSIZE_POW_2 (BLOCKSIZE * BLOCKSIZE)
 #endif
 
+// Returns true, if index (i,j,k) is on the real boundary of the grid. E.g. for 1d with m=8 and gh=2,
+// grid points at 2,3,6,7 are considered to be on the boundary.
+int is_on_real_boundary_3d(int i, int j, int k, int mgh, int ngh, int ogh, int ghosts)
+{
+    // real border of grid
+    int front_back_torus = ((i >= ghosts && i < 2 * ghosts) || (i >= mgh - 2 * ghosts && i < mgh - ghosts)) && j >= ghosts && j < ngh - ghosts && k >= ghosts && k < ogh - ghosts;
+    int top_bottom_torus = ((j >= ghosts && j < 2 * ghosts) || (j >= ngh - 2 * ghosts && j < ngh - ghosts)) && i >= ghosts && i < mgh - ghosts && k >= ghosts && k < ogh - ghosts;
+    int left_right_torus = ((k >= ghosts && k < 2 * ghosts) || (k >= ogh - 2 * ghosts && k < ogh - ghosts)) && i >= ghosts && i < mgh - ghosts && j >= ghosts && j < ngh - ghosts;
+    return front_back_torus || top_bottom_torus || left_right_torus;
+}
+
+// // Returns true, if index (i,j,k) is on the real boundary of the grid. E.g. for 1d with m=8 and gh=2,
+// // grid points at 2,3,6,7 are considered to be on the boundary.
+// int is_on_real_boundary_2d(int i, int j,  int mgh, int ngh,  int ghosts)
+// {
+//     // real border of grid
+//     int front_back_torus = ((i >= ghosts && i < 2 * ghosts) || (i >= mgh - 2 * ghosts && i < mgh - ghosts)) && j >= ghosts && j < ngh - ghosts && k >= ghosts && k < ogh - ghosts;
+//     int top_bottom_torus = ((j >= ghosts && j < 2 * ghosts) || (j >= ngh - 2 * ghosts && j < ngh - ghosts)) && i >= ghosts && i < mgh - ghosts && k >= ghosts && k < ogh - ghosts;
+//     int left_right_torus = ((k >= ghosts && k < 2 * ghosts) || (k >= ogh - 2 * ghosts && k < ogh - ghosts)) && i >= ghosts && i < mgh - ghosts && j >= ghosts && j < ngh - ghosts;
+//     return front_back_torus || top_bottom_torus || left_right_torus;
+// }
+
 /* Prints components of 7-point laplacian stencil for debugging purposes */
 void print_7point(__global double* A, int index, int ioff, int joff, int koff)
 {
@@ -1273,6 +1295,412 @@ __kernel void jacobi_iter_27point_fixed_stencil_1d(
 
     // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
     if (i >= idx_start && j >= idx_start && k >= idx_start && i < mgh - idx_start && j < ngh - idx_start && k < ogh - idx_start)
+    {
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
+        int index = i * ioff + j * ogh + k;
+
+        double res;
+        double v_in_index = v_in[index];
+
+        // A*v
+        // clang-format off
+        double stencilsum = c111 * v_in_index
+            + c110 * v_in[index - 1]
+            + c112 * v_in[index + 1]
+            + c101 * v_in[index - joff]
+            + c121 * v_in[index + joff]
+            + c011 * v_in[index - ioff]
+            + c211 * v_in[index + ioff]
+            
+            + c100 * v_in[index - joff - koff]
+            + c102 * v_in[index - joff + koff]
+            + c120 * v_in[index + joff - koff]
+            + c122 * v_in[index + joff + koff]
+            + c010 * v_in[index - ioff - koff]
+            + c012 * v_in[index - ioff + koff]
+            + c210 * v_in[index + ioff - koff]
+            + c212 * v_in[index + ioff + koff]
+            + c001 * v_in[index - ioff - joff]
+            + c021 * v_in[index - ioff + joff]
+            + c201 * v_in[index + ioff - joff]
+            + c221 * v_in[index + ioff + joff]
+
+            + c000 * v_in[index - ioff - joff - koff]
+            + c002 * v_in[index - ioff - joff + koff]
+            + c020 * v_in[index - ioff + joff - koff]
+            + c022 * v_in[index - ioff + joff + koff]
+            + c200 * v_in[index + ioff - joff - koff]
+            + c202 * v_in[index + ioff - joff + koff]
+            + c220 * v_in[index + ioff + joff - koff]
+            + c222 * v_in[index + ioff + joff + koff];
+        // clang-format on
+
+        // r = f - A*v
+        res = f[index] - stencilsum;
+
+        // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
+        v_out[index] = v_in_index + omega * (1.0 / c111) * res;
+
+        if (store_residual)
+            r[index] = res;
+    }
+}
+
+/* runs one iteration of jacobi's method using one work-item per row.
+ * uses a 2D kernel which loops over cells in x-direction. y and z is parallelized.
+ * global size must be of ghosted grid.
+ * m, n and o must be dimensions of ghosted grid, too.
+ * h2 is grid spacing to the power of 2
+ * dinv is h2/A(i,i), e.g. h2/6.0 for 3D laplacian stencil
+ * if store_residual is true, the residual will be stored into global field r
+ * idx_start determines which cells shall be calculated, which is relevant for running
+ *   Jacobi with multiple iterations without ghost cell update in-between. I.e. when
+ *   stepsPerIter = 1: idx_start = ghosts.
+ *
+ * Wis not on boundary do nothing.
+ */
+__kernel void jacobi_iter_7point_boundary(
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out,
+    __global double* restrict f,
+    __global double* restrict r,
+    const double h2inv,
+    const double dinv, const double omega,
+    const int mgh, const int ngh, const int ogh, const int ghosts,
+    const int idx_start, const int store_residual)
+{
+    int j = get_global_id(0);
+    int k = get_global_id(1);
+
+    // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
+    // if (j >= idx_start && k >= idx_start && j < ngh - idx_start && k < ogh - idx_start)
+    if (j >= ghosts && k >= ghosts && j < 2 * ghosts && k < 2 * ghosts)
+    {
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
+        int index = idx_start * ioff + j * ogh + k;
+
+        for (int i = idx_start; i < mgh - idx_start; i++)
+        {
+            double res;
+            double v_in_index = v_in[index];
+
+            // A*v
+            double stencilsum = (6.0 * v_in_index - v_in[index - koff] - v_in[index + koff] - v_in[index - joff] -
+                                 v_in[index + joff] - v_in[index - ioff] - v_in[index + ioff]) *
+                                h2inv;
+
+            // r = f - A*v
+            res = f[index] - stencilsum;
+
+            // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
+            v_out[index] = v_in_index + omega * dinv * res;
+
+            // if (j == ghosts && k == ghosts && i >= ghosts && i <= ghosts)
+            // {
+            //     printf("x,y,z = %d,%d,%d, f = %.17e, stencilsum = %.17e, res = %.17e, v_out = %.17e\n", i, j, k, f[index], stencilsum, res, v_out[index]);
+            //     print_7point(v_in, index, ioff, joff, koff);
+            // }
+
+            if (store_residual)
+                r[index] = res;
+
+            index += ioff;
+        }
+    }
+}
+
+/* runs one iteration of jacobi's method using one work-item per cell.
+ * global size must be of ghosted grid.
+ * m, n and o must be dimensions of ghosted grid, too.
+ * h2 is grid spacing to the power of 2
+ * dinv is h2/A(i,i), e.g. h2/6.0 for 3D laplacian stencil
+ * if store_residual is true, the residual will be stored into global field r
+ * idx_start determines which cells shall be calculated, which is relevant for running
+ *   Jacobi with multiple iterations without ghost cell update in-between. I.e. when
+ *   stepsPerIter = 1: idx_start = ghosts.
+ *
+ * Wis not on boundary do nothing.
+ */
+__kernel void jacobi_iter_19point_boundary(
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out,
+    __global double* restrict f,
+    __global double* restrict r,
+    const double h2inv,
+    const double dinv, const double omega,
+    const int mgh, const int ngh, const int ogh, const int ghosts,
+    const int idx_start, const int store_residual)
+{
+    int j = get_global_id(0);
+    int k = get_global_id(1);
+
+    // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
+    if (j >= ghosts && k >= ghosts && j < 2 * ghosts && k < 2 * ghosts)
+    {
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
+        int index = idx_start * ioff + j * ogh + k;
+
+        for (int i = idx_start; i < mgh - idx_start; i++)
+        {
+            double res;
+            double v_in_index = v_in[index];
+
+            // A*v 19-point laplacian stencil
+            double stencilsum =
+                (24.0 * v_in_index - 2.0 * v_in[index - koff] - 2.0 * v_in[index + koff] - 2.0 * v_in[index - joff] -
+                 2.0 * v_in[index + joff] - 2.0 * v_in[index - ioff] - 2.0 * v_in[index + ioff] -
+                 v_in[index - joff - koff] - v_in[index - joff + koff] - v_in[index + joff - koff] -
+                 v_in[index + joff + koff] - v_in[index - ioff - koff] - v_in[index - ioff + koff] -
+                 v_in[index + ioff - koff] - v_in[index + ioff + koff] - v_in[index - ioff - joff] -
+                 v_in[index - ioff + joff] - v_in[index + ioff - joff] - v_in[index + ioff + joff]) *
+                h2inv; // h2inv = 1 / (6 * h2)
+
+            // r = f - A*v
+            res = f[index] - stencilsum;
+
+            // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
+            v_out[index] = v_in_index + omega * res * dinv;
+
+            if (store_residual)
+                r[index] = res;
+
+            index += ioff;
+        }
+    }
+}
+
+/* runs one iteration of jacobi's method using 27-point stencil and one work-item per cell.
+ * global size must be of ghosted grid.
+ * m, n and o must be dimensions of ghosted grid, too.
+ * h2 is grid spacing to the power of 2.
+ * dinv is h2/A(i,i), e.g. h2/6.0 for 3D laplacian stencil.
+ * If store_residual is true, the residual will be stored into global field r.
+ * idx_start determines which cells shall be calculated, which is relevant for running
+ *   Jacobi with multiple iterations without ghost cell update in-between. I.e. when
+ *   stepsPerIter = 1: idx_start = ghosts.
+ *
+ * Wis not on boundary do nothing.
+ */
+__kernel void jacobi_iter_27point_boundary(
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out,
+    __global double* restrict f,
+    __global double* restrict r,
+    const double h2inv, const double dinv, const double omega,
+    const int mgh, const int ngh, const int ogh, const int ghosts,
+    const int idx_start, const int store_residual)
+{
+    int j = get_global_id(0);
+    int k = get_global_id(1);
+
+    // calculate residual for real cells plus some ghost cells if stepsPerIter > 1. TOOO fix only on real boundary
+    if (j >= ghosts && k >= ghosts && j < 2 * ghosts && k < 2 * ghosts)
+    {
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
+        int index = idx_start * ioff + j * ogh + k;
+
+        for (int i = idx_start; i < mgh - idx_start; i++)
+        {
+            double res;
+            double v_in_index = v_in[index];
+
+            // A*v 27-point laplacian stencil
+            double stencilsum =
+                (88.0 * v_in_index - 6.0 * v_in[index - koff] - 6.0 * v_in[index + koff] -
+                 6.0 * v_in[index - joff] - 6.0 * v_in[index + joff] - 6.0 * v_in[index - ioff] -
+                 6.0 * v_in[index + ioff]
+
+                 - 3.0 * v_in[index - joff - koff] - 3.0 * v_in[index - joff + koff] - 3.0 * v_in[index + joff - koff] -
+                 3.0 * v_in[index + joff + koff] - 3.0 * v_in[index - ioff - koff] - 3.0 * v_in[index - ioff + koff] -
+                 3.0 * v_in[index + ioff - koff] - 3.0 * v_in[index + ioff + koff] - 3.0 * v_in[index - ioff - joff] -
+                 3.0 * v_in[index - ioff + joff] - 3.0 * v_in[index + ioff - joff] - 3.0 * v_in[index + ioff + joff]
+
+                 - 2.0 * v_in[index - ioff - joff - koff] - 2.0 * v_in[index - ioff - joff + koff] -
+                 2.0 * v_in[index - ioff + joff - koff] - 2.0 * v_in[index - ioff + joff + koff] -
+                 2.0 * v_in[index + ioff - joff - koff] - 2.0 * v_in[index + ioff - joff + koff] -
+                 2.0 * v_in[index + ioff + joff - koff] - 2.0 * v_in[index + ioff + joff + koff]) *
+                h2inv; // h2inv = 1 / (30 * h2)
+
+            // r = f - A*v
+            res = f[index] - stencilsum;
+
+            // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
+            v_out[index] = v_in_index + omega * res * dinv;
+
+            if (store_residual)
+                r[index] = res;
+
+            index += ioff;
+        }
+    }
+}
+
+/* runs one iteration of jacobi's method using one work-item per grid node.
+ * uses a 1d kernel, which parallelizes all three loop in x,y and z directions.
+ * global size must be of ghosted grid.
+ * mgh, ngh and ogh must be dimensions of local ghosted grid, too.
+ * svmgh, svngh and svogh are ghosted grid sizes of stencilValues (might differ from mgh,ngh,ogh when using MPI).
+ * h2 is grid spacing to the power of 2
+ * dinv is h2/A(i,i), e.g. h2/6.0 for 3D laplacian stencil
+ * if store_residual is true, the residual will be stored into global field r.
+ * stencilValues is a VaryingStencilGpu having width 3 (i.e. a 6d array).
+ * ghosts is the amount of ghost cells of v, f and r.
+ * ghosts_sv is the amount of ghost cells of stencilValues.
+ * idx_start determines which cells shall be calculated, which is relevant for running
+ *   Jacobi with multiple iterations without ghost cell update in-between. I.e. when
+ *   stepsPerIter = 1: idx_start = ghosts.
+ *
+ * Wis not on boundary do nothing.
+ */
+__kernel void jacobi_iter_27point_varying_stencil_1d_boundary(
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out,
+    __global double* restrict f,
+    __global double* restrict r,
+    __global double* restrict stencilValues,
+    const double omega,
+    const int mgh, const int ngh, const int ogh,
+    const int svmgh, const int svngh, const int svogh,
+    const int ghosts, const int ghosts_sv,
+    const int svGridSize,
+    const int idx_start, const int store_residual)
+{
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
+
+    if (is_on_real_boundary_3d(i, j, k, mgh, ngh, ogh, ghosts))
+    {
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
+        int index = i * ioff + j * ogh + k;
+
+        int svno = svngh * svogh;
+        // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
+        int index_sv = (i - ghosts + ghosts_sv) * svno + (j - ghosts + ghosts_sv) * svogh + (k - ghosts + ghosts_sv);
+
+        double res;
+        double v_in_index = v_in[index];
+        double sv_self = stencilValues[index_sv + (9 + 3 + 1) * svGridSize];
+
+        // A*v
+        // clang-format off
+        double stencilsum = sv_self * v_in[index]
+            + stencilValues[index_sv + (9 + 3) * svGridSize]      * v_in[index - 1]
+            + stencilValues[index_sv + (9 + 3 + 2) * svGridSize]  * v_in[index + 1]
+            + stencilValues[index_sv + (9 + 1) * svGridSize]      * v_in[index - joff]
+            + stencilValues[index_sv + (9 + 6 + 1) * svGridSize]  * v_in[index + joff]
+            + stencilValues[index_sv + (3 + 1) * svGridSize]      * v_in[index - ioff]
+            + stencilValues[index_sv + (18 + 3 + 1) * svGridSize] * v_in[index + ioff]
+            
+            + stencilValues[index_sv + (9) * svGridSize]          * v_in[index - joff - koff]
+            + stencilValues[index_sv + (9 + 2) * svGridSize]      * v_in[index - joff + koff]
+            + stencilValues[index_sv + (9 + 6) * svGridSize]      * v_in[index + joff - koff]
+            + stencilValues[index_sv + (9 + 6 + 2) * svGridSize]  * v_in[index + joff + koff]
+            + stencilValues[svGridSize * 3 + index_sv]            * v_in[index - ioff - koff]
+            + stencilValues[index_sv + (3 + 2) * svGridSize]      * v_in[index - ioff + koff]
+            + stencilValues[index_sv + (18 + 3) * svGridSize]     * v_in[index + ioff - koff]
+            + stencilValues[index_sv + (18 + 3 + 2) * svGridSize] * v_in[index + ioff + koff]
+            + stencilValues[svGridSize + index_sv]                * v_in[index - ioff - joff]
+            + stencilValues[index_sv + (6 + 1) * svGridSize]      * v_in[index - ioff + joff]
+            + stencilValues[index_sv + (18 + 1) * svGridSize]     * v_in[index + ioff - joff]
+            + stencilValues[index_sv + (18 + 6 + 1) * svGridSize] * v_in[index + ioff + joff]
+
+            + stencilValues[index_sv]                           * v_in[index - ioff - joff - koff]
+            + stencilValues[svGridSize * 2 + index_sv]            * v_in[index - ioff - joff + koff]
+            + stencilValues[index_sv + (6) * svGridSize]          * v_in[index - ioff + joff - koff]
+            + stencilValues[index_sv + (6 + 2) * svGridSize]      * v_in[index - ioff + joff + koff]
+            + stencilValues[index_sv + (18) * svGridSize]         * v_in[index + ioff - joff - koff]
+            + stencilValues[index_sv + (18 + 2) * svGridSize]     * v_in[index + ioff - joff + koff]
+            + stencilValues[index_sv + (18 + 6) * svGridSize]     * v_in[index + ioff + joff - koff]
+            + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * v_in[index + ioff + joff + koff];
+        // clang-format on
+
+        // r = f - A*v
+        res = f[index] - stencilsum;
+
+        // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
+        v_out[index] = v_in_index + omega * (1.0 / sv_self) * res;
+
+        if (store_residual)
+            r[index] = res;
+    }
+}
+
+/* runs one iteration of jacobi's method using one work-item per grid node for a fixed stencil.
+ * uses a 1d kernel, which parallelizes all three loop in x,y and z directions.
+ * global size must be of ghosted grid.
+ * Arguments:
+ * - v_in: input v, only read from
+ * - v_out: output v, only written to
+ * - f: rhs, only read from
+ * - r: residual, only written to if store_residual is true. Else unused
+ * - omega: relaxation parameter
+ * - mgh, ngh,ogh: Dimensions of local ghosted grid
+ * - store_residual: If true, the residual will be stored into global field r.
+ * - ghosts: Amount of ghost cells of v, f and r.
+ * - idx_start: Determines which cells shall be calculated, which is relevant for running
+ *     Jacobi with multiple iterations without ghost cell update in-between. I.e. when
+ *     stepsPerIter = 1: idx_start = ghosts.
+ * - c000 ... c222: coefficients for the 27-point stencil with respective index
+ *
+ * Wis not on boundary do nothing.
+ */
+__kernel void jacobi_iter_27point_fixed_stencil_1d_boundary(
+    __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
+    __global double* restrict v_out,
+    __global double* restrict f,
+    __global double* restrict r,
+    const double omega,
+    const int mgh, const int ngh, const int ogh,
+    const int ghosts,
+    const int idx_start, const int store_residual,
+    const double c000,
+    const double c001,
+    const double c002,
+    const double c010,
+    const double c011,
+    const double c012,
+    const double c020,
+    const double c021,
+    const double c022,
+    const double c100,
+    const double c101,
+    const double c102,
+    const double c110,
+    const double c111,
+    const double c112,
+    const double c120,
+    const double c121,
+    const double c122,
+    const double c200,
+    const double c201,
+    const double c202,
+    const double c210,
+    const double c211,
+    const double c212,
+    const double c220,
+    const double c221,
+    const double c222)
+{
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
+
+    if (is_on_real_boundary_3d(i, j, k, mgh, ngh, ogh, ghosts))
     {
         int ioff = ngh * ogh;
         int joff = ogh;
@@ -4164,6 +4592,8 @@ __kernel void fill_buffer(
  * Arguments:
  *   buf: Buffer to fill.
  *   size: Number of elements in the buffer.
+ *   mgh, ngh, ogh: Extents of the buffer including ghost cells.
+ *   ghosts_m, ghosts_n, ghosts_o: Ghost cell amount of the buffer.
  *   realCellsOnly: If true, only fill the real cells, i.e. skip ghost cells.
  */
 __kernel void fill_1d_index(

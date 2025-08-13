@@ -276,7 +276,24 @@ namespace mgcl
                                 int stepsPerIter = 1, MPILevelData* mpiData = nullptr);
         static double jacobiSeq(args::JacobiBSSeqArgs& args);
         static double jacobi(Problem& problem, Level& level, int maxiter, bool returnResidual, int stepsPerIter = 1);
+        static double jacobiOverlapped(mgcl::Problem& problem, mgcl::Level& level, int maxiter, bool return_residual, int stepsPerIter,
+                                       cl_command_queue queue2);
         static double jacobi(args::JacobiBSOclArgs& args);
+
+        struct jacobi_overlapped_helpers // poor namespace replacement, as namespaces inside classes are not allowed
+        {
+            static double jacobiBoundary(mgcl::Problem& problem, mgcl::Level& level,
+                                         cl_mem dVIn, cl_mem dVOut, int store_res,
+                                         cl_command_queue queue, cl_kernel kernel,
+                                         size_t global[3], size_t local[3],
+                                         std::string kernelName);
+
+            static double jacobiInner(mgcl::Problem& problem, mgcl::Level& level,
+                                      cl_mem dVIn, cl_mem dVOut, int store_res,
+                                      cl_command_queue queue, cl_kernel kernel,
+                                      size_t global[3], size_t local[3],
+                                      std::string kernelName);
+        };
 
         static std::unique_ptr<VaryingStencil> galerkinOptimized(VaryingStencil& a_h, int gh_a2h,
                                                                  int resm, int resn, int reso);

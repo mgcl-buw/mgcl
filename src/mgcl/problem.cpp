@@ -1457,6 +1457,11 @@ namespace mgcl
         return openCLHelper.commands;
     }
 
+    cl_command_queue Problem::getCommands2() const
+    {
+        return openCLHelper.getCommands2();
+    }
+
     std::string Problem::getKernelFile() const
     {
         return openCLHelper.getKernelFile();

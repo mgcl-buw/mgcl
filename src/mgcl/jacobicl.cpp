@@ -634,6 +634,484 @@ namespace mgcl
         return res;
     }
 
+    // Starts the kernel for one iteration of Jacobi for boundary gps.
+    // No ghost update included. No final residual calculation included.
+    double MultigridEngine::jacobi_overlapped_helpers::jacobiBoundary(mgcl::Problem& problem, mgcl::Level& level,
+                                                                      cl_mem dVIn, cl_mem dVOut, int store_res,
+                                                                      cl_command_queue queue, cl_kernel kernel,
+                                                                      size_t global[3], size_t local[3],
+                                                                      std::string kernelName)
+    {
+        int err;
+        int mgh = level.getMgh();
+        int ngh = level.getNgh();
+        int ogh = level.getOgh();
+        double res = -1;
+        int idx_start = level.getDVIn().getGhostsM(); // only inner gps.
+
+        cl_event ev;
+
+        double h2 = 1.0 / static_cast<double>((problem.getMGlobal() >> level.getNum()) * (problem.getMGlobal() >> level.getNum()));
+        double dinv = h2 / 6.0;
+        double h2inv = level.getStencilFactor(); // divisor of the stencil, inverted to use * instead of / in kernel
+        // TODO refactor stencilFactor
+
+        // Create the compute kernel from the program
+        if (problem.getStencilType() == mgcl::MGCL_LAPLACE_19POINT)
+        {
+            dinv = (6.0 * h2) / 24.0;
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_27POINT)
+        {
+            dinv = (26.0 * h2) / 88.0;
+        }
+
+        // cl_mem dVIn = level.getDVIn().getBuffer();
+        // cl_mem dVOut = level.getDVOut().getBuffer();
+        cl_mem dF = level.getDF().getBuffer();
+        cl_mem dR = level.getDR().getBuffer();
+
+        // assign kernel arguments
+        int pos = 0;
+
+        double omega = problem.getOmega();
+        int ghosts = problem.getGhosts();
+
+        if (problem.getStencilType() == mgcl::MGCL_VARYING)
+        {
+            auto svbuf = level.getStencilValuesGpu()->getBuf();
+            int svgh = level.getStencilValuesGpu()->getGh();
+            int svmgh = level.getStencilValuesGpu()->getMgh();
+            int svngh = level.getStencilValuesGpu()->getNgh();
+            int svogh = level.getStencilValuesGpu()->getOgh();
+            int svGridSize = svmgh * svngh * svogh;
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &svbuf);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &omega);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svmgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_FIXED)
+        {
+            auto& fs = *level.getFixedStencil();
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &omega);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][0][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][0][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][0][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][1][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][1][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][1][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][2][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][2][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][2][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][0][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][0][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][0][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][1][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][1][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][1][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][2][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][2][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][2][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][0][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][0][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][0][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][1][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][1][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][1][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][2][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][2][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][2][2]);
+        }
+        else
+        {
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &h2inv);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &dinv);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &omega);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
+        }
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        int kernelDims = 2;
+        if (problem.getStencilType() == mgcl::MGCL_VARYING || problem.getStencilType() == mgcl::MGCL_FIXED)
+            kernelDims = 1;
+
+        err = clEnqueueNDRangeKernel(queue, kernel, kernelDims, NULL, global, local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing kernel");
+
+        if (problem.isProfilingEnabled())
+        {
+            problem.getProfilingData()->addMeasurement(queue, ev, kernelName,
+                                                       {global[0], global[1], 0},
+                                                       {local[0], local[1], 1});
+        }
+        mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        return res;
+    }
+
+    // Starts the kernel for one iteration of Jacobi for inner gps.
+    // No ghost update included. No final residual calculation included.
+    double MultigridEngine::jacobi_overlapped_helpers::jacobiInner(mgcl::Problem& problem, mgcl::Level& level,
+                                                                   cl_mem dVIn, cl_mem dVOut, int store_res,
+                                                                   cl_command_queue queue, cl_kernel kernel,
+                                                                   size_t global[3], size_t local[3],
+                                                                   std::string kernelName)
+    {
+        int err;
+        int mgh = level.getMgh();
+        int ngh = level.getNgh();
+        int ogh = level.getOgh();
+        double res = -1;
+        int idx_start = level.getDVIn().getGhostsM(); // only inner gps.
+
+        cl_event ev;
+
+        double h2 = 1.0 / static_cast<double>((problem.getMGlobal() >> level.getNum()) * (problem.getMGlobal() >> level.getNum()));
+        double dinv = h2 / 6.0;
+        double h2inv = level.getStencilFactor(); // divisor of the stencil, inverted to use * instead of / in kernel
+        // TODO refactor stencilFactor
+
+        // Create the compute kernel from the program
+        if (problem.getStencilType() == mgcl::MGCL_LAPLACE_19POINT)
+        {
+            dinv = (6.0 * h2) / 24.0;
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_27POINT)
+        {
+            dinv = (26.0 * h2) / 88.0;
+        }
+
+        // cl_mem dVIn = level.getDVIn().getBuffer();
+        // cl_mem dVOut = level.getDVOut().getBuffer();
+        cl_mem dF = level.getDF().getBuffer();
+        cl_mem dR = level.getDR().getBuffer();
+
+        // assign kernel arguments
+        int pos = 0;
+
+        double omega = problem.getOmega();
+        int ghosts = problem.getGhosts();
+
+        if (problem.getStencilType() == mgcl::MGCL_VARYING)
+        {
+            auto svbuf = level.getStencilValuesGpu()->getBuf();
+            int svgh = level.getStencilValuesGpu()->getGh();
+            int svmgh = level.getStencilValuesGpu()->getMgh();
+            int svngh = level.getStencilValuesGpu()->getNgh();
+            int svogh = level.getStencilValuesGpu()->getOgh();
+            int svGridSize = svmgh * svngh * svogh;
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &svbuf);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &omega);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svmgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_FIXED)
+        {
+            auto& fs = *level.getFixedStencil();
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &omega);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][0][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][0][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][0][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][1][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][1][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][1][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][2][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][2][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][2][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][0][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][0][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][0][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][1][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][1][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][1][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][2][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][2][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[1][2][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][0][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][0][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][0][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][1][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][1][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][1][2]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][2][0]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][2][1]);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[2][2][2]);
+        }
+        else
+        {
+            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dVOut);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &h2inv);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &dinv);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &omega);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
+        }
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        int kernelDims = 2;
+        if (problem.getStencilType() == mgcl::MGCL_VARYING || problem.getStencilType() == mgcl::MGCL_FIXED)
+            kernelDims = 1;
+
+        err = clEnqueueNDRangeKernel(queue, kernel, kernelDims, NULL, global, local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing kernel");
+
+        if (problem.isProfilingEnabled())
+        {
+            problem.getProfilingData()->addMeasurement(queue, ev, kernelName,
+                                                       {global[0], global[1], 0},
+                                                       {local[0], local[1], 1});
+        }
+        mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        return res;
+    }
+
+    /* Runs jacobi method using OpenCL.
+     * Doesn't creates ocl buffers and doesn't copy data from host to device and vice versa
+     * v, f and r must be of size [m][n][o] for periodic boundary condition. Ghosts of v and f must be updated.
+     * m, n and o must be the dimensions of grid + 2*ghosts
+     * If return_residual is true, the residual's 2-norm or inf-norm will be read back from device and returned, else -1.
+     * queue2 must be different from problem.getCommands().
+     */
+    double MultigridEngine::jacobiOverlapped(mgcl::Problem& problem, mgcl::Level& level, int maxiter, bool return_residual, int stepsPerIter,
+                                             cl_command_queue queue2)
+    {
+        assert(problem.getCommands() != queue2 && "queue2 must not be the same as problem.getCommands()");
+
+        int err;
+        double res = -1;
+        bool store_res = false;
+
+        // decrease stepsPerIter if it's less than maxIter
+        if (maxiter < stepsPerIter)
+            stepsPerIter = maxiter;
+
+        // Ghosts only need to be updated in the periodic case, so set stepsPerIter = 1 for non-periodic.
+        // TODO adjust for MPI
+        if (!problem.isPeriodic())
+            stepsPerIter = 1;
+
+        // Check if amount of ghost cells is large enough
+        if (problem.getGhosts() < stepsPerIter)
+        {
+            error("#ghosts must be >= stepsPerIter!");
+        }
+
+        cl_mem dVIn = level.getDVIn().getBuffer();
+        cl_mem dVOut = level.getDVOut().getBuffer();
+
+        int mgh = level.getMgh();
+        int ngh = level.getNgh();
+        int ogh = level.getOgh();
+
+        /********************** create boundary kernel *********************/
+        const char* kernelNameBoundary;
+        if (problem.getStencilType() == mgcl::MGCL_LAPLACE_7POINT)
+            kernelNameBoundary = "jacobi_iter_7point_boundary";
+        else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_19POINT)
+        {
+            kernelNameBoundary = "jacobi_iter_19point_boundary";
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_27POINT)
+        {
+            kernelNameBoundary = "jacobi_iter_27point_boundary";
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_VARYING)
+        {
+            kernelNameBoundary = "jacobi_iter_27point_varying_stencil_1d_boundary";
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_FIXED)
+        {
+            kernelNameBoundary = "jacobi_iter_27point_fixed_stencil_1d_boundary";
+        }
+        else
+        {
+            assert(false && "Unknown stencil type for Jacobi inner kernel");
+        }
+
+        cl_kernel boundaryKernel = clCreateKernel(problem.getProgram(), kernelNameBoundary, &err);
+        mgcl::mgclCheckError(err, "Creating boundaryKernel");
+
+        /********************** create inner kernel *********************/
+        // These are the default Jacobi kernels with proper idx_start
+        const char* kernelNameInner;
+        if (problem.getStencilType() == mgcl::MGCL_LAPLACE_7POINT)
+            kernelNameInner = "jacobi_iter_7point";
+        else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_19POINT)
+        {
+            kernelNameInner = "jacobi_iter_19point";
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_LAPLACE_27POINT)
+        {
+            kernelNameInner = "jacobi_iter_27point";
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_VARYING)
+        {
+            kernelNameInner = "jacobi_iter_27point_varying_stencil_1d";
+        }
+        else if (problem.getStencilType() == mgcl::MGCL_FIXED)
+        {
+            kernelNameInner = "jacobi_iter_27point_fixed_stencil_1d";
+        }
+        else
+        {
+            assert(false && "Unknown stencil type for Jacobi inner kernel");
+        }
+
+        cl_kernel innerKernel = clCreateKernel(problem.getProgram(), kernelNameInner, &err);
+        mgcl::mgclCheckError(err, "Creating innerKernel");
+
+        // NOTE: using the same conf for inner and boundary kernels
+
+        // One work-item per cell (including ghost cells).
+        size_t global[3] = {static_cast<size_t>(mgh * ngh * ogh), static_cast<size_t>(0), static_cast<size_t>(0)};
+        const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelNameBoundary, 1);
+        size_t local[3] = {c[0], c[1], c[2]};
+
+        // kernels that use constant Laplace stencils are 2d and need different global and local sizes
+        if (problem.getStencilType() != mgcl::MGCL_VARYING && problem.getStencilType() != mgcl::MGCL_FIXED)
+        {
+            global[0] = static_cast<size_t>(ngh);
+            global[1] = static_cast<size_t>(ogh);
+            // local[0] = static_cast<size_t>(1);
+            // local[1] = static_cast<size_t>(64);
+        }
+
+        // Pad global sizes to fit to local sizes
+        int kernelDims = (problem.getStencilType() == mgcl::MGCL_VARYING || problem.getStencilType() == mgcl::MGCL_FIXED) ? 1 : 2;
+        for (int i = 0; i < kernelDims; i++)
+            if (global[i] % local[i] != 0)
+            {
+                global[i] += local[i] - (global[i] % local[i]);
+            }
+
+        int globalIter = 0;
+        auto ptr_dvin_wrapper = &level.getDVIn();
+        auto ptr_dvout_wrapper = &level.getDVOut();
+        auto tmp = ptr_dvin_wrapper;
+
+        // No need for waiting for the boundary kernel to finish, because extractBorderPlanes is in same in-order queue
+        err = mgcl::MultigridEngine::updateGhosts(problem, *ptr_dvin_wrapper,
+                                                  level.getMpiDataPtr(), level.isCalculatedLocally());
+        mgcl::mgclCheckError(err, "Updating ghosts");
+
+        while (globalIter < maxiter)
+        {
+            // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
+            for (int innerIter = 0; innerIter < stepsPerIter && globalIter < maxiter; innerIter++, globalIter++)
+            {
+                auto dVIn = ptr_dvin_wrapper->getBuffer();
+                auto dVOut = ptr_dvout_wrapper->getBuffer();
+
+                store_res = globalIter == maxiter - 1;
+
+                // calculate boundary points and inner points in separate queues concurrently
+                jacobi_overlapped_helpers::jacobiBoundary(problem, level, dVIn, dVOut, store_res, problem.getCommands(), boundaryKernel, global, local, kernelNameBoundary);
+                jacobi_overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2, innerKernel, global, local, kernelNameInner);
+
+                // No need for waiting for the boundary kernel to finish, because extractBorderPlanes is in same in-order queue
+                err = mgcl::MultigridEngine::updateGhosts(problem, *ptr_dvout_wrapper,
+                                                          level.getMpiDataPtr(), level.isCalculatedLocally());
+                mgcl::mgclCheckError(err, "Updating ghosts");
+
+                // Wait for inner kernel and ghost update to finish
+                mgcl::mgclCheckError(clFinish(problem.getCommands()), "clFinish queue1");
+                mgcl::mgclCheckError(clFinish(queue2), "clFinish queue2");
+
+                // swap dVIn and dVOut for next iteration
+                tmp = ptr_dvout_wrapper;
+                ptr_dvout_wrapper = ptr_dvin_wrapper;
+                ptr_dvin_wrapper = tmp;
+            }
+        }
+
+        mgcl::mgclCheckError(clReleaseKernel(boundaryKernel), "Releasing boundaryKernel");
+        mgcl::mgclCheckError(clReleaseKernel(innerKernel), "Releasing innerKernel");
+
+        if (store_res)
+        {
+            // TODO check for mpi
+            err = mgcl::MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
+                                                      level.isCalculatedLocally());
+            mgcl::mgclCheckError(err, "Updating ghosts of dR");
+        }
+
+        // copy result into dVIn if needed
+        if (maxiter % 2 == 1)
+            level.getDVOut().copyTo(problem.getOpenCLHelper().getCommands(), level.getDVIn());
+
+        // calculate residual and its norm
+        if (return_residual)
+        {
+            // update residual to use current approximation v
+            res = mgcl::MultigridEngine::residual(problem, level, true);
+        }
+
+        return res;
+    }
+
     /* Runs jacobi method using OpenCL.
      * Uses Blockstencil.
      */
