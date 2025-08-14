@@ -22,16 +22,15 @@ int is_on_real_boundary_3d(int i, int j, int k, int mgh, int ngh, int ogh, int g
     return front_back_torus || top_bottom_torus || left_right_torus;
 }
 
-// // Returns true, if index (i,j,k) is on the real boundary of the grid. E.g. for 1d with m=8 and gh=2,
-// // grid points at 2,3,6,7 are considered to be on the boundary.
-// int is_on_real_boundary_2d(int i, int j,  int mgh, int ngh,  int ghosts)
-// {
-//     // real border of grid
-//     int front_back_torus = ((i >= ghosts && i < 2 * ghosts) || (i >= mgh - 2 * ghosts && i < mgh - ghosts)) && j >= ghosts && j < ngh - ghosts && k >= ghosts && k < ogh - ghosts;
-//     int top_bottom_torus = ((j >= ghosts && j < 2 * ghosts) || (j >= ngh - 2 * ghosts && j < ngh - ghosts)) && i >= ghosts && i < mgh - ghosts && k >= ghosts && k < ogh - ghosts;
-//     int left_right_torus = ((k >= ghosts && k < 2 * ghosts) || (k >= ogh - 2 * ghosts && k < ogh - ghosts)) && i >= ghosts && i < mgh - ghosts && j >= ghosts && j < ngh - ghosts;
-//     return front_back_torus || top_bottom_torus || left_right_torus;
-// }
+// Returns true, if index (i,j,k) is on the real boundary of the grid. E.g. for 1d with m=8 and gh=2,
+// grid points at 2,3,6,7 are considered to be on the boundary.
+int is_on_real_boundary_2d(int i, int j, int mgh, int ngh, int ghosts)
+{
+    // real border of grid
+    int top_bottom_border = ((i >= ghosts && i < 2 * ghosts) || (i >= mgh - 2 * ghosts && i < mgh - ghosts)) && j >= ghosts && j < ngh - ghosts;
+    int left_right_border = ((j >= ghosts && j < 2 * ghosts) || (j >= ngh - 2 * ghosts && j < ngh - ghosts)) && i >= ghosts && i < mgh - ghosts;
+    return top_bottom_border || left_right_border;
+}
 
 /* Prints components of 7-point laplacian stencil for debugging purposes */
 void print_7point(__global double* A, int index, int ioff, int joff, int koff)
@@ -1356,22 +1355,28 @@ __kernel void jacobi_iter_7point_boundary(
     const double h2inv,
     const double dinv, const double omega,
     const int mgh, const int ngh, const int ogh, const int ghosts,
-    const int idx_start, const int store_residual)
+    const int store_residual)
 {
     int j = get_global_id(0);
     int k = get_global_id(1);
 
     // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
-    // if (j >= idx_start && k >= idx_start && j < ngh - idx_start && k < ogh - idx_start)
-    if (j >= ghosts && k >= ghosts && j < 2 * ghosts && k < 2 * ghosts)
+    // if (j >= ghosts && k >= ghosts && j < ngh - ghosts && k < ogh - ghosts)
     {
         int ioff = ngh * ogh;
         int joff = ogh;
         int koff = 1;
-        int index = idx_start * ioff + j * ogh + k;
+        int index = ghosts * ioff + j * ogh + k;
 
-        for (int i = idx_start; i < mgh - idx_start; i++)
+        for (int i = ghosts; i < mgh - ghosts; i++)
         {
+            // can be more efficient, but not worth the effort
+            if (!is_on_real_boundary_3d(i, j, k, mgh, ngh, ogh, ghosts))
+            {
+                index += ioff;
+                continue; // skip cells that are not on the real boundary
+            }
+
             double res;
             double v_in_index = v_in[index];
 
@@ -1385,12 +1390,6 @@ __kernel void jacobi_iter_7point_boundary(
 
             // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
             v_out[index] = v_in_index + omega * dinv * res;
-
-            // if (j == ghosts && k == ghosts && i >= ghosts && i <= ghosts)
-            // {
-            //     printf("x,y,z = %d,%d,%d, f = %.17e, stencilsum = %.17e, res = %.17e, v_out = %.17e\n", i, j, k, f[index], stencilsum, res, v_out[index]);
-            //     print_7point(v_in, index, ioff, joff, koff);
-            // }
 
             if (store_residual)
                 r[index] = res;
@@ -1420,21 +1419,27 @@ __kernel void jacobi_iter_19point_boundary(
     const double h2inv,
     const double dinv, const double omega,
     const int mgh, const int ngh, const int ogh, const int ghosts,
-    const int idx_start, const int store_residual)
+    const int store_residual)
 {
     int j = get_global_id(0);
     int k = get_global_id(1);
 
     // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
-    if (j >= ghosts && k >= ghosts && j < 2 * ghosts && k < 2 * ghosts)
     {
         int ioff = ngh * ogh;
         int joff = ogh;
         int koff = 1;
-        int index = idx_start * ioff + j * ogh + k;
+        int index = ghosts * ioff + j * ogh + k;
 
-        for (int i = idx_start; i < mgh - idx_start; i++)
+        for (int i = ghosts; i < mgh - ghosts; i++)
         {
+            // can be more efficient, but not worth the effort
+            if (!is_on_real_boundary_3d(i, j, k, mgh, ngh, ogh, ghosts))
+            {
+                index += ioff;
+                continue; // skip cells that are not on the real boundary
+            }
+
             double res;
             double v_in_index = v_in[index];
 
@@ -1481,21 +1486,27 @@ __kernel void jacobi_iter_27point_boundary(
     __global double* restrict r,
     const double h2inv, const double dinv, const double omega,
     const int mgh, const int ngh, const int ogh, const int ghosts,
-    const int idx_start, const int store_residual)
+    const int store_residual)
 {
     int j = get_global_id(0);
     int k = get_global_id(1);
 
     // calculate residual for real cells plus some ghost cells if stepsPerIter > 1. TOOO fix only on real boundary
-    if (j >= ghosts && k >= ghosts && j < 2 * ghosts && k < 2 * ghosts)
     {
         int ioff = ngh * ogh;
         int joff = ogh;
         int koff = 1;
-        int index = idx_start * ioff + j * ogh + k;
+        int index = ghosts * ioff + j * ogh + k;
 
-        for (int i = idx_start; i < mgh - idx_start; i++)
+        for (int i = ghosts; i < mgh - ghosts; i++)
         {
+            // can be more efficient, but not worth the effort
+            if (!is_on_real_boundary_3d(i, j, k, mgh, ngh, ogh, ghosts))
+            {
+                index += ioff;
+                continue; // skip cells that are not on the real boundary
+            }
+
             double res;
             double v_in_index = v_in[index];
 
@@ -1541,9 +1552,6 @@ __kernel void jacobi_iter_27point_boundary(
  * stencilValues is a VaryingStencilGpu having width 3 (i.e. a 6d array).
  * ghosts is the amount of ghost cells of v, f and r.
  * ghosts_sv is the amount of ghost cells of stencilValues.
- * idx_start determines which cells shall be calculated, which is relevant for running
- *   Jacobi with multiple iterations without ghost cell update in-between. I.e. when
- *   stepsPerIter = 1: idx_start = ghosts.
  *
  * Wis not on boundary do nothing.
  */
@@ -1558,7 +1566,7 @@ __kernel void jacobi_iter_27point_varying_stencil_1d_boundary(
     const int svmgh, const int svngh, const int svogh,
     const int ghosts, const int ghosts_sv,
     const int svGridSize,
-    const int idx_start, const int store_residual)
+    const int store_residual)
 {
     int idx = get_global_id(0);
     int no = ngh * ogh;
@@ -1637,9 +1645,6 @@ __kernel void jacobi_iter_27point_varying_stencil_1d_boundary(
  * - mgh, ngh,ogh: Dimensions of local ghosted grid
  * - store_residual: If true, the residual will be stored into global field r.
  * - ghosts: Amount of ghost cells of v, f and r.
- * - idx_start: Determines which cells shall be calculated, which is relevant for running
- *     Jacobi with multiple iterations without ghost cell update in-between. I.e. when
- *     stepsPerIter = 1: idx_start = ghosts.
  * - c000 ... c222: coefficients for the 27-point stencil with respective index
  *
  * Wis not on boundary do nothing.
@@ -1652,7 +1657,7 @@ __kernel void jacobi_iter_27point_fixed_stencil_1d_boundary(
     const double omega,
     const int mgh, const int ngh, const int ogh,
     const int ghosts,
-    const int idx_start, const int store_residual,
+    const int store_residual,
     const double c000,
     const double c001,
     const double c002,

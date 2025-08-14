@@ -647,7 +647,6 @@ namespace mgcl
         int ngh = level.getNgh();
         int ogh = level.getOgh();
         double res = -1;
-        int idx_start = level.getDVIn().getGhostsM(); // only inner gps.
 
         cl_event ev;
 
@@ -700,7 +699,6 @@ namespace mgcl
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svgh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &svGridSize);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
         }
         else if (problem.getStencilType() == mgcl::MGCL_FIXED)
@@ -715,7 +713,6 @@ namespace mgcl
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
             err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][0][0]);
             err |= clSetKernelArg(kernel, ++pos, sizeof(double), &fs[0][0][1]);
@@ -758,7 +755,6 @@ namespace mgcl
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &idx_start);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &store_res);
         }
         mgcl::mgclCheckError(err, "Setting kernel arguments");
