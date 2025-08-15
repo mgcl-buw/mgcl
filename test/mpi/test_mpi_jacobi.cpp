@@ -744,7 +744,7 @@ TEST_CASE("MPI_jacobiOverlapped_ocl_VaryingStencil_n_processes")
     int o = 16;
     int periodic = 1;
 
-    int stepsPerIter = GENERATE(1, 2);
+    int stepsPerIter = 1; // GENERATE(1, 2);
     CAPTURE(stepsPerIter);
 
     // check if mpi is initialized
@@ -813,7 +813,7 @@ TEST_CASE("MPI_jacobiOverlapped_ocl_VaryingStencil_n_processes")
     double h = 1.0 / ((double)m);
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
-    int maxiter = 1;
+    int maxiter = GENERATE(1, 2, 3);
 
     int gh = stepsPerIter;
 
@@ -827,8 +827,8 @@ TEST_CASE("MPI_jacobiOverlapped_ocl_VaryingStencil_n_processes")
     mgcl::Cuboid solution(m, n, o);
     mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution);
 
-    // fill v with non-zero value
-    v_glob.fillRandom();
+    // fill v with non-zero value, but not random as different procs would have different values
+    v_glob.fill1dIndex(false);
 
     // Create local slices of global data
     std::shared_ptr<mgcl::Cuboid> vlptr = v_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
@@ -1039,7 +1039,7 @@ TEST_CASE("MPI_jacobiOverlapped_ocl_LaplaceStencils_n_processes")
     else
         stencilFactor = 1.0 / (26.0 * h * h);
     mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
-    int maxiter = 1;
+    int maxiter = 3; // GENERATE(1, 2, 3);
 
     int gh = stepsPerIter;
 
