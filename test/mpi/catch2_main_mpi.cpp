@@ -41,7 +41,12 @@ int main(int argc, char* argv[])
         return returnCode;
 
     // Set device types
-    if (inputDeviceTypes.empty() || inputDeviceTypes.find("gpu") != std::string::npos)
+    if (inputDeviceTypes.empty())
+    {
+        CLI_ARGS::deviceTypes.push_back(CL_DEVICE_TYPE_DEFAULT);
+    }
+
+    if (inputDeviceTypes.find("gpu") != std::string::npos)
     {
         if (mgcl_test::TestUtility::deviceAvailable("", CL_DEVICE_TYPE_GPU))
             CLI_ARGS::deviceTypes.push_back(CL_DEVICE_TYPE_GPU);
