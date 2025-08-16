@@ -768,6 +768,7 @@ TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
     p.setMpiComm(mpi_comm);
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
     p.init();
 
     // Check on level 0
@@ -1187,6 +1188,7 @@ TEST_CASE("MPI_updateGhosts_ocl_Blockstencil_(n_processes)")
     p.setMpiComm(mpi_comm);
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
+    p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
     p.init();
 
     // Check on level 0
