@@ -140,27 +140,27 @@ namespace mgcl
 
         // // Exchange data in x-direction
         // // Send data left
-        // MPI_Sendrecv(&(c[ghosts_m][0][0]), 1, ghostsSliceX, mpiData->left, 0,
-        //              &(c[0][0][0]), 1, ghostsSliceX, mpiData->right, 0, comm, MPI_STATUS_IGNORE);
+        // MPI_Sendrecv(&(c[ghosts_m][0][0]), 1, ghostsSliceX, mpiData->left->rank, 0,
+        //              &(c[0][0][0]), 1, ghostsSliceX, mpiData->right->rank, 0, comm, MPI_STATUS_IGNORE);
         // // Send data right
-        // MPI_Sendrecv(&(c[0][0][0]), 1, ghostsSliceX, mpiData->right, 0,
-        //              &(c[ghosts_m + m][0][0]), 1, ghostsSliceX, mpiData->left, 0, comm, MPI_STATUS_IGNORE);
+        // MPI_Sendrecv(&(c[0][0][0]), 1, ghostsSliceX, mpiData->right->rank, 0,
+        //              &(c[ghosts_m + m][0][0]), 1, ghostsSliceX, mpiData->left->rank, 0, comm, MPI_STATUS_IGNORE);
 
         // // Exchange data in y-direction
         // // Send data upwards
-        // MPI_Sendrecv(&(c[0][ghosts_n][0]), 1, ghostsSliceY, mpiData->up, 0,
-        //              &(c[0][0][0]), 1, ghostsSliceY, mpiData->down, 0, comm, MPI_STATUS_IGNORE);
+        // MPI_Sendrecv(&(c[0][ghosts_n][0]), 1, ghostsSliceY, mpiData->up->rank, 0,
+        //              &(c[0][0][0]), 1, ghostsSliceY, mpiData->down->rank, 0, comm, MPI_STATUS_IGNORE);
         // // Send data downwards
-        // MPI_Sendrecv(&(c[0][0][0]), 1, ghostsSliceY, mpiData->down, 0,
-        //              &(c[0][ghosts_n + n][0]), 1, ghostsSliceY, mpiData->up, 0, comm, MPI_STATUS_IGNORE);
+        // MPI_Sendrecv(&(c[0][0][0]), 1, ghostsSliceY, mpiData->down->rank, 0,
+        //              &(c[0][ghosts_n + n][0]), 1, ghostsSliceY, mpiData->up->rank, 0, comm, MPI_STATUS_IGNORE);
 
         // // Exchange data in z-direction
         // // Send data to the back
-        // MPI_Sendrecv(&(c[0][0][ghosts_o]), 1, ghostsSliceZ, mpiData->back, 0,
-        //              &(c[0][0][0]), 1, ghostsSliceZ, mpiData->front, 0, comm, MPI_STATUS_IGNORE);
+        // MPI_Sendrecv(&(c[0][0][ghosts_o]), 1, ghostsSliceZ, mpiData->back->rank, 0,
+        //              &(c[0][0][0]), 1, ghostsSliceZ, mpiData->front->rank, 0, comm, MPI_STATUS_IGNORE);
         // // Send data to the front
-        // MPI_Sendrecv(&(c[0][0][0]), 1, ghostsSliceZ, mpiData->front, 0,
-        //              &(c[0][0][ghosts_o + o]), 1, ghostsSliceZ, mpiData->back, 0, comm, MPI_STATUS_IGNORE);
+        // MPI_Sendrecv(&(c[0][0][0]), 1, ghostsSliceZ, mpiData->front->rank, 0,
+        //              &(c[0][0][ghosts_o + o]), 1, ghostsSliceZ, mpiData->back->rank, 0, comm, MPI_STATUS_IGNORE);
 
         // // Free types
         // MPI_Type_free(&ghostsSliceX);
@@ -203,12 +203,12 @@ namespace mgcl
         auto rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
         auto rbuf = rbuf_ptr->getData();
 
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
-                           static_cast<void*>(rbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front->rank, 0,
+                           static_cast<void*>(rbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back->rank, 0,
                            mpiData->comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
-        if (MPI_PROC_NULL != mpiData->back)
+        if (MPI_PROC_NULL != mpiData->back->rank)
             for (i = 0; i < ghosts_m; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ogh; k++)
@@ -220,12 +220,12 @@ namespace mgcl
         rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
         rbuf = rbuf_ptr->getData();
 
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back, 0,
-                           static_cast<void*>(rbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front, 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->back->rank, 0,
+                           static_cast<void*>(rbuf[0][0]), ghosts_m * ngh * ogh, MPI_DOUBLE, mpiData->front->rank, 0,
                            mpiData->comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
-        if (MPI_PROC_NULL != mpiData->front)
+        if (MPI_PROC_NULL != mpiData->front->rank)
             for (i = 0; i < ghosts_m; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ogh; k++)
@@ -237,12 +237,12 @@ namespace mgcl
         rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
         rbuf = rbuf_ptr->getData();
 
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
-                           static_cast<void*>(rbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down->rank, 0,
+                           static_cast<void*>(rbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up->rank, 0,
                            mpiData->comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
-        if (MPI_PROC_NULL != mpiData->up)
+        if (MPI_PROC_NULL != mpiData->up->rank)
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ghosts_n; j++)
                     for (k = 0; k < ogh; k++)
@@ -254,12 +254,12 @@ namespace mgcl
         rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
         rbuf = rbuf_ptr->getData();
 
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up, 0,
-                           static_cast<void*>(rbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down, 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up->rank, 0,
+                           static_cast<void*>(rbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down->rank, 0,
                            mpiData->comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
-        if (MPI_PROC_NULL != mpiData->down)
+        if (MPI_PROC_NULL != mpiData->down->rank)
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ghosts_n; j++)
                     for (k = 0; k < ogh; k++)
@@ -271,16 +271,16 @@ namespace mgcl
         rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
         rbuf = rbuf_ptr->getData();
 
-        // std::cout << myid << "," << mpiData->left << std::endl;
+        // std::cout << myid << "," << mpiData->left->rank << std::endl;
         // MPI_Barrier(comm);
         // sbuf_ptr->dumpToFile("sbuf_ptr_left" + std::to_string(myid) + ".txt");
 
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
-                           static_cast<void*>(rbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left->rank, 0,
+                           static_cast<void*>(rbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right->rank, 0,
                            mpiData->comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
-        if (MPI_PROC_NULL != mpiData->right)
+        if (MPI_PROC_NULL != mpiData->right->rank)
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ghosts_o; k++)
@@ -292,12 +292,12 @@ namespace mgcl
         rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
         rbuf = rbuf_ptr->getData();
 
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right, 0,
-                           static_cast<void*>(rbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left, 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right->rank, 0,
+                           static_cast<void*>(rbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left->rank, 0,
                            mpiData->comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
-        if (MPI_PROC_NULL != mpiData->left)
+        if (MPI_PROC_NULL != mpiData->left->rank)
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ghosts_o; k++)

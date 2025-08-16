@@ -17,12 +17,12 @@ namespace mgcl
         int rank;
 
         // IDs of neighbouring processes
-        int left;
-        int right;
-        int up;
-        int down;
-        int front;
-        int back;
+        std::shared_ptr<MPILevelData> left;
+        std::shared_ptr<MPILevelData> right;
+        std::shared_ptr<MPILevelData> up;
+        std::shared_ptr<MPILevelData> down;
+        std::shared_ptr<MPILevelData> front;
+        std::shared_ptr<MPILevelData> back;
 
         MPILevelData(MPI_Comm _comm);
         MPILevelData(const MPILevelData&) = delete;

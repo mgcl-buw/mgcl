@@ -66,12 +66,12 @@ namespace mgcl
         auto rbuf_ptr = sbuf_ptr->copyShallow();
         auto rbuf = rbuf_ptr->getData();
 
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->front, 0,
-                           static_cast<void*>(rbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->back, 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->front->rank, 0,
+                           static_cast<void*>(rbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->back->rank, 0,
                            mpiData->comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
-        if (MPI_PROC_NULL != mpiData->back)
+        if (MPI_PROC_NULL != mpiData->back->rank)
             for (i = 0; i < ghosts_m; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ogh; k++)
@@ -86,12 +86,12 @@ namespace mgcl
         rbuf_ptr = sbuf_ptr->copyShallow();
         rbuf = rbuf_ptr->getData();
 
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->back, 0,
-                           static_cast<void*>(rbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->front, 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->back->rank, 0,
+                           static_cast<void*>(rbuf[0][0][0][0][0]), ghosts_m * ngh * ogh * ssize, MPI_DOUBLE, mpiData->front->rank, 0,
                            mpiData->comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
-        if (MPI_PROC_NULL != mpiData->front)
+        if (MPI_PROC_NULL != mpiData->front->rank)
             for (i = 0; i < ghosts_m; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ogh; k++)
@@ -106,12 +106,12 @@ namespace mgcl
         rbuf_ptr = sbuf_ptr->copyShallow();
         rbuf = rbuf_ptr->getData();
 
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->down, 0,
-                           static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->up, 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->down->rank, 0,
+                           static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->up->rank, 0,
                            mpiData->comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
-        if (MPI_PROC_NULL != mpiData->up)
+        if (MPI_PROC_NULL != mpiData->up->rank)
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ghosts_n; j++)
                     for (k = 0; k < ogh; k++)
@@ -126,12 +126,12 @@ namespace mgcl
         rbuf_ptr = sbuf_ptr->copyShallow();
         rbuf = rbuf_ptr->getData();
 
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->up, 0,
-                           static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->down, 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->up->rank, 0,
+                           static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->down->rank, 0,
                            mpiData->comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
-        if (MPI_PROC_NULL != mpiData->down)
+        if (MPI_PROC_NULL != mpiData->down->rank)
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ghosts_n; j++)
                     for (k = 0; k < ogh; k++)
@@ -146,15 +146,15 @@ namespace mgcl
         rbuf_ptr = sbuf_ptr->copyShallow();
         rbuf = rbuf_ptr->getData();
 
-        // std::cout << myid << "," << mpiData->left << std::endl;
+        // std::cout << myid << "," << mpiData->left->rank << std::endl;
         // MPI_Barrier(comm);
         // sbuf_ptr->dumpToFile("sbuf_ptr_left" + std::to_string(myid) + ".txt");
 
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->left, 0,
-                           static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->right, 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->left->rank, 0,
+                           static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->right->rank, 0,
                            mpiData->comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
-        if (MPI_PROC_NULL != mpiData->right)
+        if (MPI_PROC_NULL != mpiData->right->rank)
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ghosts_o; k++)
@@ -169,12 +169,12 @@ namespace mgcl
         rbuf_ptr = sbuf_ptr->copyShallow();
         rbuf = rbuf_ptr->getData();
 
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->right, 0,
-                           static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->left, 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->right->rank, 0,
+                           static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ngh * ghosts_o * ssize, MPI_DOUBLE, mpiData->left->rank, 0,
                            mpiData->comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
-        if (MPI_PROC_NULL != mpiData->left)
+        if (MPI_PROC_NULL != mpiData->left->rank)
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ghosts_o; k++)

@@ -81,7 +81,7 @@ namespace mgcl
         std::shared_ptr<CuboidBSGpu> dRsq_bs = nullptr; // temporary buffer for storing the squared residual
 
         /* MPI relevant data, e.g. neighbour process ranks. Null if Problem::useMpi is false. */
-        std::unique_ptr<MPILevelData> mpiData = nullptr;
+        std::shared_ptr<MPILevelData> mpiData = nullptr;
 
         friend class OpenCLHelper;
         friend class MultigridEngine;

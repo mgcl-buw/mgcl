@@ -149,35 +149,35 @@ TEST_CASE("Level::initMpiData (2 processes)")
             // grid points are left on this level, the neighbour is set to self.
             if (lv.getM() > 0 && mpi_dims[2] > 1)
             {
-                REQUIRE(mpiData.left == other_rank);
-                REQUIRE(mpiData.right == other_rank);
+                REQUIRE(mpiData.left->rank == other_rank);
+                REQUIRE(mpiData.right->rank == other_rank);
             }
             else
             {
-                REQUIRE(mpiData.left == mpi_rank);
-                REQUIRE(mpiData.right == mpi_rank);
+                REQUIRE(mpiData.left->rank == mpi_rank);
+                REQUIRE(mpiData.right->rank == mpi_rank);
             }
 
             if (lv.getN() > 0 && mpi_dims[1] > 1)
             {
-                REQUIRE(mpiData.up == other_rank);
-                REQUIRE(mpiData.down == other_rank);
+                REQUIRE(mpiData.up->rank == other_rank);
+                REQUIRE(mpiData.down->rank == other_rank);
             }
             else
             {
-                REQUIRE(mpiData.up == mpi_rank);
-                REQUIRE(mpiData.down == mpi_rank);
+                REQUIRE(mpiData.up->rank == mpi_rank);
+                REQUIRE(mpiData.down->rank == mpi_rank);
             }
 
             if (lv.getO() > 0 && mpi_dims[0] > 1)
             {
-                REQUIRE(mpiData.front == other_rank);
-                REQUIRE(mpiData.back == other_rank);
+                REQUIRE(mpiData.front->rank == other_rank);
+                REQUIRE(mpiData.back->rank == other_rank);
             }
             else
             {
-                REQUIRE(mpiData.front == mpi_rank);
-                REQUIRE(mpiData.back == mpi_rank);
+                REQUIRE(mpiData.front->rank == mpi_rank);
+                REQUIRE(mpiData.back->rank == mpi_rank);
             }
         }
         else
@@ -429,9 +429,9 @@ TEST_CASE("Level::initMpiData (8 processes)")
     // {
     //     MPI_Barrier(mpi_comm);
     //     if (i == mpi_rank)
-    //         std::cout << mpi_rank << ": " << mpiData0.left << "," << mpiData0.right << ","
-    //                   << mpiData0.up << "," << mpiData0.down << ","
-    //                   << mpiData0.back << "," << mpiData0.front << std::endl;
+    //         std::cout << mpi_rank << ": " << mpiData0.left->rank << "," << mpiData0.right->rank << ","
+    //                   << mpiData0.up->rank << "," << mpiData0.down->rank << ","
+    //                   << mpiData0.back->rank << "," << mpiData0.front->rank << std::endl;
     // }
 
     // ==================================
@@ -456,12 +456,12 @@ TEST_CASE("Level::initMpiData (8 processes)")
     };
         // clang-format on
 
-        REQUIRE(mpiData0.left == neighbours0[mpi_rank][0]);
-        REQUIRE(mpiData0.right == neighbours0[mpi_rank][0]);
-        REQUIRE(mpiData0.up == neighbours0[mpi_rank][1]);
-        REQUIRE(mpiData0.down == neighbours0[mpi_rank][1]);
-        REQUIRE(mpiData0.front == neighbours0[mpi_rank][2]);
-        REQUIRE(mpiData0.back == neighbours0[mpi_rank][2]);
+        REQUIRE(mpiData0.left->rank == neighbours0[mpi_rank][0]);
+        REQUIRE(mpiData0.right->rank == neighbours0[mpi_rank][0]);
+        REQUIRE(mpiData0.up->rank == neighbours0[mpi_rank][1]);
+        REQUIRE(mpiData0.down->rank == neighbours0[mpi_rank][1]);
+        REQUIRE(mpiData0.front->rank == neighbours0[mpi_rank][2]);
+        REQUIRE(mpiData0.back->rank == neighbours0[mpi_rank][2]);
     }
 
     // ==================================
@@ -581,9 +581,9 @@ TEST_CASE("Level::initMpiData (24 processes)")
     // {
     //     MPI_Barrier(mpi_comm);
     //     if (i == mpi_rank)
-    //         std::cout << mpi_rank << ": " << mpiData0.left << "," << mpiData0.right << ","
-    //                   << mpiData0.up << "," << mpiData0.down << ","
-    //                   << mpiData0.back << "," << mpiData0.front << std::endl;
+    //         std::cout << mpi_rank << ": " << mpiData0.left->rank << "," << mpiData0.right->rank << ","
+    //                   << mpiData0.up->rank << "," << mpiData0.down->rank << ","
+    //                   << mpiData0.back->rank << "," << mpiData0.front->rank << std::endl;
     // }
 
     // ==================================
@@ -608,9 +608,9 @@ TEST_CASE("Level::initMpiData (24 processes)")
         // {
         //     MPI_Barrier(mpi_comm);
         //     if (i == mpi_rank)
-        //         std::cout << mpi_rank << ": " << mpiData0.left << "," << mpiData0.right << ","
-        //                   << mpiData0.up << "," << mpiData0.down << ","
-        //                   << mpiData0.back << "," << mpiData0.front << std::endl;
+        //         std::cout << mpi_rank << ": " << mpiData0.left->rank << "," << mpiData0.right->rank << ","
+        //                   << mpiData0.up->rank << "," << mpiData0.down->rank << ","
+        //                   << mpiData0.back->rank << "," << mpiData0.front->rank << std::endl;
         // }
 
         // clang-format off
@@ -624,12 +624,12 @@ TEST_CASE("Level::initMpiData (24 processes)")
         };
         // clang-format on
 
-        REQUIRE(mpiData0.left == neighbours0[mpi_rank][0]);
-        REQUIRE(mpiData0.right == neighbours0[mpi_rank][1]);
-        REQUIRE(mpiData0.up == neighbours0[mpi_rank][2]);
-        REQUIRE(mpiData0.down == neighbours0[mpi_rank][3]);
-        REQUIRE(mpiData0.back == neighbours0[mpi_rank][4]);
-        REQUIRE(mpiData0.front == neighbours0[mpi_rank][5]);
+        REQUIRE(mpiData0.left->rank == neighbours0[mpi_rank][0]);
+        REQUIRE(mpiData0.right->rank == neighbours0[mpi_rank][1]);
+        REQUIRE(mpiData0.up->rank == neighbours0[mpi_rank][2]);
+        REQUIRE(mpiData0.down->rank == neighbours0[mpi_rank][3]);
+        REQUIRE(mpiData0.back->rank == neighbours0[mpi_rank][4]);
+        REQUIRE(mpiData0.front->rank == neighbours0[mpi_rank][5]);
     }
 
     // ==================================
