@@ -1,3 +1,4 @@
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -9,6 +10,42 @@
 // #include "test_utility.hpp"
 
 #include "mpi.h"
+
+/************** utility functions for this tests ****************/
+
+namespace mgcl_mpi_level_helpers
+{
+    inline int index3D(int i, int j, int k, int m, int n, int o, int periodic)
+    {
+        if (!periodic)
+        {
+            // Check if still inside grid for non-periodic bc. If yes, just return the 1d index at the end
+            if (i < 0 || i >= m || j < 0 || j >= n || k < 0 || k >= o)
+                return MPI_PROC_NULL;
+        }
+        else
+        {
+            // Periodic wrap
+            i = (i + m) % m;
+            j = (j + n) % n;
+            k = (k + o) % o;
+        }
+
+        return i * (n * o) + j * o + k;
+    }
+
+    inline std::array<int, 6> neighbors3D(int i, int j, int k, int m, int n, int o, int periodic)
+    {
+        return std::array<int, 6>{
+            index3D(i, j, k - 1, m, n, o, periodic), // back  (z-1)
+            index3D(i, j, k + 1, m, n, o, periodic), // front (z+1)
+            index3D(i, j - 1, k, m, n, o, periodic), // down  (y-1)
+            index3D(i, j + 1, k, m, n, o, periodic), // up    (y+1)
+            index3D(i - 1, j, k, m, n, o, periodic), // left  (x-1)
+            index3D(i + 1, j, k, m, n, o, periodic)  // right (x+1)
+        };
+    }
+}
 
 // Checks if neighbours are initialized correctly for each level for 1 process.
 // Run with: mpiexec -n 1 tests_mpi "Level::initMpiData (1 process)"
@@ -149,35 +186,35 @@ TEST_CASE("Level::initMpiData (2 processes)")
             // grid points are left on this level, the neighbour is set to self.
             if (lv.getM() > 0 && mpi_dims[2] > 1)
             {
-                REQUIRE(mpiData.left->rank == other_rank);
-                REQUIRE(mpiData.right->rank == other_rank);
+                REQUIRE(mpiData.left[0] == other_rank);
+                REQUIRE(mpiData.right[0] == other_rank);
             }
             else
             {
-                REQUIRE(mpiData.left->rank == mpi_rank);
-                REQUIRE(mpiData.right->rank == mpi_rank);
+                REQUIRE(mpiData.left[0] == mpi_rank);
+                REQUIRE(mpiData.right[0] == mpi_rank);
             }
 
             if (lv.getN() > 0 && mpi_dims[1] > 1)
             {
-                REQUIRE(mpiData.up->rank == other_rank);
-                REQUIRE(mpiData.down->rank == other_rank);
+                REQUIRE(mpiData.up[0] == other_rank);
+                REQUIRE(mpiData.down[0] == other_rank);
             }
             else
             {
-                REQUIRE(mpiData.up->rank == mpi_rank);
-                REQUIRE(mpiData.down->rank == mpi_rank);
+                REQUIRE(mpiData.up[0] == mpi_rank);
+                REQUIRE(mpiData.down[0] == mpi_rank);
             }
 
             if (lv.getO() > 0 && mpi_dims[0] > 1)
             {
-                REQUIRE(mpiData.front->rank == other_rank);
-                REQUIRE(mpiData.back->rank == other_rank);
+                REQUIRE(mpiData.front[0] == other_rank);
+                REQUIRE(mpiData.back[0] == other_rank);
             }
             else
             {
-                REQUIRE(mpiData.front->rank == mpi_rank);
-                REQUIRE(mpiData.back->rank == mpi_rank);
+                REQUIRE(mpiData.front[0] == mpi_rank);
+                REQUIRE(mpiData.back[0] == mpi_rank);
             }
         }
         else
@@ -429,9 +466,9 @@ TEST_CASE("Level::initMpiData (8 processes)")
     // {
     //     MPI_Barrier(mpi_comm);
     //     if (i == mpi_rank)
-    //         std::cout << mpi_rank << ": " << mpiData0.left->rank << "," << mpiData0.right->rank << ","
-    //                   << mpiData0.up->rank << "," << mpiData0.down->rank << ","
-    //                   << mpiData0.back->rank << "," << mpiData0.front->rank << std::endl;
+    //         std::cout << mpi_rank << ": " << mpiData0.left[0] << "," << mpiData0.right[0] << ","
+    //                   << mpiData0.up[0] << "," << mpiData0.down[0] << ","
+    //                   << mpiData0.back[0] << "," << mpiData0.front[0] << std::endl;
     // }
 
     // ==================================
@@ -450,18 +487,14 @@ TEST_CASE("Level::initMpiData (8 processes)")
         REQUIRE((p.getO() >> i) == lv.getO());
 
         // clang-format off
-    std::vector<std::vector<int>> neighbours0 = {
-        {1, 2, 4}, {0, 3, 5}, {3, 0, 6}, {2, 1, 7},
-        {5, 6, 0}, {4, 7, 1}, {7, 4, 2}, {6, 5, 3}
-    };
-        // clang-format on
-
-        REQUIRE(mpiData0.left->rank == neighbours0[mpi_rank][0]);
-        REQUIRE(mpiData0.right->rank == neighbours0[mpi_rank][0]);
-        REQUIRE(mpiData0.up->rank == neighbours0[mpi_rank][1]);
-        REQUIRE(mpiData0.down->rank == neighbours0[mpi_rank][1]);
-        REQUIRE(mpiData0.front->rank == neighbours0[mpi_rank][2]);
-        REQUIRE(mpiData0.back->rank == neighbours0[mpi_rank][2]);
+        CAPTURE(mpi_coords[0], mpi_coords[1], mpi_coords[2], mpi_dims[0], mpi_dims[1], mpi_dims[2], i);
+        auto neighbors0 = mgcl_mpi_level_helpers::neighbors3D(mpi_coords[0], mpi_coords[1], mpi_coords[2], mpi_dims[0], mpi_dims[1], mpi_dims[2], periodic);
+        REQUIRE(mpiData0.left[0] == neighbors0[0]);
+        REQUIRE(mpiData0.right[0] == neighbors0[1]);
+        REQUIRE(mpiData0.up[0] == neighbors0[2]);
+        REQUIRE(mpiData0.down[0] == neighbors0[3]);
+        REQUIRE(mpiData0.front[0] == neighbors0[4]);
+        REQUIRE(mpiData0.back[0] == neighbors0[5]);
     }
 
     // ==================================
@@ -581,9 +614,9 @@ TEST_CASE("Level::initMpiData (24 processes)")
     // {
     //     MPI_Barrier(mpi_comm);
     //     if (i == mpi_rank)
-    //         std::cout << mpi_rank << ": " << mpiData0.left->rank << "," << mpiData0.right->rank << ","
-    //                   << mpiData0.up->rank << "," << mpiData0.down->rank << ","
-    //                   << mpiData0.back->rank << "," << mpiData0.front->rank << std::endl;
+    //         std::cout << mpi_rank << ": " << mpiData0.left[0] << "," << mpiData0.right[0] << ","
+    //                   << mpiData0.up[0] << "," << mpiData0.down[0] << ","
+    //                   << mpiData0.back[0] << "," << mpiData0.front[0] << std::endl;
     // }
 
     // ==================================
@@ -608,28 +641,179 @@ TEST_CASE("Level::initMpiData (24 processes)")
         // {
         //     MPI_Barrier(mpi_comm);
         //     if (i == mpi_rank)
-        //         std::cout << mpi_rank << ": " << mpiData0.left->rank << "," << mpiData0.right->rank << ","
-        //                   << mpiData0.up->rank << "," << mpiData0.down->rank << ","
-        //                   << mpiData0.back->rank << "," << mpiData0.front->rank << std::endl;
+        //         std::cout << mpi_rank << ": " << mpiData0.left[0] << "," << mpiData0.right[0] << ","
+        //                   << mpiData0.up[0] << "," << mpiData0.down[0] << ","
+        //                   << mpiData0.back[0] << "," << mpiData0.front[0] << std::endl;
         // }
 
-        // clang-format off
-        std::vector<std::vector<int>> neighbours0 = {
-            {1,1,2,4,6,18}, {0,0,3,5,7,19}, {3,3,4,0,8,20}, {2,2,5,1,9,21},
-            {5,5,0,2,10,22}, {4,4,1,3,11,23}, {7,7,8,10,12,0}, {6,6,9,11,13,1},
-            {9,9,10,6,14,2}, {8,8,11,7,15,3}, {11,11,6,8,16,4}, {10,10,7,9,17,5},
-            {13,13,14,16,18,6}, {12,12,15,17,19,7}, {15,15,16,12,20,8}, {14,14,17,13,21,9},
-            {17,17,12,14,22,10}, {16,16,13,15,23,11}, {19,19,20,22,0,12}, {18,18,21,23,1,13},
-            {21,21,22,18,2,14}, {20,20,23,19,3,15}, {23,23,18,20,4,16}, {22,22,19,21,5,17}
-        };
-        // clang-format on
+        CAPTURE(mpi_coords[0], mpi_coords[1], mpi_coords[2], mpi_dims[0], mpi_dims[1], mpi_dims[2], i);
+        auto neighbors0 = mgcl_mpi_level_helpers::neighbors3D(mpi_coords[0], mpi_coords[1], mpi_coords[2], mpi_dims[0], mpi_dims[1], mpi_dims[2], periodic);
+        REQUIRE(mpiData0.left[0] == neighbors0[0]);
+        REQUIRE(mpiData0.right[0] == neighbors0[1]);
+        REQUIRE(mpiData0.up[0] == neighbors0[2]);
+        REQUIRE(mpiData0.down[0] == neighbors0[3]);
+        REQUIRE(mpiData0.front[0] == neighbors0[4]);
+        REQUIRE(mpiData0.back[0] == neighbors0[5]);
+    }
 
-        REQUIRE(mpiData0.left->rank == neighbours0[mpi_rank][0]);
-        REQUIRE(mpiData0.right->rank == neighbours0[mpi_rank][1]);
-        REQUIRE(mpiData0.up->rank == neighbours0[mpi_rank][2]);
-        REQUIRE(mpiData0.down->rank == neighbours0[mpi_rank][3]);
-        REQUIRE(mpiData0.back->rank == neighbours0[mpi_rank][4]);
-        REQUIRE(mpiData0.front->rank == neighbours0[mpi_rank][5]);
+    // ==================================
+
+    // Check levels for which mpi is not used
+    for (int i = p.getMpiLevelThreshold(); i <= p.getMaxlevel(); i++)
+    {
+        auto& lv = p.getLevelAt(i);
+        REQUIRE(lv.isCalculatedLocally());
+        REQUIRE(lv.getMpiDataPtr() != nullptr);
+        // REQUIRE_THROWS(lv.getMpiData());
+
+        // Each level on rank 0 at or above the threshold must equal the global size of the problem divided by 2^num.
+        // v, f and r must not be null.
+        if (mpi_rank == 0)
+        {
+            REQUIRE((p.getMGlobal() >> i) == lv.getM());
+            REQUIRE((p.getNGlobal() >> i) == lv.getN());
+            REQUIRE((p.getOGlobal() >> i) == lv.getO());
+        }
+        // On other ranks, size is based on the local size of the problem and v, f and r are null.
+        else
+        {
+            REQUIRE((p.getM() >> i) == lv.getM());
+            REQUIRE((p.getN() >> i) == lv.getN());
+            REQUIRE((p.getO() >> i) == lv.getO());
+            // REQUIRE(lv.getVPtr() == nullptr);
+            // REQUIRE(lv.getFPtr() == nullptr);
+            // REQUIRE(lv.getRPtr() == nullptr);
+        }
+    }
+}
+
+// Checks if neighbours are initialized correctly for each level for 8 processes and ghosts > 1.
+// Run with: mpiexec -n 64 tests_mpi "Level::initMpiData_64procs_gh_eq_2"
+TEST_CASE("Level::initMpiData_64procs_gh_eq_2")
+{
+    int N = 2;      // local size of grid in one direction
+    int Ng = N * 4; // global size of grid in one direction
+    int periodic = GENERATE(0, 1);
+    int ghosts = 2;
+
+    // check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    REQUIRE(mpi_size == 64);
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {4, 4, 4};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    // No need for MPI_Dims_create, since dims are given explicitely to MPI_Cart_create (4x4x4).
+    // Disable reordering in MPI_Cart_create, s.t. a process with given rank will always have the same coordinates.
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 0, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    // if (mpi_rank == 0)
+    //     std::cout << "rank;coords" << std::endl;
+    // MPI_Barrier(mpi_comm);
+    // std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << std::endl;
+    // MPI_Barrier(mpi_comm);
+
+    // Check that coordinates are correct for our test setup, i.e.
+    // rank 0: 0,0,0,
+    // rank 1: 0,0,1,
+    // rank 2: 0,1,0 etc.
+    REQUIRE(mpi_rank == ((mpi_coords[0] << 4) + (mpi_coords[1] << 2) + mpi_coords[2]));
+
+    // Init some random data
+    auto v = std::make_shared<mgcl::Cuboid>(N, N, N, 1, 1, 1);
+    auto f = std::make_shared<mgcl::Cuboid>(N, N, N, 1, 1, 1);
+    v->fillRandom();
+    f->fillRandom();
+
+    mgcl::Problem p(N, N, N, f, v, Ng, Ng, Ng);
+    p.setMpiComm(mpi_comm);
+    p.setGhostsIn(1);
+    p.setGhosts(ghosts);
+    p.setMpiMinGridPoints(2);
+    p.init();
+
+    // Cartesian topology layout:
+    //             z=0                    z=1                    z=2                    z=3
+    //    +----+----+----+----+  +----+----+----+----+  +----+----+----+----+  +----+----+----+----+
+    // y  +  0 +  1 +  2 +  3 +  + 64 + 65 +    +    +  +    +    +    +    +  +    +    +    +    +
+    // |  +----+----+----+----+  +----+----+----+----+  +----+----+----+----+  +----+----+----+----+
+    // v  +  4 +  5 +  6 +  7 +  +    +    +    +    +  +    +    +    +    +  +    +    +    +    +
+    //    +----+----+----+----+  +----+----+----+----+  +----+----+----+----+  +----+----+----+----+
+    //    +  8 +  9 + 10 + 11 +  +    +    +    +    +  +    +    +    +    +  +    +    +    +    +
+    //    +----+----+----+----+  +----+----+----+----+  +----+----+----+----+  +----+----+----+----+
+    //    + 12 + 13 + 14 + 15 +  + 76 +    +    +    +  +    +    +    +    +  +    +    +    +    +
+    //    +----+----+----+----+  +----+----+----+----+  +----+----+----+----+  +----+----+----+----+
+    //
+    //    +----+----+----+----+  +----+----+----+----+  +----+----+----+----+  +----+----+----+----+
+    //    + 16 + 17 +    +    +  +    +    +    +    +  +    +    +    +    +  +    +    +    +    +
+    //    +----+----+----+----+  +----+----+----+----+  +----+----+----+----+  +----+----+----+----+
+    //    +    +    +    +    +  +    +    +    +    +  +    +    +    +    +  +    +    +    +    +
+    //    +----+----+----+----+  +----+----+----+----+  +----+----+----+----+  +----+----+----+----+
+    //    +    +    +    +    +  +    +    +    +    +  +    +    +    +    +  +    +    +    +    +
+    //    +----+----+----+----+  +----+----+----+----+  +----+----+----+----+  +----+----+----+----+
+    //    +    +    +    + 31 +  +    +    +    +    +  +    +    +    +    +  +    +    +    +    +
+    //    +----+----+----+----+  +----+----+----+----+  +----+----+----+----+  +----+----+----+----+
+    //
+    //    ... (2 more blockrows)
+    // x->
+
+    // Grid points per process and level in one direction:
+    // -----+-p1--+-p2--+-p3--+-p4--+-p5--+-p6--+-p7--+-p8--+
+    // lv 0 | * * | * * | * * | * * | * * | * * | * * | * * |
+    // lv 1 |   * |   * |   * |   * |   * |   * |   * |   * |
+    // lv 2 |     |   * |     |   * |     |   * |     |   * |
+    // lv 3 |     |     |     |   * |     |     |     |   * |
+
+    // ==================================
+
+    // Check levels for which mpi is used
+    for (int i = 0; i < p.getMpiLevelThreshold(); i++)
+    {
+        auto& lv = p.getLevelAt(i);
+        auto& mpiData0 = lv.getMpiData();
+        REQUIRE(mpiData0.mpiSize() == 64);
+        REQUIRE(!lv.isCalculatedLocally());
+
+        // // print neighbours per rank
+        // if (i == 0)
+        // {
+        //     for (int i = 0; i < mpi_size; i++)
+        //     {
+        //         MPI_Barrier(mpi_comm);
+        //         if (i == mpi_rank)
+        //         {
+        //             mpiData0.printNeighbours();
+        //         }
+        //     }
+        // }
+
+        // Each level below the threshold must equal the local size of the problem divided by 2^num.
+        REQUIRE((p.getM() >> i) == lv.getM());
+        REQUIRE((p.getN() >> i) == lv.getN());
+        REQUIRE((p.getO() >> i) == lv.getO());
+
+        CAPTURE(mpi_coords[0], mpi_coords[1], mpi_coords[2], mpi_dims[0], mpi_dims[1], mpi_dims[2], i);
+        auto neighbors0 = mgcl_mpi_level_helpers::neighbors3D(mpi_coords[0], mpi_coords[1], mpi_coords[2], mpi_dims[0], mpi_dims[1], mpi_dims[2], periodic);
+        REQUIRE(mpiData0.left[0] == neighbors0[0]);
+        REQUIRE(mpiData0.right[0] == neighbors0[1]);
+        REQUIRE(mpiData0.up[0] == neighbors0[2]);
+        REQUIRE(mpiData0.down[0] == neighbors0[3]);
+        REQUIRE(mpiData0.front[0] == neighbors0[4]);
+        REQUIRE(mpiData0.back[0] == neighbors0[5]);
     }
 
     // ==================================

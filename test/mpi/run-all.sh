@@ -153,6 +153,7 @@ if [ "$TEST_LEVEL" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 2 "$exe" "Level::initMpiData (2 processes)"
     run_test --oversubscribe -n 8 "$exe" "Level::initMpiData (8 processes)"
     run_test --oversubscribe -n 24 "$exe" "Level::initMpiData (24 processes)"
+    run_test --oversubscribe -n 64 "$exe" "Level::initMpiData_64procs_gh_eq_2"
 fi
 
 if [ "$TEST_GHOSTS" = true ] || [ "$TEST_ALL" = true ] ; then

@@ -1,7 +1,9 @@
 #ifndef MGCL_MPILEVELDATA_HPP
 #define MGCL_MPILEVELDATA_HPP
 
+#include <cassert>
 #include <memory>
+#include <vector>
 
 #include "mpi.h"
 
@@ -11,20 +13,23 @@ namespace mgcl
     class MPILevelData
     {
     public:
-        MPI_Comm comm;
+        const MPI_Comm comm;
 
         // rank of this process
         int rank;
 
-        // IDs of neighbouring processes
-        std::shared_ptr<MPILevelData> left;
-        std::shared_ptr<MPILevelData> right;
-        std::shared_ptr<MPILevelData> up;
-        std::shared_ptr<MPILevelData> down;
-        std::shared_ptr<MPILevelData> front;
-        std::shared_ptr<MPILevelData> back;
+        // number of neighbors in each direction
+        const int ghosts;
 
-        MPILevelData(MPI_Comm _comm);
+        // Ranks of neighbouring processes. Closest one will be at index 0.
+        std::vector<int> left;
+        std::vector<int> right;
+        std::vector<int> up;
+        std::vector<int> down;
+        std::vector<int> front;
+        std::vector<int> back;
+
+        MPILevelData(MPI_Comm _comm, int ghosts);
         MPILevelData(const MPILevelData&) = delete;
         MPILevelData& operator=(const MPILevelData&) = delete;
         MPILevelData(const MPILevelData&&) = delete;
@@ -33,6 +38,7 @@ namespace mgcl
 
         // utility functions
         int mpiSize();
+        void printNeighbours();
     };
 }
 #endif // MGCL_MPILEVELDATA_HPP
