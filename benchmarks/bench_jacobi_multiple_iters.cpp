@@ -175,7 +175,7 @@ TEST_CASE("benchmark_jacobi_ocl_multiple_iters")
 
 // Same as above but with OCL and MPI.
 // Timings will be collected per node and printed by rank at the end.
-// Run with e.g.: mpiexec -n 4 benchmarks "benchmark Jacobi MPI OCL multiple iters"
+// Run with e.g.: mpiexec -n 4 benchmarks "bench_jacobi_mpi_ocl_multiple_iters"
 TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
 {
 
@@ -307,6 +307,7 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
                 p->setOmega(omega);
                 p->setJacobiIterationsPerKernel(spi);
                 p->setUseOpencl(true);
+                p->setDeviceType(CL_DEVICE_TYPE_GPU);
                 p->setSilent(true);
                 if (p->getStencilType() == mgcl::MGCL_VARYING)
                     p->getStencilValues()->fillRandom();
