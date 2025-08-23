@@ -1059,7 +1059,8 @@ namespace mgcl
                 std::string uuid_str;
 #endif
 
-                ss << "- Device id " << j << ": " << device_name_available << ", " << deviceTypeToString(dt) << ", " << uuid_str << std::endl;
+                ss << "- Device id " << j << ": " << device_name_available << ", " << deviceTypeToString(dt) << ", " << uuid_str
+                   << ", supports double precision: " << (supportsDoublePrecision(device_ids[j]) ? "yes" : "no") << std::endl;
             }
 
             delete[] device_ids;

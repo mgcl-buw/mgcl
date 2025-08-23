@@ -175,7 +175,7 @@ TEST_CASE("benchmark_jacobi_ocl_multiple_iters")
 
 // Same as above but with OCL and MPI.
 // Timings will be collected per node and printed by rank at the end.
-// Run with e.g.: mpiexec -n 4 benchmarks "bench_jacobi_mpi_ocl_multiple_iters"
+// Run with e.g.: mpiexec -n 4 benchmarks "bench_jacobi_mpi_ocl_multiple_iters" --grids 8 --jacobiIters 3 --jacobiStepsPerIter 1,3
 TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
 {
 
