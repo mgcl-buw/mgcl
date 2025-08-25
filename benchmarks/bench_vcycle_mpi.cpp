@@ -1308,6 +1308,7 @@ TEST_CASE("benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl_mpiLevelThreshold")
                 r.nglob = nglob;
                 r.oglob = oglob;
                 r.maxLevelUsingOcl = maxLevelUsingOcl;
+                r.mpiLevelThreshold = mpiLevelThreshold;
                 minTimes.push_back(r);
 
                 if (mpi_rank > 0 && p.isProfilingEnabled())
