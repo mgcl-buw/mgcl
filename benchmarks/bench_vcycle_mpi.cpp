@@ -937,7 +937,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_fixed_vs_varying")
     bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
 }
 
-// Benchmarks the vcycle using MPI ocl.
+// Benchmarks the vcycle using MPI ocl and setting maxLevelUsingOcl to various values.
 // Only rank 0 will print the timings.
 // Run with e.g.: mpiexec -n 4 benchmarks benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl
 TEST_CASE("benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl")
@@ -1123,6 +1123,208 @@ TEST_CASE("benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl")
             std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";"
                       << r.mglob << ";" << r.nglob << ";" << r.oglob << ";"
                       << r.maxLevelUsingOcl
+                      << ";" << std::setprecision(17) << r.minTime << std::endl;
+        }
+    }
+    MPI_Barrier(mpi_comm);
+}
+
+// Benchmarks the vcycle using MPI ocl and varying maxLevelUsingOcl and mpiLevelThreshold.
+// Only rank 0 will print the timings.
+// Run with e.g.: mpiexec -n 4 benchmarks benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl_mpiLevelThreshold --grids 8,16
+TEST_CASE("benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl_mpiLevelThreshold")
+{
+    using std::min;
+
+    if (CLI_ARGS::grids.size() == 0 && (CLI_ARGS::gridsMin.size() == 0 || CLI_ARGS::gridsMax.size() == 0))
+        throw "Need to specify at least one local grid size, e.g. using --grids 4,8,16 or --gridsMin 4,4,4 AND --gridsMax 32,32,32";
+
+    // build grids to be tested from CLI args
+    std::vector<std::vector<int>> gridsTBT;
+    for (auto N : CLI_ARGS::grids)
+        gridsTBT.push_back({N, N, N});
+    for (int m = CLI_ARGS::gridsMin[0]; m <= CLI_ARGS::gridsMax[0]; m *= 2)
+        for (int n = CLI_ARGS::gridsMin[1]; n <= CLI_ARGS::gridsMax[1]; n *= 2)
+            for (int o = CLI_ARGS::gridsMin[2]; o <= CLI_ARGS::gridsMax[2]; o *= 2)
+                gridsTBT.push_back({m, n, o});
+
+    // Check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // Check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    // REQUIRE(mpi_size == 1);
+
+    int periodic = 1;
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    double omega = 0.8;
+    int nu1 = 3;
+    int nu2 = 3;
+
+    if (mpi_rank == 0)
+    {
+        std::cout << "Problem parameters:" << std::endl
+                  << "  Omega: " << omega << std::endl
+                  << "  Nu1: " << nu1 << std::endl
+                  << "  Nu2: " << nu2 << std::endl
+                  << "  VCycle iterations: " << CLI_ARGS::vCycleIterations << std::endl
+                  << "  #procs: " << mpi_size << std::endl;
+
+        std::cout << "Testing the following grid sizes" << std::endl;
+        for (auto gr : gridsTBT)
+        {
+            int m = gr[0];
+            int n = gr[1];
+            int o = gr[2];
+            std::cout << "  local size: " << m << "," << n << "," << o << ", global sizes: "
+                      << m * mpi_dims[0] << "," << n * mpi_dims[1] << "," << o * mpi_dims[2] << std::endl;
+        }
+    }
+    MPI_Barrier(mpi_comm);
+
+    struct Result
+    {
+        std::string name;
+        double minTime;
+        int m;
+        int n;
+        int o;
+        int mglob;
+        int nglob;
+        int oglob;
+        int maxLevelUsingOcl;
+        int mpiLevelThreshold;
+    };
+    std::vector<Result> minTimes;
+
+    for (auto gr : gridsTBT)
+    {
+        int m = gr[0];
+        int n = gr[1];
+        int o = gr[2];
+        int mglob = m * mpi_dims[0];
+        int nglob = n * mpi_dims[1];
+        int oglob = o * mpi_dims[2];
+        double h = 1.0 / (double)mglob;
+
+        mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+        mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
+
+        int ghin = 0;
+        auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+        auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
+        v->fillRandom();
+        f->fillRandom();
+
+        int maxlv = std::log2(min(min(m, n), o));
+
+        for (int maxLevelUsingOcl = 0; maxLevelUsingOcl <= maxlv; maxLevelUsingOcl++)
+        {
+            CAPTURE(maxLevelUsingOcl, m, mglob);
+
+            for (int mpiLevelThreshold = 1; mpiLevelThreshold < maxlv; mpiLevelThreshold++)
+            {
+
+                CAPTURE(mpiLevelThreshold);
+
+                mgcl::Problem p(m, n, o, f, v, mglob, nglob, oglob);
+                p.setSilent(true);
+                p.setUseOpencl(true);
+                p.setMaxLevelUsingOcl(maxLevelUsingOcl);
+                p.setOmega(omega);
+                p.setNu1(nu1);
+                p.setNu2(nu2);
+                p.setMaxiterVcycles(CLI_ARGS::vCycleIterations);
+                p.setGhostsIn(ghin);
+                p.setStencilType(stencilType);
+                p.setResidualNorm(resnorm);
+                p.setMpiComm(mpi_comm);
+                p.setMpiLevelThreshold(mpiLevelThreshold);
+                // p.setProfilingEnabled(true);
+
+                auto& sv = p.getStencilValues();
+                sv->fill1dIndex(true);
+
+                ankerl::nanobench::Bench bench;
+                bench.timeUnit(1ms, "ms")
+                    .epochs(CLI_ARGS::bench_epochs)
+                    .epochIterations(CLI_ARGS::bench_iterations)
+                    // .minEpochTime(100ms)
+                    .relative(false);
+
+                // disable output for non-root processes
+                if (mpi_rank > 0)
+                    bench.output(nullptr);
+
+                std::string name = std::string("ocl_mno")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o))
+                                       .append("_maxLvOcl_")
+                                       .append(std::to_string(maxLevelUsingOcl))
+                                       .append("_mpiLvTh_")
+                                       .append(std::to_string(mpiLevelThreshold));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    p.solve();
+                    // tu.finish(); //
+                    p.getOpenCLHelper().finish();
+                    MPI_Barrier(mpi_comm);
+                });
+
+                // Get minimum of all epochs in ns
+                double min = 1000000;
+                for (auto r : bench.results())
+                    if (r.minimum(ankerl::nanobench::Result::Measure::elapsed) < min)
+                        min = r.minimum(ankerl::nanobench::Result::Measure::elapsed) * 1000.0 /* * 1000.0 * 1000.0*/;
+
+                Result r;
+                r.name = name;
+                r.minTime = min;
+                r.m = m;
+                r.n = n;
+                r.o = o;
+                r.mglob = mglob;
+                r.nglob = nglob;
+                r.oglob = oglob;
+                r.maxLevelUsingOcl = maxLevelUsingOcl;
+                minTimes.push_back(r);
+
+                if (mpi_rank > 0 && p.isProfilingEnabled())
+                    p.getProfilingData()->printBestTimingsPerKernel();
+            }
+        }
+    }
+
+    // print min times
+    if (mpi_rank == 0)
+    {
+        std::cout << "name;m;n;o;mglob;nglob;oglob;maxLevelUsingOcl;mpiLevelThreshold;minTimeInMs" << std::endl;
+        for (auto r : minTimes)
+        {
+            std::cout << r.name << ";" << r.m << ";" << r.n << ";" << r.o << ";"
+                      << r.mglob << ";" << r.nglob << ";" << r.oglob << ";"
+                      << r.maxLevelUsingOcl << ";" << r.mpiLevelThreshold
                       << ";" << std::setprecision(17) << r.minTime << std::endl;
         }
     }
