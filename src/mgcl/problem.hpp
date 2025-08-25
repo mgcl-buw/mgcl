@@ -181,6 +181,11 @@ namespace mgcl
         /* First coarse level for which MPI is not used anymore. Only for internal purposes. */
         int mpiLevelThreshold = -1;
 
+        /* Maximum level for which OpenCL is used. Generally on coarser levels, using the CPU is faster as the launch
+         * overhead of the kernels is higher than their runtime. If set to -1, or larger than the number of levels,
+         * OpenCL is used on all levels. Only has an effect if useOpencl is true. */
+        int maxLevelUsingOcl = -1;
+
         /* Minimum amount of grid points for which MPI is used. Coarser levels will be run on one process. */
         int mpiMinGridPoints = 4;
 
@@ -441,6 +446,9 @@ namespace mgcl
 
         int getOverlappedJacobiGhostUpdateMaxLevel() const { return overlappedJacobiGhostUpdateMaxLevel; }
         void setOverlappedJacobiGhostUpdateMaxLevel(int overlappedJacobiGhostUpdateMaxLevel_) { overlappedJacobiGhostUpdateMaxLevel = overlappedJacobiGhostUpdateMaxLevel_; }
+
+        int getMaxLevelUsingOcl() const { return maxLevelUsingOcl; }
+        void setMaxLevelUsingOcl(int maxLevelUsingOcl_) { maxLevelUsingOcl = maxLevelUsingOcl_; }
 
         friend std::ostream& operator<<(std::ostream& os, const Problem& lv);
     };

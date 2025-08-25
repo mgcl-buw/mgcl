@@ -538,7 +538,7 @@ namespace mgcl
 
                     bool updateGhostsLocally = !useMpi() || lvCoarse.getNum() >= getMpiLevelThreshold();
 
-                    if (!use_opencl)
+                    if (!lvFine.getUseOpencl())
                     {
                         // Call Galerkin on each rank, if not above threshold, or else only on root.
                         if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
@@ -561,28 +561,53 @@ namespace mgcl
                     }
                     else
                     {
+                        std::shared_ptr<VaryingStencilGpu> sv_coarse;
                         // Call Galerkin on each rank, if not above threshold, or else only on root.
                         if (!useMpi() || lvCoarse.getNum() <= getMpiLevelThreshold() || mpiRank() == 0)
-                            lvCoarse.stencilValuesGpu = MultigridEngine::galerkinHandcrafted(
+                            sv_coarse = MultigridEngine::galerkinHandcrafted(
                                 *lvFine.getStencilValuesGpu(), gh_sv,
                                 svm, svn, svo,
                                 getProgram(), getCommands(), getContext(),
                                 &getKernelConfig(), getProfilingData());
 
-                        // Gather stencil values onto root if threshold is reached
-                        if (useMpi() && lvCoarse.getNum() == getMpiLevelThreshold())
-                            mpi_util::gather(getMpiComm(), getCommands(), *lvCoarse.getStencilValuesGpu());
-
-                        // update ghosts of stencil values depending on threshold is reached or not
-                        if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
+                        if (lvCoarse.getUseOpencl())
                         {
-                            if (updateGhostsLocally)
-                                lvCoarse.getStencilValuesGpu()->updateGhosts(getProgram(), getCommands(), &getKernelConfig(), getProfilingData());
-                            else
-                                updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvCoarse.getStencilValuesGpu(),
-                                                          getDPlanesBuf(), getHPlanesBufSend(), getHPlanesBufRecv(),
-                                                          lvCoarse.getMpiDataPtr(), false,
-                                                          &getKernelConfig(), getProfilingData());
+                            // Is true, if maxLevelUsingOpencl is not reached yet
+                            lvCoarse.stencilValuesGpu = sv_coarse;
+
+                            // Gather stencil values onto root if threshold is reached
+                            if (useMpi() && lvCoarse.getNum() == getMpiLevelThreshold())
+                                mpi_util::gather(getMpiComm(), getCommands(), *lvCoarse.getStencilValuesGpu());
+
+                            // update ghosts of stencil values depending on threshold is reached or not
+                            if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
+                            {
+                                if (updateGhostsLocally)
+                                    lvCoarse.getStencilValuesGpu()->updateGhosts(getProgram(), getCommands(), &getKernelConfig(), getProfilingData());
+                                else
+                                    updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvCoarse.getStencilValuesGpu(),
+                                                              getDPlanesBuf(), getHPlanesBufSend(), getHPlanesBufRecv(),
+                                                              lvCoarse.getMpiDataPtr(), false,
+                                                              &getKernelConfig(), getProfilingData());
+                            }
+                        }
+                        else
+                        {
+                            // If fine level uses opencl, but coarse shall not, write stencil values for coarse level from device to host
+                            lvCoarse.stencilValues = std::make_shared<mgcl::VaryingStencil>(sv_coarse->read(getCommands(), true));
+
+                            // Gather stencil values onto root if threshold is reached
+                            if (useMpi() && lvCoarse.getNum() == getMpiLevelThreshold())
+                                mpi_util::gather(getMpiComm(), *lvCoarse.getStencilValues());
+
+                            // update ghosts of stencil values depending on threshold is reached or not
+                            if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
+                            {
+                                if (updateGhostsLocally)
+                                    lvCoarse.getStencilValues()->updateGhosts();
+                                else
+                                    updateGhostsStencilMpi(*lvCoarse.getStencilValues(), lvCoarse.getMpiDataPtr(), isPeriodic(), false);
+                            }
                         }
                     }
                 }

@@ -83,6 +83,9 @@ namespace mgcl
         /* MPI relevant data, e.g. neighbour process ranks. Null if Problem::useMpi is false. */
         std::shared_ptr<MPILevelData> mpiData = nullptr;
 
+        /* Whether OpenCL should be used on this level specifically */
+        bool useOpencl;
+
         friend class OpenCLHelper;
         friend class MultigridEngine;
         friend class Problem;
@@ -243,6 +246,9 @@ namespace mgcl
         inline void setBlockstencilGpuInvScalar(std::shared_ptr<CuboidBSGpu> sv) { blockstencilInv = sv; }
 
         bool isCalculatedLocally() const;
+
+        bool getUseOpencl() const { return useOpencl; }
+        void setUseOpencl(bool useOpencl_) { useOpencl = useOpencl_; }
 
         friend std::ostream& operator<<(std::ostream& os, const Level& lv);
     };

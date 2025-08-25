@@ -275,7 +275,14 @@ namespace mgcl
         if (level.getNum() < problem.maxlevel) // if not at highest level
         {
             // reset v to zero for coarser grids (for another possible v-cycle)
-            levelAbove.getDVIn().fill(problem.getProgram(), problem.getCommands(), 0.0, false, &problem.getKernelConfig(), problem.getProfilingData());
+            if (levelAbove.getUseOpencl())
+            {
+                levelAbove.getDVIn().fill(problem.getProgram(), problem.getCommands(), 0.0, false, &problem.getKernelConfig(), problem.getProfilingData());
+            }
+            else
+            {
+                levelAbove.getV().fill(0);
+            }
         }
 
         // relax nu1 times
@@ -295,7 +302,17 @@ namespace mgcl
         // level.getDF().dumpToFile(problem.getCommands(), "dfsc_" + std::to_string(level.getNum()) + ".txt");
 
         // restrict to coarser grid
-        restrict(level, levelAbove, level.getDR(), levelAbove.getDF());
+        if (levelAbove.getUseOpencl())
+        {
+            restrict(level, levelAbove, level.getDR(), levelAbove.getDF());
+        }
+        else
+        {
+            CuboidGpu tmp_df(problem.getContext(), CL_MEM_READ_WRITE, levelAbove.m, levelAbove.n, levelAbove.o,
+                             problem.getGhosts(), problem.getGhosts(), problem.getGhosts());
+            restrict(level, levelAbove, level.getDR(), tmp_df);
+            tmp_df.read(problem.getCommands(), levelAbove.getFPtr().get(), true);
+        }
 
         // levelAbove.getDF().dumpToFile(problem.getCommands(), "dfsc_" + std::to_string(levelAbove.getNum()) + ".txt");
         // level.getDVIn().dumpToFile(problem.getCommands(), "dvsc_" + std::to_string(level.getNum()) + ".txt");
@@ -305,13 +322,26 @@ namespace mgcl
         // locally only, until we're reaching the threshold level moving downwards again.
         if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
         {
-            mpi_util::gather(problem.getMpiComm(), problem.getCommands(), levelAbove.getDF());
+            if (levelAbove.getUseOpencl())
+            {
+                mpi_util::gather(problem.getMpiComm(), problem.getCommands(), levelAbove.getDF());
 
-            // Update ghosts of gathered
-            // TODO check Dirichlet
-            if (problem.isPeriodic() && problem.mpiRank() == 0)
-                MultigridEngine::updateGhosts(problem, levelAbove.getDF(),
-                                              levelAbove.getMpiDataPtr(), levelAbove.isCalculatedLocally());
+                // Update ghosts of gathered
+                // TODO check Dirichlet
+                if (problem.isPeriodic() && problem.mpiRank() == 0)
+                    MultigridEngine::updateGhosts(problem, levelAbove.getDF(),
+                                                  levelAbove.getMpiDataPtr(), levelAbove.isCalculatedLocally());
+            }
+            else
+            {
+                mpi_util::gather(problem.getMpiComm(), levelAbove.getF());
+
+                // Update ghosts of gathered
+                // TODO check Dirichlet
+                if (problem.isPeriodic() && problem.mpiRank() == 0)
+                    MultigridEngine::updateGhostsSeq(levelAbove.getF(), levelAbove.getMpiDataPtr(), problem.isPeriodic(),
+                                                     levelAbove.isCalculatedLocally());
+            }
         }
 
         // Advance to coarser levels only if
@@ -322,7 +352,16 @@ namespace mgcl
         {
             // start next v-cycle iteration if not at highest level
             if (level.getNum() < problem.maxlevel - 1)
-                vcycle(problem, levelAbove);
+            {
+                if (levelAbove.getUseOpencl())
+                {
+                    vcycle(problem, levelAbove);
+                }
+                else
+                {
+                    vcycleSeq(problem, levelAbove);
+                }
+            }
             else
             {
                 if (level.getNum() <= problem.getOverlappedJacobiGhostUpdateMaxLevel())
@@ -341,7 +380,16 @@ namespace mgcl
         // If MPI is in use but minGridPoints is reached, scatter v data from process 0 to others and continue
         // distributed calulcations.
         if (problem.useMpi() && problem.getMpiLevelThreshold() == levelAbove.getNum())
-            mpi_util::scatter_inplace_wgh(problem.getMpiComm(), problem.getCommands(), levelAbove.getDVIn());
+        {
+            if (levelAbove.getUseOpencl())
+            {
+                mpi_util::scatter_inplace_wgh(problem.getMpiComm(), problem.getCommands(), levelAbove.getDVIn());
+            }
+            else
+            {
+                mpi_util::scatter_inplace_wgh(problem.getMpiComm(), levelAbove.getV());
+            }
+        }
 
         // levelAbove.getDF().dumpToFile(problem.getCommands(), "dfsc_" + std::to_string(levelAbove.getNum()) + ".txt");
         // levelAbove.getDVIn().dumpToFile(problem.getCommands(), "dvsc_" + std::to_string(levelAbove.getNum()) + ".txt");
@@ -349,7 +397,17 @@ namespace mgcl
 
         // prolongate from coarser to finer grid
         // r of this level.getNum() is reused here and should actually be called e
-        prolongate(level, levelAbove, level.getDR(), levelAbove.getDVIn());
+        if (levelAbove.getUseOpencl())
+        {
+            prolongate(level, levelAbove, level.getDR(), level.getDVIn());
+        }
+        else
+        {
+            CuboidGpu tmp_dv(problem.getContext(), CL_MEM_READ_WRITE, level.m, level.n, level.o,
+                             problem.getGhosts(), problem.getGhosts(), problem.getGhosts());
+            tmp_dv.write(problem.getCommands(), level.getV(), true);
+            prolongate(level, levelAbove, level.getDR(), tmp_dv);
+        }
 
         // level.getDR().dumpToFile(problem.getCommands(), "drsc_" + std::to_string(level.getNum()) + ".txt");
 

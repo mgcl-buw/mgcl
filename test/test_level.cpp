@@ -1,6 +1,8 @@
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include <cmath>
 #include <iostream>
 #include <memory>
 
@@ -202,5 +204,75 @@ TEST_CASE("Level::init")
         CHECK(level.getR().getM() == p->getM() >> levelNum);
         CHECK(level.getR().getN() == p->getN() >> levelNum);
         CHECK(level.getR().getO() == p->getO() >> levelNum);
+    }
+}
+
+TEST_CASE("Level::init_maxLevelUsingOcl")
+{
+    int N = 8;
+    int maxLevelUsingOcl = GENERATE(0, 1, 2, -1);
+    int maxLevel = std::log2(N);
+    int gh_in = 1;
+
+    auto v = std::make_shared<mgcl::Cuboid>(N, N, N, gh_in, gh_in, gh_in);
+    auto f = std::make_shared<mgcl::Cuboid>(N, N, N, gh_in, gh_in, gh_in);
+    v->fillRandom();
+    f->fillRandom();
+
+    auto p = std::make_shared<mgcl::Problem>(N, N, N, f, v);
+    p->setGhostsIn(gh_in);
+    p->setUseOpencl(true);
+    p->setMaxlevel(maxLevel);
+    p->setMaxLevelUsingOcl(maxLevelUsingOcl);
+    p->setStencilType(mgcl::MGCL_VARYING);
+    p->getStencilValues()->fillRandom();
+
+    p->init();
+
+    for (int levelNum = 0; levelNum < maxLevel; levelNum++)
+    {
+        auto& level = p->getLevelAt(levelNum);
+
+        CAPTURE(maxLevelUsingOcl, levelNum);
+
+        if (maxLevelUsingOcl < 0 || levelNum <= maxLevelUsingOcl)
+        {
+            REQUIRE(level.getUseOpencl());
+
+            REQUIRE(level.getDVInPtr());
+            REQUIRE(level.getDVOutPtr());
+            REQUIRE(level.getDRPtr());
+            REQUIRE(level.getDFPtr());
+            REQUIRE(level.getStencilValuesGpu());
+
+            if (levelNum == 0)
+            {
+                REQUIRE(level.getVPtr());
+                REQUIRE(level.getFPtr());
+                REQUIRE(level.getStencilValues());
+            }
+            else
+            {
+                REQUIRE(!level.getVPtr());
+                REQUIRE(!level.getFPtr());
+                REQUIRE(!level.getStencilValues());
+            }
+            REQUIRE(!level.getRPtr());
+        }
+        else
+        {
+            REQUIRE(!level.getUseOpencl());
+
+            REQUIRE(!level.getDVInPtr());
+            REQUIRE(!level.getDVOutPtr());
+            REQUIRE(!level.getDRPtr());
+            REQUIRE(!level.getDFPtr());
+            REQUIRE(!level.getStencilValuesGpu());
+
+            REQUIRE(level.getVPtr());
+            REQUIRE(level.getRPtr());
+            REQUIRE(level.getFPtr());
+            REQUIRE(level.getStencilValues());
+        }
     }
 }

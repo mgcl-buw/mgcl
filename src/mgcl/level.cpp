@@ -43,7 +43,8 @@ namespace mgcl
           ngh(n + 2 * problem->getGhosts()),
           ogh(o + 2 * problem->getGhosts()),
           h(1.0 / static_cast<double>(problem->getMGlobal() >> num_)), // TODO differentiate for non-cube-like domains
-          stencilType(problem_->stencilType)
+          stencilType(problem_->stencilType),
+          useOpencl(problem_->use_opencl && (problem_->maxLevelUsingOcl < 0 || num_ <= problem_->maxLevelUsingOcl))
     {
         if (stencilType == MGCL_LAPLACE_7POINT)
             stencilFactor = 1.0 / (h * h);
@@ -147,7 +148,7 @@ namespace mgcl
             // 1. mgcl is run without MPI at all, or
             // 2. mgcl is run with MPI and this level is below the level threshold (i.e. enough grid points), or
             // 3. mgcl is run with MPI, this level is equal to or above the level threshold but the rank is 0.
-            if (!problem->use_opencl)
+            if (!getUseOpencl())
             {
                 v = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
                 f = std::make_shared<Cuboid>(m, n, o, problem->ghosts, problem->ghosts, problem->ghosts);
@@ -261,7 +262,7 @@ namespace mgcl
      */
     int Level::initOpenCLBuffers()
     {
-        if (!problem->getUseOpencl())
+        if (!getUseOpencl())
             return CL_SUCCESS;
 
         int err;
