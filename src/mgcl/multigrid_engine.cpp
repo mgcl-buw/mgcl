@@ -13,6 +13,7 @@
 #include "profiling_data.hpp"
 #include "stencil.hpp"
 
+#include <CL/cl.h>
 #include <cassert>
 #include <cstddef> // for size_t, NULL
 #include <iostream>
@@ -399,13 +400,11 @@ namespace mgcl
         // r of this level.getNum() is reused here and should actually be called e
         if (levelAbove.getUseOpencl())
         {
-            prolongate(level, levelAbove, level.getDR(), level.getDVIn());
+            prolongate(level, levelAbove, level.getDR(), levelAbove.getDVIn());
         }
         else
         {
-            CuboidGpu tmp_dv(problem.getContext(), CL_MEM_READ_WRITE, level.m, level.n, level.o,
-                             problem.getGhosts(), problem.getGhosts(), problem.getGhosts());
-            tmp_dv.write(problem.getCommands(), level.getV(), true);
+            CuboidGpu tmp_dv(problem.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, levelAbove.getV());
             prolongate(level, levelAbove, level.getDR(), tmp_dv);
         }
 

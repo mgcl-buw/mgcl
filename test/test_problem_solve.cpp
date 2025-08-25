@@ -1,3 +1,4 @@
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -1258,4 +1259,122 @@ TEST_CASE("solve_fixed_vs_varying_stencil")
 
         REQUIRE(v_fixed->isEqual(*v_varying));
     }
+}
+
+/**
+ * @brief Checks whether vcycle works with levels partly calculated with OpenCL and partly calculated on host
+ *
+ */
+TEST_CASE("solve_maxLevelUsingOcl")
+{
+    int N = 16;
+    double h = 1.0 / (double)N;
+
+    // Problem parameters
+    double tol = 1e-1; // will be reached really quick
+    int nu1 = 2;
+    int nu2 = 2;
+    double omega = 0.8;
+    int maxIterVCycles = 10;
+    int maxlevel = 10;
+    int maxLevelUsingOcl = GENERATE(0, 1, 2);
+
+    CAPTURE(maxLevelUsingOcl);
+
+    auto v_fixed = std::make_shared<mgcl::Cuboid>(N, N, N);
+    auto v_varying = std::make_shared<mgcl::Cuboid>(N, N, N);
+    auto f = std::make_shared<mgcl::Cuboid>(N, N, N);
+    auto solution = mgcl::Cuboid(N, N, N);
+
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++)
+            for (int k = 0; k < N; k++)
+            {
+                double zs = i * h;
+                double ys = j * h;
+                double xs = k * h;
+                double xs2 = xs * xs;
+                double ys2 = ys * ys;
+                double zs2 = zs * zs;
+                double xsm1_2 = (xs - 1) * (xs - 1);
+                double ysm1_2 = (ys - 1) * (ys - 1);
+                double zsm1_2 = (zs - 1) * (zs - 1);
+                double xs3 = xs * xs * xs;
+                double ys3 = ys * ys * ys;
+                double zs3 = zs * zs * zs;
+                double xsm1_3 = (xs - 1) * (xs - 1) * (xs - 1);
+                double ysm1_3 = (ys - 1) * (ys - 1) * (ys - 1);
+                double zsm1_3 = (zs - 1) * (zs - 1) * (zs - 1);
+                double xs4 = xs * xs * xs * xs;
+                double ys4 = ys * ys * ys * ys;
+                double zs4 = zs * zs * zs * zs;
+                double xsm1_4 = (xs - 1) * (xs - 1) * (xs - 1) * (xs - 1);
+                double ysm1_4 = (ys - 1) * (ys - 1) * (ys - 1) * (ys - 1);
+                double zsm1_4 = (zs - 1) * (zs - 1) * (zs - 1) * (zs - 1);
+                (*v_fixed)[i][j][k] = 0;
+                (*v_varying)[i][j][k] = 0;
+                solution[i][j][k] = 1000000 * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) *
+                                    (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) *
+                                    (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1));
+                (*f)[i][j][k] =
+                    -1000000 *
+                    (12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_2 + 12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_2 * zsm1_4 +
+                     12 * xs4 * ys4 * zs4 * xsm1_2 * ysm1_4 * zsm1_4 + 32 * xs4 * ys4 * zs3 * xsm1_4 * ysm1_4 * zsm1_3 +
+                     12 * xs4 * ys4 * zs2 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs4 * ys3 * zs4 * xsm1_4 * ysm1_3 * zsm1_4 +
+                     12 * xs4 * ys2 * zs4 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs3 * ys4 * zs4 * xsm1_3 * ysm1_4 * zsm1_4 +
+                     12 * xs2 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_4);
+            }
+
+    mgcl::Problem pAllLevelsUsingOcl(N, N, N, f, v_fixed);
+    pAllLevelsUsingOcl.setMaxiterVcycles(maxIterVCycles);
+    pAllLevelsUsingOcl.setTol(tol);
+    pAllLevelsUsingOcl.setNu1(nu1);
+    pAllLevelsUsingOcl.setNu2(nu2);
+    pAllLevelsUsingOcl.setOmega(omega);
+    pAllLevelsUsingOcl.setMaxlevel(maxlevel);
+
+    pAllLevelsUsingOcl.setStencilType(mgcl::MGCL_FIXED);
+    auto& fixedStencil = pAllLevelsUsingOcl.getFixedStencil();
+    fixedStencil->fillRandom();
+    (*fixedStencil)[1][1][1] = 1.0; // make sure the stencil does not produce nan
+
+    mgcl::Problem pUsingOclLevelThreshold(N, N, N, f, v_varying);
+    pUsingOclLevelThreshold.setMaxiterVcycles(maxIterVCycles);
+    pUsingOclLevelThreshold.setTol(tol);
+    pUsingOclLevelThreshold.setNu1(nu1);
+    pUsingOclLevelThreshold.setNu2(nu2);
+    pUsingOclLevelThreshold.setOmega(omega);
+    pUsingOclLevelThreshold.setMaxlevel(maxlevel);
+    pUsingOclLevelThreshold.setMaxLevelUsingOcl(maxLevelUsingOcl);
+
+    pUsingOclLevelThreshold.setStencilType(mgcl::MGCL_VARYING);
+    auto& sv = pUsingOclLevelThreshold.getStencilValues();
+    // copy from fixed into varying
+    // clang-format off
+    for (int i = 0; i < sv->getMgh(); i++)
+    for (int j = 0; j < sv->getNgh(); j++)
+    for (int k = 0; k < sv->getOgh(); k++)
+        for (int ii = 0; ii < 3; ii++)
+        for (int jj = 0; jj < 3; jj++)
+        for (int kk = 0; kk < 3; kk++)
+        {
+            (*sv)[ii][jj][kk][i][j][k] = (*fixedStencil)[ii][jj][kk];
+        }
+    // clang-format on
+
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+    // std::string oclDeviceType = deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU";
+
+    pAllLevelsUsingOcl.setUseOpencl(true);
+    pAllLevelsUsingOcl.setDeviceType(CL_DEVICE_TYPE_GPU);
+    pAllLevelsUsingOcl.setDeviceType(deviceType);
+    pUsingOclLevelThreshold.setUseOpencl(true);
+    pUsingOclLevelThreshold.setDeviceType(CL_DEVICE_TYPE_GPU);
+    pUsingOclLevelThreshold.setDeviceType(deviceType);
+
+    pAllLevelsUsingOcl.solve();
+    pUsingOclLevelThreshold.solve();
+
+    REQUIRE(v_fixed->isEqual(*v_varying));
 }
