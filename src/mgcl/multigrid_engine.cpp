@@ -365,13 +365,25 @@ namespace mgcl
             }
             else
             {
-                if (level.getNum() <= problem.getOverlappedJacobiGhostUpdateMaxLevel())
+                if (levelAbove.getUseOpencl())
                 {
-                    jacobiOverlapped(problem, levelAbove, problem.nu1 + problem.nu2, false, problem.getJacobiIterationsPerKernel(), problem.getCommands2());
+                    if (level.getNum() <= problem.getOverlappedJacobiGhostUpdateMaxLevel())
+                    {
+                        jacobiOverlapped(problem, levelAbove, problem.nu1 + problem.nu2, false, problem.getJacobiIterationsPerKernel(), problem.getCommands2());
+                    }
+                    else
+                    {
+                        jacobi(problem, levelAbove, problem.nu1 + problem.nu2, false, problem.getJacobiIterationsPerKernel());
+                    }
                 }
                 else
                 {
-                    jacobi(problem, levelAbove, problem.nu1 + problem.nu2, false, problem.getJacobiIterationsPerKernel());
+                    MultigridEngine::jacobiSeq(levelAbove.getV(), levelAbove.getF(), levelAbove.getR(), problem.omega,
+                                               levelAbove.h * levelAbove.h, problem.nu1 + problem.nu2, problem.residual_norm,
+                                               problem.stencilType, levelAbove.stencilFactor,
+                                               levelAbove.stencilValues.get(), levelAbove.fixedStencil.get(), false, problem.isPeriodic(),
+                                               levelAbove.isCalculatedLocally(), problem.getJacobiIterationsPerKernel(),
+                                               levelAbove.getMpiDataPtr());
                 }
                 // levelAbove.getDVIn().dumpToFile(problem.getCommands(), "dvsc_" + std::to_string(levelAbove.getNum()) + ".txt");
                 // levelAbove.getDR().dumpToFile(problem.getCommands(), "drsc_" + std::to_string(levelAbove.getNum()) + ".txt");
