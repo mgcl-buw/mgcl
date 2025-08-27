@@ -369,7 +369,7 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
                 results.push_back(res);
 
                 MPI_Barrier(mpi_comm);
-                if (mpi_rank == 0)
+                if (mpi_rank == 0 && CLI_ARGS::enableKernelProfiling)
                 {
                     p->getProfilingData()->printBestTimingsPerKernel(ss);
                 }
