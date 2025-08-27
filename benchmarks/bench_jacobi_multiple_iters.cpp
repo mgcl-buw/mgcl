@@ -257,6 +257,7 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
     }
     MPI_Barrier(mpi_comm);
 
+    std::stringstream ss;
     std::vector<bench_util::ResultJacobiMpi> results;
     bool printedGpu = false;
     for (auto gr : gridsTBT)
@@ -307,8 +308,10 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
                 p->setOmega(omega);
                 p->setJacobiIterationsPerKernel(spi);
                 p->setUseOpencl(true);
+                p->setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
                 p->setDeviceType(CL_DEVICE_TYPE_GPU);
                 p->setSilent(true);
+                p->setStencilType(mgcl::MGCL_VARYING);
                 if (p->getStencilType() == mgcl::MGCL_VARYING)
                     p->getStencilValues()->fillRandom();
                 p->init();
@@ -364,11 +367,24 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
                 res.spi = spi;
                 res.iters = iters;
                 results.push_back(res);
+
+                MPI_Barrier(mpi_comm);
+                if (mpi_rank == 0)
+                {
+                    p->getProfilingData()->printBestTimingsPerKernel(ss);
+                }
+                MPI_Barrier(mpi_comm);
             }
         }
     }
 
     bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
+
+    MPI_Barrier(mpi_comm);
+    if (mpi_rank == 0)
+    {
+        std::cout << ss.str() << std::endl;
+    }
 
     MPI_Barrier(mpi_comm);
 }
