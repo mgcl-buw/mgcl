@@ -39,9 +39,9 @@ namespace mgcl
 
         // TODO return type?
         std::unique_ptr<std::vector<double>> read(cl_command_queue queue, double* h_target, bool blocking) const;
-        std::unique_ptr<std::vector<double>> read(cl_command_queue queue, double* h_target, bool blocking, size_t _size) const;
+        std::unique_ptr<std::vector<double>> read(cl_command_queue queue, double* h_target, bool blocking, size_t _size, ProfilingData* pd = nullptr) const;
         void write(cl_command_queue queue, const std::vector<double>& host_data, bool blocking);
-        void write(cl_command_queue queue, const std::vector<double>& host_data, bool blocking, size_t _size);
+        void write(cl_command_queue queue, const std::vector<double>& host_data, bool blocking, size_t _size, ProfilingData* pd = nullptr);
         void fill(cl_program program, cl_command_queue queue, double value, bool blocking,
                   conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 

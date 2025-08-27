@@ -97,20 +97,29 @@ namespace mgcl
      * @param _size
      * @return std::unique_ptr<std::vector<double>>
      */
-    std::unique_ptr<std::vector<double>> BufferGpu::read(cl_command_queue queue, double* h_target, bool blocking, size_t _size) const
+    std::unique_ptr<std::vector<double>> BufferGpu::read(cl_command_queue queue, double* h_target, bool blocking, size_t _size, ProfilingData* pd) const
     {
         std::unique_ptr<std::vector<double>> ret = nullptr;
         int err;
+        cl_event ev;
         if (h_target)
         {
-            err = clEnqueueReadBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * _size, h_target, 0, nullptr, nullptr);
+            err = clEnqueueReadBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * _size, h_target, 0, nullptr, &ev);
         }
         else
         {
             ret = std::make_unique<std::vector<double>>(_size);
-            err = clEnqueueReadBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * _size, ret->data(), 0, nullptr, nullptr);
+            err = clEnqueueReadBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * _size, ret->data(), 0, nullptr, &ev);
         }
         mgclCheckError(err, "clEnqueueReadBuffer");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(queue, ev, "clEnqueueReadBuffer",
+                               {_size, 0, 0},
+                               {1, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
         return ret;
     }
 
@@ -134,13 +143,22 @@ namespace mgcl
      * @param blocking
      * @param _size
      */
-    void BufferGpu::write(cl_command_queue queue, const std::vector<double>& host_data, bool blocking, size_t _size)
+    void BufferGpu::write(cl_command_queue queue, const std::vector<double>& host_data, bool blocking, size_t _size, ProfilingData* pd)
     {
         if (host_data.size() < _size)
             error("CuboidGpu::write: host_data is not big enough!");
 
-        int err = clEnqueueWriteBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * _size, host_data.data(), 0, nullptr, nullptr);
+        cl_event ev;
+        int err = clEnqueueWriteBuffer(queue, buf, blocking ? CL_TRUE : CL_FALSE, 0, sizeof(double) * _size, host_data.data(), 0, nullptr, &ev);
         mgclCheckError(err, "clEnqueueWriteBuffer");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(queue, ev, "clEnqueueWriteBuffer",
+                               {_size, 0, 0},
+                               {1, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
     }
 
     void BufferGpu::fill(cl_program program, cl_command_queue queue, double value, bool blocking,
