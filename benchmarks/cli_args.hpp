@@ -24,7 +24,6 @@ namespace CLI_ARGS
 
     extern std::vector<int> jacobiIters;
     extern std::vector<int> jacobiStepsPerIter;
-    extern bool jacobiUseTwoQueues;
 
     extern std::vector<int> elements;
 

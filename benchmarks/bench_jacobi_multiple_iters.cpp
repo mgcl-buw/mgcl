@@ -311,7 +311,6 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
                 p->setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
                 p->setDeviceType(CL_DEVICE_TYPE_GPU);
                 p->setSilent(true);
-                p->setUseTwoQueuesForJacobi(CLI_ARGS::jacobiUseTwoQueues);
                 p->setStencilType(mgcl::MGCL_VARYING);
                 if (p->getStencilType() == mgcl::MGCL_VARYING)
                     p->getStencilValues()->fillRandom();
