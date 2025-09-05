@@ -1,5 +1,6 @@
 #include "blockstencil.hpp"
-#include "cuboid.hpp"    // for Cuboid
+#include "cuboid.hpp" // for Cuboid
+#include "cuboid_gpu.hpp"
 #include "hypercube.hpp" // for Hypercube6d
 #include "level.hpp"     // for Level
 #include "mgcl.hpp"      // for mgcl_debug, MGCL_LAPLACE_19POINT
@@ -615,7 +616,10 @@ namespace mgcl
 
         // copy result into dVIn if needed
         if (maxiter % 2 == 1)
-            level.getDVOut().copyTo(problem.getOpenCLHelper().getCommands(), level.getDVIn());
+        {
+            // level.getDVOut().copyTo(problem.getOpenCLHelper().getCommands(), level.getDVIn());
+            CuboidGpu::swap(level.getDVIn(), level.getDVOut());
+        }
 
         // Update ghosts of dVIn
         err = MultigridEngine::updateGhosts(problem, level.getDVIn(),
