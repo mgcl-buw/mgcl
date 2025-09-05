@@ -350,6 +350,13 @@ namespace mgcl
             commands = nullptr;
         }
 
+        if (commands2)
+        {
+            err = clReleaseCommandQueue(commands2);
+            mgclCheckError(err, "clReleaseCommandQueue");
+            commands2 = nullptr;
+        }
+
         if (deviceId)
         {
             err = clReleaseDevice(deviceId);
