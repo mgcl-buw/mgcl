@@ -308,7 +308,7 @@ namespace mgcl
      * m,n,o must be size of ghosted grid.
      * Only enqueues the kernel. Neither waits for kernel to finish nor reads back results */
     int MultigridEngine::updateGhosts(Problem& problem, CuboidGpu& dBuffer,
-                                      MPILevelData* mpiData, bool forceLocal)
+                                      MPILevelData* mpiData, bool forceLocal, cl_command_queue queue)
     {
         // TODO actually request these as arguments
         int m = dBuffer.getM();
@@ -323,7 +323,7 @@ namespace mgcl
 
         if (!forceLocal && problem.useMpi() && mpiData)
         {
-            updateGhostsOclMpi(problem, dBuffer, *mpiData, problem.isPeriodic(), forceLocal);
+            updateGhostsOclMpi(problem, dBuffer, *mpiData, problem.isPeriodic(), forceLocal, queue);
             return CL_SUCCESS;
         }
 
@@ -369,7 +369,9 @@ namespace mgcl
         cl_event ev;
 
         // enqueue kernel
-        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel, 3, NULL, global, local, 0, NULL, &ev);
+        if (queue == nullptr)
+            queue = problem.getOpenCLHelper().getCommands();
+        err = clEnqueueNDRangeKernel(queue, kernel, 3, NULL, global, local, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing update_ghosts_periodic kernel");
 
         if (problem.isProfilingEnabled())
@@ -404,7 +406,7 @@ namespace mgcl
      * @param forceLocal
      */
     void MultigridEngine::updateGhostsOclMpi(Problem& p, CuboidGpu& d_buf, MPILevelData& mpiData,
-                                             bool periodic, bool forceLocal)
+                                             bool periodic, bool forceLocal, cl_command_queue queue)
     {
         // Read back from GPU and update ghosts on host in order to update neighbouring nodes, too.
         // auto tmp = d_buf.read(commands, nullptr, true);
@@ -413,7 +415,7 @@ namespace mgcl
 
         if (forceLocal)
         {
-            MultigridEngine::updateGhosts(p, d_buf, nullptr, true);
+            MultigridEngine::updateGhosts(p, d_buf, nullptr, true, queue);
             return;
         }
 
@@ -438,8 +440,11 @@ namespace mgcl
                 std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend->size()) +
                 " (send) and " + std::to_string(hPlanesBufRecv->size()) + " (recv)";
 
+        if (queue == nullptr)
+            queue = p.getCommands();
+
         // Extract border planes from the buffer
-        d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(),
+        d_buf.extractBorderPlanes(queue, p.getProgram(),
                                   dPlanesBuf, hPlanesBufSend,
                                   &p.getKernelConfig(), p.getProfilingData());
         auto& sbuf = *hPlanesBufSend;
@@ -451,8 +456,8 @@ namespace mgcl
                                    sbuf, rbuf, mpiData);
 
         // Paste planes back into the buffer.
-        dPlanesBuf->write(p.getCommands(), rbuf, false, ressize, p.getProfilingData());
-        d_buf.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(),
+        dPlanesBuf->write(queue, rbuf, false, ressize, p.getProfilingData());
+        d_buf.pasteGhostsFromBorderPlanes(p.getContext(), queue, p.getProgram(),
                                           dPlanesBuf, nullptr,
                                           &p.getKernelConfig(), p.getProfilingData());
     }

@@ -88,11 +88,11 @@ namespace mgcl
             mgclCheckError(err, "Creating command queue");
 
             // Create second command queue if overlapped Jacobi ghost update is used
-            if (problem->getOverlappedJacobiGhostUpdateMaxLevel() >= 0)
-            {
-                commands2 = clCreateCommandQueue(context, deviceId, props, &err);
-                mgclCheckError(err, "Creating second command queue for overlapped Jacobi ghost update");
-            }
+            // if (problem->getOverlappedJacobiGhostUpdateMaxLevel() >= 0)
+            // {
+            commands2 = clCreateCommandQueue(context, deviceId, props, &err);
+            mgclCheckError(err, "Creating second command queue for overlapped Jacobi ghost update");
+            // }
         }
         else
         {
@@ -348,6 +348,13 @@ namespace mgcl
             err = clReleaseCommandQueue(commands);
             mgclCheckError(err, "clReleaseCommandQueue");
             commands = nullptr;
+        }
+
+        if (commands2)
+        {
+            err = clReleaseCommandQueue(commands2);
+            mgclCheckError(err, "clReleaseCommandQueue");
+            commands2 = nullptr;
         }
 
         if (deviceId)

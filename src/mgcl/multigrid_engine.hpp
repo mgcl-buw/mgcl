@@ -255,9 +255,9 @@ namespace mgcl
         static void prolongateBlockstencil(args::ProlongationBSOclArgs& args);
 
         static void updateGhostsSeq(Cuboid& c, MPILevelData* mpiData, bool periodic, bool forceLocal);
-        static int updateGhosts(Problem& problem, CuboidGpu& dBuffer, MPILevelData* mpiData, bool forceLocal);
+        static int updateGhosts(Problem& problem, CuboidGpu& dBuffer, MPILevelData* mpiData, bool forceLocal, cl_command_queue queue = nullptr);
         static void updateGhostsOclMpi(Problem& p, CuboidGpu& d_buf, MPILevelData& mpiData,
-                                       bool periodic, bool forceLocal);
+                                       bool periodic, bool forceLocal, cl_command_queue queue = nullptr);
 
         static double residual(Problem& problem, Level& level, bool returnResidual,
                                int moff = 0, int noff = 0, int ooff = 0);

@@ -768,8 +768,7 @@ namespace mgcl
             return CL_SUCCESS;
         }
 
-        int err = clFinish(openCLHelper.getCommands());
-        mgclCheckError(err, "Waiting for kernels to finish");
+        finish();
 
         if (reuse_opencl_buffers || copy_buffer_data)
         {
@@ -779,8 +778,8 @@ namespace mgcl
         }
 
         // read back results TODO: only for testing purposes, maybe define TESTING?
-        err = clEnqueueReadBuffer(openCLHelper.getCommands(), levels[0]->getDVIn().getBuffer(), CL_TRUE, 0,
-                                  sizeof(double) * levels[0]->mgh * levels[0]->ngh * levels[0]->ogh, levels[0]->getV()[0][0], 0, NULL, NULL);
+        int err = clEnqueueReadBuffer(openCLHelper.getCommands(), levels[0]->getDVIn().getBuffer(), CL_TRUE, 0,
+                                      sizeof(double) * levels[0]->mgh * levels[0]->ngh * levels[0]->ogh, levels[0]->getV()[0][0], 0, NULL, NULL);
         mgclCheckError(err, "Error: Failed to read output arrays from device!");
 
         // copy result to initial v vector
@@ -797,8 +796,7 @@ namespace mgcl
 
     void Problem::readResultsBlockstencil()
     {
-        int err = clFinish(openCLHelper.getCommands());
-        mgclCheckError(err, "Waiting for kernels to finish");
+        finish();
 
         // if (reuse_opencl_buffers || copy_buffer_data)
         // {
@@ -808,8 +806,8 @@ namespace mgcl
         // }
 
         // read back results TODO: only for testing purposes, maybe define TESTING?
-        err = clEnqueueReadBuffer(openCLHelper.getCommands(), levels[0]->getDVBSIn().getBuffer(), CL_TRUE, 0,
-                                  sizeof(double) * levels[0]->getDVBSIn().getSize(), levels[0]->getVBS().field1d().data(), 0, NULL, NULL);
+        int err = clEnqueueReadBuffer(openCLHelper.getCommands(), levels[0]->getDVBSIn().getBuffer(), CL_TRUE, 0,
+                                      sizeof(double) * levels[0]->getDVBSIn().getSize(), levels[0]->getVBS().field1d().data(), 0, NULL, NULL);
         mgclCheckError(err, "Error: Failed to read output arrays from device!");
 
         // copy result to initial v vector
@@ -829,7 +827,10 @@ namespace mgcl
     void Problem::finish()
     {
         if (openCLHelper.isInitialized())
-            mgclCheckError(clFinish(getCommands()), "clFinish");
+        {
+            mgclCheckError(clFinish(getCommands()), "clFinish queue1");
+            mgclCheckError(clFinish(getCommands2()), "clFinish queue2");
+        }
     }
 
     /**

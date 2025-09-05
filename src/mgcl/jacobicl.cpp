@@ -610,7 +610,7 @@ namespace mgcl
         {
             // TODO check for mpi
             err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
-                                                level.isCalculatedLocally());
+                                                level.isCalculatedLocally(), problem.getUseTwoQueuesForJacobi() ? problem.getCommands2() : problem.getCommands());
             mgclCheckError(err, "Updating ghosts of dR");
         }
 
@@ -634,6 +634,11 @@ namespace mgcl
         }
 
         clReleaseKernel(kernel);
+
+        if (problem.getUseTwoQueuesForJacobi())
+        { // Need to sync here because update ghosts of r and v use different queues
+            problem.finish();
+        }
 
         return res;
     }
