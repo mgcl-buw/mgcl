@@ -580,14 +580,6 @@ namespace mgcl
                     mgclCheckError(err, "Setting kernel arguments");
                 }
 
-                // set flag to store residual in last iteration
-                if (globalIter == maxiter - 1)
-                {
-                    store_res = 1;
-                    err = clSetKernelArg(kernel, pos_storeres, sizeof(int), &store_res);
-                    mgclCheckError(err, "Setting kernel arguments");
-                }
-
                 // recalculate and set idx_start
                 idx_start = problem.ghosts - ((stepsPerIter - innerIter) - 1);
                 err = clSetKernelArg(kernel, pos_idxstart, sizeof(int), &idx_start);
@@ -604,14 +596,6 @@ namespace mgcl
                 }
                 mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
             }
-        }
-
-        if (store_res)
-        {
-            // TODO check for mpi
-            err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
-                                                level.isCalculatedLocally());
-            mgclCheckError(err, "Updating ghosts of dR");
         }
 
         // copy result into dVIn if needed
