@@ -37,6 +37,21 @@ namespace mgcl_bench_kernel_launch_overhead
         mgcl::ProfilingData* pd;
     };
 
+    using RegisterPressureKernelsArgs = struct
+    {
+        std::array<int, 3> global;
+        std::array<int, 3> local;
+        int registersPerThread;
+        mgcl::BufferGpu& out;
+
+        cl_program program;
+        cl_kernel kernel;
+        cl_command_queue queue;
+        cl_context context;
+
+        mgcl::ProfilingData* pd;
+    };
+
     /**
      * @brief Launches a kernel that does nothing but has between 0 and 8 cl_mem arguments.
      *
@@ -88,12 +103,63 @@ namespace mgcl_bench_kernel_launch_overhead
         err = clReleaseKernel(kernel); // TODO maybe clFinish before release?
         mgcl::mgclCheckError(err, "clReleaseKernel " + kernelName);
     }
+
+    /**
+     * @brief Launches a kernel that does nothing but has between 0 and 8 cl_mem arguments.
+     *
+     * @param args
+     */
+    void prepareAndLaunchRegisterPressureKernel(const RegisterPressureKernelsArgs& args)
+    {
+        int err;
+
+        if (args.registersPerThread % 16 != 0)
+        {
+            throw "args.registersPerThread must be a multiple of 16";
+        }
+
+        // Create the compute kernel from the program
+        const std::string kernelName = std::string("reg" + std::to_string(args.registersPerThread));
+        cl_event ev;
+
+        // Create the compute kernel from the program
+        cl_kernel kernel = clCreateKernel(args.program, kernelName.c_str(), &err);
+        mgcl::mgclCheckError(err, std::string("Creating kernel " + kernelName));
+
+        // assign kernel arguments
+        int pos = 0;
+        cl_mem buf = args.out.getBuf();
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buf);
+        mgcl::mgclCheckError(err, std::string("Setting kernel argument " + std::to_string(pos)));
+
+        // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
+        size_t global = args.global[0] * args.global[1] * args.global[2];
+        // const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
+        size_t local = args.local[0]; // c[0];
+
+        if (global % local != 0)
+            global += local - (global % local);
+
+        err = clEnqueueNDRangeKernel(args.queue, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing kernel " + kernelName);
+
+        if (args.pd)
+        {
+            args.pd->addMeasurement(args.queue, ev, kernelName,
+                                    {global, 0, 0},
+                                    {local, 1, 1});
+        }
+        mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        err = clReleaseKernel(kernel); // TODO maybe clFinish before release?
+        mgcl::mgclCheckError(err, "clReleaseKernel " + kernelName);
+    }
 }
 
 // Launches empty kernel with 0 to 8 cl_mem arguments and prints profiling data.
 // Size of ndrange can be controlled by --grids N. It is launched as 1d kernel with N*N*N work-items.
 // Run with e.g.: mpiexec -n 1 benchmarks "bench_kernel_launch_overhead_mpi" --grids 8
-TEST_CASE("bench_kernel_launch_overhead_mpi")
+TEST_CASE("bench_kernel_launch_overhead_mpi_register_pressure")
 {
 
     using std::min;
@@ -199,13 +265,9 @@ TEST_CASE("bench_kernel_launch_overhead_mpi")
             printedGpu = true;
         }
 
-        std::vector<mgcl::BufferGpu> bufs;
-        for (int i = 0; i <= 8; i++)
-        {
-            bufs.push_back(mgcl::BufferGpu(p->getContext(), CL_MEM_READ_WRITE, m * n * o));
-        }
+        mgcl::BufferGpu out(p->getContext(), CL_MEM_READ_WRITE, m * n * o);
 
-        for (int args_cnt = 0; args_cnt <= 8; args_cnt++)
+        for (int regs = 16; regs <= 256; regs += 16)
         {
             std::string name = std::string("ocl_mpi_N")
                                    .append(std::to_string(m))
@@ -213,14 +275,14 @@ TEST_CASE("bench_kernel_launch_overhead_mpi")
                                    .append(std::to_string(n))
                                    .append("_")
                                    .append(std::to_string(o))
-                                   .append("_args")
-                                   .append(std::to_string(args_cnt));
+                                   .append("_regs")
+                                   .append(std::to_string(regs));
 
-            mgcl_bench_kernel_launch_overhead::EmptyKernelArgs args{
+            mgcl_bench_kernel_launch_overhead::RegisterPressureKernelsArgs args{
                 {m, n, o},
                 {64, 1, 1},
-                bufs,
-                args_cnt,
+                regs,
+                out,
                 p->getOpenCLHelper().getProgram(),
                 nullptr,
                 p->getOpenCLHelper().getCommands(),
@@ -229,7 +291,7 @@ TEST_CASE("bench_kernel_launch_overhead_mpi")
 
             bench.run(std::string(name).c_str(), [&] { //
                 MPI_Barrier(mpi_comm);
-                mgcl_bench_kernel_launch_overhead::prepareAndLaunchEmptyKernel(args);
+                mgcl_bench_kernel_launch_overhead::prepareAndLaunchRegisterPressureKernel(args);
                 MPI_Barrier(mpi_comm);
             });
 
@@ -256,9 +318,8 @@ TEST_CASE("bench_kernel_launch_overhead_mpi")
         MPI_Barrier(mpi_comm);
         if (mpi_rank == 0 && CLI_ARGS::enableKernelProfiling)
         {
-            // p->getProfilingData()->printBestTimingsPerKernelAsCsv(ss);
-            // TODO print all?
-            p->getProfilingData()->printMeasurementsAsCsv(ss);
+            p->getProfilingData()->printBestTimingsPerKernelAsCsv(ss);
+            // p->getProfilingData()->printMeasurementsAsCsv(ss);
         }
         MPI_Barrier(mpi_comm);
     }
