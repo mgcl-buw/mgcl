@@ -827,6 +827,11 @@ namespace mgcl
         }
     }
 
+    void OpenCLHelper::mgcl_check_error(cl_int err, const std::string operation, const char* filename, int line)
+    {
+        mgcl_check_error(err, operation.c_str(), filename, line);
+    }
+
     void OpenCLHelper::mgcl_check_error(cl_int err, const char* operation, const char* filename, int line)
     {
         if (err != CL_SUCCESS)

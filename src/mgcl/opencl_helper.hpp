@@ -113,6 +113,7 @@ namespace mgcl
         void setContext(const cl_context& context_);
 
         static const char* mgcl_err_code(cl_int err_in);
+        static void mgcl_check_error(cl_int err, const std::string operation, const char* filename, int line);
         static void mgcl_check_error(cl_int err, const char* operation, const char* filename, int line);
 
         cl_device_id getDeviceId() const;
