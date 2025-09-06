@@ -69,6 +69,14 @@ namespace mgcl
         mgclCheckError(err, "clCreateBuffer");
     }
 
+    BufferGpu::BufferGpu(BufferGpu&& s)
+        : context(s.context), _size(s._size), buf(s.buf)
+    {
+        s.buf = nullptr;
+        s._size = 0;
+        s.context = nullptr;
+    }
+
     BufferGpu::~BufferGpu()
     {
         if (buf != nullptr)

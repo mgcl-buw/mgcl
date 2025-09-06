@@ -32,7 +32,7 @@ namespace mgcl
         BufferGpu(cl_context context, cl_mem_flags flags, std::vector<double>& h_data);
 
         BufferGpu(const BufferGpu& s) = delete;
-        BufferGpu(BufferGpu&& s) = delete;
+        BufferGpu(BufferGpu&& s);
         BufferGpu& operator=(const BufferGpu& s) = delete;
         BufferGpu& operator=(BufferGpu&& s) = delete;
         ~BufferGpu();
