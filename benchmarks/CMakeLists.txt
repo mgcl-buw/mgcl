@@ -37,6 +37,7 @@ set(SOURCES_BENCH
     bench_residual_varying_stencil_inner_vs_boundary.cpp
     bench_borderplanes.cpp
     bench_jacobi_parallel_ghost_update_mpi.cpp
+    bench_kernel_launch_overhead.cpp
     cli_args.hpp
     catch2_main_benchs.cpp)
 
@@ -73,3 +74,4 @@ mgcl_copy_kernel_file(benchmarks kernel_optimizations.cl)
 mgcl_copy_kernel_file(benchmarks blockstencil_kernels.cl)
 mgcl_copy_kernel_file(benchmarks residual_kernels_inner_vs_boundary.cl)
 mgcl_copy_kernel_file(benchmarks borderplanes_kernels.cl)
+mgcl_copy_kernel_file(benchmarks kernel_launch_overhead.cl)
