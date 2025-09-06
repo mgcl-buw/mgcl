@@ -67,6 +67,8 @@ namespace mgcl
                             std::array<size_t, 3> global, std::array<size_t, 3> local);
 
         void printBestTimingsPerKernel(std::ostream& os = std::cout);
+        void printBestTimingsPerKernelAsCsv(std::ostream& os = std::cout);
+        void printMeasurementsAsCsv(std::ostream& os = std::cout);
 
         friend std::ostream& operator<<(std::ostream& os, const ProfilingData& pd);
     };

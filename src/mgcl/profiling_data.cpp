@@ -121,4 +121,44 @@ namespace mgcl
             }
         }
     }
+
+    void ProfilingData::printBestTimingsPerKernelAsCsv(std::ostream& os)
+    {
+        os << "kernel;queue_to_submit_ns;submit_to_start_ns;start_to_end_ns;work_items_x;work_items_y;work_items_z;work_group_x;work_group_y;work_group_z" << std::endl;
+        for (const auto& entry : measurements)
+        {
+            auto kernelName = entry.first;
+            auto it = std::min_element(
+                entry.second.begin(),
+                entry.second.end(),
+                [](const ProfilingMeasurement& a, const ProfilingMeasurement& b)
+                {
+                    return a.start_to_end < b.start_to_end;
+                });
+            os << kernelName << ";"
+               << it->queue_to_submit << ";"
+               << it->submit_to_start << ";"
+               << it->start_to_end << ";"
+               << it->work_items[0] << ";" << it->work_items[1] << ";" << it->work_items[2] << ";"
+               << it->work_group[0] << ";" << it->work_group[1] << ";" << it->work_group[2] << std::endl;
+        }
+    }
+
+    void ProfilingData::printMeasurementsAsCsv(std::ostream& os)
+    {
+        os << "kernel;queue_to_submit_ns;submit_to_start_ns;start_to_end_ns;work_items_x;work_items_y;work_items_z;work_group_x;work_group_y;work_group_z" << std::endl;
+        for (const auto& entry : measurements)
+        {
+            auto kernelName = entry.first;
+            for (const auto& m : entry.second)
+            {
+                os << kernelName << ";"
+                   << m.queue_to_submit << ";"
+                   << m.submit_to_start << ";"
+                   << m.start_to_end << ";"
+                   << m.work_items[0] << ";" << m.work_items[1] << ";" << m.work_items[2] << ";"
+                   << m.work_group[0] << ";" << m.work_group[1] << ";" << m.work_group[2] << std::endl;
+            }
+        }
+    }
 } // namespace mgcl
