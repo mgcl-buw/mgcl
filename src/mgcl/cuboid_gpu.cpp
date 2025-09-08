@@ -729,7 +729,7 @@ namespace mgcl
         }
         mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
-        mgcl::mgclCheckError(clFinish(commands), "clFinish");
+        // mgcl::mgclCheckError(clFinish(commands), "clFinish");
 
         err = clReleaseKernel(kernel);
         mgcl::mgclCheckError(err, "Releasing pasteGhostsFromBorderPlanes kernel");
