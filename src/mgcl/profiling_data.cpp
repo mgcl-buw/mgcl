@@ -142,6 +142,34 @@ namespace mgcl
                << it->work_items[0] << ";" << it->work_items[1] << ";" << it->work_items[2] << ";"
                << it->work_group[0] << ";" << it->work_group[1] << ";" << it->work_group[2] << std::endl;
         }
+
+        // Iterate over all measurements per kernel
+        for (const auto& entry : measurements)
+        {
+            // Create map per work-item count with measurements for the current kernel
+            std::map<int, std::vector<ProfilingMeasurement>> tmp;
+            for (const auto& m : entry.second)
+                tmp[m.work_items[0] * (m.work_items[1] > 0 ? m.work_items[1] : 1) * (m.work_items[2] > 0 ? m.work_items[2] : 1)].push_back(m);
+
+            // Find and print minimum elapsed time per work-item count for the current kernel
+            for (const auto& m : tmp)
+            {
+                auto it = std::min_element(
+                    m.second.begin(),
+                    m.second.end(),
+                    [](const ProfilingMeasurement& a, const ProfilingMeasurement& b)
+                    {
+                        return a.start_to_end < b.start_to_end;
+                    });
+
+                os << entry.first << ";"
+                   << it->queue_to_submit << ";"
+                   << it->submit_to_start << ";"
+                   << it->start_to_end << ";"
+                   << it->work_items[0] << ";" << it->work_items[1] << ";" << it->work_items[2] << ";"
+                   << it->work_group[0] << ";" << it->work_group[1] << ";" << it->work_group[2] << std::endl;
+            }
+        }
     }
 
     void ProfilingData::printMeasurementsAsCsv(std::ostream& os)
