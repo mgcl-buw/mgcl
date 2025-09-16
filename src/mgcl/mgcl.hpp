@@ -8,17 +8,6 @@
 
 namespace mgcl
 {
-// define mgcl_debug for debugging output. Compile with -D MGCL_DEBUG to enable, e.g. run: make CPPFLAGS="-D MGCL_DEBUG"
-// taken from https://stackoverflow.com/questions/1644868/define-macro-for-debug-printing-in-c
-#ifdef MGCL_DEBUG
-#define mgcl_debug(fmt, ...) printf("%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__)
-#else
-#define mgcl_debug(fmt, ...) \
-    do                       \
-    {                        \
-    } while (0)
-#endif
-
 // Define the function mgcl::error(msg) for throwing an exception in case of an error. If stack tracing is
 // enabled, the stack trace is printed.
 #ifdef MGCL_PRINT_TRACE
