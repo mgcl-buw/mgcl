@@ -2,43 +2,11 @@
 #include <iostream>
 #include <memory>
 
+#include "arg_parser.hpp"
 #include "mpi.h"
 
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/problem.hpp"
-
-// taken from https://stackoverflow.com/a/868894/4108363
-class InputParser
-{
-public:
-    InputParser(int& argc, char** argv)
-    {
-        for (int i = 1; i < argc; ++i)
-            this->tokens.push_back(std::string(argv[i]));
-    }
-
-    /// @author iain
-    const std::string& getCmdOption(const std::string& option) const
-    {
-        std::vector<std::string>::const_iterator itr;
-        itr = std::find(this->tokens.begin(), this->tokens.end(), option);
-        if (itr != this->tokens.end() && ++itr != this->tokens.end())
-        {
-            return *itr;
-        }
-        static const std::string empty_string("");
-        return empty_string;
-    }
-
-    /// @author iain
-    bool cmdOptionExists(const std::string& option) const
-    {
-        return std::find(this->tokens.begin(), this->tokens.end(), option) != this->tokens.end();
-    }
-
-private:
-    std::vector<std::string> tokens;
-};
 
 /*
  * This program creates a problem using OpenCL, which then prints the used devices.
@@ -61,40 +29,52 @@ int main(int argc, char** argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     MPI_Dims_create(mpi_size, 3, mpi_dims);
 
-    InputParser input(argc, argv);
     std::string deviceName = "";
     cl_device_type deviceType = CL_DEVICE_TYPE_DEFAULT;
+    std::string deviceTypeStr = "default";
+
     mgcl::OCL_DEVICE_STRATEGY deviceStrategy = mgcl::OCL_DEVICE_STRATEGY::ALWAYS_FIRST;
 
-    if (input.cmdOptionExists("--device-name"))
-        deviceName = input.getCmdOption("--device-name");
+    mgcl_examples_helper::ArgParser parser;
+    parser.registerEnumValue("device-type", "Choose device type", {"cpu", "gpu"}, {"--dt"});
+    parser.registerValue("device-name", "Name of the device to use (partial names are allowed)", {"--dn"});
+    parser.registerEnumValue("device-strategy", "Choose device strategy", {"first", "distribute"}, {"--ds"});
 
-    if (input.cmdOptionExists("--device-type"))
+    try
     {
-        std::string deviceTypeStr = input.getCmdOption("--device-type");
-        if (deviceTypeStr == "cpu")
-            deviceType = CL_DEVICE_TYPE_CPU;
-        else if (deviceTypeStr == "gpu")
-            deviceType = CL_DEVICE_TYPE_GPU;
-        else
-            throw "Invalid device type. Must be 'cpu' or 'gpu'";
-    }
+        parser.parse(argc, argv);
 
-    if (input.cmdOptionExists("--device-strategy"))
-    {
-        std::string deviceStrategyStr = input.getCmdOption("--device-strategy");
-        if (deviceStrategyStr == "first")
-            deviceStrategy = mgcl::OCL_DEVICE_STRATEGY::ALWAYS_FIRST;
-        else if (deviceStrategyStr == "distribute")
-            deviceStrategy = mgcl::OCL_DEVICE_STRATEGY::DISTRIBUTE_EVENLY;
-        else
+        if (parser.isPresent("--device-type"))
         {
-            std::cerr << "Invalid device strategy. Must be 'first' or 'distribute'" << std::endl;
-            return 1;
+            deviceTypeStr = parser.getValue("--device-type");
+            if (deviceTypeStr == "cpu")
+                deviceType = CL_DEVICE_TYPE_CPU;
+            else if (deviceTypeStr == "gpu")
+                deviceType = CL_DEVICE_TYPE_GPU;
+        }
+
+        if (parser.isPresent("--device-name"))
+        {
+            deviceName = parser.getValue("--device-name");
+        }
+
+        if (parser.isPresent("--device-strategy"))
+        {
+            std::string deviceStrategyStr = parser.getValue("--device-strategy");
+            if (deviceStrategyStr == "first")
+                deviceStrategy = mgcl::OCL_DEVICE_STRATEGY::ALWAYS_FIRST;
+            else if (deviceStrategyStr == "distribute")
+                deviceStrategy = mgcl::OCL_DEVICE_STRATEGY::DISTRIBUTE_EVENLY;
         }
     }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Error: " << e.what() << "\n";
+        parser.printHelp();
+        return 1;
+    }
 
-    int N = 16;
+    int N = 4;
 
     auto f = std::make_shared<mgcl::Cuboid>(N, N, N);
     auto v = std::make_shared<mgcl::Cuboid>(N, N, N);
@@ -126,6 +106,7 @@ int main(int argc, char** argv)
             std::cout << "initializing OpenCLHelper on rank " << i << ": " << std::endl;
             std::cout << "  > " << std::endl;
             p.getOpenCLHelper().init(mpi_rank);
+            std::cout << "-----" << std::endl;
             std::cout << std::flush;
         }
     }

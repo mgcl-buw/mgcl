@@ -11,43 +11,7 @@
 #include <vector>
 
 #include "../src/mgcl/problem.hpp"
-
-// forward declarations
-static std::vector<std::string> split(std::string s, std::string delimiter);
-static std::vector<int> split_int(std::string s, std::string delimiter);
-
-// taken from https://stackoverflow.com/a/868894/4108363
-class InputParser
-{
-public:
-    InputParser(int& argc, char** argv)
-    {
-        for (int i = 1; i < argc; ++i)
-            this->tokens.push_back(std::string(argv[i]));
-    }
-
-    /// @author iain
-    const std::string& getCmdOption(const std::string& option) const
-    {
-        std::vector<std::string>::const_iterator itr;
-        itr = std::find(this->tokens.begin(), this->tokens.end(), option);
-        if (itr != this->tokens.end() && ++itr != this->tokens.end())
-        {
-            return *itr;
-        }
-        static const std::string empty_string("");
-        return empty_string;
-    }
-
-    /// @author iain
-    bool cmdOptionExists(const std::string& option) const
-    {
-        return std::find(this->tokens.begin(), this->tokens.end(), option) != this->tokens.end();
-    }
-
-private:
-    std::vector<std::string> tokens;
-};
+#include "arg_parser.hpp"
 
 int main(int argc, char** argv)
 {
@@ -63,20 +27,32 @@ int main(int argc, char** argv)
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
 
     // parse input
-    InputParser input(argc, argv);
+    mgcl_examples_helper::ArgParser parser;
+    parser.registerValue("device-name", "Name of the device to use (partial names are allowed)", {"--dn"});
+    parser.registerEnumValue("device-type", "Choose device type", {"cpu", "gpu"}, {"--dt"});
 
-    if (input.cmdOptionExists("--device-name"))
-        deviceName = input.getCmdOption("--device-name");
-
-    if (input.cmdOptionExists("--device-type"))
+    try
     {
-        deviceTypeStr = input.getCmdOption("--device-type");
-        if (deviceTypeStr == "cpu")
-            deviceType = CL_DEVICE_TYPE_CPU;
-        else if (deviceTypeStr == "gpu")
-            deviceType = CL_DEVICE_TYPE_GPU;
-        else
-            throw "Invalid device type. Must be 'cpu' or 'gpu'";
+        parser.parse(argc, argv);
+
+        if (parser.isPresent("--device-name"))
+            deviceName = parser.getValue("--device-name");
+        if (parser.isPresent("--device-type"))
+        {
+            deviceTypeStr = parser.getValue("--device-type");
+            if (deviceTypeStr == "cpu")
+                deviceType = CL_DEVICE_TYPE_CPU;
+            else if (deviceTypeStr == "gpu")
+                deviceType = CL_DEVICE_TYPE_GPU;
+            else
+                throw "Invalid device type. Must be 'cpu' or 'gpu'";
+        }
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Error: " << e.what() << std::endl;
+        parser.printHelp();
+        return 1;
     }
 
     // Init some random data
@@ -132,39 +108,4 @@ int main(int argc, char** argv)
     std::remove(binaryFileName.c_str());
 
     return 0;
-}
-
-// taken from https://stackoverflow.com/a/46931770/4108363
-static std::vector<std::string> split(std::string s, std::string delimiter)
-{
-    size_t pos_start = 0, pos_end, delim_len = delimiter.length();
-    std::string token;
-    std::vector<std::string> res;
-
-    while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos)
-    {
-        token = s.substr(pos_start, pos_end - pos_start);
-        pos_start = pos_end + delim_len;
-        res.push_back(token);
-    }
-
-    res.push_back(s.substr(pos_start));
-    return res;
-}
-
-static std::vector<int> split_int(std::string s, std::string delimiter)
-{
-    size_t pos_start = 0, pos_end, delim_len = delimiter.length();
-    std::string token;
-    std::vector<int> res;
-
-    while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos)
-    {
-        token = s.substr(pos_start, pos_end - pos_start);
-        pos_start = pos_end + delim_len;
-        res.push_back(std::stoi(token));
-    }
-
-    res.push_back(std::stoi(s.substr(pos_start)));
-    return res;
 }

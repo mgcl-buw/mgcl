@@ -2,6 +2,7 @@
 #define PMG_UTILITY_HPP
 
 #include "mpi.h"
+#include <cstdlib>
 
 inline MPI_Comm* init_mpi_for_pmg()
 {

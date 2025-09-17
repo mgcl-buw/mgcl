@@ -12,43 +12,11 @@
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/kernel_config.hpp"
 #include "../src/mgcl/problem.hpp"
+#include "arg_parser.hpp"
 
 // forward declarations
 static std::vector<std::string> split(std::string s, std::string delimiter);
 static std::vector<int> split_int(std::string s, std::string delimiter);
-
-// taken from https://stackoverflow.com/a/868894/4108363
-class InputParser
-{
-public:
-    InputParser(int& argc, char** argv)
-    {
-        for (int i = 1; i < argc; ++i)
-            this->tokens.push_back(std::string(argv[i]));
-    }
-
-    /// @author iain
-    const std::string& getCmdOption(const std::string& option) const
-    {
-        std::vector<std::string>::const_iterator itr;
-        itr = std::find(this->tokens.begin(), this->tokens.end(), option);
-        if (itr != this->tokens.end() && ++itr != this->tokens.end())
-        {
-            return *itr;
-        }
-        static const std::string empty_string("");
-        return empty_string;
-    }
-
-    /// @author iain
-    bool cmdOptionExists(const std::string& option) const
-    {
-        return std::find(this->tokens.begin(), this->tokens.end(), option) != this->tokens.end();
-    }
-
-private:
-    std::vector<std::string> tokens;
-};
 
 using std::min;
 
@@ -73,54 +41,72 @@ int main(int argc, char* argv[])
     std::string deviceTypeStr = "default";
     cl_device_type deviceType = CL_DEVICE_TYPE_DEFAULT;
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
+    std::string stencilTypeStr = "var";
 
-    // parse input
-    InputParser input(argc, argv);
+    mgcl_examples_helper::ArgParser parser;
+    parser.registerFlag("non-periodic", "Disable periodic behavior", {"-np"});
+    parser.registerIntList("N", "Specify a list of integers", {"-N"});
+    parser.registerEnumValue("device-type", "Choose device type", {"cpu", "gpu"}, {"--dt"});
+    parser.registerValue("device-name", "Name of the device to use (partial names are allowed)", {"--dn"});
+    parser.registerEnumValue("stencil-type", "Stencil type", {"l7", "l19", "l27", "var"}, {"--st"});
 
-    if (input.cmdOptionExists("-N"))
+    try
     {
-        auto sizes = split_int(input.getCmdOption("-N"), ",");
-        if (sizes.size() == 1)
-            m = n = o = sizes[0];
-        else if (sizes.size() == 2)
+        parser.parse(argc, argv);
+
+        if (parser.isPresent("--non-periodic"))
         {
-            m = sizes[0];
-            n = o = sizes[1];
+            periodic = false;
         }
-        else if (sizes.size() == 3)
+
+        if (parser.isPresent("-N"))
         {
-            m = sizes[0];
-            n = sizes[1];
-            o = sizes[2];
+            auto values = parser.getIntList("-N");
+            if (values.size() == 1)
+                m = n = o = values[0];
+            else if (values.size() == 2)
+            {
+                m = values[0];
+                n = o = values[1];
+            }
+            else if (values.size() == 3)
+            {
+                m = values[0];
+                n = values[1];
+                o = values[2];
+            }
+        }
+
+        if (parser.isPresent("--device-type"))
+        {
+            deviceTypeStr = parser.getValue("--device-type");
+            if (deviceTypeStr == "cpu")
+                deviceType = CL_DEVICE_TYPE_CPU;
+            else if (deviceTypeStr == "gpu")
+                deviceType = CL_DEVICE_TYPE_GPU;
+        }
+
+        if (parser.isPresent("--device-name"))
+        {
+            deviceName = parser.getValue("--device-name");
+        }
+
+        if (parser.isPresent("--stencil-type"))
+        {
+            stencilTypeStr = parser.getValue("--stencil-type");
+            if (stencilTypeStr == "l7")
+                stencilType = mgcl::MGCL_LAPLACE_7POINT;
+            else if (stencilTypeStr == "l19")
+                stencilType = mgcl::MGCL_LAPLACE_19POINT;
+            else if (stencilTypeStr == "l27")
+                stencilType = mgcl::MGCL_LAPLACE_27POINT;
         }
     }
-
-    if (input.cmdOptionExists("-np") || input.cmdOptionExists("--non-periodic"))
-        periodic = false;
-
-    if (input.cmdOptionExists("--device-name"))
-        deviceName = input.getCmdOption("--device-name");
-
-    if (input.cmdOptionExists("--device-type"))
+    catch (const std::exception& e)
     {
-        deviceTypeStr = input.getCmdOption("--device-type");
-        if (deviceTypeStr == "cpu")
-            deviceType = CL_DEVICE_TYPE_CPU;
-        else if (deviceTypeStr == "gpu")
-            deviceType = CL_DEVICE_TYPE_GPU;
-        else
-            throw "Invalid device type. Must be 'cpu' or 'gpu'";
-    }
-
-    if (input.cmdOptionExists("--stencil-type"))
-    {
-        std::string st = input.getCmdOption("--stencil-type");
-        if (st == "l7")
-            stencilType = mgcl::MGCL_LAPLACE_7POINT;
-        else if (st == "l19")
-            stencilType = mgcl::MGCL_LAPLACE_19POINT;
-        else if (st == "l27")
-            stencilType = mgcl::MGCL_LAPLACE_27POINT;
+        std::cerr << "Error: " << e.what() << "\n";
+        parser.printHelp();
+        return 1;
     }
 
     /* MPI variables */
@@ -158,7 +144,7 @@ int main(int argc, char* argv[])
         std::cout << "Arguments:" << std::endl;
         std::cout << "  m,n,o: " << m << "," << n << "," << o << "," << std::endl;
         std::cout << "  periodic: " << periodic << std::endl;
-        std::cout << "  stencilType: " << input.getCmdOption("--stencil-type") << std::endl;
+        std::cout << "  stencilType: " << stencilTypeStr << std::endl;
         std::cout << "  rank;ms;me;ns;ne;os;oe;ml;nl;ol" << std::endl;
     }
 
