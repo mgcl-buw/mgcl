@@ -581,7 +581,7 @@ namespace mgcl
                 }
 
                 // recalculate and set idx_start
-                idx_start = problem.ghosts - ((stepsPerIter - innerIter) - 1);
+                idx_start = problem.ghosts - (std::min((stepsPerIter - innerIter), maxiter - globalIter) - 1);
                 err = clSetKernelArg(kernel, pos_idxstart, sizeof(int), &idx_start);
                 mgclCheckError(err, "Setting kernel arguments");
 
