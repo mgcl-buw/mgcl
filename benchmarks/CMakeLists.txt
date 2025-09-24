@@ -59,8 +59,6 @@ target_link_libraries(benchmarks PRIVATE MPI::MPI_CXX)
 target_link_libraries(benchmarks PRIVATE nanobench::nanobench)
 target_link_libraries(benchmarks PRIVATE Catch2::Catch2)
 target_link_libraries(benchmarks PRIVATE mgcl)
-target_link_libraries(benchmarks PRIVATE pmg)
-target_link_libraries(benchmarks PRIVATE mgcl_c)
 
 # Remove comments to use address sanitizer (ASAN). ASAN is not compatible with OpenCL, see
 # https://stackoverflow.com/a/68027496/4108363. A workaround is to set

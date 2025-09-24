@@ -446,7 +446,6 @@ namespace mgcl
 
     /**
      * @brief Initializes MPI data for the current level and sets dimensions.
-     * Mainly taken from pmg from Matthias Bolten.
      * If mgcl is used on one MPI process only, no intialization is needed and this functions returns early.
      *
      * @return int

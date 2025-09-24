@@ -76,12 +76,9 @@ set(SOURCES_TEST_SOLVING
 add_executable(tests_solving ${SOURCES_TEST_SOLVING} ${BACKWARD_ENABLE})
 add_backward(tests_solving)
 
-# find_package(MPI REQUIRED) target_include_directories(pmg SYSTEM PUBLIC
-# ${MPI_INCLUDE_PATH}) set(MPI_CXX_SKIP_MPICXX TRUE)
 target_link_libraries(tests_solving PRIVATE MPI::MPI_CXX)
 target_link_libraries(tests_solving PRIVATE Catch2::Catch2)
 target_link_libraries(tests_solving PRIVATE mgcl)
-target_link_libraries(tests_solving PRIVATE pmg)
 
 # ==========================
 
@@ -107,8 +104,6 @@ set(SOURCES_TEST_MPI
 add_executable(tests_mpi ${SOURCES_TEST_MPI} ${BACKWARD_ENABLE})
 add_backward(tests_mpi)
 
-# find_package(MPI REQUIRED) target_include_directories(pmg SYSTEM PUBLIC
-# ${MPI_INCLUDE_PATH}) set(MPI_CXX_SKIP_MPICXX TRUE)
 target_link_libraries(tests_mpi PRIVATE MPI::MPI_CXX Catch2::Catch2 mgcl)
 
 # copy run-all script file to build directory

@@ -62,10 +62,6 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   endif()
   # ==============================
 
-  if(MGCL_BUILD_TESTS OR MGCL_BUILD_BENCHMARKS)
-    add_subdirectory(thirdparty)
-  endif()
-
   if(MGCL_BUILD_TESTS)
     add_subdirectory(test)
 

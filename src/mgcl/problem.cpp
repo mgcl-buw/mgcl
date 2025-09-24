@@ -1019,7 +1019,7 @@ namespace mgcl
 
             if (getVPtr())
             {
-                // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
+                // calculate initial residual
                 if (isPeriodic())
                     MultigridEngine::updateGhostsSeq(lv0.getV(), lv0.getMpiDataPtr(), isPeriodic(),
                                                      levels[0]->isCalculatedLocally());
@@ -1034,7 +1034,7 @@ namespace mgcl
             }
             else
             {
-                // calculate initial residual (different from pmg's initres bc ghosts are not updated in pmg first)
+                // calculate initial residual
                 if (isPeriodic())
                 {
                     lv0.getVBS().updateGhosts(lv0.getMpiDataPtr(), lv0.isCalculatedLocally());

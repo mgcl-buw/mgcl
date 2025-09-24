@@ -17,10 +17,6 @@ using namespace std::chrono_literals;
 #include "../test/ocl_wrapper.hpp"
 #include "../test/test_utility.hpp"
 #include "bench_render_templates.hpp"
-#include "pmg_utility.hpp"
-
-#include "../thirdparty/mgcl_c/mgcl.hpp"
-#include "../thirdparty/pmg/mg.h"
 
 double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
            bool return_sum, size_t localSize, std::string kernelName, size_t globalSize, int fractions = 1);

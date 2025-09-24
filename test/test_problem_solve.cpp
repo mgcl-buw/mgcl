@@ -7,10 +7,8 @@
 #include <iomanip>
 #include <iostream>
 
-#include "../benchmarks/pmg_utility.hpp"
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/problem.hpp"
-#include "../thirdparty/pmg/mg.h"
 #include "cli_args.hpp"
 #include "device_type_generator.hpp"
 #include "test_utility.hpp"
@@ -328,82 +326,6 @@ TEST_CASE("solve_periodic")
             CHECK(errMax < 1e-2);
         }
     }
-
-    SECTION("pmg")
-    {
-        // pmg
-
-        // setup MPI
-        MPI_Comm mpi_comm_cart = *init_mpi_for_pmg();
-
-        if (mpi_comm_cart == MPI_COMM_NULL)
-        {
-            std::cout << "mpi_comm_cart is null! Cannot test against pmg." << std::endl;
-        }
-        else
-        {
-            // auto v = std::make_shared<mgcl::Cuboid>(N, N, N);
-
-            // init 7-point stencil for pmg's jacobi
-            int size = 7;
-            double h2 = 1.0 / (double)(N * N);
-            double* values = new double[size]();
-            int* xoff = new int[size]();
-            int* yoff = new int[size]();
-            int* zoff = new int[size]();
-
-            values[0] = 6.0 / h2;
-            for (int i = 1; i <= 6; i++)
-                values[i] = (-1.0) / h2;
-
-            xoff[0] = 0;
-            xoff[1] = 1;
-            xoff[2] = -1;
-            for (int i = 3; i <= 6; i++)
-                xoff[i] = 0;
-
-            for (int i = 0; i <= 2; i++)
-                yoff[i] = 0;
-            yoff[3] = 1;
-            yoff[4] = -1;
-            yoff[5] = 0;
-            yoff[6] = 0;
-
-            for (int i = 0; i <= 4; i++)
-                zoff[i] = 0;
-            zoff[5] = 1;
-            zoff[6] = -1;
-
-            // run with a tolerance that will never be reached thus all vcycle iters are executed
-            mg_with_maxlv(v->getData(), f->getData(), maxIterVCycles, tol, N, N, N, 0, N - 1, 0, N - 1, 0, N - 1,
-                          1, nu1, nu2, omega, size, values, xoff, yoff, zoff, mpi_comm_cart, 0, maxlevel + 1);
-
-            // check if solution is good
-            auto err = mgcl_test::calculateError(solution, *v);
-            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = mgcl_test::calculateMaxError(*err);
-
-            std::cout
-                << "pmg" << std::endl
-                << std::scientific << "  ||e||_2 = " << errNorm << std::endl
-                << std::scientific << "  e_max = " << errMax << std::endl;
-
-            CHECK(errNorm < 1e-2);
-            CHECK(errMax < 1e-2);
-
-            // check if error is equal to old mgcl implementation (problem params must match)
-            if (p.getMaxiterVcycles() == 10 && N == 32 && p.getTol() == 1e-14 &&
-                p.getNu1() == 2 && p.getNu2() == 2 && p.getOmega() == 0.8 &&
-                p.getDeviceName() == "Quadro" && p.getDeviceType() == CL_DEVICE_TYPE_GPU)
-            {
-                CHECK(fabs(errNorm - 3.93115528889612358e-03) < 1e-14);
-                CHECK(fabs(errMax - 3.95723982871536324e-03) < 1e-14);
-            }
-        }
-
-        // Gets called in custom catch2 main
-        // MPI_Finalize();
-    }
 }
 
 TEST_CASE("solve_dirichlet")
@@ -708,102 +630,6 @@ TEST_CASE("solve_dirichlet")
             CHECK(errNorm < 1e-2);
             CHECK(errMax < 1e-2);
         }
-    }
-
-    // pmg does not work without touching the code, skip for now
-    SECTION("pmg")
-    {
-        // pmg
-
-        // decrement N by 1 for Dirichlet bc's
-        int Norig = N;
-        N = N - 1;
-
-        // setup MPI
-        MPI_Comm mpi_comm_cart = *init_mpi_for_pmg();
-
-        if (mpi_comm_cart == MPI_COMM_NULL)
-        {
-            std::cout << "mpi_comm_cart is null! Cannot test against pmg." << std::endl;
-        }
-        else
-        {
-            int periodic = 0;
-            // auto v = std::make_shared<mgcl::Cuboid>(N, N, N);
-
-            // Copy non-ghosted versions of v and f for pmg
-            mgcl::Cuboid vpmg(N, N, N);
-            mgcl::Cuboid fpmg(N, N, N);
-
-            for (int i = ghin; i < N + ghin; i++)
-                for (int j = ghin; j < N + ghin; j++)
-                    for (int k = ghin; k < N + ghin; k++)
-                    {
-                        vpmg[i - ghin][j - ghin][k - ghin] = (*v)[i][j][k];
-                        fpmg[i - ghin][j - ghin][k - ghin] = (*f)[i][j][k];
-                    }
-
-            mgcl::Cuboid solutionpmg(N, N, N);
-            for (int i = 0; i < N; i++)
-                for (int j = 0; j < N; j++)
-                    for (int k = 0; k < N; k++)
-                    {
-                        solutionpmg[i][j][k] = solution[i][j][k];
-                    }
-
-            // init 7-point stencil for pmg's jacobi
-            int size = 7;
-            double h2 = 1.0 / (double)(Norig * Norig);
-            double* values = new double[size]();
-            int* xoff = new int[size]();
-            int* yoff = new int[size]();
-            int* zoff = new int[size]();
-
-            values[0] = 6.0 / h2;
-            for (int i = 1; i <= 6; i++)
-                values[i] = (-1.0) / h2;
-
-            xoff[0] = 0;
-            xoff[1] = 1;
-            xoff[2] = -1;
-            for (int i = 3; i <= 6; i++)
-                xoff[i] = 0;
-
-            for (int i = 0; i <= 2; i++)
-                yoff[i] = 0;
-            yoff[3] = 1;
-            yoff[4] = -1;
-            yoff[5] = 0;
-            yoff[6] = 0;
-
-            for (int i = 0; i <= 4; i++)
-                zoff[i] = 0;
-            zoff[5] = 1;
-            zoff[6] = -1;
-
-            // run with a tolerance that will never be reached thus all vcycle iters are executed
-            mg_with_maxlv(vpmg.getData(), fpmg.getData(), maxIterVCycles, tol, N, N, N, 0, N - 1, 0, N - 1, 0, N - 1,
-                          periodic, nu1, nu2, omega, size, values, xoff, yoff, zoff, mpi_comm_cart, 1, maxlevel + 1);
-
-            // vpmg.dumpToFile("vpmg.txt");
-            // fpmg.dumpToFile("fpmg.txt");
-
-            // check if solution is good
-            auto err = mgcl_test::calculateError(solutionpmg, vpmg);
-            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)Norig, *err);
-            auto errMax = mgcl_test::calculateMaxError(*err);
-
-            std::cout
-                << "pmg" << std::endl
-                << std::scientific << "  ||e||_2 = " << errNorm << std::endl
-                << std::scientific << "  e_max = " << errMax << std::endl;
-
-            CHECK(errNorm < 1e-2);
-            CHECK(errMax < 1e-2);
-        }
-
-        // Gets called in custom catch2 main
-        // MPI_Finalize();
     }
 }
 
