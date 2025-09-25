@@ -32,121 +32,121 @@ int is_on_real_boundary_2d(int i, int j, int mgh, int ngh, int ghosts)
     return top_bottom_border || left_right_border;
 }
 
-/* Prints components of 7-point laplacian stencil for debugging purposes */
-void print_7point(__global double* A, int index, int ioff, int joff, int koff)
-{
-    printf("7point stencil at %d:\n", index);
-    printf("v[self] = %.17e\n", A[index]);
-    printf(" v[k-1] = %.17e\n", A[index - koff]);
-    printf(" v[k+1] = %.17e\n", A[index + koff]);
-    printf(" v[j-1] = %.17e\n", A[index - joff]);
-    printf(" v[j+1] = %.17e\n", A[index + joff]);
-    printf(" v[i-1] = %.17e\n", A[index - ioff]);
-    printf(" v[i+1] = %.17e\n", A[index + ioff]);
-}
+// /* Prints components of 7-point laplacian stencil for debugging purposes */
+// void print_7point(__global double* A, int index, int ioff, int joff, int koff)
+// {
+//     printf("7point stencil at %d:\n", index);
+//     printf("v[self] = %.17e\n", A[index]);
+//     printf(" v[k-1] = %.17e\n", A[index - koff]);
+//     printf(" v[k+1] = %.17e\n", A[index + koff]);
+//     printf(" v[j-1] = %.17e\n", A[index - joff]);
+//     printf(" v[j+1] = %.17e\n", A[index + joff]);
+//     printf(" v[i-1] = %.17e\n", A[index - ioff]);
+//     printf(" v[i+1] = %.17e\n", A[index + ioff]);
+// }
 
-void print_7point_local(__local double* A, __local double* rm, __local double* rp, int index, int ioff, int joff,
-                        int koff)
-{
-    printf("7point stencil at %d:\n", index);
-    printf("v[self] = %e\n", A[index]);
-    printf(" v[k-1] = %e\n", A[index - koff]);
-    printf(" v[k+1] = %e\n", A[index + koff]);
-    printf(" v[j-1] = %e\n", A[index - joff]);
-    printf(" v[j+1] = %e\n", A[index + joff]);
-    printf(" v[i-1] = %e\n", rm == NULL ? A[index - ioff] : rm[index]);
-    printf(" v[i+1] = %e\n", rp == NULL ? A[index + ioff] : rp[index]);
-}
+// void print_7point_local(__local double* A, __local double* rm, __local double* rp, int index, int ioff, int joff,
+//                         int koff)
+// {
+//     printf("7point stencil at %d:\n", index);
+//     printf("v[self] = %e\n", A[index]);
+//     printf(" v[k-1] = %e\n", A[index - koff]);
+//     printf(" v[k+1] = %e\n", A[index + koff]);
+//     printf(" v[j-1] = %e\n", A[index - joff]);
+//     printf(" v[j+1] = %e\n", A[index + joff]);
+//     printf(" v[i-1] = %e\n", rm == NULL ? A[index - ioff] : rm[index]);
+//     printf(" v[i+1] = %e\n", rp == NULL ? A[index + ioff] : rp[index]);
+// }
 
-void print_19point_local(__local double* A, __local double* rm, __local double* rp, int index, int ioff, int joff,
-                         int koff)
-{
-    printf("19point stencil at %d:\n", index);
-    printf("v[self] = %e\n", A[index]);
-    printf(" v[ i ][ j ][k-1] = %e\n", A[index - koff]);
-    printf(" v[ i ][ j ][k+1] = %e\n", A[index + koff]);
-    printf(" v[ i ][j-1][ k ] = %e\n", A[index - joff]);
-    printf(" v[ i ][j+1][ k ] = %e\n", A[index + joff]);
-    printf(" v[i-1][ j ][ k ] = %e\n", rm == NULL ? A[index - ioff] : rm[index]);
-    printf(" v[i+1][ j ][ k ] = %e\n", rp == NULL ? A[index + ioff] : rp[index]);
-    printf(" v[ i ][j-1][k-1] = %e\n", A[index - joff - koff]);
-    printf(" v[ i ][j-1][k+1] = %e\n", A[index - joff + koff]);
-    printf(" v[ i ][j+1][k-1] = %e\n", A[index + joff - koff]);
-    printf(" v[ i ][j+1][k+1] = %e\n", A[index + joff + koff]);
-    printf(" v[i-1][ j ][k-1] = %e\n", rm == NULL ? A[index - ioff - 1] : rm[index - 1]);
-    printf(" v[i-1][ j ][k+1] = %e\n", rm == NULL ? A[index - ioff + 1] : rm[index + 1]);
-    printf(" v[i+1][ j ][k-1] = %e\n", rp == NULL ? A[index + ioff - 1] : rp[index - 1]);
-    printf(" v[i+1][ j ][k+1] = %e\n", rp == NULL ? A[index + ioff + 1] : rp[index + 1]);
-    printf(" v[i-1][j-1][ k ] = %e\n", rm == NULL ? A[index - ioff - joff] : rm[index - joff]);
-    printf(" v[i-1][j+1][ k ] = %e\n", rm == NULL ? A[index - ioff + joff] : rm[index + joff]);
-    printf(" v[i+1][j-1][ k ] = %e\n", rp == NULL ? A[index + ioff - joff] : rp[index - joff]);
-    printf(" v[i+1][j+1][ k ] = %e\n", rp == NULL ? A[index + ioff + joff] : rp[index + joff]);
-}
+// void print_19point_local(__local double* A, __local double* rm, __local double* rp, int index, int ioff, int joff,
+//                          int koff)
+// {
+//     printf("19point stencil at %d:\n", index);
+//     printf("v[self] = %e\n", A[index]);
+//     printf(" v[ i ][ j ][k-1] = %e\n", A[index - koff]);
+//     printf(" v[ i ][ j ][k+1] = %e\n", A[index + koff]);
+//     printf(" v[ i ][j-1][ k ] = %e\n", A[index - joff]);
+//     printf(" v[ i ][j+1][ k ] = %e\n", A[index + joff]);
+//     printf(" v[i-1][ j ][ k ] = %e\n", rm == NULL ? A[index - ioff] : rm[index]);
+//     printf(" v[i+1][ j ][ k ] = %e\n", rp == NULL ? A[index + ioff] : rp[index]);
+//     printf(" v[ i ][j-1][k-1] = %e\n", A[index - joff - koff]);
+//     printf(" v[ i ][j-1][k+1] = %e\n", A[index - joff + koff]);
+//     printf(" v[ i ][j+1][k-1] = %e\n", A[index + joff - koff]);
+//     printf(" v[ i ][j+1][k+1] = %e\n", A[index + joff + koff]);
+//     printf(" v[i-1][ j ][k-1] = %e\n", rm == NULL ? A[index - ioff - 1] : rm[index - 1]);
+//     printf(" v[i-1][ j ][k+1] = %e\n", rm == NULL ? A[index - ioff + 1] : rm[index + 1]);
+//     printf(" v[i+1][ j ][k-1] = %e\n", rp == NULL ? A[index + ioff - 1] : rp[index - 1]);
+//     printf(" v[i+1][ j ][k+1] = %e\n", rp == NULL ? A[index + ioff + 1] : rp[index + 1]);
+//     printf(" v[i-1][j-1][ k ] = %e\n", rm == NULL ? A[index - ioff - joff] : rm[index - joff]);
+//     printf(" v[i-1][j+1][ k ] = %e\n", rm == NULL ? A[index - ioff + joff] : rm[index + joff]);
+//     printf(" v[i+1][j-1][ k ] = %e\n", rp == NULL ? A[index + ioff - joff] : rp[index - joff]);
+//     printf(" v[i+1][j+1][ k ] = %e\n", rp == NULL ? A[index + ioff + joff] : rp[index + joff]);
+// }
 
-void print27point(__global double* v, int index, int ioff, int joff, int koff)
-{
-    printf("27point stencil at %d:\n", index);
-    printf("v[self] = %e\n", v[index]);
-    printf(" v[ i ][ j ][k-1] = %e\n", v[index - koff]);
-    printf(" v[ i ][ j ][k+1] = %e\n", v[index + koff]);
-    printf(" v[ i ][j-1][ k ] = %e\n", v[index - joff]);
-    printf(" v[ i ][j+1][ k ] = %e\n", v[index + joff]);
-    printf(" v[i-1][ j ][ k ] = %e\n", v[index - ioff]);
-    printf(" v[i+1][ j ][ k ] = %e\n", v[index + ioff]);
-    printf(" v[ i ][j-1][k-1] = %e\n", v[index - joff - koff]);
-    printf(" v[ i ][j-1][k+1] = %e\n", v[index - joff + koff]);
-    printf(" v[ i ][j+1][k-1] = %e\n", v[index + joff - koff]);
-    printf(" v[ i ][j+1][k+1] = %e\n", v[index + joff + koff]);
-    printf(" v[i-1][ j ][k-1] = %e\n", v[index - ioff - koff]);
-    printf(" v[i-1][ j ][k+1] = %e\n", v[index - ioff + koff]);
-    printf(" v[i+1][ j ][k-1] = %e\n", v[index + ioff - koff]);
-    printf(" v[i+1][ j ][k+1] = %e\n", v[index + ioff + koff]);
-    printf(" v[i-1][j-1][ k ] = %e\n", v[index - ioff - joff]);
-    printf(" v[i-1][j+1][ k ] = %e\n", v[index - ioff + joff]);
-    printf(" v[i+1][j-1][ k ] = %e\n", v[index + ioff - joff]);
-    printf(" v[i+1][j+1][ k ] = %e\n", v[index + ioff + joff]);
-    printf(" v[i-1][j-1][k-1] = %e\n", v[index - ioff - joff - koff]);
-    printf(" v[i-1][j-1][k+1] = %e\n", v[index - ioff - joff + koff]);
-    printf(" v[i-1][j+1][k-1] = %e\n", v[index - ioff + joff - koff]);
-    printf(" v[i-1][j+1][k+1] = %e\n", v[index - ioff + joff + koff]);
-    printf(" v[i+1][j-1][k-1] = %e\n", v[index + ioff - joff - koff]);
-    printf(" v[i+1][j-1][k+1] = %e\n", v[index + ioff - joff + koff]);
-    printf(" v[i+1][j+1][k-1] = %e\n", v[index + ioff + joff - koff]);
-    printf(" v[i+1][j+1][k+1] = %e\n", v[index + ioff + joff + koff]);
-}
+// void print27point(__global double* v, int index, int ioff, int joff, int koff)
+// {
+//     printf("27point stencil at %d:\n", index);
+//     printf("v[self] = %e\n", v[index]);
+//     printf(" v[ i ][ j ][k-1] = %e\n", v[index - koff]);
+//     printf(" v[ i ][ j ][k+1] = %e\n", v[index + koff]);
+//     printf(" v[ i ][j-1][ k ] = %e\n", v[index - joff]);
+//     printf(" v[ i ][j+1][ k ] = %e\n", v[index + joff]);
+//     printf(" v[i-1][ j ][ k ] = %e\n", v[index - ioff]);
+//     printf(" v[i+1][ j ][ k ] = %e\n", v[index + ioff]);
+//     printf(" v[ i ][j-1][k-1] = %e\n", v[index - joff - koff]);
+//     printf(" v[ i ][j-1][k+1] = %e\n", v[index - joff + koff]);
+//     printf(" v[ i ][j+1][k-1] = %e\n", v[index + joff - koff]);
+//     printf(" v[ i ][j+1][k+1] = %e\n", v[index + joff + koff]);
+//     printf(" v[i-1][ j ][k-1] = %e\n", v[index - ioff - koff]);
+//     printf(" v[i-1][ j ][k+1] = %e\n", v[index - ioff + koff]);
+//     printf(" v[i+1][ j ][k-1] = %e\n", v[index + ioff - koff]);
+//     printf(" v[i+1][ j ][k+1] = %e\n", v[index + ioff + koff]);
+//     printf(" v[i-1][j-1][ k ] = %e\n", v[index - ioff - joff]);
+//     printf(" v[i-1][j+1][ k ] = %e\n", v[index - ioff + joff]);
+//     printf(" v[i+1][j-1][ k ] = %e\n", v[index + ioff - joff]);
+//     printf(" v[i+1][j+1][ k ] = %e\n", v[index + ioff + joff]);
+//     printf(" v[i-1][j-1][k-1] = %e\n", v[index - ioff - joff - koff]);
+//     printf(" v[i-1][j-1][k+1] = %e\n", v[index - ioff - joff + koff]);
+//     printf(" v[i-1][j+1][k-1] = %e\n", v[index - ioff + joff - koff]);
+//     printf(" v[i-1][j+1][k+1] = %e\n", v[index - ioff + joff + koff]);
+//     printf(" v[i+1][j-1][k-1] = %e\n", v[index + ioff - joff - koff]);
+//     printf(" v[i+1][j-1][k+1] = %e\n", v[index + ioff - joff + koff]);
+//     printf(" v[i+1][j+1][k-1] = %e\n", v[index + ioff + joff - koff]);
+//     printf(" v[i+1][j+1][k+1] = %e\n", v[index + ioff + joff + koff]);
+// }
 
-void print27point_sv(__global double* v, int index, int ioff, int joff, int koff,
-                     __global double* sv, int index_sv)
-{
-    printf("27point stencil at %d,%d:\n", index_sv, index);
-    printf(" sv * v[    self     ] = %e * %e\n", sv[index_sv + 9 + 3 + 1], v[index]);
-    printf(" sv * v[ i ][ j ][k-1] = %e * %e\n", sv[index_sv + 9 + 3], v[index - koff]);
-    printf(" sv * v[ i ][ j ][k+1] = %e * %e\n", sv[index_sv + 9 + 3 + 2], v[index + koff]);
-    printf(" sv * v[ i ][j-1][ k ] = %e * %e\n", sv[index_sv + 9 + 1], v[index - joff]);
-    printf(" sv * v[ i ][j+1][ k ] = %e * %e\n", sv[index_sv + 9 + 6 + 1], v[index + joff]);
-    printf(" sv * v[i-1][ j ][ k ] = %e * %e\n", sv[index_sv + 3 + 1], v[index - ioff]);
-    printf(" sv * v[i+1][ j ][ k ] = %e * %e\n", sv[index_sv + 18 + 3 + 1], v[index + ioff]);
-    printf(" sv * v[ i ][j-1][k-1] = %e * %e\n", sv[index_sv + 9], v[index - joff - koff]);
-    printf(" sv * v[ i ][j-1][k+1] = %e * %e\n", sv[index_sv + 9 + 2], v[index - joff + koff]);
-    printf(" sv * v[ i ][j+1][k-1] = %e * %e\n", sv[index_sv + 9 + 6], v[index + joff - koff]);
-    printf(" sv * v[ i ][j+1][k+1] = %e * %e\n", sv[index_sv + 9 + 6 + 2], v[index + joff + koff]);
-    printf(" sv * v[i-1][ j ][k-1] = %e * %e\n", sv[index_sv + 3], v[index - ioff - koff]);
-    printf(" sv * v[i-1][ j ][k+1] = %e * %e\n", sv[index_sv + 3 + 2], v[index - ioff + koff]);
-    printf(" sv * v[i+1][ j ][k-1] = %e * %e\n", sv[index_sv + 18 + 3], v[index + ioff - koff]);
-    printf(" sv * v[i+1][ j ][k+1] = %e * %e\n", sv[index_sv + 18 + 3 + 2], v[index + ioff + koff]);
-    printf(" sv * v[i-1][j-1][ k ] = %e * %e\n", sv[index_sv + 1], v[index - ioff - joff]);
-    printf(" sv * v[i-1][j+1][ k ] = %e * %e\n", sv[index_sv + 6 + 1], v[index - ioff + joff]);
-    printf(" sv * v[i+1][j-1][ k ] = %e * %e\n", sv[index_sv + 18 + 1], v[index + ioff - joff]);
-    printf(" sv * v[i+1][j+1][ k ] = %e * %e\n", sv[index_sv + 18 + 6 + 1], v[index + ioff + joff]);
-    printf(" sv * v[i-1][j-1][k-1] = %e * %e\n", sv[index_sv], v[index - ioff - joff - koff]);
-    printf(" sv * v[i-1][j-1][k+1] = %e * %e\n", sv[index_sv + 2], v[index - ioff - joff + koff]);
-    printf(" sv * v[i-1][j+1][k-1] = %e * %e\n", sv[index_sv + 6], v[index - ioff + joff - koff]);
-    printf(" sv * v[i-1][j+1][k+1] = %e * %e\n", sv[index_sv + 6 + 2], v[index - ioff + joff + koff]);
-    printf(" sv * v[i+1][j-1][k-1] = %e * %e\n", sv[index_sv + 18], v[index + ioff - joff - koff]);
-    printf(" sv * v[i+1][j-1][k+1] = %e * %e\n", sv[index_sv + 18 + 2], v[index + ioff - joff + koff]);
-    printf(" sv * v[i+1][j+1][k-1] = %e * %e\n", sv[index_sv + 18 + 6], v[index + ioff + joff - koff]);
-    printf(" sv * v[i+1][j+1][k+1] = %e * %e\n", sv[index_sv + 18 + 6 + 2], v[index + ioff + joff + koff]);
-}
+// void print27point_sv(__global double* v, int index, int ioff, int joff, int koff,
+//                      __global double* sv, int index_sv)
+// {
+//     printf("27point stencil at %d,%d:\n", index_sv, index);
+//     printf(" sv * v[    self     ] = %e * %e\n", sv[index_sv + 9 + 3 + 1], v[index]);
+//     printf(" sv * v[ i ][ j ][k-1] = %e * %e\n", sv[index_sv + 9 + 3], v[index - koff]);
+//     printf(" sv * v[ i ][ j ][k+1] = %e * %e\n", sv[index_sv + 9 + 3 + 2], v[index + koff]);
+//     printf(" sv * v[ i ][j-1][ k ] = %e * %e\n", sv[index_sv + 9 + 1], v[index - joff]);
+//     printf(" sv * v[ i ][j+1][ k ] = %e * %e\n", sv[index_sv + 9 + 6 + 1], v[index + joff]);
+//     printf(" sv * v[i-1][ j ][ k ] = %e * %e\n", sv[index_sv + 3 + 1], v[index - ioff]);
+//     printf(" sv * v[i+1][ j ][ k ] = %e * %e\n", sv[index_sv + 18 + 3 + 1], v[index + ioff]);
+//     printf(" sv * v[ i ][j-1][k-1] = %e * %e\n", sv[index_sv + 9], v[index - joff - koff]);
+//     printf(" sv * v[ i ][j-1][k+1] = %e * %e\n", sv[index_sv + 9 + 2], v[index - joff + koff]);
+//     printf(" sv * v[ i ][j+1][k-1] = %e * %e\n", sv[index_sv + 9 + 6], v[index + joff - koff]);
+//     printf(" sv * v[ i ][j+1][k+1] = %e * %e\n", sv[index_sv + 9 + 6 + 2], v[index + joff + koff]);
+//     printf(" sv * v[i-1][ j ][k-1] = %e * %e\n", sv[index_sv + 3], v[index - ioff - koff]);
+//     printf(" sv * v[i-1][ j ][k+1] = %e * %e\n", sv[index_sv + 3 + 2], v[index - ioff + koff]);
+//     printf(" sv * v[i+1][ j ][k-1] = %e * %e\n", sv[index_sv + 18 + 3], v[index + ioff - koff]);
+//     printf(" sv * v[i+1][ j ][k+1] = %e * %e\n", sv[index_sv + 18 + 3 + 2], v[index + ioff + koff]);
+//     printf(" sv * v[i-1][j-1][ k ] = %e * %e\n", sv[index_sv + 1], v[index - ioff - joff]);
+//     printf(" sv * v[i-1][j+1][ k ] = %e * %e\n", sv[index_sv + 6 + 1], v[index - ioff + joff]);
+//     printf(" sv * v[i+1][j-1][ k ] = %e * %e\n", sv[index_sv + 18 + 1], v[index + ioff - joff]);
+//     printf(" sv * v[i+1][j+1][ k ] = %e * %e\n", sv[index_sv + 18 + 6 + 1], v[index + ioff + joff]);
+//     printf(" sv * v[i-1][j-1][k-1] = %e * %e\n", sv[index_sv], v[index - ioff - joff - koff]);
+//     printf(" sv * v[i-1][j-1][k+1] = %e * %e\n", sv[index_sv + 2], v[index - ioff - joff + koff]);
+//     printf(" sv * v[i-1][j+1][k-1] = %e * %e\n", sv[index_sv + 6], v[index - ioff + joff - koff]);
+//     printf(" sv * v[i-1][j+1][k+1] = %e * %e\n", sv[index_sv + 6 + 2], v[index - ioff + joff + koff]);
+//     printf(" sv * v[i+1][j-1][k-1] = %e * %e\n", sv[index_sv + 18], v[index + ioff - joff - koff]);
+//     printf(" sv * v[i+1][j-1][k+1] = %e * %e\n", sv[index_sv + 18 + 2], v[index + ioff - joff + koff]);
+//     printf(" sv * v[i+1][j+1][k-1] = %e * %e\n", sv[index_sv + 18 + 6], v[index + ioff + joff - koff]);
+//     printf(" sv * v[i+1][j+1][k+1] = %e * %e\n", sv[index_sv + 18 + 6 + 2], v[index + ioff + joff + koff]);
+// }
 
 /**
  * Updates ghosts of a cuboid, respecting small grids, e.g. gh > m.

@@ -203,7 +203,7 @@ int main(int argc, char* argv[])
     auto& conf = p.getKernelConfig();
 
     // Jacobi kernels
-    conf["jacobi_iter_27point_varying_stencil_1d"] = mgcl::conf::KernelWorkgroupSizes{{1, {512, 1, 1}}};
+    // conf["jacobi_iter_27point_varying_stencil_1d"] = mgcl::conf::KernelWorkgroupSizes{{1, {512, 1, 1}}};
     // conf["jacobi_iter_7point"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
     // conf["jacobi_iter_19point"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
     // conf["jacobi_iter_27point"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};

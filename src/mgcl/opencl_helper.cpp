@@ -63,6 +63,9 @@ namespace mgcl
             {
                 deviceId = selectDevice(platforms[i], mpi_rank);
                 platformId = platforms[i];
+
+                if (deviceId != nullptr)
+                    break;
             }
 
             if (deviceId == nullptr)
