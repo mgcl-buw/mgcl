@@ -112,7 +112,7 @@ namespace mgcl
         cl_context getContext() const;
         void setContext(const cl_context& context_);
 
-        static const char* mgcl_err_code(cl_int err_in);
+        static std::string errorCodeToStr(cl_int errorCode);
         static void mgcl_check_error(cl_int err, const std::string operation, const char* filename, int line);
         static void mgcl_check_error(cl_int err, const char* operation, const char* filename, int line);
 
