@@ -52,6 +52,33 @@ mgcl_test::TestUtility::TestUtility(cl_device_type deviceType, bool profilingEna
     problem->printDeviceInfo();
 }
 
+mgcl_test::TestUtility::TestUtility(std::string deviceName, cl_device_type deviceType)
+    : mgcl_test::TestUtility(deviceName, deviceType, false) {}
+
+mgcl_test::TestUtility::TestUtility(std::string deviceName, cl_device_type deviceType, bool profilingEnabled)
+{
+
+    if (!deviceAvailable(deviceName, deviceType))
+    {
+        std::string typeName = "CL_DEVICE_TYPE_DEFAULT";
+        if (deviceType == CL_DEVICE_TYPE_CPU)
+            typeName = "CL_DEVICE_TYPE_CPU";
+        else if (deviceType == CL_DEVICE_TYPE_GPU)
+            typeName = "CL_DEVICE_TYPE_GPU";
+        else if (deviceType == CL_DEVICE_TYPE_ACCELERATOR)
+            typeName = "CL_DEVICE_TYPE_ACCELERATOR";
+        throw std::runtime_error("OpenCL device is not available. deviceName: " + deviceName + ", deviceType: " + typeName);
+    }
+
+    problem = std::make_shared<mgcl::Problem>(2, 2, 2);
+    problem->setSilent(true);
+    problem->setDeviceType(deviceType);
+    problem->setDeviceName(deviceName);
+    problem->setProfilingEnabled(profilingEnabled);
+    problem->initOpenCL();
+    problem->printDeviceInfo();
+}
+
 mgcl_test::TestUtility::TestUtility(std::shared_ptr<mgcl::Problem> problem_)
     : problem(std::shared_ptr<mgcl::Problem>(problem_))
 {

@@ -13,6 +13,7 @@
 #include <iostream>
 
 std::vector<cl_device_type> CLI_ARGS::deviceTypes;
+std::vector<std::string> CLI_ARGS::deviceNames;
 
 // Initializes MPI, runs Catch2 tests and finalizes MPI.
 int main(int argc, char* argv[])
@@ -25,12 +26,17 @@ int main(int argc, char* argv[])
     Catch::Session session; // There must be exactly one instance
 
     std::string inputDeviceTypes = "";
+    std::string inputDeviceNames = "";
 
     using namespace Catch::Clara;
-    auto cli = session.cli()                                                                  // Get Catch2's command line parser
-               | Opt(inputDeviceTypes, "deviceTypes")                                         // bind variable to a new option, with a hint string
-                     ["--deviceTypes"]                                                        // the option names it will respond to
-               ("deviceTypes for OpenCL seperated by ',', e.g. 'gpu,cpu'. Default is 'gpu'"); // description string for the help output
+    auto cli = session.cli()                                                                 // Get Catch2's command line parser
+               | Opt(inputDeviceTypes, "deviceTypes")                                        // bind variable to a new option, with a hint string
+                     ["--deviceTypes"]                                                       // the option names it will respond to
+               ("deviceTypes for OpenCL seperated by ',', e.g. 'gpu,cpu'. Default is 'gpu'") // description string for the help output
+
+               | Opt(inputDeviceNames, "deviceNames")                                            // bind variable to a new option, with a hint string
+                     ["--deviceNames"]                                                           // the option names it will respond to
+               ("deviceNames for OpenCL seperated by ',', e.g. 'Quadro,AMD'. Default is empty"); // description string for the help output
 
     // Now pass the new composite back to Catch2 so it uses that
     session.cli(cli);
@@ -62,6 +68,32 @@ int main(int argc, char* argv[])
             std::cout << "CPU device type given as argument, but is not available on system." << std::endl;
     }
 
+    if (inputDeviceNames != "")
+    {
+        std::string input = inputDeviceNames;
+
+        // Create a stringstream from the input string
+        std::stringstream ss(input);
+        std::string token;
+        std::vector<std::string> tokens;
+
+        // Split the string by commas
+        while (std::getline(ss, token, ','))
+        {
+            tokens.push_back(token);
+        }
+
+        // Iterate through the tokens
+        for (const auto& token : tokens)
+        {
+
+            if (mgcl_test::TestUtility::deviceAvailable(token, CL_DEVICE_TYPE_ALL))
+                CLI_ARGS::deviceNames.push_back(token);
+            else
+                std::cout << "Device Name '" << token << "' given as argument, but is not available on system." << std::endl;
+        }
+    }
+
     if (mpi_rank == 0)
     {
         std::cout << "Using the following OpenCL device types: " << std::endl;
@@ -70,6 +102,9 @@ int main(int argc, char* argv[])
                 std::cout << "  GPU" << std::endl;
             else if (deviceType == CL_DEVICE_TYPE_CPU)
                 std::cout << "  CPU" << std::endl;
+        std::cout << "And using the following OpenCL device names: " << std::endl;
+        for (auto deviceName : CLI_ARGS::deviceNames)
+            std::cout << "  " << deviceName << std::endl;
     }
 
     int result = session.run();

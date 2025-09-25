@@ -1,6 +1,7 @@
 #ifndef MGCL_CLI_ARGS_HPP
 #define MGCL_CLI_ARGS_HPP
 
+#include <string>
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
@@ -12,6 +13,7 @@
 namespace CLI_ARGS
 {
     extern std::vector<cl_device_type> deviceTypes;
+    extern std::vector<std::string> deviceNames;
 }
 
 #endif // MGCL_CLI_ARGS_HPP

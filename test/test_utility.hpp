@@ -34,6 +34,8 @@ namespace mgcl_test
         TestUtility();
         TestUtility(std::string deviceName);
         TestUtility(cl_device_type deviceType);
+        TestUtility(std::string deviceName, cl_device_type deviceType);
+        TestUtility(std::string deviceName, cl_device_type deviceType, bool profilingEnabled);
         TestUtility(cl_device_type deviceType, bool profilingEnabled);
         TestUtility(std::shared_ptr<mgcl::Problem> problem);
         ~TestUtility();

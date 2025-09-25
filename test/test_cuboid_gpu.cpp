@@ -12,6 +12,7 @@
 #include "../src/mgcl/cuboid_gpu.hpp"
 #include "../src/mgcl/multigrid_engine.hpp"
 #include "cli_args.hpp"
+#include "device_name_generator.hpp"
 #include "device_type_generator.hpp"
 #include "test_utility.hpp"
 
@@ -204,11 +205,12 @@ TEST_CASE("CuboidGpu::write", "[ocl]")
 TEST_CASE("CuboidGpu::fill", "[ocl]")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    auto deviceName = GENERATE(mgcl_test::deviceNames(CLI_ARGS::deviceNames));
 
     mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
     ch.fillRandom();
 
-    mgcl_test::TestUtility tu(deviceType);
+    mgcl_test::TestUtility tu(deviceName, deviceType);
     mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4);
     c.write(tu.getCommands(), ch, true);
 
