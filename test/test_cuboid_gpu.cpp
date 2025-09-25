@@ -20,9 +20,10 @@
 TEST_CASE("CuboidGpu ctor no host_data", "[ocl]")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    auto deviceName = GENERATE(mgcl_test::deviceNames(CLI_ARGS::deviceNames));
     SECTION("success")
     {
-        mgcl_test::TestUtility tu(deviceType);
+        mgcl_test::TestUtility tu(deviceName, deviceType);
         mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4);
 
         REQUIRE(c.getM() == 1);
@@ -39,7 +40,7 @@ TEST_CASE("CuboidGpu ctor no host_data", "[ocl]")
 
     SECTION("Invalid dimensions")
     {
-        mgcl_test::TestUtility tu(deviceType);
+        mgcl_test::TestUtility tu(deviceName, deviceType);
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE, 0, 2, 3, 2, 3, 4));
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE, 1, 0, 3, 2, 3, 4));
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 0, 2, 3, 4));
@@ -51,7 +52,7 @@ TEST_CASE("CuboidGpu ctor no host_data", "[ocl]")
     SECTION("invalid flags")
     {
         mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
-        mgcl_test::TestUtility tu(deviceType);
+        mgcl_test::TestUtility tu(deviceName, deviceType);
 
         // flags must contain one of CL_MEM_READ_WRITE, CL_MEM_WRITE_ONLY or CL_MEM_READ_ONLY.
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_COPY_HOST_PTR, 1, 2, 3, 2, 3, 4));
@@ -74,12 +75,13 @@ TEST_CASE("CuboidGpu ctor no host_data", "[ocl]")
 TEST_CASE("CuboidGpu ctor host_data given", "[ocl]")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    auto deviceName = GENERATE(mgcl_test::deviceNames(CLI_ARGS::deviceNames));
     SECTION("sucess")
     {
         mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
         ch.fillRandom();
 
-        mgcl_test::TestUtility tu(deviceType);
+        mgcl_test::TestUtility tu(deviceName, deviceType);
         mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, ch);
 
         REQUIRE(c.getM() == 1);
@@ -100,7 +102,7 @@ TEST_CASE("CuboidGpu ctor host_data given", "[ocl]")
     SECTION("invalid flags")
     {
         mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
-        mgcl_test::TestUtility tu(deviceType);
+        mgcl_test::TestUtility tu(deviceName, deviceType);
 
         // flags must contain one of CL_MEM_COPY_HOST_PTR, CL_MEM_USE_HOST_PTR or CL_MEM_ALLOC_HOST_PTR
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_WRITE_ONLY, ch));
@@ -118,12 +120,13 @@ TEST_CASE("CuboidGpu ctor host_data given", "[ocl]")
 TEST_CASE("CuboidGpu ctor retaining buffer", "[ocl]")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    auto deviceName = GENERATE(mgcl_test::deviceNames(CLI_ARGS::deviceNames));
     SECTION("success")
     {
         int refCount;
         int err;
 
-        mgcl_test::TestUtility tu(deviceType);
+        mgcl_test::TestUtility tu(deviceName, deviceType);
         mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
         cl_mem buf = tu.createOpenCLBuffer(ch);
 
@@ -146,7 +149,7 @@ TEST_CASE("CuboidGpu ctor retaining buffer", "[ocl]")
 
     SECTION("Invalid dimensions")
     {
-        mgcl_test::TestUtility tu(deviceType);
+        mgcl_test::TestUtility tu(deviceName, deviceType);
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE, 0, 2, 3, 2, 3, 4));
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE, 1, 0, 3, 2, 3, 4));
         REQUIRE_THROWS(mgcl::CuboidGpu(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 0, 2, 3, 4));
@@ -159,11 +162,12 @@ TEST_CASE("CuboidGpu ctor retaining buffer", "[ocl]")
 TEST_CASE("CuboidGpu::read into new", "[ocl]")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    auto deviceName = GENERATE(mgcl_test::deviceNames(CLI_ARGS::deviceNames));
 
     mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
     ch.fillRandom();
 
-    mgcl_test::TestUtility tu(deviceType);
+    mgcl_test::TestUtility tu(deviceName, deviceType);
     mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, ch);
     auto ret = c.read(tu.getCommands(), nullptr, true);
 
@@ -173,11 +177,12 @@ TEST_CASE("CuboidGpu::read into new", "[ocl]")
 TEST_CASE("CuboidGpu::read into existing", "[ocl]")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    auto deviceName = GENERATE(mgcl_test::deviceNames(CLI_ARGS::deviceNames));
 
     mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
     ch.fillRandom();
 
-    mgcl_test::TestUtility tu(deviceType);
+    mgcl_test::TestUtility tu(deviceName, deviceType);
     mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, ch);
 
     mgcl::Cuboid ch_act(1, 2, 3, 2, 3, 4);
@@ -189,11 +194,12 @@ TEST_CASE("CuboidGpu::read into existing", "[ocl]")
 TEST_CASE("CuboidGpu::write", "[ocl]")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    auto deviceName = GENERATE(mgcl_test::deviceNames(CLI_ARGS::deviceNames));
 
     mgcl::Cuboid ch(1, 2, 3, 2, 3, 4);
     ch.fillRandom();
 
-    mgcl_test::TestUtility tu(deviceType);
+    mgcl_test::TestUtility tu(deviceName, deviceType);
     mgcl::CuboidGpu c(tu.getContext(), CL_MEM_READ_WRITE, 1, 2, 3, 2, 3, 4);
     c.write(tu.getCommands(), ch, true);
 
@@ -225,8 +231,9 @@ TEST_CASE("CuboidGpu::fill", "[ocl]")
 TEST_CASE("CuboidGpu::copyTo", "[ocl]")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    auto deviceName = GENERATE(mgcl_test::deviceNames(CLI_ARGS::deviceNames));
 
-    mgcl_test::TestUtility tu(deviceType);
+    mgcl_test::TestUtility tu(deviceName, deviceType);
 
     SECTION("success")
     {
@@ -261,8 +268,9 @@ TEST_CASE("CuboidGpu::copyTo", "[ocl]")
 TEST_CASE("CuboidGpu::swap", "[ocl]")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    auto deviceName = GENERATE(mgcl_test::deviceNames(CLI_ARGS::deviceNames));
 
-    mgcl_test::TestUtility tu(deviceType);
+    mgcl_test::TestUtility tu(deviceName, deviceType);
 
     SECTION("success")
     {
@@ -301,8 +309,9 @@ TEST_CASE("CuboidGpu::swap", "[ocl]")
 TEST_CASE("CuboidGpu::copyShallow", "[ocl]")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    auto deviceName = GENERATE(mgcl_test::deviceNames(CLI_ARGS::deviceNames));
 
-    mgcl_test::TestUtility tu(deviceType);
+    mgcl_test::TestUtility tu(deviceName, deviceType);
 
     SECTION("success")
     {
@@ -357,6 +366,7 @@ TEST_CASE("CuboidGpu::copyShallow", "[ocl]")
 TEST_CASE("CuboidGpu::extract_border_planes", "[ocl]")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    auto deviceName = GENERATE(mgcl_test::deviceNames(CLI_ARGS::deviceNames));
 
     SECTION("indices")
     {
@@ -532,6 +542,7 @@ TEST_CASE("CuboidGpu::extract_border_planes", "[ocl]")
         mgcl::Problem p(1, 1, 1, f, v);
         p.setUseOpencl(true);
         p.setDeviceType(deviceType);
+        p.setDeviceName(deviceName);
         p.init();
 
         {
@@ -556,6 +567,7 @@ TEST_CASE("CuboidGpu::extract_border_planes", "[ocl]")
         mgcl::Problem p(1, 1, 1, f, v);
         p.setUseOpencl(true);
         p.setDeviceType(deviceType);
+        p.setDeviceName(deviceName);
         p.init();
 
         int m = 3;
@@ -662,6 +674,7 @@ TEST_CASE("CuboidGpu::extract_border_planes", "[ocl]")
 TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes", "[ocl]")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    auto deviceName = GENERATE(mgcl_test::deviceNames(CLI_ARGS::deviceNames));
 
     SECTION("indices")
     {
@@ -878,6 +891,7 @@ TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes", "[ocl]")
         mgcl::Problem p(1, 1, 1, f, v);
         p.setUseOpencl(true);
         p.setDeviceType(deviceType);
+        p.setDeviceName(deviceName);
         p.init();
 
         int m = 3;
@@ -998,6 +1012,7 @@ TEST_CASE("CuboidGpu::pasteGhostsFromBorderPlanes", "[ocl]")
 TEST_CASE("CuboidGpu::fill1dIndex")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    auto deviceName = GENERATE(mgcl_test::deviceNames(CLI_ARGS::deviceNames));
     int m = 3;
     int n = 5;
     int o = 7;
@@ -1013,6 +1028,7 @@ TEST_CASE("CuboidGpu::fill1dIndex")
     mgcl::Problem p(1, 1, 1, f, v);
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
+    p.setDeviceName(deviceName);
     p.setSilent(true);
     p.init();
 
