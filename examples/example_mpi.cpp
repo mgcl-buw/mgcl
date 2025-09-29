@@ -30,6 +30,7 @@ using std::min;
  * --device-type <(cpu|gpu)> Type of OpenCL device to use. Optional.
  * --stencil-type <l7|l19|l27|var> Stencil type that shall be used. l(7,19,27): Use Laplace stencil with given size.
  *   var: Use varying stencil (default)
+ * -seq, -sequential Run in sequential mode on host (no OpenCL)
  */
 int main(int argc, char* argv[])
 {
@@ -37,6 +38,7 @@ int main(int argc, char* argv[])
     int n = 16;
     int o = 16;
     bool periodic = true;
+    bool sequential = false;
     std::string deviceName = "";
     std::string deviceTypeStr = "default";
     cl_device_type deviceType = CL_DEVICE_TYPE_DEFAULT;
@@ -44,8 +46,9 @@ int main(int argc, char* argv[])
     std::string stencilTypeStr = "var";
 
     mgcl_examples_helper::ArgParser parser;
-    parser.registerFlag("non-periodic", "Disable periodic behavior", {"-np"});
-    parser.registerIntList("N", "Specify a list of integers", {"-N"});
+    parser.registerFlag("sequential", "Run in sequential mode on host", {"--seq"});
+    parser.registerFlag("non-periodic", "Disable periodic behavior", {"--np"});
+    parser.registerIntList("N", "Specify a list of integers", {"--N"});
     parser.registerEnumValue("device-type", "Choose device type", {"cpu", "gpu"}, {"--dt"});
     parser.registerValue("device-name", "Name of the device to use (partial names are allowed)", {"--dn"});
     parser.registerEnumValue("stencil-type", "Stencil type", {"l7", "l19", "l27", "var"}, {"--st"});
@@ -54,14 +57,12 @@ int main(int argc, char* argv[])
     {
         parser.parse(argc, argv);
 
-        if (parser.isPresent("--non-periodic"))
-        {
-            periodic = false;
-        }
+        periodic = !parser.isPresent("--np");
+        sequential = parser.isPresent("--seq");
 
-        if (parser.isPresent("-N"))
+        if (parser.isPresent("--N"))
         {
-            auto values = parser.getIntList("-N");
+            auto values = parser.getIntList("--N");
             if (values.size() == 1)
                 m = n = o = values[0];
             else if (values.size() == 2)
@@ -143,7 +144,8 @@ int main(int argc, char* argv[])
     {
         std::cout << "Arguments:" << std::endl;
         std::cout << "  m,n,o: " << m << "," << n << "," << o << "," << std::endl;
-        std::cout << "  periodic: " << periodic << std::endl;
+        std::cout << "  periodic: " << std::boolalpha << periodic << std::endl;
+        std::cout << "  sequential: " << std::boolalpha << sequential << std::endl;
         std::cout << "  stencilType: " << stencilTypeStr << std::endl;
         std::cout << "  rank;ms;me;ns;ne;os;oe;ml;nl;ol" << std::endl;
     }
@@ -169,9 +171,12 @@ int main(int argc, char* argv[])
     // Create problem, set mpi communicator (needed for topology information) and solve.
     mgcl::Problem p(ml, nl, ol, f, v, m, n, o);
     p.setMpiComm(mpi_comm);
-    p.setUseOpencl(true);
-    p.setDeviceName(deviceName);
-    p.setDeviceType(deviceType);
+    if (!sequential)
+    {
+        p.setUseOpencl(true);
+        p.setDeviceName(deviceName);
+        p.setDeviceType(deviceType);
+    }
     p.setStencilType(stencilType);
     if (stencilType == mgcl::MGCL_VARYING)
     {
