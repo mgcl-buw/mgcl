@@ -31,7 +31,9 @@ namespace mgcl_bench_residual_varying
 {
     enum class KernelVersion
     {
-        COEFFS_FIRST,
+        COEFFS_FIRST_1D,
+        COEFFS_FIRST_3D_M0,
+        COEFFS_FIRST_3D_O0,
         REMOVED_V,
         // COEFFS_WITHOUT_GHOSTS // not needed, using COEFFS_FIRST for this
         FOUR_GP_PER_WI,
@@ -40,7 +42,7 @@ namespace mgcl_bench_residual_varying
 
     using size_t3 = struct
     {
-        int x, y, z;
+        size_t x, y, z;
     };
 
     using ResidualArgs = struct
@@ -126,33 +128,11 @@ namespace mgcl_bench_residual_varying
             error("args.c_dR must have at least 1 ghost cell in each dimension");
         }
 
-        // Create the compute kernel from the program
-        const char* kernelName;
-        if (args.stencilType == mgcl::MGCL_LAPLACE_7POINT)
-            kernelName = "residual_7point";
-        else if (args.stencilType == mgcl::MGCL_LAPLACE_19POINT)
-        {
-            kernelName = "residual_19point";
-            h2inv = 1.0 / (6.0 * args.h2);
-        }
-        else if (args.stencilType == mgcl::MGCL_LAPLACE_27POINT)
-        {
-            kernelName = "residual_27point";
-            h2inv = 1.0 / (26.0 * args.h2);
-        }
-        else if (args.stencilType == mgcl::MGCL_VARYING)
-        {
-            kernelName = "residual_27point_varying_stencil";
-        }
-        else if (args.stencilType == mgcl::MGCL_FIXED)
-        {
-            kernelName = "residual_27point_fixed_stencil_coeffs_as_global_buffer";
-        }
-
         // This is only for selecting the kernel to benchmark. Not in productive code.
-        if (args.kernelVersion == KernelVersion::COEFFS_FIRST)
+        std::string kernelName = "";
+        if (args.kernelVersion == KernelVersion::COEFFS_FIRST_1D)
         {
-            kernelName = "residual_27point_varying_stencil_coeffs_first";
+            kernelName = "residual_27point_varying_stencil_coeffs_first_1d";
         }
         else if (args.kernelVersion == KernelVersion::REMOVED_V)
         {
@@ -166,11 +146,19 @@ namespace mgcl_bench_residual_varying
         {
             kernelName = "residual_27point_varying_stencil_coeffs_first_indices_precalc_64";
         }
+        else if (args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_M0)
+        {
+            kernelName = "residual_27point_varying_stencil_coeffs_first_3d_m0";
+        }
+        else if (args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_O0)
+        {
+            kernelName = "residual_27point_varying_stencil_coeffs_first_3d_o0";
+        }
 
         cl_event ev;
 
         // Create the compute kernel from the program
-        cl_kernel kernel = clCreateKernel(args.program, kernelName, &err);
+        cl_kernel kernel = clCreateKernel(args.program, kernelName.c_str(), &err);
         mgcl::mgclCheckError(err, "Creating kernel");
 
         cl_mem dVIn = args.c_dVIn.getBuffer();
@@ -185,10 +173,10 @@ namespace mgcl_bench_residual_varying
         int pos = 0;
         if (args.stencilType == mgcl::MGCL_VARYING)
         {
-            if (args.kernelVersion == KernelVersion::COEFFS_FIRST ||
-                args.kernelVersion == KernelVersion::REMOVED_V ||
-                args.kernelVersion == KernelVersion::FOUR_GP_PER_WI ||
-                args.kernelVersion == KernelVersion::COEFF_INDICES_PRECALC)
+            // if (args.kernelVersion == KernelVersion::COEFFS_FIRST_1D ||
+            //     args.kernelVersion == KernelVersion::REMOVED_V ||
+            //     args.kernelVersion == KernelVersion::FOUR_GP_PER_WI ||
+            //     args.kernelVersion == KernelVersion::COEFF_INDICES_PRECALC)
             {
                 auto svbuf = args.c_stencilValues->getBuf();
                 int svgh = args.c_stencilValues->getGh();
@@ -250,26 +238,58 @@ namespace mgcl_bench_residual_varying
 
         mgcl::mgclCheckError(err, "Setting residual kernel arguments");
 
-        // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
-        size_t global = args.mgh * args.ngh * args.ogh;
-        if (args.kernelVersion == KernelVersion::FOUR_GP_PER_WI)
+        size_t global[3];
+        size_t local[3];
+        bool is3dKernel = (args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_M0 ||
+                           args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_O0);
+        if (is3dKernel)
         {
-            global /= 4;
+            global[0] = static_cast<size_t>(args.mgh);
+            global[1] = static_cast<size_t>(args.ngh);
+            global[2] = static_cast<size_t>(args.ogh);
+            local[0] = args.wgsize.x;
+            local[1] = args.wgsize.y;
+            local[2] = args.wgsize.z;
+            // decrease wg size for bigger grids
+            // if (mgh >= 32 && ngh >= 32 && ogh >= 32)
+            //     local[2] = 16;
+
+            for (int i = 0; i < 3; i++)
+                if (global[i] % local[i] != 0)
+                {
+                    // printf("padding global size %d from %ld to ", i, global[i]);
+                    global[i] += local[i] - (global[i] % local[i]);
+                    // printf("%ld (multiple of %ld)\n", global[i], local[i]);
+                }
         }
-        // const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
-        size_t local = args.wgsize.x; // c[0];
+        else
+        {
+            // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
+            global[0] = args.mgh * args.ngh * args.ogh;
+            if (args.kernelVersion == KernelVersion::FOUR_GP_PER_WI)
+            {
+                global[0] /= 4;
+            }
+            // const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
+            local[0] = args.wgsize.x; // c[0];
 
-        if (global % local != 0)
-            global += local - (global % local);
+            if (global[0] % local[0] != 0)
+                global[0] += local[0] - (global[0] % local[0]);
 
-        err = clEnqueueNDRangeKernel(args.commands, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
+            global[1] = 1;
+            global[2] = 1;
+            local[1] = 1;
+            local[2] = 1;
+        }
+
+        err = clEnqueueNDRangeKernel(args.commands, kernel, is3dKernel ? 3 : 1, NULL, global, local, 0, NULL, &ev);
         mgcl::mgclCheckError(err, "Enqueueing residual kernel");
 
         if (args.pd)
         {
             args.pd->addMeasurement(args.commands, ev, kernelName,
-                                    {global, 0, 0},
-                                    {local, 1, 1});
+                                    {global[0], global[1], global[2]},
+                                    {local[0], local[1], local[2]});
         }
         mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
@@ -364,10 +384,10 @@ namespace mgcl_bench_residual_varying
         auto v_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
         auto f_dummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
         mgcl::Problem p(1, 1, 1, f_dummy, v_dummy);
-        p.setKernelFile("kernel_optimizations.cl");
+        p.setKernelFile("residual_kernels_1d_vs_3d.cl");
         if (CLI_ARGS::useBinaryFile)
         {
-            p.setBinaryFile("residualFixedKernelVersions.bin");
+            p.setBinaryFile("residualVaryingKernelVersions.bin");
         }
         p.setUseOpencl(true);
         p.setDeviceType(CL_DEVICE_TYPE_GPU);
@@ -419,7 +439,7 @@ namespace mgcl_bench_residual_varying
                 .moff = 0,
                 .noff = 0,
                 .ooff = 0,
-                .kernelVersion = KernelVersion::COEFFS_FIRST,
+                .kernelVersion = KernelVersion::COEFFS_FIRST_1D,
             };
 
             ankerl::nanobench::Bench bench;
@@ -428,7 +448,9 @@ namespace mgcl_bench_residual_varying
                 .epochIterations(CLI_ARGS::bench_iterations)
                 .relative(false);
 
-            std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first = nullptr;
+            std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first_1d = nullptr;
+            std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first_3d_m0 = nullptr;
+            std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first_3d_o0 = nullptr;
             // std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_indices_precalc = nullptr;
             // std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_without_ghosts = nullptr;
             std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_4_gp_per_thread = nullptr;
@@ -438,8 +460,8 @@ namespace mgcl_bench_residual_varying
             }
 
             {
-                args.kernelVersion = KernelVersion::COEFFS_FIRST;
-                std::string name = std::string("residual_varying_stencil_coeffs_first_")
+                args.kernelVersion = KernelVersion::COEFFS_FIRST_1D;
+                std::string name = std::string("residual_varying_stencil_coeffs_first_1d_")
                                        .append(std::to_string(m))
                                        .append("_")
                                        .append(std::to_string(n))
@@ -464,8 +486,8 @@ namespace mgcl_bench_residual_varying
 
                 if (CLI_ARGS::checkResults)
                 {
-                    r_out_global_coeffs_first = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                    args.c_dR.read(args.commands, r_out_global_coeffs_first.get(), true);
+                    r_out_global_coeffs_first_1d = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                    args.c_dR.read(args.commands, r_out_global_coeffs_first_1d.get(), true);
                 }
             }
 
@@ -612,10 +634,99 @@ namespace mgcl_bench_residual_varying
             //     // }
             // }
 
+            std::vector<std::vector<size_t>> wg_sizes = {{4, 4, 4}, {1, 1, 16}, {1, 1, 32}, {1, 1, 64}, {16, 1, 1}, {32, 1, 1}, {64, 1, 1}};
+            {
+                args.kernelVersion = KernelVersion::COEFFS_FIRST_3D_M0;
+                // args.wgsize = {16, 16, 4};
+                for (auto ws : wg_sizes)
+                {
+                    args.wgsize = {ws[0], ws[1], ws[2]};
+                    std::string name = std::string("residual_varying_stencil_coeffs_first_3d_m0_")
+                                           .append(std::to_string(m))
+                                           .append("_")
+                                           .append(std::to_string(n))
+                                           .append("_")
+                                           .append(std::to_string(o))
+                                           .append("_wg")
+                                           .append(std::to_string(ws[0]))
+                                           .append("x")
+                                           .append(std::to_string(ws[1]))
+                                           .append("x")
+                                           .append(std::to_string(ws[2]));
+
+                    bench.run(std::string(name).c_str(), [&] { //
+                        residual(args);
+                        p.finish();
+                    });
+
+                    bench_util::Result res;
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.m = m;
+                    res.n = n;
+                    res.o = o;
+                    results.push_back(res);
+
+                    if (CLI_ARGS::checkResults)
+                    {
+                        r_out_global_coeffs_first_3d_m0 = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                        args.c_dR.read(args.commands, r_out_global_coeffs_first_3d_m0.get(), true);
+                    }
+                }
+            }
+
+            {
+                args.kernelVersion = KernelVersion::COEFFS_FIRST_3D_O0;
+                // args.wgsize = {16, 16, 4};
+                for (auto ws : wg_sizes)
+                {
+                    args.wgsize = {ws[0], ws[1], ws[2]};
+                    std::string name = std::string("residual_varying_stencil_coeffs_first_3d_o0_")
+                                           .append(std::to_string(m))
+                                           .append("_")
+                                           .append(std::to_string(n))
+                                           .append("_")
+                                           .append(std::to_string(o))
+                                           .append("_wg")
+                                           .append(std::to_string(ws[0]))
+                                           .append("x")
+                                           .append(std::to_string(ws[1]))
+                                           .append("x")
+                                           .append(std::to_string(ws[2]));
+
+                    bench.run(std::string(name).c_str(), [&] { //
+                        residual(args);
+                        p.finish();
+                    });
+
+                    bench_util::Result res;
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.m = m;
+                    res.n = n;
+                    res.o = o;
+                    results.push_back(res);
+
+                    if (CLI_ARGS::checkResults)
+                    {
+                        r_out_global_coeffs_first_3d_o0 = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                        args.c_dR.read(args.commands, r_out_global_coeffs_first_3d_o0.get(), true);
+                    }
+                }
+            }
+
             // Check results for kernels that it is valid for
             if (CLI_ARGS::checkResults)
             {
-                REQUIRE(r_out_global_coeffs_first->isEqual(*r_out_global_coeffs_4_gp_per_thread));
+                REQUIRE(r_out_global_coeffs_first_1d->isEqual(*r_out_global_coeffs_4_gp_per_thread));
+                REQUIRE(r_out_global_coeffs_first_1d->isEqual(*r_out_global_coeffs_first_3d_m0));
+                REQUIRE(r_out_global_coeffs_first_1d->isEqual(*r_out_global_coeffs_first_3d_o0));
             }
         }
 
