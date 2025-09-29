@@ -2,7 +2,9 @@
 #define NULL 0
 #endif
 
-/* Calculates residual without dinv */
+/* Calculates residual without dinv
+ * Uses layout [3x3x3][m,n,o] for stencilValues.
+ */
 __kernel void residual_27point_varying_stencil_coeffs_first_1d(
     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
     __global double* restrict f,
@@ -193,7 +195,7 @@ __kernel void residual_27point_varying_stencil_coeffs_first_3d_o0(
     const int moff, const int noff, const int ooff)
 
 {
-    int i = get_global_id(1);
+    int i = get_global_id(2);
     int j = get_global_id(1);
     int k = get_global_id(0);
 
@@ -261,6 +263,164 @@ __kernel void residual_27point_varying_stencil_coeffs_first_3d_o0(
         //     printf("ocl stencilsum = %e\n", stencilsum);
         //     print27point_sv(v_in, index, ioff, joff, koff, stencilValues, index_sv);
         // }
+
+        // r = f - A*v
+        r[index] = f[index] - stencilsum;
+    }
+}
+
+/**
+ * Uses layout [m,n,o][3x3x3] for stencilValues.
+ */
+__kernel void residual_27point_varying_stencil_gps_first_1d(
+    __global double* v_in,
+    __global double* f,
+    __global double* r,
+    __global double* stencilValues,
+    const int mgh, const int ngh, const int ogh,
+    const int svmgh, const int svngh, const int svogh, // not needed but for sake of simplicity
+    const int ghosts, const int ghosts_sv,
+    const int svGridSize, // not needed but for sake of simplicity
+    const int moff, const int noff, const int ooff)
+{
+    int idx = get_global_id(0);
+    int no = ngh * ogh;
+    int i = idx / no;
+    int j = (idx - i * no) / ogh;
+    int k = idx % ogh;
+
+    // loop boundaries
+    // TODO maybe refactor to use v_ghm, etc.?
+    int istart_v = ghosts + moff;
+    int jstart_v = ghosts + noff;
+    int kstart_v = ghosts + ooff;
+    int iend_v = mgh - ghosts - moff;
+    int jend_v = ngh - ghosts - noff;
+    int kend_v = ogh - ghosts - ooff;
+
+    // calculate residual only for relevant cells (off = 0: only real cells)
+    if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
+    {
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
+        int index = i * ioff + j * ogh + k;
+
+        int koff_sv = 27;
+        int joff_sv = ((ogh - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
+        int ioff_sv = ((ngh - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
+        int index_sv = (i + (ghosts_sv - ghosts)) * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
+
+        // A*v
+        // clang-format off
+        double stencilsum = stencilValues[index_sv + 9 + 3 + 1] * v_in[index]
+            + stencilValues[index_sv + 9 + 3]      * v_in[index - 1]
+            + stencilValues[index_sv + 9 + 3 + 2]  * v_in[index + 1]
+            + stencilValues[index_sv + 9 + 1]      * v_in[index - joff]
+            + stencilValues[index_sv + 9 + 6 + 1]  * v_in[index + joff]
+            + stencilValues[index_sv + 3 + 1]      * v_in[index - ioff]
+            + stencilValues[index_sv + 18 + 3 + 1] * v_in[index + ioff]
+            
+            + stencilValues[index_sv + 9]          * v_in[index - joff - koff]
+            + stencilValues[index_sv + 9 + 2]      * v_in[index - joff + koff]
+            + stencilValues[index_sv + 9 + 6]      * v_in[index + joff - koff]
+            + stencilValues[index_sv + 9 + 6 + 2]  * v_in[index + joff + koff]
+            + stencilValues[index_sv + 3]          * v_in[index - ioff - koff]
+            + stencilValues[index_sv + 3 + 2]      * v_in[index - ioff + koff]
+            + stencilValues[index_sv + 18 + 3]     * v_in[index + ioff - koff]
+            + stencilValues[index_sv + 18 + 3 + 2] * v_in[index + ioff + koff]
+            + stencilValues[index_sv + 1]          * v_in[index - ioff - joff]
+            + stencilValues[index_sv + 6 + 1]      * v_in[index - ioff + joff]
+            + stencilValues[index_sv + 18 + 1]     * v_in[index + ioff - joff]
+            + stencilValues[index_sv + 18 + 6 + 1] * v_in[index + ioff + joff]
+
+            + stencilValues[index_sv]              * v_in[index - ioff - joff - koff]
+            + stencilValues[index_sv + 2]          * v_in[index - ioff - joff + koff]
+            + stencilValues[index_sv + 6]          * v_in[index - ioff + joff - koff]
+            + stencilValues[index_sv + 6 + 2]      * v_in[index - ioff + joff + koff]
+            + stencilValues[index_sv + 18]         * v_in[index + ioff - joff - koff]
+            + stencilValues[index_sv + 18 + 2]     * v_in[index + ioff - joff + koff]
+            + stencilValues[index_sv + 18 + 6]     * v_in[index + ioff + joff - koff]
+            + stencilValues[index_sv + 18 + 6 + 2] * v_in[index + ioff + joff + koff];
+        // clang-format on
+
+        // r = f - A*v
+        r[index] = f[index] - stencilsum;
+    }
+}
+
+/**
+ * Uses layout [m,n,o][3x3x3] for stencilValues.
+ */
+__kernel void residual_27point_varying_stencil_gps_first_3d_o0(
+    __global double* v_in,
+    __global double* f,
+    __global double* r,
+    __global double* stencilValues,
+    const int mgh, const int ngh, const int ogh,
+    const int svmgh, const int svngh, const int svogh, // not needed but for sake of simplicity
+    const int ghosts, const int ghosts_sv,
+    const int svGridSize, // not needed but for sake of simplicity
+    const int moff, const int noff, const int ooff)
+{
+    int i = get_global_id(2);
+    int j = get_global_id(1);
+    int k = get_global_id(0);
+
+    // loop boundaries
+    // TODO maybe refactor to use v_ghm, etc.?
+    int istart_v = ghosts + moff;
+    int jstart_v = ghosts + noff;
+    int kstart_v = ghosts + ooff;
+    int iend_v = mgh - ghosts - moff;
+    int jend_v = ngh - ghosts - noff;
+    int kend_v = ogh - ghosts - ooff;
+
+    // calculate residual only for relevant cells (off = 0: only real cells)
+    if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
+    {
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
+        int index = i * ioff + j * ogh + k;
+
+        int koff_sv = 27;
+        int joff_sv = ((ogh - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
+        int ioff_sv = ((ngh - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
+        int index_sv = (i + (ghosts_sv - ghosts)) * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
+
+        // A*v
+        // clang-format off
+        double stencilsum = stencilValues[index_sv + 9 + 3 + 1] * v_in[index]
+            + stencilValues[index_sv + 9 + 3]      * v_in[index - 1]
+            + stencilValues[index_sv + 9 + 3 + 2]  * v_in[index + 1]
+            + stencilValues[index_sv + 9 + 1]      * v_in[index - joff]
+            + stencilValues[index_sv + 9 + 6 + 1]  * v_in[index + joff]
+            + stencilValues[index_sv + 3 + 1]      * v_in[index - ioff]
+            + stencilValues[index_sv + 18 + 3 + 1] * v_in[index + ioff]
+            
+            + stencilValues[index_sv + 9]          * v_in[index - joff - koff]
+            + stencilValues[index_sv + 9 + 2]      * v_in[index - joff + koff]
+            + stencilValues[index_sv + 9 + 6]      * v_in[index + joff - koff]
+            + stencilValues[index_sv + 9 + 6 + 2]  * v_in[index + joff + koff]
+            + stencilValues[index_sv + 3]          * v_in[index - ioff - koff]
+            + stencilValues[index_sv + 3 + 2]      * v_in[index - ioff + koff]
+            + stencilValues[index_sv + 18 + 3]     * v_in[index + ioff - koff]
+            + stencilValues[index_sv + 18 + 3 + 2] * v_in[index + ioff + koff]
+            + stencilValues[index_sv + 1]          * v_in[index - ioff - joff]
+            + stencilValues[index_sv + 6 + 1]      * v_in[index - ioff + joff]
+            + stencilValues[index_sv + 18 + 1]     * v_in[index + ioff - joff]
+            + stencilValues[index_sv + 18 + 6 + 1] * v_in[index + ioff + joff]
+
+            + stencilValues[index_sv]              * v_in[index - ioff - joff - koff]
+            + stencilValues[index_sv + 2]          * v_in[index - ioff - joff + koff]
+            + stencilValues[index_sv + 6]          * v_in[index - ioff + joff - koff]
+            + stencilValues[index_sv + 6 + 2]      * v_in[index - ioff + joff + koff]
+            + stencilValues[index_sv + 18]         * v_in[index + ioff - joff - koff]
+            + stencilValues[index_sv + 18 + 2]     * v_in[index + ioff - joff + koff]
+            + stencilValues[index_sv + 18 + 6]     * v_in[index + ioff + joff - koff]
+            + stencilValues[index_sv + 18 + 6 + 2] * v_in[index + ioff + joff + koff];
+        // clang-format on
 
         // r = f - A*v
         r[index] = f[index] - stencilsum;

@@ -32,8 +32,10 @@ namespace mgcl_bench_residual_varying
     enum class KernelVersion
     {
         COEFFS_FIRST_1D,
+        GPS_FIRST_1D,
         COEFFS_FIRST_3D_M0,
         COEFFS_FIRST_3D_O0,
+        GPS_FIRST_3D_O0,
         REMOVED_V,
         // COEFFS_WITHOUT_GHOSTS // not needed, using COEFFS_FIRST for this
         FOUR_GP_PER_WI,
@@ -154,6 +156,14 @@ namespace mgcl_bench_residual_varying
         {
             kernelName = "residual_27point_varying_stencil_coeffs_first_3d_o0";
         }
+        else if (args.kernelVersion == KernelVersion::GPS_FIRST_1D)
+        {
+            kernelName = "residual_27point_varying_stencil_gps_first_1d";
+        }
+        else if (args.kernelVersion == KernelVersion::GPS_FIRST_3D_O0)
+        {
+            kernelName = "residual_27point_varying_stencil_gps_first_3d_o0";
+        }
 
         cl_event ev;
 
@@ -206,42 +216,14 @@ namespace mgcl_bench_residual_varying
                 err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ooff);
             }
         }
-        else if (args.stencilType == mgcl::MGCL_FIXED)
-        {
-            auto fs_buf = args.c_fixedStencil->getBuf();
-            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &fs_buf);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.mgh);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ngh);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ogh);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ghosts);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.moff);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.noff);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ooff);
-        }
-        else
-        {
-            err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &dVIn);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dF);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &dR);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(double), &h2inv);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.mgh);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ngh);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ogh);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ghosts);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.moff);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.noff);
-            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &args.ooff);
-        }
 
         mgcl::mgclCheckError(err, "Setting residual kernel arguments");
 
         size_t global[3];
         size_t local[3];
         bool is3dKernel = (args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_M0 ||
-                           args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_O0);
+                           args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_O0 ||
+                           args.kernelVersion == KernelVersion::GPS_FIRST_3D_O0);
         if (is3dKernel)
         {
             global[0] = static_cast<size_t>(args.mgh);
@@ -454,6 +436,8 @@ namespace mgcl_bench_residual_varying
             // std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_indices_precalc = nullptr;
             // std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_without_ghosts = nullptr;
             std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_4_gp_per_thread = nullptr;
+            // std::unique_ptr<mgcl::Cuboid> r_out_global_gps_first_1d = nullptr;
+            // std::unique_ptr<mgcl::Cuboid> r_out_global_gps_first_3d_m0 = nullptr;
             if (CLI_ARGS::checkResults)
             {
                 bench.epochs(1).epochIterations(1);
@@ -489,6 +473,41 @@ namespace mgcl_bench_residual_varying
                     r_out_global_coeffs_first_1d = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
                     args.c_dR.read(args.commands, r_out_global_coeffs_first_1d.get(), true);
                 }
+            }
+
+            {
+                // result check will be wrong since we just use stencilValues with [coeffs][m,n,o] layout! For timings,
+                // only the access pattern matters and we don't run into illegal memory accesses since the overall size
+                // is the same.
+                args.kernelVersion = KernelVersion::GPS_FIRST_1D;
+                std::string name = std::string("residual_varying_stencil_gps_first_1d_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    residual(args);
+                    p.finish();
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+
+                // if (CLI_ARGS::checkResults)
+                // {
+                //     r_out_global_gps_first_1d = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                //     args.c_dR.read(args.commands, r_out_global_gps_first_1d.get(), true);
+                // }
             }
 
             if (m == 64)
@@ -718,6 +737,41 @@ namespace mgcl_bench_residual_varying
                         r_out_global_coeffs_first_3d_o0 = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
                         args.c_dR.read(args.commands, r_out_global_coeffs_first_3d_o0.get(), true);
                     }
+                }
+
+                {
+                    // result check will be wrong since we just use stencilValues with [coeffs][m,n,o] layout! For timings,
+                    // only the access pattern matters and we don't run into illegal memory accesses since the overall size
+                    // is the same.
+                    args.kernelVersion = KernelVersion::GPS_FIRST_3D_O0;
+                    std::string name = std::string("residual_27point_varying_stencil_gps_first_3d_o0")
+                                           .append(std::to_string(m))
+                                           .append("_")
+                                           .append(std::to_string(n))
+                                           .append("_")
+                                           .append(std::to_string(o));
+
+                    bench.run(std::string(name).c_str(), [&] { //
+                        residual(args);
+                        p.finish();
+                    });
+
+                    bench_util::Result res;
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.m = m;
+                    res.n = n;
+                    res.o = o;
+                    results.push_back(res);
+
+                    // if (CLI_ARGS::checkResults)
+                    // {
+                    //     r_out_global_gps_first_1d = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                    //     args.c_dR.read(args.commands, r_out_global_gps_first_1d.get(), true);
+                    // }
                 }
             }
 
