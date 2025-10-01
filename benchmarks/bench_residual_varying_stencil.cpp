@@ -314,13 +314,16 @@ namespace mgcl_bench_residual_varying
             // if (mgh >= 32 && ngh >= 32 && ogh >= 32)
             //     local[2] = 16;
 
-            for (int i = 0; i < 3; i++)
-                if (global[i] % local[i] != 0)
-                {
-                    // printf("padding global size %d from %ld to ", i, global[i]);
-                    global[i] += local[i] - (global[i] % local[i]);
-                    // printf("%ld (multiple of %ld)\n", global[i], local[i]);
-                }
+            if (local[0] > 0)
+            {
+                for (int i = 0; i < 3; i++)
+                    if (global[i] % local[i] != 0)
+                    {
+                        // printf("padding global size %d from %ld to ", i, global[i]);
+                        global[i] += local[i] - (global[i] % local[i]);
+                        // printf("%ld (multiple of %ld)\n", global[i], local[i]);
+                    }
+            }
         }
         else
         {
@@ -349,8 +352,11 @@ namespace mgcl_bench_residual_varying
             // const auto& c = mgcl::conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
             local[0] = args.wgsize.x; // c[0];
 
-            if (global[0] % local[0] != 0)
-                global[0] += local[0] - (global[0] % local[0]);
+            if (local[0] > 0)
+            {
+                if (global[0] % local[0] != 0)
+                    global[0] += local[0] - (global[0] % local[0]);
+            }
 
             global[1] = 1;
             global[2] = 1;
@@ -358,7 +364,7 @@ namespace mgcl_bench_residual_varying
             local[2] = 1;
         }
 
-        err = clEnqueueNDRangeKernel(args.commands, kernel, is3dKernel ? 3 : 1, NULL, global, local, 0, NULL, &ev);
+        err = clEnqueueNDRangeKernel(args.commands, kernel, is3dKernel ? 3 : 1, NULL, global, local[0] > 0 ? local : NULL, 0, NULL, &ev);
         mgcl::mgclCheckError(err, "Enqueueing residual kernel");
 
         if (args.pd)
@@ -991,7 +997,7 @@ namespace mgcl_bench_residual_varying
             //     // }
             // }
 
-            std::vector<std::vector<size_t>> wg_sizes = {{4, 4, 4}, {1, 1, 16}, {1, 1, 32}, {1, 1, 64}, {16, 1, 1}, {32, 1, 1}, {64, 1, 1}};
+            std::vector<std::vector<size_t>> wg_sizes = {{0, 0, 0}, {4, 4, 4}, {1, 1, 16}, {1, 1, 32}, {1, 1, 64}, {16, 1, 1}, {32, 1, 1}, {64, 1, 1}};
             {
                 c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
                 args.kernelVersion = KernelVersion::COEFFS_FIRST_3D_M0;
