@@ -1475,8 +1475,8 @@ __kernel void residual_27point_varying_stencil_1d_mult_wi_per_cell_4_sv_spread_s
     const int m, const int n, const int o,
     const int svmgh, const int svngh, const int svogh, // not needed but for sake of simplicity
     const int ghosts, const int ghosts_sv,
-    const int moff, const int noff, const int ooff,
     const int svGridSize, // not needed but for sake of simplicity
+    const int moff, const int noff, const int ooff,
     const int wiPerGridPoint
     // ,const int gridPointsPerBlock, const int gridsize
 )
@@ -1492,9 +1492,15 @@ __kernel void residual_27point_varying_stencil_1d_mult_wi_per_cell_4_sv_spread_s
     // if (i == ghosts && j == ghosts && k == ghosts)
     //     printf("idx %d, idx_gp %d\n", idx, idx_gp);
 
+    int istart_v = ghosts + moff;
+    int jstart_v = ghosts + noff;
+    int kstart_v = ghosts + ooff;
+    int iend_v = m - ghosts - moff;
+    int jend_v = n - ghosts - noff;
+    int kend_v = o - ghosts - ooff;
+
     // calculate residual only for relevant cells (off = 0: only real cells)
-    if (i >= ghosts + moff && j >= ghosts + noff && k >= ghosts + ooff &&
-        i < m - ghosts - moff && j < n - ghosts - noff && k < o - ghosts - ooff)
+    if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
     {
         int ioff = n * o;
         int joff = o;
@@ -1597,8 +1603,8 @@ __kernel void residual_27point_varying_stencil_1d_mult_wi_per_cell_2_sv_spread_s
     const int m, const int n, const int o,
     const int svmgh, const int svngh, const int svogh, // not needed but for sake of simplicity
     const int ghosts, const int ghosts_sv,
-    const int moff, const int noff, const int ooff,
     const int svGridSize, // not needed but for sake of simplicity
+    const int moff, const int noff, const int ooff,
     const int wiPerGridPoint
     // , const int gridPointsPerBlock, const int gridsize
 )

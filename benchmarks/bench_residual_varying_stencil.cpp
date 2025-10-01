@@ -546,6 +546,7 @@ namespace mgcl_bench_residual_varying
             }
 
             {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
                 args.kernelVersion = KernelVersion::COEFFS_FIRST_1D;
                 std::string name = std::string("residual_varying_stencil_coeffs_first_1d_")
                                        .append(std::to_string(m))
@@ -578,6 +579,7 @@ namespace mgcl_bench_residual_varying
             }
 
             {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
                 // result check will be wrong since we just use stencilValues with [coeffs][m,n,o] layout! For timings,
                 // only the access pattern matters and we don't run into illegal memory accesses since the overall size
                 // is the same.
@@ -614,6 +616,7 @@ namespace mgcl_bench_residual_varying
 
             if (m == 64)
             {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
                 args.kernelVersion = KernelVersion::COEFF_INDICES_PRECALC;
                 std::string name = std::string("residual_varying_stencil_coeff_indices_precalc_")
                                        .append(std::to_string(m))
@@ -646,6 +649,7 @@ namespace mgcl_bench_residual_varying
             }
 
             {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
                 args.kernelVersion = KernelVersion::FOUR_GP_PER_WI;
                 std::string name = std::string("residual_varying_stencil_coeffs_first_4_gps_per_thread")
                                        .append(std::to_string(m))
@@ -678,6 +682,7 @@ namespace mgcl_bench_residual_varying
             }
 
             {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
                 args.kernelVersion = KernelVersion::GPS_FIRST_1D_RESTRUCTURED;
                 std::string name = std::string("residual_varying_stencil_gps_first_1d_restructured_")
                                        .append(std::to_string(m))
@@ -710,6 +715,7 @@ namespace mgcl_bench_residual_varying
             }
 
             {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
 
                 args.kernelVersion = KernelVersion::GPS_FIRST_1D_REAL_ONLY;
                 std::string name = std::string("residual_varying_stencil_gps_first_1d_real_only_")
@@ -743,6 +749,7 @@ namespace mgcl_bench_residual_varying
             }
 
             {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
                 args.kernelVersion = KernelVersion::GPS_FIRST_1D_2WI_PER_GP;
                 std::string name = std::string("residual_varying_stencil_gps_first_1d_2wi_per_gp_")
                                        .append(std::to_string(m))
@@ -775,6 +782,7 @@ namespace mgcl_bench_residual_varying
             }
 
             {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
                 args.kernelVersion = KernelVersion::GPS_FIRST_1D_4WI_PER_GP;
                 std::string name = std::string("residual_varying_stencil_gps_first_1d_4wi_per_gp_")
                                        .append(std::to_string(m))
@@ -807,6 +815,7 @@ namespace mgcl_bench_residual_varying
             }
 
             {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
                 args.kernelVersion = KernelVersion::COEFFS_FIRST_1D_4WI_PER_GP;
                 std::string name = std::string("residual_varying_stencil_coeffs_first_1d_4wi_per_gp_")
                                        .append(std::to_string(m))
@@ -839,6 +848,7 @@ namespace mgcl_bench_residual_varying
             }
 
             {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
                 args.kernelVersion = KernelVersion::COEFFS_FIRST_1D_4WI_PER_GP_SHMEM_SPREAD;
                 std::string name = std::string("residual_varying_stencil_coeffs_first_1d_4wi_per_gp_shmem_spread_")
                                        .append(std::to_string(m))
@@ -871,6 +881,7 @@ namespace mgcl_bench_residual_varying
             }
 
             {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
                 args.kernelVersion = KernelVersion::COEFFS_FIRST_1D_2WI_PER_GP_SHMEM_SPREAD;
                 std::string name = std::string("residual_varying_stencil_coeffs_first_1d_2wi_per_gp_shmem_spread_")
                                        .append(std::to_string(m))
@@ -982,6 +993,7 @@ namespace mgcl_bench_residual_varying
 
             std::vector<std::vector<size_t>> wg_sizes = {{4, 4, 4}, {1, 1, 16}, {1, 1, 32}, {1, 1, 64}, {16, 1, 1}, {32, 1, 1}, {64, 1, 1}};
             {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
                 args.kernelVersion = KernelVersion::COEFFS_FIRST_3D_M0;
                 // args.wgsize = {16, 16, 4};
                 for (auto ws : wg_sizes)
@@ -1025,6 +1037,7 @@ namespace mgcl_bench_residual_varying
             }
 
             {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
                 args.kernelVersion = KernelVersion::COEFFS_FIRST_3D_O0;
                 // args.wgsize = {16, 16, 4};
                 for (auto ws : wg_sizes)
