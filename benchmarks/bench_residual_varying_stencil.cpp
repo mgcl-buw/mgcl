@@ -999,6 +999,7 @@ namespace mgcl_bench_residual_varying
 
             // std::vector<std::vector<size_t>> wg_sizes = {{0, 0, 0}, {4, 4, 4}, {1, 1, 16}, {1, 1, 32}, {1, 1, 64}, {16, 1, 1}, {32, 1, 1}, {64, 1, 1}};
             std::vector<std::vector<size_t>> wg_sizes = {{8, 1, 1}, {16, 1, 1}, {32, 1, 1}, {64, 1, 1}, {96, 1, 1}, {128, 1, 1}, {256, 1, 1}};
+            // std::vector<std::vector<size_t>> wg_sizes = {{8, 1, 1}, {16, 1, 1}, {32, 1, 1}, {32, 2, 1}, {32, 4, 1}, {64, 1, 1}, {96, 1, 1}, {128, 1, 1}, {256, 1, 1}};
             // {
             //     c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
             //     args.kernelVersion = KernelVersion::COEFFS_FIRST_3D_M0;
