@@ -95,10 +95,10 @@ namespace mgcl
         // Iterate over all measurements per kernel
         for (const auto& entry : measurements)
         {
-            // Create map per work-item count with measurements for the current kernel
-            std::map<int, std::vector<ProfilingMeasurement>> tmp;
+            // Group measurements by work-item count and work-group size
+            std::map<std::string, std::vector<ProfilingMeasurement>> tmp;
             for (const auto& m : entry.second)
-                tmp[m.work_items[0] * (m.work_items[1] > 0 ? m.work_items[1] : 1) * (m.work_items[2] > 0 ? m.work_items[2] : 1)].push_back(m);
+                tmp[std::to_string(m.work_items[0]) + "," + std::to_string(m.work_items[1]) + "," + std::to_string(m.work_items[2]) + "," + std::to_string(m.work_group[0]) + "," + std::to_string(m.work_group[1]) + "," + std::to_string(m.work_group[2])].push_back(m);
 
             // Find and print minimum elapsed time per work-item count for the current kernel
             for (const auto& m : tmp)
@@ -146,10 +146,10 @@ namespace mgcl
         // Iterate over all measurements per kernel
         for (const auto& entry : measurements)
         {
-            // Create map per work-item count with measurements for the current kernel
-            std::map<int, std::vector<ProfilingMeasurement>> tmp;
+            // Group measurements by work-item count and work-group size
+            std::map<std::string, std::vector<ProfilingMeasurement>> tmp;
             for (const auto& m : entry.second)
-                tmp[m.work_items[0] * (m.work_items[1] > 0 ? m.work_items[1] : 1) * (m.work_items[2] > 0 ? m.work_items[2] : 1)].push_back(m);
+                tmp[std::to_string(m.work_items[0]) + "," + std::to_string(m.work_items[1]) + "," + std::to_string(m.work_items[2]) + "," + std::to_string(m.work_group[0]) + "," + std::to_string(m.work_group[1]) + "," + std::to_string(m.work_group[2])].push_back(m);
 
             // Find and print minimum elapsed time per work-item count for the current kernel
             for (const auto& m : tmp)
