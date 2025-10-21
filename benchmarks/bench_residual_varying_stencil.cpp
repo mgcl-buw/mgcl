@@ -853,69 +853,84 @@ namespace mgcl_bench_residual_varying
                 }
             }
 
+            std::vector<std::vector<size_t>> wg_sizes_shmem = {{128, 1, 1}, {32, 1, 1}, {64, 1, 1}, {192, 1, 1}, {256, 1, 1}, {464, 1, 1}, {512, 1, 1}};
             {
-                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
-                args.kernelVersion = KernelVersion::COEFFS_FIRST_1D_4WI_PER_GP_SHMEM_SPREAD;
-                std::string name = std::string("residual_varying_stencil_coeffs_first_1d_4wi_per_gp_shmem_spread_")
-                                       .append(std::to_string(m))
-                                       .append("_")
-                                       .append(std::to_string(n))
-                                       .append("_")
-                                       .append(std::to_string(o));
-
-                bench.run(std::string(name).c_str(), [&] { //
-                    residual(args);
-                    p.finish();
-                });
-
-                bench_util::Result res;
-                res.name = name;
-                res.minTime = bench_util::getMinTime(bench, name);
-                res.medianTime = bench_util::getMedianTime(bench, name);
-                res.avgTime = bench_util::getAvgTime(bench, name);
-                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                res.m = m;
-                res.n = n;
-                res.o = o;
-                results.push_back(res);
-
-                if (CLI_ARGS::checkResults)
+                for (auto ws : wg_sizes_shmem)
                 {
-                    r_out_global_coeffs_first_1d_4wi_per_gp_shmem_spread = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                    args.c_dR.read(args.commands, r_out_global_coeffs_first_1d_4wi_per_gp_shmem_spread.get(), true);
+                    c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                    args.kernelVersion = KernelVersion::COEFFS_FIRST_1D_4WI_PER_GP_SHMEM_SPREAD;
+                    args.wgsize = {ws[0], ws[1], ws[2]};
+                    std::string name = std::string("residual_varying_stencil_coeffs_first_1d_4wi_per_gp_shmem_spread_")
+                                           .append(std::to_string(m))
+                                           .append("_")
+                                           .append(std::to_string(n))
+                                           .append("_")
+                                           .append(std::to_string(o));
+
+                    bench.run(std::string(name).c_str(), [&] { //
+                        residual(args);
+                        p.finish();
+                    });
+
+                    bench_util::Result res;
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.m = m;
+                    res.n = n;
+                    res.o = o;
+                    results.push_back(res);
+
+                    if (CLI_ARGS::checkResults)
+                    {
+                        r_out_global_coeffs_first_1d_4wi_per_gp_shmem_spread = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                        args.c_dR.read(args.commands, r_out_global_coeffs_first_1d_4wi_per_gp_shmem_spread.get(), true);
+                    }
                 }
             }
 
             {
-                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
-                args.kernelVersion = KernelVersion::COEFFS_FIRST_1D_2WI_PER_GP_SHMEM_SPREAD;
-                std::string name = std::string("residual_varying_stencil_coeffs_first_1d_2wi_per_gp_shmem_spread_")
-                                       .append(std::to_string(m))
-                                       .append("_")
-                                       .append(std::to_string(n))
-                                       .append("_")
-                                       .append(std::to_string(o));
-
-                bench.run(std::string(name).c_str(), [&] { //
-                    residual(args);
-                    p.finish();
-                });
-
-                bench_util::Result res;
-                res.name = name;
-                res.minTime = bench_util::getMinTime(bench, name);
-                res.medianTime = bench_util::getMedianTime(bench, name);
-                res.avgTime = bench_util::getAvgTime(bench, name);
-                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                res.m = m;
-                res.n = n;
-                res.o = o;
-                results.push_back(res);
-
-                if (CLI_ARGS::checkResults)
+                for (auto ws : wg_sizes_shmem)
                 {
-                    r_out_global_coeffs_first_1d_2wi_per_gp_shmem_spread = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                    args.c_dR.read(args.commands, r_out_global_coeffs_first_1d_2wi_per_gp_shmem_spread.get(), true);
+                    c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                    args.kernelVersion = KernelVersion::COEFFS_FIRST_1D_2WI_PER_GP_SHMEM_SPREAD;
+                    args.wgsize = {ws[0], ws[1], ws[2]};
+                    std::string name = std::string("residual_varying_stencil_coeffs_first_1d_2wi_per_gp_shmem_spread_")
+                                           .append(std::to_string(m))
+                                           .append("_")
+                                           .append(std::to_string(n))
+                                           .append("_")
+                                           .append(std::to_string(o))
+                                           .append("_wg")
+                                           .append(std::to_string(ws[0]))
+                                           .append("x")
+                                           .append(std::to_string(ws[1]))
+                                           .append("x")
+                                           .append(std::to_string(ws[2]));
+
+                    bench.run(std::string(name).c_str(), [&] { //
+                        residual(args);
+                        p.finish();
+                    });
+
+                    bench_util::Result res;
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.m = m;
+                    res.n = n;
+                    res.o = o;
+                    results.push_back(res);
+
+                    if (CLI_ARGS::checkResults)
+                    {
+                        r_out_global_coeffs_first_1d_2wi_per_gp_shmem_spread = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                        args.c_dR.read(args.commands, r_out_global_coeffs_first_1d_2wi_per_gp_shmem_spread.get(), true);
+                    }
                 }
             }
 
