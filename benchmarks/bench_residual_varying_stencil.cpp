@@ -43,6 +43,7 @@ namespace mgcl_bench_residual_varying
         COEFFS_FIRST_1D_4WI_PER_GP,
         COEFFS_FIRST_1D_2WI_PER_GP_SHMEM_SPREAD,
         COEFFS_FIRST_1D_4WI_PER_GP_SHMEM_SPREAD,
+        COEFFS_FIRST_3D_4WI_PER_GP_SHMEM_SPREAD,
 
         REMOVED_V,
         // COEFFS_WITHOUT_GHOSTS // not needed, using COEFFS_FIRST for this
@@ -196,6 +197,10 @@ namespace mgcl_bench_residual_varying
         {
             kernelName = "residual_27point_varying_stencil_1d_mult_wi_per_cell_4_sv_spread_shmem_spread";
         }
+        else if (args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_4WI_PER_GP_SHMEM_SPREAD)
+        {
+            kernelName = "residual_27point_varying_stencil_3d_mult_wi_per_cell_4_sv_spread_shmem_spread";
+        }
         else if (args.kernelVersion == KernelVersion::COEFFS_FIRST_1D_2WI_PER_GP_SHMEM_SPREAD)
         {
             kernelName = "residual_27point_varying_stencil_1d_mult_wi_per_cell_2_sv_spread_shmem_spread";
@@ -217,6 +222,7 @@ namespace mgcl_bench_residual_varying
 
         bool isMultipleWisPerGp = (args.kernelVersion == KernelVersion::COEFFS_FIRST_1D_2WI_PER_GP_SHMEM_SPREAD ||
                                    args.kernelVersion == KernelVersion::COEFFS_FIRST_1D_4WI_PER_GP_SHMEM_SPREAD ||
+                                   args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_4WI_PER_GP_SHMEM_SPREAD ||
                                    args.kernelVersion == KernelVersion::COEFFS_FIRST_1D_4WI_PER_GP ||
                                    args.kernelVersion == KernelVersion::GPS_FIRST_1D_4WI_PER_GP ||
                                    args.kernelVersion == KernelVersion::GPS_FIRST_1D_2WI_PER_GP);
@@ -301,18 +307,31 @@ namespace mgcl_bench_residual_varying
         size_t local[3];
         bool is3dKernel = (args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_M0 ||
                            args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_O0 ||
-                           args.kernelVersion == KernelVersion::GPS_FIRST_3D_O0);
+                           args.kernelVersion == KernelVersion::GPS_FIRST_3D_O0 ||
+                           args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_4WI_PER_GP_SHMEM_SPREAD);
         if (is3dKernel)
         {
             global[0] = static_cast<size_t>(args.mgh);
             global[1] = static_cast<size_t>(args.ngh);
             global[2] = static_cast<size_t>(args.ogh);
+
             local[0] = args.wgsize.x;
             local[1] = args.wgsize.y;
             local[2] = args.wgsize.z;
             // decrease wg size for bigger grids
             // if (mgh >= 32 && ngh >= 32 && ogh >= 32)
             //     local[2] = 16;
+
+            if (args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_4WI_PER_GP_SHMEM_SPREAD)
+            {
+                global[0] = static_cast<size_t>(args.ogh * 4);
+                global[1] = static_cast<size_t>(args.ngh);
+                global[2] = static_cast<size_t>(args.mgh);
+
+                local[0] = args.wgsize.x;
+                local[1] = args.wgsize.y;
+                local[2] = args.wgsize.z;
+            }
 
             if (local[0] > 0)
             {
@@ -541,6 +560,7 @@ namespace mgcl_bench_residual_varying
             std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first_1d_4wi_per_gp = nullptr;
             std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first_1d_4wi_per_gp_shmem_spread = nullptr;
             std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first_1d_2wi_per_gp_shmem_spread = nullptr;
+            std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first_3d_4wi_per_gp_shmem_spread = nullptr;
             // std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_indices_precalc = nullptr;
             // std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_without_ghosts = nullptr;
             std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_4_gp_per_thread = nullptr;
@@ -865,7 +885,13 @@ namespace mgcl_bench_residual_varying
                                            .append("_")
                                            .append(std::to_string(n))
                                            .append("_")
-                                           .append(std::to_string(o));
+                                           .append(std::to_string(o))
+                                           .append("_wg")
+                                           .append(std::to_string(ws[0]))
+                                           .append("x")
+                                           .append(std::to_string(ws[1]))
+                                           .append("x")
+                                           .append(std::to_string(ws[2]));
 
                     bench.run(std::string(name).c_str(), [&] { //
                         residual(args);
@@ -930,6 +956,50 @@ namespace mgcl_bench_residual_varying
                     {
                         r_out_global_coeffs_first_1d_2wi_per_gp_shmem_spread = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
                         args.c_dR.read(args.commands, r_out_global_coeffs_first_1d_2wi_per_gp_shmem_spread.get(), true);
+                    }
+                }
+            }
+
+            std::vector<std::vector<size_t>> wg_sizes_shmem_3d = {{128, 1, 1}, {32, 1, 1}, {64, 1, 1}};
+            {
+                for (auto ws : wg_sizes_shmem_3d)
+                {
+                    c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                    args.kernelVersion = KernelVersion::COEFFS_FIRST_3D_4WI_PER_GP_SHMEM_SPREAD;
+                    args.wgsize = {ws[0], ws[1], ws[2]};
+                    std::string name = std::string("residual_varying_stencil_coeffs_first_3d_4wi_per_gp_shmem_spread_")
+                                           .append(std::to_string(m))
+                                           .append("_")
+                                           .append(std::to_string(n))
+                                           .append("_")
+                                           .append(std::to_string(o))
+                                           .append("_wg")
+                                           .append(std::to_string(ws[0]))
+                                           .append("x")
+                                           .append(std::to_string(ws[1]))
+                                           .append("x")
+                                           .append(std::to_string(ws[2]));
+
+                    bench.run(std::string(name).c_str(), [&] { //
+                        residual(args);
+                        p.finish();
+                    });
+
+                    bench_util::Result res;
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.m = m;
+                    res.n = n;
+                    res.o = o;
+                    results.push_back(res);
+
+                    if (CLI_ARGS::checkResults)
+                    {
+                        r_out_global_coeffs_first_3d_4wi_per_gp_shmem_spread = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                        args.c_dR.read(args.commands, r_out_global_coeffs_first_3d_4wi_per_gp_shmem_spread.get(), true);
                     }
                 }
             }
@@ -1013,51 +1083,52 @@ namespace mgcl_bench_residual_varying
             // }
 
             // std::vector<std::vector<size_t>> wg_sizes = {{0, 0, 0}, {4, 4, 4}, {1, 1, 16}, {1, 1, 32}, {1, 1, 64}, {16, 1, 1}, {32, 1, 1}, {64, 1, 1}};
-            std::vector<std::vector<size_t>> wg_sizes = {{8, 1, 1}, {16, 1, 1}, {32, 1, 1}, {64, 1, 1}, {96, 1, 1}, {128, 1, 1}, {256, 1, 1}};
+            // std::vector<std::vector<size_t>> wg_sizes = {{8, 1, 1}, {16, 1, 1}, {32, 1, 1}, {64, 1, 1}, {96, 1, 1}, {128, 1, 1}, {256, 1, 1}};
+            std::vector<std::vector<size_t>> wg_sizes = {{32, 1, 1}};
             // std::vector<std::vector<size_t>> wg_sizes = {{8, 1, 1}, {16, 1, 1}, {32, 1, 1}, {32, 2, 1}, {32, 4, 1}, {64, 1, 1}, {96, 1, 1}, {128, 1, 1}, {256, 1, 1}};
-            // {
-            //     c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
-            //     args.kernelVersion = KernelVersion::COEFFS_FIRST_3D_M0;
-            //     // args.wgsize = {16, 16, 4};
-            //     for (auto ws : wg_sizes)
-            //     {
-            //         args.wgsize = {ws[0], ws[1], ws[2]};
-            //         std::string name = std::string("residual_varying_stencil_coeffs_first_3d_m0_")
-            //                                .append(std::to_string(m))
-            //                                .append("_")
-            //                                .append(std::to_string(n))
-            //                                .append("_")
-            //                                .append(std::to_string(o))
-            //                                .append("_wg")
-            //                                .append(std::to_string(ws[0]))
-            //                                .append("x")
-            //                                .append(std::to_string(ws[1]))
-            //                                .append("x")
-            //                                .append(std::to_string(ws[2]));
+            {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                args.kernelVersion = KernelVersion::COEFFS_FIRST_3D_M0;
+                // args.wgsize = {16, 16, 4};
+                for (auto ws : wg_sizes)
+                {
+                    args.wgsize = {ws[0], ws[1], ws[2]};
+                    std::string name = std::string("residual_varying_stencil_coeffs_first_3d_m0_")
+                                           .append(std::to_string(m))
+                                           .append("_")
+                                           .append(std::to_string(n))
+                                           .append("_")
+                                           .append(std::to_string(o))
+                                           .append("_wg")
+                                           .append(std::to_string(ws[0]))
+                                           .append("x")
+                                           .append(std::to_string(ws[1]))
+                                           .append("x")
+                                           .append(std::to_string(ws[2]));
 
-            //         bench.run(std::string(name).c_str(), [&] { //
-            //             residual(args);
-            //             p.finish();
-            //         });
+                    bench.run(std::string(name).c_str(), [&] { //
+                        residual(args);
+                        p.finish();
+                    });
 
-            //         bench_util::Result res;
-            //         res.name = name;
-            //         res.minTime = bench_util::getMinTime(bench, name);
-            //         res.medianTime = bench_util::getMedianTime(bench, name);
-            //         res.avgTime = bench_util::getAvgTime(bench, name);
-            //         res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-            //         res.m = m;
-            //         res.n = n;
-            //         res.o = o;
-            //         results.push_back(res);
+                    bench_util::Result res;
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.m = m;
+                    res.n = n;
+                    res.o = o;
+                    results.push_back(res);
 
-            //         if (CLI_ARGS::checkResults)
-            //         {
-            //             r_out_global_coeffs_first_3d_m0 = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-            //             args.c_dR.read(args.commands, r_out_global_coeffs_first_3d_m0.get(), true);
-            //         }
-            //     }
-            // }
+                    if (CLI_ARGS::checkResults)
+                    {
+                        r_out_global_coeffs_first_3d_m0 = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                        args.c_dR.read(args.commands, r_out_global_coeffs_first_3d_m0.get(), true);
+                    }
+                }
+            }
 
             {
                 c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
@@ -1102,40 +1173,40 @@ namespace mgcl_bench_residual_varying
                     }
                 }
 
-                // {
-                //     // result check will be wrong since we just use stencilValues with [coeffs][m,n,o] layout! For timings,
-                //     // only the access pattern matters and we don't run into illegal memory accesses since the overall size
-                //     // is the same.
-                //     args.kernelVersion = KernelVersion::GPS_FIRST_3D_O0;
-                //     std::string name = std::string("residual_27point_varying_stencil_gps_first_3d_o0")
-                //                            .append(std::to_string(m))
-                //                            .append("_")
-                //                            .append(std::to_string(n))
-                //                            .append("_")
-                //                            .append(std::to_string(o));
+                {
+                    // result check will be wrong since we just use stencilValues with [coeffs][m,n,o] layout! For timings,
+                    // only the access pattern matters and we don't run into illegal memory accesses since the overall size
+                    // is the same.
+                    args.kernelVersion = KernelVersion::GPS_FIRST_3D_O0;
+                    std::string name = std::string("residual_27point_varying_stencil_gps_first_3d_o0")
+                                           .append(std::to_string(m))
+                                           .append("_")
+                                           .append(std::to_string(n))
+                                           .append("_")
+                                           .append(std::to_string(o));
 
-                //     bench.run(std::string(name).c_str(), [&] { //
-                //         residual(args);
-                //         p.finish();
-                //     });
+                    bench.run(std::string(name).c_str(), [&] { //
+                        residual(args);
+                        p.finish();
+                    });
 
-                //     bench_util::Result res;
-                //     res.name = name;
-                //     res.minTime = bench_util::getMinTime(bench, name);
-                //     res.medianTime = bench_util::getMedianTime(bench, name);
-                //     res.avgTime = bench_util::getAvgTime(bench, name);
-                //     res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                //     res.m = m;
-                //     res.n = n;
-                //     res.o = o;
-                //     results.push_back(res);
+                    bench_util::Result res;
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.m = m;
+                    res.n = n;
+                    res.o = o;
+                    results.push_back(res);
 
-                //     if (CLI_ARGS::checkResults)
-                //     {
-                //         r_out_global_gps_first_3d_m0 = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                //         args.c_dR.read(args.commands, r_out_global_gps_first_3d_m0.get(), true);
-                //     }
-                // }
+                    if (CLI_ARGS::checkResults)
+                    {
+                        r_out_global_gps_first_3d_m0 = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                        args.c_dR.read(args.commands, r_out_global_gps_first_3d_m0.get(), true);
+                    }
+                }
             }
 
             // Check results for kernels that it is valid for
@@ -1148,6 +1219,7 @@ namespace mgcl_bench_residual_varying
                 REQUIRE(r_out_global_coeffs_first_1d->isEqual(*r_out_global_coeffs_first_1d_4wi_per_gp));
                 REQUIRE(r_out_global_coeffs_first_1d->isEqual(*r_out_global_coeffs_first_1d_4wi_per_gp_shmem_spread));
                 REQUIRE(r_out_global_coeffs_first_1d->isEqual(*r_out_global_coeffs_first_1d_2wi_per_gp_shmem_spread));
+                REQUIRE(r_out_global_coeffs_first_1d->isEqual(*r_out_global_coeffs_first_3d_4wi_per_gp_shmem_spread));
 
                 // r_out_global_coeffs_first_1d->dumpToFile("r_out_global_coeffs_first_1d.txt");
                 // r_out_global_coeffs_first_1d_2wi_per_gp_shmem_spread->dumpToFile("r_out_global_coeffs_first_1d_2wi_per_gp_shmem_spread.txt");

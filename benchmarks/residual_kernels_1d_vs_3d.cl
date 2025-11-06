@@ -1587,6 +1587,131 @@ __kernel void residual_27point_varying_stencil_1d_mult_wi_per_cell_4_sv_spread_s
 }
 
 /*
+ * This kernel must be called with 4 wi per grid node. Each wi applies a part of the stencil and
+ * stores the result in shared memory. The first wi of the 4 will build the sum in the end.
+ * Stencil values are spread out, see other sv spread kernel for more information.
+ * The wi associated with one grid point are spread out evenly in the whole block. E.g. when
+ *   block=32 and wiPerGridPoint=4, every 8th wi will calculate data regarding grid point 0. Thus,
+ *   if the block size is large enough, one warp won't suffer from branch divergence.
+ * Call with mgh x ngh x ogh*4 work-items, e.g. 64x1x1 wg size.
+ */
+__kernel void residual_27point_varying_stencil_3d_mult_wi_per_cell_4_sv_spread_shmem_spread(
+    __global double* v_in,
+    __global double* f,
+    __global double* r,
+    __global double* stencilValues,
+    __local double* partials, // size = (wg-size / 4) * 3
+    const int m, const int n, const int o,
+    const int svmgh, const int svngh, const int svogh, // not needed but for sake of simplicity
+    const int ghosts, const int ghosts_sv,
+    const int svGridSize, // not needed but for sake of simplicity
+    const int moff, const int noff, const int ooff,
+    const int wiPerGridPoint
+    // ,const int gridPointsPerBlock, const int gridsize
+)
+{
+    int gridPointsPerBlock = get_local_size(0) / wiPerGridPoint;
+    int i = get_global_id(2);
+    int j = get_global_id(1);
+    int k = get_global_id(0) % gridPointsPerBlock + (get_global_id(0) / get_local_size(0)) * gridPointsPerBlock;
+    // if (i == ghosts && j == ghosts && k == ghosts)
+    //     printf("idx %d, idx_gp %d\n", idx, idx_gp);
+
+    int istart_v = ghosts + moff;
+    int jstart_v = ghosts + noff;
+    int kstart_v = ghosts + ooff;
+    int iend_v = m - ghosts - moff;
+    int jend_v = n - ghosts - noff;
+    int kend_v = o - ghosts - ooff;
+
+    // calculate residual only for relevant cells (off = 0: only real cells)
+    if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
+    {
+        int ioff = n * o;
+        int joff = o;
+        int koff = 1;
+        int index = i * ioff + j * o + k;
+        // int gridsize = m * n * o;
+
+        // int koff_sv = 27;
+        // int joff_sv = ((o - 2 * ghosts) + 2 * ghosts_sv) * koff_sv;
+        // int ioff_sv = ((n - 2 * ghosts) + 2 * ghosts_sv) * joff_sv;
+        // int index_sv = (i + (ghosts_sv - ghosts)) * ioff_sv + (j + (ghosts_sv - ghosts)) * joff_sv + (k + (ghosts_sv - ghosts)) * koff_sv;
+        int svno = svngh * svogh;
+        // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
+        int index_sv = (i - ghosts + ghosts_sv) * svno + (j - ghosts + ghosts_sv) * svogh + (k - ghosts + ghosts_sv);
+
+        // A*v
+        // clang-format off
+        double stencilsum = 0.0;
+        // __shared__ double partials[blockDim.x / 2];
+        // __shared__ double partials[256]; // hard-coded for block size 256
+        if (get_local_id(0) < gridPointsPerBlock) {
+    // if (i == ghosts && j == ghosts && k == ghosts)
+    //     printf("get_local_id(0) %d\n", get_local_id(0));
+            stencilsum = 
+                stencilValues[index_sv + (9 + 3 + 1) * svGridSize] * v_in[index]
+                + stencilValues[index_sv + (9 + 3) * svGridSize]      * v_in[index - 1]
+                + stencilValues[index_sv + (9 + 3 + 2) * svGridSize]  * v_in[index + 1]
+                + stencilValues[index_sv + (9 + 1) * svGridSize]      * v_in[index - joff]
+                + stencilValues[index_sv + (9 + 6 + 1) * svGridSize]  * v_in[index + joff]
+                + stencilValues[index_sv + (3 + 1) * svGridSize]      * v_in[index - ioff]
+                + stencilValues[index_sv + (18 + 3 + 1) * svGridSize] * v_in[index + ioff];
+        } else if (get_local_id(0) < gridPointsPerBlock * 2) {
+            stencilsum = 
+                + stencilValues[index_sv + (9) * svGridSize]          * v_in[index - joff - koff]
+                + stencilValues[index_sv + (9 + 2) * svGridSize]      * v_in[index - joff + koff]
+                + stencilValues[index_sv + (9 + 6) * svGridSize]      * v_in[index + joff - koff]
+                + stencilValues[index_sv + (9 + 6 + 2) * svGridSize]  * v_in[index + joff + koff]
+                + stencilValues[svGridSize * 3 + index]          * v_in[index - ioff - koff]
+                + stencilValues[index_sv + (3 + 2) * svGridSize]      * v_in[index - ioff + koff]
+                + stencilValues[index_sv + (18 + 3) * svGridSize]     * v_in[index + ioff - koff];
+            partials[get_local_id(0)] = stencilsum;
+        } else if (get_local_id(0) < gridPointsPerBlock * 3) {
+            stencilsum = 
+                + stencilValues[index_sv + (18 + 3 + 2) * svGridSize] * v_in[index + ioff + koff]
+                + stencilValues[svGridSize + index]          * v_in[index - ioff - joff]
+                + stencilValues[index_sv + (6 + 1) * svGridSize]      * v_in[index - ioff + joff]
+                + stencilValues[index_sv + (18 + 1) * svGridSize]     * v_in[index + ioff - joff]
+                + stencilValues[index_sv + (18 + 6 + 1) * svGridSize] * v_in[index + ioff + joff]
+                + stencilValues[index_sv]              * v_in[index - ioff - joff - koff]
+                + stencilValues[svGridSize * 2 + index]          * v_in[index - ioff - joff + koff];
+            partials[get_local_id(0)] = stencilsum;
+        } else {
+    // if (i == ghosts && j == ghosts && k == ghosts)
+    //     printf("get_local_id(0) %d\n", get_local_id(0));
+            stencilsum = 
+                + stencilValues[index_sv + (6) * svGridSize]          * v_in[index - ioff + joff - koff]
+                + stencilValues[index_sv + (6 + 2) * svGridSize]      * v_in[index - ioff + joff + koff]
+                + stencilValues[index_sv + (18) * svGridSize]         * v_in[index + ioff - joff - koff]
+                + stencilValues[index_sv + (18 + 2) * svGridSize]     * v_in[index + ioff - joff + koff]
+                + stencilValues[index_sv + (18 + 6) * svGridSize]     * v_in[index + ioff + joff - koff]
+                + stencilValues[index_sv + (18 + 6 + 2) * svGridSize] * v_in[index + ioff + joff + koff];
+            // store result from upper half of warp in shared memory
+            partials[get_local_id(0)] = stencilsum;
+
+    // if (i == ghosts && j == ghosts && k == ghosts)
+    //     printf("get_local_id(0) %d storing into %d\n", get_local_id(0), get_local_id(0) - (blockDim.x >> 1));
+        }
+        // clang-format on
+
+        // wait for warp to finish and add results from other work-items calculating for this grid point
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if (get_local_id(0) < gridPointsPerBlock)
+        {
+            stencilsum += partials[get_local_id(0) + gridPointsPerBlock];
+            stencilsum += partials[get_local_id(0) + gridPointsPerBlock * 2];
+            stencilsum += partials[get_local_id(0) + gridPointsPerBlock * 3];
+            // if (i == ghosts && j == ghosts && k == ghosts)
+            //     printf("get_local_id(0) %d reading from %d\n", get_local_id(0), get_local_id(0));
+
+            // r = f - A*v
+            r[index] = f[index] - stencilsum;
+        }
+    }
+}
+
+/*
  * This kernel must be called with 2 wi per grid node. Each wi applies a part of the stencil and
  * stores the result in shared memory. The first wi of the 2 will build the sum in the end.
  * Stencil values are spread out, see other sv spread kernel for more information.
