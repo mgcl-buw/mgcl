@@ -648,12 +648,14 @@ namespace mgcl_bench_residual_varying
                 }
             }
 
+            for (auto wg : wg_sizes_shmem_coeffs_first_1d)
             {
                 c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
                 // result check will be wrong since we just use stencilValues with [coeffs][m,n,o] layout! For timings,
                 // only the access pattern matters and we don't run into illegal memory accesses since the overall size
                 // is the same.
                 args.kernelVersion = KernelVersion::GPS_FIRST_1D;
+                args.wgsize.x = wg[0];
                 std::string name = std::string("residual_varying_stencil_gps_first_1d_")
                                        .append(std::to_string(m))
                                        .append("_")
