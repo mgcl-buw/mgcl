@@ -38,6 +38,7 @@ namespace mgcl_bench_residual_varying
         GPS_FIRST_3D_O0,
         GPS_FIRST_1D_RESTRUCTURED,
         GPS_FIRST_1D_REAL_ONLY,
+        COEFFS_FIRST_1D_REAL_ONLY,
         GPS_FIRST_1D_2WI_PER_GP,
         GPS_FIRST_1D_4WI_PER_GP,
         COEFFS_FIRST_1D_4WI_PER_GP,
@@ -144,6 +145,10 @@ namespace mgcl_bench_residual_varying
         if (args.kernelVersion == KernelVersion::COEFFS_FIRST_1D)
         {
             kernelName = "residual_27point_varying_stencil_coeffs_first_1d";
+        }
+        else if (args.kernelVersion == KernelVersion::COEFFS_FIRST_1D_REAL_ONLY)
+        {
+            kernelName = "residual_27point_varying_stencil_coeffs_first_1d_real_only";
         }
         else if (args.kernelVersion == KernelVersion::REMOVED_V)
         {
@@ -352,7 +357,7 @@ namespace mgcl_bench_residual_varying
             {
                 global[0] /= 4;
             }
-            if (args.kernelVersion == KernelVersion::GPS_FIRST_1D_REAL_ONLY)
+            if (args.kernelVersion == KernelVersion::GPS_FIRST_1D_REAL_ONLY || args.kernelVersion == KernelVersion::COEFFS_FIRST_1D_REAL_ONLY)
             {
                 global[0] = m * n * o;
             }
@@ -530,7 +535,7 @@ namespace mgcl_bench_residual_varying
                 .stencilType = mgcl::MGCL_VARYING,
                 .program = p.getProgram(),
                 .commands = p.getCommands(),
-                .wgsize = {128, 1, 1},
+                .wgsize = {32, 1, 1},
                 .c_dVIn = c_dVIn,
                 .c_dF = c_dF,
                 .c_dR = c_dR,
@@ -550,6 +555,7 @@ namespace mgcl_bench_residual_varying
                 .relative(false);
 
             std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first_1d = nullptr;
+            std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first_1d_real_only = nullptr;
             std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first_3d_m0 = nullptr;
             std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_first_3d_o0 = nullptr;
             std::unique_ptr<mgcl::Cuboid> r_out_global_gps_first_1d_restructured = nullptr;
@@ -604,6 +610,41 @@ namespace mgcl_bench_residual_varying
                 {
                     r_out_global_coeffs_first_1d = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
                     args.c_dR.read(args.commands, r_out_global_coeffs_first_1d.get(), true);
+                }
+            }
+
+            for (auto wg : wg_sizes_shmem_coeffs_first_1d)
+            {
+                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                args.kernelVersion = KernelVersion::COEFFS_FIRST_1D_REAL_ONLY;
+                args.wgsize.x = wg[0];
+                std::string name = std::string("residual_varying_stencil_coeffs_first_1d_real_only_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    residual(args);
+                    p.finish();
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+
+                if (CLI_ARGS::checkResults)
+                {
+                    r_out_global_coeffs_first_1d_real_only = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                    args.c_dR.read(args.commands, r_out_global_coeffs_first_1d_real_only.get(), true);
                 }
             }
 
@@ -748,39 +789,39 @@ namespace mgcl_bench_residual_varying
                 }
             }
 
-            {
-                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+            // {
+            //     c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
 
-                args.kernelVersion = KernelVersion::GPS_FIRST_1D_REAL_ONLY;
-                std::string name = std::string("residual_varying_stencil_gps_first_1d_real_only_")
-                                       .append(std::to_string(m))
-                                       .append("_")
-                                       .append(std::to_string(n))
-                                       .append("_")
-                                       .append(std::to_string(o));
+            //     args.kernelVersion = KernelVersion::GPS_FIRST_1D_REAL_ONLY;
+            //     std::string name = std::string("residual_varying_stencil_gps_first_1d_real_only_")
+            //                            .append(std::to_string(m))
+            //                            .append("_")
+            //                            .append(std::to_string(n))
+            //                            .append("_")
+            //                            .append(std::to_string(o));
 
-                bench.run(std::string(name).c_str(), [&] { //
-                    residual(args);
-                    p.finish();
-                });
+            //     bench.run(std::string(name).c_str(), [&] { //
+            //         residual(args);
+            //         p.finish();
+            //     });
 
-                bench_util::Result res;
-                res.name = name;
-                res.minTime = bench_util::getMinTime(bench, name);
-                res.medianTime = bench_util::getMedianTime(bench, name);
-                res.avgTime = bench_util::getAvgTime(bench, name);
-                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                res.m = m;
-                res.n = n;
-                res.o = o;
-                results.push_back(res);
+            //     bench_util::Result res;
+            //     res.name = name;
+            //     res.minTime = bench_util::getMinTime(bench, name);
+            //     res.medianTime = bench_util::getMedianTime(bench, name);
+            //     res.avgTime = bench_util::getAvgTime(bench, name);
+            //     res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            //     res.m = m;
+            //     res.n = n;
+            //     res.o = o;
+            //     results.push_back(res);
 
-                if (CLI_ARGS::checkResults)
-                {
-                    r_out_global_gps_first_1d_real_only = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                    args.c_dR.read(args.commands, r_out_global_gps_first_1d_real_only.get(), true);
-                }
-            }
+            //     if (CLI_ARGS::checkResults)
+            //     {
+            //         r_out_global_gps_first_1d_real_only = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+            //         args.c_dR.read(args.commands, r_out_global_gps_first_1d_real_only.get(), true);
+            //     }
+            // }
 
             {
                 c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
@@ -1230,6 +1271,7 @@ namespace mgcl_bench_residual_varying
             if (CLI_ARGS::checkResults)
             {
                 // coeffs first have different results than gps first, since we don't actually convert stenciValues layout
+                REQUIRE(r_out_global_coeffs_first_1d->isEqual(*r_out_global_coeffs_first_1d_real_only));
                 REQUIRE(r_out_global_coeffs_first_1d->isEqual(*r_out_global_coeffs_4_gp_per_thread));
                 REQUIRE(r_out_global_coeffs_first_1d->isEqual(*r_out_global_coeffs_first_3d_m0));
                 REQUIRE(r_out_global_coeffs_first_1d->isEqual(*r_out_global_coeffs_first_3d_o0));
@@ -1242,7 +1284,7 @@ namespace mgcl_bench_residual_varying
                 // r_out_global_coeffs_first_1d_2wi_per_gp_shmem_spread->dumpToFile("r_out_global_coeffs_first_1d_2wi_per_gp_shmem_spread.txt");
 
                 REQUIRE(r_out_global_gps_first_3d_m0->isEqual(*r_out_global_gps_first_1d_restructured));
-                REQUIRE(r_out_global_gps_first_3d_m0->isEqual(*r_out_global_gps_first_1d_real_only));
+                // REQUIRE(r_out_global_gps_first_3d_m0->isEqual(*r_out_global_gps_first_1d_real_only));
                 REQUIRE(r_out_global_gps_first_3d_m0->isEqual(*r_out_global_gps_first_1d_2wi_per_gp));
                 REQUIRE(r_out_global_gps_first_3d_m0->isEqual(*r_out_global_gps_first_1d_4wi_per_gp));
             }
