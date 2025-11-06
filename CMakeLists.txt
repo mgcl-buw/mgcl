@@ -33,9 +33,9 @@ set(MGCL_nanobench_version "v4.3.11")
 set(MGCL_backwardcpp_version "v1.6")
 set(MGCL_cpptrace_version "v0.6.3")
 
-if(CMAKE_BUILD_TYPE MATCHES Debug)
+# if(CMAKE_BUILD_TYPE MATCHES Debug)
   include(cmake/CPM.cmake)
-endif()
+# endif()
 
 # add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
 # add_link_options(-fsanitize=address -fno-omit-frame-pointer)
@@ -57,9 +57,9 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   # ==============================
   # Add CPM as dependency manager for tests and benchmarks. Download it if not already present. see
   # https://github.com/cpm-cmake/CPM.cmake/wiki/Downloading-CPM.cmake-in-CMake
-  if(MGCL_BUILD_TESTS OR MGCL_BUILD_BENCHMARKS)
-    include(cmake/CPM.cmake)
-  endif()
+  # if(MGCL_BUILD_TESTS OR MGCL_BUILD_BENCHMARKS)
+  #   include(cmake/CPM.cmake)
+  # endif()
   # ==============================
 
   if(MGCL_BUILD_TESTS)
