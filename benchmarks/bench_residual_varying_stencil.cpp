@@ -678,35 +678,40 @@ namespace mgcl_bench_residual_varying
             }
 
             {
-                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
-                args.kernelVersion = KernelVersion::FOUR_GP_PER_WI;
-                std::string name = std::string("residual_varying_stencil_coeffs_first_4_gps_per_thread")
-                                       .append(std::to_string(m))
-                                       .append("_")
-                                       .append(std::to_string(n))
-                                       .append("_")
-                                       .append(std::to_string(o));
-
-                bench.run(std::string(name).c_str(), [&] { //
-                    residual(args);
-                    p.finish();
-                });
-
-                bench_util::Result res;
-                res.name = name;
-                res.minTime = bench_util::getMinTime(bench, name);
-                res.medianTime = bench_util::getMedianTime(bench, name);
-                res.avgTime = bench_util::getAvgTime(bench, name);
-                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                res.m = m;
-                res.n = n;
-                res.o = o;
-                results.push_back(res);
-
-                if (CLI_ARGS::checkResults)
+                std::vector<std::vector<size_t>> wg_sizes_shmem = {{128, 1, 1}, {16, 1, 1}, {32, 1, 1}, {64, 1, 1}, {256, 1, 1}};
+                for (auto ws : wg_sizes_shmem)
                 {
-                    r_out_global_coeffs_4_gp_per_thread = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                    args.c_dR.read(args.commands, r_out_global_coeffs_4_gp_per_thread.get(), true);
+                    c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                    args.kernelVersion = KernelVersion::FOUR_GP_PER_WI;
+                    args.wgsize.x = ws[0];
+                    std::string name = std::string("residual_varying_stencil_coeffs_first_4_gps_per_thread")
+                                           .append(std::to_string(m))
+                                           .append("_")
+                                           .append(std::to_string(n))
+                                           .append("_")
+                                           .append(std::to_string(o));
+
+                    bench.run(std::string(name).c_str(), [&] { //
+                        residual(args);
+                        p.finish();
+                    });
+
+                    bench_util::Result res;
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.m = m;
+                    res.n = n;
+                    res.o = o;
+                    results.push_back(res);
+
+                    if (CLI_ARGS::checkResults)
+                    {
+                        r_out_global_coeffs_4_gp_per_thread = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                        args.c_dR.read(args.commands, r_out_global_coeffs_4_gp_per_thread.get(), true);
+                    }
                 }
             }
 
