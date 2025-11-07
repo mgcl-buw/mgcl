@@ -1196,11 +1196,11 @@ namespace mgcl_bench_residual_varying
                                            .append("_")
                                            .append(std::to_string(o))
                                            .append("_wg")
-                                           .append(std::to_string(ws[0]))
+                                           .append(std::to_string(wg[0]))
                                            .append("x")
-                                           .append(std::to_string(ws[1]))
+                                           .append(std::to_string(wg[1]))
                                            .append("x")
-                                           .append(std::to_string(ws[2]));
+                                           .append(std::to_string(wg[2]));
 
                     bench.run(std::string(name).c_str(), [&] { //
                         residual(args);
