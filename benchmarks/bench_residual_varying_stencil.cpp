@@ -834,71 +834,71 @@ namespace mgcl_bench_residual_varying
             //     }
             // }
 
-            {
-                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
-                args.kernelVersion = KernelVersion::GPS_FIRST_1D_2WI_PER_GP;
-                std::string name = std::string("residual_varying_stencil_gps_first_1d_2wi_per_gp_")
-                                       .append(std::to_string(m))
-                                       .append("_")
-                                       .append(std::to_string(n))
-                                       .append("_")
-                                       .append(std::to_string(o));
+            // {
+            //     c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+            //     args.kernelVersion = KernelVersion::GPS_FIRST_1D_2WI_PER_GP;
+            //     std::string name = std::string("residual_varying_stencil_gps_first_1d_2wi_per_gp_")
+            //                            .append(std::to_string(m))
+            //                            .append("_")
+            //                            .append(std::to_string(n))
+            //                            .append("_")
+            //                            .append(std::to_string(o));
 
-                bench.run(std::string(name).c_str(), [&] { //
-                    residual(args);
-                    p.finish();
-                });
+            //     bench.run(std::string(name).c_str(), [&] { //
+            //         residual(args);
+            //         p.finish();
+            //     });
 
-                bench_util::Result res;
-                res.name = name;
-                res.minTime = bench_util::getMinTime(bench, name);
-                res.medianTime = bench_util::getMedianTime(bench, name);
-                res.avgTime = bench_util::getAvgTime(bench, name);
-                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                res.m = m;
-                res.n = n;
-                res.o = o;
-                results.push_back(res);
+            //     bench_util::Result res;
+            //     res.name = name;
+            //     res.minTime = bench_util::getMinTime(bench, name);
+            //     res.medianTime = bench_util::getMedianTime(bench, name);
+            //     res.avgTime = bench_util::getAvgTime(bench, name);
+            //     res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            //     res.m = m;
+            //     res.n = n;
+            //     res.o = o;
+            //     results.push_back(res);
 
-                if (CLI_ARGS::checkResults)
-                {
-                    r_out_global_gps_first_1d_2wi_per_gp = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                    args.c_dR.read(args.commands, r_out_global_gps_first_1d_2wi_per_gp.get(), true);
-                }
-            }
+            //     if (CLI_ARGS::checkResults)
+            //     {
+            //         r_out_global_gps_first_1d_2wi_per_gp = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+            //         args.c_dR.read(args.commands, r_out_global_gps_first_1d_2wi_per_gp.get(), true);
+            //     }
+            // }
 
-            {
-                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
-                args.kernelVersion = KernelVersion::GPS_FIRST_1D_4WI_PER_GP;
-                std::string name = std::string("residual_varying_stencil_gps_first_1d_4wi_per_gp_")
-                                       .append(std::to_string(m))
-                                       .append("_")
-                                       .append(std::to_string(n))
-                                       .append("_")
-                                       .append(std::to_string(o));
+            // {
+            //     c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+            //     args.kernelVersion = KernelVersion::GPS_FIRST_1D_4WI_PER_GP;
+            //     std::string name = std::string("residual_varying_stencil_gps_first_1d_4wi_per_gp_")
+            //                            .append(std::to_string(m))
+            //                            .append("_")
+            //                            .append(std::to_string(n))
+            //                            .append("_")
+            //                            .append(std::to_string(o));
 
-                bench.run(std::string(name).c_str(), [&] { //
-                    residual(args);
-                    p.finish();
-                });
+            //     bench.run(std::string(name).c_str(), [&] { //
+            //         residual(args);
+            //         p.finish();
+            //     });
 
-                bench_util::Result res;
-                res.name = name;
-                res.minTime = bench_util::getMinTime(bench, name);
-                res.medianTime = bench_util::getMedianTime(bench, name);
-                res.avgTime = bench_util::getAvgTime(bench, name);
-                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                res.m = m;
-                res.n = n;
-                res.o = o;
-                results.push_back(res);
+            //     bench_util::Result res;
+            //     res.name = name;
+            //     res.minTime = bench_util::getMinTime(bench, name);
+            //     res.medianTime = bench_util::getMedianTime(bench, name);
+            //     res.avgTime = bench_util::getAvgTime(bench, name);
+            //     res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            //     res.m = m;
+            //     res.n = n;
+            //     res.o = o;
+            //     results.push_back(res);
 
-                if (CLI_ARGS::checkResults)
-                {
-                    r_out_global_gps_first_1d_4wi_per_gp = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                    args.c_dR.read(args.commands, r_out_global_gps_first_1d_4wi_per_gp.get(), true);
-                }
-            }
+            //     if (CLI_ARGS::checkResults)
+            //     {
+            //         r_out_global_gps_first_1d_4wi_per_gp = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+            //         args.c_dR.read(args.commands, r_out_global_gps_first_1d_4wi_per_gp.get(), true);
+            //     }
+            // }
 
             {
                 c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
@@ -1290,8 +1290,8 @@ namespace mgcl_bench_residual_varying
 
                 REQUIRE(r_out_global_gps_first_3d_o0->isEqual(*r_out_global_gps_first_1d_restructured));
                 // REQUIRE(r_out_global_gps_first_3d_m0->isEqual(*r_out_global_gps_first_1d_real_only));
-                REQUIRE(r_out_global_gps_first_3d_o0->isEqual(*r_out_global_gps_first_1d_2wi_per_gp));
-                REQUIRE(r_out_global_gps_first_3d_o0->isEqual(*r_out_global_gps_first_1d_4wi_per_gp));
+                // REQUIRE(r_out_global_gps_first_3d_o0->isEqual(*r_out_global_gps_first_1d_2wi_per_gp));
+                // REQUIRE(r_out_global_gps_first_3d_o0->isEqual(*r_out_global_gps_first_1d_4wi_per_gp));
             }
         }
 
