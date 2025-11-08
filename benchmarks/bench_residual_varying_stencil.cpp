@@ -316,9 +316,18 @@ namespace mgcl_bench_residual_varying
                            args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_4WI_PER_GP_SHMEM_SPREAD);
         if (is3dKernel)
         {
-            global[0] = static_cast<size_t>(args.mgh);
-            global[1] = static_cast<size_t>(args.ngh);
-            global[2] = static_cast<size_t>(args.ogh);
+            if (args.kernelVersion == KernelVersion::COEFFS_FIRST_3D_M0)
+            {
+                global[0] = static_cast<size_t>(args.mgh);
+                global[1] = static_cast<size_t>(args.ngh);
+                global[2] = static_cast<size_t>(args.ogh);
+            }
+            else
+            {
+                global[0] = static_cast<size_t>(args.ogh);
+                global[1] = static_cast<size_t>(args.ngh);
+                global[2] = static_cast<size_t>(args.mgh);
+            }
 
             local[0] = args.wgsize.x;
             local[1] = args.wgsize.y;
@@ -571,7 +580,7 @@ namespace mgcl_bench_residual_varying
             // std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_without_ghosts = nullptr;
             std::unique_ptr<mgcl::Cuboid> r_out_global_coeffs_4_gp_per_thread = nullptr;
             // std::unique_ptr<mgcl::Cuboid> r_out_global_gps_first_1d = nullptr;
-            std::unique_ptr<mgcl::Cuboid> r_out_global_gps_first_3d_m0 = nullptr;
+            std::unique_ptr<mgcl::Cuboid> r_out_global_gps_first_3d_o0 = nullptr;
             if (CLI_ARGS::checkResults)
             {
                 bench.epochs(1).epochIterations(1);
@@ -1257,8 +1266,8 @@ namespace mgcl_bench_residual_varying
 
                     if (CLI_ARGS::checkResults)
                     {
-                        r_out_global_gps_first_3d_m0 = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                        args.c_dR.read(args.commands, r_out_global_gps_first_3d_m0.get(), true);
+                        r_out_global_gps_first_3d_o0 = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                        args.c_dR.read(args.commands, r_out_global_gps_first_3d_o0.get(), true);
                     }
                 }
             }
@@ -1279,10 +1288,10 @@ namespace mgcl_bench_residual_varying
                 // r_out_global_coeffs_first_1d->dumpToFile("r_out_global_coeffs_first_1d.txt");
                 // r_out_global_coeffs_first_1d_2wi_per_gp_shmem_spread->dumpToFile("r_out_global_coeffs_first_1d_2wi_per_gp_shmem_spread.txt");
 
-                REQUIRE(r_out_global_gps_first_3d_m0->isEqual(*r_out_global_gps_first_1d_restructured));
+                REQUIRE(r_out_global_gps_first_3d_o0->isEqual(*r_out_global_gps_first_1d_restructured));
                 // REQUIRE(r_out_global_gps_first_3d_m0->isEqual(*r_out_global_gps_first_1d_real_only));
-                REQUIRE(r_out_global_gps_first_3d_m0->isEqual(*r_out_global_gps_first_1d_2wi_per_gp));
-                REQUIRE(r_out_global_gps_first_3d_m0->isEqual(*r_out_global_gps_first_1d_4wi_per_gp));
+                REQUIRE(r_out_global_gps_first_3d_o0->isEqual(*r_out_global_gps_first_1d_2wi_per_gp));
+                REQUIRE(r_out_global_gps_first_3d_o0->isEqual(*r_out_global_gps_first_1d_4wi_per_gp));
             }
         }
 
