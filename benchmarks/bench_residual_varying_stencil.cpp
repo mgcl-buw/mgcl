@@ -901,39 +901,44 @@ namespace mgcl_bench_residual_varying
             // }
 
             {
-                c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
-                args.kernelVersion = KernelVersion::COEFFS_FIRST_1D_4WI_PER_GP;
-                std::string name = std::string("residual_varying_stencil_coeffs_first_1d_4wi_per_gp_")
-                                       .append(std::to_string(m))
-                                       .append("_")
-                                       .append(std::to_string(n))
-                                       .append("_")
-                                       .append(std::to_string(o));
-
-                bench.run(std::string(name).c_str(), [&] { //
-                    residual(args);
-                    p.finish();
-                });
-
-                bench_util::Result res;
-                res.name = name;
-                res.minTime = bench_util::getMinTime(bench, name);
-                res.medianTime = bench_util::getMedianTime(bench, name);
-                res.avgTime = bench_util::getAvgTime(bench, name);
-                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                res.m = m;
-                res.n = n;
-                res.o = o;
-                results.push_back(res);
-
-                if (CLI_ARGS::checkResults)
+                std::vector<std::vector<size_t>> wg_sizes_shmem = {{32, 1, 1}, {64, 1, 1}, {128, 1, 1}, {256, 1, 1}, {512, 1, 1}};
+                for (auto ws : wg_sizes_shmem)
                 {
-                    r_out_global_coeffs_first_1d_4wi_per_gp = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
-                    args.c_dR.read(args.commands, r_out_global_coeffs_first_1d_4wi_per_gp.get(), true);
+                    c_dR.fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+                    args.kernelVersion = KernelVersion::COEFFS_FIRST_1D_4WI_PER_GP;
+                    args.wgsize = {ws[0], ws[1], ws[2]};
+                    std::string name = std::string("residual_varying_stencil_coeffs_first_1d_4wi_per_gp_")
+                                           .append(std::to_string(m))
+                                           .append("_")
+                                           .append(std::to_string(n))
+                                           .append("_")
+                                           .append(std::to_string(o));
+
+                    bench.run(std::string(name).c_str(), [&] { //
+                        residual(args);
+                        p.finish();
+                    });
+
+                    bench_util::Result res;
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.m = m;
+                    res.n = n;
+                    res.o = o;
+                    results.push_back(res);
+
+                    if (CLI_ARGS::checkResults)
+                    {
+                        r_out_global_coeffs_first_1d_4wi_per_gp = std::make_unique<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+                        args.c_dR.read(args.commands, r_out_global_coeffs_first_1d_4wi_per_gp.get(), true);
+                    }
                 }
             }
 
-            std::vector<std::vector<size_t>> wg_sizes_shmem = {{128, 1, 1}, {32, 1, 1}, {64, 1, 1}, {192, 1, 1}, {256, 1, 1}, {464, 1, 1}, {512, 1, 1}};
+            std::vector<std::vector<size_t>> wg_sizes_shmem = {{32, 1, 1}, {64, 1, 1}, {128, 1, 1}, {256, 1, 1}, {512, 1, 1}};
             {
                 for (auto ws : wg_sizes_shmem)
                 {
