@@ -17,7 +17,7 @@ namespace mgcl::conf
         KernelConfig ret;
 
         // Jacobi kernels
-        ret["jacobi_iter_27point_varying_stencil_1d"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
+        ret["jacobi_iter_27point_varying_stencil_1d"] = KernelWorkgroupSizes{{1, {32, 1, 1}}};
         ret["jacobi_iter_27point_fixed_stencil_1d"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         ret["jacobi_iter_7point"] = KernelWorkgroupSizes{{1, {1, 64, 1}}};
         ret["jacobi_iter_19point"] = KernelWorkgroupSizes{{1, {1, 64, 1}}};
@@ -29,7 +29,7 @@ namespace mgcl::conf
         ret["jacobi_iter_27point_boundary"] = mgcl::conf::KernelWorkgroupSizes{{1, {1, 64, 1}}};
 
         // Residual kernels
-        ret["residual_27point_varying_stencil"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
+        ret["residual_27point_varying_stencil"] = KernelWorkgroupSizes{{1, {32, 1, 1}}};
         ret["residual_27point_fixed_stencil"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         ret["residual_7point"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};
         ret["residual_19point"] = KernelWorkgroupSizes{{1, {128, 1, 1}}};

@@ -37,6 +37,7 @@ set(SOURCES_BENCH
     bench_residual_varying_stencil_inner_vs_boundary.cpp
     bench_borderplanes.cpp
     bench_jacobi_parallel_ghost_update_mpi.cpp
+    bench_jacobi_split_vs_fused.cpp
     bench_kernel_launch_overhead.cpp
     cli_args.hpp
     catch2_main_benchs.cpp)
@@ -63,6 +64,7 @@ target_link_libraries(benchmarks PRIVATE mgcl)
 # Remove comments to use address sanitizer (ASAN). ASAN is not compatible with OpenCL, see
 # https://stackoverflow.com/a/68027496/4108363. A workaround is to set
 # ASAN_OPTIONS=protect_shadow_gap=0 when calling the executable. 
+# apt package is libclang-rt-22-dev (insert current clang version).
 # target_compile_options(benchmarks PUBLIC -fsanitize=address -fno-omit-frame-pointer)
 # target_link_options(benchmarks PUBLIC -fsanitize=address)
 
@@ -74,3 +76,4 @@ mgcl_copy_kernel_file(benchmarks residual_kernels_inner_vs_boundary.cl)
 mgcl_copy_kernel_file(benchmarks borderplanes_kernels.cl)
 mgcl_copy_kernel_file(benchmarks kernel_launch_overhead.cl)
 mgcl_copy_kernel_file(benchmarks residual_kernels_1d_vs_3d.cl)
+mgcl_copy_kernel_file(benchmarks jacobi_kernels_split_vs_fused.cl)
