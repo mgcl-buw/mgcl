@@ -1,7 +1,7 @@
 #!/bin/bash
 ## do not run exclusively SBATCH --exclusive
 #SBATCH --job-name=mgcl_clean_build
-#SBATCH --partition=gpu
+#SBATCH --partition=gpushort
 #SBATCH --account=imacm_gpu
 #SBATCH -N1
 #SBATCH -n1

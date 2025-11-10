@@ -1,7 +1,7 @@
 #!/bin/bash
 ## #SBATCH --exclusive
 #SBATCH --job-name=mgcl_print_devices
-#SBATCH --partition=gpu
+#SBATCH --partition=gpushort
 #SBATCH --account=imacm_gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=2

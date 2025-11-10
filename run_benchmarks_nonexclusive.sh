@@ -1,7 +1,7 @@
 #!/bin/bash
 #not #SBATCH --exclusive
 #SBATCH --job-name=mgcl_bench
-#SBATCH --partition=gpu
+#SBATCH --partition=gpushort
 #SBATCH --account=imacm_gpu
 #SBATCH -N1
 #SBATCH -n1
