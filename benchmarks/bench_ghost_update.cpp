@@ -883,7 +883,8 @@ namespace mgcl_bench_ghost_update_wgsizes
     {
         THREE_D,
         ONE_D,
-        SPLIT // split into 3 kernels, one per dimension. Also is a 3d kernel.
+        THREE_D_OLD_INDEX_CALC, // e.g. int ireal = i + floor(((double)(ghm - 1 - i)) / m + 1) * m;
+        SPLIT                   // split into 3 kernels, one per dimension. Also is a 3d kernel.
     };
 
     using size_t3 = struct
@@ -910,11 +911,17 @@ namespace mgcl_bench_ghost_update_wgsizes
 
         int err;
 
-        bool is3d = kernelVersion == KernelVersion::THREE_D;
+        bool is3d = kernelVersion == KernelVersion::THREE_D || kernelVersion == KernelVersion::THREE_D_OLD_INDEX_CALC;
 
         // Create the compute kernel from the program
-        const char* kernelName = (is3d ? "update_ghosts_periodic_3d" : "update_ghosts_periodic_1d");
-        cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper().getProgram(), kernelName, &err);
+        std::string kernelName;
+        if (kernelVersion == KernelVersion::THREE_D)
+            kernelName = "update_ghosts_periodic_3d";
+        else if (kernelVersion == KernelVersion::THREE_D_OLD_INDEX_CALC)
+            kernelName = "update_ghosts_periodic_3d_old_index_calc";
+        else if (kernelVersion == KernelVersion::ONE_D)
+            kernelName = "update_ghosts_periodic_1d";
+        cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper().getProgram(), kernelName.c_str(), &err);
         mgcl::mgclCheckError(err, "clCreateKernel");
 
         // assign kernel arguments
@@ -1285,6 +1292,51 @@ namespace mgcl_bench_ghost_update_wgsizes
 
                     bench.run(std::string(name).c_str(), [&] { //
                         updateGhosts(p, lv0.getDVIn(), KernelVersion::THREE_D, wg);
+                        p.finish();
+                    });
+
+                    bench_util::ResultMpi res;
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.m = ml;
+                    res.n = nl;
+                    res.o = ol;
+                    res.mglob = mglob;
+                    res.nglob = nglob;
+                    res.oglob = oglob;
+                    res.gpus = mpi_size;
+                    res.LT = -1;
+                    results.push_back(res);
+
+                    // if (CLI_ARGS::checkResults)
+                    // {
+                    //     v_out_default = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                    //     lv0.getDVIn().read(p.getCommands(), v_out_default.get(), true);
+                    // } }
+                }
+
+                {
+                    lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
+                    lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
+
+                    std::string name = std::string("ghost_update_3d_old_index_calc_")
+                                           .append(std::to_string(mglob))
+                                           .append("_")
+                                           .append(std::to_string(nglob))
+                                           .append("_")
+                                           .append(std::to_string(oglob))
+                                           .append("_wg")
+                                           .append(std::to_string(wg[0]))
+                                           .append("x")
+                                           .append(std::to_string(wg[1]))
+                                           .append("x")
+                                           .append(std::to_string(wg[2]));
+
+                    bench.run(std::string(name).c_str(), [&] { //
+                        updateGhosts(p, lv0.getDVIn(), KernelVersion::THREE_D_OLD_INDEX_CALC, wg);
                         p.finish();
                     });
 
