@@ -965,9 +965,7 @@ namespace mgcl_bench_ghost_update_wgsizes
         return err;
     }
 
-    // Benchs the various residual fixed stencil kernel versions
-    // Note that, while kernel profiling works and reports adequate timings, it needs to wait for each kernel to be finished before starting the next one,
-    // which might hurt performance, even when using two queues.
+    // Benchs the ghost update of CuboidGpu for different workgroup sizes.
     TEST_CASE("benchGhostUpdateWgSizes")
     {
         using std::min;
@@ -1195,6 +1193,211 @@ namespace mgcl_bench_ghost_update_wgsizes
                 // }
             }
             mgcl::MultigridEngine::updateGhosts(p, lv0.getDVIn(), nullptr, true);
+
+            if (CLI_ARGS::enableKernelProfiling)
+            {
+                p.getProfilingData()->printBestTimingsPerKernel(kernelProfilesStream);
+            }
+        }
+
+        MPI_Barrier(mpi_comm);
+        bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
+        MPI_Barrier(mpi_comm);
+
+        if (CLI_ARGS::enableKernelProfiling)
+        {
+            kernelProfilesStream << "rank: " << mpi_rank << std::endl;
+            std::cout << kernelProfilesStream.str() << std::endl;
+        }
+        MPI_Barrier(mpi_comm);
+    }
+
+    // Benchs the ghost update of CuboidGpu for different ghost layer sizes, i.e. ghost amounts.
+    TEST_CASE("benchGhostUpdateLayerSize")
+    {
+        using std::min;
+
+        if (CLI_ARGS::grids.size() == 0 && (CLI_ARGS::gridsMin.size() == 0 || CLI_ARGS::gridsMax.size() == 0))
+            throw "Need to specify at least one local grid size, e.g. using --grids 4,8,16 or --gridsMin 4,4,4 AND --gridsMax 32,32,32";
+
+        // build grids to be tested from CLI args
+        std::vector<std::vector<int>> gridsTBT;
+        for (auto N : CLI_ARGS::grids)
+            gridsTBT.push_back({N, N, N});
+        if (CLI_ARGS::gridsMin.size() > 0 && CLI_ARGS::gridsMax.size() > 0)
+            for (int m = CLI_ARGS::gridsMin[0]; m <= CLI_ARGS::gridsMax[0]; m *= 2)
+                for (int n = CLI_ARGS::gridsMin[1]; n <= CLI_ARGS::gridsMax[1]; n *= 2)
+                    for (int o = CLI_ARGS::gridsMin[2]; o <= CLI_ARGS::gridsMax[2]; o *= 2)
+                        gridsTBT.push_back({m, n, o});
+
+        std::vector<bench_util::ResultGhostUpdateMpi> results;
+
+        int ghosts = 1;
+        int periodic = 1;
+        std::stringstream kernelProfilesStream;
+
+        for (auto stepsPerIter : CLI_ARGS::jacobiStepsPerIter)
+            if (stepsPerIter > ghosts)
+                throw "stepsPerIter must be <= ghosts. Not supported yet.";
+
+        // check if mpi is initialized
+        int isInitialized = 0;
+        MPI_Initialized(&isInitialized);
+        REQUIRE(isInitialized);
+
+        MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+        // check number of processes
+        int mpi_size = -1;
+        MPI_Comm_size(mpi_comm, &mpi_size);
+        // REQUIRE(mpi_size == 8);
+
+        /* MPI variables */
+        int mpi_rank;
+        int mpi_dims[3] = {0, 0, 0};
+        int mpi_periods[3] = {periodic, periodic, periodic};
+        int mpi_coords[3];
+
+        /* Initialize cartesian process grid */
+        MPI_Comm_size(mpi_comm, &mpi_size);
+        MPI_Dims_create(mpi_size, 3, mpi_dims);
+        MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+        MPI_Comm_rank(mpi_comm, &mpi_rank);
+        MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+        for (auto gr : gridsTBT)
+        {
+            int ml = gr[0];
+            int nl = gr[1];
+            int ol = gr[2];
+            int mglob = ml * mpi_dims[0];
+            int nglob = nl * mpi_dims[1];
+            int oglob = ol * mpi_dims[2];
+
+            CAPTURE(ml, nl, ol, mglob, nglob, oglob);
+
+            // print coords and boundaries per rank
+            // if (mpi_rank == 0)
+            //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
+
+            // for (int i = 0; i < mpi_size; i++)
+            // {
+            //     MPI_Barrier(mpi_comm);
+            //     if (mpi_rank == i)
+            //     {
+            //         std::cout << mpi_rank << ";" << mpi_coords[0] << ";" << mpi_coords[1] << ";" << mpi_coords[2] << ";"
+            //                   << m_start << ";" << m_end << ";"
+            //                   << n_start << ";" << n_end << ";"
+            //                   << o_start << ";" << o_end << std::endl;
+            //     }
+            // }
+
+            REQUIRE(ml > 0);
+            REQUIRE(ml <= mglob);
+            REQUIRE(nl > 0);
+            REQUIRE(nl <= nglob);
+            REQUIRE(ol > 0);
+            REQUIRE(ol <= oglob);
+
+            auto v_in = std::make_shared<mgcl::Cuboid>(ml, nl, ol, 0, 0, 0);
+            auto f_in = std::make_shared<mgcl::Cuboid>(ml, nl, ol, 0, 0, 0);
+            v_in->fill1dIndex(true);
+            f_in->fill1dIndex(true);
+            // v_in->fillRandom();
+            // f_in->fillRandom();
+
+            // Create dummy problem to initialize OpenCL
+            mgcl::Problem p(ml, nl, ol, f_in, v_in, mglob, nglob, oglob);
+            p.setSilent(true);
+            p.setKernelFile("kernels_ghost_update.cl");
+            if (CLI_ARGS::useBinaryFile)
+            {
+                p.setBinaryFile("kernels_ghost_update.bin");
+            }
+            p.setUseOpencl(true);
+            p.setGhosts(ghosts);
+            p.setStencilType(mgcl::MGCL_LAPLACE_7POINT);
+            p.setDeviceType(CL_DEVICE_TYPE_GPU);
+            p.setDeviceStrategy(mgcl::OCL_DEVICE_STRATEGY::DISTRIBUTE_EVENLY);
+            p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
+            p.setMpiComm(mpi_comm);
+
+            // auto& conf = p.getKernelConfig();
+            // // Jacobi kernels
+            // conf["jacobi_iter_27point_varying_stencil_1d_update_step_only"] = mgcl::conf::KernelWorkgroupSizes{{1, {32, 1, 1}}};
+            p.init();
+
+            if (CLI_ARGS::enableKernelProfiling)
+                p.getProfilingData()->getMeasurements().clear();
+
+            auto& lv0 = p.getLevelAt(0);
+
+            ankerl::nanobench::Bench bench;
+            bench.timeUnit(1ms, "ms")
+                .epochs(CLI_ARGS::bench_epochs)
+                .epochIterations(CLI_ARGS::bench_iterations)
+                .relative(false);
+
+            if (mpi_rank > 0)
+                bench.output(nullptr);
+
+            if (CLI_ARGS::checkResults)
+            {
+                bench.epochs(1).epochIterations(1);
+            }
+
+            std::vector<size_t> gh_counts = {1, 2, 3, 4, 5};
+            std::vector<std::vector<size_t>> wg_sizes_3d = {{4, 4, 4}, {32, 1, 1}};
+            for (auto gh : gh_counts)
+            {
+                mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, ml, nl, ol, gh, gh, gh);
+                for (auto wg : wg_sizes_3d)
+                {
+                    c.fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
+                    c.fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
+
+                    std::string name = std::string("ghost_update_3d_")
+                                           .append(std::to_string(mglob))
+                                           .append("_")
+                                           .append(std::to_string(nglob))
+                                           .append("_")
+                                           .append(std::to_string(oglob))
+                                           .append("_wg")
+                                           .append(std::to_string(wg[0]))
+                                           .append("x")
+                                           .append(std::to_string(wg[1]))
+                                           .append("x")
+                                           .append(std::to_string(wg[2]));
+
+                    bench.run(std::string(name).c_str(), [&] { //
+                        updateGhosts(p, c, KernelVersion::THREE_D, wg);
+                        p.finish();
+                    });
+
+                    bench_util::ResultGhostUpdateMpi res;
+
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.mloc = ml;
+                    res.nloc = nl;
+                    res.oloc = ol;
+                    res.mglob = mglob;
+                    res.nglob = nglob;
+                    res.oglob = oglob;
+                    res.ghosts = gh;     // amount of ghost cells in one direction
+                    res.gpus = mpi_size; // GPU-count, equals mpi proc count
+                    results.push_back(res);
+
+                    // if (CLI_ARGS::checkResults)
+                    // {
+                    //     v_out_default = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                    //     lv0.getDVIn().read(p.getCommands(), v_out_default.get(), true);
+                    // }
+                }
+            }
 
             if (CLI_ARGS::enableKernelProfiling)
             {
