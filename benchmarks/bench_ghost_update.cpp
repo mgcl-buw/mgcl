@@ -1569,7 +1569,7 @@ namespace mgcl_bench_ghost_update_wgsizes
             }
 
             std::vector<size_t> gh_counts = {1, 2, 3, 4, 5};
-            std::vector<std::vector<size_t>> wg_sizes_3d = {{4, 4, 4}, {32, 1, 1}};
+            std::vector<std::vector<size_t>> wg_sizes_3d = {{4, 4, 4}, {4, 4, 8}};
             for (auto gh : gh_counts)
             {
                 mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, ml, nl, ol, gh, gh, gh);
