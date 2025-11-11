@@ -1311,6 +1311,7 @@ namespace mgcl_bench_ghost_update_wgsizes
                     // } }
                 }
 
+                if (false)
                 {
                     lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
                     lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
