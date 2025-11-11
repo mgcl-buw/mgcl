@@ -355,12 +355,12 @@ namespace mgcl
         // int mgh = m + 2 * gh;
         // int ngh = n + 2 * gh;
         // int ogh = o + 2 * gh;
-        size_t global[3] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
+        size_t global[3] = {static_cast<size_t>(ogh), static_cast<size_t>(ngh), static_cast<size_t>(mgh)};
         const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, 1);
         const size_t local[3] = {
-            static_cast<size_t>(mgh > c[0] ? c[0] : mgh),
+            static_cast<size_t>(ogh > c[0] ? c[0] : ogh),
             static_cast<size_t>(ngh > c[1] ? c[1] : ngh),
-            static_cast<size_t>(ogh > c[2] ? c[2] : ogh)};
+            static_cast<size_t>(mgh > c[2] ? c[2] : mgh)};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)

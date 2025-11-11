@@ -173,9 +173,9 @@ __kernel void update_ghosts_periodic(
     int m, int n, int o,
     int ghm, int ghn, int gho)
 {
-    int i = get_global_id(0);
+    int i = get_global_id(2);
     int j = get_global_id(1);
-    int k = get_global_id(2);
+    int k = get_global_id(0);
 
     int mgh = m + 2 * ghm;
     int ngh = n + 2 * ghn;

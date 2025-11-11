@@ -1359,6 +1359,9 @@ namespace mgcl_bench_ghost_update_wgsizes
             }
 
             // call regular ghpst update that is in production code once for kernel timing comparison
+            auto& conf = p.getKernelConfig();
+            // Jacobi kernels
+            conf["update_ghosts_periodic"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 8}}};
             mgcl::MultigridEngine::updateGhosts(p, lv0.getDVIn(), nullptr, true);
 
             if (CLI_ARGS::enableKernelProfiling)
