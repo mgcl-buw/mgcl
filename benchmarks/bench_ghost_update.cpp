@@ -882,7 +882,8 @@ namespace mgcl_bench_ghost_update_wgsizes
     enum class KernelVersion
     {
         THREE_D,
-        ONE_D
+        ONE_D,
+        SPLIT // split into 3 kernels, one per dimension. Also is a 3d kernel.
     };
 
     using size_t3 = struct
@@ -960,6 +961,122 @@ namespace mgcl_bench_ghost_update_wgsizes
         mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         err = clReleaseKernel(kernel);
+        mgcl::mgclCheckError(err, "Releasing update_ghosts_periodic kernel");
+
+        return err;
+    }
+
+    int updateGhostsSplit(mgcl::Problem& problem, mgcl::CuboidGpu& dBuffer, KernelVersion kernelVersion, std::vector<size_t> wgsizes)
+    {
+        // TODO actually request these as arguments
+        int m = dBuffer.getM();
+        int n = dBuffer.getN();
+        int o = dBuffer.getO();
+        int mgh = dBuffer.getMgh();
+        int ngh = dBuffer.getNgh();
+        int ogh = dBuffer.getOgh();
+        int ghosts_m = dBuffer.getGhostsM();
+        int ghosts_n = dBuffer.getGhostsN();
+        int ghosts_o = dBuffer.getGhostsO();
+
+        if (!problem.isPeriodic())
+            return CL_SUCCESS;
+
+        if (kernelVersion != KernelVersion::SPLIT)
+            throw "Only KernelVersion::SPLIT is supported";
+
+        int err;
+
+        bool is3d = true;
+
+        // Create the compute kernel from the program
+        const char* kernelNamex = "update_ghosts_periodic_x";
+        const char* kernelNamey = "update_ghosts_periodic_y";
+        const char* kernelNamez = "update_ghosts_periodic_z";
+        cl_kernel kernelx = clCreateKernel(problem.getOpenCLHelper().getProgram(), kernelNamex, &err);
+        mgcl::mgclCheckError(err, "clCreateKernel");
+        cl_kernel kernely = clCreateKernel(problem.getOpenCLHelper().getProgram(), kernelNamey, &err);
+        mgcl::mgclCheckError(err, "clCreateKernel");
+        cl_kernel kernelz = clCreateKernel(problem.getOpenCLHelper().getProgram(), kernelNamez, &err);
+        mgcl::mgclCheckError(err, "clCreateKernel");
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernelx, pos, sizeof(cl_mem), &dBuffer);
+        err |= clSetKernelArg(kernelx, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernelx, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernelx, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernelx, ++pos, sizeof(int), &ghosts_m);
+        err |= clSetKernelArg(kernelx, ++pos, sizeof(int), &ghosts_n);
+        err |= clSetKernelArg(kernelx, ++pos, sizeof(int), &ghosts_o);
+        mgcl::mgclCheckError(err, "Setting kernelx arguments");
+        pos = 0;
+        err = clSetKernelArg(kernely, pos, sizeof(cl_mem), &dBuffer);
+        err |= clSetKernelArg(kernely, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernely, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernely, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernely, ++pos, sizeof(int), &ghosts_m);
+        err |= clSetKernelArg(kernely, ++pos, sizeof(int), &ghosts_n);
+        err |= clSetKernelArg(kernely, ++pos, sizeof(int), &ghosts_o);
+        mgcl::mgclCheckError(err, "Setting kernely arguments");
+        pos = 0;
+        err = clSetKernelArg(kernelz, pos, sizeof(cl_mem), &dBuffer);
+        err |= clSetKernelArg(kernelz, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernelz, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernelz, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernelz, ++pos, sizeof(int), &ghosts_m);
+        err |= clSetKernelArg(kernelz, ++pos, sizeof(int), &ghosts_n);
+        err |= clSetKernelArg(kernelz, ++pos, sizeof(int), &ghosts_o);
+        mgcl::mgclCheckError(err, "Setting kernelz arguments");
+
+        // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
+        // int mgh = m + 2 * gh;
+        // int ngh = n + 2 * gh;
+        // int ogh = o + 2 * gh;
+        size_t globalx[2] = {static_cast<size_t>(ngh), static_cast<size_t>(ogh)};
+        size_t globaly[2] = {static_cast<size_t>(mgh), static_cast<size_t>(ogh)};
+        size_t globalz[2] = {static_cast<size_t>(mgh), static_cast<size_t>(ngh)};
+        size_t const local[3] = {wgsizes[0], wgsizes[1], wgsizes[2]};
+
+        for (int i = 0; i < 2; i++)
+        {
+            if (globalx[i] % local[i] != 0)
+                globalx[i] += local[i] - (globalx[i] % local[i]);
+            if (globaly[i] % local[i] != 0)
+                globaly[i] += local[i] - (globaly[i] % local[i]);
+            if (globalz[i] % local[i] != 0)
+                globalz[i] += local[i] - (globalz[i] % local[i]);
+        }
+
+        cl_event ev;
+
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernelx, 2, NULL, globalx, local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing update_ghosts_periodic kernel");
+        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernely, 2, NULL, globaly, local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing update_ghosts_periodic kernel");
+        err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernelz, 2, NULL, globalz, local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing update_ghosts_periodic kernel");
+
+        if (problem.isProfilingEnabled())
+        {
+            problem.getProfilingData()->addMeasurement(problem.getCommands(), ev, kernelNamex,
+                                                       {globalx[0], globalx[1], 0},
+                                                       {local[0], local[1], local[2]});
+            problem.getProfilingData()->addMeasurement(problem.getCommands(), ev, kernelNamey,
+                                                       {globaly[0], globaly[1], 0},
+                                                       {local[0], local[1], local[2]});
+            problem.getProfilingData()->addMeasurement(problem.getCommands(), ev, kernelNamez,
+                                                       {globalz[0], globalz[1], 0},
+                                                       {local[0], local[1], local[2]});
+        }
+        mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        err = clReleaseKernel(kernelx);
+        mgcl::mgclCheckError(err, "Releasing update_ghosts_periodic kernel");
+        err = clReleaseKernel(kernely);
+        mgcl::mgclCheckError(err, "Releasing update_ghosts_periodic kernel");
+        err = clReleaseKernel(kernelz);
         mgcl::mgclCheckError(err, "Releasing update_ghosts_periodic kernel");
 
         return err;
@@ -1146,70 +1263,119 @@ namespace mgcl_bench_ghost_update_wgsizes
                 // }
             }
 
-            std::vector<std::vector<size_t>> wg_sizes_3d = {{4, 4, 4}, {32, 1, 1}, {64, 1, 1}, {128, 1, 1}, {256, 1, 1}};
+            std::vector<std::vector<size_t>> wg_sizes_3d = {{4, 4, 4}, {4, 4, 8}, {2, 2, 8}, {8, 8, 8}, {4, 8, 8}, {4, 4, 16}, {8, 4, 4}, {32, 1, 1}, {64, 1, 1}};
             for (auto wg : wg_sizes_3d)
             {
-                lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
-                lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
+                {
+                    lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
+                    lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
 
-                std::string name = std::string("ghost_update_3d_")
-                                       .append(std::to_string(mglob))
-                                       .append("_")
-                                       .append(std::to_string(nglob))
-                                       .append("_")
-                                       .append(std::to_string(oglob))
-                                       .append("_wg")
-                                       .append(std::to_string(wg[0]))
-                                       .append("x")
-                                       .append(std::to_string(wg[1]))
-                                       .append("x")
-                                       .append(std::to_string(wg[2]));
+                    std::string name = std::string("ghost_update_3d_")
+                                           .append(std::to_string(mglob))
+                                           .append("_")
+                                           .append(std::to_string(nglob))
+                                           .append("_")
+                                           .append(std::to_string(oglob))
+                                           .append("_wg")
+                                           .append(std::to_string(wg[0]))
+                                           .append("x")
+                                           .append(std::to_string(wg[1]))
+                                           .append("x")
+                                           .append(std::to_string(wg[2]));
 
-                bench.run(std::string(name).c_str(), [&] { //
-                    updateGhosts(p, lv0.getDVIn(), KernelVersion::THREE_D, wg);
-                    p.finish();
-                });
+                    bench.run(std::string(name).c_str(), [&] { //
+                        updateGhosts(p, lv0.getDVIn(), KernelVersion::THREE_D, wg);
+                        p.finish();
+                    });
 
-                bench_util::ResultMpi res;
-                res.name = name;
-                res.minTime = bench_util::getMinTime(bench, name);
-                res.medianTime = bench_util::getMedianTime(bench, name);
-                res.avgTime = bench_util::getAvgTime(bench, name);
-                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                res.m = ml;
-                res.n = nl;
-                res.o = ol;
-                res.mglob = mglob;
-                res.nglob = nglob;
-                res.oglob = oglob;
-                res.gpus = mpi_size;
-                res.LT = -1;
-                results.push_back(res);
+                    bench_util::ResultMpi res;
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.m = ml;
+                    res.n = nl;
+                    res.o = ol;
+                    res.mglob = mglob;
+                    res.nglob = nglob;
+                    res.oglob = oglob;
+                    res.gpus = mpi_size;
+                    res.LT = -1;
+                    results.push_back(res);
 
-                // if (CLI_ARGS::checkResults)
-                // {
-                //     v_out_default = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
-                //     lv0.getDVIn().read(p.getCommands(), v_out_default.get(), true);
-                // }
+                    // if (CLI_ARGS::checkResults)
+                    // {
+                    //     v_out_default = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                    //     lv0.getDVIn().read(p.getCommands(), v_out_default.get(), true);
+                    // } }
+                }
+
+                {
+                    lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
+                    lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
+
+                    std::string name = std::string("ghost_update_3d_")
+                                           .append(std::to_string(mglob))
+                                           .append("_")
+                                           .append(std::to_string(nglob))
+                                           .append("_")
+                                           .append(std::to_string(oglob))
+                                           .append("_wg")
+                                           .append(std::to_string(wg[0]))
+                                           .append("x")
+                                           .append(std::to_string(wg[1]))
+                                           .append("x")
+                                           .append(std::to_string(wg[2]));
+
+                    bench.run(std::string(name).c_str(), [&] { //
+                        updateGhostsSplit(p, lv0.getDVIn(), KernelVersion::SPLIT, wg);
+                        p.finish();
+                    });
+
+                    bench_util::ResultMpi res;
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.m = ml;
+                    res.n = nl;
+                    res.o = ol;
+                    res.mglob = mglob;
+                    res.nglob = nglob;
+                    res.oglob = oglob;
+                    res.gpus = mpi_size;
+                    res.LT = -1;
+                    results.push_back(res);
+
+                    // if (CLI_ARGS::checkResults)
+                    // {
+                    //     v_out_default = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                    //     lv0.getDVIn().read(p.getCommands(), v_out_default.get(), true);
+                    // } }
+                }
             }
+
+            // call regular ghpst update that is in production code once for kernel timing comparison
             mgcl::MultigridEngine::updateGhosts(p, lv0.getDVIn(), nullptr, true);
 
             if (CLI_ARGS::enableKernelProfiling)
             {
                 p.getProfilingData()->printBestTimingsPerKernel(kernelProfilesStream);
             }
-        }
 
-        MPI_Barrier(mpi_comm);
-        bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
-        MPI_Barrier(mpi_comm);
+            MPI_Barrier(mpi_comm);
+            bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
+            MPI_Barrier(mpi_comm);
 
-        if (CLI_ARGS::enableKernelProfiling)
-        {
-            kernelProfilesStream << "rank: " << mpi_rank << std::endl;
-            std::cout << kernelProfilesStream.str() << std::endl;
+            if (CLI_ARGS::enableKernelProfiling)
+            {
+                kernelProfilesStream << "rank: " << mpi_rank << std::endl;
+                std::cout << kernelProfilesStream.str() << std::endl;
+            }
+            MPI_Barrier(mpi_comm);
         }
-        MPI_Barrier(mpi_comm);
     }
 
     // Benchs the ghost update of CuboidGpu for different ghost layer sizes, i.e. ghost amounts.
@@ -1416,5 +1582,4 @@ namespace mgcl_bench_ghost_update_wgsizes
         }
         MPI_Barrier(mpi_comm);
     }
-
 }

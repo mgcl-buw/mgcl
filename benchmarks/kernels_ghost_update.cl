@@ -202,9 +202,9 @@ __kernel void update_ghosts_periodic_3d(
          i >= ghm + m || j >= ghn + n || k >= gho + o) &&
         (i < mgh && j < ngh && k < ogh))
     {
-        int ireal = i + floor(((double)(ghm - 1 - i)) / m + 1) * m;
-        int jreal = j + floor(((double)(ghn - 1 - j)) / n + 1) * n;
-        int kreal = k + floor(((double)(gho - 1 - k)) / o + 1) * o;
+        int ireal = ((i - ghm) % m + m) % m + ghm;
+        int jreal = ((j - ghn) % n + n) % n + ghn;
+        int kreal = ((k - gho) % o + o) % o + gho;
 
         // 1d indices
         int idx_gh_cell = i * ngh * ogh + j * ogh + k;
@@ -244,6 +244,103 @@ __kernel void update_ghosts_periodic_1d(
 
         // update ghost cell
         c[idx_gh_cell] = c[idx_real_cell];
+    }
+}
+
+__kernel void update_ghosts_periodic_x(
+    __global double* restrict c,
+    int m, int n, int o,
+    int ghm, int ghn, int gho)
+{
+    int j = get_global_id(0);
+    int k = get_global_id(1);
+    int ngh = n + 2 * ghn;
+    int ogh = o + 2 * gho;
+    int plane = ngh * ogh;
+
+    if (j >= ngh || k >= ogh)
+        return;
+
+    // left side ghosts
+    for (int gi = 0; gi < ghm; gi++)
+    {
+        int ireal = gi + m;
+        c[gi * plane + j * ogh + k] =
+            c[ireal * plane + j * ogh + k];
+    }
+
+    // right side ghosts
+    for (int gi = 0; gi < ghm; gi++)
+    {
+        int i = ghm + m + gi;
+        int ireal = ghm + gi;
+        c[i * plane + j * ogh + k] =
+            c[ireal * plane + j * ogh + k];
+    }
+}
+
+__kernel void update_ghosts_periodic_y(
+    __global double* restrict c,
+    int m, int n, int o,
+    int ghm, int ghn, int gho)
+{
+    int i = get_global_id(0);
+    int k = get_global_id(1);
+    int mgh = m + 2 * ghm;
+    int ngh = n + 2 * ghn;
+    int ogh = o + 2 * gho;
+    int plane = ngh * ogh;
+
+    if (i >= mgh || k >= ogh)
+        return;
+
+    int base = i * plane;
+
+    for (int gj = 0; gj < ghn; gj++)
+    {
+        int jreal = gj + n;
+        c[base + gj * ogh + k] =
+            c[base + jreal * ogh + k];
+    }
+    for (int gj = 0; gj < ghn; gj++)
+    {
+        int j = ghn + n + gj;
+        int jreal = ghn + gj;
+        c[base + j * ogh + k] =
+            c[base + jreal * ogh + k];
+    }
+}
+
+__kernel void update_ghosts_periodic_z(
+    __global double* restrict c,
+    int m, int n, int o,
+    int ghm, int ghn, int gho)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int mgh = m + 2 * ghm;
+    int ngh = n + 2 * ghn;
+    int ogh = o + 2 * gho;
+    int plane = ngh * ogh;
+
+    if (i >= mgh || j >= ngh)
+        return;
+
+    int base = i * plane + j * ogh;
+
+    for (int gk = 0; gk < gho; gk++)
+    {
+        int kreal = gk + o;
+        c[base + gk] =
+            c[base + kreal];
+    }
+
+    for (int gk = 0; gk < gho; gk++)
+    {
+        int k = gho + o + gk;
+        int kreal = gho + gk;
+        c[base + k] =
+            c[base + kreal];
     }
 }
 
