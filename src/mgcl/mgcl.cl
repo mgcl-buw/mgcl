@@ -172,9 +172,12 @@ __kernel void update_ghosts_periodic(
          i >= ghm + m || j >= ghn + n || k >= gho + o) &&
         (i < mgh && j < ngh && k < ogh))
     {
-        int ireal = i + floor(((double)(ghm - 1 - i)) / m + 1) * m;
-        int jreal = j + floor(((double)(ghn - 1 - j)) / n + 1) * n;
-        int kreal = k + floor(((double)(gho - 1 - k)) / o + 1) * o;
+        // int ireal = i + floor(((double)(ghm - 1 - i)) / m + 1) * m;
+        // int jreal = j + floor(((double)(ghn - 1 - j)) / n + 1) * n;
+        // int kreal = k + floor(((double)(gho - 1 - k)) / o + 1) * o;
+        int ireal = ((i - ghm) % m + m) % m + ghm;
+        int jreal = ((j - ghn) % n + n) % n + ghn;
+        int kreal = ((k - gho) % o + o) % o + gho;
 
         // 1d indices
         int idx_gh_cell = i * ngh * ogh + j * ogh + k;
@@ -209,9 +212,12 @@ __kernel void update_ghosts_cuboidbs_periodic_blockstencil(
          i >= ghm + m || j >= ghn + n || k >= gho + o) &&
         (i < mgh && j < ngh && k < ogh))
     {
-        int ireal = i + floor(((double)(ghm - 1 - i)) / m + 1) * m;
-        int jreal = j + floor(((double)(ghn - 1 - j)) / n + 1) * n;
-        int kreal = k + floor(((double)(gho - 1 - k)) / o + 1) * o;
+        // int ireal = i + floor(((double)(ghm - 1 - i)) / m + 1) * m;
+        // int jreal = j + floor(((double)(ghn - 1 - j)) / n + 1) * n;
+        // int kreal = k + floor(((double)(gho - 1 - k)) / o + 1) * o;
+        int ireal = ((i - ghm) % m + m) % m + ghm;
+        int jreal = ((j - ghn) % n + n) % n + ghn;
+        int kreal = ((k - gho) % o + o) % o + gho;
 
         // 1d indices
         int idx_gh_cell = i * ngh * ogh * BLOCKSIZE + j * ogh * BLOCKSIZE + k * BLOCKSIZE;
