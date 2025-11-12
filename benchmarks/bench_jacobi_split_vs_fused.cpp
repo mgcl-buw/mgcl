@@ -655,9 +655,9 @@ namespace mgcl_bench_jacobi_split_vs_fused
         // if (store_res)
         // {
         // TODO check for mpi
-        err = mgcl::MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
-                                                  level.isCalculatedLocally());
-        mgcl::mgclCheckError(err, "Updating ghosts of dR");
+        // err = mgcl::MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
+        //                                           level.isCalculatedLocally());
+        // mgcl::mgclCheckError(err, "Updating ghosts of dR");
         // }
 
         // Update ghosts of dVIn
