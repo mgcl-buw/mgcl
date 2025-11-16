@@ -1420,7 +1420,8 @@ namespace mgcl_bench_ghost_update_wgsizes
 
             if (CLI_ARGS::enableKernelProfiling)
             {
-                p.getProfilingData()->printBestTimingsPerKernel(kernelProfilesStream);
+                // p.getProfilingData()->printBestTimingsPerKernel(kernelProfilesStream);
+                p.getProfilingData()->printBestTimingsPerKernelAsCsv(kernelProfilesStream);
             }
 
             MPI_Barrier(mpi_comm);
@@ -1625,7 +1626,8 @@ namespace mgcl_bench_ghost_update_wgsizes
 
             if (CLI_ARGS::enableKernelProfiling)
             {
-                p.getProfilingData()->printBestTimingsPerKernel(kernelProfilesStream);
+                // p.getProfilingData()->printBestTimingsPerKernel(kernelProfilesStream);
+                p.getProfilingData()->printBestTimingsPerKernelAsCsv(kernelProfilesStream);
             }
         }
 
