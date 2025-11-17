@@ -2158,15 +2158,15 @@ __kernel void restrict_to_coarse_blockstencil(
  * fine and coarse must be of sizes of ghosted grids.
  * gh_vals_coarse must be sizes of coarse grid's cuboids. Most of the time its equal to m/2,n/2,o/2 but for
  * the threshold-level when using MPI, the cuboid is bigger than the actual level would be. */
-__kernel void prolongate_to_fine(
+__kernel void prolongate_to_fine_old(
     __global double* restrict fine,
     __global double* restrict coarse,
     const int m, const int n, const int o, const int ghosts,
     const int ngh_vals_coarse, const int ogh_vals_coarse)
 {
-    int i = get_global_id(0);
+    int i = get_global_id(2);
     int j = get_global_id(1);
-    int k = get_global_id(2);
+    int k = get_global_id(0);
     int g2 = 2 * ghosts;
 
     const int mc = (m - g2) / 2 + g2, nc = (n - g2) / 2 + g2, oc = (o - g2) / 2 + g2;
@@ -2197,6 +2197,69 @@ __kernel void prolongate_to_fine(
                      coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k - 1] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k] +
                      coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k - 1] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
                      coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k - 1]);
+    }
+}
+
+__kernel void prolongate_to_fine(
+    __global double* restrict fine,
+    __global double* restrict coarse,
+    const int m, const int n, const int o, const int ghosts,
+    const int ngh_vals_coarse, const int ogh_vals_coarse)
+{
+    int i = get_global_id(2);
+    int j = get_global_id(1);
+    int k = get_global_id(0) % 8;
+    int g2 = 2 * ghosts;
+
+    const int mc = (m - g2) / 2 + g2, nc = (n - g2) / 2 + g2, oc = (o - g2) / 2 + g2;
+
+    if (i > ghosts - 1 && i < mc - ghosts && j > ghosts - 1 && j < nc - ghosts && k > ghosts - 1 && k < oc - ghosts)
+    {
+        const int index_coarse = i * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k;
+        const int i2 = i * 2 - (ghosts - 1), j2 = j * 2 - (ghosts - 1), k2 = k * 2 - (ghosts - 1);
+
+        if (get_global_id(0) < o)
+        {
+            fine[i2 * n * o + j2 * o + k2] = coarse[index_coarse];
+        }
+        else if (get_global_id(0) < 2 * o)
+        {
+            fine[i2 * n * o + j2 * o + k2 - 1] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - 1]);
+        }
+        else if (get_global_id(0) < 3 * o)
+        {
+            fine[i2 * n * o + (j2 - 1) * o + k2] = 0.5 * (coarse[index_coarse] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k]);
+        }
+        else if (get_global_id(0) < 4 * o)
+        {
+            fine[(i2 - 1) * n * o + j2 * o + k2] = 0.5 * (coarse[index_coarse] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k]);
+        }
+        else if (get_global_id(0) < 5 * o)
+        {
+            fine[i2 * n * o + (j2 - 1) * o + k2 - 1] =
+                0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
+                        coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k - 1]);
+        }
+        else if (get_global_id(0) < 6 * o)
+        {
+            fine[(i2 - 1) * n * o + j2 * o + k2 - 1] =
+                0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k] +
+                        coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k - 1]);
+        }
+        else if (get_global_id(0) < 7 * o)
+        {
+            fine[(i2 - 1) * n * o + (j2 - 1) * o + k2] =
+                0.25 * (coarse[index_coarse] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
+                        coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k]);
+        }
+        else if (get_global_id(0) < 8 * o)
+        {
+            fine[(i2 - 1) * n * o + (j2 - 1) * o + k2 - 1] =
+                0.125 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
+                         coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k - 1] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k] +
+                         coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k - 1] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
+                         coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k - 1]);
+        }
     }
 }
 

@@ -2151,9 +2151,9 @@ __kernel void prolongate_to_fine(
     const int m, const int n, const int o, const int ghosts,
     const int ngh_vals_coarse, const int ogh_vals_coarse)
 {
-    int i = get_global_id(0);
+    int i = get_global_id(2);
     int j = get_global_id(1);
-    int k = get_global_id(2);
+    int k = get_global_id(0);
     int g2 = 2 * ghosts;
 
     const int mc = (m - g2) / 2 + g2, nc = (n - g2) / 2 + g2, oc = (o - g2) / 2 + g2;

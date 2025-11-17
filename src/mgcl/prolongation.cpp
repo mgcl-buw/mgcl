@@ -92,11 +92,11 @@ namespace mgcl
         mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per cell (including ghost cells). Pad global sizes to fit to local sizes
-        size_t global[3] = {static_cast<size_t>(fine.mgh >> 1), static_cast<size_t>(fine.ngh >> 1), static_cast<size_t>(fine.ogh >> 1)};
-        const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(fine.problem->getKernelConfig(), kernelName, 1);
-        const size_t local[3] = {static_cast<size_t>((fine.mgh >> 1) > c[0] ? c[0] : (fine.mgh >> 1)),
-                                 static_cast<size_t>((fine.ngh >> 1) > c[1] ? c[1] : (fine.ngh >> 1)),
-                                 static_cast<size_t>((fine.ogh >> 1) > c[2] ? c[2] : (fine.ogh >> 1))};
+        size_t global[3] = {static_cast<size_t>(coarse.ogh), static_cast<size_t>(coarse.ngh), static_cast<size_t>(coarse.mgh)};
+        const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(coarse.problem->getKernelConfig(), kernelName, 1);
+        const size_t local[3] = {static_cast<size_t>((coarse.ogh) > c[0] ? c[0] : (coarse.ogh)),
+                                 static_cast<size_t>((coarse.ngh) > c[1] ? c[1] : (coarse.ngh)),
+                                 static_cast<size_t>((coarse.mgh) > c[2] ? c[2] : (coarse.mgh))};
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)
