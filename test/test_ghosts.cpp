@@ -1,3 +1,4 @@
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
@@ -142,6 +143,7 @@ TEST_CASE("updateGhosts gh > m")
             for (int j = 0; j < ghosts_n; j++)
                 for (int k = 0; k < ghosts_o; k++)
                 {
+                    CAPTURE(i, j, k);
                     REQUIRE(fabs((*c2)[i][j][k] - (*c2)[i + m][j + n][k + o]) < tol);
                     REQUIRE(fabs((*c2)[i + ghosts_m][j + ghosts_n][k + ghosts_o] - (*c2)[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
                 }

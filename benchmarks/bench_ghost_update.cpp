@@ -881,10 +881,11 @@ namespace mgcl_bench_ghost_update_wgsizes
 {
     enum class KernelVersion
     {
-        THREE_D,
+        THREE_D_MODULO,
         ONE_D,
-        THREE_D_OLD_INDEX_CALC, // e.g. int ireal = i + floor(((double)(ghm - 1 - i)) / m + 1) * m;
-        SPLIT                   // split into 3 kernels, one per dimension. Also is a 3d kernel.
+        THREE_D_TYPECONV_DOUBLE, // e.g. int ireal = i + floor(((double)(ghm - 1 - i)) / m + 1) * m;
+        THREE_D_TYPECONV_FLOAT,  // e.g. int ireal = i + floor(((float)(ghm - 1 - i)) / m + 1) * m;
+        SPLIT                    // split into 3 kernels, one per dimension. Also is a 3d kernel.
     };
 
     using size_t3 = struct
@@ -911,14 +912,16 @@ namespace mgcl_bench_ghost_update_wgsizes
 
         int err;
 
-        bool is3d = kernelVersion == KernelVersion::THREE_D || kernelVersion == KernelVersion::THREE_D_OLD_INDEX_CALC;
+        bool is3d = kernelVersion == KernelVersion::THREE_D_MODULO || kernelVersion == KernelVersion::THREE_D_TYPECONV_DOUBLE || kernelVersion == KernelVersion::THREE_D_TYPECONV_FLOAT;
 
         // Create the compute kernel from the program
         std::string kernelName;
-        if (kernelVersion == KernelVersion::THREE_D)
-            kernelName = "update_ghosts_periodic_3d";
-        else if (kernelVersion == KernelVersion::THREE_D_OLD_INDEX_CALC)
-            kernelName = "update_ghosts_periodic_3d_old_index_calc";
+        if (kernelVersion == KernelVersion::THREE_D_MODULO)
+            kernelName = "update_ghosts_periodic_3d_modulo";
+        else if (kernelVersion == KernelVersion::THREE_D_TYPECONV_DOUBLE)
+            kernelName = "update_ghosts_periodic_3d_typeconv_double";
+        else if (kernelVersion == KernelVersion::THREE_D_TYPECONV_FLOAT)
+            kernelName = "update_ghosts_periodic_3d_typeconv_float";
         else if (kernelVersion == KernelVersion::ONE_D)
             kernelName = "update_ghosts_periodic_1d";
         cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper().getProgram(), kernelName.c_str(), &err);
@@ -1223,6 +1226,8 @@ namespace mgcl_bench_ghost_update_wgsizes
                 bench.epochs(1).epochIterations(1);
             }
 
+            p.getProfilingData()->getMeasurements().clear();
+
             std::vector<std::vector<size_t>> wg_sizes_1d = {{4, 1, 1}, {8, 1, 1}, {32, 1, 1}, {64, 1, 1}, {128, 1, 1}, {256, 1, 1}};
             for (auto wg : wg_sizes_1d)
             {
@@ -1270,14 +1275,14 @@ namespace mgcl_bench_ghost_update_wgsizes
                 // }
             }
 
-            std::vector<std::vector<size_t>> wg_sizes_3d = {{4, 4, 4}, {4, 4, 8}, {2, 2, 8}, {8, 8, 8}, {4, 8, 8}, {4, 4, 16}, {8, 4, 4}, {32, 1, 1}, {64, 1, 1}};
+            std::vector<std::vector<size_t>> wg_sizes_3d = {{4, 4, 4}, {4, 4, 8}, {2, 2, 8}, {8, 8, 8}, {4, 4, 16}, {32, 1, 1}, {64, 1, 1}, {128, 1, 1}};
             for (auto wg : wg_sizes_3d)
             {
                 {
                     lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
                     lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
 
-                    std::string name = std::string("ghost_update_3d_")
+                    std::string name = std::string("ghost_update_3d_modulo_")
                                            .append(std::to_string(mglob))
                                            .append("_")
                                            .append(std::to_string(nglob))
@@ -1291,7 +1296,7 @@ namespace mgcl_bench_ghost_update_wgsizes
                                            .append(std::to_string(wg[2]));
 
                     bench.run(std::string(name).c_str(), [&] { //
-                        updateGhosts(p, lv0.getDVIn(), KernelVersion::THREE_D, wg);
+                        updateGhosts(p, lv0.getDVIn(), KernelVersion::THREE_D_MODULO, wg);
                         p.finish();
                     });
 
@@ -1324,7 +1329,7 @@ namespace mgcl_bench_ghost_update_wgsizes
                 lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
                 lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
 
-                std::string name = std::string("ghost_update_3d_old_index_calc_")
+                std::string name = std::string("ghost_update_3d_typeconv_double_")
                                        .append(std::to_string(mglob))
                                        .append("_")
                                        .append(std::to_string(nglob))
@@ -1338,7 +1343,7 @@ namespace mgcl_bench_ghost_update_wgsizes
                                        .append(std::to_string(wg[2]));
 
                 bench.run(std::string(name).c_str(), [&] { //
-                    updateGhosts(p, lv0.getDVIn(), KernelVersion::THREE_D_OLD_INDEX_CALC, wg);
+                    updateGhosts(p, lv0.getDVIn(), KernelVersion::THREE_D_TYPECONV_DOUBLE, wg);
                     p.finish();
                 });
 
@@ -1366,7 +1371,53 @@ namespace mgcl_bench_ghost_update_wgsizes
             }
 
             for (auto wg : wg_sizes_3d)
-                if (false)
+            {
+                lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
+                lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
+
+                std::string name = std::string("ghost_update_3d_typeconv_float_")
+                                       .append(std::to_string(mglob))
+                                       .append("_")
+                                       .append(std::to_string(nglob))
+                                       .append("_")
+                                       .append(std::to_string(oglob))
+                                       .append("_wg")
+                                       .append(std::to_string(wg[0]))
+                                       .append("x")
+                                       .append(std::to_string(wg[1]))
+                                       .append("x")
+                                       .append(std::to_string(wg[2]));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    updateGhosts(p, lv0.getDVIn(), KernelVersion::THREE_D_TYPECONV_FLOAT, wg);
+                    p.finish();
+                });
+
+                bench_util::ResultMpi res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = ml;
+                res.n = nl;
+                res.o = ol;
+                res.mglob = mglob;
+                res.nglob = nglob;
+                res.oglob = oglob;
+                res.gpus = mpi_size;
+                res.LT = -1;
+                results.push_back(res);
+
+                // if (CLI_ARGS::checkResults)
+                // {
+                //     v_out_default = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                //     lv0.getDVIn().read(p.getCommands(), v_out_default.get(), true);
+                // } }
+            }
+
+            if (false)
+                for (auto wg : wg_sizes_3d)
                 {
                     lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
                     lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
@@ -1595,7 +1646,7 @@ namespace mgcl_bench_ghost_update_wgsizes
                                            .append(std::to_string(wg[2]));
 
                     bench.run(std::string(name).c_str(), [&] { //
-                        updateGhosts(p, c, KernelVersion::THREE_D, wg);
+                        updateGhosts(p, c, KernelVersion::THREE_D_MODULO, wg);
                         p.finish();
                     });
 
