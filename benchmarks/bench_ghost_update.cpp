@@ -883,9 +883,12 @@ namespace mgcl_bench_ghost_update_wgsizes
     {
         THREE_D_MODULO,
         ONE_D,
-        THREE_D_TYPECONV_DOUBLE, // e.g. int ireal = i + floor(((double)(ghm - 1 - i)) / m + 1) * m;
-        THREE_D_TYPECONV_FLOAT,  // e.g. int ireal = i + floor(((float)(ghm - 1 - i)) / m + 1) * m;
-        SPLIT                    // split into 3 kernels, one per dimension. Also is a 3d kernel.
+        THREE_D_TYPECONV_DOUBLE,          // e.g. int ireal = i + floor(((double)(ghm - 1 - i)) / m + 1) * m;
+        THREE_D_TYPECONV_FLOAT,           // e.g. int ireal = i + floor(((float)(ghm - 1 - i)) / m + 1) * m;
+        THREE_D_TYPECONV_FLOAT_CONVERTFN, // e.g. int ireal = i + ((int)(((float)(ghm - 1 - i)) / m) + 1.0f) * m;
+        THREE_D_TYPECONV_FLOAT_TRUNCATE,  // e.g. int ireal = i + ((int)(((float)(ghm - 1 - i)) / m) + 1.0f) * m;
+
+        SPLIT // split into 3 kernels, one per dimension. Also is a 3d kernel.
     };
 
     using size_t3 = struct
@@ -912,7 +915,11 @@ namespace mgcl_bench_ghost_update_wgsizes
 
         int err;
 
-        bool is3d = kernelVersion == KernelVersion::THREE_D_MODULO || kernelVersion == KernelVersion::THREE_D_TYPECONV_DOUBLE || kernelVersion == KernelVersion::THREE_D_TYPECONV_FLOAT;
+        bool is3d = kernelVersion == KernelVersion::THREE_D_MODULO ||
+                    kernelVersion == KernelVersion::THREE_D_TYPECONV_DOUBLE ||
+                    kernelVersion == KernelVersion::THREE_D_TYPECONV_FLOAT ||
+                    kernelVersion == KernelVersion::THREE_D_TYPECONV_FLOAT_CONVERTFN ||
+                    kernelVersion == KernelVersion::THREE_D_TYPECONV_FLOAT_TRUNCATE;
 
         // Create the compute kernel from the program
         std::string kernelName;
@@ -922,6 +929,10 @@ namespace mgcl_bench_ghost_update_wgsizes
             kernelName = "update_ghosts_periodic_3d_typeconv_double";
         else if (kernelVersion == KernelVersion::THREE_D_TYPECONV_FLOAT)
             kernelName = "update_ghosts_periodic_3d_typeconv_float";
+        else if (kernelVersion == KernelVersion::THREE_D_TYPECONV_FLOAT_CONVERTFN)
+            kernelName = "update_ghosts_periodic_3d_typeconv_float_convertfn";
+        else if (kernelVersion == KernelVersion::THREE_D_TYPECONV_FLOAT_TRUNCATE)
+            kernelName = "update_ghosts_periodic_3d_typeconv_float_truncate";
         else if (kernelVersion == KernelVersion::ONE_D)
             kernelName = "update_ghosts_periodic_1d";
         cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper().getProgram(), kernelName.c_str(), &err);
@@ -1388,6 +1399,100 @@ namespace mgcl_bench_ghost_update_wgsizes
 
                 bench.run(std::string(name).c_str(), [&] { //
                     updateGhosts(p, lv0.getDVIn(), KernelVersion::THREE_D_TYPECONV_FLOAT, wg);
+                    p.finish();
+                });
+
+                bench_util::ResultMpi res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = ml;
+                res.n = nl;
+                res.o = ol;
+                res.mglob = mglob;
+                res.nglob = nglob;
+                res.oglob = oglob;
+                res.gpus = mpi_size;
+                res.LT = -1;
+                results.push_back(res);
+
+                // if (CLI_ARGS::checkResults)
+                // {
+                //     v_out_default = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                //     lv0.getDVIn().read(p.getCommands(), v_out_default.get(), true);
+                // } }
+            }
+
+            // if (false)
+            for (auto wg : wg_sizes_3d)
+            {
+                lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
+                lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
+
+                std::string name = std::string("ghost_update_3d_typeconv_float_truncate_")
+                                       .append(std::to_string(mglob))
+                                       .append("_")
+                                       .append(std::to_string(nglob))
+                                       .append("_")
+                                       .append(std::to_string(oglob))
+                                       .append("_wg")
+                                       .append(std::to_string(wg[0]))
+                                       .append("x")
+                                       .append(std::to_string(wg[1]))
+                                       .append("x")
+                                       .append(std::to_string(wg[2]));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    updateGhosts(p, lv0.getDVIn(), KernelVersion::THREE_D_TYPECONV_FLOAT_CONVERTFN, wg);
+                    p.finish();
+                });
+
+                bench_util::ResultMpi res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = ml;
+                res.n = nl;
+                res.o = ol;
+                res.mglob = mglob;
+                res.nglob = nglob;
+                res.oglob = oglob;
+                res.gpus = mpi_size;
+                res.LT = -1;
+                results.push_back(res);
+
+                // if (CLI_ARGS::checkResults)
+                // {
+                //     v_out_default = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                //     lv0.getDVIn().read(p.getCommands(), v_out_default.get(), true);
+                // } }
+            }
+
+            // if (false)
+            for (auto wg : wg_sizes_3d)
+            {
+                lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
+                lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
+
+                std::string name = std::string("ghost_update_3d_typeconv_float_truncate_")
+                                       .append(std::to_string(mglob))
+                                       .append("_")
+                                       .append(std::to_string(nglob))
+                                       .append("_")
+                                       .append(std::to_string(oglob))
+                                       .append("_wg")
+                                       .append(std::to_string(wg[0]))
+                                       .append("x")
+                                       .append(std::to_string(wg[1]))
+                                       .append("x")
+                                       .append(std::to_string(wg[2]));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    updateGhosts(p, lv0.getDVIn(), KernelVersion::THREE_D_TYPECONV_FLOAT_TRUNCATE, wg);
                     p.finish();
                 });
 
