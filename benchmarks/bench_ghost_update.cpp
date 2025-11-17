@@ -1226,8 +1226,6 @@ namespace mgcl_bench_ghost_update_wgsizes
                 bench.epochs(1).epochIterations(1);
             }
 
-            p.getProfilingData()->getMeasurements().clear();
-
             std::vector<std::vector<size_t>> wg_sizes_1d = {{4, 1, 1}, {8, 1, 1}, {32, 1, 1}, {64, 1, 1}, {128, 1, 1}, {256, 1, 1}};
             for (auto wg : wg_sizes_1d)
             {
