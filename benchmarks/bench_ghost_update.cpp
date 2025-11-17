@@ -1726,16 +1726,19 @@ namespace mgcl_bench_ghost_update_wgsizes
             }
 
             std::vector<size_t> gh_counts = {1, 2, 3, 4, 5};
-            std::vector<std::vector<size_t>> wg_sizes_3d = {{4, 4, 4}, {4, 4, 8}};
+            std::vector<std::vector<size_t>> wg_sizes_3d = {{4, 4, 4}, {4, 4, 8}, {4, 4, 16}};
             for (auto gh : gh_counts)
             {
+                if (CLI_ARGS::enableKernelProfiling)
+                    p.getProfilingData()->getMeasurements().clear();
+
                 mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, ml, nl, ol, gh, gh, gh);
                 for (auto wg : wg_sizes_3d)
                 {
                     c.fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
                     c.fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
 
-                    std::string name = std::string("ghost_update_3d_")
+                    std::string name = std::string("ghost_update_3d_modulo_")
                                            .append(std::to_string(mglob))
                                            .append("_")
                                            .append(std::to_string(nglob))
@@ -1776,12 +1779,59 @@ namespace mgcl_bench_ghost_update_wgsizes
                     //     lv0.getDVIn().read(p.getCommands(), v_out_default.get(), true);
                     // }
                 }
-            }
 
-            if (CLI_ARGS::enableKernelProfiling)
-            {
-                // p.getProfilingData()->printBestTimingsPerKernel(kernelProfilesStream);
-                p.getProfilingData()->printBestTimingsPerKernelAsCsv(kernelProfilesStream);
+                for (auto wg : wg_sizes_3d)
+                {
+                    c.fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
+                    c.fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
+
+                    std::string name = std::string("ghost_update_3d_float_")
+                                           .append(std::to_string(mglob))
+                                           .append("_")
+                                           .append(std::to_string(nglob))
+                                           .append("_")
+                                           .append(std::to_string(oglob))
+                                           .append("_wg")
+                                           .append(std::to_string(wg[0]))
+                                           .append("x")
+                                           .append(std::to_string(wg[1]))
+                                           .append("x")
+                                           .append(std::to_string(wg[2]));
+
+                    bench.run(std::string(name).c_str(), [&] { //
+                        updateGhosts(p, c, KernelVersion::THREE_D_TYPECONV_FLOAT, wg);
+                        p.finish();
+                    });
+
+                    bench_util::ResultGhostUpdateMpi res;
+
+                    res.name = name;
+                    res.minTime = bench_util::getMinTime(bench, name);
+                    res.medianTime = bench_util::getMedianTime(bench, name);
+                    res.avgTime = bench_util::getAvgTime(bench, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                    res.mloc = ml;
+                    res.nloc = nl;
+                    res.oloc = ol;
+                    res.mglob = mglob;
+                    res.nglob = nglob;
+                    res.oglob = oglob;
+                    res.ghosts = gh;     // amount of ghost cells in one direction
+                    res.gpus = mpi_size; // GPU-count, equals mpi proc count
+                    results.push_back(res);
+
+                    // if (CLI_ARGS::checkResults)
+                    // {
+                    //     v_out_default = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                    //     lv0.getDVIn().read(p.getCommands(), v_out_default.get(), true);
+                    // }
+                }
+                if (CLI_ARGS::enableKernelProfiling)
+                {
+                    // p.getProfilingData()->printBestTimingsPerKernel(kernelProfilesStream);
+                    p.getProfilingData()->printBestTimingsPerKernelAsCsv(kernelProfilesStream);
+                    kernelProfilesStream << "----------" << std::endl;
+                }
             }
         }
 
