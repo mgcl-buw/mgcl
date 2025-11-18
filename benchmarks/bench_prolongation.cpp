@@ -259,11 +259,10 @@ namespace mgcl_bench_prolongation
                 // run code that is in production for result checking
                 fine.fill(p.getProgram(), p.getCommands(), 0, false, nullptr, nullptr);
                 coarse.fill1dIndex(p.getProgram(), p.getCommands(), true, false, nullptr, nullptr);
+                fine_3d_prod = fine.read(p.getCommands(), nullptr, false);
+                auto h_coarse = coarse.read(p.getCommands(), nullptr, true);
 
-                mgcl::MultigridEngine::prolongate(lv0, lv1, fine, coarse);
-
-                fine_3d_prod = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
-                lv0.getDVIn().read(p.getCommands(), fine_3d_prod.get(), true);
+                mgcl::MultigridEngine::prolongateSeq(lv0, lv1, *fine_3d_prod, *h_coarse);
             }
 
             // std::vector<std::vector<size_t>> wg_sizes_1d = {{4, 1, 1}, {8, 1, 1}, {32, 1, 1}, {64, 1, 1}, {128, 1, 1}, {256, 1, 1}};
