@@ -95,10 +95,16 @@ namespace mgcl
         // Iterate over all measurements per kernel
         for (const auto& entry : measurements)
         {
-            // Group measurements by work-item count and work-group size
-            std::map<std::string, std::vector<ProfilingMeasurement>> tmp;
+            // Map grouped by work_items and work_group
+            // Sorted by work_group because std::map sorts by key
+            std::map<GroupKey, std::vector<ProfilingMeasurement>> tmp;
+
+            // Group measurements
             for (const auto& m : entry.second)
-                tmp[std::to_string(m.work_items[0]) + "," + std::to_string(m.work_items[1]) + "," + std::to_string(m.work_items[2]) + "," + std::to_string(m.work_group[0]) + "," + std::to_string(m.work_group[1]) + "," + std::to_string(m.work_group[2])].push_back(m);
+            {
+                auto key = make_group_key(m);
+                tmp[key].push_back(m);
+            }
 
             // Find and print minimum elapsed time per work-item count for the current kernel
             for (const auto& m : tmp)
@@ -146,10 +152,16 @@ namespace mgcl
         // Iterate over all measurements per kernel
         for (const auto& entry : measurements)
         {
-            // Group measurements by work-item count and work-group size
-            std::map<std::string, std::vector<ProfilingMeasurement>> tmp;
+            // Map grouped by work_items and work_group
+            // Sorted by work_group because std::map sorts by key
+            std::map<GroupKey, std::vector<ProfilingMeasurement>> tmp;
+
+            // Group measurements
             for (const auto& m : entry.second)
-                tmp[std::to_string(m.work_items[0]) + "," + std::to_string(m.work_items[1]) + "," + std::to_string(m.work_items[2]) + "," + std::to_string(m.work_group[0]) + "," + std::to_string(m.work_group[1]) + "," + std::to_string(m.work_group[2])].push_back(m);
+            {
+                auto key = make_group_key(m);
+                tmp[key].push_back(m);
+            }
 
             // Find and print minimum elapsed time per work-item count for the current kernel
             for (const auto& m : tmp)

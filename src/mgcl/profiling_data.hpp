@@ -56,6 +56,16 @@ namespace mgcl
     private:
         MeasurementsPerKernel measurements;
 
+        // Helper to compare work_items and work_group
+        using GroupKey = std::tuple<std::array<size_t, 3>, std::array<size_t, 3>>;
+
+        inline GroupKey make_group_key(const ProfilingMeasurement& m)
+        {
+            std::array<size_t, 3> wi = {m.work_items[0], m.work_items[1], m.work_items[2]};
+            std::array<size_t, 3> wg = {m.work_group[0], m.work_group[1], m.work_group[2]};
+            return std::make_tuple(wi, wg);
+        }
+
     public:
         MeasurementsPerKernel& getMeasurements()
         {
