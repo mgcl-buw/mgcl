@@ -39,6 +39,7 @@ set(SOURCES_BENCH
     bench_jacobi_parallel_ghost_update_mpi.cpp
     bench_jacobi_split_vs_fused.cpp
     bench_kernel_launch_overhead.cpp
+    bench_prolongation.cpp
     cli_args.hpp
     catch2_main_benchs.cpp)
 
