@@ -21,7 +21,8 @@ namespace mgcl_bench_prolongation
     {
         THREE_D,
         THREE_D_8WI_PER_GP,
-        ONE_D_8WI_PER_GP
+        ONE_D_8WI_PER_GP,
+        ONE_D_4WI_PER_GP
     };
 
     using size_t3 = struct
@@ -34,7 +35,7 @@ namespace mgcl_bench_prolongation
     {
         int err;
 
-        bool is3d = !(kernelVersion == KernelVersion::ONE_D_8WI_PER_GP);
+        bool is3d = (kernelVersion == KernelVersion::THREE_D || kernelVersion == KernelVersion::THREE_D_8WI_PER_GP);
 
         // Create the compute kernel from the program
         std::string kernelName;
@@ -44,6 +45,8 @@ namespace mgcl_bench_prolongation
             kernelName = "prolongate_to_fine_8wi_per_gp";
         else if (kernelVersion == KernelVersion::ONE_D_8WI_PER_GP)
             kernelName = "prolongate_to_fine_8wi_per_gp_1d";
+        else if (kernelVersion == KernelVersion::ONE_D_4WI_PER_GP)
+            kernelName = "prolongate_to_fine_4wi_per_gp_1d";
         cl_kernel kernel = clCreateKernel(problem.getOpenCLHelper().getProgram(), kernelName.c_str(), &err);
         mgcl::mgclCheckError(err, "clCreateKernel");
 
@@ -78,7 +81,8 @@ namespace mgcl_bench_prolongation
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh_vals_coarse);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh_vals_coarse);
 
-        if (kernelVersion == KernelVersion::THREE_D_8WI_PER_GP || kernelVersion == KernelVersion::ONE_D_8WI_PER_GP)
+        if (kernelVersion == KernelVersion::THREE_D_8WI_PER_GP || kernelVersion == KernelVersion::ONE_D_8WI_PER_GP ||
+            kernelVersion == KernelVersion::ONE_D_4WI_PER_GP)
         {
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &fine_m);
             err |= clSetKernelArg(kernel, ++pos, sizeof(int), &fine_n);
@@ -99,6 +103,13 @@ namespace mgcl_bench_prolongation
         if (kernelVersion == KernelVersion::ONE_D_8WI_PER_GP)
         {
             global[0] = static_cast<size_t>(coarse.getO() * 8 * coarse.getN() * coarse.getM());
+            global[1] = 1;
+            global[2] = 1;
+        }
+
+        if (kernelVersion == KernelVersion::ONE_D_4WI_PER_GP)
+        {
+            global[0] = static_cast<size_t>(coarse.getO() * 4 * coarse.getN() * coarse.getM());
             global[1] = 1;
             global[2] = 1;
         }
@@ -277,6 +288,7 @@ namespace mgcl_bench_prolongation
             std::unique_ptr<mgcl::Cuboid> fine_3d_1wi_per_gp = nullptr;
             std::unique_ptr<mgcl::Cuboid> fine_3d_8wi_per_gp = nullptr;
             std::unique_ptr<mgcl::Cuboid> fine_1d_8wi_per_gp = nullptr;
+            std::unique_ptr<mgcl::Cuboid> fine_1d_4wi_per_gp = nullptr;
 
             if (CLI_ARGS::checkResults)
             {
@@ -333,6 +345,52 @@ namespace mgcl_bench_prolongation
                 {
                     fine_1d_8wi_per_gp = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
                     lv0.getDVIn().read(p.getCommands(), fine_1d_8wi_per_gp.get(), true);
+                }
+            }
+
+            for (auto wg : wg_sizes_1d)
+            {
+                lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
+                lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
+
+                std::string name = std::string("prolongation_4wi_per_gp_1d_")
+                                       .append(std::to_string(mglob))
+                                       .append("_")
+                                       .append(std::to_string(nglob))
+                                       .append("_")
+                                       .append(std::to_string(oglob))
+                                       .append("_wg")
+                                       .append(std::to_string(wg[0]))
+                                       .append("x")
+                                       .append(std::to_string(wg[1]))
+                                       .append("x")
+                                       .append(std::to_string(wg[2]));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    prolongate(p, fine, coarse, KernelVersion::ONE_D_4WI_PER_GP, wg);
+                    p.finish();
+                });
+
+                bench_util::ResultMpi res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = ml;
+                res.n = nl;
+                res.o = ol;
+                res.mglob = mglob;
+                res.nglob = nglob;
+                res.oglob = oglob;
+                res.gpus = mpi_size;
+                res.LT = -1;
+                results.push_back(res);
+
+                if (CLI_ARGS::checkResults)
+                {
+                    fine_1d_4wi_per_gp = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                    lv0.getDVIn().read(p.getCommands(), fine_1d_4wi_per_gp.get(), true);
                 }
             }
 
@@ -442,6 +500,7 @@ namespace mgcl_bench_prolongation
                 REQUIRE(fine_3d_prod->isEqual(*fine_3d_1wi_per_gp));
                 REQUIRE(fine_3d_prod->isEqual(*fine_3d_8wi_per_gp));
                 REQUIRE(fine_3d_prod->isEqual(*fine_1d_8wi_per_gp));
+                REQUIRE(fine_3d_prod->isEqual(*fine_1d_4wi_per_gp));
             }
 
             if (CLI_ARGS::enableKernelProfiling)

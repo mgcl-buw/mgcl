@@ -7319,7 +7319,7 @@ __kernel void prolongate_to_fine_8wi_per_gp(
     const int ngh_vals_coarse, const int ogh_vals_coarse,
     const int mreal, const int nreal, const int oreal,
     const int mc, const int nc, const int oc,
-    const int mcreal,const int ncreal,  const int ocreal)
+    const int mcreal, const int ncreal, const int ocreal)
 {
     // int g2 = 2 * ghosts;
     // const int mreal = m - g2;
@@ -7412,8 +7412,8 @@ __kernel void prolongate_to_fine_8wi_per_gp_1d(
     // int k = get_global_id(0) % ocreal + ghosts;
     int idx = get_global_id(0);
     int no = ncreal * ocreal;
-    int i = (idx / no) % 8;
-    int j = ((idx - i * no) / ocreal) % 8;
+    int i = (idx / no) % ocreal;
+    int j = ((idx - i * no) / ocreal) % ocreal;
     int k = (idx % ocreal);
     i += ghosts;
     j += ghosts;
@@ -7429,7 +7429,7 @@ __kernel void prolongate_to_fine_8wi_per_gp_1d(
         const int cjoff = oc;
         const int cioff = nc * oc;
         const int gridsize_creal = mcreal * ncreal * ocreal;
-        
+
         if (get_global_id(0) < gridsize_creal)
         {
             fine[index_fine] = coarse[index_coarse];
@@ -7461,6 +7461,78 @@ __kernel void prolongate_to_fine_8wi_per_gp_1d(
         else if (get_global_id(0) < 8 * gridsize_creal)
         {
             fine[index_fine - fioff - fjoff - 1] = 0.125 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cjoff] + coarse[index_coarse - cjoff - 1] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - 1] + coarse[index_coarse - cioff - cjoff] + coarse[index_coarse - cioff - cjoff - 1]);
+        }
+    }
+}
+
+/* Prolongates from coarse to fine grid.
+ * Needs to get called with #work-items = real size of coarse grid.
+ * m,n,o is size of ghosted fine grid.
+ * fine and coarse must be of sizes of ghosted grids.
+ * gh_vals_coarse must be sizes of coarse grid's cuboids. Most of the time its equal to m/2,n/2,o/2 but for
+ * the threshold-level when using MPI, the cuboid is bigger than the actual level would be. */
+__kernel void prolongate_to_fine_4wi_per_gp_1d(
+    __global double* restrict fine,
+    __global double* restrict coarse,
+    const int m, const int n, const int o, const int ghosts,
+    const int ngh_vals_coarse, const int ogh_vals_coarse,
+    const int mreal, const int nreal, const int oreal,
+    const int mc, const int nc, const int oc,
+    const int mcreal, const int ncreal, const int ocreal)
+{
+    // int g2 = 2 * ghosts;
+    // const int mreal = m - g2;
+    // const int nreal = n - g2;
+    // const int oreal = o - g2;
+
+    // const int mc = mreal / 2 + g2;
+    // const int nc = nreal / 2 + g2;
+    // const int oc = oreal / 2 + g2;
+    // const int ocreal = oreal / 2;
+
+    // coarse point index
+    // int i = get_global_id(2) + ghosts;
+    // int j = get_global_id(1) + ghosts;
+    // int k = get_global_id(0) % ocreal + ghosts;
+    int idx = get_global_id(0);
+    int no = ncreal * ocreal;
+    int i = (idx / no) % ocreal;
+    int j = ((idx - i * no) / ocreal) % ocreal;
+    int k = (idx % ocreal);
+    i += ghosts;
+    j += ghosts;
+    k += ghosts;
+
+    if (i >= ghosts && i < mc - ghosts && j >= ghosts && j < nc - ghosts && k >= ghosts && k < oc - ghosts)
+    {
+        const int index_coarse = i * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k;
+        const int i2 = i * 2 - (ghosts - 1), j2 = j * 2 - (ghosts - 1), k2 = k * 2 - (ghosts - 1);
+        const int index_fine = i2 * n * o + j2 * o + k2;
+        const int fjoff = o;
+        const int fioff = n * o;
+        const int cjoff = oc;
+        const int cioff = nc * oc;
+        const int gridsize_creal = mcreal * ncreal * ocreal;
+
+        if (get_global_id(0) < gridsize_creal)
+        {
+            fine[index_fine - 1] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - 1]);
+            fine[index_fine] = coarse[index_coarse];
+        }
+        else if (get_global_id(0) < 2 * gridsize_creal)
+        {
+            fine[index_fine - fjoff - 1] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cjoff] + coarse[index_coarse - cjoff - 1]);
+            fine[index_fine - fjoff] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - cjoff]);
+        }
+        else if (get_global_id(0) < 3 * gridsize_creal)
+        {
+            fine[index_fine - fioff - 1] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - 1]);
+            fine[index_fine - fioff] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - cioff]);
+        }
+        else if (get_global_id(0) < 4 * gridsize_creal)
+        {
+            fine[index_fine - fioff - fjoff - 1] = 0.125 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cjoff] + coarse[index_coarse - cjoff - 1] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - 1] + coarse[index_coarse - cioff - cjoff] + coarse[index_coarse - cioff - cjoff - 1]);
+            fine[index_fine - fioff - fjoff] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - cjoff] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - cjoff]);
         }
     }
 }
