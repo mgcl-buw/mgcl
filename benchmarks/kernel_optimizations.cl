@@ -7287,30 +7287,22 @@ __kernel void prolongate_to_fine(
         const int index_coarse = i * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k;
         const int i2 = i * 2 - (ghosts - 1), j2 = j * 2 - (ghosts - 1), k2 = k * 2 - (ghosts - 1);
         const int index_fine = i2 * n * o + j2 * o + k2;
-        const int joff = o;
-        const int ioff = n*o;
+        const int fjoff = o;
+        const int fioff = n * o;
+        const int cjoff = o / 2;
+        const int cioff = (n * o) / 2;
 
         fine[index_fine] = coarse[index_coarse];
 
         fine[index_fine - 1] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - 1]);
-        fine[index_fine - joff] = 0.5 * (coarse[index_coarse] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k]);
-        fine[index_fine - ioff] = 0.5 * (coarse[index_coarse] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k]);
+        fine[index_fine - fjoff] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - cjoff]);
+        fine[index_fine - fioff] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - cioff]);
 
-        fine[index_fine - joff - 1] =
-            0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
-                    coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k - 1]);
-        fine[index_fine - ioff - 1] =
-            0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k] +
-                    coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k - 1]);
-        fine[index_fine - ioff - joff] =
-            0.25 * (coarse[index_coarse] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
-                    coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k]);
+        fine[index_fine - fjoff - 1] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cjoff] + coarse[index_coarse - cjoff - 1]);
+        fine[index_fine - fioff - 1] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - 1]);
+        fine[index_fine - fioff - fjoff] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - cjoff] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - cjoff]);
 
-        fine[index_fine - ioff - joff - 1] =
-            0.125 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
-                     coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k - 1] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k] +
-                     coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k - 1] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
-                     coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k - 1]);
+        fine[index_fine - fioff - fjoff - 1] = 0.125 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cjoff] + coarse[index_coarse - cjoff - 1] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - 1] + coarse[index_coarse - cioff - cjoff] + coarse[index_coarse - cioff - cjoff - 1]);
     }
 }
 
@@ -7324,17 +7316,20 @@ __kernel void prolongate_to_fine_8wi_per_gp(
     __global double* restrict fine,
     __global double* restrict coarse,
     const int m, const int n, const int o, const int ghosts,
-    const int ngh_vals_coarse, const int ogh_vals_coarse)
+    const int ngh_vals_coarse, const int ogh_vals_coarse,
+    const int mreal, const int nreal, const int oreal,
+    const int mc, const int nc, const int oc,
+    const int ocreal)
 {
-    int g2 = 2 * ghosts;
-    const int mreal = m - g2;
-    const int nreal = n - g2;
-    const int oreal = o - g2;
+    // int g2 = 2 * ghosts;
+    // const int mreal = m - g2;
+    // const int nreal = n - g2;
+    // const int oreal = o - g2;
 
-    const int mc = mreal / 2 + g2;
-    const int nc = nreal / 2 + g2;
-    const int oc = oreal / 2 + g2;
-    const int ocreal = oreal / 2;
+    // const int mc = mreal / 2 + g2;
+    // const int nc = nreal / 2 + g2;
+    // const int oc = oreal / 2 + g2;
+    // const int ocreal = oreal / 2;
 
     // coarse point index
     int i = get_global_id(2) + ghosts;
@@ -7345,48 +7340,43 @@ __kernel void prolongate_to_fine_8wi_per_gp(
     {
         const int index_coarse = i * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k;
         const int i2 = i * 2 - (ghosts - 1), j2 = j * 2 - (ghosts - 1), k2 = k * 2 - (ghosts - 1);
+        const int index_fine = i2 * n * o + j2 * o + k2;
+        const int fjoff = o;
+        const int fioff = n * o;
+        const int cjoff = o / 2;
+        const int cioff = (n * o) / 2;
 
         if (get_global_id(0) < ocreal)
         {
-            fine[i2 * n * o + j2 * o + k2] = coarse[index_coarse];
+            fine[index_fine] = coarse[index_coarse];
         }
         else if (get_global_id(0) < 2 * ocreal)
         {
-            fine[i2 * n * o + j2 * o + k2 - 1] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - 1]);
+            fine[index_fine - 1] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - 1]);
         }
         else if (get_global_id(0) < 3 * ocreal)
         {
-            fine[i2 * n * o + (j2 - 1) * o + k2] = 0.5 * (coarse[index_coarse] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k]);
+        fine[index_fine - fjoff] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - cjoff]);
         }
         else if (get_global_id(0) < 4 * ocreal)
         {
-            fine[(i2 - 1) * n * o + j2 * o + k2] = 0.5 * (coarse[index_coarse] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k]);
+        fine[index_fine - fioff] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - cioff]);
         }
         else if (get_global_id(0) < 5 * ocreal)
         {
-            fine[i2 * n * o + (j2 - 1) * o + k2 - 1] =
-                0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
-                        coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k - 1]);
+        fine[index_fine - fjoff - 1] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cjoff] + coarse[index_coarse - cjoff - 1]);
         }
         else if (get_global_id(0) < 6 * ocreal)
         {
-            fine[(i2 - 1) * n * o + j2 * o + k2 - 1] =
-                0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k] +
-                        coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k - 1]);
+        fine[index_fine - fioff - 1] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - 1]);
         }
         else if (get_global_id(0) < 7 * ocreal)
         {
-            fine[(i2 - 1) * n * o + (j2 - 1) * o + k2] =
-                0.25 * (coarse[index_coarse] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
-                        coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k]);
+        fine[index_fine - fioff - fjoff] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - cjoff] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - cjoff]);
         }
         else
         {
-            fine[(i2 - 1) * n * o + (j2 - 1) * o + k2 - 1] =
-                0.125 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
-                         coarse[i * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k - 1] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k] +
-                         coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k - 1] + coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k] +
-                         coarse[(i - 1) * ngh_vals_coarse * ogh_vals_coarse + (j - 1) * ogh_vals_coarse + k - 1]);
+        fine[index_fine - fioff - fjoff - 1] = 0.125 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cjoff] + coarse[index_coarse - cjoff - 1] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - 1] + coarse[index_coarse - cioff - cjoff] + coarse[index_coarse - cioff - cjoff - 1]);
         }
     }
 }

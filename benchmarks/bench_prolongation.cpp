@@ -57,6 +57,10 @@ namespace mgcl_bench_prolongation
         int coarse_mgh = coarse.getMgh();
         int coarse_ngh = coarse.getNgh();
         int coarse_ogh = coarse.getOgh();
+        int fine_m = fine.getM();
+        int fine_n = fine.getN();
+        int fine_o = fine.getO();
+        int coarse_o = coarse.getO();
 
         // assign kernel arguments
         int pos = 0;
@@ -68,6 +72,18 @@ namespace mgcl_bench_prolongation
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh_vals_coarse);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh_vals_coarse);
+
+        if (kernelVersion == KernelVersion::THREE_D_8WI_PER_GP)
+        {
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &fine_m);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &fine_n);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &fine_o);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse_mgh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse_ngh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse_ogh);
+            err |= clSetKernelArg(kernel, ++pos, sizeof(int), &coarse_o);
+        }
+
         mgcl::mgclCheckError(err, "Setting kernel arguments");
 
         size_t global[3] = {static_cast<size_t>(coarse_ogh), static_cast<size_t>(coarse_ngh), static_cast<size_t>(coarse_mgh)};
