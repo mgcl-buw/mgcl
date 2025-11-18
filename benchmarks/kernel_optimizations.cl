@@ -7289,8 +7289,8 @@ __kernel void prolongate_to_fine(
         const int index_fine = i2 * n * o + j2 * o + k2;
         const int fjoff = o;
         const int fioff = n * o;
-        const int cjoff = o / 2;
-        const int cioff = (n * o) / 2;
+        const int cjoff = oc;
+        const int cioff = nc * oc;
 
         fine[index_fine] = coarse[index_coarse];
 
@@ -7343,8 +7343,8 @@ __kernel void prolongate_to_fine_8wi_per_gp(
         const int index_fine = i2 * n * o + j2 * o + k2;
         const int fjoff = o;
         const int fioff = n * o;
-        const int cjoff = o / 2;
-        const int cioff = (n * o) / 2;
+        const int cjoff = oc;
+        const int cioff = nc * oc;
 
         if (get_global_id(0) < ocreal)
         {
@@ -7356,30 +7356,31 @@ __kernel void prolongate_to_fine_8wi_per_gp(
         }
         else if (get_global_id(0) < 3 * ocreal)
         {
-        fine[index_fine - fjoff] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - cjoff]);
+            fine[index_fine - fjoff] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - cjoff]);
         }
         else if (get_global_id(0) < 4 * ocreal)
         {
-        fine[index_fine - fioff] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - cioff]);
+            fine[index_fine - fioff] = 0.5 * (coarse[index_coarse] + coarse[index_coarse - cioff]);
         }
         else if (get_global_id(0) < 5 * ocreal)
         {
-        fine[index_fine - fjoff - 1] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cjoff] + coarse[index_coarse - cjoff - 1]);
+            fine[index_fine - fjoff - 1] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cjoff] + coarse[index_coarse - cjoff - 1]);
         }
         else if (get_global_id(0) < 6 * ocreal)
         {
-        fine[index_fine - fioff - 1] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - 1]);
+            fine[index_fine - fioff - 1] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - 1]);
         }
         else if (get_global_id(0) < 7 * ocreal)
         {
-        fine[index_fine - fioff - fjoff] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - cjoff] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - cjoff]);
+            fine[index_fine - fioff - fjoff] = 0.25 * (coarse[index_coarse] + coarse[index_coarse - cjoff] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - cjoff]);
         }
         else
         {
-        fine[index_fine - fioff - fjoff - 1] = 0.125 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cjoff] + coarse[index_coarse - cjoff - 1] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - 1] + coarse[index_coarse - cioff - cjoff] + coarse[index_coarse - cioff - cjoff - 1]);
+            fine[index_fine - fioff - fjoff - 1] = 0.125 * (coarse[index_coarse] + coarse[index_coarse - 1] + coarse[index_coarse - cjoff] + coarse[index_coarse - cjoff - 1] + coarse[index_coarse - cioff] + coarse[index_coarse - cioff - 1] + coarse[index_coarse - cioff - cjoff] + coarse[index_coarse - cioff - cjoff - 1]);
         }
     }
 }
+
 
 /**
  * Updates ghosts of a varying stencil, respecting small grids, e.g. gh > m.
