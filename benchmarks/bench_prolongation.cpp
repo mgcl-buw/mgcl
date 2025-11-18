@@ -312,7 +312,7 @@ namespace mgcl_bench_prolongation
             //     // }
             // }
 
-            std::vector<std::vector<size_t>> wg_sizes_3d = {{4, 4, 4}, {4, 4, 8}, {2, 2, 8}, {8, 8, 8}, {4, 4, 16}, {32, 1, 1}, {64, 1, 1}, {128, 1, 1}};
+            std::vector<std::vector<size_t>> wg_sizes_3d = {{4, 4, 4}, {8, 4, 4}, {8, 8, 4}, {8, 8, 8}, {32, 1, 1}, {64, 1, 1}, {128, 1, 1}};
             // std::vector<std::vector<size_t>> wg_sizes_3d = {{4, 4, 4}};
             for (auto wg : wg_sizes_3d)
             {
