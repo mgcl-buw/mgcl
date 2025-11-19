@@ -40,6 +40,7 @@ set(SOURCES_BENCH
     bench_jacobi_split_vs_fused.cpp
     bench_kernel_launch_overhead.cpp
     bench_prolongation.cpp
+    bench_restriction.cpp
     cli_args.hpp
     catch2_main_benchs.cpp)
 
@@ -79,3 +80,4 @@ mgcl_copy_kernel_file(benchmarks kernel_launch_overhead.cl)
 mgcl_copy_kernel_file(benchmarks residual_kernels_1d_vs_3d.cl)
 mgcl_copy_kernel_file(benchmarks jacobi_kernels_split_vs_fused.cl)
 mgcl_copy_kernel_file(benchmarks kernels_ghost_update.cl)
+mgcl_copy_kernel_file(benchmarks kernels_restriction.cl)
