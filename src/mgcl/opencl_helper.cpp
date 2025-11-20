@@ -200,6 +200,17 @@ namespace mgcl
 
     void OpenCLHelper::rebuildProgram()
     {
+        int err;
+        if (!program)
+        {
+            throw "program object is null! Need to call init() first.";
+        }
+
+        if (!deviceId)
+        {
+            throw "deviceId is null! Need to call init() first.";
+        }
+
         std::string options = "-cl-fast-relaxed-math " + preprocessorConstantsToString();
         if (!problem->silent)
         {
@@ -207,7 +218,7 @@ namespace mgcl
         }
 
         // Build the program
-        int err = clBuildProgram(program, 1, &deviceId, options.c_str(), nullptr, nullptr);
+        err = clBuildProgram(program, 1, &deviceId, options.c_str(), nullptr, nullptr);
         // err = clBuildProgram(program, 1, &deviceId, "-cl-fast-relaxed-math -cl-nv-arch sm_75", nullptr, nullptr);
         if (err != CL_SUCCESS || problem->isPrintKernelLog())
         {
@@ -228,10 +239,7 @@ namespace mgcl
 
             free(log);
 
-            if (err != CL_SUCCESS)
-            {
-                assert(err == CL_SUCCESS && "Building the kernel failed.");
-            }
+            mgclCheckError(err, "clBuildProgram");
         }
     }
 

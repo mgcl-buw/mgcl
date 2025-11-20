@@ -118,4 +118,20 @@ TEST_CASE("OpenCLHelper")
         // Remove the binary file to clean up
         std::remove(binaryFileName.c_str());
     }
+
+    SECTION("rebuildProgram")
+    {
+        SECTION("success")
+        {
+            openCLHelper.init();
+            openCLHelper.setPreprocessorConstant("BLOCKSIZE", std::to_string(2));
+            REQUIRE_NOTHROW(openCLHelper.rebuildProgram());
+        }
+
+        SECTION("failure")
+        {
+            openCLHelper.setPreprocessorConstant("BLOCKSIZE", std::to_string(2));
+            REQUIRE_THROWS(openCLHelper.rebuildProgram());
+        }
+    }
 }
