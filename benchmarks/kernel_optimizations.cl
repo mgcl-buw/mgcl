@@ -4090,6 +4090,49 @@ __kernel void sum_finish(
     buf_sum[0] = sum;
 }
 
+// same as sum_partial_global_eq_x_num_elements_same_kernel_finish, but removed restrict keyword since finish invocation uses same buffer for input and output
+__kernel void sum_partial_global_eq_x_num_elements_same_kernel_finish(
+    __global double* buf,
+    __global double* partial_sums,
+    __local double* buf_local,
+    int num_elements,
+    int fractions)
+{
+    int i = get_global_id(0);
+    int wg_size = get_local_size(0);
+    int iloc = get_local_id(0);
+
+    if (i < num_elements)
+    {
+        // copy buf of this work-item into local storage.
+        buf_local[iloc] = buf[i];
+
+        for (int f = 1; f < fractions; f++)
+            if (i + f * get_global_size(0) < num_elements)
+                buf_local[iloc] += buf[i + f * get_global_size(0)];
+
+        // sum up buf using parallel sum reduction, "a >> 1" == "a / 2" for int
+        // TODO: ensure that stride is even (or handle odd strides)
+        for (int stride = wg_size >> 1; stride > 0; stride >>= 1)
+        {
+            // synchronize local memory
+            barrier(CLK_LOCAL_MEM_FENCE);
+
+            // fold upper half onto lower half
+            if (iloc < stride && iloc + stride < wg_size && iloc + stride < num_elements)
+            {
+                buf_local[iloc] += buf_local[iloc + stride];
+            }
+        }
+
+        // write into output partial_sums
+        if (iloc == 0)
+        {
+            partial_sums[get_group_id(0)] = buf_local[iloc];
+        }
+    }
+}
+
 /**************************************
  ***                                ***
  *          Jacobi Kernels            *
