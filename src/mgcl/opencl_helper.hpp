@@ -72,6 +72,7 @@ namespace mgcl
         std::string availableDevicesInfo();
         std::string deviceTypeToString(cl_device_type dt);
         bool supportsDoublePrecision(cl_device_id _device_id);
+        void rebuildProgram();
 
         void finish();
 

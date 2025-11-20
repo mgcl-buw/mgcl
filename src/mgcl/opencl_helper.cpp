@@ -172,6 +172,34 @@ namespace mgcl
             mgclCheckError(err, "Creating program");
         }
 
+        rebuildProgram();
+
+        // Save the program binary if binaryFile is not empty and binaryFile does not exist yet
+        if (binaryFile != "" && !fbin && (!problem->useMpi() || problem->mpiRank() == 0))
+        {
+            if (!problem->silent)
+            {
+                std::cout << "mgcl: Saving binary file to: " << binaryFile << std::endl;
+            }
+
+            // Save the program binary to "test.bin"
+            size_t binarySize;
+            err = clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binarySize, nullptr);
+            mgclCheckError(err, "clGetProgramInfo(CL_PROGRAM_BINARY_SIZES)");
+
+            unsigned char* binary = new unsigned char[binarySize];
+            err = clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(unsigned char*), &binary, nullptr);
+            mgclCheckError(err, "clGetProgramInfo(CL_PROGRAM_BINARIES)");
+
+            std::ofstream binaryFileOut(binaryFile, std::ios::out | std::ios::binary);
+            binaryFileOut.write(reinterpret_cast<char*>(binary), binarySize);
+            binaryFileOut.close();
+            delete[] binary;
+        }
+    }
+
+    void OpenCLHelper::rebuildProgram()
+    {
         std::string options = "-cl-fast-relaxed-math " + preprocessorConstantsToString();
         if (!problem->silent)
         {
@@ -179,7 +207,7 @@ namespace mgcl
         }
 
         // Build the program
-        err = clBuildProgram(program, 1, &deviceId, options.c_str(), nullptr, nullptr);
+        int err = clBuildProgram(program, 1, &deviceId, options.c_str(), nullptr, nullptr);
         // err = clBuildProgram(program, 1, &deviceId, "-cl-fast-relaxed-math -cl-nv-arch sm_75", nullptr, nullptr);
         if (err != CL_SUCCESS || problem->isPrintKernelLog())
         {
@@ -204,29 +232,6 @@ namespace mgcl
             {
                 assert(err == CL_SUCCESS && "Building the kernel failed.");
             }
-        }
-
-        // Save the program binary if binaryFile is not empty and binaryFile does not exist yet
-        if (binaryFile != "" && !fbin && (!problem->useMpi() || problem->mpiRank() == 0))
-        {
-            if (!problem->silent)
-            {
-                std::cout << "mgcl: Saving binary file to: " << binaryFile << std::endl;
-            }
-
-            // Save the program binary to "test.bin"
-            size_t binarySize;
-            err = clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binarySize, nullptr);
-            mgclCheckError(err, "clGetProgramInfo(CL_PROGRAM_BINARY_SIZES)");
-
-            unsigned char* binary = new unsigned char[binarySize];
-            err = clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(unsigned char*), &binary, nullptr);
-            mgclCheckError(err, "clGetProgramInfo(CL_PROGRAM_BINARIES)");
-
-            std::ofstream binaryFileOut(binaryFile, std::ios::out | std::ios::binary);
-            binaryFileOut.write(reinterpret_cast<char*>(binary), binarySize);
-            binaryFileOut.close();
-            delete[] binary;
         }
     }
 
