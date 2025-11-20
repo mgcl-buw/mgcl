@@ -1,3 +1,4 @@
+#include "cli_args.hpp"
 #include "nanobench.h"
 
 #include "catch2/catch_test_macros.hpp"
@@ -8,6 +9,7 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <vector>
 using namespace std::chrono_literals;
 
@@ -19,9 +21,11 @@ using namespace std::chrono_literals;
 #include "bench_render_templates.hpp"
 
 double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
-           bool return_sum, size_t localSize, std::string kernelName, size_t globalSize, int fractions = 1);
+           bool return_sum, size_t localSize, std::string kernelName, size_t globalSize, int fractions,
+           mgcl::ProfilingData* pd);
 double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
-                         bool return_sum, size_t localSize, std::string kernelName, size_t global, int fractions);
+                         bool return_sum, size_t localSize, std::string kernelName, size_t global, int fractions,
+                         mgcl::ProfilingData* pd);
 
 // Checks sum sequentially vs opencl
 TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][seqVsOcl]")
@@ -421,10 +425,13 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][locals]")
 }
 
 // Checks different kernel versions
-TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][kernelVersions]")
+TEST_CASE("benchSumReductionVersions")
 {
+
+    using std::min;
+
     // Check if results are equal.
-    SECTION("acceptance")
+    if (CLI_ARGS::checkResults)
     {
         mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
         OCLWrapper oclw(CL_DEVICE_TYPE_GPU,
@@ -451,35 +458,35 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][kernelVersions]")
         std::vector<double> sums;
 
         sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_num_elements", o));
+                           oclw.commands, true, local, "sum_partial_global_eq_num_elements", o, 1, nullptr));
 
         sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_half_num_elements", ceil(o / 2.0)));
+                           oclw.commands, true, local, "sum_partial_global_eq_half_num_elements", ceil(o / 2.0), 1, nullptr));
 
         sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_quarter_num_elements", ceil(o / 4.0)));
+                           oclw.commands, true, local, "sum_partial_global_eq_quarter_num_elements", ceil(o / 4.0), 1, nullptr));
 
         sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 8.0), 8));
+                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 8.0), 8, nullptr));
 
         sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 16.0), 16));
+                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 16.0), 16, nullptr));
 
         sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 32.0), 32));
+                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 32.0), 32, nullptr));
 
         sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 64.0), 64));
+                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 64.0), 64, nullptr));
 
         sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 128.0), 128));
+                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 128.0), 128, nullptr));
 
         sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 256.0), 256));
+                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 256.0), 256, nullptr));
 
         sums.push_back(sum_finish_on_cpu(dData, data.field1d().size(), oclw.context, oclw.program,
                                          oclw.commands, true, local, "sum_partial_global_eq_x_num_elements",
-                                         ceil(o / 256.0), 256));
+                                         ceil(o / 256.0), 256, nullptr));
 
         // for (auto s : sums)
         //     std::cout << "  sum: " << s << std::endl;
@@ -487,130 +494,223 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][kernelVersions]")
         for (auto s : sums)
             REQUIRE_THAT(sums[0], Catch::Matchers::WithinAbs(s, 1e-14));
     }
-
-    // Run the actual benchmark.
-    SECTION("benchmark")
+    else
     {
+
+        if (CLI_ARGS::grids.size() == 0 && (CLI_ARGS::gridsMin.size() == 0 || CLI_ARGS::gridsMax.size() == 0))
+            throw "Need to specify at least one local grid size, e.g. using --grids 4,8,16 or --gridsMin 4,4,4 AND --gridsMax 32,32,32";
+
+        // build grids to be tested from CLI args
+        std::vector<std::vector<int>> gridsTBT;
+        for (auto N : CLI_ARGS::grids)
+            gridsTBT.push_back({N, N, N});
+        if (CLI_ARGS::gridsMin.size() > 0 && CLI_ARGS::gridsMax.size() > 0)
+            for (int m = CLI_ARGS::gridsMin[0]; m <= CLI_ARGS::gridsMax[0]; m *= 2)
+                for (int n = CLI_ARGS::gridsMin[1]; n <= CLI_ARGS::gridsMax[1]; n *= 2)
+                    for (int o = CLI_ARGS::gridsMin[2]; o <= CLI_ARGS::gridsMax[2]; o *= 2)
+                        gridsTBT.push_back({m, n, o});
+
+        // std::vector<bench_util::ResultMpi> results;
+
+        std::stringstream kernelProfilesStream;
+
         // Almost not effect for small grids (plus they are fast anyway).
-        std::vector grids{32, 64, 128, 256, 512};
+        // std::vector grids{32, 64, 128, 256, 512};
         // std::vector<size_t> locals{16, 32, 64, 128, 192, 256, 384, 512, 768, 1024};
         std::vector<size_t> locals{512};
 
-        for (auto N : grids)
+        for (auto grid : gridsTBT)
         {
             // int N = 16;
-            int m = N;
-            int n = N;
-            int o = N;
+            int m = grid[0];
+            int n = grid[1];
+            int o = grid[2];
+            int N = m * n * o;
 
-            mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
-            OCLWrapper oclw(CL_DEVICE_TYPE_GPU,
-                            mgcl_test::TestUtility::deviceAvailable("Quadro", CL_DEVICE_TYPE_GPU) ? "Quadro" : "",
-                            "", "./kernel_optimizations.cl", tu.getContext());
+            // dummy problem
+            auto vdummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+            auto fdummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+            mgcl::Problem p(1, 1, 1, fdummy, vdummy);
+            p.setUseOpencl(true);
+            p.setDeviceType(CL_DEVICE_TYPE_GPU);
+            p.setSilent(true);
+            p.setKernelFile("kernel_optimizations.cl");
+            p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
+            // TODO preprocessor values
+            p.init();
 
             mgcl::Cuboid data(m, n, o);
             data.fillRandom(-10, 10);
 
-            cl_mem dData = tu.createOpenCLBuffer(data);
+            mgcl::CuboidGpu dDataGpu(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, data);
+            cl_mem dData = dDataGpu.getBuffer();
+
+            auto context = p.getContext();
+            auto program = p.getProgram();
+            auto commands = p.getCommands();
 
             ankerl::nanobench::Bench b;
             b.timeUnit(1ns, "ns")
-                // .epochs(1)
-                // .epochIterations(1)
-                .minEpochTime(100ms)
-                .maxEpochTime(5s)
+                .epochs(CLI_ARGS::bench_epochs)
+                .epochIterations(CLI_ARGS::bench_iterations)
+                // .minEpochTime(100ms)
+                // .maxEpochTime(5s)
                 .relative(true);
 
             int num_elements = data.field1d().size();
 
+            auto pd = p.getProfilingData();
+
             for (auto local : locals)
             {
-                b.run(std::string("sum_partial_global_eq_num_elements, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
+                std::string name = std::string("sum_partial_global_eq_x_num_elements_N")
+                                       .append(std::to_string(N))
+                                       .append("_wg")
+                                       .append(std::to_string(local));
+                b.run(name.c_str(), [&]
                       {
                           ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, oclw.context, oclw.program,
-                                  oclw.commands, true, local, "sum_partial_global_eq_num_elements", num_elements)); //
+                              sum(dData, num_elements, context, program,
+                                  commands, true, local, "sum_partial_global_eq_num_elements", num_elements, 1, pd)); //
                       });
 
-                b.run(std::string("sum_partial_global_eq_half_num_elements, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
+                name = std::string("sum_partial_global_eq_half_num_elements_N")
+                           .append(std::to_string(N))
+                           .append("_wg")
+                           .append(std::to_string(local));
+                b.run(name.c_str(), [&]
                       {
                           ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, oclw.context, oclw.program,
-                                  oclw.commands, true, local, "sum_partial_global_eq_half_num_elements", ceil(num_elements / 2.0))); //
+                              sum(dData, num_elements, context, program,
+                                  commands, true, local, "sum_partial_global_eq_half_num_elements", ceil(num_elements / 2.0), 1, pd)); //
                       });
 
-                b.run(std::string("sum_partial_global_eq_quarter_num_elements, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
+                name = std::string("sum_partial_global_eq_quarter_num_elements_N")
+                           .append(std::to_string(N))
+                           .append("_wg")
+                           .append(std::to_string(local));
+                b.run(name.c_str(), [&]
                       {
                           ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, oclw.context, oclw.program,
-                                  oclw.commands, true, local, "sum_partial_global_eq_quarter_num_elements", ceil(num_elements / 4.0))); //
+                              sum(dData, num_elements, context, program,
+                                  commands, true, local, "sum_partial_global_eq_quarter_num_elements", ceil(num_elements / 4.0), 1, pd)); //
                       });
 
-                b.run(std::string("sum_partial_global_eq_1/8_num_elements, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
+                name = std::string("sum_partial_global_eq_1/8_N")
+                           .append(std::to_string(N))
+                           .append("_wg")
+                           .append(std::to_string(local));
+                b.run(name.c_str(), [&]
                       {
                           ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, oclw.context, oclw.program,
-                                  oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 8.0), 8)); //
+                              sum(dData, num_elements, context, program,
+                                  commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 8.0), 8, pd)); //
                       });
 
-                b.run(std::string("sum_partial_global_eq_1/16_num_elements, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
+                name = std::string("sum_partial_global_eq_1/16_N")
+                           .append(std::to_string(N))
+                           .append("_wg")
+                           .append(std::to_string(local));
+                b.run(name.c_str(), [&]
                       {
                           ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, oclw.context, oclw.program,
-                                  oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 16.0), 16)); //
+                              sum(dData, num_elements, context, program,
+                                  commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 16.0), 16, pd)); //
                       });
 
-                b.run(std::string("sum_partial_global_eq_1/32_num_elements, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
+                name = std::string("sum_partial_global_eq_1/32_N")
+                           .append(std::to_string(N))
+                           .append("_wg")
+                           .append(std::to_string(local));
+                b.run(name.c_str(), [&]
                       {
                           ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, oclw.context, oclw.program,
-                                  oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 32.0), 32)); //
+                              sum(dData, num_elements, context, program,
+                                  commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 32.0), 32, pd)); //
                       });
 
-                b.run(std::string("sum_partial_global_eq_1/64_num_elements, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
+                name = std::string("sum_partial_global_eq_1/64_N")
+                           .append(std::to_string(N))
+                           .append("_wg")
+                           .append(std::to_string(local));
+                b.run(name.c_str(), [&]
                       {
                           ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, oclw.context, oclw.program,
-                                  oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 64.0), 64)); //
+                              sum(dData, num_elements, context, program,
+                                  commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 64.0), 64, pd)); //
                       });
 
-                b.run(std::string("sum_partial_global_eq_1/128_num_elements, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
+                name = std::string("sum_partial_global_eq_1/128_N")
+                           .append(std::to_string(N))
+                           .append("_wg")
+                           .append(std::to_string(local));
+                b.run(name.c_str(), [&]
                       {
                           ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, oclw.context, oclw.program,
-                                  oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 128.0), 128)); //
+                              sum(dData, num_elements, context, program,
+                                  commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 128.0), 128, pd)); //
                       });
 
-                b.run(std::string("sum_partial_global_eq_1/256_num_elements, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
+                name = std::string("sum_partial_global_eq_1/256_N")
+                           .append(std::to_string(N))
+                           .append("_wg")
+                           .append(std::to_string(local));
+                b.run(name.c_str(), [&]
                       {
                           ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, oclw.context, oclw.program,
-                                  oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 256.0), 256)); //
+                              sum(dData, num_elements, context, program,
+                                  commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 256.0), 256, pd)); //
                       });
 
-                b.run(std::string("sum_partial_global_eq_1/512_num_elements, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
+                name = std::string("sum_partial_global_eq_1/128_N")
+                           .append(std::to_string(N))
+                           .append("_wg")
+                           .append(std::to_string(local));
+                b.run(name.c_str(), [&]
                       {
                           ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, oclw.context, oclw.program,
-                                  oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 512.0), 512)); //
+                              sum(dData, num_elements, context, program,
+                                  commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 512.0), 512, pd)); //
                       });
 
-                b.run(std::string("sum_partial_global_eq_1/512_num_elements + sum_finish on cpu, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
+                name = std::string("sum_partial_global_eq_1/512_N")
+                           .append(std::to_string(N))
+                           .append("_wg")
+                           .append(std::to_string(local));
+                b.run(name.c_str(), [&]
                       {
                           ankerl::nanobench::doNotOptimizeAway(
-                              sum_finish_on_cpu(dData, num_elements, oclw.context, oclw.program,
-                                                oclw.commands, true, local, "sum_partial_global_eq_x_num_elements",
-                                                ceil(num_elements / 512.0), 512)); //
+                              sum_finish_on_cpu(dData, num_elements, context, program,
+                                                commands, true, local, "sum_partial_global_eq_x_num_elements",
+                                                ceil(num_elements / 512.0), 512, pd)); //
                       });
             }
             std::cout << "=============" << std::endl;
+
+            if (CLI_ARGS::enableKernelProfiling)
+            {
+                // p.getProfilingData()->printBestTimingsPerKernel(kernelProfilesStream);
+                p.getProfilingData()->printBestTimingsPerKernelAsCsv(kernelProfilesStream);
+            }
         }
+
+        // MPI_Barrier(mpi_comm);
+        // bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
+        // MPI_Barrier(mpi_comm);
+
+        if (CLI_ARGS::enableKernelProfiling)
+        {
+            // kernelProfilesStream << "rank: " << mpi_rank << std::endl;
+            std::cout << kernelProfilesStream.str() << std::endl;
+        }
+        // MPI_Barrier(mpi_comm);
     }
 }
 
 // Copied and slightly modified for different inputs from mgcl::util::sum
 double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
-           bool return_sum, size_t localSize, std::string kernelName, size_t global, int fractions)
+           bool return_sum, size_t localSize, std::string kernelName, size_t global, int fractions,
+           mgcl::ProfilingData* pd)
 {
     int err;
 
@@ -653,8 +753,17 @@ double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program progr
         err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(int), &fractions);
     mgcl::mgclCheckError(err, "Setting kernel sum_partial arguments");
 
-    err = clEnqueueNDRangeKernel(commands, kernel_sum_partial, 1, NULL, &global, &localSize, 0, NULL, NULL);
+    cl_event ev;
+    err = clEnqueueNDRangeKernel(commands, kernel_sum_partial, 1, NULL, &global, &localSize, 0, NULL, &ev);
     mgcl::mgclCheckError(err, "Enqueueing kernel sum_partial");
+
+    if (pd != nullptr)
+    {
+        pd->addMeasurement(commands, ev, kernelName,
+                           {global, 0, 0},
+                           {localSize, 1, 1});
+    }
+    mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
     // Create the compute kernel from the program
     cl_kernel kernel_sum_finish = clCreateKernel(program, "sum_finish", &err);
@@ -669,9 +778,18 @@ double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program progr
     err |= clSetKernelArg(kernel_sum_finish, ++pos, sizeof(int), &num_partials);
     mgcl::mgclCheckError(err, "Setting sum_finish kernel arguments");
 
+    cl_event ev2;
     size_t one = 1;
-    err = clEnqueueNDRangeKernel(commands, kernel_sum_finish, 1, NULL, &one, &one, 0, NULL, NULL);
+    err = clEnqueueNDRangeKernel(commands, kernel_sum_finish, 1, NULL, &one, &one, 0, NULL, &ev2);
     mgcl::mgclCheckError(err, "Enqueueing kernel sum_finish");
+
+    if (pd != nullptr)
+    {
+        pd->addMeasurement(commands, ev2, "sum_finish",
+                           {one, 0, 0},
+                           {one, 1, 1});
+    }
+    mgcl::mgclCheckError(clReleaseEvent(ev2), "clReleaseEvent");
 
     double ret = 0;
     if (return_sum)
@@ -695,7 +813,8 @@ double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program progr
 // Copied and slightly modified for different inputs from mgcl::util::sum.
 // Sums up partial sums sequentially on cpu.
 double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
-                         bool return_sum, size_t localSize, std::string kernelName, size_t global, int fractions)
+                         bool return_sum, size_t localSize, std::string kernelName, size_t global, int fractions,
+                         mgcl::ProfilingData* pd)
 {
     int err;
 
@@ -738,8 +857,17 @@ double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl
         err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(int), &fractions);
     mgcl::mgclCheckError(err, "Setting kernel sum_partial arguments");
 
-    err = clEnqueueNDRangeKernel(commands, kernel_sum_partial, 1, NULL, &global, &localSize, 0, NULL, NULL);
+    cl_event ev;
+    err = clEnqueueNDRangeKernel(commands, kernel_sum_partial, 1, NULL, &global, &localSize, 0, NULL, &ev);
     mgcl::mgclCheckError(err, "Enqueueing kernel sum_partial");
+
+    if (pd != nullptr)
+    {
+        pd->addMeasurement(commands, ev, kernelName,
+                           {global, 0, 0},
+                           {localSize, 1, 1});
+    }
+    mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
     double ret = 0;
     if (return_sum)
