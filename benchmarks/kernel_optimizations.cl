@@ -4133,6 +4133,104 @@ __kernel void sum_partial_global_eq_x_num_elements_same_kernel_finish(
     }
 }
 
+#ifndef SUM_WG_SIZE
+#define SUM_WG_SIZE 512 // need to set this as preprocessor macro!! This is only uncommented for linting
+#endif
+
+// same as sum_partial_global_eq_x_num_elements_same_kernel_finish, but removed restrict keyword since finish invocation uses same buffer for input and output
+__kernel void sum_partial_global_eq_x_num_elements_same_kernel_finish_unrolled(
+    __global double* buf,
+    __global double* partial_sums,
+    __local volatile double* buf_local,
+    int num_elements,
+    int fractions)
+{
+    int i = get_global_id(0);
+    int wg_size = get_local_size(0);
+    int iloc = get_local_id(0);
+
+    if (i < num_elements)
+    {
+        // copy buf of this work-item into local storage.
+        buf_local[iloc] = buf[i];
+
+        for (int f = 1; f < fractions; f++)
+            if (i + f * get_global_size(0) < num_elements)
+                buf_local[iloc] += buf[i + f * get_global_size(0)];
+            else
+                break;
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if (SUM_WG_SIZE >= 512)
+        {
+            // fold upper half onto lower half
+            if (iloc < 256 && iloc + 256 < wg_size && iloc + 256 < num_elements)
+            {
+                buf_local[iloc] += buf_local[iloc + 256];
+                barrier(CLK_LOCAL_MEM_FENCE);
+            }
+        }
+        if (SUM_WG_SIZE >= 256)
+        {
+            // fold upper half onto lower half
+            if (iloc < 128 && iloc + 128 < wg_size && iloc + 128 < num_elements)
+            {
+                buf_local[iloc] += buf_local[iloc + 128];
+                barrier(CLK_LOCAL_MEM_FENCE);
+            }
+        }
+        if (SUM_WG_SIZE >= 128)
+        {
+            // fold upper half onto lower half
+            if (iloc < 64 && iloc + 64 < wg_size && iloc + 64 < num_elements)
+            {
+                buf_local[iloc] += buf_local[iloc + 64];
+                barrier(CLK_LOCAL_MEM_FENCE);
+            }
+        }
+
+        if (iloc < 32)
+        {
+            if (SUM_WG_SIZE >= 64)
+            {
+                if (iloc < 32 && iloc + 32 < wg_size && iloc + 32 < num_elements)
+                    buf_local[iloc] += buf_local[iloc + 32];
+            }
+            if (SUM_WG_SIZE >= 32)
+            {
+                if (iloc < 16 && iloc + 16 < wg_size && iloc + 16 < num_elements)
+                    buf_local[iloc] += buf_local[iloc + 16];
+            }
+            if (SUM_WG_SIZE >= 16)
+            {
+                if (iloc < 8 && iloc + 8 < wg_size && iloc + 8 < num_elements)
+                    buf_local[iloc] += buf_local[iloc + 8];
+            }
+            if (SUM_WG_SIZE >= 8)
+            {
+                if (iloc < 4 && iloc + 4 < wg_size && iloc + 4 < num_elements)
+                    buf_local[iloc] += buf_local[iloc + 4];
+            }
+            if (SUM_WG_SIZE >= 4)
+            {
+                if (iloc < 2 && iloc + 2 < wg_size && iloc + 2 < num_elements)
+                    buf_local[iloc] += buf_local[iloc + 2];
+            }
+            if (SUM_WG_SIZE >= 2)
+            {
+                if (iloc < 1 && iloc + 1 < wg_size && iloc + 1 < num_elements)
+                    buf_local[iloc] += buf_local[iloc + 1];
+            }
+        }
+
+        // write into output partial_sums
+        if (iloc == 0)
+        {
+            partial_sums[get_group_id(0)] = buf_local[0];
+        }
+    }
+}
+
 /**************************************
  ***                                ***
  *          Jacobi Kernels            *

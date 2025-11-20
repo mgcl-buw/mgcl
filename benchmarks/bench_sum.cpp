@@ -3,6 +3,7 @@
 
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/generators/catch_generators.hpp"
+#include <catch2/catch_message.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <chrono>
@@ -29,6 +30,9 @@ double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl
 double sum_finish_use_same_kernel(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
                                   bool return_sum, size_t localSize, std::string kernelName, size_t global, int fractions,
                                   mgcl::ProfilingData* pd);
+double sum_finish_use_same_kernel_unrolled(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
+                                           bool return_sum, size_t localSize, std::string kernelName, size_t global, int fractions,
+                                           mgcl::ProfilingData* pd);
 
 // Checks sum sequentially vs opencl
 TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][seqVsOcl]")
@@ -436,70 +440,99 @@ TEST_CASE("benchSumReductionVersions")
     // Check if results are equal.
     if (CLI_ARGS::checkResults)
     {
-        mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
-        OCLWrapper oclw(CL_DEVICE_TYPE_GPU,
-                        mgcl_test::TestUtility::deviceAvailable("Quadro", CL_DEVICE_TYPE_GPU) ? "Quadro" : "",
-                        "", "./kernel_optimizations.cl", tu.getContext());
+        // dummy problem
+        auto vdummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto fdummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        mgcl::Problem p(1, 1, 1, fdummy, vdummy);
+        p.setUseOpencl(true);
+        p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setSilent(true);
+        p.setKernelFile("kernel_optimizations.cl");
+        p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
+        p.getOpenCLHelper().setPreprocessorConstant("SUM_WG_SIZE", std::to_string(128));
+        p.init();
 
         int m = 1;
         int n = 1;
-        int o = GENERATE(1, 2, 3, 33, 64, 256);
-        size_t local = GENERATE(32, 33);
 
-        std::cout << "checking o: " << o << ", local: " << local << std::endl;
-
-        mgcl::Cuboid data(m, n, o);
-        // data.fillRandom(-10, 10);
-        for (int i = 0; i < o; i++)
+        std::vector<int> o_sizes = {1, 2, 3, 33, 64, 256};
+        // std::vector<int> locals = {32, 33};
+        std::vector<int> locals = {32, 128, 512};
+        for (int local : locals)
         {
-            // data[0][0][i] = (i + 1) * (1.0 / 4.0);
-            data[0][0][i] = (1.0 / 4.0);
+            p.getOpenCLHelper().setPreprocessorConstant("SUM_WG_SIZE", std::to_string(local));
+            p.getOpenCLHelper().rebuildProgram();
+            for (int o : o_sizes)
+            {
+                std::cout << "checking o: " << o << ", local: " << local << std::endl;
+
+                mgcl::Cuboid data(m, n, o);
+                // data.fillRandom(-10, 10);
+                for (int i = 0; i < o; i++)
+                {
+                    // data[0][0][i] = (i + 1) * (1.0 / 4.0);
+                    data[0][0][i] = (1.0 / 4.0);
+                }
+
+                mgcl::CuboidGpu dDataGpu(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, data);
+                cl_mem dData = dDataGpu.getBuffer();
+
+                auto context = p.getContext();
+                auto program = p.getProgram();
+                auto commands = p.getCommands();
+
+                std::vector<double> sums;
+
+                sums.push_back(sum(dData, data.field1d().size(), context, program,
+                                   commands, true, local, "sum_partial_global_eq_num_elements", o, 1, nullptr));
+
+                sums.push_back(sum(dData, data.field1d().size(), context, program,
+                                   commands, true, local, "sum_partial_global_eq_half_num_elements", ceil(o / 2.0), 1, nullptr));
+
+                sums.push_back(sum(dData, data.field1d().size(), context, program,
+                                   commands, true, local, "sum_partial_global_eq_quarter_num_elements", ceil(o / 4.0), 1, nullptr));
+
+                sums.push_back(sum(dData, data.field1d().size(), context, program,
+                                   commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 8.0), 8, nullptr));
+
+                sums.push_back(sum(dData, data.field1d().size(), context, program,
+                                   commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 16.0), 16, nullptr));
+
+                sums.push_back(sum(dData, data.field1d().size(), context, program,
+                                   commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 32.0), 32, nullptr));
+
+                sums.push_back(sum(dData, data.field1d().size(), context, program,
+                                   commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 64.0), 64, nullptr));
+
+                sums.push_back(sum(dData, data.field1d().size(), context, program,
+                                   commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 128.0), 128, nullptr));
+
+                sums.push_back(sum(dData, data.field1d().size(), context, program,
+                                   commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 256.0), 256, nullptr));
+
+                sums.push_back(sum_finish_on_cpu(dData, data.field1d().size(), context, program,
+                                                 commands, true, local, "sum_partial_global_eq_x_num_elements",
+                                                 ceil(o / 256.0), 256, nullptr));
+
+                sums.push_back(sum_finish_use_same_kernel(dData, data.field1d().size(), context, program,
+                                                          commands, true, local, "",
+                                                          ceil(o / 256.0), 256, nullptr));
+                sums.push_back(sum_finish_use_same_kernel_unrolled(dData, data.field1d().size(), context, program,
+                                                                   commands, true, local, "",
+                                                                   ceil(o / 256.0), 256, nullptr));
+
+                // for (auto s : sums)
+                //     std::cout << "  sum: " << s << std::endl;
+
+                int cnt = 0;
+                for (auto s : sums)
+                {
+                    CAPTURE(cnt);
+                    cnt++;
+                    REQUIRE_THAT(sums[0], Catch::Matchers::WithinAbs(s, 1e-14));
+                }
+            }
         }
-
-        cl_mem dData = tu.createOpenCLBuffer(data);
-
-        std::vector<double> sums;
-
-        sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_num_elements", o, 1, nullptr));
-
-        sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_half_num_elements", ceil(o / 2.0), 1, nullptr));
-
-        sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_quarter_num_elements", ceil(o / 4.0), 1, nullptr));
-
-        sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 8.0), 8, nullptr));
-
-        sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 16.0), 16, nullptr));
-
-        sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 32.0), 32, nullptr));
-
-        sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 64.0), 64, nullptr));
-
-        sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 128.0), 128, nullptr));
-
-        sums.push_back(sum(dData, data.field1d().size(), oclw.context, oclw.program,
-                           oclw.commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(o / 256.0), 256, nullptr));
-
-        sums.push_back(sum_finish_on_cpu(dData, data.field1d().size(), oclw.context, oclw.program,
-                                         oclw.commands, true, local, "sum_partial_global_eq_x_num_elements",
-                                         ceil(o / 256.0), 256, nullptr));
-
-        sums.push_back(sum_finish_use_same_kernel(dData, data.field1d().size(), oclw.context, oclw.program,
-                                                  oclw.commands, true, local, "",
-                                                  ceil(o / 256.0), 256, nullptr));
-
-        // for (auto s : sums)
-        //     std::cout << "  sum: " << s << std::endl;
-
-        for (auto s : sums)
-            REQUIRE_THAT(sums[0], Catch::Matchers::WithinAbs(s, 1e-14));
     }
     else
     {
@@ -524,7 +557,7 @@ TEST_CASE("benchSumReductionVersions")
         // Almost not effect for small grids (plus they are fast anyway).
         // std::vector grids{32, 64, 128, 256, 512};
         // std::vector<size_t> locals{16, 32, 64, 128, 192, 256, 384, 512, 768, 1024};
-        std::vector<size_t> locals{512};
+        std::vector<size_t> locals{128, 256, 512};
 
         for (auto grid : gridsTBT)
         {
@@ -543,6 +576,7 @@ TEST_CASE("benchSumReductionVersions")
             p.setSilent(true);
             p.setKernelFile("kernel_optimizations.cl");
             p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
+            p.getOpenCLHelper().setPreprocessorConstant("SUM_WG_SIZE", std::to_string(512));
             // TODO preprocessor values
             p.init();
 
@@ -570,6 +604,9 @@ TEST_CASE("benchSumReductionVersions")
 
             for (auto local : locals)
             {
+                p.getOpenCLHelper().setPreprocessorConstant("SUM_WG_SIZE", std::to_string(local));
+                p.getOpenCLHelper().rebuildProgram();
+
                 std::string name = std::string("sum_partial_global_eq_x_num_elements_N")
                                        .append(std::to_string(N))
                                        .append("_wg")
@@ -603,7 +640,7 @@ TEST_CASE("benchSumReductionVersions")
                                   commands, true, local, "sum_partial_global_eq_quarter_num_elements", ceil(num_elements / 4.0), 1, pd)); //
                       });
 
-                std::vector<int> fractions_finishOnGpu{8, 16, 32, 64, 128, 256, 512};
+                std::vector<int> fractions_finishOnGpu{8, 16, 32, 64, 128, 256, 512, 1024};
                 for (int fr : fractions_finishOnGpu)
                 {
                     name = std::string("sum_partial_global_eq_1/")
@@ -637,6 +674,25 @@ TEST_CASE("benchSumReductionVersions")
                                   sum_finish_use_same_kernel(dData, num_elements, context, program,
                                                              commands, true, local, "",
                                                              ceil(num_elements / static_cast<double>(fr)), fr, pd)); //
+                          });
+                }
+
+                std::vector<int> fractions_finishOnGpu_unrolled{8, 16, 32, 64, 128, 256, 512, 1024};
+                for (int fr : fractions_finishOnGpu_unrolled)
+                {
+                    name = std::string("sum_partial_global_eq_1/")
+                               .append(std::to_string(fr))
+                               .append("_N")
+                               .append(std::to_string(N))
+                               .append("_wg")
+                               .append(std::to_string(local))
+                               .append("_finishOnGPU_sameKernel_unrolled");
+                    b.run(name.c_str(), [&]
+                          {
+                              ankerl::nanobench::doNotOptimizeAway(
+                                  sum_finish_use_same_kernel_unrolled(dData, num_elements, context, program,
+                                                                      commands, true, local, "",
+                                                                      ceil(num_elements / static_cast<double>(fr)), fr, pd)); //
                           });
                 }
 
@@ -781,6 +837,9 @@ double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program progr
     err = clReleaseMemObject(dTotalSum);
     mgcl::mgclCheckError(err, "clReleaseMemObject dTotalSum");
 
+    mgcl::mgclCheckError(clReleaseKernel(kernel_sum_partial), "clReleaseKernel(kernel_sum_partial)");
+    mgcl::mgclCheckError(clReleaseKernel(kernel_sum_finish), "clReleaseKernel(kernel_sum_finish)");
+
     return ret;
 }
 
@@ -885,6 +944,118 @@ double sum_finish_use_same_kernel(cl_mem buf, size_t num_elements, cl_context co
     err = clReleaseMemObject(dPartialSums);
     mgcl::mgclCheckError(err, "clReleaseMemObject dPartialSums");
 
+    mgcl::mgclCheckError(clReleaseKernel(kernel_sum_partial), "clReleaseKernel(kernel_sum_partial)");
+
+    return ret;
+}
+
+double sum_finish_use_same_kernel_unrolled(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
+                                           bool return_sum, size_t localSize, std::string kernelName, size_t global, int fractions,
+                                           mgcl::ProfilingData* pd)
+{
+    int err;
+
+    // One work-item per element in buf
+    // size_t global = num_elements;
+
+    // should not happen, but for e.g. global = o/2, o = 1
+    if (global <= 0)
+        global = 2;
+
+    // make localSize even so reduction in kernel works properly
+    if (localSize % 2 != 0)
+        localSize++;
+
+    // Pad global work-item count to fit wg-size
+    if (global % localSize != 0)
+        global += localSize - (global % localSize);
+
+    kernelName = "sum_partial_global_eq_x_num_elements_same_kernel_finish_unrolled";
+
+    // number of partial sums = num of work-groups
+    int num_partials = global / localSize;
+
+    if (num_partials > 512)
+    {
+        throw "num_partials must be less than max block size of 512 for sum_partial_global_eq_x_num_elements_same_kernel_finish. num_partials: " +
+            std::to_string(num_partials) + ", localSize: " + std::to_string(localSize) + ", global: " + std::to_string(global);
+    }
+
+    // int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
+    cl_mem dPartialSums = clCreateBuffer(context, CL_MEM_READ_WRITE,
+                                         sizeof(double) * num_partials, nullptr, &err);
+    mgcl::mgclCheckError(err, "Creating dPartialSums buffer");
+
+    // fill buffer with zeros
+    mgcl::util::fill(program, commands, dPartialSums, 0, num_partials, false, nullptr, nullptr);
+
+    // Create the compute kernel from the program
+    cl_kernel kernel_sum_partial = clCreateKernel(program, kernelName.c_str(), &err);
+    mgcl::mgclCheckError(err, std::string("Creating kernel ").append(kernelName).c_str());
+
+    int pos = 0;
+    err = clSetKernelArg(kernel_sum_partial, pos, sizeof(cl_mem), &buf);
+    err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(cl_mem), &dPartialSums);
+    err |= clSetKernelArg(kernel_sum_partial, ++pos, localSize * sizeof(double), nullptr);
+    err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(int), &num_elements);
+    err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(int), &fractions);
+    mgcl::mgclCheckError(err, "Setting kernel sum_partial arguments");
+
+    cl_event ev;
+    err = clEnqueueNDRangeKernel(commands, kernel_sum_partial, 1, NULL, &global, &localSize, 0, NULL, &ev);
+    mgcl::mgclCheckError(err, "Enqueueing kernel sum_partial");
+
+    if (pd != nullptr)
+    {
+        pd->addMeasurement(commands, ev, kernelName,
+                           {global, 0, 0},
+                           {localSize, 1, 1});
+    }
+    mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+    // start same kernel a 2nd time only on partialSums buffer with only one work-group
+    int one = 1;
+    int log2_num_partials = std::ceil(std::log2(num_partials));
+    size_t localSizeFinish = 1 << log2_num_partials; // round up to next power of 2
+    size_t globalFinish = num_partials;
+    if (globalFinish % localSizeFinish != 0)
+        globalFinish += localSizeFinish - (globalFinish % localSizeFinish);
+    pos = 0;
+    err = clSetKernelArg(kernel_sum_partial, pos, sizeof(cl_mem), &dPartialSums);
+    err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(cl_mem), &dPartialSums);
+    err |= clSetKernelArg(kernel_sum_partial, ++pos, localSizeFinish * sizeof(double), nullptr);
+    err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(int), &num_partials);
+    err |= clSetKernelArg(kernel_sum_partial, ++pos, sizeof(int), &one);
+    mgcl::mgclCheckError(err, "Setting kernel sum_partial arguments");
+
+    cl_event ev2;
+    err = clEnqueueNDRangeKernel(commands, kernel_sum_partial, 1, NULL, &globalFinish, &localSizeFinish, 0, NULL, &ev2);
+    mgcl::mgclCheckError(err, "Enqueueing kernel sum_partial");
+
+    if (pd != nullptr)
+    {
+        pd->addMeasurement(commands, ev2, kernelName,
+                           {global, 0, 0},
+                           {localSize, 1, 1});
+    }
+    mgcl::mgclCheckError(clReleaseEvent(ev2), "clReleaseEvent");
+
+    double ret = 0;
+    if (return_sum)
+    {
+        err = clFinish(commands);
+        mgcl::mgclCheckError(err, "Error: clFinish failed!");
+
+        err = clEnqueueReadBuffer(commands, dPartialSums, CL_TRUE, 0, sizeof(double),
+                                  &ret, 0, NULL, NULL);
+        mgcl::mgclCheckError(err, "Error: Failed to read dTotalSum from device!");
+    }
+
+    err = clReleaseMemObject(dPartialSums);
+    mgcl::mgclCheckError(err, "clReleaseMemObject dPartialSums");
+
+    mgcl::mgclCheckError(clReleaseKernel(kernel_sum_partial), "clReleaseKernel(kernel_sum_partial)");
+
     return ret;
 }
 
@@ -963,6 +1134,8 @@ double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl
 
     err = clReleaseMemObject(dPartialSums);
     mgcl::mgclCheckError(err, "clReleaseMemObject dPartialSums");
+
+    mgcl::mgclCheckError(clReleaseKernel(kernel_sum_partial), "clReleaseKernel(kernel_sum_partial)");
 
     return ret;
 }
