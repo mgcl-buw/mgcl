@@ -596,94 +596,43 @@ TEST_CASE("benchSumReductionVersions")
                                   commands, true, local, "sum_partial_global_eq_quarter_num_elements", ceil(num_elements / 4.0), 1, pd)); //
                       });
 
-                name = std::string("sum_partial_global_eq_1/8_N")
-                           .append(std::to_string(N))
-                           .append("_wg")
-                           .append(std::to_string(local));
-                b.run(name.c_str(), [&]
-                      {
-                          ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, context, program,
-                                  commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 8.0), 8, pd)); //
-                      });
+                std::vector<int> fractions_finishOnGpu{8, 16, 32, 64, 128, 256, 512};
+                for (int fr : fractions_finishOnGpu)
+                {
+                    name = std::string("sum_partial_global_eq_1/")
+                               .append(std::to_string(fr))
+                               .append("_N")
+                               .append(std::to_string(N))
+                               .append("_wg")
+                               .append(std::to_string(local))
+                               .append("_finishOnGPU");
+                    b.run(name.c_str(), [&]
+                          {
+                              ankerl::nanobench::doNotOptimizeAway(
+                                  sum_finish_on_cpu(dData, num_elements, context, program,
+                                                    commands, true, local, "sum_partial_global_eq_x_num_elements",
+                                                    ceil(num_elements / static_cast<double>(fr)), fr, pd)); //
+                          });
+                }
 
-                name = std::string("sum_partial_global_eq_1/16_N")
-                           .append(std::to_string(N))
-                           .append("_wg")
-                           .append(std::to_string(local));
-                b.run(name.c_str(), [&]
-                      {
-                          ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, context, program,
-                                  commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 16.0), 16, pd)); //
-                      });
-
-                name = std::string("sum_partial_global_eq_1/32_N")
-                           .append(std::to_string(N))
-                           .append("_wg")
-                           .append(std::to_string(local));
-                b.run(name.c_str(), [&]
-                      {
-                          ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, context, program,
-                                  commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 32.0), 32, pd)); //
-                      });
-
-                name = std::string("sum_partial_global_eq_1/64_N")
-                           .append(std::to_string(N))
-                           .append("_wg")
-                           .append(std::to_string(local));
-                b.run(name.c_str(), [&]
-                      {
-                          ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, context, program,
-                                  commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 64.0), 64, pd)); //
-                      });
-
-                name = std::string("sum_partial_global_eq_1/128_N")
-                           .append(std::to_string(N))
-                           .append("_wg")
-                           .append(std::to_string(local));
-                b.run(name.c_str(), [&]
-                      {
-                          ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, context, program,
-                                  commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 128.0), 128, pd)); //
-                      });
-
-                name = std::string("sum_partial_global_eq_1/256_N")
-                           .append(std::to_string(N))
-                           .append("_wg")
-                           .append(std::to_string(local));
-                b.run(name.c_str(), [&]
-                      {
-                          ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, context, program,
-                                  commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 256.0), 256, pd)); //
-                      });
-
-                name = std::string("sum_partial_global_eq_1/128_N")
-                           .append(std::to_string(N))
-                           .append("_wg")
-                           .append(std::to_string(local));
-                b.run(name.c_str(), [&]
-                      {
-                          ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, context, program,
-                                  commands, true, local, "sum_partial_global_eq_x_num_elements", ceil(num_elements / 512.0), 512, pd)); //
-                      });
-
-                name = std::string("sum_partial_global_eq_1/512_N")
-                           .append(std::to_string(N))
-                           .append("_wg")
-                           .append(std::to_string(local));
-                b.run(name.c_str(), [&]
-                      {
-                          ankerl::nanobench::doNotOptimizeAway(
-                              sum_finish_on_cpu(dData, num_elements, context, program,
-                                                commands, true, local, "sum_partial_global_eq_x_num_elements",
-                                                ceil(num_elements / 512.0), 512, pd)); //
-                      });
+                std::vector<int> fractions_finishOnCpu{128, 256, 512};
+                for (int fr : fractions_finishOnCpu)
+                {
+                    name = std::string("sum_partial_global_eq_1/")
+                               .append(std::to_string(fr))
+                               .append("_N")
+                               .append(std::to_string(N))
+                               .append("_wg")
+                               .append(std::to_string(local))
+                               .append("_finishOnCPU");
+                    b.run(name.c_str(), [&]
+                          {
+                              ankerl::nanobench::doNotOptimizeAway(
+                                  sum_finish_on_cpu(dData, num_elements, context, program,
+                                                    commands, true, local, "sum_partial_global_eq_x_num_elements",
+                                                    ceil(num_elements / static_cast<double>(fr)), fr, pd)); //
+                          });
+                }
             }
             std::cout << "=============" << std::endl;
 
