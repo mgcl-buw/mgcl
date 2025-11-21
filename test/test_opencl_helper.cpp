@@ -134,4 +134,35 @@ TEST_CASE("OpenCLHelper")
             REQUIRE_THROWS(openCLHelper.rebuildProgram());
         }
     }
+
+    SECTION("queryComputeUnitCount")
+    {
+        openCLHelper.init();
+
+        REQUIRE(openCLHelper.queryComputeUnitCount(openCLHelper.getDeviceId()) > 0);
+
+        auto s = openCLHelper.queryDeviceName(openCLHelper.getDeviceId());
+        // std::cout << "s: " << s << std::endl;
+        if (s == "Quadro T2000 with Max-Q Design")
+            REQUIRE(openCLHelper.queryComputeUnitCount(openCLHelper.getDeviceId()) == 16);
+    }
+
+    SECTION("queryDeviceName")
+    {
+        openCLHelper.init();
+        auto s = openCLHelper.queryDeviceName(openCLHelper.getDeviceId());
+        REQUIRE(s.length() > 0);
+    }
+
+    SECTION("queryMaxWgSize")
+    {
+        openCLHelper.init();
+
+        REQUIRE(openCLHelper.queryMaxWgSize(openCLHelper.getDeviceId()) > 0);
+
+        auto s = openCLHelper.queryDeviceName(openCLHelper.getDeviceId());
+        // std::cout << "s: " << s << std::endl;
+        if (s == "Quadro T2000 with Max-Q Design")
+            REQUIRE(openCLHelper.queryMaxWgSize(openCLHelper.getDeviceId()) == 1024);
+    }
 }

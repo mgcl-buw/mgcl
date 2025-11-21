@@ -74,6 +74,10 @@ namespace mgcl
         bool supportsDoublePrecision(cl_device_id _device_id);
         void rebuildProgram();
 
+        int queryComputeUnitCount(cl_device_id _device_id);
+        int queryMaxWgSize(cl_device_id _device_id);
+        std::string queryDeviceName(cl_device_id _device_id);
+
         void finish();
 
         /**

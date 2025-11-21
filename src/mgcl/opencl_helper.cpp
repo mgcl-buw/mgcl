@@ -1094,4 +1094,28 @@ namespace mgcl
 
         return ss.str();
     }
+
+    int OpenCLHelper::queryComputeUnitCount(cl_device_id _device_id)
+    {
+        cl_uint computeUnits;
+        int err = clGetDeviceInfo(_device_id, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &computeUnits, nullptr);
+        mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_COMPUTE_UNITS)");
+        return computeUnits;
+    }
+
+    int OpenCLHelper::queryMaxWgSize(cl_device_id _device_id)
+    {
+        size_t maxWgSize;
+        int err = clGetDeviceInfo(_device_id, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), &maxWgSize, nullptr);
+        mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_WORK_GROUP_SIZE)");
+        return maxWgSize;
+    }
+
+    std::string OpenCLHelper::queryDeviceName(cl_device_id _device_id)
+    {
+        char deviceName[1024];
+        int err = clGetDeviceInfo(_device_id, CL_DEVICE_NAME, sizeof(deviceName), &deviceName, nullptr);
+        mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_NAME)");
+        return deviceName;
+    }
 }
