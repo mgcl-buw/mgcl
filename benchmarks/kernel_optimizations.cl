@@ -3902,176 +3902,80 @@ __kernel void sum_partial_global_eq_num_elements(
     int wg_size = get_local_size(0);
     int iloc = get_local_id(0);
 
-    if (i < num_elements)
+    // copy buf of this work-item into local storage. Fill padded elements at the end with 0.
+    buf_local[iloc] = (i < num_elements) ? buf[i] : 0;
+
+    // sum up buf using parallel sum reduction, "a >> 1" == "a / 2" for int
+    // TODO: ensure that stride is even (or handle odd strides)
+    for (int stride = wg_size >> 1; stride > 0; stride >>= 1)
     {
-        // copy buf of this work-item into local storage
-        buf_local[iloc] = buf[i];
+        // synchronize local memory
+        barrier(CLK_LOCAL_MEM_FENCE);
 
-        // sum up buf using parallel sum reduction, "a >> 1" == "a / 2" for int
-        // TODO: ensure that stride is even (or handle odd strides)
-        for (int stride = wg_size >> 1; stride > 0; stride >>= 1)
+        // fold upper half onto lower half
+        if (iloc < stride && iloc + stride < wg_size && iloc + stride < num_elements)
         {
-            // synchronize local memory
-            barrier(CLK_LOCAL_MEM_FENCE);
-
-            // fold upper half onto lower half
-            if (iloc < stride && iloc + stride < wg_size && iloc + stride < num_elements)
-            {
-                buf_local[iloc] += buf_local[iloc + stride];
-            }
+            int gid = get_group_id(0);
+            // gid, i, iloc, stride, buf_local[iloc], buf_local[iloc + stride]:
+            // printf("%d,%d,%d,%d,%lf,%lf\n", i, iloc, stride, buf_local[iloc], buf_local[iloc + stride]);
+            buf_local[iloc] += buf_local[iloc + stride];
         }
+    }
 
-        // write into output partial_sums
-        if (iloc == 0)
-        {
-            partial_sums[get_group_id(0)] = buf_local[iloc];
-        }
+    // write into output partial_sums
+    if (iloc == 0)
+    {
+        partial_sums[get_group_id(0)] = buf_local[iloc];
     }
 }
 
 // Form partial sum of buf per work-group and write result into buf_local.
 // For full sum of buf sum_finish must be enqueued after this kernel (so global memory gets synchronized between work-groups).
 // Not that using barrier(CLK_GLOBAL_MEM_FENCE) does not work for this as it does not synchronize work-groups.
-// Must be called with a 1-D kernel range with #work-items = 0.5 * #elements in buf.
-// num_elements must be half of #elements in buf.
-// partial_sums's size must be equal to number of work-groups.
-// buf_local's size must be equal to work-group size.
-__kernel void sum_partial_global_eq_half_num_elements(
-    __global double* restrict buf,
-    __global double* restrict partial_sums,
-    __local double* buf_local,
-    int num_elements)
-{
-    int i = get_global_id(0);
-    int wg_size = get_local_size(0);
-    int iloc = get_local_id(0);
-
-    if (i < num_elements)
-    {
-        // copy buf of this work-item into local storage. Two values since #wi = num_elements / 2 + padding
-        buf_local[iloc] = buf[i];
-        if (i + get_global_size(0) < num_elements)
-            buf_local[iloc] += buf[i + get_global_size(0)];
-
-        // sum up buf using parallel sum reduction, "a >> 1" == "a / 2" for int
-        // TODO: ensure that stride is even (or handle odd strides)
-        for (int stride = wg_size >> 1; stride > 0; stride >>= 1)
-        {
-            // synchronize local memory
-            barrier(CLK_LOCAL_MEM_FENCE);
-
-            // fold upper half onto lower half
-            if (iloc < stride && iloc + stride < wg_size && iloc + stride < num_elements)
-            {
-                buf_local[iloc] += buf_local[iloc + stride];
-            }
-        }
-
-        // write into output partial_sums
-        if (iloc == 0)
-        {
-            partial_sums[get_group_id(0)] = buf_local[iloc];
-        }
-    }
-}
-
-// Form partial sum of buf per work-group and write result into buf_local.
-// For full sum of buf sum_finish must be enqueued after this kernel (so global memory gets synchronized between work-groups).
-// Not that using barrier(CLK_GLOBAL_MEM_FENCE) does not work for this as it does not synchronize work-groups.
-// Must be called with a 1-D kernel range with #work-items = 0.25 * #elements in buf.
-// num_elements must be quarter of #elements in buf.
-// partial_sums's size must be equal to number of work-groups.
-// buf_local's size must be equal to work-group size.
-__kernel void sum_partial_global_eq_quarter_num_elements(
-    __global double* restrict buf,
-    __global double* restrict partial_sums,
-    __local double* buf_local,
-    int num_elements)
-{
-    int i = get_global_id(0);
-    int wg_size = get_local_size(0);
-    int iloc = get_local_id(0);
-
-    if (i < num_elements)
-    {
-        // copy buf of this work-item into local storage. Two values since #wi = num_elements / 2 + padding
-        buf_local[iloc] = buf[i];
-        if (i + get_global_size(0) < num_elements)
-            buf_local[iloc] += buf[i + get_global_size(0)];
-        if (i + 2 * get_global_size(0) < num_elements)
-            buf_local[iloc] += buf[i + 2 * get_global_size(0)];
-        if (i + 3 * get_global_size(0) < num_elements)
-            buf_local[iloc] += buf[i + 3 * get_global_size(0)];
-
-        // sum up buf using parallel sum reduction, "a >> 1" == "a / 2" for int
-        // TODO: ensure that stride is even (or handle odd strides)
-        for (int stride = wg_size >> 1; stride > 0; stride >>= 1)
-        {
-            // synchronize local memory
-            barrier(CLK_LOCAL_MEM_FENCE);
-
-            // fold upper half onto lower half
-            if (iloc < stride && iloc + stride < wg_size && iloc + stride < num_elements)
-            {
-                buf_local[iloc] += buf_local[iloc + stride];
-            }
-        }
-
-        // write into output partial_sums
-        if (iloc == 0)
-        {
-            partial_sums[get_group_id(0)] = buf_local[iloc];
-        }
-    }
-}
-
-// Form partial sum of buf per work-group and write result into buf_local.
-// For full sum of buf sum_finish must be enqueued after this kernel (so global memory gets synchronized between work-groups).
-// Not that using barrier(CLK_GLOBAL_MEM_FENCE) does not work for this as it does not synchronize work-groups.
-// Must be called with a 1-D kernel range with #work-items = 1/fractions * #elements in buf.
+// Must be called with a 1-D kernel range with #work-items = 1/batchSize * #elements in buf.
 // num_elements must be 1/fraction * #elements in buf.
 // partial_sums's size must be equal to number of work-groups.
 // buf_local's size must be equal to work-group size.
-// fractions determines the size of mapping of work-items to num_elements, i.e. 4 means #wi = 1/4 * #elements
+// batchSize determines the size of mapping of work-items to num_elements, i.e. 4 means #wi = 1/4 * #elements
 __kernel void sum_partial_global_eq_x_num_elements(
     __global double* restrict buf,
     __global double* restrict partial_sums,
     __local double* buf_local,
     int num_elements,
-    int fractions)
+    int batchSize)
 {
     int i = get_global_id(0);
     int wg_size = get_local_size(0);
     int iloc = get_local_id(0);
 
-    if (i < num_elements)
+    // copy buf of this work-item into local storage. Fill padded elements at the end with 0.
+    buf_local[iloc] = (i < num_elements) ? buf[i] : 0;
+
+    int idx = i + get_global_size(0);
+    for (int f = 1; f < batchSize && idx < num_elements; f++)
     {
-        // copy buf of this work-item into local storage.
-        buf_local[iloc] = buf[i];
+        buf_local[iloc] += buf[idx];
+        idx += get_global_size(0);
+    }
 
-        for (int f = 1; f < fractions; f++)
-            if (i + f * get_global_size(0) < num_elements)
-                buf_local[iloc] += buf[i + f * get_global_size(0)];
+    // sum up buf using parallel sum reduction, "a >> 1" == "a / 2" for int
+    // TODO: ensure that stride is even (or handle odd strides)
+    for (int stride = wg_size >> 1; stride > 0; stride >>= 1)
+    {
+        // synchronize local memory
+        barrier(CLK_LOCAL_MEM_FENCE);
 
-        // sum up buf using parallel sum reduction, "a >> 1" == "a / 2" for int
-        // TODO: ensure that stride is even (or handle odd strides)
-        for (int stride = wg_size >> 1; stride > 0; stride >>= 1)
+        // fold upper half onto lower half
+        if (iloc < stride && iloc + stride < wg_size && iloc + stride < num_elements)
         {
-            // synchronize local memory
-            barrier(CLK_LOCAL_MEM_FENCE);
-
-            // fold upper half onto lower half
-            if (iloc < stride && iloc + stride < wg_size && iloc + stride < num_elements)
-            {
-                buf_local[iloc] += buf_local[iloc + stride];
-            }
+            buf_local[iloc] += buf_local[iloc + stride];
         }
+    }
 
-        // write into output partial_sums
-        if (iloc == 0)
-        {
-            partial_sums[get_group_id(0)] = buf_local[iloc];
-        }
+    // write into output partial_sums
+    if (iloc == 0)
+    {
+        partial_sums[get_group_id(0)] = buf_local[iloc];
     }
 }
 
@@ -4096,40 +4000,40 @@ __kernel void sum_partial_global_eq_x_num_elements_same_kernel_finish(
     __global double* partial_sums,
     __local double* buf_local,
     int num_elements,
-    int fractions)
+    int batchSize)
 {
     int i = get_global_id(0);
     int wg_size = get_local_size(0);
     int iloc = get_local_id(0);
 
-    if (i < num_elements)
+    // copy buf of this work-item into local storage. Fill padded elements at the end with 0.
+    buf_local[iloc] = (i < num_elements) ? buf[i] : 0;
+
+    int idx = i + get_global_size(0);
+    for (int f = 1; f < batchSize && idx < num_elements; f++)
     {
-        // copy buf of this work-item into local storage.
-        buf_local[iloc] = buf[i];
+        buf_local[iloc] += buf[idx];
+        idx += get_global_size(0);
+    }
 
-        for (int f = 1; f < fractions; f++)
-            if (i + f * get_global_size(0) < num_elements)
-                buf_local[iloc] += buf[i + f * get_global_size(0)];
+    // sum up buf using parallel sum reduction, "a >> 1" == "a / 2" for int
+    // TODO: ensure that stride is even (or handle odd strides)
+    for (int stride = wg_size >> 1; stride > 0; stride >>= 1)
+    {
+        // synchronize local memory
+        barrier(CLK_LOCAL_MEM_FENCE);
 
-        // sum up buf using parallel sum reduction, "a >> 1" == "a / 2" for int
-        // TODO: ensure that stride is even (or handle odd strides)
-        for (int stride = wg_size >> 1; stride > 0; stride >>= 1)
+        // fold upper half onto lower half
+        if (iloc < stride)
         {
-            // synchronize local memory
-            barrier(CLK_LOCAL_MEM_FENCE);
-
-            // fold upper half onto lower half
-            if (iloc < stride && iloc + stride < wg_size && iloc + stride < num_elements)
-            {
-                buf_local[iloc] += buf_local[iloc + stride];
-            }
+            buf_local[iloc] += buf_local[iloc + stride];
         }
+    }
 
-        // write into output partial_sums
-        if (iloc == 0)
-        {
-            partial_sums[get_group_id(0)] = buf_local[iloc];
-        }
+    // write into output partial_sums
+    if (iloc == 0)
+    {
+        partial_sums[get_group_id(0)] = buf_local[iloc];
     }
 }
 
@@ -4143,91 +4047,87 @@ __kernel void sum_partial_global_eq_x_num_elements_same_kernel_finish_unrolled(
     __global double* partial_sums,
     __local volatile double* buf_local,
     int num_elements,
-    int fractions)
+    int batchSize)
 {
     int i = get_global_id(0);
-    int wg_size = get_local_size(0);
     int iloc = get_local_id(0);
 
-    if (i < num_elements)
+    // copy buf of this work-item into local storage. Fill padded elements at the end with 0.
+    buf_local[iloc] = (i < num_elements) ? buf[i] : 0;
+
+    int idx = i + get_global_size(0);
+    for (int f = 1; f < batchSize && idx < num_elements; f++)
     {
-        // copy buf of this work-item into local storage.
-        buf_local[iloc] = buf[i];
+        buf_local[iloc] += buf[idx];
+        idx += get_global_size(0);
+    }
 
-        for (int f = 1; f < fractions; f++)
-            if (i + f * get_global_size(0) < num_elements)
-                buf_local[iloc] += buf[i + f * get_global_size(0)];
-            else
-                break;
-
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (SUM_WG_SIZE >= 1024)
+    {
+        if (iloc < 512)
+        {
+            buf_local[iloc] += buf_local[iloc + 512];
+        }
         barrier(CLK_LOCAL_MEM_FENCE);
-        if (SUM_WG_SIZE >= 512)
+    }
+    if (SUM_WG_SIZE >= 512)
+    {
+        if (iloc < 256)
         {
-            // fold upper half onto lower half
-            if (iloc < 256 && iloc + 256 < wg_size && iloc + 256 < num_elements)
-            {
-                buf_local[iloc] += buf_local[iloc + 256];
-                barrier(CLK_LOCAL_MEM_FENCE);
-            }
+            buf_local[iloc] += buf_local[iloc + 256];
         }
-        if (SUM_WG_SIZE >= 256)
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    if (SUM_WG_SIZE >= 256)
+    {
+        if (iloc < 128)
         {
-            // fold upper half onto lower half
-            if (iloc < 128 && iloc + 128 < wg_size && iloc + 128 < num_elements)
-            {
-                buf_local[iloc] += buf_local[iloc + 128];
-                barrier(CLK_LOCAL_MEM_FENCE);
-            }
+            buf_local[iloc] += buf_local[iloc + 128];
         }
-        if (SUM_WG_SIZE >= 128)
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    if (SUM_WG_SIZE >= 128)
+    {
+        if (iloc < 64)
         {
-            // fold upper half onto lower half
-            if (iloc < 64 && iloc + 64 < wg_size && iloc + 64 < num_elements)
-            {
-                buf_local[iloc] += buf_local[iloc + 64];
-                barrier(CLK_LOCAL_MEM_FENCE);
-            }
+            buf_local[iloc] += buf_local[iloc + 64];
         }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
 
-        if (iloc < 32)
+    if (iloc < 32)
+    {
+        if (SUM_WG_SIZE >= 64)
         {
-            if (SUM_WG_SIZE >= 64)
-            {
-                if (iloc < 32 && iloc + 32 < wg_size && iloc + 32 < num_elements)
-                    buf_local[iloc] += buf_local[iloc + 32];
-            }
-            if (SUM_WG_SIZE >= 32)
-            {
-                if (iloc < 16 && iloc + 16 < wg_size && iloc + 16 < num_elements)
-                    buf_local[iloc] += buf_local[iloc + 16];
-            }
-            if (SUM_WG_SIZE >= 16)
-            {
-                if (iloc < 8 && iloc + 8 < wg_size && iloc + 8 < num_elements)
-                    buf_local[iloc] += buf_local[iloc + 8];
-            }
-            if (SUM_WG_SIZE >= 8)
-            {
-                if (iloc < 4 && iloc + 4 < wg_size && iloc + 4 < num_elements)
-                    buf_local[iloc] += buf_local[iloc + 4];
-            }
-            if (SUM_WG_SIZE >= 4)
-            {
-                if (iloc < 2 && iloc + 2 < wg_size && iloc + 2 < num_elements)
-                    buf_local[iloc] += buf_local[iloc + 2];
-            }
-            if (SUM_WG_SIZE >= 2)
-            {
-                if (iloc < 1 && iloc + 1 < wg_size && iloc + 1 < num_elements)
-                    buf_local[iloc] += buf_local[iloc + 1];
-            }
+            buf_local[iloc] += buf_local[iloc + 32];
         }
+        if (SUM_WG_SIZE >= 32)
+        {
+            buf_local[iloc] += buf_local[iloc + 16];
+        }
+        if (SUM_WG_SIZE >= 16)
+        {
+            buf_local[iloc] += buf_local[iloc + 8];
+        }
+        if (SUM_WG_SIZE >= 8)
+        {
+            buf_local[iloc] += buf_local[iloc + 4];
+        }
+        if (SUM_WG_SIZE >= 4)
+        {
+            buf_local[iloc] += buf_local[iloc + 2];
+        }
+        if (SUM_WG_SIZE >= 2)
+        {
+            buf_local[iloc] += buf_local[iloc + 1];
+        }
+    }
 
-        // write into output partial_sums
-        if (iloc == 0)
-        {
-            partial_sums[get_group_id(0)] = buf_local[0];
-        }
+    // write into output partial_sums
+    if (iloc == 0)
+    {
+        partial_sums[get_group_id(0)] = buf_local[0];
     }
 }
 
