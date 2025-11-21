@@ -26,7 +26,7 @@ double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program progr
            mgcl::ProfilingData* pd, int cuCount, int maxWgSize);
 double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
                          bool return_sum, size_t localSize, std::string kernelName, size_t global, int batchSize,
-                         mgcl::ProfilingData* pd, int cuCount, int maxWgSize, int minElementsForCpu);
+                         mgcl::ProfilingData* pd, int cuCount, int maxWgSize, int maxKernelCalls);
 double sum_finish_use_same_kernel(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
                                   bool return_sum, size_t localSize, std::string kernelName, size_t global, int batchSize,
                                   mgcl::ProfilingData* pd, int cuCount, int maxWgSizebool, bool isUnrolled);
@@ -592,7 +592,7 @@ TEST_CASE("benchSumReductionVersions")
         // std::vector grids{32, 64, 128, 256, 512};
         // std::vector<size_t> locals{16, 32, 64, 128, 192, 256, 384, 512, 768, 1024};
         std::vector<size_t> locals{32, 64, 128, 256, 512};
-        std::vector<int> minElementsForCpu = {1 << 8, 1 << 10, 1 << 13, 1 << 14, 1 << 15, 1 << 16};
+        std::vector<int> maxKernelCalls = {1, 2, 3}; // max kernel calls before sum is finished on CPU
 
         for (auto grid : gridsTBT)
         {
@@ -740,8 +740,13 @@ TEST_CASE("benchSumReductionVersions")
                 // std::vector<int> batchSize_finishOnCpu{128, 256, 512};
                 // for (int fr : batchSize_finishOnCpu)
                 for (int fr : batchSizes)
-                    for (int me : minElementsForCpu)
+                    for (int me : maxKernelCalls)
                     {
+                        // if log_wgsize(ndrange) < maxKernelCalls, skip
+                        int maxlv = ceil(log2(ceil(num_elements / static_cast<double>(fr))) / log2(local));
+                        if (maxlv < me)
+                            continue;
+
                         name = std::string("sum_partial_global_eq_1/")
                                    .append(std::to_string(fr))
                                    .append("_N")
@@ -749,7 +754,9 @@ TEST_CASE("benchSumReductionVersions")
                                    .append("_wg")
                                    .append(std::to_string(local))
                                    .append("_finishOnCPU_threshold")
-                                   .append(std::to_string(me));
+                                   .append(std::to_string(me))
+                                   .append("_maxlv")
+                                   .append(std::to_string(maxlv));
                         b.run(name.c_str(), [&]
                               {
                                   ankerl::nanobench::doNotOptimizeAway(
@@ -1021,7 +1028,7 @@ double sum_finish_use_same_kernel(cl_mem buf, size_t num_elements, cl_context co
 
 double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
                          bool return_sum, size_t localSize, std::string kernelName, size_t global, int batchSize,
-                         mgcl::ProfilingData* pd, int cuCount, int maxWgSize, int minElementsForCpu)
+                         mgcl::ProfilingData* pd, int cuCount, int maxWgSize, int maxKernelCalls)
 {
     int err;
 
@@ -1130,7 +1137,7 @@ double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl
         // }
         batchSize = 1;
         cntKernelCalls++;
-    } while (num_elements > 1 && num_elements > minElementsForCpu);
+    } while (num_elements > 1 && cntKernelCalls < maxKernelCalls);
 
     double ret = 0;
     if (return_sum)
