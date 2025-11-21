@@ -476,7 +476,7 @@ TEST_CASE("benchSumReductionVersions")
         int m = 1;
         int n = 1;
 
-        std::vector<int> o_sizes = {1, 2, 3, 10, 33, 64, 256, 257};
+        std::vector<int> o_sizes = {1, 2, 3, 33, 256, 257, 2048};
         std::vector<int> locals = {4, 32, 128, 512};
         // std::vector<int> o_sizes = {256};
         // std::vector<int> locals = {4};
@@ -887,11 +887,11 @@ double sum_finish_use_same_kernel(cl_mem buf, size_t num_elements, cl_context co
     // number of partial sums = num of work-groups
     int num_partials = ceil(global / static_cast<double>(localSize));
 
-    if (num_partials > 512)
-    {
-        throw "num_partials must be less than max block size of 512 for sum_partial_global_eq_x_num_elements_same_kernel_finish. num_partials: " +
-            std::to_string(num_partials) + ", localSize: " + std::to_string(localSize) + ", global: " + std::to_string(global);
-    }
+    // if (num_partials > 512)
+    // {
+    //     throw "num_partials must be less than max block size of 512 for sum_partial_global_eq_x_num_elements_same_kernel_finish. num_partials: " +
+    //         std::to_string(num_partials) + ", localSize: " + std::to_string(localSize) + ", global: " + std::to_string(global);
+    // }
 
     // int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
     cl_mem dPartialSums = clCreateBuffer(context, CL_MEM_READ_WRITE,
@@ -910,12 +910,12 @@ double sum_finish_use_same_kernel(cl_mem buf, size_t num_elements, cl_context co
     cl_mem src = buf;
     do // while num_partials > 1
     {
-        std::cout << "cntKernelCalls: " << cntKernelCalls << std::endl;
-        std::cout << "  localSize: " << localSize << std::endl;
-        std::cout << "  batchSize: " << batchSize << std::endl;
-        std::cout << "  num_partials: " << num_partials << std::endl;
-        std::cout << "  global: " << global << std::endl;
-        std::cout << "  num_elements: " << num_elements << std::endl;
+        // std::cout << "cntKernelCalls: " << cntKernelCalls << std::endl;
+        // std::cout << "  localSize: " << localSize << std::endl;
+        // std::cout << "  batchSize: " << batchSize << std::endl;
+        // std::cout << "  num_partials: " << num_partials << std::endl;
+        // std::cout << "  global: " << global << std::endl;
+        // std::cout << "  num_elements: " << num_elements << std::endl;
 
         int pos = 0;
         err = clSetKernelArg(kernel_sum_partial, pos, sizeof(cl_mem), &src);
@@ -1019,11 +1019,11 @@ double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl
     // number of partial sums = num of work-groups
     int num_partials = ceil(global / static_cast<double>(localSize));
 
-    if (num_partials > 512)
-    {
-        throw "num_partials must be less than max block size of 512 for sum_partial_global_eq_x_num_elements_same_kernel_finish. num_partials: " +
-            std::to_string(num_partials) + ", localSize: " + std::to_string(localSize) + ", global: " + std::to_string(global);
-    }
+    // if (num_partials > 512)
+    // {
+    //     throw "num_partials must be less than max block size of 512 for sum_partial_global_eq_x_num_elements_same_kernel_finish. num_partials: " +
+    //         std::to_string(num_partials) + ", localSize: " + std::to_string(localSize) + ", global: " + std::to_string(global);
+    // }
 
     // int pointer_flag = problem.getOpenCLHelper().getDeviceType() == CL_DEVICE_TYPE_GPU ? CL_MEM_COPY_HOST_PTR : CL_MEM_USE_HOST_PTR;
     cl_mem dPartialSums = clCreateBuffer(context, CL_MEM_READ_WRITE,
