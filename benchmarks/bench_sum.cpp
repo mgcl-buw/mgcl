@@ -480,7 +480,7 @@ TEST_CASE("benchSumReductionVersions")
         std::vector<int> locals = {4, 32, 128, 512};
         // std::vector<int> o_sizes = {256};
         // std::vector<int> locals = {4};
-        std::vector<int> batchSizes = {4, 32, 128};
+        std::vector<int> batchSizes = {4, 5, 32, 128};
         std::vector<std::string> testNames;
         int minElementsForCpu = 1024;
         for (int local : locals)
@@ -591,8 +591,8 @@ TEST_CASE("benchSumReductionVersions")
         // Almost not effect for small grids (plus they are fast anyway).
         // std::vector grids{32, 64, 128, 256, 512};
         // std::vector<size_t> locals{16, 32, 64, 128, 192, 256, 384, 512, 768, 1024};
-        std::vector<size_t> locals{128, 256, 512};
-        int minElementsForCpu = 1024;
+        std::vector<size_t> locals{32, 64, 128, 256, 512};
+        std::vector<int> minElementsForCpu = {1 << 8, 1 << 10, 1 << 13, 1 << 14, 1 << 15, 1 << 16};
 
         for (auto grid : gridsTBT)
         {
@@ -601,6 +601,26 @@ TEST_CASE("benchSumReductionVersions")
             int n = grid[1];
             int o = grid[2];
             int N = m * n * o;
+
+            int brentP = N / std::log2(N);      // Number of work-items we should use according to Brent
+            int targetBatchSize = std::log2(N); // Target batch size according to Brent
+
+            double batchRatioLower = 0.1; // ratio to test around brentP
+            double batchRatioUpper = 0.3; // ratio to test around brentP
+            int targetBatchSizeLower = ceil(targetBatchSize - targetBatchSize * batchRatioLower);
+            int targetBatchSizeUpper = floor(targetBatchSize + targetBatchSize * batchRatioUpper);
+            int batchStepsize = 2;
+            std::vector<int> batchSizes;
+            std::cout << "> brentP: " << brentP << std::endl;
+            std::cout << "> batchRatioLower: " << batchRatioLower << std::endl;
+            std::cout << "> batchRatioUpper: " << batchRatioUpper << std::endl;
+            std::cout << "> batchStepsize: " << batchStepsize << std::endl;
+            std::cout << "> batchSizes: [" << targetBatchSizeLower << "," << targetBatchSizeUpper << "]" << std::endl;
+
+            for (int r = targetBatchSizeLower; r < targetBatchSizeUpper; r += batchStepsize)
+            {
+                batchSizes.push_back(r);
+            }
 
             // dummy problem
             auto vdummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
@@ -658,8 +678,9 @@ TEST_CASE("benchSumReductionVersions")
                                   commands, true, local, "sum_partial_global_eq_num_elements", num_elements, 1, pd, cuCount, maxWgSize)); //
                       });
 
-                std::vector<int> batchSize_finishOnGpu{8, 16, 32, 64, 128, 256, 512, 1024};
-                for (int fr : batchSize_finishOnGpu)
+                // std::vector<int> batchSize_finishOnGpu{8, 16, 32, 64, 128, 256, 512, 1024};
+                // for (int fr : batchSize_finishOnGpu)
+                for (int fr : batchSizes)
                 {
                     name = std::string("sum_partial_global_eq_1/")
                                .append(std::to_string(fr))
@@ -677,7 +698,8 @@ TEST_CASE("benchSumReductionVersions")
                           });
                 }
 
-                for (int fr : batchSize_finishOnGpu)
+                // for (int fr : batchSize_finishOnGpu)
+                for (int fr : batchSizes)
                 {
                     name = std::string("sum_partial_global_eq_1/")
                                .append(std::to_string(fr))
@@ -695,8 +717,9 @@ TEST_CASE("benchSumReductionVersions")
                           });
                 }
 
-                std::vector<int> batchSize_finishOnGpu_unrolled{8, 16, 32, 64, 128, 256, 512, 1024};
-                for (int fr : batchSize_finishOnGpu_unrolled)
+                // std::vector<int> batchSize_finishOnGpu_unrolled{8, 16, 32, 64, 128, 256, 512, 1024};
+                // for (int fr : batchSize_finishOnGpu_unrolled)
+                for (int fr : batchSizes)
                 {
                     name = std::string("sum_partial_global_eq_1/")
                                .append(std::to_string(fr))
@@ -714,24 +737,27 @@ TEST_CASE("benchSumReductionVersions")
                           });
                 }
 
-                std::vector<int> batchSize_finishOnCpu{128, 256, 512};
-                for (int fr : batchSize_finishOnCpu)
-                {
-                    name = std::string("sum_partial_global_eq_1/")
-                               .append(std::to_string(fr))
-                               .append("_N")
-                               .append(std::to_string(N))
-                               .append("_wg")
-                               .append(std::to_string(local))
-                               .append("_finishOnCPU");
-                    b.run(name.c_str(), [&]
-                          {
-                              ankerl::nanobench::doNotOptimizeAway(
-                                  sum_finish_on_cpu(dData, num_elements, context, program,
-                                                    commands, true, local, "sum_partial_global_eq_x_num_elements_same_kernel_finish",
-                                                    ceil(num_elements / static_cast<double>(fr)), fr, pd, cuCount, maxWgSize, minElementsForCpu)); //
-                          });
-                }
+                // std::vector<int> batchSize_finishOnCpu{128, 256, 512};
+                // for (int fr : batchSize_finishOnCpu)
+                for (int fr : batchSizes)
+                    for (int me : minElementsForCpu)
+                    {
+                        name = std::string("sum_partial_global_eq_1/")
+                                   .append(std::to_string(fr))
+                                   .append("_N")
+                                   .append(std::to_string(N))
+                                   .append("_wg")
+                                   .append(std::to_string(local))
+                                   .append("_finishOnCPU_threshold")
+                                   .append(std::to_string(me));
+                        b.run(name.c_str(), [&]
+                              {
+                                  ankerl::nanobench::doNotOptimizeAway(
+                                      sum_finish_on_cpu(dData, num_elements, context, program,
+                                                        commands, true, local, "sum_partial_global_eq_x_num_elements_same_kernel_finish",
+                                                        ceil(num_elements / static_cast<double>(fr)), fr, pd, cuCount, maxWgSize, me)); //
+                              });
+                    }
             }
             std::cout << "=============" << std::endl;
 
