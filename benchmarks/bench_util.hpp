@@ -73,11 +73,12 @@ namespace bench_util
         double medianTime;
         double avgTime;
         double medianAbsolutePercentError;
-        int N;
-        int batchSize;
-        int wgx;
-        int ndrange;
-        int kernelCalls;
+        size_t N;
+        size_t batchSize;
+        size_t wgx;
+        size_t ndrange;
+        size_t kernelCalls;
+        size_t elementsOnCpu;
     };
 
     struct ResultMpi
@@ -256,11 +257,11 @@ namespace bench_util
         ss << std::endl;
         ss << "***DATASTART***" << std::endl;
         // ss << "gpus;spi;iters;name;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
-        ss << "name;N;ndrange;wgx;batchSize;kernelCalls;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+        ss << "name;N;ndrange;wgx;batchSize;kernelCalls;elementsOnCpu;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
         for (auto r : results)
         {
             ss << r.name << ";"
-               << r.N << ";" << r.ndrange << ";" << r.wgx << ";" << r.batchSize << ";" << r.kernelCalls
+               << r.N << ";" << r.ndrange << ";" << r.wgx << ";" << r.batchSize << ";" << r.kernelCalls << ";" << r.elementsOnCpu
                << ";" << std::setprecision(17) << r.minTime
                << ";" << std::setprecision(17) << r.medianTime
                << ";" << std::setprecision(17) << r.avgTime

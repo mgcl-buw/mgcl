@@ -28,7 +28,7 @@ double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program progr
            mgcl::ProfilingData* pd, int cuCount, int maxWgSize);
 double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
                          bool return_sum, size_t localSize, std::string kernelName, size_t global, int batchSize,
-                         mgcl::ProfilingData* pd, int cuCount, int maxWgSize, int maxKernelCalls, int& out_numKernelCalls);
+                         mgcl::ProfilingData* pd, int cuCount, int maxWgSize, int maxKernelCalls, int& out_numKernelCalls, int& out_elementsOnCpu);
 double sum_finish_use_same_kernel(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
                                   bool return_sum, size_t localSize, std::string kernelName, size_t global, int batchSize,
                                   mgcl::ProfilingData* pd, int cuCount, int maxWgSizebool, bool isUnrolled, int& out_numKernelCalls);
@@ -518,6 +518,7 @@ TEST_CASE("benchSumReductionVersions")
 
                 std::vector<double> sums;
                 int cntKernelCalls;
+                int elementsOnCpu;
 
                 testNames.push_back("sum_partial_global_eq_num_elements");
                 sums.push_back(sum(dData, data.field1d().size(), context, program,
@@ -536,7 +537,7 @@ TEST_CASE("benchSumReductionVersions")
                     testNames.push_back("sum_partial_global_eq_x_num_elements, finish on cpu, batchSize: " + std::to_string(batchSize));
                     CAPTURE(batchSize);
                     sums.push_back(sum_finish_on_cpu(dData, data.field1d().size(), context, program,
-                                                     commands, true, local, "sum_partial_global_eq_x_num_elements_same_kernel_finish", ceil(o / static_cast<double>(batchSize)), batchSize, nullptr, cuCount, maxWgSize, minElementsForCpu, cntKernelCalls));
+                                                     commands, true, local, "sum_partial_global_eq_x_num_elements_same_kernel_finish", ceil(o / static_cast<double>(batchSize)), batchSize, nullptr, cuCount, maxWgSize, minElementsForCpu, cntKernelCalls, elementsOnCpu));
                 }
 
                 for (auto batchSize : batchSizes)
@@ -767,6 +768,7 @@ TEST_CASE("benchSumReductionVersions")
                     res.wgx = local;
                     res.ndrange = padGlobal(glob, local);
                     res.kernelCalls = cntKernelCalls;
+                    res.elementsOnCpu = 0;
                     results.push_back(res);
                 }
 
@@ -802,6 +804,7 @@ TEST_CASE("benchSumReductionVersions")
                     res.wgx = local;
                     res.ndrange = padGlobal(glob, local);
                     res.kernelCalls = cntKernelCalls;
+                    res.elementsOnCpu = 0;
                     results.push_back(res);
                 }
 
@@ -816,6 +819,7 @@ TEST_CASE("benchSumReductionVersions")
                             continue;
 
                         int cntKernelCalls = -1;
+                        int elementsOnCpu;
                         int glob = ceil(num_elements / static_cast<double>(bs));
                         std::string name = std::string("sum_partial_global_eq_1/")
                                                .append(std::to_string(bs))
@@ -832,7 +836,7 @@ TEST_CASE("benchSumReductionVersions")
                                   ankerl::nanobench::doNotOptimizeAway(
                                       sum_finish_on_cpu(dData, num_elements, context, program,
                                                         commands, true, local, "sum_partial_global_eq_x_num_elements_same_kernel_finish",
-                                                        glob, bs, pd, cuCount, maxWgSize, me, cntKernelCalls)); //
+                                                        glob, bs, pd, cuCount, maxWgSize, me, cntKernelCalls, elementsOnCpu)); //
                               });
 
                         bench_util::ResultSumReduction res;
@@ -846,6 +850,7 @@ TEST_CASE("benchSumReductionVersions")
                         res.wgx = local;
                         res.ndrange = padGlobal(glob, local);
                         res.kernelCalls = cntKernelCalls;
+                        res.elementsOnCpu = elementsOnCpu;
                         results.push_back(res);
                     }
             }
@@ -1113,7 +1118,7 @@ double sum_finish_use_same_kernel(cl_mem buf, size_t num_elements, cl_context co
 
 double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
                          bool return_sum, size_t localSize, std::string kernelName, size_t global, int batchSize,
-                         mgcl::ProfilingData* pd, int cuCount, int maxWgSize, int maxKernelCalls, int& out_numKernelCalls)
+                         mgcl::ProfilingData* pd, int cuCount, int maxWgSize, int maxKernelCalls, int& out_numKernelCalls, int& out_elementsOnCpu)
 {
     int err;
 
@@ -1225,6 +1230,7 @@ double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl
     } while (num_elements > 1 && cntKernelCalls < maxKernelCalls);
 
     out_numKernelCalls = cntKernelCalls;
+    out_elementsOnCpu = num_elements;
 
     double ret = 0;
     if (return_sum)
