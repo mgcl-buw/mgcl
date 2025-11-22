@@ -600,8 +600,10 @@ TEST_CASE("benchSumReductionVersions")
         // Almost not effect for small grids (plus they are fast anyway).
         // std::vector grids{32, 64, 128, 256, 512};
         // std::vector<size_t> locals{16, 32, 64, 128, 192, 256, 384, 512, 768, 1024};
-        std::vector<size_t> locals{32, 64, 128, 256, 512};
-        std::vector<int> maxKernelCalls = {1, 2, 3}; // max kernel calls before sum is finished on CPU
+        // std::vector<size_t> locals{32, 64, 128, 256, 512};
+        std::vector<size_t> locals{256};
+        // std::vector<int> maxKernelCalls = {1, 2, 3}; // max kernel calls before sum is finished on CPU
+        std::vector<int> maxKernelCalls = {2}; // max kernel calls before sum is finished on CPU
 
         for (auto grid : gridsTBT)
         {
@@ -614,22 +616,23 @@ TEST_CASE("benchSumReductionVersions")
             int brentP = N / std::log2(N);      // Number of work-items we should use according to Brent
             int targetBatchSize = std::log2(N); // Target batch size according to Brent
 
-            double batchRatioLower = 0.1; // ratio to test around brentP
-            double batchRatioUpper = 0.3; // ratio to test around brentP
+            double batchRatioLower = 0.2; // ratio to test around brentP
+            double batchRatioUpper = 1.0; // ratio to test around brentP
             int targetBatchSizeLower = ceil(targetBatchSize - targetBatchSize * batchRatioLower);
             int targetBatchSizeUpper = floor(targetBatchSize + targetBatchSize * batchRatioUpper);
-            int batchStepsize = 2;
-            std::vector<int> batchSizes = {1};
+            int batchStepsize = 4;
+            // std::vector<int> batchSizes = {1, 2, 3, 4, 5, 1 << 7, 1 << 9, 1 << 12, 1 << 13, 1 << 14, 1 << 15, 1 << 16, 1 << 17, 1 << 18};
+            std::vector<int> batchSizes = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
             std::cout << "> brentP: " << brentP << std::endl;
             std::cout << "> batchRatioLower: " << batchRatioLower << std::endl;
             std::cout << "> batchRatioUpper: " << batchRatioUpper << std::endl;
             std::cout << "> batchStepsize: " << batchStepsize << std::endl;
             std::cout << "> batchSizes: [" << targetBatchSizeLower << "," << targetBatchSizeUpper << "]" << std::endl;
 
-            for (int r = targetBatchSizeLower; r < targetBatchSizeUpper; r += batchStepsize)
-            {
-                batchSizes.push_back(r);
-            }
+            // for (int r = targetBatchSizeLower; r < targetBatchSizeUpper; r += batchStepsize)
+            // {
+            //     batchSizes.push_back(r);
+            // }
 
             // dummy problem
             auto vdummy = std::make_shared<mgcl::Cuboid>(1, 1, 1);
@@ -665,7 +668,7 @@ TEST_CASE("benchSumReductionVersions")
                 .epochIterations(CLI_ARGS::bench_iterations)
                 // .minEpochTime(100ms)
                 // .maxEpochTime(5s)
-                .relative(true);
+                .relative(false);
 
             int num_elements = data.field1d().size();
 
