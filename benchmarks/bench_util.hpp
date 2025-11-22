@@ -66,6 +66,20 @@ namespace bench_util
         int ghosts_o;
     };
 
+    struct ResultSumReduction
+    {
+        std::string name;
+        double minTime;
+        double medianTime;
+        double avgTime;
+        double medianAbsolutePercentError;
+        int N;
+        int batchSize;
+        int wgx;
+        int ndrange;
+        int kernelCalls;
+    };
+
     struct ResultMpi
     {
         std::string name;
@@ -223,6 +237,30 @@ namespace bench_util
         {
             ss << r.name << ";"
                << r.m << ";" << r.n << ";" << r.o
+               << ";" << std::setprecision(17) << r.minTime
+               << ";" << std::setprecision(17) << r.medianTime
+               << ";" << std::setprecision(17) << r.avgTime
+               << ";" << std::setprecision(4) << r.medianAbsolutePercentError << "%"
+               << std::endl;
+        }
+        ss << "***DATAEND***" << std::endl;
+        std::string output = ss.str();
+        std::replace(output.begin(), output.end(), '.', ',');
+        std::cout << output;
+    }
+
+    inline void printCsvFormat(std::vector<ResultSumReduction> results)
+    {
+        // print min times
+        std::stringstream ss;
+        ss << std::endl;
+        ss << "***DATASTART***" << std::endl;
+        // ss << "gpus;spi;iters;name;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+        ss << "name;N;ndrange;wgx;batchSize;kernelCalls;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+        for (auto r : results)
+        {
+            ss << r.name << ";"
+               << r.N << ";" << r.ndrange << ";" << r.wgx << ";" << r.batchSize << ";" << r.kernelCalls
                << ";" << std::setprecision(17) << r.minTime
                << ";" << std::setprecision(17) << r.medianTime
                << ";" << std::setprecision(17) << r.avgTime

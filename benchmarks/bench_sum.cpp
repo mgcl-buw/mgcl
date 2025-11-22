@@ -1,3 +1,4 @@
+#include "bench_util.hpp"
 #include "cli_args.hpp"
 #include "nanobench.h"
 
@@ -10,6 +11,7 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <vector>
 using namespace std::chrono_literals;
@@ -26,10 +28,10 @@ double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program progr
            mgcl::ProfilingData* pd, int cuCount, int maxWgSize);
 double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
                          bool return_sum, size_t localSize, std::string kernelName, size_t global, int batchSize,
-                         mgcl::ProfilingData* pd, int cuCount, int maxWgSize, int maxKernelCalls);
+                         mgcl::ProfilingData* pd, int cuCount, int maxWgSize, int maxKernelCalls, int& out_numKernelCalls);
 double sum_finish_use_same_kernel(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
                                   bool return_sum, size_t localSize, std::string kernelName, size_t global, int batchSize,
-                                  mgcl::ProfilingData* pd, int cuCount, int maxWgSizebool, bool isUnrolled);
+                                  mgcl::ProfilingData* pd, int cuCount, int maxWgSizebool, bool isUnrolled, int& out_numKernelCalls);
 
 int nextPowerOfTwo(int x)
 {
@@ -50,6 +52,11 @@ int nextPowerOfTwo(int x)
     x |= x >> 16;
 
     return x + 1;
+}
+
+int padGlobal(size_t global, size_t local)
+{
+    return global + (local - (global % local));
 }
 
 // Checks sum sequentially vs opencl
@@ -510,6 +517,7 @@ TEST_CASE("benchSumReductionVersions")
                 auto commands = p.getCommands();
 
                 std::vector<double> sums;
+                int cntKernelCalls;
 
                 testNames.push_back("sum_partial_global_eq_num_elements");
                 sums.push_back(sum(dData, data.field1d().size(), context, program,
@@ -528,7 +536,7 @@ TEST_CASE("benchSumReductionVersions")
                     testNames.push_back("sum_partial_global_eq_x_num_elements, finish on cpu, batchSize: " + std::to_string(batchSize));
                     CAPTURE(batchSize);
                     sums.push_back(sum_finish_on_cpu(dData, data.field1d().size(), context, program,
-                                                     commands, true, local, "sum_partial_global_eq_x_num_elements_same_kernel_finish", ceil(o / static_cast<double>(batchSize)), batchSize, nullptr, cuCount, maxWgSize, minElementsForCpu));
+                                                     commands, true, local, "sum_partial_global_eq_x_num_elements_same_kernel_finish", ceil(o / static_cast<double>(batchSize)), batchSize, nullptr, cuCount, maxWgSize, minElementsForCpu, cntKernelCalls));
                 }
 
                 for (auto batchSize : batchSizes)
@@ -536,7 +544,7 @@ TEST_CASE("benchSumReductionVersions")
                     testNames.push_back("sum_partial_global_eq_x_num_elements, same kernel, batchSize: " + std::to_string(batchSize));
                     CAPTURE(batchSize);
                     sums.push_back(sum_finish_use_same_kernel(dData, data.field1d().size(), context, program,
-                                                              commands, true, local, "sum_partial_global_eq_x_num_elements_same_kernel_finish", ceil(o / static_cast<double>(batchSize)), batchSize, nullptr, cuCount, maxWgSize, false));
+                                                              commands, true, local, "sum_partial_global_eq_x_num_elements_same_kernel_finish", ceil(o / static_cast<double>(batchSize)), batchSize, nullptr, cuCount, maxWgSize, false, cntKernelCalls));
                 }
 
                 // for (auto batchSize : batchSizes)
@@ -545,7 +553,7 @@ TEST_CASE("benchSumReductionVersions")
                     testNames.push_back("sum_partial_global_eq_x_num_elements, same kernel unrolled, batchSize: " + std::to_string(batchSize));
                     CAPTURE(batchSize);
                     sums.push_back(sum_finish_use_same_kernel(dData, data.field1d().size(), context, program,
-                                                              commands, true, local, "sum_partial_global_eq_x_num_elements_same_kernel_finish_unrolled", ceil(o / static_cast<double>(batchSize)), batchSize, nullptr, cuCount, maxWgSize, true));
+                                                              commands, true, local, "sum_partial_global_eq_x_num_elements_same_kernel_finish_unrolled", ceil(o / static_cast<double>(batchSize)), batchSize, nullptr, cuCount, maxWgSize, true, cntKernelCalls));
                 }
 
                 // sums.push_back(sum_finish_use_same_kernel(dData, data.field1d().size(), context, program,
@@ -584,7 +592,7 @@ TEST_CASE("benchSumReductionVersions")
                     for (int o = CLI_ARGS::gridsMin[2]; o <= CLI_ARGS::gridsMax[2]; o *= 2)
                         gridsTBT.push_back({m, n, o});
 
-        // std::vector<bench_util::ResultMpi> results;
+        std::vector<bench_util::ResultSumReduction> results;
 
         std::stringstream kernelProfilesStream;
 
@@ -610,7 +618,7 @@ TEST_CASE("benchSumReductionVersions")
             int targetBatchSizeLower = ceil(targetBatchSize - targetBatchSize * batchRatioLower);
             int targetBatchSizeUpper = floor(targetBatchSize + targetBatchSize * batchRatioUpper);
             int batchStepsize = 2;
-            std::vector<int> batchSizes;
+            std::vector<int> batchSizes = {1};
             std::cout << "> brentP: " << brentP << std::endl;
             std::cout << "> batchRatioLower: " << batchRatioLower << std::endl;
             std::cout << "> batchRatioUpper: " << batchRatioUpper << std::endl;
@@ -667,103 +675,178 @@ TEST_CASE("benchSumReductionVersions")
                 p.getOpenCLHelper().setPreprocessorConstant("SUM_WG_SIZE", std::to_string(local));
                 p.getOpenCLHelper().rebuildProgram();
 
-                std::string name = std::string("sum_partial_global_eq_x_num_elements_N")
-                                       .append(std::to_string(N))
-                                       .append("_wg")
-                                       .append(std::to_string(local));
-                b.run(name.c_str(), [&]
-                      {
-                          ankerl::nanobench::doNotOptimizeAway(
-                              sum(dData, num_elements, context, program,
-                                  commands, true, local, "sum_partial_global_eq_num_elements", num_elements, 1, pd, cuCount, maxWgSize)); //
-                      });
+                // {
+                //     std::string name = std::string("sum_partial_global_eq_x_num_elements_N")
+                //                            .append(std::to_string(N))
+                //                            .append("_wg")
+                //                            .append(std::to_string(local));
+                //     b.run(name.c_str(), [&]
+                //           {
+                //               ankerl::nanobench::doNotOptimizeAway(
+                //                   sum(dData, num_elements, context, program,
+                //                       commands, true, local, "sum_partial_global_eq_num_elements", num_elements, 1, pd, cuCount, maxWgSize)); //
+                //           });
+
+                //     bench_util::ResultSumReduction res;
+                //     res.name = name;
+                //     res.minTime = bench_util::getMinTime(b, name);
+                //     res.medianTime = bench_util::getMedianTime(b, name);
+                //     res.avgTime = bench_util::getAvgTime(b, name);
+                //     res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(b, name);
+                //     res.N = N;
+                //     res.batchSize = 1;
+                //     res.wgx = local;
+                //     res.ndrange = padGlobal(num_elements, local);
+                //     res.kernelCalls = 1;
+                //     results.push_back(res);
+                // }
 
                 // std::vector<int> batchSize_finishOnGpu{8, 16, 32, 64, 128, 256, 512, 1024};
                 // for (int fr : batchSize_finishOnGpu)
-                for (int fr : batchSizes)
-                {
-                    name = std::string("sum_partial_global_eq_1/")
-                               .append(std::to_string(fr))
-                               .append("_N")
-                               .append(std::to_string(N))
-                               .append("_wg")
-                               .append(std::to_string(local))
-                               .append("_finishOnGPU");
-                    b.run(name.c_str(), [&]
-                          {
-                              ankerl::nanobench::doNotOptimizeAway(
-                                  sum(dData, num_elements, context, program,
-                                      commands, true, local, "sum_partial_global_eq_x_num_elements",
-                                      ceil(num_elements / static_cast<double>(fr)), fr, pd, cuCount, maxWgSize)); //
-                          });
-                }
+                // for (int bs : batchSizes)
+                // {
+                //     int cntKernelCalls = -1;
+                //     int glob = ceil(num_elements / static_cast<double>(bs));
+                //     std::string name = std::string("sum_partial_global_eq_1/")
+                //                            .append(std::to_string(bs))
+                //                            .append("_N")
+                //                            .append(std::to_string(N))
+                //                            .append("_wg")
+                //                            .append(std::to_string(local))
+                //                            .append("_finishOnGPU");
+                //     b.run(name.c_str(), [&]
+                //           {
+                //               ankerl::nanobench::doNotOptimizeAway(
+                //                   sum(dData, num_elements, context, program,
+                //                       commands, true, local, "sum_partial_global_eq_x_num_elements",
+                //                       glob, bs, pd, cuCount, maxWgSize)); //
+                //           });
+
+                //     bench_util::ResultSumReduction res;
+                //     res.name = name;
+                //     res.minTime = bench_util::getMinTime(b, name);
+                //     res.medianTime = bench_util::getMedianTime(b, name);
+                //     res.avgTime = bench_util::getAvgTime(b, name);
+                //     res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(b, name);
+                //     res.N = N;
+                //     res.batchSize = bs;
+                //     res.wgx = local;
+                //     res.ndrange = padGlobal(glob, local);
+                //     res.kernelCalls = cntKernelCalls;
+                //     results.push_back(res);
+                // }
 
                 // for (int fr : batchSize_finishOnGpu)
-                for (int fr : batchSizes)
+                for (int bs : batchSizes)
                 {
-                    name = std::string("sum_partial_global_eq_1/")
-                               .append(std::to_string(fr))
-                               .append("_N")
-                               .append(std::to_string(N))
-                               .append("_wg")
-                               .append(std::to_string(local))
-                               .append("_finishOnGPU_sameKernel");
+                    int cntKernelCalls = -1;
+                    int glob = ceil(num_elements / static_cast<double>(bs));
+                    std::string name = std::string("sum_partial_global_eq_1/")
+                                           .append(std::to_string(bs))
+                                           .append("_N")
+                                           .append(std::to_string(N))
+                                           .append("_wg")
+                                           .append(std::to_string(local))
+                                           .append("_finishOnGPU_sameKernel");
                     b.run(name.c_str(), [&]
                           {
                               ankerl::nanobench::doNotOptimizeAway(
                                   sum_finish_use_same_kernel(dData, num_elements, context, program,
                                                              commands, true, local, "sum_partial_global_eq_x_num_elements_same_kernel_finish",
-                                                             ceil(num_elements / static_cast<double>(fr)), fr, pd, cuCount, maxWgSize, false)); //
+                                                             glob, bs, pd, cuCount, maxWgSize, false, cntKernelCalls)); //
                           });
+
+                    bench_util::ResultSumReduction res;
+                    res.name = "gpuOnly";
+                    res.minTime = bench_util::getMinTime(b, name);
+                    res.medianTime = bench_util::getMedianTime(b, name);
+                    res.avgTime = bench_util::getAvgTime(b, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(b, name);
+                    res.N = N;
+                    res.batchSize = bs;
+                    res.wgx = local;
+                    res.ndrange = padGlobal(glob, local);
+                    res.kernelCalls = cntKernelCalls;
+                    results.push_back(res);
                 }
 
                 // std::vector<int> batchSize_finishOnGpu_unrolled{8, 16, 32, 64, 128, 256, 512, 1024};
                 // for (int fr : batchSize_finishOnGpu_unrolled)
-                for (int fr : batchSizes)
+                for (int bs : batchSizes)
                 {
-                    name = std::string("sum_partial_global_eq_1/")
-                               .append(std::to_string(fr))
-                               .append("_N")
-                               .append(std::to_string(N))
-                               .append("_wg")
-                               .append(std::to_string(local))
-                               .append("_finishOnGPU_sameKernel_unrolled");
+                    int cntKernelCalls = -1;
+                    int glob = ceil(num_elements / static_cast<double>(bs));
+                    std::string name = std::string("sum_partial_global_eq_1/")
+                                           .append(std::to_string(bs))
+                                           .append("_N")
+                                           .append(std::to_string(N))
+                                           .append("_wg")
+                                           .append(std::to_string(local))
+                                           .append("_finishOnGPU_sameKernel_unrolled");
                     b.run(name.c_str(), [&]
                           {
                               ankerl::nanobench::doNotOptimizeAway(
                                   sum_finish_use_same_kernel(dData, num_elements, context, program,
                                                              commands, true, local, "sum_partial_global_eq_x_num_elements_same_kernel_finish_unrolled",
-                                                             ceil(num_elements / static_cast<double>(fr)), fr, pd, cuCount, maxWgSize, true)); //
+                                                             glob, bs, pd, cuCount, maxWgSize, true, cntKernelCalls)); //
                           });
+
+                    bench_util::ResultSumReduction res;
+                    res.name = "gpuOnlyUnrolled";
+                    res.minTime = bench_util::getMinTime(b, name);
+                    res.medianTime = bench_util::getMedianTime(b, name);
+                    res.avgTime = bench_util::getAvgTime(b, name);
+                    res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(b, name);
+                    res.N = N;
+                    res.batchSize = bs;
+                    res.wgx = local;
+                    res.ndrange = padGlobal(glob, local);
+                    res.kernelCalls = cntKernelCalls;
+                    results.push_back(res);
                 }
 
                 // std::vector<int> batchSize_finishOnCpu{128, 256, 512};
                 // for (int fr : batchSize_finishOnCpu)
-                for (int fr : batchSizes)
+                for (int bs : batchSizes)
                     for (int me : maxKernelCalls)
                     {
                         // if log_wgsize(ndrange) < maxKernelCalls, skip
-                        int maxlv = ceil(log2(ceil(num_elements / static_cast<double>(fr))) / log2(local));
+                        int maxlv = ceil(log2(ceil(num_elements / static_cast<double>(bs))) / log2(local));
                         if (maxlv < me)
                             continue;
 
-                        name = std::string("sum_partial_global_eq_1/")
-                                   .append(std::to_string(fr))
-                                   .append("_N")
-                                   .append(std::to_string(N))
-                                   .append("_wg")
-                                   .append(std::to_string(local))
-                                   .append("_finishOnCPU_threshold")
-                                   .append(std::to_string(me))
-                                   .append("_maxlv")
-                                   .append(std::to_string(maxlv));
+                        int cntKernelCalls = -1;
+                        int glob = ceil(num_elements / static_cast<double>(bs));
+                        std::string name = std::string("sum_partial_global_eq_1/")
+                                               .append(std::to_string(bs))
+                                               .append("_N")
+                                               .append(std::to_string(N))
+                                               .append("_wg")
+                                               .append(std::to_string(local))
+                                               .append("_finishOnCPU_levelsOnGpu")
+                                               .append(std::to_string(me))
+                                               .append("_maxlv")
+                                               .append(std::to_string(maxlv));
                         b.run(name.c_str(), [&]
                               {
                                   ankerl::nanobench::doNotOptimizeAway(
                                       sum_finish_on_cpu(dData, num_elements, context, program,
                                                         commands, true, local, "sum_partial_global_eq_x_num_elements_same_kernel_finish",
-                                                        ceil(num_elements / static_cast<double>(fr)), fr, pd, cuCount, maxWgSize, me)); //
+                                                        glob, bs, pd, cuCount, maxWgSize, me, cntKernelCalls)); //
                               });
+
+                        bench_util::ResultSumReduction res;
+                        res.name = "finishOnCpu";
+                        res.minTime = bench_util::getMinTime(b, name);
+                        res.medianTime = bench_util::getMedianTime(b, name);
+                        res.avgTime = bench_util::getAvgTime(b, name);
+                        res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(b, name);
+                        res.N = N;
+                        res.batchSize = bs;
+                        res.wgx = local;
+                        res.ndrange = padGlobal(glob, local);
+                        res.kernelCalls = cntKernelCalls;
+                        results.push_back(res);
                     }
             }
             std::cout << "=============" << std::endl;
@@ -773,10 +856,10 @@ TEST_CASE("benchSumReductionVersions")
                 // p.getProfilingData()->printBestTimingsPerKernel(kernelProfilesStream);
                 p.getProfilingData()->printBestTimingsPerKernelAsCsv(kernelProfilesStream);
             }
-        }
+        } // end for all N
 
         // MPI_Barrier(mpi_comm);
-        // bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
+        bench_util::printCsvFormat(results);
         // MPI_Barrier(mpi_comm);
 
         if (CLI_ARGS::enableKernelProfiling)
@@ -896,7 +979,7 @@ double sum(cl_mem buf, size_t num_elements, cl_context context, cl_program progr
 
 double sum_finish_use_same_kernel(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
                                   bool return_sum, size_t localSize, std::string kernelName, size_t global, int batchSize,
-                                  mgcl::ProfilingData* pd, int cuCount, int maxWgSize, bool isUnrolled)
+                                  mgcl::ProfilingData* pd, int cuCount, int maxWgSize, bool isUnrolled, int& out_numKernelCalls)
 {
     int err;
 
@@ -1007,6 +1090,8 @@ double sum_finish_use_same_kernel(cl_mem buf, size_t num_elements, cl_context co
         cntKernelCalls++;
     } while (num_elements > 1);
 
+    out_numKernelCalls = cntKernelCalls;
+
     double ret = 0;
     if (return_sum)
     {
@@ -1028,7 +1113,7 @@ double sum_finish_use_same_kernel(cl_mem buf, size_t num_elements, cl_context co
 
 double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl_program program, cl_command_queue commands,
                          bool return_sum, size_t localSize, std::string kernelName, size_t global, int batchSize,
-                         mgcl::ProfilingData* pd, int cuCount, int maxWgSize, int maxKernelCalls)
+                         mgcl::ProfilingData* pd, int cuCount, int maxWgSize, int maxKernelCalls, int& out_numKernelCalls)
 {
     int err;
 
@@ -1139,18 +1224,20 @@ double sum_finish_on_cpu(cl_mem buf, size_t num_elements, cl_context context, cl
         cntKernelCalls++;
     } while (num_elements > 1 && cntKernelCalls < maxKernelCalls);
 
+    out_numKernelCalls = cntKernelCalls;
+
     double ret = 0;
     if (return_sum)
     {
         err = clFinish(commands);
         mgcl::mgclCheckError(err, "Error: clFinish failed!");
 
-        double tmp[num_elements];
-        err = clEnqueueReadBuffer(commands, dPartialSums, CL_TRUE, 0, num_elements * sizeof(double), &tmp, 0, NULL, NULL);
+        auto tmp = std::make_unique<double[]>(num_elements);
+        err = clEnqueueReadBuffer(commands, dPartialSums, CL_TRUE, 0, num_elements * sizeof(double), tmp.get(), 0, NULL, NULL);
         mgcl::mgclCheckError(err, "Error: Failed to read dTotalSum from device!");
 
         for (int i = 0; i < num_elements; i++)
-            ret += tmp[i];
+            ret += tmp.get()[i];
     }
 
     err = clReleaseMemObject(dPartialSums);
