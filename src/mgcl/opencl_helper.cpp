@@ -117,8 +117,71 @@ namespace mgcl
             mgclCheckError(err, "clRetainDevice");
         }
 
-        // if binaryPath is set, check if it exists and use it instead of recompiling
         std::ifstream fbin(binaryFile, std::ios::binary | std::ios::in);
+        createProgramObject(fbin);
+        rebuildProgram();
+        storeBinary(fbin);
+    }
+
+    void OpenCLHelper::storeBinary(std::istream& fbin)
+    {
+        if (!deviceId)
+        {
+            throw "deviceId is null! Need to call init() first.";
+        }
+
+        if (!program)
+        {
+            throw "program is null! Need to call createProgramObject() first.";
+        }
+
+        int err;
+
+        // Save the program binary if binaryFile is not empty and binaryFile does not exist yet
+        if (binaryFile != "" && !fbin && (!problem->useMpi() || problem->mpiRank() == 0))
+        {
+            if (!problem->silent)
+            {
+                std::cout << "mgcl: Saving binary file to: " << binaryFile << std::endl;
+            }
+
+            // Save the program binary to "test.bin"
+            size_t binarySize;
+            err = clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binarySize, nullptr);
+            mgclCheckError(err, "clGetProgramInfo(CL_PROGRAM_BINARY_SIZES)");
+
+            unsigned char* binary = new unsigned char[binarySize];
+            err = clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(unsigned char*), &binary, nullptr);
+            mgclCheckError(err, "clGetProgramInfo(CL_PROGRAM_BINARIES)");
+
+            std::ofstream binaryFileOut(binaryFile, std::ios::out | std::ios::binary);
+            binaryFileOut.write(reinterpret_cast<char*>(binary), binarySize);
+            binaryFileOut.close();
+            delete[] binary;
+        }
+    }
+
+    /**
+     * @brief Creates the program object, either from binary file (if binaryFile is set and file exists) or from source.
+     * If from source, the source is either read from kernelFile (if readKernelFromFile is true) or from the embedded MGCL_KERNEL_SOURCE.
+     * If a binary file is created, it is saved to binaryFile.
+     *
+     */
+    void OpenCLHelper::createProgramObject(std::istream& fbin)
+    {
+        if (!deviceId)
+        {
+            throw "deviceId is null! Need to call init() first.";
+        }
+
+        if (program)
+        {
+            mgclCheckError(clReleaseProgram(program), "clReleaseProgram");
+        }
+
+        int err;
+
+        // if binaryPath is set, check if it exists and use it instead of recompiling
         if (binaryFile != "" && fbin)
         {
             if (!problem->silent)
@@ -171,44 +234,33 @@ namespace mgcl
             program = clCreateProgramWithSource(context, 1, &ksc, nullptr, &err);
             mgclCheckError(err, "Creating program");
         }
-
-        rebuildProgram();
-
-        // Save the program binary if binaryFile is not empty and binaryFile does not exist yet
-        if (binaryFile != "" && !fbin && (!problem->useMpi() || problem->mpiRank() == 0))
-        {
-            if (!problem->silent)
-            {
-                std::cout << "mgcl: Saving binary file to: " << binaryFile << std::endl;
-            }
-
-            // Save the program binary to "test.bin"
-            size_t binarySize;
-            err = clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binarySize, nullptr);
-            mgclCheckError(err, "clGetProgramInfo(CL_PROGRAM_BINARY_SIZES)");
-
-            unsigned char* binary = new unsigned char[binarySize];
-            err = clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(unsigned char*), &binary, nullptr);
-            mgclCheckError(err, "clGetProgramInfo(CL_PROGRAM_BINARIES)");
-
-            std::ofstream binaryFileOut(binaryFile, std::ios::out | std::ios::binary);
-            binaryFileOut.write(reinterpret_cast<char*>(binary), binarySize);
-            binaryFileOut.close();
-            delete[] binary;
-        }
     }
 
-    void OpenCLHelper::rebuildProgram()
+    /**
+     * @brief Builds the OpenCL program, using the preprocessor constants set beforehand.
+     * If building fails, the build log is printed to stdout.
+     * Recreates the program object beforehand.
+     *
+     */
+    void OpenCLHelper::rebuildProgram(bool forceRebuild)
     {
         int err;
-        if (!program)
-        {
-            throw "program object is null! Need to call init() first.";
-        }
 
         if (!deviceId)
         {
             throw "deviceId is null! Need to call init() first.";
+        }
+
+        bool programWasBuilt = false;
+        if (forceRebuild)
+        {
+            std::ifstream fbin(binaryFile, std::ios::binary | std::ios::in);
+            createProgramObject(fbin);
+            programWasBuilt = true;
+        }
+        else if (!program)
+        {
+            throw "program is null! Need to call createProgramObject() first.";
         }
 
         std::string options = "-cl-fast-relaxed-math " + preprocessorConstantsToString();
@@ -240,6 +292,12 @@ namespace mgcl
             free(log);
 
             mgclCheckError(err, "clBuildProgram");
+        }
+
+        if (programWasBuilt)
+        {
+            std::ifstream fbin(binaryFile, std::ios::binary | std::ios::in);
+            storeBinary(fbin);
         }
     }
 

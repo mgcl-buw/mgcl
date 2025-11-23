@@ -72,7 +72,9 @@ namespace mgcl
         std::string availableDevicesInfo();
         std::string deviceTypeToString(cl_device_type dt);
         bool supportsDoublePrecision(cl_device_id _device_id);
-        void rebuildProgram();
+        void createProgramObject(std::istream& fbin);
+        void rebuildProgram(bool forceRebuild = false);
+        void storeBinary(std::istream& fbin);
 
         int queryComputeUnitCount(cl_device_id _device_id);
         int queryMaxWgSize(cl_device_id _device_id);

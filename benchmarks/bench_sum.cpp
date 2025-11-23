@@ -493,7 +493,7 @@ TEST_CASE("benchSumReductionVersions")
         for (int local : locals)
         {
             p.getOpenCLHelper().setPreprocessorConstant("SUM_WG_SIZE", std::to_string(local));
-            p.getOpenCLHelper().rebuildProgram();
+            p.getOpenCLHelper().rebuildProgram(true);
             for (int o : o_sizes)
             {
                 std::cout << "checking o: " << o << ", local: " << local << std::endl;
@@ -658,10 +658,6 @@ TEST_CASE("benchSumReductionVersions")
             mgcl::CuboidGpu dDataGpu(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, data);
             cl_mem dData = dDataGpu.getBuffer();
 
-            auto context = p.getContext();
-            auto program = p.getProgram();
-            auto commands = p.getCommands();
-
             ankerl::nanobench::Bench b;
             b.timeUnit(1ns, "ns")
                 .epochs(CLI_ARGS::bench_epochs)
@@ -677,7 +673,10 @@ TEST_CASE("benchSumReductionVersions")
             for (auto local : locals)
             {
                 p.getOpenCLHelper().setPreprocessorConstant("SUM_WG_SIZE", std::to_string(local));
-                p.getOpenCLHelper().rebuildProgram();
+                p.getOpenCLHelper().rebuildProgram(true);
+                auto context = p.getContext();
+                auto program = p.getProgram();
+                auto commands = p.getCommands();
 
                 // {
                 //     std::string name = std::string("sum_partial_global_eq_x_num_elements_N")

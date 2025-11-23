@@ -121,17 +121,51 @@ TEST_CASE("OpenCLHelper")
 
     SECTION("rebuildProgram")
     {
-        SECTION("success")
+        SECTION("success program object initialized")
         {
             openCLHelper.init();
             openCLHelper.setPreprocessorConstant("BLOCKSIZE", std::to_string(2));
             REQUIRE_NOTHROW(openCLHelper.rebuildProgram());
         }
 
-        SECTION("failure")
+        SECTION("success force rebuild program object")
+        {
+            openCLHelper.init();
+            openCLHelper.setPreprocessorConstant("BLOCKSIZE", std::to_string(2));
+            REQUIRE_NOTHROW(openCLHelper.rebuildProgram(true));
+        }
+
+        SECTION("failure program object not initialized")
         {
             openCLHelper.setPreprocessorConstant("BLOCKSIZE", std::to_string(2));
             REQUIRE_THROWS(openCLHelper.rebuildProgram());
+        }
+
+        SECTION("failure program object has kernels")
+        {
+            openCLHelper.init();
+
+            int err;
+            const char* kernelName = "update_ghosts_periodic";
+            cl_kernel kernel = clCreateKernel(openCLHelper.getProgram(), kernelName, &err);
+            mgcl::mgclCheckError(err, "clCreateKernel");
+
+            openCLHelper.setPreprocessorConstant("BLOCKSIZE", std::to_string(2));
+            REQUIRE_THROWS(openCLHelper.rebuildProgram());
+        }
+
+        SECTION("success program object has released kernels")
+        {
+            openCLHelper.init();
+
+            int err;
+            const char* kernelName = "update_ghosts_periodic";
+            cl_kernel kernel = clCreateKernel(openCLHelper.getProgram(), kernelName, &err);
+            mgcl::mgclCheckError(err, "clCreateKernel");
+            mgcl::mgclCheckError(clReleaseKernel(kernel), "clReleaseKernel");
+
+            openCLHelper.setPreprocessorConstant("BLOCKSIZE", std::to_string(2));
+            REQUIRE_NOTHROW(openCLHelper.rebuildProgram());
         }
     }
 

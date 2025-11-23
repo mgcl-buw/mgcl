@@ -6696,8 +6696,8 @@ __kernel void jacobi_iter_27point_varying_stencil_1d(
 }
 
 /**********************************
-/* Jacobi temporal tiling start
-***********************************/
+ * Jacobi temporal tiling start
+ ***********************************/
 
 /**
  * Loads a plane for one work-group in local memory. Ghosted with 2 layers at each border.
@@ -7245,8 +7245,8 @@ __kernel void jacobi_iter_27point_varying_stencil_2d_local_mem_2iters(
 // }
 
 /**********************************
-/* Jacobi temporal tiling end
-***********************************/
+ * Jacobi temporal tiling end
+ ***********************************/
 
 /* Restricts from fine to coarse grid.
  * Needs to get called with m*n*o work-items.
