@@ -26,8 +26,12 @@ namespace mgcl_test
         int current_index = 0;
 
     public:
-        CLDeviceTypeGenerator(std::vector<cl_device_type>& device_types)
-            : device_types(device_types) {}
+        CLDeviceTypeGenerator(std::vector<cl_device_type>& _device_types)
+            : device_types(_device_types)
+        {
+            if (device_types.empty())
+                device_types.push_back(CL_DEVICE_TYPE_DEFAULT);
+        }
 
         cl_device_type const& get() const override;
         // Returns true, if there is a next element in the vector

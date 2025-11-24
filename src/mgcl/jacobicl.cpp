@@ -1564,14 +1564,14 @@ namespace mgcl
                 mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
                 // sum up residual squares
-                res = sqrt(util::sum(dRsquares, problem.getProgram(), problem.getCommands(), true, &problem.getKernelConfig(), problem.getProfilingData()));
+                res = sqrt(util::sum(dRsquares, problem.getProgram(), problem.getCommands(), true, util::DEFAULT_REDUCTION_MAX_WG_SIZE, &problem.getKernelConfig(), problem.getProfilingData()));
 
                 clReleaseKernel(kernel_square);
             }
             else
             {
                 // calculate Infinity-Norm
-                res = util::max_abs(level.getDR(), problem.getProgram(), problem.getCommands(), true, &problem.getKernelConfig(), problem.getProfilingData());
+                res = util::max_abs(level.getDR(), problem.getProgram(), problem.getCommands(), true, util::DEFAULT_REDUCTION_MAX_WG_SIZE, &problem.getKernelConfig(), problem.getProfilingData());
             }
         }
 
@@ -1748,14 +1748,14 @@ namespace mgcl
                 mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
                 // sum up residual squares
-                res = sqrt(util::sum(dRsquares, args.dRsq->getSize(), args.program, args.queue, args.context, true, args.conf, args.pd));
+                res = sqrt(util::sum(dRsquares, args.dRsq->getSize(), args.program, args.queue, args.context, true, util::DEFAULT_REDUCTION_MAX_WG_SIZE, args.conf, args.pd));
 
                 clReleaseKernel(kernel_square);
             }
             else
             {
                 // calculate Infinity-Norm
-                res = util::max_abs(r.getBuffer(), r.getSize(), args.program, args.queue, args.context, true, args.conf, args.pd);
+                res = util::max_abs(r.getBuffer(), r.getSize(), args.program, args.queue, args.context, true, util::DEFAULT_REDUCTION_MAX_WG_SIZE, args.conf, args.pd);
             }
         }
 

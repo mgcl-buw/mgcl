@@ -18,7 +18,7 @@
  * @param global work-item count that the kernel gets called with
  * @param measurementCount number of measurements
  */
-void checkResult(mgcl::Problem& p, std::string kernelName, std::array<int, 3> global, int measurementCount = 1)
+void checkResult(mgcl::Problem& p, std::string kernelName, std::array<size_t, 3> global, int measurementCount = 1)
 {
     auto& conf = p.getKernelConfig();
 
@@ -79,7 +79,7 @@ TEST_CASE("profiling_kernels")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
-    int m, n, o;
+    size_t m, n, o;
     m = n = o = 8;
     double h = 1.0 / static_cast<double>(m);
     auto v = std::make_shared<mgcl::Cuboid>(m, n, o);
@@ -95,11 +95,13 @@ TEST_CASE("profiling_kernels")
     p.init();
     auto& lv0 = p.getLevelAt(0);
 
-    int mgh = lv0.getMgh();
-    int ngh = lv0.getNgh();
-    int ogh = lv0.getOgh();
+    size_t mgh = static_cast<size_t>(lv0.getMgh());
+    size_t ngh = static_cast<size_t>(lv0.getNgh());
+    size_t ogh = static_cast<size_t>(lv0.getOgh());
 
     auto& conf = p.getKernelConfig();
+
+    size_t maxWgSize = p.getOpenCLHelper().queryMaxWgSize(p.getDeviceId());
 
     // Clear measurements from Problem::init call
     p.getProfilingData()->getMeasurements().clear();
@@ -137,7 +139,7 @@ TEST_CASE("profiling_kernels")
         int yz = d_buf.getNgh() * d_buf.getOgh();
         int xz = d_buf.getMgh() * d_buf.getOgh();
         int xy = d_buf.getMgh() * d_buf.getNgh();
-        int ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
+        size_t ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
 
         auto tmp = d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, &conf, p.getProfilingData());
 
@@ -151,7 +153,7 @@ TEST_CASE("profiling_kernels")
         int yz = d_buf.getNgh() * d_buf.getOgh();
         int xz = d_buf.getMgh() * d_buf.getOgh();
         int xy = d_buf.getMgh() * d_buf.getNgh();
-        int ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
+        size_t ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
 
         mgcl::BufferGpu dBorderPlanes(p.getContext(), CL_MEM_READ_WRITE, ressize);
 
@@ -192,15 +194,21 @@ TEST_CASE("profiling_kernels")
     SECTION("restrict")
     {
         auto& lv1 = p.getLevelAt(1);
+        size_t m1 = static_cast<size_t>(lv1.getM());
+        size_t n1 = static_cast<size_t>(lv1.getN());
+        size_t o1 = static_cast<size_t>(lv1.getO());
         mgcl::MultigridEngine::restrict(lv0, lv1, lv0.getDVIn(), lv1.getDR());
-        checkResult(p, "restrict_to_coarse", {lv1.getM(), lv1.getN(), lv1.getO()});
+        checkResult(p, "restrict_to_coarse", {m1, n1, o1});
     }
 
     SECTION("prolongate")
     {
         auto& lv1 = p.getLevelAt(1);
+        size_t m1 = static_cast<size_t>(lv1.getM());
+        size_t n1 = static_cast<size_t>(lv1.getN());
+        size_t o1 = static_cast<size_t>(lv1.getO());
         mgcl::MultigridEngine::prolongate(lv0, lv1, lv0.getDVIn(), lv1.getDR());
-        checkResult(p, "prolongate_to_fine", {lv1.getMgh(), lv1.getNgh(), lv1.getOgh()});
+        checkResult(p, "prolongate_to_fine", {m1, n1, o1});
     }
 
     SECTION("stencil_update_ghosts")
@@ -255,14 +263,18 @@ TEST_CASE("profiling_kernels")
         // get workgroup size from config for smallest problem size
         auto& wg = conf["sum_partial_global_eq_x_num_elements"][0].second;
         int localSize = wg[0];
-        int fractions = 4;
-        int global = ceil((1.0 / fractions) * lv0.getDVIn().getSize());
+        size_t num_elements = lv0.getDVIn().getSize();
+        // int global = ceil((1.0 / fractions) * lv0.getDVIn().getSize());
+
+        // Set batchSize according to Brent's theorem (each work-item does log2(N) work)
+        int batchSize = num_elements <= 1 ? 1 : std::log2(num_elements);
+        size_t global = ceil((1.0 / batchSize) * num_elements);
 
         // Pad global work-item count to fit wg-size
         if (global % localSize != 0)
             global += localSize - (global % localSize);
 
-        mgcl::util::sum(lv0.getDVIn(), p.getProgram(), p.getCommands(), true, &conf, p.getProfilingData());
+        mgcl::util::sum(lv0.getDVIn(), p.getProgram(), p.getCommands(), true, p.getOpenCLHelper().queryMaxWgSize(p.getDeviceId()), &conf, p.getProfilingData());
         checkResult(p, "sum_partial_global_eq_x_num_elements", {global, 0, 0});
     }
 
@@ -271,14 +283,18 @@ TEST_CASE("profiling_kernels")
         // get workgroup size from config for smallest problem size
         auto& wg = conf["max_partial_global_eq_x_num_elements"][0].second;
         int localSize = wg[0];
-        int fractions = 4;
-        int global = ceil((1.0 / fractions) * lv0.getDVIn().getSize());
+        size_t num_elements = lv0.getDVIn().getSize();
+        // int global = ceil((1.0 / fractions) * lv0.getDVIn().getSize());
+
+        // Set batchSize according to Brent's theorem (each work-item does log2(N) work)
+        int batchSize = num_elements <= 1 ? 1 : std::log2(num_elements);
+        size_t global = ceil((1.0 / batchSize) * num_elements);
 
         // Pad global work-item count to fit wg-size
         if (global % localSize != 0)
             global += localSize - (global % localSize);
 
-        mgcl::util::max(lv0.getDVIn(), p.getProgram(), p.getCommands(), true, &conf, p.getProfilingData());
+        mgcl::util::max(lv0.getDVIn(), p.getProgram(), p.getCommands(), true, maxWgSize, &conf, p.getProfilingData());
         checkResult(p, "max_partial_global_eq_x_num_elements", {global, 0, 0});
     }
 
@@ -287,23 +303,27 @@ TEST_CASE("profiling_kernels")
         // get workgroup size from config for smallest problem size
         auto& wg = conf["max_abs_partial_global_eq_x_num_elements"][0].second;
         int localSize = wg[0];
-        int fractions = 4;
-        int global = ceil((1.0 / fractions) * lv0.getDVIn().getSize());
+        size_t num_elements = lv0.getDVIn().getSize();
+        // int global = ceil((1.0 / fractions) * lv0.getDVIn().getSize());
+
+        // Set batchSize according to Brent's theorem (each work-item does log2(N) work)
+        int batchSize = num_elements <= 1 ? 1 : std::log2(num_elements);
+        size_t global = ceil((1.0 / batchSize) * num_elements);
 
         // Pad global work-item count to fit wg-size
         if (global % localSize != 0)
             global += localSize - (global % localSize);
 
-        mgcl::util::max_abs(lv0.getDVIn(), p.getProgram(), p.getCommands(), true, &conf, p.getProfilingData());
+        mgcl::util::max_abs(lv0.getDVIn(), p.getProgram(), p.getCommands(), true, maxWgSize, &conf, p.getProfilingData());
         checkResult(p, "max_abs_partial_global_eq_x_num_elements", {global, 0, 0});
     }
 
     SECTION("galerkinOptimized")
     {
         auto& lv0 = p.getLevelAt(0);
-        int resm = lv0.getM() >> 1;
-        int resn = lv0.getN() >> 1;
-        int reso = lv0.getO() >> 1;
+        size_t resm = lv0.getM() >> 1;
+        size_t resn = lv0.getN() >> 1;
+        size_t reso = lv0.getO() >> 1;
 
         // Change conf for kernel since problem is too small (8x8x8 would result in a wg size of 64x1x1, since
         // the coarser grid has size 4x4x4).

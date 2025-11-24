@@ -755,6 +755,7 @@ namespace mgcl
                 openCLHelper.setPreprocessorConstant("BLOCKSIZE", std::to_string(getVBS().getBlocksize()));
             }
             openCLHelper.init(useMpi() ? mpiRank() : 0);
+            mgcl::util::DEFAULT_REDUCTION_MAX_WG_SIZE = openCLHelper.queryMaxWgSize(openCLHelper.getDeviceId());
         }
     }
 

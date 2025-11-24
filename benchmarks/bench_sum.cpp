@@ -76,6 +76,10 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][seqVsOcl]")
 
         mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
 
+        size_t maxWgSize;
+        int err = clGetDeviceInfo(tu.getDeviceId(), CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), &maxWgSize, nullptr);
+        mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_WORK_GROUP_SIZE)");
+
         mgcl::Cuboid data(m, n, o);
         data.fillRandom(-10, 10);
 
@@ -105,7 +109,7 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][seqVsOcl]")
         b.run(std::string("ocl, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
               {
                   ankerl::nanobench::doNotOptimizeAway(
-                      mgcl::util::sum(*dData, tu.getProgram(), tu.getCommands(), true, nullptr, nullptr)); //
+                      mgcl::util::sum(*dData, tu.getProgram(), tu.getCommands(), true, maxWgSize, nullptr, nullptr)); //
               });
     }
 }
@@ -431,6 +435,10 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][locals]")
 
         mgcl_test::TestUtility tu(CL_DEVICE_TYPE_GPU);
 
+        size_t maxWgSize;
+        int err = clGetDeviceInfo(tu.getDeviceId(), CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), &maxWgSize, nullptr);
+        mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_WORK_GROUP_SIZE)");
+
         mgcl::Cuboid data(m, n, o);
         data.fillRandom(-10, 10);
 
@@ -449,7 +457,7 @@ TEST_CASE("mgcl bench util::sum", "[!benchmark][sum][locals]")
             b.run(std::string("ocl, N: ").append(std::to_string(N)).append(", wg: ").append(std::to_string(local)).c_str(), [&]
                   {
                       ankerl::nanobench::doNotOptimizeAway(
-                          mgcl::util::sum(*dData, tu.getProgram(), tu.getCommands(), true, nullptr, nullptr)); //
+                          mgcl::util::sum(*dData, tu.getProgram(), tu.getCommands(), true, maxWgSize, nullptr, nullptr)); //
                   });
         }
         std::cout << "=============" << std::endl;

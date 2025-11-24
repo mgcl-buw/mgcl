@@ -26,8 +26,12 @@ namespace mgcl_test
         int current_index = 0;
 
     public:
-        CLDeviceNameGenerator(std::vector<std::string>& device_names)
-            : device_names(device_names) {}
+        CLDeviceNameGenerator(std::vector<std::string>& _device_names)
+            : device_names(_device_names)
+        {
+            if (device_names.empty())
+                device_names.push_back("");
+        }
 
         std::string const& get() const override;
         // Returns true, if there is a next element in the vector

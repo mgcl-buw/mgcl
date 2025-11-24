@@ -325,6 +325,8 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
             double h2 = hm * hm;
             double h2inv = 1.0 / h2; // divisor of the stencil, inverted to use * instead of / in kernel
 
+            size_t maxWgSize = problem.getOpenCLHelper().queryMaxWgSize(problem.getOpenCLHelper().getDeviceId());
+
             CAPTURE(ghosts, moff, noff, ooff);
             // check if off is too small (i.e. start < 0)
             // TODO refactor to use GPUCuboid and check against v.getGhosts
@@ -438,7 +440,7 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
                           mgcl::mgclCheckError(err, "Enqueueing residual squared kernel");
 
                           // sum up residual squares
-                          ankerl::nanobench::doNotOptimizeAway(res = sqrt(mgcl::util::sum(dRsquares, problem.getProgram(), problem.getCommands(), true, nullptr, nullptr)));
+                          ankerl::nanobench::doNotOptimizeAway(res = sqrt(mgcl::util::sum(dRsquares, problem.getProgram(), problem.getCommands(), true, maxWgSize, nullptr, nullptr)));
 
                           clReleaseKernel(kernel_square);
                       }

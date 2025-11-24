@@ -158,6 +158,10 @@ TEST_CASE("util::sum")
 
         mgcl_test::TestUtility tu(deviceType);
 
+        size_t maxWgSize;
+        int err = clGetDeviceInfo(tu.getDeviceId(), CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), &maxWgSize, nullptr);
+        mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_WORK_GROUP_SIZE)");
+
         SECTION("sum to 0")
         {
             // size_t local = GENERATE(8, 32, 43);
@@ -187,7 +191,7 @@ TEST_CASE("util::sum")
             REQUIRE_THAT(sum_host, Catch::Matchers::WithinAbs(0, 1e-8));
 
             mgcl::CuboidGpu dData(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, data);
-            double sum_device = mgcl::util::sum(dData, tu.getProgram(), tu.getCommands(), true, nullptr, nullptr);
+            double sum_device = mgcl::util::sum(dData, tu.getProgram(), tu.getCommands(), true, maxWgSize, nullptr, nullptr);
 
             // std::cout << std::scientific << std::setprecision(17) << "  host: " << sum_host << std::endl
             //           << "device: " << sum_device << std::endl;
@@ -221,7 +225,7 @@ TEST_CASE("util::sum")
                     }
 
             mgcl::CuboidGpu dData(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, data);
-            double sum_device = mgcl::util::sum(dData, tu.getProgram(), tu.getCommands(), true, nullptr, nullptr);
+            double sum_device = mgcl::util::sum(dData, tu.getProgram(), tu.getCommands(), true, maxWgSize, nullptr, nullptr);
 
             // std::cout << std::scientific << std::setprecision(17) << "  host: " << sum_host << std::endl
             //           << "device: " << sum_device << std::endl;
@@ -237,6 +241,10 @@ TEST_CASE("util::max")
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility tu(deviceType);
+
+    size_t maxWgSize;
+    int err = clGetDeviceInfo(tu.getDeviceId(), CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), &maxWgSize, nullptr);
+    mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_WORK_GROUP_SIZE)");
 
     // size_t local = GENERATE(8, 32, 43);
     size_t local = 32;
@@ -265,7 +273,7 @@ TEST_CASE("util::max")
             }
 
     mgcl::CuboidGpu dData(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, data);
-    double max_device = mgcl::util::max(dData, tu.getProgram(), tu.getCommands(), true, nullptr, nullptr);
+    double max_device = mgcl::util::max(dData, tu.getProgram(), tu.getCommands(), true, maxWgSize, nullptr, nullptr);
 
     // std::cout << std::scientific << std::setprecision(17) << "  host: " << sum_host << std::endl
     //           << "device: " << sum_device << std::endl;
@@ -279,6 +287,10 @@ TEST_CASE("util::max_abs")
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     mgcl_test::TestUtility tu(deviceType);
+
+    size_t maxWgSize;
+    int err = clGetDeviceInfo(tu.getDeviceId(), CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), &maxWgSize, nullptr);
+    mgcl::mgclCheckError(err, "clGetDeviceInfo(CL_DEVICE_MAX_WORK_GROUP_SIZE)");
 
     // size_t local = GENERATE(8, 32, 43);
     size_t local = 32;
@@ -295,7 +307,7 @@ TEST_CASE("util::max_abs")
     double max_abs_host = fabs(data[0][0][0]);
 
     mgcl::CuboidGpu dData(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, data);
-    double max_abs_device = mgcl::util::max_abs(dData, tu.getProgram(), tu.getCommands(), true, nullptr, nullptr);
+    double max_abs_device = mgcl::util::max_abs(dData, tu.getProgram(), tu.getCommands(), true, maxWgSize, nullptr, nullptr);
 
     // std::cout << std::scientific << std::setprecision(17) << "  host: " << sum_host << std::endl
     //           << "device: " << sum_device << std::endl;
