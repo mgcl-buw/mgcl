@@ -22,10 +22,202 @@ using namespace std::chrono_literals;
 
 namespace mgcl_bench_galerkin_optimized
 {
+    enum class MULT_VERSION
+    {
+        NAIVE,               // loops: grid points, coeffs of a, coeffs of b. 1wi per gp
+        REORDERED,           // loops: grid points, coeffs of c, coeffs of a and b. 1wi per gp
+        REORDERED_PARALLEL_C // loops: grid points, coeffs of c, coeffs of a and b. 1wi per gp and c coeff
+    };
+
+    /**
+     * @brief Multiplies a*b with coeffs first layout.
+     *
+     */
+    mgcl::VaryingStencilGpu multiply(mgcl::FixedStencilGpu& a, mgcl::VaryingStencilGpu& b, int ghc,
+                                     cl_program program, cl_command_queue queue, cl_context context,
+                                     mgcl::ProfilingData* pd, MULT_VERSION version)
+    {
+        int err;
+
+        // Create the compute kernel from the program
+        const char* kernelName;
+        if (version == MULT_VERSION::NAIVE)
+            kernelName = "mult_stencils_fix_var_coeffsfirst";
+        else if (version == MULT_VERSION::REORDERED)
+            kernelName = "mult_stencils_fix_var_reordered_coeffsfirst";
+        else if (version == MULT_VERSION::REORDERED_PARALLEL_C)
+            kernelName = "mult_stencils_fix_var_reordered_parallel_c_coeffsfirst";
+
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
+        mgcl::mgclCheckError(err, "clCreateKernel");
+
+        int m = b.getM();
+        int n = b.getN();
+        int o = b.getO();
+
+        // create output buffer c
+        mgcl::VaryingStencilGpu c(m, n, o, a.getWidth() + b.getWidth() - 1, ghc, context, queue, program);
+
+        auto abuf = a.getBuf();
+        auto bbuf = b.getBuf();
+        auto cbuf = c.getBuf();
+        auto wa = a.getWidth();
+        auto wb = b.getWidth();
+        auto ghb = b.getGh();
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &abuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &bbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &cbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &wa);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &wb);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghb);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghc);
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        int wc = c.getWidth();
+        // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
+        size_t global = static_cast<size_t>(m * n * o * wc * wc * wc);
+
+        if (version == MULT_VERSION::NAIVE || version == MULT_VERSION::REORDERED)
+            global = static_cast<size_t>(m * n * o);
+
+        size_t local = global > 128 ? 128 : global;
+
+        if (global % local != 0)
+            global += local - (global % local);
+        // for (int i = 0; i < 3; i++)
+        //     if (global[i] % local[i] != 0)
+        //         global[i] += local[i] - (global[i] % local[i]);
+
+        // update ghosts of b first (maybe not needed if done earlier)
+        // b.updateGhosts(program, queue);
+
+        cl_event ev;
+
+        // enqueue multiplication kernel
+        err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing stencil multiplication kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(queue, ev, kernelName,
+                               {global, 0, 0},
+                               {local, 1, 1});
+        }
+        mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        // update ghosts of c
+        if (ghc > 0)
+        {
+            c.updateGhosts(program, queue, nullptr, pd);
+        }
+
+        clReleaseKernel(kernel);
+        return c;
+    }
+
+    /**
+     * @brief Multiplies a*b with coeffs first layout.
+     *
+     */
+    mgcl::VaryingStencilGpu multiply(mgcl::VaryingStencilGpu& a, mgcl::FixedStencilGpu& b, int ghc,
+                                     cl_program program, cl_command_queue queue, cl_context context,
+                                     mgcl::ProfilingData* pd, MULT_VERSION version)
+    {
+        int err;
+
+        // Create the compute kernel from the program
+        const char* kernelName;
+        if (version == MULT_VERSION::NAIVE)
+            kernelName = "mult_stencils_var_fix_coeffsfirst";
+        else if (version == MULT_VERSION::REORDERED)
+            kernelName = "mult_stencils_var_fix_reordered_coeffsfirst";
+        else if (version == MULT_VERSION::REORDERED_PARALLEL_C)
+            kernelName = "mult_stencils_var_fix_reordered_parallel_c_coeffsfirst";
+
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
+        mgcl::mgclCheckError(err, "clCreateKernel");
+
+        int m = a.getM();
+        int n = a.getN();
+        int o = a.getO();
+
+        // create output buffer c
+        mgcl::VaryingStencilGpu c(m, n, o, a.getWidth() + b.getWidth() - 1, ghc, context, queue, program);
+
+        auto abuf = a.getBuf();
+        auto bbuf = b.getBuf();
+        auto cbuf = c.getBuf();
+        auto wa = a.getWidth();
+        auto wb = b.getWidth();
+        auto gha = a.getGh();
+
+        // assign kernel arguments
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &abuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &bbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &cbuf);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &wa);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &wb);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gha);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghc);
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        int wc = c.getWidth();
+        // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
+        size_t global = static_cast<size_t>(m * n * o * wc * wc * wc);
+
+        if (version == MULT_VERSION::NAIVE || version == MULT_VERSION::REORDERED)
+            global = static_cast<size_t>(m * n * o);
+
+        size_t local = global > 128 ? 128 : global;
+
+        if (global % local != 0)
+            global += local - (global % local);
+        // for (int i = 0; i < 3; i++)
+        //     if (global[i] % local[i] != 0)
+        //         global[i] += local[i] - (global[i] % local[i]);
+
+        // update ghosts of b first (maybe not needed if done earlier)
+        // b.updateGhosts(program, queue);
+
+        cl_event ev;
+
+        // enqueue multiplication kernel
+        err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing stencil multiplication kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(queue, ev, kernelName,
+                               {global, 0, 0},
+                               {local, 1, 1});
+        }
+        mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        // update ghosts of c
+        if (ghc > 0)
+        {
+            c.updateGhosts(program, queue, nullptr, pd);
+        }
+
+        clReleaseKernel(kernel);
+        return c;
+    }
+
     // Simplified version of old stencil multiplication (removed ghost update, kernel config and profiling features) as of 08.08.2024.
+    // Starts kernel with reordered loops and m*n*o*wc^3 work-items.
     mgcl::VaryingStencilGpu galerkinStencilMult(mgcl::VaryingStencilGpu& a_h, int gh_a2h,
                                                 cl_program program, cl_command_queue queue, cl_context context,
-                                                int resm, int resn, int reso)
+                                                int resm, int resn, int reso, mgcl::ProfilingData* pd, MULT_VERSION version)
     {
         // Make sure a_h has two ghosts at each border for periodic bc.
         if (a_h.getGh() < 2)
@@ -41,11 +233,11 @@ namespace mgcl_bench_galerkin_optimized
 
         // A_2h = R * A_h * P = K * S * A_h * S * K^T, where K is the cutting matrix. We first calculate
         // S * A_h * S and cut out later manually.
-        auto sas = sr.multiply(a_h, 2, nullptr, nullptr, nullptr, program, queue, context, nullptr, true, nullptr, nullptr)
-                       .multiply(sp, 0, nullptr, nullptr, nullptr, program, queue, context, nullptr, true, nullptr, nullptr);
+        auto sa = multiply(sr, a_h, 2, program, queue, context, pd, version);
+        auto sas = multiply(sa, sp, 0, program, queue, context, pd, version);
 
         // Cut stencil from 7x7x7 down to 3x3x3, i.e. copy only selected values to new stencil, skipping ghosts.
-        auto a_2h = sas.cutFromW7ToW3(program, queue, context, gh_a2h, nullptr, nullptr, resm, resn, reso);
+        auto a_2h = sas.cutFromW7ToW3(program, queue, context, gh_a2h, nullptr, pd, resm, resn, reso);
 
         return a_2h;
     }
@@ -64,6 +256,7 @@ namespace mgcl_bench_galerkin_optimized
     std::unique_ptr<mgcl::VaryingStencilGpu> galerkinOptimized(mgcl::VaryingStencilGpu& a_h, int gh_a2h,
                                                                int resm, int resn, int reso,
                                                                cl_program program, cl_command_queue queue, cl_context context,
+                                                               mgcl::ProfilingData* pd,
                                                                KernelVersion kernelVersion)
     {
         // Make sure a_h has two ghosts at each border for periodic bc.
@@ -182,12 +375,12 @@ namespace mgcl_bench_galerkin_optimized
         err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
         mgcl::mgclCheckError(err, "Enqueueing galerkin kernel");
 
-        // if (pd != nullptr)
-        // {
-        //     pd->addMeasurement(queue, ev, kernelName,
-        //                        {global, 0, 0},
-        //                        {local, 1, 1});
-        // }
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(queue, ev, kernelName,
+                               {global, 0, 0},
+                               {local, 1, 1});
+        }
         mgcl::mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
         err = clReleaseKernel(kernel);
@@ -410,7 +603,10 @@ namespace mgcl_bench_galerkin_optimized
         p.setKernelFile("kernel_optimizations.cl");
         p.setUseOpencl(true);
         p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
         p.init();
+
+        auto pd = p.getProfilingData();
 
         for (auto gr : gridsTBT)
         {
@@ -435,7 +631,7 @@ namespace mgcl_bench_galerkin_optimized
                                        .append(std::to_string(o));
 
                 bench.run(std::string(name).c_str(), [&] { //
-                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::DEFAULT);
+                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), pd, KernelVersion::DEFAULT);
                 });
 
                 bench_util::Result res;
@@ -449,8 +645,9 @@ namespace mgcl_bench_galerkin_optimized
                 res.o = o;
                 results.push_back(res);
             }
+
             {
-                std::string name = std::string("galerkin_stencil_arithmetic_")
+                std::string name = std::string("galerkin_stencil_arithmetic_naive_")
                                        .append(std::to_string(m))
                                        .append("_")
                                        .append(std::to_string(n))
@@ -458,7 +655,55 @@ namespace mgcl_bench_galerkin_optimized
                                        .append(std::to_string(o));
 
                 bench.run(std::string(name).c_str(), [&] { //
-                    galerkinStencilMult(a_h, 2, p.getProgram(), p.getCommands(), p.getContext(), m >> 1, n >> 1, o >> 1);
+                    galerkinStencilMult(a_h, 2, p.getProgram(), p.getCommands(), p.getContext(), m >> 1, n >> 1, o >> 1, p.getProfilingData(), MULT_VERSION::NAIVE);
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+            }
+
+            {
+                std::string name = std::string("galerkin_stencil_arithmetic_reordered_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    galerkinStencilMult(a_h, 2, p.getProgram(), p.getCommands(), p.getContext(), m >> 1, n >> 1, o >> 1, p.getProfilingData(), MULT_VERSION::REORDERED);
+                });
+
+                bench_util::Result res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.m = m;
+                res.n = n;
+                res.o = o;
+                results.push_back(res);
+            }
+
+            {
+                std::string name = std::string("galerkin_stencil_arithmetic_reordered_parallelc_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o));
+
+                bench.run(std::string(name).c_str(), [&] { //
+                    galerkinStencilMult(a_h, 2, p.getProgram(), p.getCommands(), p.getContext(), m >> 1, n >> 1, o >> 1, p.getProfilingData(), MULT_VERSION::REORDERED_PARALLEL_C);
                 });
 
                 bench_util::Result res;
@@ -475,6 +720,12 @@ namespace mgcl_bench_galerkin_optimized
         }
 
         bench_util::printCsvFormat(results);
+
+        if (CLI_ARGS::enableKernelProfiling)
+        {
+            p.getProfilingData()->printBestTimingsPerKernel();
+            // p.getProfilingData()->printBestTimingsPerKernelAsCsv();
+        }
     }
 
     // Checks results for correctness
@@ -503,7 +754,10 @@ namespace mgcl_bench_galerkin_optimized
         p.getOpenCLHelper().setReadKernelFromFile(true);
         p.setUseOpencl(true);
         p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
         p.init();
+
+        auto pd = p.getProfilingData();
 
         for (auto gr : gridsTBT)
         {
@@ -518,14 +772,14 @@ namespace mgcl_bench_galerkin_optimized
 
             std::unique_ptr<mgcl::VaryingStencilGpu> a_2h_check = galerkinOptimized(
                 a_h, 2, m >> 1, n >> 1, o >> 1,
-                p.getProgram(), p.getCommands(), p.getContext(),
+                p.getProgram(), p.getCommands(), p.getContext(), pd,
                 KernelVersion::DEFAULT);
             auto a_2h_check_h = a_2h_check->read(p.getCommands(), true);
 
             {
                 auto a_2h_private_rp = galerkinOptimized(
                     a_h, 2, m >> 1, n >> 1, o >> 1,
-                    p.getProgram(), p.getCommands(), p.getContext(),
+                    p.getProgram(), p.getCommands(), p.getContext(), pd,
                     KernelVersion::PRIVATE_R_P);
                 auto a_2h_private_rp_h = a_2h_private_rp->read(p.getCommands(), true);
                 REQUIRE(a_2h_check_h.isEqual(a_2h_private_rp_h));
@@ -534,7 +788,7 @@ namespace mgcl_bench_galerkin_optimized
 
             {
                 auto a_2h_parallel_iijjkk = galerkinOptimized(
-                    a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+                    a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), pd,
                     KernelVersion::PARALLEL_IIJJKK);
                 auto a_2h_parallel_iijjkk_h = a_2h_parallel_iijjkk->read(p.getCommands(), true);
                 REQUIRE(a_2h_check_h.isEqual(a_2h_parallel_iijjkk_h));
@@ -543,7 +797,7 @@ namespace mgcl_bench_galerkin_optimized
 
             {
                 auto a_2h_pointer = galerkinOptimized(
-                    a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+                    a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), pd,
                     KernelVersion::POINTER);
                 auto a_2h_pointer_h = a_2h_pointer->read(p.getCommands(), true);
                 REQUIRE(a_2h_check_h.isEqual(a_2h_pointer_h));
@@ -552,7 +806,7 @@ namespace mgcl_bench_galerkin_optimized
 
             {
                 auto a_2h_cached_ra = galerkinOptimized(
-                    a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+                    a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), pd,
                     KernelVersion::CACHED_RA);
                 auto a_2h_cached_ra_h = a_2h_cached_ra->read(p.getCommands(), true);
                 REQUIRE(a_2h_check_h.isEqual(a_2h_cached_ra_h));
@@ -560,7 +814,7 @@ namespace mgcl_bench_galerkin_optimized
 
             {
                 auto a_2h_cached_ra_localmem = galerkinOptimized(
-                    a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(),
+                    a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), pd,
                     KernelVersion::CACHED_RA_LOCALMEM);
                 auto a_2h_cached_ra_localmem_h = a_2h_cached_ra_localmem->read(p.getCommands(), true);
                 REQUIRE(a_2h_check_h.isEqual(a_2h_cached_ra_localmem_h));
@@ -621,7 +875,10 @@ namespace mgcl_bench_galerkin_optimized
         p.getOpenCLHelper().setReadKernelFromFile(true);
         p.setUseOpencl(true);
         p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
         p.init();
+
+        auto pd = p.getProfilingData();
 
         for (auto gr : gridsTBT)
         {
@@ -646,7 +903,7 @@ namespace mgcl_bench_galerkin_optimized
                                        .append(std::to_string(o));
 
                 bench.run(std::string(name).c_str(), [&] { //
-                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::DEFAULT);
+                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), pd, KernelVersion::DEFAULT);
                 });
 
                 bench_util::Result res;
@@ -670,7 +927,7 @@ namespace mgcl_bench_galerkin_optimized
                                        .append(std::to_string(o));
 
                 bench.run(std::string(name).c_str(), [&] { //
-                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::CACHED_RA);
+                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), pd, KernelVersion::CACHED_RA);
                 });
 
                 bench_util::Result res;
@@ -693,7 +950,7 @@ namespace mgcl_bench_galerkin_optimized
                                        .append(std::to_string(o));
 
                 bench.run(std::string(name).c_str(), [&] { //
-                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::CACHED_RA_LOCALMEM);
+                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), pd, KernelVersion::CACHED_RA_LOCALMEM);
                 });
 
                 bench_util::Result res;
@@ -717,7 +974,7 @@ namespace mgcl_bench_galerkin_optimized
                                        .append(std::to_string(o));
 
                 bench.run(std::string(name).c_str(), [&] { //
-                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::PRIVATE_R_P);
+                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), pd, KernelVersion::PRIVATE_R_P);
                 });
 
                 bench_util::Result res;
@@ -740,7 +997,7 @@ namespace mgcl_bench_galerkin_optimized
                                        .append(std::to_string(o));
 
                 bench.run(std::string(name).c_str(), [&] { //
-                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::PARALLEL_IIJJKK);
+                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), pd, KernelVersion::PARALLEL_IIJJKK);
                 });
 
                 bench_util::Result res;
@@ -763,7 +1020,7 @@ namespace mgcl_bench_galerkin_optimized
                                        .append(std::to_string(o));
 
                 bench.run(std::string(name).c_str(), [&] { //
-                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::POINTER);
+                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), pd, KernelVersion::POINTER);
                 });
 
                 bench_util::Result res;
@@ -913,7 +1170,10 @@ namespace mgcl_bench_galerkin_optimized
         p.getOpenCLHelper().setReadKernelFromFile(true);
         p.setUseOpencl(true);
         p.setDeviceType(CL_DEVICE_TYPE_GPU);
+        p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
         p.init();
+
+        auto pd = p.getProfilingData();
 
         for (auto gr : gridsTBT)
         {
@@ -938,7 +1198,7 @@ namespace mgcl_bench_galerkin_optimized
                                        .append(std::to_string(o));
 
                 bench.run(std::string(name).c_str(), [&] { //
-                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), KernelVersion::DEFAULT);
+                    galerkinOptimized(a_h, 2, m >> 1, n >> 1, o >> 1, p.getProgram(), p.getCommands(), p.getContext(), pd, KernelVersion::DEFAULT);
                     p.finish();
                 });
 

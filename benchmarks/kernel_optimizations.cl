@@ -889,6 +889,232 @@ __kernel void mult_stencils_var_fix_reordered_parallel_c(
 }
 
 /**
+ * Multiplies a varying stencil a with a fixed stencil b, i.e. c = a * b.
+ * m, n and o are dimensions of the grid.
+ * wa and wb are the widths of the stencils. Must be odd and >= 3.
+ * gha and ghc are ghosts of the stencils at one border.
+ * These restrictions are not checked in the kernel but shall be checked beforehand!
+ * This kernel is supposed to be launched with one work-item per grid cell.
+ * Remember to update ghosts of c if ghc > 0 afterwards.
+ */
+__kernel void mult_stencils_var_fix_coeffsfirst(
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
+    int m, int n, int o,
+    int wa, int wb,
+    int gha, int ghc)
+{
+    // increment order: k -> j -> i, i.e. k varying fastest
+    int idx = get_global_id(0);
+    int k = idx % o;
+    idx /= o;
+    int j = idx % n;
+    idx /= n;
+    int i = idx % m;
+
+    int wa2 = wa >> 1;
+    int wc = wa + wb - 1;
+
+    int gridsize_a = (m + 2 * gha) * (n + 2 * gha) * (o + 2 * gha);
+    int gridsize_c = (m + 2 * ghc) * (n + 2 * ghc) * (o + 2 * ghc);
+
+    // 1d indices
+    int wcPow2 = wc * wc;
+    int wcPow3 = wcPow2 * wc;
+    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) + (j + ghc) * (o + 2 * ghc)  + (k + ghc);
+
+    int waPow2 = wa * wa;
+    int waPow3 = waPow2 * wa;
+    int cell_a = (i + gha) * (n + 2 * gha) * (o + 2 * gha)  + (j + gha) * (o + 2 * gha)  + (k + gha);
+
+    int wbPow2 = wb * wb;
+    int wbPow3 = wbPow2 * wb;
+
+    if (i < m && j < n && k < o)
+    {
+        // clang-format off
+        for (int a_i = 0; a_i < wa; a_i++)
+        for (int a_j = 0; a_j < wa; a_j++)
+        for (int a_k = 0; a_k < wa; a_k++)
+        {
+            int idx_a = cell_a + (a_i * waPow2 + a_j * wa + a_k) * gridsize_a;
+
+            for (int b_i = 0; b_i < wb; b_i++)
+            for (int b_j = 0; b_j < wb; b_j++)
+            for (int b_k = 0; b_k < wb; b_k++)
+            {
+                int ci = a_i + b_i;
+                int cj = a_j + b_j;
+                int ck = a_k + b_k;
+
+                if (ci >= 0 && ci < wc &&
+                    cj >= 0 && cj < wc &&
+                    ck >= 0 && ck < wc)
+                {
+                    c[cell_c + (ci * wcPow2 + cj * wc + ck) * gridsize_c] +=
+                        a[idx_a] *
+                        b[b_i * wbPow2 + b_j * wb + b_k];
+
+                    // c[i + ghc][j + ghc][k + ghc][a_i + b_i][a_j + b_j][a_k + b_k] +=
+                    //     a[i + gha][j + gha][k + gha][a_i][a_j][a_k] *
+                    //     b[gpi][gpj][gpk][b_i][b_j][b_k];
+                }
+            }
+        }
+        // clang-format on
+    }
+}
+
+/**
+ * Multiplies a varying stencil a with a fixed stencil b, i.e. c = a * b.
+ * m, n and o are dimensions of the grid.
+ * wa and wb are the widths of the stencils. Must be odd and >= 3.
+ * gha and ghc are ghosts of the stencils at one border.
+ * These restrictions are not checked in the kernel but shall be checked beforehand!
+ * This kernel is supposed to be launched with one work-item per grid cell.
+ * Remember to update ghosts of c if ghc > 0 afterwards.
+ */
+__kernel void mult_stencils_var_fix_reordered_coeffsfirst(
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
+    int m, int n, int o,
+    int wa, int wb,
+    int gha, int ghc)
+{
+    // increment order: k -> j -> i, i.e. k varying fastest
+    int idx = get_global_id(0);
+    int k = idx % o;
+    idx /= o;
+    int j = idx % n;
+    idx /= n;
+    int i = idx % m;
+
+    int wa2 = wa >> 1;
+    int wc = wa + wb - 1;
+
+    int gridsize_a = (m + 2 * gha) * (n + 2 * gha) * (o + 2 * gha);
+    int gridsize_c = (m + 2 * ghc) * (n + 2 * ghc) * (o + 2 * ghc);
+
+    // 1d indices
+    int wcPow2 = wc * wc;
+    int wcPow3 = wcPow2 * wc;
+    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) + (j + ghc) * (o + 2 * ghc) + (k + ghc);
+
+    int waPow2 = wa * wa;
+    int waPow3 = waPow2 * wa;
+    int cell_a = (i + gha) * (n + 2 * gha) * (o + 2 * gha) + (j + gha) * (o + 2 * gha) + (k + gha);
+
+    int wbPow2 = wb * wb;
+    int wbPow3 = wbPow2 * wb;
+
+    if (i < m && j < n && k < o)
+    {
+        // clang-format off
+        for (int ci = 0; ci < wc; ci++)
+        for (int cj = 0; cj < wc; cj++)
+        for (int ck = 0; ck < wc; ck++)
+        {
+            double csum = 0;
+            for (int a_i = ci - (min(ci, wb - 1)), b_i = min(ci, wb - 1);
+                a_i <= min(ci, wa - 1) && b_i >= ci - min(ci, wa - 1);
+                a_i++, b_i--)
+            for (int a_j = cj - (min(cj, wb - 1)), b_j = min(cj, wb - 1);
+                    a_j <= min(cj, wa - 1) && b_j >= cj - min(cj, wa - 1);
+                    a_j++, b_j--)
+            for (int a_k = ck - (min(ck, wb - 1)), b_k = min(ck, wb - 1);
+                    a_k <= min(ck, wa - 1) && b_k >= ck - min(ck, wa - 1);
+                    a_k++, b_k--)
+            {
+                int idx_a = cell_a + (a_i * waPow2 + a_j * wa + a_k) * gridsize_a;
+                csum +=
+                    a[idx_a] *
+                    b[b_i * wbPow2 + b_j * wb + b_k];
+            }
+
+            c[cell_c + (ci * wcPow2 + cj * wc + ck) * gridsize_c] = csum;
+        }
+        // clang-format on
+    }
+}
+
+/**
+ * Multiplies a varying stencil a with a fixed stencil b, i.e. c = a * b.
+ * m, n and o are dimensions of the grid.
+ * wa and wb are the widths of the stencils. Must be odd and >= 3.
+ * gha and ghc are ghosts of the stencils at one border.
+ * These restrictions are not checked in the kernel but shall be checked beforehand!
+ * This kernel is supposed to be launched with m x n x o*wc*wc*wc work-items.
+ * Remember to update ghosts of c if ghc > 0 afterwards.
+ */
+__kernel void mult_stencils_var_fix_reordered_parallel_c_coeffsfirst(
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
+    int m, int n, int o,
+    int wa, int wb,
+    int gha, int ghc)
+{
+    int wa2 = wa >> 1;
+    int wc = wa + wb - 1;
+    int wcPow2 = wc * wc;
+    int wcPow3 = wcPow2 * wc;
+
+    // increment order: k -> j -> i -> ck -> cj -> ck, i.e. k varying fastest
+    int idx = get_global_id(0);
+    int k = idx % o;
+    idx /= o;
+    int j = idx % n;
+    idx /= n;
+    int i = idx % m;
+    idx /= m;
+    int ck = idx % 3;
+    idx /= 3;
+    int cj = idx % 3;
+    idx /= 3;
+    int ci = idx % 3;
+
+    int gridsize_a = (m + 2 * gha) * (n + 2 * gha) * (o + 2 * gha);
+    int gridsize_c = (m + 2 * ghc) * (n + 2 * ghc) * (o + 2 * ghc);
+
+    // 1d indices
+    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) + (j + ghc) * (o + 2 * ghc) + (k + ghc);
+
+    int waPow2 = wa * wa;
+    int waPow3 = waPow2 * wa;
+    int cell_a = (i + gha) * (n + 2 * gha) * (o + 2 * gha) + (j + gha) * (o + 2 * gha) + (k + gha);
+
+    int wbPow2 = wb * wb;
+    int wbPow3 = wbPow2 * wb;
+
+    if (i < m && j < n && k < o)
+    {
+        // clang-format off
+        double csum = 0;
+        for (int a_i = ci - (min(ci, wb - 1)), b_i = min(ci, wb - 1);
+            a_i <= min(ci, wa - 1) && b_i >= ci - min(ci, wa - 1);
+            a_i++, b_i--)
+        for (int a_j = cj - (min(cj, wb - 1)), b_j = min(cj, wb - 1);
+                a_j <= min(cj, wa - 1) && b_j >= cj - min(cj, wa - 1);
+                a_j++, b_j--)
+        for (int a_k = ck - (min(ck, wb - 1)), b_k = min(ck, wb - 1);
+                a_k <= min(ck, wa - 1) && b_k >= ck - min(ck, wa - 1);
+                a_k++, b_k--)
+        {
+            int idx_a = cell_a + (a_i * waPow2 + a_j * wa + a_k) * gridsize_a;
+
+            csum +=
+                a[idx_a] *
+                b[b_i * wbPow2 + b_j * wb + b_k];
+        }
+
+        c[cell_c + (ci * wcPow2 + cj * wc + ck) * gridsize_c] = csum;
+        // clang-format on
+    }
+}
+
+/**
  * Multiplies a fixed stencil a with a varying stencilb, i.e. c = a * b.
  * m, n and o are dimensions of the grid.
  * wa and wb are the widths of the stencils. Must be odd and >= 3.
@@ -1077,6 +1303,221 @@ __kernel void mult_stencils_fix_var_reordered_parallel_c(
         }
 
         c[cell_c + ci * wcPow2 + cj * wc + ck] = csum;
+        // clang-format on
+    }
+}
+
+/**
+ * Multiplies a fixed stencil a with a varying stencilb, i.e. c = a * b.
+ * m, n and o are dimensions of the grid.
+ * wa and wb are the widths of the stencils. Must be odd and >= 3.
+ * ghb and ghc are ghosts of the varying stencils at one border. ghb must be >= floor(wa / 2)
+ * These restrictions are not checked in the kernel but shall be checked beforehand!
+ * This kernel is supposed to be launched with one work-item per grid cell.
+ * Remember to update ghosts of c if ghc > 0 afterwards.
+ */
+__kernel void mult_stencils_fix_var_coeffsfirst(
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
+    int m, int n, int o,
+    int wa, int wb,
+    int ghb, int ghc)
+{
+    // increment order: k -> j -> i, i.e. k varying fastest
+    int idx = get_global_id(0);
+    int k = idx % o;
+    idx /= o;
+    int j = idx % n;
+    idx /= n;
+    int i = idx % m;
+
+    int wa2 = wa >> 1;
+    int wc = wa + wb - 1;
+
+    int gridsize_b = (m + 2 * ghb) * (n + 2 * ghb) * (o + 2 * ghb);
+    int gridsize_c = (m + 2 * ghc) * (n + 2 * ghc) * (o + 2 * ghc);
+
+    // 1d indices
+    int wcPow2 = wc * wc;
+    int wcPow3 = wcPow2 * wc;
+    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) + (j + ghc) * (o + 2 * ghc) + (k + ghc);
+
+    int waPow2 = wa * wa;
+
+    int wbPow2 = wb * wb;
+    int wbPow3 = wbPow2 * wb;
+
+    if (i < m && j < n && k < o)
+    {
+        // clang-format off
+        for (int a_i = 0; a_i < wa; a_i++)
+        for (int a_j = 0; a_j < wa; a_j++)
+        for (int a_k = 0; a_k < wa; a_k++)
+            for (int b_i = 0; b_i < wb; b_i++)
+            for (int b_j = 0; b_j < wb; b_j++)
+            for (int b_k = 0; b_k < wb; b_k++)
+            {
+                int gpi = i + a_i - wa2 + ghb;
+                int gpj = j + a_j - wa2 + ghb;
+                int gpk = k + a_k - wa2 + ghb;
+
+                int cell_b = gpi * (n + 2 * ghb) * (o + 2 * ghb) + gpj * (o + 2 * ghb) + gpk;
+                int idx_b = cell_b + (b_i * wbPow2 + b_j * wb + b_k) * gridsize_b;
+
+                int ci = a_i + b_i;
+                int cj = a_j + b_j;
+                int ck = a_k + b_k;
+
+                c[cell_c + (ci * wcPow2 + cj * wc + ck) * gridsize_c] +=
+                    a[a_i * waPow2 + a_j * wa + a_k] *
+                    b[idx_b];
+
+                // c[i + ghc][j + ghc][k + ghc][a_i + b_i][a_j + b_j][a_k + b_k] +=
+                //     a[i + gha][j + gha][k + gha][a_i][a_j][a_k] *
+                //     b[gpi][gpj][gpk][b_i][b_j][b_k];
+            }
+        // clang-format on
+    }
+}
+
+// reordered for loops
+__kernel void mult_stencils_fix_var_reordered_coeffsfirst(
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
+    int m, int n, int o,
+    int wa, int wb,
+    int ghb, int ghc)
+{
+    // increment order: k -> j -> i, i.e. k varying fastest
+    int idx = get_global_id(0);
+    int k = idx % o;
+    idx /= o;
+    int j = idx % n;
+    idx /= n;
+    int i = idx % m;
+
+    int wa2 = wa >> 1;
+    int wc = wa + wb - 1;
+
+    int gridsize_b = (m + 2 * ghb) * (n + 2 * ghb) * (o + 2 * ghb);
+    int gridsize_c = (m + 2 * ghc) * (n + 2 * ghc) * (o + 2 * ghc);
+
+    // 1d indices
+    int wcPow2 = wc * wc;
+    int wcPow3 = wcPow2 * wc;
+    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) + (j + ghc) * (o + 2 * ghc) + (k + ghc);
+
+    int waPow2 = wa * wa;
+
+    int wbPow2 = wb * wb;
+    int wbPow3 = wbPow2 * wb;
+
+    if (i < m && j < n && k < o)
+    {
+        // clang-format off
+        for (int ci = 0; ci < wc; ci++)
+        for (int cj = 0; cj < wc; cj++)
+        for (int ck = 0; ck < wc; ck++)
+        {
+            double csum = 0;
+            for (int a_i = ci - (min(ci, wb - 1)), b_i = min(ci, wb - 1);
+                a_i <= min(ci, wa - 1) && b_i >= ci - min(ci, wa - 1);
+                a_i++, b_i--)
+            for (int a_j = cj - (min(cj, wb - 1)), b_j = min(cj, wb - 1);
+                    a_j <= min(cj, wa - 1) && b_j >= cj - min(cj, wa - 1);
+                    a_j++, b_j--)
+            for (int a_k = ck - (min(ck, wb - 1)), b_k = min(ck, wb - 1);
+                    a_k <= min(ck, wa - 1) && b_k >= ck - min(ck, wa - 1);
+                    a_k++, b_k--)
+            {
+                int gpi = i + a_i - wa2 + ghb;
+                int gpj = j + a_j - wa2 + ghb;
+                int gpk = k + a_k - wa2 + ghb;
+
+                int cell_b = gpi * (n + 2 * ghb) * (o + 2 * ghb) + gpj * (o + 2 * ghb) + gpk;
+                int idx_b = cell_b + (b_i * wbPow2 + b_j * wb + b_k) * gridsize_b;
+
+                csum +=
+                    a[a_i * waPow2 + a_j * wa + a_k] *
+                    b[idx_b];
+            }
+
+            c[cell_c + (ci * wcPow2 + cj * wc + ck) * gridsize_c] = csum;
+        }
+        // clang-format on
+    }
+}
+
+// same as mult_stencils_fix_var_reordered_parallel_c but with coeffs first layout
+__kernel void mult_stencils_fix_var_reordered_parallel_c_coeffsfirst(
+    __global double* restrict a,
+    __global double* restrict b,
+    __global double* restrict c,
+    int m, int n, int o,
+    int wa, int wb,
+    int ghb, int ghc)
+{
+    int wa2 = wa >> 1;
+    int wc = wa + wb - 1;
+    int wcPow2 = wc * wc;
+    int wcPow3 = wcPow2 * wc;
+
+    // idx = (ci * wc^2 + cj * wc + ck) * gridsize_c + i * no + j * ogh + k
+
+    // increment order: k -> j -> i -> ck -> cj -> ck, i.e. k varying fastest
+    int idx = get_global_id(0);
+    int k = idx % o;
+    idx /= o;
+    int j = idx % n;
+    idx /= n;
+    int i = idx % m;
+    idx /= m;
+    int ck = idx % 3;
+    idx /= 3;
+    int cj = idx % 3;
+    idx /= 3;
+    int ci = idx % 3;
+
+    int gridsize_b = (m + 2 * ghb) * (n + 2 * ghb) * (o + 2 * ghb);
+    int gridsize_c = (m + 2 * ghc) * (n + 2 * ghc) * (o + 2 * ghc);
+
+    // 1d indices
+    int cell_c = (i + ghc) * (n + 2 * ghc) * (o + 2 * ghc) + (j + ghc) * (o + 2 * ghc) + (k + ghc);
+
+    int waPow2 = wa * wa;
+
+    int wbPow2 = wb * wb;
+    int wbPow3 = wbPow2 * wb;
+
+    if (i < m && j < n && k < o)
+    {
+        // clang-format off
+        double csum = 0;
+        for (int a_i = ci - (min(ci, wb - 1)), b_i = min(ci, wb - 1);
+            a_i <= min(ci, wa - 1) && b_i >= ci - min(ci, wa - 1);
+            a_i++, b_i--)
+        for (int a_j = cj - (min(cj, wb - 1)), b_j = min(cj, wb - 1);
+                a_j <= min(cj, wa - 1) && b_j >= cj - min(cj, wa - 1);
+                a_j++, b_j--)
+        for (int a_k = ck - (min(ck, wb - 1)), b_k = min(ck, wb - 1);
+                a_k <= min(ck, wa - 1) && b_k >= ck - min(ck, wa - 1);
+                a_k++, b_k--)
+        {
+            int gpi = i + a_i - wa2 + ghb;
+            int gpj = j + a_j - wa2 + ghb;
+            int gpk = k + a_k - wa2 + ghb;
+
+            int cell_b = gpi * (n + 2 * ghb) * (o + 2 * ghb) + gpj * (o + 2 * ghb) + gpk;
+            int idx_b = cell_b + (b_i * wbPow2 + b_j * wb + b_k) * gridsize_b;
+
+            csum +=
+                a[a_i * waPow2 + a_j * wa + a_k] *
+                b[idx_b];
+        }
+
+        c[cell_c + (ci * wcPow2 + cj * wc + ck) * gridsize_c] = csum;
         // clang-format on
     }
 }
