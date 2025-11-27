@@ -1306,5 +1306,11 @@ namespace mgcl_bench_galerkin_optimized
         }
 
         bench_util::printCsvFormat(results);
+
+        if (CLI_ARGS::enableKernelProfiling)
+        {
+            // p.getProfilingData()->printBestTimingsPerKernel();
+            p.getProfilingData()->printBestTimingsPerKernelAsCsv();
+        }
     }
 }
