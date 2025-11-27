@@ -607,6 +607,8 @@ namespace mgcl_bench_galerkin_optimized
         p.init();
 
         auto pd = p.getProfilingData();
+        if (pd != nullptr)
+            pd->getMeasurements().clear();
 
         for (auto gr : gridsTBT)
         {
