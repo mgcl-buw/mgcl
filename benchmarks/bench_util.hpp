@@ -420,10 +420,10 @@ namespace bench_util
             ss << std::endl;
             ss << "***DATASTART***" << std::endl;
             // ss << "gpus;spi;iters;name;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
-            ss << "gpus;ghosts;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
+            ss << "name;gpus;ghosts;mloc;nloc;oloc;mglob;nglob;oglob;minTimeInMs;medianTimeInMs;avgTimeInMs;err%" << std::endl;
             for (auto r : results)
             {
-                ss << r.gpus << ";" << r.ghosts << ";"
+                ss << r.name << ";" << r.gpus << ";" << r.ghosts << ";"
                    /* << r.name << ";" */
                    << r.mloc << ";" << r.nloc << ";" << r.oloc << ";"
                    << r.mglob << ";" << r.nglob << ";" << r.oglob
