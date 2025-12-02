@@ -126,6 +126,7 @@ TEST_CASE("bench_ghost_update_mpi_ocl")
             p->init();
 
             auto& buf = p->getLevelAt(0).getDVIn();
+            auto h_buf = buf.read(p->getCommands(), nullptr, true);
             auto mpiLevelData = p->getLevelAt(0).getMpiDataPtr();
 
             if (!printedGpu)
@@ -142,39 +143,80 @@ TEST_CASE("bench_ghost_update_mpi_ocl")
                 printedGpu = true;
             }
 
-            std::string name = std::string("ocl_mpi_N")
-                                   .append(std::to_string(m))
-                                   .append("_")
-                                   .append(std::to_string(n))
-                                   .append("_")
-                                   .append(std::to_string(o))
-                                   .append("_gh")
-                                   .append(std::to_string(ghosts));
-            bench.run(std::string(name).c_str(), [&] { //
-                MPI_Barrier(mpi_comm);
-                mgcl::MultigridEngine::updateGhosts(*p, buf, mpiLevelData, false);
-                p->getOpenCLHelper().finish();
-                MPI_Barrier(mpi_comm);
-            });
+            {
+                std::string name = std::string("ghupdate_ocl_mpi_planes_N_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o))
+                                       .append("_gh")
+                                       .append(std::to_string(ghosts));
+                bench.run(std::string(name).c_str(), [&] { //
+                    MPI_Barrier(mpi_comm);
+                    mgcl::MultigridEngine::updateGhosts(*p, buf, mpiLevelData, false);
+                    p->getOpenCLHelper().finish();
+                    MPI_Barrier(mpi_comm);
+                });
 
-            // std::cout << "rank " << mpi_rank << " done" << std::endl;
-            MPI_Barrier(mpi_comm);
+                // std::cout << "rank " << mpi_rank << " done" << std::endl;
+                MPI_Barrier(mpi_comm);
 
-            bench_util::ResultGhostUpdateMpi res;
-            res.name = name;
-            res.minTime = bench_util::getMinTime(bench, name);
-            res.medianTime = bench_util::getMedianTime(bench, name);
-            res.avgTime = bench_util::getAvgTime(bench, name);
-            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-            res.mloc = m;
-            res.nloc = n;
-            res.oloc = o;
-            res.mglob = mglob;
-            res.nglob = nglob;
-            res.oglob = oglob;
-            res.ghosts = ghosts;
-            res.gpus = mpi_size;
-            results.push_back(res);
+                bench_util::ResultGhostUpdateMpi res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.mloc = m;
+                res.nloc = n;
+                res.oloc = o;
+                res.mglob = mglob;
+                res.nglob = nglob;
+                res.oglob = oglob;
+                res.ghosts = ghosts;
+                res.gpus = mpi_size;
+                results.push_back(res);
+            }
+
+            {
+                // old ghost update copying the entire grid to host
+                std::string name = std::string("ghupdate_ocl_mpi_entiregrid_N_")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o))
+                                       .append("_gh")
+                                       .append(std::to_string(ghosts));
+                bench.run(std::string(name).c_str(), [&] { //
+                    MPI_Barrier(mpi_comm);
+                    buf.read(p->getCommands(), h_buf.get(), true);
+                    mgcl::MultigridEngine::updateGhostsSeq(*h_buf, mpiLevelData, periodic, false);
+                    buf.write(p->getCommands(), *h_buf, true);
+                    p->getOpenCLHelper().finish();
+                    MPI_Barrier(mpi_comm);
+                });
+
+                // std::cout << "rank " << mpi_rank << " done" << std::endl;
+                MPI_Barrier(mpi_comm);
+
+                bench_util::ResultGhostUpdateMpi res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.mloc = m;
+                res.nloc = n;
+                res.oloc = o;
+                res.mglob = mglob;
+                res.nglob = nglob;
+                res.oglob = oglob;
+                res.ghosts = ghosts;
+                res.gpus = mpi_size;
+                results.push_back(res);
+            }
         }
     }
 
