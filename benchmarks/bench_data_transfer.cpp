@@ -172,44 +172,44 @@ TEST_CASE("bench_data_transfer_host_device")
         //     results.push_back(res);
         // }
 
-        {
-            std::string name = std::string("device_to_host_newbuf_els")
-                                   .append(std::to_string(el));
-            bench.run(std::string(name).c_str(), [&] { //
-                ankerl::nanobench::doNotOptimizeAway(c_d.read(p.getCommands(), nullptr, true));
-                p.getOpenCLHelper().finish();
-            });
+        //     {
+        //         std::string name = std::string("device_to_host_newbuf_els")
+        //                                .append(std::to_string(el));
+        //         bench.run(std::string(name).c_str(), [&] { //
+        //             ankerl::nanobench::doNotOptimizeAway(c_d.read(p.getCommands(), nullptr, true));
+        //             p.getOpenCLHelper().finish();
+        //         });
 
-            bench_util::ResultDataTransferMpi res;
-            res.name = name;
-            res.minTime = bench_util::getMinTime(bench, name);
-            res.medianTime = bench_util::getMedianTime(bench, name);
-            res.avgTime = bench_util::getAvgTime(bench, name);
-            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-            res.elements = el;
-            res.gpus = mpi_size;
-            results.push_back(res);
-        }
+        //         bench_util::ResultDataTransferMpi res;
+        //         res.name = name;
+        //         res.minTime = bench_util::getMinTime(bench, name);
+        //         res.medianTime = bench_util::getMedianTime(bench, name);
+        //         res.avgTime = bench_util::getAvgTime(bench, name);
+        //         res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+        //         res.elements = el;
+        //         res.gpus = mpi_size;
+        //         results.push_back(res);
+        //     }
 
-        {
-            std::string name = std::string("device_to_host_to_device_els")
-                                   .append(std::to_string(el));
-            bench.run(std::string(name).c_str(), [&] { //
-                auto tmp = c_d.read(p.getCommands(), nullptr, true);
-                c_d.write(p.getCommands(), *tmp, true);
-                p.getOpenCLHelper().finish();
-            });
+        //     {
+        //         std::string name = std::string("device_to_host_to_device_els")
+        //                                .append(std::to_string(el));
+        //         bench.run(std::string(name).c_str(), [&] { //
+        //             auto tmp = c_d.read(p.getCommands(), nullptr, true);
+        //             c_d.write(p.getCommands(), *tmp, true);
+        //             p.getOpenCLHelper().finish();
+        //         });
 
-            bench_util::ResultDataTransferMpi res;
-            res.name = name;
-            res.minTime = bench_util::getMinTime(bench, name);
-            res.medianTime = bench_util::getMedianTime(bench, name);
-            res.avgTime = bench_util::getAvgTime(bench, name);
-            res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-            res.elements = el;
-            res.gpus = mpi_size;
-            results.push_back(res);
-        }
+        //         bench_util::ResultDataTransferMpi res;
+        //         res.name = name;
+        //         res.minTime = bench_util::getMinTime(bench, name);
+        //         res.medianTime = bench_util::getMedianTime(bench, name);
+        //         res.avgTime = bench_util::getAvgTime(bench, name);
+        //         res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+        //         res.elements = el;
+        //         res.gpus = mpi_size;
+        //         results.push_back(res);
+        //     }
     }
 
     bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
