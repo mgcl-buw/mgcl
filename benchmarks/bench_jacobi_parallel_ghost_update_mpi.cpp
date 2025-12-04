@@ -336,17 +336,10 @@ namespace mgcl_bench_jacobi_varying_overlapped
             }
         }
 
-        if (store_res)
-        {
-            // TODO check for mpi
-            err = mgcl::MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
-                                                      level.isCalculatedLocally());
-            mgcl::mgclCheckError(err, "Updating ghosts of dR");
-        }
-
         // copy result into dVIn if needed
         if (maxiter % 2 == 1)
-            level.getDVOut().copyTo(problem.getOpenCLHelper().getCommands(), level.getDVIn());
+            // level.getDVOut().copyTo(problem.getOpenCLHelper().getCommands(), level.getDVIn());
+            mgcl::CuboidGpu::swap(level.getDVIn(), level.getDVOut());
 
         // Update ghosts of dVIn
         err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVIn(),
@@ -824,17 +817,10 @@ namespace mgcl_bench_jacobi_varying_overlapped
         mgcl::mgclCheckError(clReleaseKernel(boundaryKernel), "Releasing boundaryKernel");
         mgcl::mgclCheckError(clReleaseKernel(innerKernel), "Releasing innerKernel");
 
-        if (store_res)
-        {
-            // TODO check for mpi
-            err = mgcl::MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
-                                                      level.isCalculatedLocally());
-            mgcl::mgclCheckError(err, "Updating ghosts of dR");
-        }
-
         // copy result into dVIn if needed
         if (maxiter % 2 == 1)
-            level.getDVOut().copyTo(problem.getOpenCLHelper().getCommands(), level.getDVIn());
+            // level.getDVOut().copyTo(problem.getOpenCLHelper().getCommands(), level.getDVIn());
+            mgcl::CuboidGpu::swap(level.getDVIn(), level.getDVOut());
 
         // Update ghosts of dVIn
         // err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVIn(),
@@ -1071,7 +1057,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
         std::vector<bench_util::ResultMpi> results;
 
-        bool return_residual = true;
+        bool return_residual = false;
         int ghosts = 1;
         int periodic = 1;
         std::stringstream kernelProfilesStream;
