@@ -26,6 +26,7 @@ using namespace std::chrono_literals;
 
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/level.hpp"
+#include "../src/mgcl/mpi_util.hpp"
 #include "../src/mgcl/multigrid_engine.hpp"
 #include "../src/mgcl/problem.hpp"
 #include "../test/test_utility.hpp"
@@ -37,6 +38,13 @@ namespace mgcl_bench_jacobi_varying_overlapped
     {
         DEFAULT,
         OVERLAPPED
+    };
+
+    enum class OverlappedKernelVersion
+    {
+        BOUNDARY_INNER_PARALLEL, // enqueue boundary and inner kernels back to back
+        EXTRACT_INNER_PARALLEL,  // enqueue extract and inner kernels back to back
+        MEMCPY_INNER_PARALLEL    // wait for extract to finish and then enqueue inner, s.t. it is overlapped with memcpy
     };
 
     using size_t3 = struct
@@ -360,6 +368,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
     namespace overlapped_helpers
     {
+
         // Starts the kernel for one iteration of Jacobi for boundary gps.
         // No ghost update included. No final residual calculation included.
         double jacobiBoundary(mgcl::Problem& problem, mgcl::Level& level,
@@ -665,7 +674,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
      * stepsPerIter is amount iterations without ghost update in-between. Ghost cells must be adequate. Defaults to 1.
      */
     double jacobiOverlapped(mgcl::Problem& problem, mgcl::Level& level, int maxiter, bool return_residual, int stepsPerIter,
-                            cl_command_queue queue2)
+                            cl_command_queue queue2, OverlappedKernelVersion kv)
     {
         int err;
         double res = -1;
@@ -796,12 +805,70 @@ namespace mgcl_bench_jacobi_varying_overlapped
 
                 // calculate boundary points and inner points in separate queues concurrently
                 overlapped_helpers::jacobiBoundary(problem, level, dVIn, dVOut, store_res, problem.getCommands(), boundaryKernel, global, local, kernelNameBoundary);
-                overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2, innerKernel, global, local, kernelNameInner);
 
-                // No need for waiting for the boundary kernel to finish, because extractBorderPlanes is in same in-order queue
-                err = mgcl::MultigridEngine::updateGhosts(problem, *ptr_dvout_wrapper,
-                                                          level.getMpiDataPtr(), level.isCalculatedLocally());
-                mgcl::mgclCheckError(err, "Updating ghosts");
+                if (kv == OverlappedKernelVersion::BOUNDARY_INNER_PARALLEL)
+                {
+                    overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2, innerKernel, global, local, kernelNameInner);
+
+                    // No need for waiting for the boundary kernel to finish, because extractBorderPlanes is in same in-order queue
+                    err = mgcl::MultigridEngine::updateGhosts(problem, *ptr_dvout_wrapper,
+                                                              level.getMpiDataPtr(), level.isCalculatedLocally());
+                    mgcl::mgclCheckError(err, "Updating ghosts");
+                }
+                else
+                {
+                    auto& d_buf = *ptr_dvout_wrapper;
+                    if (problem.getDPlanesBufPtr() == nullptr)
+                        error("MultigridEngine::updateGhostsOclMpi: dPlanesBufPtr is null");
+
+                    // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
+                    // TODO maybe disable check in UNSAFE mode
+                    int yz = d_buf.getNgh() * d_buf.getOgh();
+                    int xz = d_buf.getMgh() * d_buf.getOgh();
+                    int xy = d_buf.getMgh() * d_buf.getNgh();
+                    int ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
+
+                    auto dPlanesBuf = problem.getDPlanesBufPtr();
+                    if (dPlanesBuf->getSize() < ressize)
+                        error("MultigridEngine::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf->getSize()));
+
+                    auto hPlanesBufSend = problem.getHPlanesBufSendPtr();
+                    auto hPlanesBufRecv = problem.getHPlanesBufRecvPtr();
+                    if (hPlanesBufSend->size() < ressize || hPlanesBufRecv->size() < ressize)
+                        throw "MultigridEngine::updateGhostsOclMpi: hPlanesBufSend or hPlanesBufRecv is too small. Need at least " +
+                            std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend->size()) +
+                            " (send) and " + std::to_string(hPlanesBufRecv->size()) + " (recv)";
+
+                    // Extract border planes from the buffer
+                    // d_buf.extractBorderPlanes(problem.getCommands(), problem.getProgram(),
+                    //                           dPlanesBuf, hPlanesBufSend,
+                    //                           &problem.getKernelConfig(), problem.getProfilingData());
+                    d_buf.extractBorderPlanes(problem.getCommands(), problem.getProgram(),
+                                              dPlanesBuf, nullptr,
+                                              &problem.getKernelConfig(), problem.getProfilingData(), false);
+                    auto& sbuf = *hPlanesBufSend;
+                    auto& rbuf = *hPlanesBufRecv;
+
+                    if (kv == OverlappedKernelVersion::MEMCPY_INNER_PARALLEL)
+                    {
+                        problem.finish(); // if we wait here, inner Jacobi and memcpy will be executed in parallel
+                    }
+
+                    overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2, innerKernel, global, local, kernelNameInner);
+
+                    dPlanesBuf->read(problem.getCommands(), hPlanesBufSend->data(), true, ressize, nullptr);
+
+                    // Send our planes to neighbours and receive their planes
+                    mgcl::mpi_util::sendBorderPlanes(d_buf.getMgh(), d_buf.getNgh(), d_buf.getOgh(),
+                                                     d_buf.getGhostsM(), d_buf.getGhostsN(), d_buf.getGhostsO(), 1,
+                                                     sbuf, rbuf, *level.getMpiDataPtr());
+
+                    // Paste planes back into the buffer.
+                    dPlanesBuf->write(problem.getCommands(), rbuf, false, ressize, problem.getProfilingData());
+                    d_buf.pasteGhostsFromBorderPlanes(problem.getContext(), problem.getCommands(), problem.getProgram(),
+                                                      dPlanesBuf, nullptr,
+                                                      &problem.getKernelConfig(), problem.getProfilingData());
+                }
 
                 // Wait for inner kernel and ghost update to finish
                 mgcl::mgclCheckError(clFinish(problem.getCommands()), "clFinish queue1");
@@ -1242,7 +1309,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
                         cl_command_queue queue2 = clCreateCommandQueue(p.getContext(), p.getOpenCLHelper().getDeviceId(), props, &err);
                         mgcl::mgclCheckError(err, "Creating command queue");
 
-                        std::string name = std::string("jacobi_overlapped_")
+                        std::string name = std::string("jacobi_overlapped_boundaryInnerParallel_")
                                                .append(std::to_string(maxiter))
                                                .append("iters_")
                                                .append(std::to_string(mglob))
@@ -1252,7 +1319,99 @@ namespace mgcl_bench_jacobi_varying_overlapped
                                                .append(std::to_string(oglob));
 
                         bench.run(std::string(name).c_str(), [&] { //
-                            jacobiOverlapped(p, lv0, maxiter, return_residual, stepsPerIter, queue2);
+                            jacobiOverlapped(p, lv0, maxiter, return_residual, stepsPerIter, queue2, OverlappedKernelVersion::BOUNDARY_INNER_PARALLEL);
+                            p.finish();
+                        });
+
+                        bench_util::ResultMpi res;
+                        res.name = name;
+                        res.minTime = bench_util::getMinTime(bench, name);
+                        res.medianTime = bench_util::getMedianTime(bench, name);
+                        res.avgTime = bench_util::getAvgTime(bench, name);
+                        res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                        res.m = ml;
+                        res.n = nl;
+                        res.o = ol;
+                        res.mglob = mglob;
+                        res.nglob = nglob;
+                        res.oglob = oglob;
+                        res.gpus = mpi_size;
+                        res.LT = -1;
+                        results.push_back(res);
+
+                        if (CLI_ARGS::checkResults)
+                        {
+                            v_out_overlapped = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                            lv0.getDVIn().read(p.getCommands(), v_out_overlapped.get(), true);
+                        }
+                    }
+
+                    {
+                        lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
+                        lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
+
+                        int err;
+                        cl_command_queue_properties props = p.isProfilingEnabled() ? CL_QUEUE_PROFILING_ENABLE : 0;
+                        cl_command_queue queue2 = clCreateCommandQueue(p.getContext(), p.getOpenCLHelper().getDeviceId(), props, &err);
+                        mgcl::mgclCheckError(err, "Creating command queue");
+
+                        std::string name = std::string("jacobi_overlapped_extractInnerParallel")
+                                               .append(std::to_string(maxiter))
+                                               .append("iters_")
+                                               .append(std::to_string(mglob))
+                                               .append("_")
+                                               .append(std::to_string(nglob))
+                                               .append("_")
+                                               .append(std::to_string(oglob));
+
+                        bench.run(std::string(name).c_str(), [&] { //
+                            jacobiOverlapped(p, lv0, maxiter, return_residual, stepsPerIter, queue2, OverlappedKernelVersion::EXTRACT_INNER_PARALLEL);
+                            p.finish();
+                        });
+
+                        bench_util::ResultMpi res;
+                        res.name = name;
+                        res.minTime = bench_util::getMinTime(bench, name);
+                        res.medianTime = bench_util::getMedianTime(bench, name);
+                        res.avgTime = bench_util::getAvgTime(bench, name);
+                        res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                        res.m = ml;
+                        res.n = nl;
+                        res.o = ol;
+                        res.mglob = mglob;
+                        res.nglob = nglob;
+                        res.oglob = oglob;
+                        res.gpus = mpi_size;
+                        res.LT = -1;
+                        results.push_back(res);
+
+                        if (CLI_ARGS::checkResults)
+                        {
+                            v_out_overlapped = std::make_unique<mgcl::Cuboid>(ml, nl, ol, ghosts, ghosts, ghosts);
+                            lv0.getDVIn().read(p.getCommands(), v_out_overlapped.get(), true);
+                        }
+                    }
+
+                    {
+                        lv0.getDVIn().fill(p.getProgram(), p.getCommands(), 0.0, false, nullptr, nullptr);
+                        lv0.getDVIn().fill1dIndex(p.getProgram(), p.getCommands(), true, true, nullptr, nullptr);
+
+                        int err;
+                        cl_command_queue_properties props = p.isProfilingEnabled() ? CL_QUEUE_PROFILING_ENABLE : 0;
+                        cl_command_queue queue2 = clCreateCommandQueue(p.getContext(), p.getOpenCLHelper().getDeviceId(), props, &err);
+                        mgcl::mgclCheckError(err, "Creating command queue");
+
+                        std::string name = std::string("jacobi_overlapped_memcpyInnerParallel")
+                                               .append(std::to_string(maxiter))
+                                               .append("iters_")
+                                               .append(std::to_string(mglob))
+                                               .append("_")
+                                               .append(std::to_string(nglob))
+                                               .append("_")
+                                               .append(std::to_string(oglob));
+
+                        bench.run(std::string(name).c_str(), [&] { //
+                            jacobiOverlapped(p, lv0, maxiter, return_residual, stepsPerIter, queue2, OverlappedKernelVersion::MEMCPY_INNER_PARALLEL);
                             p.finish();
                         });
 
