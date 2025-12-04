@@ -2,8 +2,10 @@
 
 #include "catch2/catch_test_macros.hpp"
 
+#include <CL/cl.h>
 #include <chrono>
 #include <iostream>
+#include <mpi.h>
 #include <vector>
 using namespace std::chrono_literals;
 
@@ -194,6 +196,591 @@ TEST_CASE("bench_ghost_update_mpi_ocl")
                     buf.read(p->getCommands(), h_buf.get(), true);
                     mgcl::MultigridEngine::updateGhostsSeq(*h_buf, mpiLevelData, periodic, false);
                     buf.write(p->getCommands(), *h_buf, true);
+                    p->getOpenCLHelper().finish();
+                    MPI_Barrier(mpi_comm);
+                });
+
+                // std::cout << "rank " << mpi_rank << " done" << std::endl;
+                MPI_Barrier(mpi_comm);
+
+                bench_util::ResultGhostUpdateMpi res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.mloc = m;
+                res.nloc = n;
+                res.oloc = o;
+                res.mglob = mglob;
+                res.nglob = nglob;
+                res.oglob = oglob;
+                res.ghosts = ghosts;
+                res.gpus = mpi_size;
+                results.push_back(res);
+            }
+        }
+    }
+
+    bench_util::printCsvFormat(results, mpi_comm, mpi_rank);
+
+    MPI_Barrier(mpi_comm);
+}
+
+namespace mgclBenchGhostUpdateSplitFused
+{
+    using namespace mgcl;
+    struct Args
+    {
+        CuboidGpu& d_buf;                    // buffer to update ghosts of
+        BufferGpu& dPlanesBuf;               // GPU buffer that holds the border planes
+        std::vector<double>& hPlanesBufSend; // host buffer for sending data via MPI
+        std::vector<double>& hPlanesBufRecv; // host buffer for receiving data via MPI
+
+        cl_program program;
+        cl_command_queue queue;
+        cl_context context;
+
+        MPILevelData& mpiData;
+
+        conf::KernelConfig* kernelConfig;
+        ProfilingData* pd;
+    };
+
+    void sendBorderPlanesInterleaved(int mgh, int ngh, int ogh, int ghosts_m, int ghosts_n, int ghosts_o,
+                                     int stencilWidth, BufferGpu& dPlanesBuf,
+                                     cl_command_queue queue,
+                                     std::vector<double>& sbuf, std::vector<double>& rbuf, MPILevelData& mpiData)
+    {
+        // Sizes of planes
+        int yz = ngh * ogh;
+        int xz = mgh * ogh;
+        int xy = mgh * ngh;
+
+        // Size of planes times amount of ghosts in that direction, i.e. number of grid points that are sent in that
+        // direction
+        int yzgh = yz * ghosts_m;
+        int xzgh = xz * ghosts_n;
+        int xygh = xy * ghosts_o;
+
+        int stencilSize = stencilWidth * stencilWidth * stencilWidth;
+
+        int m = mgh - 2 * ghosts_m;
+        int n = ngh - 2 * ghosts_n;
+        int o = ogh - 2 * ghosts_o;
+
+        // int base_yz_front = 0;
+        int base_yz_back = yzgh * stencilSize;
+        int base_xz_top = (2 * yzgh) * stencilSize;
+        int base_xz_bottom = (2 * yzgh + xzgh) * stencilSize;
+        int base_xy_left = (2 * yzgh + 2 * xzgh) * stencilSize;
+        int base_xy_right = (2 * yzgh + 2 * xzgh + xygh) * stencilSize;
+
+        int numElementsFrontBack = yzgh * stencilSize * 2;
+        int numElementsTopBottom = xzgh * stencilSize * 2;
+        int numElementsLeftRight = xygh * stencilSize * 2;
+
+        // Send planes to neighbors
+        int myid, err;
+        MPI_Comm_rank(mpiData.comm, &myid);
+
+        auto sbuf_raw = sbuf.data();
+
+        cl_event evRead1;
+        cl_event evRead2;
+        cl_event evRead3;
+
+        // read front and back, wait for it and enqueue read of top and bottom
+        err = clEnqueueReadBuffer(queue, dPlanesBuf.getBuf(), CL_FALSE, 0, sizeof(double) * numElementsFrontBack, sbuf_raw, 0, nullptr, &evRead1);
+        mgclCheckError(err, "clEnqueueReadBuffer 1");
+        err = clEnqueueReadBuffer(queue, dPlanesBuf.getBuf(), CL_FALSE, sizeof(double) * base_xz_top, sizeof(double) * numElementsTopBottom, &sbuf_raw[base_xz_top], 0, nullptr, &evRead2);
+        mgclCheckError(err, "clEnqueueReadBuffer 2");
+        err = clEnqueueReadBuffer(queue, dPlanesBuf.getBuf(), CL_FALSE, sizeof(double) * base_xy_left, sizeof(double) * numElementsLeftRight, &sbuf_raw[base_xy_left], 0, nullptr, &evRead3);
+        mgclCheckError(err, "clEnqueueReadBuffer 3");
+        // mgclCheckError(clFinish(queue), "clFinish");
+
+        // halt execution until first read is finished
+        mgclCheckError(clWaitForEvents(1, &evRead1), "clWaitForEvents evRead1");
+
+        // Send front planes to the back
+        err = MPI_Sendrecv(static_cast<void*>(sbuf.data()), yzgh * stencilSize, MPI_DOUBLE, mpiData.back[0], 0,
+                           static_cast<void*>(rbuf.data()), yzgh * stencilSize, MPI_DOUBLE, mpiData.front[0], 0,
+                           mpiData.comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
+
+        // Send back planes to the front
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_yz_back])), yzgh * stencilSize, MPI_DOUBLE, mpiData.front[0], 0,
+                           static_cast<void*>(&(rbuf[base_yz_back])), yzgh * stencilSize, MPI_DOUBLE, mpiData.back[0], 0,
+                           mpiData.comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
+
+        // Asynchronously copy front and back to device again
+        err = clEnqueueWriteBuffer(queue, dPlanesBuf.getBuf(), CL_FALSE, 0, sizeof(double) * numElementsFrontBack, sbuf_raw, 0, nullptr, nullptr);
+        mgclCheckError(err, "clEnqueueWriteBuffer 1");
+
+        // halt execution until second read is finished
+        mgclCheckError(clWaitForEvents(1, &evRead2), "clWaitForEvents evRead2");
+
+        // Write received edges of cuboid to send buffer
+        // i0: i index of recv buffers for yz plane (always all i indices)
+        // i1: i index of send buffers xz back ghosts
+        // j0: j index of send buffers for xz plane (always all j indices)
+        // j1: j index of recv buffer yz top edge
+        // j2: j index of recv buffer yz bottom edge
+        for (int st = 0; st < stencilSize; st++)
+            for (int i0 = 0, i1 = m + ghosts_m;
+                 i0 < ghosts_m;
+                 i0++, i1++)
+                for (int j0 = 0, j1 = ghosts_n, j2 = n;
+                     j0 < ghosts_n;
+                     j0++, j1++, j2++)
+                    for (int k = 0; k < ogh; k++)
+                    {
+                        // Upper front edge - Write ghosts in the front (from back recv buffer) to xz top send buffer
+                        sbuf[st * xzgh + base_xz_top + j0 * xz + i0 * ogh + k] = rbuf[st * yzgh + base_yz_back + i0 * yz + j1 * ogh + k];
+
+                        // Lower front edge - Write ghosts in the front (from back recv buffer) to xz bottom send buffer
+                        sbuf[st * xzgh + base_xz_bottom + j0 * xz + i0 * ogh + k] = rbuf[st * yzgh + base_yz_back + i0 * yz + j2 * ogh + k];
+
+                        // Upper back edge - Write ghosts in the back (from front recv buffer, base 0) to xz top send buffer
+                        sbuf[st * xzgh + base_xz_top + j0 * xz + i1 * ogh + k] = rbuf[st * yzgh + i0 * yz + j1 * ogh + k];
+
+                        // Lower back edge - Write ghosts in the back (from front recv buffer, base 0) to xz bottom send buffer
+                        sbuf[st * xzgh + base_xz_bottom + j0 * xz + i1 * ogh + k] = rbuf[st * yzgh + i0 * yz + j2 * ogh + k];
+                    }
+
+        // Send top planes to the bottom
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xz_top])), xzgh * stencilSize, MPI_DOUBLE, mpiData.down[0], 0,
+                           static_cast<void*>(&(rbuf[base_xz_top])), xzgh * stencilSize, MPI_DOUBLE, mpiData.up[0], 0,
+                           mpiData.comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
+
+        // Send bottom planes to the top
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xz_bottom])), xzgh * stencilSize, MPI_DOUBLE, mpiData.up[0], 0,
+                           static_cast<void*>(&(rbuf[base_xz_bottom])), xzgh * stencilSize, MPI_DOUBLE, mpiData.down[0], 0,
+                           mpiData.comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
+
+        // Asynchronously copy top and bottom to device again
+        err = clEnqueueWriteBuffer(queue, dPlanesBuf.getBuf(), CL_FALSE, sizeof(double) * base_xz_top, sizeof(double) * numElementsTopBottom, &sbuf_raw[base_xz_top], 0, nullptr, &evRead2);
+        mgclCheckError(err, "clEnqueueWriteBuffer 2");
+
+        // halt execution until last read is finished
+        mgclCheckError(clWaitForEvents(1, &evRead3), "clWaitForEvents evRead3");
+
+        // Write received left torus of cuboid to send buffer
+        // k0: k index of send buffers for xy planes (left and right)
+        // k1: k index of recv buffers for copy into left send buffer
+        // k2: k index of recv buffers for copy into right send buffer
+        for (int st = 0; st < stencilSize; st++)
+            for (int k0 = 0, k1 = ghosts_o, k2 = o;
+                 k0 < ghosts_o;
+                 k0++, k1++, k2++)
+            {
+
+                // Copying from yz planes (front back)
+                // i0: i index of recv buffers for yz plane (always all i indices)
+                // i1: i index of send buffers xz back ghosts
+                for (int i0 = 0, i1 = m + ghosts_m;
+                     i0 < ghosts_m;
+                     i0++, i1++)
+                    for (int j = ghosts_n; j < ghosts_n + n; j++)
+                    {
+                        // Left front face - Write ghosts in the send left buffer from recv back buffer
+                        sbuf[st * xygh + base_xy_left + k0 * xy + i0 * ngh + j] = rbuf[st * yzgh + base_yz_back + i0 * yz + j * ogh + k1];
+
+                        // Left back face - Write ghosts in the send left buffer from recv front buffer
+                        sbuf[st * xygh + base_xy_left + k0 * xy + i1 * ngh + j] = rbuf[st * yzgh + i0 * yz + j * ogh + k1];
+
+                        // Right front face - Write ghosts in the send right buffer from recv back buffer
+                        sbuf[st * xygh + base_xy_right + k0 * xy + i0 * ngh + j] = rbuf[st * yzgh + base_yz_back + i0 * yz + j * ogh + k2];
+
+                        // Right back face - Write ghosts in the send right buffer from recv front buffer
+                        sbuf[st * xygh + base_xy_right + k0 * xy + i1 * ngh + j] = rbuf[st * yzgh + i0 * yz + j * ogh + k2];
+                    }
+
+                // Copying from xz planes (top bottom)
+                // j0: j index of recv buffers yz bottom and send both left and right
+                // j1: j index of send buffers xy bottom ghosts (recv top)
+                for (int i = 0; i < mgh; i++)
+                    for (int j0 = 0, j1 = n + ghosts_n;
+                         j0 < ghosts_n;
+                         j0++, j1++)
+                    {
+                        // Left top edge - Write ghosts in the send left buffer from recv bottom buffer
+                        sbuf[st * xygh + base_xy_left + k0 * xy + i * ngh + j0] = rbuf[st * xzgh + base_xz_bottom + j0 * xz + i * ogh + k1];
+
+                        // Left bottom edge - Write ghosts in the send left buffer from recv top buffer
+                        sbuf[st * xygh + base_xy_left + k0 * xy + i * ngh + j1] = rbuf[st * xzgh + base_xz_top + j0 * xz + i * ogh + k1];
+
+                        // Right top edge - Write ghosts in the send left buffer from recv bottom buffer
+                        sbuf[st * xygh + base_xy_right + k0 * xy + i * ngh + j0] = rbuf[st * xzgh + base_xz_bottom + j0 * xz + i * ogh + k2];
+
+                        // Right bottom face - Write ghosts in the send right buffer from recv top buffer
+                        sbuf[st * xygh + base_xy_right + k0 * xy + i * ngh + j1] = rbuf[st * xzgh + base_xz_top + j0 * xz + i * ogh + k2];
+                    }
+            }
+
+        // Send left planes to the right
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xy_left])), xygh * stencilSize, MPI_DOUBLE, mpiData.right[0], 0,
+                           static_cast<void*>(&(rbuf[base_xy_left])), xygh * stencilSize, MPI_DOUBLE, mpiData.left[0], 0,
+                           mpiData.comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
+
+        // Send right planes to the left
+        err = MPI_Sendrecv(static_cast<void*>(&(sbuf[base_xy_right])), xygh * stencilSize, MPI_DOUBLE, mpiData.left[0], 0,
+                           static_cast<void*>(&(rbuf[base_xy_right])), xygh * stencilSize, MPI_DOUBLE, mpiData.right[0], 0,
+                           mpiData.comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData.comm, err, "MPI_Sendrecv");
+
+        err = clEnqueueWriteBuffer(queue, dPlanesBuf.getBuf(), CL_FALSE, sizeof(double) * base_xy_left, sizeof(double) * numElementsLeftRight, &sbuf_raw[base_xy_left], 0, nullptr, &evRead3);
+        mgclCheckError(err, "clEnqueueWriteBuffer 3");
+
+        clReleaseEvent(evRead1);
+        clReleaseEvent(evRead2);
+        clReleaseEvent(evRead3);
+    }
+
+    void extractBorderPlanesWithoutRead(CuboidGpu& c,
+                                        cl_command_queue commands, cl_program program,
+                                        BufferGpu& d_target,
+                                        mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
+
+    {
+        int m = c.getM();
+        int n = c.getN();
+        int o = c.getO();
+        int mgh = c.getMgh();
+        int ngh = c.getNgh();
+        int ogh = c.getOgh();
+        int ghosts_m = c.getGhostsM();
+        int ghosts_n = c.getGhostsN();
+        int ghosts_o = c.getGhostsO();
+        cl_context context = c.getContext();
+        auto buffer = c.getBuffer();
+
+        // Plane sizes
+        int yz = ngh * ogh;
+        int xz = mgh * ogh;
+        int xy = mgh * ngh;
+        int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
+
+        if (ghosts_m > m || ghosts_n > n || ghosts_o > o)
+            error("CuboidGpu::extractBorderPlanes: Only defined for ghosts <= m, n, o");
+
+        int err;
+
+        // Create the compute kernel from the program
+        const char* kernelName = "extract_border_planes";
+        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
+        mgcl::mgclCheckError(err, "clCreateKernel");
+
+        // assign kernel arguments
+        cl_mem d_target_buffer = d_target.getBuf();
+        int pos = 0;
+        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buffer);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_target_buffer);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_n);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
+        mgcl::mgclCheckError(err, "Setting kernel arguments");
+
+        // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
+        size_t global = ressize;
+        size_t local = 32;
+        // Apply kernel config, if available
+        if (conf)
+        {
+            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, global);
+            local = c[0];
+        }
+
+        if (global % local != 0)
+            global += local - (global % local);
+
+        cl_event ev;
+
+        // enqueue kernel
+        err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
+        mgcl::mgclCheckError(err, "Enqueueing extract_border_planes kernel");
+
+        if (pd != nullptr)
+        {
+            pd->addMeasurement(commands, ev, kernelName,
+                               {global, 0, 0},
+                               {local, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        // mgcl::mgclCheckError(clFinish(commands), "clFinish");
+
+        err = clReleaseKernel(kernel);
+        mgcl::mgclCheckError(err, "Releasing extract_border_planes kernel");
+
+        // Read into h_target
+        // d_target->read(commands, retraw->data(), true, ressize, pd);
+
+        // return h_target;
+    }
+
+    // void updateGhostsOclMpi(Problem& p, CuboidGpu& d_buf, MPILevelData& mpiData,
+    //                         bool periodic, bool forceLocal)
+    void updateGhostsOclMpi(Args& args)
+    {
+        // Read back from GPU and update ghosts on host in order to update neighbouring nodes, too.
+        // auto tmp = d_buf.read(commands, nullptr, true);
+        // MultigridEngine::updateGhostsSeq(*tmp, &mpiData, periodic, forceLocal);
+        // d_buf.write(commands, *tmp, true);
+
+        auto& d_buf = args.d_buf;
+
+        // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
+        // TODO maybe disable check in UNSAFE mode
+        int yz = d_buf.getNgh() * d_buf.getOgh();
+        int xz = d_buf.getMgh() * d_buf.getOgh();
+        int xy = d_buf.getMgh() * d_buf.getNgh();
+        int ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
+
+        auto& dPlanesBuf = args.dPlanesBuf;
+        if (dPlanesBuf.getSize() < ressize)
+            error("MultigridEngine::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf.getSize()));
+
+        auto& hPlanesBufSend = args.hPlanesBufSend;
+        auto& hPlanesBufRecv = args.hPlanesBufRecv;
+        if (hPlanesBufSend.size() < ressize || hPlanesBufRecv.size() < ressize)
+            throw "MultigridEngine::updateGhostsOclMpi: hPlanesBufSend or hPlanesBufRecv is too small. Need at least " +
+                std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend.size()) +
+                " (send) and " + std::to_string(hPlanesBufRecv.size()) + " (recv)";
+
+        // Extract border planes from the buffer but don't read yet
+        extractBorderPlanesWithoutRead(d_buf, args.queue, args.program,
+                                       dPlanesBuf,
+                                       args.kernelConfig, args.pd);
+
+        // Read planes from device, send our planes to neighbours and receive their planes and write back to device
+        sendBorderPlanesInterleaved(d_buf.getMgh(), d_buf.getNgh(), d_buf.getOgh(),
+                                    d_buf.getGhostsM(), d_buf.getGhostsN(), d_buf.getGhostsO(), 1,
+                                    dPlanesBuf, args.queue,
+                                    args.hPlanesBufSend, args.hPlanesBufRecv, args.mpiData);
+
+        // dPlanesBuf.write(args.queue, hPlanesBufRecv, false, ressize, args.pd);
+        d_buf.pasteGhostsFromBorderPlanes(args.context, args.queue, args.program,
+                                          &dPlanesBuf, nullptr,
+                                          args.kernelConfig, args.pd);
+    }
+
+}
+
+// Runs ghost update using MPI and OCL, as it happens between Jacobi iterations.
+// Compares version a: reading entire buffer from device to host, send via MPI and write back to device vs.
+// b: interleaving copies between device and host with MPI transfer
+// Run with e.g.: mpiexec -n 4 benchmarks bench_ghost_update_mpi_ocl
+TEST_CASE("benchGhostUpdateMpiOclWholeVsInterleaved")
+{
+    using std::min;
+
+    if (CLI_ARGS::grids.size() == 0 && (CLI_ARGS::gridsMin.size() == 0 || CLI_ARGS::gridsMax.size() == 0))
+        throw "Need to specify at least one local grid size, e.g. using --grids 4,8,16 or --gridsMin 4,4,4 AND --gridsMax 32,32,32";
+
+    // build grids to be tested from CLI args
+    std::vector<std::vector<int>> gridsTBT;
+    for (auto N : CLI_ARGS::grids)
+        gridsTBT.push_back({N, N, N});
+    if (CLI_ARGS::gridsMin.size() > 0 && CLI_ARGS::gridsMax.size() > 0)
+        for (int m = CLI_ARGS::gridsMin[0]; m <= CLI_ARGS::gridsMax[0]; m *= 2)
+            for (int n = CLI_ARGS::gridsMin[1]; n <= CLI_ARGS::gridsMax[1]; n *= 2)
+                for (int o = CLI_ARGS::gridsMin[2]; o <= CLI_ARGS::gridsMax[2]; o *= 2)
+                    gridsTBT.push_back({m, n, o});
+
+    // Check if mpi is initialized
+    int isInitialized = 0;
+    MPI_Initialized(&isInitialized);
+    REQUIRE(isInitialized);
+
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
+
+    // Check number of processes
+    int mpi_size = -1;
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    REQUIRE(mpi_size > 1);
+
+    int periodic = 1;
+
+    /* MPI variables */
+    int mpi_rank;
+    int mpi_dims[3] = {0, 0, 0};
+    int mpi_periods[3] = {periodic, periodic, periodic};
+    int mpi_coords[3];
+
+    /* Initialize cartesian process grid */
+    MPI_Comm_size(mpi_comm, &mpi_size);
+    MPI_Dims_create(mpi_size, 3, mpi_dims);
+    MPI_Cart_create(mpi_comm, 3, mpi_dims, mpi_periods, 1, &mpi_comm);
+    MPI_Comm_rank(mpi_comm, &mpi_rank);
+    MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
+
+    if (mpi_rank == 0)
+    {
+        std::cout << "Testing the following grid sizes" << std::endl;
+        for (auto gr : gridsTBT)
+        {
+            int m = gr[0];
+            int n = gr[1];
+            int o = gr[2];
+            std::cout << "  local size: " << m << "," << n << "," << o << ", global size: "
+                      << m * mpi_dims[0] << "," << n * mpi_dims[1] << "," << o * mpi_dims[2] << std::endl;
+        }
+    }
+    MPI_Barrier(mpi_comm);
+
+    int maxGhosts = 3;
+    std::vector<bench_util::ResultGhostUpdateMpi> results;
+
+    bool printedGpu = false;
+    for (auto gr : gridsTBT)
+    {
+        int m = gr[0];
+        int n = gr[1];
+        int o = gr[2];
+        int mglob = m * mpi_dims[0];
+        int nglob = n * mpi_dims[1];
+        int oglob = o * mpi_dims[2];
+        double hm = 1.0 / (double)mglob;
+        double hn = 1.0 / (double)nglob;
+        double ho = 1.0 / (double)oglob;
+
+        mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
+        mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_7POINT;
+
+        ankerl::nanobench::Bench bench;
+        bench.timeUnit(1ms, "ms")
+            .epochs(CLI_ARGS::bench_epochs)
+            .epochIterations(CLI_ARGS::bench_iterations)
+            // .minEpochTime(100ms)
+            .relative(CLI_ARGS::jacobiIters.size() > 1);
+
+        if (mpi_rank > 0)
+            bench.output(nullptr);
+
+        for (int ghosts = 1; ghosts <= maxGhosts; ghosts++)
+        {
+            auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+            auto r = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+            auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts, ghosts, ghosts);
+            v->fillRandom();
+            f->fillRandom();
+
+            auto p = std::make_shared<mgcl::Problem>(m, n, o, f, v, mglob, nglob, oglob);
+            p->setMpiComm(mpi_comm);
+            p->setGhosts(ghosts);
+            p->setGhostsIn(ghosts);
+            p->setUseOpencl(true);
+            p->setDeviceType(CL_DEVICE_TYPE_GPU);
+            p->setSilent(true);
+            if (p->getStencilType() == mgcl::MGCL_VARYING)
+                p->getStencilValues()->fillRandom();
+            p->init();
+
+            auto& buf = p->getLevelAt(0).getDVIn();
+            auto h_buf = buf.read(p->getCommands(), nullptr, true);
+            auto mpiLevelData = p->getLevelAt(0).getMpiDataPtr();
+
+            if (!printedGpu)
+            {
+                for (int i = 0; i < mpi_size; i++)
+                {
+                    MPI_Barrier(mpi_comm);
+                    if (i == mpi_rank)
+                    {
+                        std::cout << "on rank " << mpi_rank << ", GPU info: ";
+                        p->getOpenCLHelper().outputDeviceInfo();
+                    }
+                }
+                printedGpu = true;
+            }
+
+            {
+                std::string name = std::string("ghupdate_ocl_mpi_fused_N")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o))
+                                       .append("_gh")
+                                       .append(std::to_string(ghosts));
+                bench.run(std::string(name).c_str(), [&] { //
+                    MPI_Barrier(mpi_comm);
+                    mgcl::MultigridEngine::updateGhosts(*p, buf, mpiLevelData, false);
+                    p->getOpenCLHelper().finish();
+                    MPI_Barrier(mpi_comm);
+                });
+
+                // std::cout << "rank " << mpi_rank << " done" << std::endl;
+                MPI_Barrier(mpi_comm);
+
+                bench_util::ResultGhostUpdateMpi res;
+                res.name = name;
+                res.minTime = bench_util::getMinTime(bench, name);
+                res.medianTime = bench_util::getMedianTime(bench, name);
+                res.avgTime = bench_util::getAvgTime(bench, name);
+                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+                res.mloc = m;
+                res.nloc = n;
+                res.oloc = o;
+                res.mglob = mglob;
+                res.nglob = nglob;
+                res.oglob = oglob;
+                res.ghosts = ghosts;
+                res.gpus = mpi_size;
+                results.push_back(res);
+            }
+
+            {
+                // {
+                //     CuboidGpu& d_buf;                    // buffer to update ghosts of
+                //     BufferGpu& dPlanesBuf;               // GPU buffer that holds the border planes
+                //     std::vector<double>& hPlanesBufSend; // host buffer for sending data via MPI
+                //     std::vector<double>& hPlanesBufRecv; // host buffer for receiving data via MPI
+
+                //     cl_program program;
+                //     cl_command_queue queue;
+                //     cl_context context;
+
+                //     MPILevelData& mpiData;
+
+                //     conf::KernelConfig* kernelConfig;
+                //     ProfilingData* pd;
+                // };
+                mgclBenchGhostUpdateSplitFused::Args args{
+                    buf,
+                    p->getDPlanesBuf(),
+                    p->getHPlanesBufSend(),
+                    p->getHPlanesBufRecv(),
+                    p->getProgram(),
+                    p->getCommands(),
+                    p->getContext(),
+                    *mpiLevelData,
+                    &p->getKernelConfig(),
+                    p->getProfilingData()
+
+                };
+                std::string name = std::string("ghupdate_ocl_mpi_interleaved_N")
+                                       .append(std::to_string(m))
+                                       .append("_")
+                                       .append(std::to_string(n))
+                                       .append("_")
+                                       .append(std::to_string(o))
+                                       .append("_gh")
+                                       .append(std::to_string(ghosts));
+                bench.run(std::string(name).c_str(), [&] { //
+                    MPI_Barrier(mpi_comm);
+                    mgclBenchGhostUpdateSplitFused::updateGhostsOclMpi(args);
                     p->getOpenCLHelper().finish();
                     MPI_Barrier(mpi_comm);
                 });
