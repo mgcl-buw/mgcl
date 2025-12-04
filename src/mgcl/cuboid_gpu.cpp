@@ -549,11 +549,14 @@ namespace mgcl
      * @param program OpenCL program
      * @param d_target CuboidGpu that data gets extracted into. If nullptr, a new CuboidGpu is created temporarily.
      * @param h_target Cuboid that data gets extracted into. If target is nullptr, a new Cuboid is created and returned.
+     * @param readResult If true, we wait for the kernel to finish and read the result into h_target (or return it as
+     *                   newly created vector). If false, we neither wait for the kernel to finish nor read the result.
      * @return std::unique_ptr<Cuboid>
      */
     std::unique_ptr<std::vector<double>> CuboidGpu::extractBorderPlanes(cl_command_queue commands, cl_program program,
                                                                         BufferGpu* d_target, std::vector<double>* h_target,
-                                                                        mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
+                                                                        mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd,
+                                                                        bool readResult)
     {
         // Plane sizes
         int yz = ngh * ogh;
@@ -567,7 +570,7 @@ namespace mgcl
         // Create return buffer, if not provided
         std::unique_ptr<std::vector<double>> ret = nullptr;
         std::vector<double>* retraw = h_target;
-        if (h_target == nullptr)
+        if (h_target == nullptr && readResult)
         {
             ret = std::make_unique<std::vector<double>>(ressize);
             retraw = ret.get();
@@ -632,13 +635,16 @@ namespace mgcl
         }
         mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
-        mgcl::mgclCheckError(clFinish(commands), "clFinish");
-
         err = clReleaseKernel(kernel);
         mgcl::mgclCheckError(err, "Releasing extract_border_planes kernel");
 
-        // Read into h_target
-        d_target->read(commands, retraw->data(), true, ressize, pd);
+        if (readResult)
+        {
+            mgcl::mgclCheckError(clFinish(commands), "clFinish");
+
+            // Read into h_target
+            d_target->read(commands, retraw->data(), true, ressize, pd);
+        }
 
         if (createdDTarget)
             delete d_target;

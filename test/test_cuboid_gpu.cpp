@@ -547,15 +547,15 @@ TEST_CASE("CuboidGpu::extract_border_planes", "[ocl]")
 
         {
             mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 2, 1, 1);
-            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
+            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr, true));
         }
         {
             mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 2, 1);
-            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
+            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr, true));
         }
         {
             mgcl::CuboidGpu c(p.getContext(), CL_MEM_READ_WRITE, 1, 1, 1, 1, 1, 2);
-            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr));
+            REQUIRE_THROWS(c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr, true));
         }
     }
 
@@ -635,7 +635,7 @@ TEST_CASE("CuboidGpu::extract_border_planes", "[ocl]")
 
         SECTION("no_reuse")
         {
-            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr);
+            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, nullptr, nullptr, true);
             REQUIRE(ret != nullptr);
             check(*ret);
         }
@@ -646,7 +646,7 @@ TEST_CASE("CuboidGpu::extract_border_planes", "[ocl]")
             std::fill(h_ret.begin(), h_ret.end(), -1);
             mgcl::BufferGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, h_ret);
 
-            c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, &h_ret, nullptr, nullptr);
+            c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, &h_ret, nullptr, nullptr, true);
             check(h_ret);
         }
 
@@ -655,7 +655,7 @@ TEST_CASE("CuboidGpu::extract_border_planes", "[ocl]")
             std::vector<double> h_ret(ressize);
             std::fill(h_ret.begin(), h_ret.end(), -1);
 
-            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, &h_ret, nullptr, nullptr);
+            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, &h_ret, nullptr, nullptr, true);
             REQUIRE(ret == nullptr);
             check(h_ret);
         }
@@ -665,7 +665,7 @@ TEST_CASE("CuboidGpu::extract_border_planes", "[ocl]")
             mgcl::BufferGpu d_tmp(p.getContext(), CL_MEM_READ_WRITE, ressize);
             d_tmp.fill(p.getProgram(), p.getCommands(), -1, true, &p.getKernelConfig(), p.getProfilingData());
 
-            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr, nullptr, nullptr);
+            auto ret = c.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_tmp, nullptr, nullptr, nullptr, true);
             check(*ret);
         }
     }

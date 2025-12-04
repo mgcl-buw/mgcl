@@ -99,7 +99,7 @@ TEST_CASE("bench_borderplanes")
                                    .append(std::to_string(ghosts));
 
             bench.run(std::string(name).c_str(), [&] { //
-                auto sbuf_ptr = c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, nullptr, nullptr, p.getProfilingData());
+                auto sbuf_ptr = c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, nullptr, nullptr, p.getProfilingData(), true);
                 p.getOpenCLHelper().finish();
             });
 
@@ -127,7 +127,7 @@ TEST_CASE("bench_borderplanes")
                                    .append(std::to_string(ghosts));
 
             bench.run(std::string(name).c_str(), [&] { //
-                c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, &h_planesbuf, nullptr, p.getProfilingData());
+                c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, &h_planesbuf, nullptr, p.getProfilingData(), true);
                 p.getOpenCLHelper().finish();
             });
 

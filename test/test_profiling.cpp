@@ -141,7 +141,7 @@ TEST_CASE("profiling_kernels")
         int xy = d_buf.getMgh() * d_buf.getNgh();
         size_t ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
 
-        auto tmp = d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, &conf, p.getProfilingData());
+        auto tmp = d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(), nullptr, nullptr, &conf, p.getProfilingData(), true);
 
         checkResult(p, "extract_border_planes", {ressize, 0, 0});
     }

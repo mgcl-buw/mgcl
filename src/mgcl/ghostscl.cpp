@@ -441,7 +441,7 @@ namespace mgcl
         // Extract border planes from the buffer
         d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(),
                                   dPlanesBuf, hPlanesBufSend,
-                                  &p.getKernelConfig(), p.getProfilingData());
+                                  &p.getKernelConfig(), p.getProfilingData(), true);
         auto& sbuf = *hPlanesBufSend;
         auto& rbuf = *hPlanesBufRecv;
 

@@ -441,94 +441,6 @@ namespace mgclBenchGhostUpdateSplitFused
         clReleaseEvent(evRead3);
     }
 
-    void extractBorderPlanesWithoutRead(CuboidGpu& c,
-                                        cl_command_queue commands, cl_program program,
-                                        BufferGpu& d_target,
-                                        mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
-
-    {
-        int m = c.getM();
-        int n = c.getN();
-        int o = c.getO();
-        int mgh = c.getMgh();
-        int ngh = c.getNgh();
-        int ogh = c.getOgh();
-        int ghosts_m = c.getGhostsM();
-        int ghosts_n = c.getGhostsN();
-        int ghosts_o = c.getGhostsO();
-        cl_context context = c.getContext();
-        auto buffer = c.getBuffer();
-
-        // Plane sizes
-        int yz = ngh * ogh;
-        int xz = mgh * ogh;
-        int xy = mgh * ngh;
-        int ressize = 2 * yz * ghosts_m + 2 * xz * ghosts_n + 2 * xy * ghosts_o;
-
-        if (ghosts_m > m || ghosts_n > n || ghosts_o > o)
-            error("CuboidGpu::extractBorderPlanes: Only defined for ghosts <= m, n, o");
-
-        int err;
-
-        // Create the compute kernel from the program
-        const char* kernelName = "extract_border_planes";
-        cl_kernel kernel = clCreateKernel(program, kernelName, &err);
-        mgcl::mgclCheckError(err, "clCreateKernel");
-
-        // assign kernel arguments
-        cl_mem d_target_buffer = d_target.getBuf();
-        int pos = 0;
-        err = clSetKernelArg(kernel, pos, sizeof(cl_mem), &buffer);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(cl_mem), &d_target_buffer);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &m);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &n);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &o);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &mgh);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_m);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_n);
-        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ghosts_o);
-        mgcl::mgclCheckError(err, "Setting kernel arguments");
-
-        // one work-item per ghost cell (excluding real cells). Pad global sizes to fit to local sizes
-        size_t global = ressize;
-        size_t local = 32;
-        // Apply kernel config, if available
-        if (conf)
-        {
-            const auto& c = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, global);
-            local = c[0];
-        }
-
-        if (global % local != 0)
-            global += local - (global % local);
-
-        cl_event ev;
-
-        // enqueue kernel
-        err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, &ev);
-        mgcl::mgclCheckError(err, "Enqueueing extract_border_planes kernel");
-
-        if (pd != nullptr)
-        {
-            pd->addMeasurement(commands, ev, kernelName,
-                               {global, 0, 0},
-                               {local, 1, 1});
-        }
-        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
-
-        // mgcl::mgclCheckError(clFinish(commands), "clFinish");
-
-        err = clReleaseKernel(kernel);
-        mgcl::mgclCheckError(err, "Releasing extract_border_planes kernel");
-
-        // Read into h_target
-        // d_target->read(commands, retraw->data(), true, ressize, pd);
-
-        // return h_target;
-    }
-
     // void updateGhostsOclMpi(Problem& p, CuboidGpu& d_buf, MPILevelData& mpiData,
     //                         bool periodic, bool forceLocal)
     void updateGhostsOclMpi(Args& args)
@@ -559,9 +471,9 @@ namespace mgclBenchGhostUpdateSplitFused
                 " (send) and " + std::to_string(hPlanesBufRecv.size()) + " (recv)";
 
         // Extract border planes from the buffer but don't read yet
-        extractBorderPlanesWithoutRead(d_buf, args.queue, args.program,
-                                       dPlanesBuf,
-                                       args.kernelConfig, args.pd);
+        d_buf.extractBorderPlanes(args.queue, args.program,
+                                  &dPlanesBuf, nullptr,
+                                  args.kernelConfig, args.pd, false);
 
         // Read planes from device, send our planes to neighbours and receive their planes and write back to device
         sendBorderPlanesInterleaved(d_buf.getMgh(), d_buf.getNgh(), d_buf.getOgh(),
@@ -1230,7 +1142,7 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
                                    .append(std::to_string(ghosts));
 
             bench.run(std::string(name).c_str(), [&] { //
-                auto sbuf_ptr = c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, nullptr, nullptr, nullptr);
+                auto sbuf_ptr = c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, nullptr, nullptr, nullptr, true);
                 p.getOpenCLHelper().finish();
             });
 
@@ -1263,7 +1175,7 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
                                    .append(std::to_string(ghosts));
 
             bench.run(std::string(name).c_str(), [&] { //
-                c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, &h_planesbuf, nullptr, nullptr);
+                c_d.extractBorderPlanes(p.getCommands(), p.getProgram(), &d_planesbuf, &h_planesbuf, nullptr, nullptr, true);
                 p.getOpenCLHelper().finish();
             });
 
