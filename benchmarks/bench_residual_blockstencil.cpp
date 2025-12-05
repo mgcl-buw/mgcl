@@ -617,165 +617,165 @@ namespace mgcl_bench_residual_blockstencil
                 }
             }
 
-            {
-                // reset r to zero
-                d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
-                args.c_dVIn = d_vin_gp_first.get();
-                args.c_dF = d_f_gp_first.get();
+            // {
+            //     // reset r to zero
+            //     d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+            //     args.c_dVIn = d_vin_gp_first.get();
+            //     args.c_dF = d_f_gp_first.get();
 
-                args.kernelVersion = KernelVersion::BS_GP_COEFFS_BLOCK_V_GP_BLOCK;
-                fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
-                auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
-                args.c_blockStencil = tmp.get();
+            //     args.kernelVersion = KernelVersion::BS_GP_COEFFS_BLOCK_V_GP_BLOCK;
+            //     fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
+            //     auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
+            //     args.c_blockStencil = tmp.get();
 
-                std::string name = std::string("residual_blockstencil_gp_coeffs_block_v_gp_block_")
-                                       .append(std::to_string(m))
-                                       .append("_")
-                                       .append(std::to_string(n))
-                                       .append("_")
-                                       .append(std::to_string(o));
+            //     std::string name = std::string("residual_blockstencil_gp_coeffs_block_v_gp_block_")
+            //                            .append(std::to_string(m))
+            //                            .append("_")
+            //                            .append(std::to_string(n))
+            //                            .append("_")
+            //                            .append(std::to_string(o));
 
-                bench.run(std::string(name).c_str(), [&] { //
-                    residual(args);
-                    p.finish();
-                });
+            //     bench.run(std::string(name).c_str(), [&] { //
+            //         residual(args);
+            //         p.finish();
+            //     });
 
-                bench_util::Result res;
-                res.name = name;
-                res.minTime = bench_util::getMinTime(bench, name);
-                res.medianTime = bench_util::getMedianTime(bench, name);
-                res.avgTime = bench_util::getAvgTime(bench, name);
-                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                res.m = m;
-                res.n = n;
-                res.o = o;
-                results.push_back(res);
+            //     bench_util::Result res;
+            //     res.name = name;
+            //     res.minTime = bench_util::getMinTime(bench, name);
+            //     res.medianTime = bench_util::getMedianTime(bench, name);
+            //     res.avgTime = bench_util::getAvgTime(bench, name);
+            //     res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            //     res.m = m;
+            //     res.n = n;
+            //     res.o = o;
+            //     results.push_back(res);
 
-                if (CLI_ARGS::checkResults)
-                {
-                    r_out_bs_gp_coeffs_block_v_gp_block = args.c_dR->read(args.commands, nullptr, true);
-                }
-            }
+            //     if (CLI_ARGS::checkResults)
+            //     {
+            //         r_out_bs_gp_coeffs_block_v_gp_block = args.c_dR->read(args.commands, nullptr, true);
+            //     }
+            // }
 
-            {
-                // reset r to zero
-                d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
-                args.c_dVIn = d_vin_gp_first.get();
-                args.c_dF = d_f_gp_first.get();
+            // {
+            //     // reset r to zero
+            //     d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+            //     args.c_dVIn = d_vin_gp_first.get();
+            //     args.c_dF = d_f_gp_first.get();
 
-                args.kernelVersion = KernelVersion::BS_GP_BLOCK_COEFFS_V_GP_BLOCK;
-                fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
-                auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
-                args.c_blockStencil = tmp.get();
+            //     args.kernelVersion = KernelVersion::BS_GP_BLOCK_COEFFS_V_GP_BLOCK;
+            //     fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
+            //     auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
+            //     args.c_blockStencil = tmp.get();
 
-                std::string name = std::string("residual_blockstencil_gp_block_coeffs_v_gp_block_")
-                                       .append(std::to_string(m))
-                                       .append("_")
-                                       .append(std::to_string(n))
-                                       .append("_")
-                                       .append(std::to_string(o));
+            //     std::string name = std::string("residual_blockstencil_gp_block_coeffs_v_gp_block_")
+            //                            .append(std::to_string(m))
+            //                            .append("_")
+            //                            .append(std::to_string(n))
+            //                            .append("_")
+            //                            .append(std::to_string(o));
 
-                bench.run(std::string(name).c_str(), [&] { //
-                    residual(args);
-                    p.finish();
-                });
+            //     bench.run(std::string(name).c_str(), [&] { //
+            //         residual(args);
+            //         p.finish();
+            //     });
 
-                bench_util::Result res;
-                res.name = name;
-                res.minTime = bench_util::getMinTime(bench, name);
-                res.medianTime = bench_util::getMedianTime(bench, name);
-                res.avgTime = bench_util::getAvgTime(bench, name);
-                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                res.m = m;
-                res.n = n;
-                res.o = o;
-                results.push_back(res);
+            //     bench_util::Result res;
+            //     res.name = name;
+            //     res.minTime = bench_util::getMinTime(bench, name);
+            //     res.medianTime = bench_util::getMedianTime(bench, name);
+            //     res.avgTime = bench_util::getAvgTime(bench, name);
+            //     res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            //     res.m = m;
+            //     res.n = n;
+            //     res.o = o;
+            //     results.push_back(res);
 
-                if (CLI_ARGS::checkResults)
-                {
-                    r_out_bs_gp_block_coeffs_v_gp_block = args.c_dR->read(args.commands, nullptr, true);
-                }
-            }
+            //     if (CLI_ARGS::checkResults)
+            //     {
+            //         r_out_bs_gp_block_coeffs_v_gp_block = args.c_dR->read(args.commands, nullptr, true);
+            //     }
+            // }
 
-            {
-                // reset r to zero
-                d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
-                args.c_dVIn = d_vin_block_first.get();
-                args.c_dF = d_f_block_first.get();
+            // {
+            //     // reset r to zero
+            //     d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+            //     args.c_dVIn = d_vin_block_first.get();
+            //     args.c_dF = d_f_block_first.get();
 
-                args.kernelVersion = KernelVersion::BS_GP_COEFFS_BLOCK_V_BLOCK_GP;
-                fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
-                auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
-                args.c_blockStencil = tmp.get();
+            //     args.kernelVersion = KernelVersion::BS_GP_COEFFS_BLOCK_V_BLOCK_GP;
+            //     fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
+            //     auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
+            //     args.c_blockStencil = tmp.get();
 
-                std::string name = std::string("residual_blockstencil_gp_coeffs_block_v_block_gp_")
-                                       .append(std::to_string(m))
-                                       .append("_")
-                                       .append(std::to_string(n))
-                                       .append("_")
-                                       .append(std::to_string(o));
+            //     std::string name = std::string("residual_blockstencil_gp_coeffs_block_v_block_gp_")
+            //                            .append(std::to_string(m))
+            //                            .append("_")
+            //                            .append(std::to_string(n))
+            //                            .append("_")
+            //                            .append(std::to_string(o));
 
-                bench.run(std::string(name).c_str(), [&] { //
-                    residual(args);
-                    p.finish();
-                });
+            //     bench.run(std::string(name).c_str(), [&] { //
+            //         residual(args);
+            //         p.finish();
+            //     });
 
-                bench_util::Result res;
-                res.name = name;
-                res.minTime = bench_util::getMinTime(bench, name);
-                res.medianTime = bench_util::getMedianTime(bench, name);
-                res.avgTime = bench_util::getAvgTime(bench, name);
-                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                res.m = m;
-                res.n = n;
-                res.o = o;
-                results.push_back(res);
+            //     bench_util::Result res;
+            //     res.name = name;
+            //     res.minTime = bench_util::getMinTime(bench, name);
+            //     res.medianTime = bench_util::getMedianTime(bench, name);
+            //     res.avgTime = bench_util::getAvgTime(bench, name);
+            //     res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            //     res.m = m;
+            //     res.n = n;
+            //     res.o = o;
+            //     results.push_back(res);
 
-                if (CLI_ARGS::checkResults)
-                {
-                    r_out_bs_gp_coeffs_block_v_block_gp = args.c_dR->read(args.commands, nullptr, true);
-                }
-            }
+            //     if (CLI_ARGS::checkResults)
+            //     {
+            //         r_out_bs_gp_coeffs_block_v_block_gp = args.c_dR->read(args.commands, nullptr, true);
+            //     }
+            // }
 
-            {
-                // reset r to zero
-                d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
-                args.c_dVIn = d_vin_block_first.get();
-                args.c_dF = d_f_block_first.get();
+            // {
+            //     // reset r to zero
+            //     d_r->fill(p.getProgram(), p.getCommands(), 0.0, true, nullptr, nullptr);
+            //     args.c_dVIn = d_vin_block_first.get();
+            //     args.c_dF = d_f_block_first.get();
 
-                args.kernelVersion = KernelVersion::BS_GP_BLOCK_COEFFS_V_BLOCK_GP;
-                fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
-                auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
-                args.c_blockStencil = tmp.get();
+            //     args.kernelVersion = KernelVersion::BS_GP_BLOCK_COEFFS_V_BLOCK_GP;
+            //     fillBs(bs, args.kernelVersion, mgh, ngh, ogh, ghosts, blocksize);
+            //     auto tmp = std::make_unique<mgcl::BufferGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, bs);
+            //     args.c_blockStencil = tmp.get();
 
-                std::string name = std::string("residual_blockstencil_gp_block_coeffs_v_block_gp_")
-                                       .append(std::to_string(m))
-                                       .append("_")
-                                       .append(std::to_string(n))
-                                       .append("_")
-                                       .append(std::to_string(o));
+            //     std::string name = std::string("residual_blockstencil_gp_block_coeffs_v_block_gp_")
+            //                            .append(std::to_string(m))
+            //                            .append("_")
+            //                            .append(std::to_string(n))
+            //                            .append("_")
+            //                            .append(std::to_string(o));
 
-                bench.run(std::string(name).c_str(), [&] { //
-                    residual(args);
-                    p.finish();
-                });
+            //     bench.run(std::string(name).c_str(), [&] { //
+            //         residual(args);
+            //         p.finish();
+            //     });
 
-                bench_util::Result res;
-                res.name = name;
-                res.minTime = bench_util::getMinTime(bench, name);
-                res.medianTime = bench_util::getMedianTime(bench, name);
-                res.avgTime = bench_util::getAvgTime(bench, name);
-                res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
-                res.m = m;
-                res.n = n;
-                res.o = o;
-                results.push_back(res);
+            //     bench_util::Result res;
+            //     res.name = name;
+            //     res.minTime = bench_util::getMinTime(bench, name);
+            //     res.medianTime = bench_util::getMedianTime(bench, name);
+            //     res.avgTime = bench_util::getAvgTime(bench, name);
+            //     res.medianAbsolutePercentError = bench_util::getMedianAbsolutePercentError(bench, name);
+            //     res.m = m;
+            //     res.n = n;
+            //     res.o = o;
+            //     results.push_back(res);
 
-                if (CLI_ARGS::checkResults)
-                {
-                    r_out_bs_gp_block_coeffs_v_block_gp = args.c_dR->read(args.commands, nullptr, true);
-                }
-            }
+            //     if (CLI_ARGS::checkResults)
+            //     {
+            //         r_out_bs_gp_block_coeffs_v_block_gp = args.c_dR->read(args.commands, nullptr, true);
+            //     }
+            // }
 
             // Check results for kernels that it is valid for
             if (CLI_ARGS::checkResults)
@@ -832,7 +832,7 @@ namespace mgcl_bench_residual_blockstencil
 
         if (CLI_ARGS::enableKernelProfiling)
         {
-            p.getProfilingData()->printBestTimingsPerKernel();
+            p.getProfilingData()->printBestTimingsPerKernelAsCsv();
         }
     }
 
