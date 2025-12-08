@@ -43,7 +43,7 @@ TEST_CASE("CuboidBS")
                 for (int k = 0; k < c.getO(); k++)
                     for (int b = 0; b < blocksize; b++)
                     {
-                        c_check[i][j][k][b] = c[i][j][k][b];
+                        c_check[b][i][j][k] = c[b][i][j][k];
                     }
 
         mgcl::CuboidBS c2(std::move(c));
@@ -67,7 +67,7 @@ TEST_CASE("CuboidBS")
                 for (int k = 0; k < c.getO(); k++)
                     for (int b = 0; b < blocksize; b++)
                     {
-                        c_check[i][j][k][b] = c[i][j][k][b];
+                        c_check[b][i][j][k] = c[b][i][j][k];
                     }
 
         mgcl::CuboidBS c2 = std::move(c);
@@ -91,15 +91,15 @@ TEST_CASE("CuboidBS")
 
     SECTION("values")
     {
-        c[0][1][1][0] = 3.0;
-        c[0][1][1][1] = 5.0;
+        c[0][0][1][1] = 3.0;
+        c[1][0][1][1] = 5.0;
         REQUIRE(c[0][0][0][0] == 0.0);
-        REQUIRE(c[0][0][0][1] == 0.0);
+        REQUIRE(c[1][0][0][0] == 0.0);
         REQUIRE(c[0][0][0][0] == 0.0);
-        REQUIRE(c[0][1][1][0] == 3.0);
-        REQUIRE(c[0][1][1][1] == 5.0);
-        REQUIRE(c[0][0][0][0 + 1 * blocksize * o + 1 * blocksize + 0] == 3.0);
-        REQUIRE(c[0][0][0][0 + 1 * blocksize * o + 1 * blocksize + 1] == 5.0);
+        REQUIRE(c[0][0][1][1] == 3.0);
+        REQUIRE(c[1][0][1][1] == 5.0);
+        REQUIRE(c[0][0][0][0 + 0 * n * o + 1 * o + 1] == 3.0);
+        REQUIRE(c[0][0][0][1 * m * n * o + 0 * n * o + 1 * o + 1] == 5.0);
     }
 
     SECTION("default value")
@@ -129,8 +129,8 @@ TEST_CASE("CuboidBS")
         c[0][0][0][0] = 3;
         c2[0][0][0][0] = 5;
 
-        c[0][0][2][1] = 7;
-        c2[0][0][2][1] = 8;
+        c[1][0][0][2] = 7;
+        c2[1][0][0][2] = 8;
 
         REQUIRE(!c.isEqual(c2));
         REQUIRE(!c2.isEqual(c));
@@ -143,8 +143,8 @@ TEST_CASE("CuboidBS")
         c[0][0][0][0] = 3;
         c2[0][0][0][0] = 3;
 
-        c[0][0][2][1] = 7;
-        c2[0][0][2][1] = 7;
+        c[1][0][0][2] = 7;
+        c2[1][0][0][2] = 7;
 
         REQUIRE(c.isEqual(c2));
         REQUIRE(c2.isEqual(c));
@@ -203,7 +203,7 @@ TEST_CASE("CuboidBS")
                 for (int k = c2.getGhostsO(); k < c2.getO() + c2.getGhostsO(); k++)
                     for (int b = 0; b < blocksize; b++)
                     {
-                        CHECK(c2[i][j][k][b] == 5.0);
+                        CHECK(c2[b][i][j][k] == 5.0);
                     }
 
         for (int i = 0; i < c2.getGhostsM(); i++)
@@ -211,7 +211,7 @@ TEST_CASE("CuboidBS")
                 for (int k = 0; k < c2.getGhostsO(); k++)
                     for (int b = 0; b < blocksize; b++)
                     {
-                        CHECK(c2[i][j][k][b] == 0.0);
+                        CHECK(c2[b][i][j][k] == 0.0);
                     }
 
         for (int i = c2.getM() + c2.getGhostsM(); i < c2.getMgh(); i++)
@@ -219,7 +219,7 @@ TEST_CASE("CuboidBS")
                 for (int k = c2.getO() + c2.getGhostsO(); k < c2.getOgh(); k++)
                     for (int b = 0; b < blocksize; b++)
                     {
-                        CHECK(c2[i][j][k][b] == 0.0);
+                        CHECK(c2[b][i][j][k] == 0.0);
                     }
 
         // fill ghosted cells, too
@@ -282,8 +282,8 @@ TEST_CASE("CuboidBS::slice")
                 for (int k = 0; k < cs->getO(); k++)
                     for (int b = 0; b < blocksize; b++)
                     {
-                        REQUIRE(cs->getData()[i + cs->getGhostsM()][j + cs->getGhostsN()][k + cs->getGhostsO()][b] ==
-                                cb[i + cb.getGhostsM()][j + cb.getGhostsN()][k + cb.getGhostsO() + 2][b]);
+                        REQUIRE(cs->getData()[b][i + cs->getGhostsM()][j + cs->getGhostsN()][k + cs->getGhostsO()] ==
+                                cb[b][i + cb.getGhostsM()][j + cb.getGhostsN()][k + cb.getGhostsO() + 2]);
                     }
     }
 }
@@ -326,7 +326,7 @@ TEST_CASE("CuboidBS::sliceIncGhosts")
                 for (int k = 0; k < cs->getO(); k++)
                     for (int b = 0; b < blocksize; b++)
                     {
-                        REQUIRE(cs->getData()[i][j][k][b] == cb[i][j][k + 2][b]);
+                        REQUIRE(cs->getData()[b][i][j][k] == cb[b][i][j][k + 2]);
                     }
     }
 }
@@ -354,9 +354,9 @@ TEST_CASE("CuboidBS::fill1dindex")
                 for (int b = 0; b < blocksize; b++)
                 {
                     if (i > ghm && i < m + ghm && j > ghn && j < n + ghn && k > gho && k < o + gho)
-                        REQUIRE(c_real[i][j][k][b] == cnt);
+                        REQUIRE(c_real[b][i][j][k] == cnt);
 
-                    REQUIRE(c_gh[i][j][k][b] == cnt);
+                    REQUIRE(c_gh[b][i][j][k] == cnt);
                     cnt++;
                 }
 }
@@ -385,8 +385,8 @@ TEST_CASE("updateGhostsLocally gh < m")
             for (int k = 0; k < o + 2 * ghosts_o; k++)
                 for (int b = 0; b < blocksize; b++)
                 {
-                    REQUIRE(c1[i][j][k][b] == c1[i + m][j][k][b]);
-                    REQUIRE(c1[i + ghosts_m][j][k][b] == c1[i + ghosts_m + m][j][k][b]);
+                    REQUIRE(c1[b][i][j][k] == c1[b][i + m][j][k]);
+                    REQUIRE(c1[b][i + ghosts_m][j][k] == c1[b][i + ghosts_m + m][j][k]);
                 }
 
     // check in y-direction
@@ -395,8 +395,8 @@ TEST_CASE("updateGhostsLocally gh < m")
             for (int k = 0; k < o + 2 * ghosts_o; k++)
                 for (int b = 0; b < blocksize; b++)
                 {
-                    REQUIRE(c1[i][j][k][b] == c1[i][j + n][k][b]);
-                    REQUIRE(c1[i][j + ghosts_n][k][b] == c1[i][j + ghosts_n + n][k][b]);
+                    REQUIRE(c1[b][i][j][k] == c1[b][i][j + n][k]);
+                    REQUIRE(c1[b][i][j + ghosts_n][k] == c1[b][i][j + ghosts_n + n][k]);
                 }
 
     // check in x-direction
@@ -405,8 +405,8 @@ TEST_CASE("updateGhostsLocally gh < m")
             for (int k = 0; k < ghosts_o; k++)
                 for (int b = 0; b < blocksize; b++)
                 {
-                    REQUIRE(c1[i][j][k][b] == c1[i][j][k + o][b]);
-                    REQUIRE(c1[i][j][k + ghosts_o][b] == c1[i][j][k + ghosts_o + o][b]);
+                    REQUIRE(c1[b][i][j][k] == c1[b][i][j][k + o]);
+                    REQUIRE(c1[b][i][j][k + ghosts_o] == c1[b][i][j][k + ghosts_o + o]);
                 }
 }
 
@@ -434,8 +434,8 @@ TEST_CASE("updateGhostsLocally gh > m")
             for (int k = 0; k < o + 2 * ghosts_o; k++)
                 for (int b = 0; b < blocksize; b++)
                 {
-                    REQUIRE(c1[i][j][k][b] == c1[i + m][j][k][b]);
-                    REQUIRE(c1[i + ghosts_m][j][k][b] == c1[i + ghosts_m + m][j][k][b]);
+                    REQUIRE(c1[b][i][j][k] == c1[b][i + m][j][k]);
+                    REQUIRE(c1[b][i + ghosts_m][j][k] == c1[b][i + ghosts_m + m][j][k]);
                 }
 
     // check in y-direction
@@ -444,8 +444,8 @@ TEST_CASE("updateGhostsLocally gh > m")
             for (int k = 0; k < o + 2 * ghosts_o; k++)
                 for (int b = 0; b < blocksize; b++)
                 {
-                    REQUIRE(c1[i][j][k][b] == c1[i][j + n][k][b]);
-                    REQUIRE(c1[i][j + ghosts_n][k][b] == c1[i][j + ghosts_n + n][k][b]);
+                    REQUIRE(c1[b][i][j][k] == c1[b][i][j + n][k]);
+                    REQUIRE(c1[b][i][j + ghosts_n][k] == c1[b][i][j + ghosts_n + n][k]);
                 }
 
     // check in x-direction
@@ -454,7 +454,7 @@ TEST_CASE("updateGhostsLocally gh > m")
             for (int k = 0; k < ghosts_o; k++)
                 for (int b = 0; b < blocksize; b++)
                 {
-                    REQUIRE(c1[i][j][k][b] == c1[i][j][k + o][b]);
-                    REQUIRE(c1[i][j][k + ghosts_o][b] == c1[i][j][k + ghosts_o + o][b]);
+                    REQUIRE(c1[b][i][j][k] == c1[b][i][j][k + o]);
+                    REQUIRE(c1[b][i][j][k + ghosts_o] == c1[b][i][j][k + ghosts_o + o]);
                 }
 }

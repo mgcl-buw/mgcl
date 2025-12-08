@@ -103,7 +103,7 @@ TEST_CASE("mpi_util::gather-cuboidbs-src-dest-same")
                     for (size_t bi = 0; bi < blocksize; bi++)
                     {
 
-                        (*cglob_recv)[i][j][k][bi] = cglob[i][j][k][bi];
+                        (*cglob_recv)[bi][i][j][k] = cglob[bi][i][j][k];
                     }
     }
     else
@@ -211,7 +211,7 @@ TEST_CASE("mpi_util::gather-cuboidbs-src-dest-same-ocl")
                     for (size_t bi = 0; bi < blocksize; bi++)
                     {
 
-                        (*cglob_recv)[i][j][k][bi] = cglob[i][j][k][bi];
+                        (*cglob_recv)[bi][i][j][k] = cglob[bi][i][j][k];
                     }
     }
     else
@@ -561,7 +561,7 @@ TEST_CASE("mpi_util::scatter-cuboidbs-src-dest-same-with-ghosts")
             for (int k = 0; k < olgh; k++)
                 for (size_t b = 0; b < blocksize; b++)
                 {
-                    cloc_exp[i][j][k][b] = cglob[i + m_start][j + n_start][k + o_start][b];
+                    cloc_exp[b][i][j][k] = cglob[b][i + m_start][j + n_start][k + o_start];
                 }
 
     // Local slice for actual result, reset with 0.
@@ -684,7 +684,7 @@ TEST_CASE("mpi_util::scatter-cuboidbs-GPU-src-dest-same-with-ghosts")
             for (int k = 0; k < olgh; k++)
                 for (size_t b = 0; b < blocksize; b++)
                 {
-                    cloc_exp[i][j][k][b] = cglob[i + m_start][j + n_start][k + o_start][b];
+                    cloc_exp[b][i][j][k] = cglob[b][i + m_start][j + n_start][k + o_start];
                 }
 
     // Local slice for actual result, reset with 0.
@@ -823,10 +823,10 @@ TEST_CASE("mpi_util::sendBorderPlanes_cuboidbs")
                 for (int b = 0; b < blocksize; b++)
                 {
                     // front
-                    sbuf[(i * yz + j * ogh + k) * blocksize + b] = c[i + ghosts_m][j][k][b];
+                    sbuf[(i * yz + j * ogh + k) * blocksize + b] = c[b][i + ghosts_m][j][k];
 
                     // back
-                    sbuf[base_yz_back + (i * yz + j * ogh + k) * blocksize + b] = c[i + m][j][k][b];
+                    sbuf[base_yz_back + (i * yz + j * ogh + k) * blocksize + b] = c[b][i + m][j][k];
                 }
     for (int i = 0; i < mgh; i++)
         for (int j = 0; j < ghosts_n; j++)
@@ -834,10 +834,10 @@ TEST_CASE("mpi_util::sendBorderPlanes_cuboidbs")
                 for (int b = 0; b < blocksize; b++)
                 {
                     // top
-                    sbuf[base_xz_top + (j * xz + i * ogh + k) * blocksize + b] = c[i][j + ghosts_n][k][b];
+                    sbuf[base_xz_top + (j * xz + i * ogh + k) * blocksize + b] = c[b][i][j + ghosts_n][k];
 
                     // bottom
-                    sbuf[base_xz_bottom + (j * xz + i * ogh + k) * blocksize + b] = c[i][j + n][k][b];
+                    sbuf[base_xz_bottom + (j * xz + i * ogh + k) * blocksize + b] = c[b][i][j + n][k];
                 }
     for (int i = 0; i < mgh; i++)
         for (int j = 0; j < ngh; j++)
@@ -845,10 +845,10 @@ TEST_CASE("mpi_util::sendBorderPlanes_cuboidbs")
                 for (int b = 0; b < blocksize; b++)
                 {
                     // left
-                    sbuf[base_xy_left + (k * xy + i * ngh + j) * blocksize + b] = c[i][j][k + ghosts_o][b];
+                    sbuf[base_xy_left + (k * xy + i * ngh + j) * blocksize + b] = c[b][i][j][k + ghosts_o];
 
                     // right
-                    sbuf[base_xy_right + (k * xy + i * ngh + j) * blocksize + b] = c[i][j][k + o][b];
+                    sbuf[base_xy_right + (k * xy + i * ngh + j) * blocksize + b] = c[b][i][j][k + o];
                 }
 
     for (size_t i = 0; i < rbuf.size(); i++)
@@ -870,10 +870,10 @@ TEST_CASE("mpi_util::sendBorderPlanes_cuboidbs")
                 {
                     CAPTURE(i, j, k);
                     // top (bottom ghosts)
-                    REQUIRE(rbuf[base_xz_top + (j * xz + i * ogh + k) * blocksize + b] == c[i][j + ghosts_n + n][k][b]);
+                    REQUIRE(rbuf[base_xz_top + (j * xz + i * ogh + k) * blocksize + b] == c[b][i][j + ghosts_n + n][k]);
 
                     // bottom (top ghosts)
-                    REQUIRE(rbuf[base_xz_bottom + (j * xz + i * ogh + k) * blocksize + b] == c[i][j][k][b]);
+                    REQUIRE(rbuf[base_xz_bottom + (j * xz + i * ogh + k) * blocksize + b] == c[b][i][j][k]);
                 }
     // Toruses in send buffers for left and right after sending to top and bottom
     for (int i = 0; i < mgh; i++)
@@ -882,10 +882,10 @@ TEST_CASE("mpi_util::sendBorderPlanes_cuboidbs")
                 for (int b = 0; b < blocksize; b++)
                 {
                     // left (right ghosts)
-                    REQUIRE(rbuf[base_xy_left + (k * xy + i * ngh + j) * blocksize + b] == c[i][j][k + ghosts_o + o][b]);
+                    REQUIRE(rbuf[base_xy_left + (k * xy + i * ngh + j) * blocksize + b] == c[b][i][j][k + ghosts_o + o]);
 
                     // right (left ghosts)
-                    REQUIRE(rbuf[base_xy_right + (k * xy + i * ngh + j) * blocksize + b] == c[i][j][k][b]);
+                    REQUIRE(rbuf[base_xy_right + (k * xy + i * ngh + j) * blocksize + b] == c[b][i][j][k]);
                 }
 }
 

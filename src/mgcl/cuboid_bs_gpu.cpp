@@ -375,7 +375,7 @@ namespace mgcl
                             for (int b = 0; b < blocksize; b++)
                             {
                                 myfile << i - ghosts_m << "\t" << j - ghosts_n << "\t" << k - ghosts_o << "\t" << b << "\t"
-                                       << std::scientific << std::setprecision(17) << tmp->getData()[i][j][k][b] << std::endl;
+                                       << std::scientific << std::setprecision(17) << tmp->getData()[b][i][j][k] << std::endl;
                             }
             }
             else
@@ -386,7 +386,7 @@ namespace mgcl
                             for (int b = 0; b < blocksize; b++)
                             {
                                 myfile << i << "\t" << j << "\t" << k << "\t" << b << "\t"
-                                       << std::scientific << std::setprecision(17) << tmp->getData()[i][j][k][b] << std::endl;
+                                       << std::scientific << std::setprecision(17) << tmp->getData()[b][i][j][k] << std::endl;
                             }
             }
             myfile.close();

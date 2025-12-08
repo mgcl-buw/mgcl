@@ -748,7 +748,7 @@ void mgcl_test::copyCuboidToCuboidBS(mgcl::Cuboid& src, mgcl::CuboidBS& dst, int
                     for (int jj = 0; jj < scalen; jj++)
                         for (int kk = 0; kk < scaleo; kk++)
                         {
-                            dst[i][j][k][b++] = src[i2 + ii][j2 + jj][k2 + kk];
+                            dst[b++][i][j][k] = src[i2 + ii][j2 + jj][k2 + kk];
                         }
             }
 }
@@ -786,7 +786,7 @@ void mgcl_test::copyCuboidBSToCuboid(mgcl::CuboidBS& src, mgcl::Cuboid& dst, int
                     for (int jj = 0; jj < scalen; jj++)
                         for (int kk = 0; kk < scaleo; kk++)
                         {
-                            dst[i2 + ii][j2 + jj][k2 + kk] = src[i][j][k][b++];
+                            dst[i2 + ii][j2 + jj][k2 + kk] = src[b++][i][j][k];
                         }
             }
 }

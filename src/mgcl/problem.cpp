@@ -819,8 +819,8 @@ namespace mgcl
                 for (int k = 0; k < o; k++)
                     for (size_t b = 0; b < blocksize; b++)
                     {
-                        (*v_bs)[i + ghosts_in][j + ghosts_in][k + ghosts_in][b] =
-                            levels[0]->getVBS()[i + ghosts][j + ghosts][k + ghosts][b];
+                        (*v_bs)[b][i + ghosts_in][j + ghosts_in][k + ghosts_in] =
+                            levels[0]->getVBS()[b][i + ghosts][j + ghosts][k + ghosts];
                     }
     }
 
@@ -1139,8 +1139,8 @@ namespace mgcl
                     for (int k = 0; k < o; k++)
                         for (size_t b = 0; b < blocksize; b++)
                         {
-                            (*v_bs)[i + ghosts_in][j + ghosts_in][k + ghosts_in][b] =
-                                levels[0]->getVBS()[i + ghosts][j + ghosts][k + ghosts][b];
+                            (*v_bs)[b][i + ghosts_in][j + ghosts_in][k + ghosts_in] =
+                                levels[0]->getVBS()[b][i + ghosts][j + ghosts][k + ghosts];
                         }
         }
     }

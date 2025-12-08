@@ -157,10 +157,10 @@ TEST_CASE("bs_jacobi_independent_quantities")
         for (int j = 0; j < ngh; j++)
             for (int k = 0; k < ogh; k++)
             {
-                v1[i][j][k] = v[i][j][k][0];
-                v2[i][j][k] = v[i][j][k][1];
-                f1[i][j][k] = f[i][j][k][0];
-                f2[i][j][k] = f[i][j][k][1];
+                v1[i][j][k] = v[0][i][j][k];
+                v2[i][j][k] = v[1][i][j][k];
+                f1[i][j][k] = f[0][i][j][k];
+                f2[i][j][k] = f[1][i][j][k];
             }
 
     v.updateGhosts(nullptr, true);
@@ -250,10 +250,10 @@ TEST_CASE("bs_jacobi_independent_quantities")
             for (int k = gh; k < o + gh; k++)
             {
                 CAPTURE(i, j, k);
-                REQUIRE_THAT(r1[i][j][k], Catch::Matchers::WithinAbs(r[i][j][k][0], 1e-4));
-                REQUIRE_THAT(r2[i][j][k], Catch::Matchers::WithinAbs(r[i][j][k][1], 1e-4));
-                REQUIRE_THAT(v1[i][j][k], Catch::Matchers::WithinAbs(v[i][j][k][0], 1e-4));
-                REQUIRE_THAT(v2[i][j][k], Catch::Matchers::WithinAbs(v[i][j][k][1], 1e-4));
+                REQUIRE_THAT(r1[i][j][k], Catch::Matchers::WithinAbs(r[0][i][j][k], 1e-4));
+                REQUIRE_THAT(r2[i][j][k], Catch::Matchers::WithinAbs(r[1][i][j][k], 1e-4));
+                REQUIRE_THAT(v1[i][j][k], Catch::Matchers::WithinAbs(v[0][i][j][k], 1e-4));
+                REQUIRE_THAT(v2[i][j][k], Catch::Matchers::WithinAbs(v[1][i][j][k], 1e-4));
             }
 }
 
@@ -426,22 +426,22 @@ TEST_CASE("bs_jacobi_combined_scalars")
             for (int k = gh, k2 = gh; k < oc + gh; k++, k2 += 2)
             {
                 CAPTURE(i, j, k, i2, j2, k2);
-                REQUIRE_THAT(v[i][j][k][0], Catch::Matchers::WithinAbs(v1[i2][j2][k2], 1e-4));
-                REQUIRE_THAT(v[i][j][k][1], Catch::Matchers::WithinAbs(v1[i2][j2][k2 + 1], 1e-4));
-                REQUIRE_THAT(v[i][j][k][2], Catch::Matchers::WithinAbs(v1[i2][j2 + 1][k2], 1e-4));
-                REQUIRE_THAT(v[i][j][k][3], Catch::Matchers::WithinAbs(v1[i2][j2 + 1][k2 + 1], 1e-4));
-                REQUIRE_THAT(v[i][j][k][4], Catch::Matchers::WithinAbs(v1[i2 + 1][j2][k2], 1e-4));
-                REQUIRE_THAT(v[i][j][k][5], Catch::Matchers::WithinAbs(v1[i2 + 1][j2][k2 + 1], 1e-4));
-                REQUIRE_THAT(v[i][j][k][6], Catch::Matchers::WithinAbs(v1[i2 + 1][j2 + 1][k2], 1e-4));
-                REQUIRE_THAT(v[i][j][k][7], Catch::Matchers::WithinAbs(v1[i2 + 1][j2 + 1][k2 + 1], 1e-4));
-                REQUIRE_THAT(r[i][j][k][0], Catch::Matchers::WithinAbs(r1[i2][j2][k2], 1e-4));
-                REQUIRE_THAT(r[i][j][k][1], Catch::Matchers::WithinAbs(r1[i2][j2][k2 + 1], 1e-4));
-                REQUIRE_THAT(r[i][j][k][2], Catch::Matchers::WithinAbs(r1[i2][j2 + 1][k2], 1e-4));
-                REQUIRE_THAT(r[i][j][k][3], Catch::Matchers::WithinAbs(r1[i2][j2 + 1][k2 + 1], 1e-4));
-                REQUIRE_THAT(r[i][j][k][4], Catch::Matchers::WithinAbs(r1[i2 + 1][j2][k2], 1e-4));
-                REQUIRE_THAT(r[i][j][k][5], Catch::Matchers::WithinAbs(r1[i2 + 1][j2][k2 + 1], 1e-4));
-                REQUIRE_THAT(r[i][j][k][6], Catch::Matchers::WithinAbs(r1[i2 + 1][j2 + 1][k2], 1e-4));
-                REQUIRE_THAT(r[i][j][k][7], Catch::Matchers::WithinAbs(r1[i2 + 1][j2 + 1][k2 + 1], 1e-4));
+                REQUIRE_THAT(v[0][i][j][k], Catch::Matchers::WithinAbs(v1[i2][j2][k2], 1e-4));
+                REQUIRE_THAT(v[1][i][j][k], Catch::Matchers::WithinAbs(v1[i2][j2][k2 + 1], 1e-4));
+                REQUIRE_THAT(v[2][i][j][k], Catch::Matchers::WithinAbs(v1[i2][j2 + 1][k2], 1e-4));
+                REQUIRE_THAT(v[3][i][j][k], Catch::Matchers::WithinAbs(v1[i2][j2 + 1][k2 + 1], 1e-4));
+                REQUIRE_THAT(v[4][i][j][k], Catch::Matchers::WithinAbs(v1[i2 + 1][j2][k2], 1e-4));
+                REQUIRE_THAT(v[5][i][j][k], Catch::Matchers::WithinAbs(v1[i2 + 1][j2][k2 + 1], 1e-4));
+                REQUIRE_THAT(v[6][i][j][k], Catch::Matchers::WithinAbs(v1[i2 + 1][j2 + 1][k2], 1e-4));
+                REQUIRE_THAT(v[7][i][j][k], Catch::Matchers::WithinAbs(v1[i2 + 1][j2 + 1][k2 + 1], 1e-4));
+                REQUIRE_THAT(r[0][i][j][k], Catch::Matchers::WithinAbs(r1[i2][j2][k2], 1e-4));
+                REQUIRE_THAT(r[1][i][j][k], Catch::Matchers::WithinAbs(r1[i2][j2][k2 + 1], 1e-4));
+                REQUIRE_THAT(r[2][i][j][k], Catch::Matchers::WithinAbs(r1[i2][j2 + 1][k2], 1e-4));
+                REQUIRE_THAT(r[3][i][j][k], Catch::Matchers::WithinAbs(r1[i2][j2 + 1][k2 + 1], 1e-4));
+                REQUIRE_THAT(r[4][i][j][k], Catch::Matchers::WithinAbs(r1[i2 + 1][j2][k2], 1e-4));
+                REQUIRE_THAT(r[5][i][j][k], Catch::Matchers::WithinAbs(r1[i2 + 1][j2][k2 + 1], 1e-4));
+                REQUIRE_THAT(r[6][i][j][k], Catch::Matchers::WithinAbs(r1[i2 + 1][j2 + 1][k2], 1e-4));
+                REQUIRE_THAT(r[7][i][j][k], Catch::Matchers::WithinAbs(r1[i2 + 1][j2 + 1][k2 + 1], 1e-4));
             }
 }
 

@@ -279,9 +279,9 @@ TEST_CASE("CuboidBSGpu::swap", "[ocl]")
         mgcl::CuboidBS ch1(1, 1, 1, 0, 0, 0, blocksize);
         mgcl::CuboidBS ch2(1, 1, 1, 0, 0, 0, blocksize);
         ch1[0][0][0][0] = 1.0;
-        ch1[0][0][0][1] = 3.0;
+        ch1[1][0][0][0] = 3.0;
         ch2[0][0][0][0] = 2.0;
-        ch2[0][0][0][1] = 4.0;
+        ch2[1][0][0][0] = 4.0;
 
         mgcl::CuboidBSGpu c1(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, ch1);
         mgcl::CuboidBSGpu c2(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, ch2);
@@ -321,7 +321,7 @@ TEST_CASE("CuboidBSGpu::copyShallow", "[ocl]")
     {
         mgcl::CuboidBS ch1(1, 2, 3, 0, 1, 2, blocksize);
         ch1[0][0][0][0] = 2.0;
-        ch1[0][0][0][1] = 3.0;
+        ch1[1][0][0][0] = 3.0;
 
         mgcl::CuboidBSGpu c1(tu.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, ch1);
         auto c2ptr = c1.copyShallow();
@@ -441,7 +441,7 @@ TEST_CASE("CuboidBSGpu::extract_border_planes", "[ocl]")
                         for (int b = 0; b < blocksize; b++)
                         {
                             CAPTURE(i, j, k, cnt);
-                            REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k][b]);
+                            REQUIRE(data_borders[cnt++] == h_cuboid[b][i][j][k]);
                         }
 
             // back planes (yz)
@@ -449,35 +449,35 @@ TEST_CASE("CuboidBSGpu::extract_border_planes", "[ocl]")
                 for (int j = 0; j < ngh; j++)      // all cells in y-dir
                     for (int k = 0; k < ogh; k++)  // all cells in z-dir
                         for (int b = 0; b < blocksize; b++)
-                            REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k][b]);
+                            REQUIRE(data_borders[cnt++] == h_cuboid[b][i][j][k]);
 
             // top planes (xz)
             for (int j = ghosts_n; j < 2 * ghosts_n; j++)
                 for (int i = 0; i < mgh; i++)
                     for (int k = 0; k < ogh; k++)
                         for (int b = 0; b < blocksize; b++)
-                            REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k][b]);
+                            REQUIRE(data_borders[cnt++] == h_cuboid[b][i][j][k]);
 
             // bottom planes (xz)
             for (int j = n; j < n + ghosts_n; j++)
                 for (int i = 0; i < mgh; i++)
                     for (int k = 0; k < ogh; k++)
                         for (int b = 0; b < blocksize; b++)
-                            REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k][b]);
+                            REQUIRE(data_borders[cnt++] == h_cuboid[b][i][j][k]);
 
             // left planes (xy)
             for (int k = ghosts_o; k < 2 * ghosts_o; k++)
                 for (int i = 0; i < mgh; i++)
                     for (int j = 0; j < ngh; j++)
                         for (int b = 0; b < blocksize; b++)
-                            REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k][b]);
+                            REQUIRE(data_borders[cnt++] == h_cuboid[b][i][j][k]);
 
             // right planes (xy)
             for (int k = o; k < o + ghosts_o; k++)
                 for (int i = 0; i < mgh; i++)
                     for (int j = 0; j < ngh; j++)
                         for (int b = 0; b < blocksize; b++)
-                            REQUIRE(data_borders[cnt++] == h_cuboid[i][j][k][b]);
+                            REQUIRE(data_borders[cnt++] == h_cuboid[b][i][j][k]);
         };
 
         SECTION("no_reuse")
@@ -587,7 +587,7 @@ TEST_CASE("CuboidBSGpu::pasteGhostsFromBorderPlanes", "[ocl]")
                         if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
                         {
                             CAPTURE(i, j, k);
-                            REQUIRE((*slice_back)[i][j][k][b] == buf_planes[idx]);
+                            REQUIRE((*slice_back)[b][i][j][k] == buf_planes[idx]);
                         }
                         idx++;
                     }
@@ -601,7 +601,7 @@ TEST_CASE("CuboidBSGpu::pasteGhostsFromBorderPlanes", "[ocl]")
                         if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
                         {
                             CAPTURE(i, j, k);
-                            REQUIRE((*slice_front)[i][j][k][b] == buf_planes[idx]);
+                            REQUIRE((*slice_front)[b][i][j][k] == buf_planes[idx]);
                         }
                         idx++;
                     }
@@ -615,7 +615,7 @@ TEST_CASE("CuboidBSGpu::pasteGhostsFromBorderPlanes", "[ocl]")
                         if (k >= ghosts_o && k < o + ghosts_o)
                         {
                             CAPTURE(i, j, k);
-                            REQUIRE((*slice_bottom)[i][j][k][b] == buf_planes[idx]);
+                            REQUIRE((*slice_bottom)[b][i][j][k] == buf_planes[idx]);
                         }
                         idx++;
                     }
@@ -629,7 +629,7 @@ TEST_CASE("CuboidBSGpu::pasteGhostsFromBorderPlanes", "[ocl]")
                         if (k >= ghosts_o && k < o + ghosts_o)
                         {
                             CAPTURE(i, j, k);
-                            REQUIRE((*slice_top)[i][j][k][b] == buf_planes[idx]);
+                            REQUIRE((*slice_top)[b][i][j][k] == buf_planes[idx]);
                         }
                         idx++;
                     }
@@ -640,7 +640,7 @@ TEST_CASE("CuboidBSGpu::pasteGhostsFromBorderPlanes", "[ocl]")
                     for (int b = 0; b < blocksize; b++)
                     {
                         CAPTURE(i, j, k);
-                        REQUIRE((*slice_right)[i][j][k][b] == buf_planes[idx]);
+                        REQUIRE((*slice_right)[b][i][j][k] == buf_planes[idx]);
                         idx++;
                     }
         // Left ghosts
@@ -650,7 +650,7 @@ TEST_CASE("CuboidBSGpu::pasteGhostsFromBorderPlanes", "[ocl]")
                     for (int b = 0; b < blocksize; b++)
                     {
                         CAPTURE(i, j, k);
-                        REQUIRE((*slice_left)[i][j][k][b] == buf_planes[idx]);
+                        REQUIRE((*slice_left)[b][i][j][k] == buf_planes[idx]);
                         idx++;
                     }
     }
@@ -697,8 +697,8 @@ TEST_CASE("CuboidBSGpu::updateGhosts gh < m")
             for (int k = 0; k < ghosts_o; k++)
                 for (int b = 0; b < blocksize; b++)
                 {
-                    REQUIRE(fabs((*c2)[i][j][k][b] - (*c2)[i + m][j + n][k + o][b]) < tol);
-                    REQUIRE(fabs((*c2)[i + ghosts_m][j + ghosts_n][k + ghosts_o][b] - (*c2)[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o][b]) < tol);
+                    REQUIRE(fabs((*c2)[b][i][j][k] - (*c2)[b][i + m][j + n][k + o]) < tol);
+                    REQUIRE(fabs((*c2)[b][i + ghosts_m][j + ghosts_n][k + ghosts_o] - (*c2)[b][i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
                 }
 }
 
@@ -743,7 +743,7 @@ TEST_CASE("CuboidBSGpu::updateGhosts gh > m")
             for (int k = 0; k < ghosts_o; k++)
                 for (int b = 0; b < blocksize; b++)
                 {
-                    REQUIRE(fabs((*c2)[i][j][k][b] - (*c2)[i + m][j + n][k + o][b]) < tol);
-                    REQUIRE(fabs((*c2)[i + ghosts_m][j + ghosts_n][k + ghosts_o][b] - (*c2)[i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o][b]) < tol);
+                    REQUIRE(fabs((*c2)[b][i][j][k] - (*c2)[b][i + m][j + n][k + o]) < tol);
+                    REQUIRE(fabs((*c2)[b][i + ghosts_m][j + ghosts_n][k + ghosts_o] - (*c2)[b][i + m + ghosts_m][j + n + ghosts_n][k + o + ghosts_o]) < tol);
                 }
 }

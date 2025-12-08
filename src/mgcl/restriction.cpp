@@ -185,39 +185,39 @@ namespace mgcl
                         for (int bj = 0; bj < args.rbs.getBlocksize(); bj++)
                         {
                             // clang-format off
-                            stencilsum += bsraw[bi][bj][1][1][1] * fraw[i2][j2][k2][bj] // self
-                                + bsraw[bi][bj][1][1][0] * fraw[ i2 ][ j2 ][k2-1][bj]
-                                + bsraw[bi][bj][1][1][2] * fraw[ i2 ][ j2 ][k2+1][bj]
-                                + bsraw[bi][bj][1][0][1] * fraw[ i2 ][j2-1][ k2 ][bj]
-                                + bsraw[bi][bj][1][2][1] * fraw[ i2 ][j2+1][ k2 ][bj]
-                                + bsraw[bi][bj][0][1][1] * fraw[i2-1][ j2 ][ k2 ][bj]
-                                + bsraw[bi][bj][2][1][1] * fraw[i2+1][ j2 ][ k2 ][bj]
+                            stencilsum += bsraw[bi][bj][1][1][1] * fraw[bj][i2][j2][k2] // self
+                                + bsraw[bi][bj][1][1][0] * fraw[bj][ i2 ][ j2 ][k2-1]
+                                + bsraw[bi][bj][1][1][2] * fraw[bj][ i2 ][ j2 ][k2+1]
+                                + bsraw[bi][bj][1][0][1] * fraw[bj][ i2 ][j2-1][ k2 ]
+                                + bsraw[bi][bj][1][2][1] * fraw[bj][ i2 ][j2+1][ k2 ]
+                                + bsraw[bi][bj][0][1][1] * fraw[bj][i2-1][ j2 ][ k2 ]
+                                + bsraw[bi][bj][2][1][1] * fraw[bj][i2+1][ j2 ][ k2 ]
                                 
-                                + bsraw[bi][bj][1][0][0] * fraw[ i2 ][j2-1][k2-1][bj]
-                                + bsraw[bi][bj][1][0][2] * fraw[ i2 ][j2-1][k2+1][bj]
-                                + bsraw[bi][bj][1][2][0] * fraw[ i2 ][j2+1][k2-1][bj]
-                                + bsraw[bi][bj][1][2][2] * fraw[ i2 ][j2+1][k2+1][bj]
-                                + bsraw[bi][bj][0][1][0] * fraw[i2-1][ j2 ][k2-1][bj]
-                                + bsraw[bi][bj][0][1][2] * fraw[i2-1][ j2 ][k2+1][bj]
-                                + bsraw[bi][bj][2][1][0] * fraw[i2+1][ j2 ][k2-1][bj]
-                                + bsraw[bi][bj][2][1][2] * fraw[i2+1][ j2 ][k2+1][bj]
-                                + bsraw[bi][bj][0][0][1] * fraw[i2-1][j2-1][ k2 ][bj]
-                                + bsraw[bi][bj][0][2][1] * fraw[i2-1][j2+1][ k2 ][bj]
-                                + bsraw[bi][bj][2][0][1] * fraw[i2+1][j2-1][ k2 ][bj]
-                                + bsraw[bi][bj][2][2][1] * fraw[i2+1][j2+1][ k2 ][bj]
+                                + bsraw[bi][bj][1][0][0] * fraw[bj][ i2 ][j2-1][k2-1]
+                                + bsraw[bi][bj][1][0][2] * fraw[bj][ i2 ][j2-1][k2+1]
+                                + bsraw[bi][bj][1][2][0] * fraw[bj][ i2 ][j2+1][k2-1]
+                                + bsraw[bi][bj][1][2][2] * fraw[bj][ i2 ][j2+1][k2+1]
+                                + bsraw[bi][bj][0][1][0] * fraw[bj][i2-1][ j2 ][k2-1]
+                                + bsraw[bi][bj][0][1][2] * fraw[bj][i2-1][ j2 ][k2+1]
+                                + bsraw[bi][bj][2][1][0] * fraw[bj][i2+1][ j2 ][k2-1]
+                                + bsraw[bi][bj][2][1][2] * fraw[bj][i2+1][ j2 ][k2+1]
+                                + bsraw[bi][bj][0][0][1] * fraw[bj][i2-1][j2-1][ k2 ]
+                                + bsraw[bi][bj][0][2][1] * fraw[bj][i2-1][j2+1][ k2 ]
+                                + bsraw[bi][bj][2][0][1] * fraw[bj][i2+1][j2-1][ k2 ]
+                                + bsraw[bi][bj][2][2][1] * fraw[bj][i2+1][j2+1][ k2 ]
                                 
-                                + bsraw[bi][bj][0][0][0] * fraw[i2-1][j2-1][k2-1][bj]
-                                + bsraw[bi][bj][0][0][2] * fraw[i2-1][j2-1][k2+1][bj]
-                                + bsraw[bi][bj][0][2][0] * fraw[i2-1][j2+1][k2-1][bj]
-                                + bsraw[bi][bj][0][2][2] * fraw[i2-1][j2+1][k2+1][bj]
-                                + bsraw[bi][bj][2][0][0] * fraw[i2+1][j2-1][k2-1][bj]
-                                + bsraw[bi][bj][2][0][2] * fraw[i2+1][j2-1][k2+1][bj]
-                                + bsraw[bi][bj][2][2][0] * fraw[i2+1][j2+1][k2-1][bj]
-                                + bsraw[bi][bj][2][2][2] * fraw[i2+1][j2+1][k2+1][bj];
+                                + bsraw[bi][bj][0][0][0] * fraw[bj][i2-1][j2-1][k2-1]
+                                + bsraw[bi][bj][0][0][2] * fraw[bj][i2-1][j2-1][k2+1]
+                                + bsraw[bi][bj][0][2][0] * fraw[bj][i2-1][j2+1][k2-1]
+                                + bsraw[bi][bj][0][2][2] * fraw[bj][i2-1][j2+1][k2+1]
+                                + bsraw[bi][bj][2][0][0] * fraw[bj][i2+1][j2-1][k2-1]
+                                + bsraw[bi][bj][2][0][2] * fraw[bj][i2+1][j2-1][k2+1]
+                                + bsraw[bi][bj][2][2][0] * fraw[bj][i2+1][j2+1][k2-1]
+                                + bsraw[bi][bj][2][2][2] * fraw[bj][i2+1][j2+1][k2+1];
                             // clang-format on
                         }
 
-                        args.coarse[i][j][k][bi] = stencilsum;
+                        args.coarse[bi][i][j][k] = stencilsum;
                     }
                 }
             }

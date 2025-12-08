@@ -88,16 +88,16 @@ namespace mgcl
         for (i = 0; i < field_1d.size(); i++)
             field_1d[i] = value;
 
-        field_4d = new double***[mgh];
-        for (i = 0; i < mgh; i++)
+        field_4d = new double***[blocksize];
+        for (i = 0; i < blocksize; i++)
         {
-            field_4d[i] = new double**[ngh];
-            for (j = 0; j < ngh; j++)
+            field_4d[i] = new double**[mgh];
+            for (j = 0; j < mgh; j++)
             {
-                field_4d[i][j] = new double*[ogh];
-                for (k = 0; k < ogh; k++)
+                field_4d[i][j] = new double*[ngh];
+                for (k = 0; k < ngh; k++)
                 {
-                    field_4d[i][j][k] = &field_1d[i * ngh * ogh * blocksize + j * ogh * blocksize + k * blocksize];
+                    field_4d[i][j][k] = &field_1d[i * mgh * ngh * ogh + j * ngh * ogh + k * ogh];
                 }
             }
         }
@@ -161,9 +161,9 @@ namespace mgcl
 
     CuboidBS::~CuboidBS()
     {
-        for (int i = 0; i < mgh; i++)
+        for (int i = 0; i < blocksize; i++)
         {
-            for (int j = 0; j < ngh; j++)
+            for (int j = 0; j < mgh; j++)
             {
                 delete[] field_4d[i][j];
             }
@@ -190,7 +190,7 @@ namespace mgcl
                     for (int d3 = ghostsM; d3 < o + ghostsO; d3++)
                         for (int d4 = 0; d4 < blocksize; d4++)
                         {
-                            field_4d[d1][d2][d3][d4] = dist(rng);
+                            field_4d[d4][d1][d2][d3] = dist(rng);
                         }
         }
         else
@@ -217,7 +217,7 @@ namespace mgcl
                     for (int d3 = ghostsM; d3 < o + ghostsO; d3++)
                         for (int d4 = 0; d4 < blocksize; d4++)
                         {
-                            field_4d[d1][d2][d3][d4] = dist(rng);
+                            field_4d[d4][d1][d2][d3] = dist(rng);
                         }
         }
         else
@@ -242,7 +242,7 @@ namespace mgcl
                     for (int k = ghostsO; k < o + ghostsO; k++)
                         for (int b = 0; b < blocksize; b++)
                         {
-                            field_4d[i][j][k][b] = value;
+                            field_4d[b][i][j][k] = value;
                         }
         }
         else
@@ -264,7 +264,7 @@ namespace mgcl
                     for (int k = ghostsO; k < o + ghostsO; k++)
                         for (int b = 0; b < blocksize; b++)
                         {
-                            (*this)[i][j][k][b] = to1dIndex(i, j, k, b);
+                            (*this)[b][i][j][k] = to1dIndex(i, j, k, b);
                         }
         else
             for (int i = 0; i < mgh; i++)
@@ -272,7 +272,7 @@ namespace mgcl
                     for (int k = 0; k < ogh; k++)
                         for (int b = 0; b < blocksize; b++)
                         {
-                            (*this)[i][j][k][b] = to1dIndex(i, j, k, b);
+                            (*this)[b][i][j][k] = to1dIndex(i, j, k, b);
                         }
     }
 
@@ -304,8 +304,8 @@ namespace mgcl
                 for (int k = 0; k < o; k++)
                     for (int b = 0; b < blocksize; b++)
                     {
-                        diff = fabs(field_4d[i + ghostsM][j + ghostsN][k + ghostsO][b] -
-                                    c[i + c.getGhostsM()][j + c.getGhostsN()][k + c.getGhostsO()][b]);
+                        diff = fabs(field_4d[b][i + ghostsM][j + ghostsN][k + ghostsO] -
+                                    c[b][i + c.getGhostsM()][j + c.getGhostsN()][k + c.getGhostsO()]);
                         if (diff > tol)
                         {
                             return false;
@@ -343,7 +343,7 @@ namespace mgcl
                 for (int k = 0; k < ogh; k++)
                     for (int b = 0; b < blocksize; b++)
                     {
-                        diff = fabs(field_4d[i][j][k][b] - c[i][j][k][b]);
+                        diff = fabs(field_4d[b][i][j][k] - c[b][i][j][k]);
                         if (diff > tol)
                         {
                             return false;
@@ -375,7 +375,7 @@ namespace mgcl
                             for (int b = 0; b < blocksize; b++)
                             {
                                 myfile << i - ghostsM << "\t" << j - ghostsN << "\t" << k - ghostsO << "\t" << b << "\t"
-                                       << std::scientific << std::setprecision(17) << field_4d[i][j][k][b] << std::endl;
+                                       << std::scientific << std::setprecision(17) << field_4d[b][i][j][k] << std::endl;
                             }
             }
             else
@@ -386,7 +386,7 @@ namespace mgcl
                             for (int b = 0; b < blocksize; b++)
                             {
                                 myfile << i << "\t" << j << "\t" << k << "\t" << b << "\t"
-                                       << std::scientific << std::setprecision(17) << field_4d[i][j][k][b] << std::endl;
+                                       << std::scientific << std::setprecision(17) << field_4d[b][i][j][k] << std::endl;
                             }
             }
             myfile.close();
@@ -412,7 +412,7 @@ namespace mgcl
                 for (int k = 0; k < c.getOgh(); k++)
                     for (int b = 0; b < c.getBlocksize(); b++)
                     {
-                        ret[i][j][k][b] = c[i][j][k][b];
+                        ret[b][i][j][k] = c[b][i][j][k];
                     }
 
         return ret;
@@ -433,7 +433,7 @@ namespace mgcl
                 for (int k = 0; k < o; k++)
                     for (int b = 0; b < blocksize; b++)
                     {
-                        field_4d[i + ghostsM][j + ghostsN][k + ghostsO][b] = c[i + c.getGhostsM()][j + c.getGhostsN()][k + c.getGhostsO()][b];
+                        field_4d[b][i + ghostsM][j + ghostsN][k + ghostsO] = c[b][i + c.getGhostsM()][j + c.getGhostsN()][k + c.getGhostsO()];
                     }
     }
 
@@ -453,7 +453,7 @@ namespace mgcl
                 for (int k = 0; k < ogh; k++)
                     for (int b = 0; b < blocksize; b++)
                     {
-                        field_4d[i][j][k][b] = c[i][j][k][b];
+                        field_4d[b][i][j][k] = c[b][i][j][k];
                     }
     }
 
@@ -486,7 +486,7 @@ namespace mgcl
                 for (int k = o_start, ks = gho, kb = k + ghostsO; k <= o_end; k++, ks++, kb++)
                     for (int b = 0; b < blocksize; b++)
                     {
-                        ret->getData()[is][js][ks][b] = getData()[ib][jb][kb][b];
+                        ret->getData()[b][is][js][ks] = getData()[b][ib][jb][kb];
                     }
 
         return ret;
@@ -515,7 +515,7 @@ namespace mgcl
                 for (int k = o_start, ks = k - o_start; k <= o_end; k++, ks++)
                     for (int b = 0; b < blocksize; b++)
                     {
-                        ret->getData()[is][js][ks][b] = getData()[i][j][k][b];
+                        ret->getData()[b][is][js][ks] = getData()[b][i][j][k];
                     }
 
         return ret;
@@ -549,8 +549,8 @@ namespace mgcl
             for (int b = 0; b < blocksize; b++)
                 {
                     
-                    field_4d[i][j][k][b] = field_4d[i + factor_left * m][j][k][b]; // left ghost cell = right real cell
-                    field_4d[ghm_start_right + i][j][k][b] = field_4d[ghm_start_right + i - factor_right * m][j][k][b]; // right ghost cell = left real cell
+                    field_4d[b][i][j][k] = field_4d[b][i + factor_left * m][j][k]; // left ghost cell = right real cell
+                    field_4d[b][ghm_start_right + i][j][k] = field_4d[b][ghm_start_right + i - factor_right * m][j][k]; // right ghost cell = left real cell
                 }
         }
 
@@ -565,8 +565,8 @@ namespace mgcl
             for (int b = 0; b < blocksize; b++)
                 {
                     
-                    field_4d[j][i][k][b] = field_4d[j][i + factor_left * n][k][b]; // left ghost cell = right real cell
-                    field_4d[j][ghn_start_right + i][k][b] = field_4d[j][ghn_start_right + i - factor_right * n][k][b]; // right ghost cell = left real cell
+                    field_4d[b][j][i][k] = field_4d[b][j][i + factor_left * n][k]; // left ghost cell = right real cell
+                    field_4d[b][j][ghn_start_right + i][k] = field_4d[b][j][ghn_start_right + i - factor_right * n][k]; // right ghost cell = left real cell
                 }
         }
 
@@ -581,8 +581,8 @@ namespace mgcl
             for (int b = 0; b < blocksize; b++)
                 {
                     
-                    field_4d[j][k][i][b] = field_4d[j][k][i + factor_left * o][b]; // left ghost cell = right real cell
-                    field_4d[j][k][gho_start_right + i][b] = field_4d[j][k][gho_start_right + i - factor_right * o][b]; // right ghost cell = left real cell
+                    field_4d[b][j][k][i] = field_4d[b][j][k][i + factor_left * o]; // left ghost cell = right real cell
+                    field_4d[b][j][k][gho_start_right + i] = field_4d[b][j][k][gho_start_right + i - factor_right * o]; // right ghost cell = left real cell
                 }
         }
         // clang-format on
@@ -623,7 +623,7 @@ namespace mgcl
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ogh; k++)
                         for (int b = 0; b < blocksize; b++)
-                            cbuf[mgh - ghostsM + i][j][k][b] = rbuf[i][j][k][b];
+                            cbuf[b][mgh - ghostsM + i][j][k] = rbuf[b][i][j][k];
 
         /* Sending data to the back */
         sbuf_ptr = sliceIncGhosts(m, m + ghostsM - 1, 0, ngh - 1, 0, ogh - 1); // TODO max when gh > m

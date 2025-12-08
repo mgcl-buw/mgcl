@@ -45,7 +45,7 @@ TEST_CASE("prolongation_single_point")
             for (int k = ghosts_o; k < oc + ghosts_o; k++)
                 for (int b = 0; b < blocksize; b++)
                 {
-                    c_coarse[i][j][k][b] = cnt++;
+                    c_coarse[b][i][j][k] = cnt++;
                 }
     // c_coarse.dumpToFile("c_coarse.txt", false);
 
@@ -112,22 +112,22 @@ TEST_CASE("prolongation_single_point")
     // c_fine.dumpToFile("c_fine.txt", false);
 
     // Check against manually calculated results
-    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 3][ghosts_o + 3][0] == 4463); // self
-    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 3][ghosts_o + 3][1] == 4633);
-    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 3][ghosts_o + 2][0] == 8700); // left
-    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 3][ghosts_o + 2][1] == 9032);
-    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 2][ghosts_o + 3][0] == 7894); // top
-    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 2][ghosts_o + 3][1] == 8202);
-    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 3][ghosts_o + 3][0] == 3262); // front
-    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 3][ghosts_o + 3][1] == 3474);
-    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 2][ghosts_o + 2][0] == 15336); // top left
-    REQUIRE(c_fine[ghosts_m + 3][ghosts_n + 2][ghosts_o + 2][1] == 15936);
-    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 3][ghosts_o + 2][0] == 6072); // front left
-    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 3][ghosts_o + 2][1] == 6480);
-    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 2][ghosts_o + 3][0] == 4460); // front top
-    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 2][ghosts_o + 3][1] == 4820);
-    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 2][ghosts_o + 2][0] == 8016); // front top left
-    REQUIRE(c_fine[ghosts_m + 2][ghosts_n + 2][ghosts_o + 2][1] == 8704);
+    REQUIRE(c_fine[0][ghosts_m + 3][ghosts_n + 3][ghosts_o + 3] == 4463); // self
+    REQUIRE(c_fine[1][ghosts_m + 3][ghosts_n + 3][ghosts_o + 3] == 4633);
+    REQUIRE(c_fine[0][ghosts_m + 3][ghosts_n + 3][ghosts_o + 2] == 8700); // left
+    REQUIRE(c_fine[1][ghosts_m + 3][ghosts_n + 3][ghosts_o + 2] == 9032);
+    REQUIRE(c_fine[0][ghosts_m + 3][ghosts_n + 2][ghosts_o + 3] == 7894); // top
+    REQUIRE(c_fine[1][ghosts_m + 3][ghosts_n + 2][ghosts_o + 3] == 8202);
+    REQUIRE(c_fine[0][ghosts_m + 2][ghosts_n + 3][ghosts_o + 3] == 3262); // front
+    REQUIRE(c_fine[1][ghosts_m + 2][ghosts_n + 3][ghosts_o + 3] == 3474);
+    REQUIRE(c_fine[0][ghosts_m + 3][ghosts_n + 2][ghosts_o + 2] == 15336); // top left
+    REQUIRE(c_fine[1][ghosts_m + 3][ghosts_n + 2][ghosts_o + 2] == 15936);
+    REQUIRE(c_fine[0][ghosts_m + 2][ghosts_n + 3][ghosts_o + 2] == 6072); // front left
+    REQUIRE(c_fine[1][ghosts_m + 2][ghosts_n + 3][ghosts_o + 2] == 6480);
+    REQUIRE(c_fine[0][ghosts_m + 2][ghosts_n + 2][ghosts_o + 3] == 4460); // front top
+    REQUIRE(c_fine[1][ghosts_m + 2][ghosts_n + 2][ghosts_o + 3] == 4820);
+    REQUIRE(c_fine[0][ghosts_m + 2][ghosts_n + 2][ghosts_o + 2] == 8016); // front top left
+    REQUIRE(c_fine[1][ghosts_m + 2][ghosts_n + 2][ghosts_o + 2] == 8704);
 }
 
 // Tests restriction using a blockstencil and checks results against multiple restrictions using scalar stencils, while
@@ -179,8 +179,8 @@ TEST_CASE("prolongation_blockstencil_independent_quantities")
         for (int j = 0; j < nghc; j++)
             for (int k = 0; k < oghc; k++)
             {
-                c_coarse1[i][j][k] = c_coarsebs[i][j][k][0];
-                c_coarse2[i][j][k] = c_coarsebs[i][j][k][1];
+                c_coarse1[i][j][k] = c_coarsebs[0][i][j][k];
+                c_coarse2[i][j][k] = c_coarsebs[1][i][j][k];
             }
 
     // fill diagonals with full-weighted restriction operator, which is the same as in the scalar case
@@ -238,8 +238,8 @@ TEST_CASE("prolongation_blockstencil_independent_quantities")
                 for (int k = ghosts_o; k < of + ghosts_o; k++)
                 {
                     CAPTURE(i, j, k);
-                    REQUIRE(c_fine1[i][j][k] == c_finebs[i][j][k][0]);
-                    REQUIRE(c_fine2[i][j][k] == c_finebs[i][j][k][1]);
+                    REQUIRE(c_fine1[i][j][k] == c_finebs[0][i][j][k]);
+                    REQUIRE(c_fine2[i][j][k] == c_finebs[1][i][j][k]);
                 }
     }
 
@@ -282,8 +282,8 @@ TEST_CASE("prolongation_blockstencil_independent_quantities")
                 for (int k = ghosts_o; k < of + ghosts_o; k++)
                 {
                     CAPTURE(i, j, k);
-                    REQUIRE(c_fine1[i][j][k] == c_finebs[i][j][k][0]);
-                    REQUIRE(c_fine2[i][j][k] == c_finebs[i][j][k][1]);
+                    REQUIRE(c_fine1[i][j][k] == c_finebs[0][i][j][k]);
+                    REQUIRE(c_fine2[i][j][k] == c_finebs[1][i][j][k]);
                 }
     }
 }

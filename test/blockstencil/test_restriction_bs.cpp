@@ -69,8 +69,8 @@ TEST_CASE("seq_restriction_single_point")
     // c_coarse.dumpToFile("c_coarse.txt", false);
 
     // Check against manually calculated results
-    REQUIRE(c_coarse[ghosts_m][ghosts_n][ghosts_o][0] == 284787);
-    REQUIRE(c_coarse[ghosts_m][ghosts_n][ghosts_o][1] == 293913);
+    REQUIRE(c_coarse[0][ghosts_m][ghosts_n][ghosts_o] == 284787);
+    REQUIRE(c_coarse[1][ghosts_m][ghosts_n][ghosts_o] == 293913);
 }
 
 // Tests restriction using a blockstencil and checks results against multiple restrictions using scalar stencils, while
@@ -112,8 +112,8 @@ TEST_CASE("restriction_blockstencil_independent_quantities")
         for (int j = 0; j < ngh; j++)
             for (int k = 0; k < ogh; k++)
             {
-                c_fine1[i][j][k] = c_finebs[i][j][k][0];
-                c_fine2[i][j][k] = c_finebs[i][j][k][1];
+                c_fine1[i][j][k] = c_finebs[0][i][j][k];
+                c_fine2[i][j][k] = c_finebs[1][i][j][k];
             }
 
     // fill diagonals with full-weighted restriction operator, which is the same as in the scalar case
@@ -171,8 +171,8 @@ TEST_CASE("restriction_blockstencil_independent_quantities")
                 for (int k = ghosts_o; k < o / 2 + ghosts_o; k++)
                 {
                     CAPTURE(i, j, k);
-                    REQUIRE(c_coarse1[i][j][k] == c_coarsebs[i][j][k][0]);
-                    REQUIRE(c_coarse2[i][j][k] == c_coarsebs[i][j][k][1]);
+                    REQUIRE(c_coarse1[i][j][k] == c_coarsebs[0][i][j][k]);
+                    REQUIRE(c_coarse2[i][j][k] == c_coarsebs[1][i][j][k]);
                 }
     }
 
@@ -215,8 +215,8 @@ TEST_CASE("restriction_blockstencil_independent_quantities")
                 for (int k = ghosts_o; k < o / 2 + ghosts_o; k++)
                 {
                     CAPTURE(i, j, k);
-                    REQUIRE(c_coarse1[i][j][k] == c_coarsebs[i][j][k][0]);
-                    REQUIRE(c_coarse2[i][j][k] == c_coarsebs[i][j][k][1]);
+                    REQUIRE(c_coarse1[i][j][k] == c_coarsebs[0][i][j][k]);
+                    REQUIRE(c_coarse2[i][j][k] == c_coarsebs[1][i][j][k]);
                 }
     }
 }

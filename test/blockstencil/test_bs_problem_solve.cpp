@@ -426,10 +426,10 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
                 for (int j = 0; j < N; j++)
                     for (int k = 0; k < N; k++)
                     {
-                        (*vbs)[i][j][k][0] = (*vsc)[i][j][k];
-                        (*fbs)[i][j][k][0] = (*fsc)[i][j][k];
-                        (*vbs)[i][j][k][1] = (*vsc)[i][j][k];
-                        (*fbs)[i][j][k][1] = (*fsc)[i][j][k];
+                        (*vbs)[0][i][j][k] = (*vsc)[i][j][k];
+                        (*fbs)[0][i][j][k] = (*fsc)[i][j][k];
+                        (*vbs)[1][i][j][k] = (*vsc)[i][j][k];
+                        (*fbs)[1][i][j][k] = (*fsc)[i][j][k];
                     }
 
             mgcl::Problem pbs(N, N, N, fbs, vbs);
@@ -500,8 +500,8 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
                 for (int j = 0; j < N; j++)
                     for (int k = 0; k < N; k++)
                     {
-                        REQUIRE_THAT((*vbs)[i][j][k][0], Catch::Matchers::WithinAbs((*vsc)[i][j][k], 1e-14));
-                        REQUIRE_THAT((*vbs)[i][j][k][1], Catch::Matchers::WithinAbs((*vsc)[i][j][k], 1e-14));
+                        REQUIRE_THAT((*vbs)[0][i][j][k], Catch::Matchers::WithinAbs((*vsc)[i][j][k], 1e-14));
+                        REQUIRE_THAT((*vbs)[1][i][j][k], Catch::Matchers::WithinAbs((*vsc)[i][j][k], 1e-14));
                     }
         }
     }
@@ -531,10 +531,10 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
                 for (int j = 0; j < N; j++)
                     for (int k = 0; k < N; k++)
                     {
-                        (*vbs)[i][j][k][0] = (*vsc)[i][j][k];
-                        (*fbs)[i][j][k][0] = (*fsc)[i][j][k];
-                        (*vbs)[i][j][k][1] = (*vsc)[i][j][k];
-                        (*fbs)[i][j][k][1] = (*fsc)[i][j][k];
+                        (*vbs)[0][i][j][k] = (*vsc)[i][j][k];
+                        (*fbs)[0][i][j][k] = (*fsc)[i][j][k];
+                        (*vbs)[1][i][j][k] = (*vsc)[i][j][k];
+                        (*fbs)[1][i][j][k] = (*fsc)[i][j][k];
                     }
 
             mgcl::Problem pbs(N, N, N, fbs, vbs);
@@ -613,8 +613,8 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
                 for (int j = 0; j < N; j++)
                     for (int k = 0; k < N; k++)
                     {
-                        REQUIRE_THAT((*vbs)[i][j][k][0], Catch::Matchers::WithinAbs((*vsc)[i][j][k], 1e-14));
-                        REQUIRE_THAT((*vbs)[i][j][k][1], Catch::Matchers::WithinAbs((*vsc)[i][j][k], 1e-14));
+                        REQUIRE_THAT((*vbs)[0][i][j][k], Catch::Matchers::WithinAbs((*vsc)[i][j][k], 1e-14));
+                        REQUIRE_THAT((*vbs)[1][i][j][k], Catch::Matchers::WithinAbs((*vsc)[i][j][k], 1e-14));
                     }
         }
     }

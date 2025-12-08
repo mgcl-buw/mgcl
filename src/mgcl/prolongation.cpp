@@ -154,34 +154,34 @@ namespace mgcl
                     for (int bi = 0; bi < args.rbs.getBlocksize(); bi++)
                     {
                         // set values for current bi to 0 first
-                        fineVals[i2][j2][k2][bi] = 0;
-                        fineVals[i2][j2][k2 - 1][bi] = 0;
-                        fineVals[i2][j2 - 1][k2][bi] = 0;
-                        fineVals[i2 - 1][j2][k2][bi] = 0;
-                        fineVals[i2][j2 - 1][k2 - 1][bi] = 0;
-                        fineVals[i2 - 1][j2][k2 - 1][bi] = 0;
-                        fineVals[i2 - 1][j2 - 1][k2][bi] = 0;
-                        fineVals[i2 - 1][j2 - 1][k2 - 1][bi] = 0;
+                        fineVals[bi][i2][j2][k2] = 0;
+                        fineVals[bi][i2][j2][k2 - 1] = 0;
+                        fineVals[bi][i2][j2 - 1][k2] = 0;
+                        fineVals[bi][i2 - 1][j2][k2] = 0;
+                        fineVals[bi][i2][j2 - 1][k2 - 1] = 0;
+                        fineVals[bi][i2 - 1][j2][k2 - 1] = 0;
+                        fineVals[bi][i2 - 1][j2 - 1][k2] = 0;
+                        fineVals[bi][i2 - 1][j2 - 1][k2 - 1] = 0;
 
                         for (int bj = 0; bj < args.rbs.getBlocksize(); bj++)
                         {
-                            fineVals[i2][j2][k2][bi] += bsraw[bi][bj][1][1][1] * coarseVals[i][j][k][bj];
+                            fineVals[bi][i2][j2][k2] += bsraw[bi][bj][1][1][1] * coarseVals[bj][i][j][k];
 
-                            fineVals[i2][j2][k2 - 1][bi] += (bsraw[bi][bj][1][1][0] * coarseVals[i][j][k][bj] + bsraw[bi][bj][1][1][2] * coarseVals[i][j][k - 1][bj]);
-                            fineVals[i2][j2 - 1][k2][bi] += (bsraw[bi][bj][1][0][1] * coarseVals[i][j][k][bj] + bsraw[bi][bj][1][2][1] * coarseVals[i][j - 1][k][bj]);
-                            fineVals[i2 - 1][j2][k2][bi] += (bsraw[bi][bj][0][1][1] * coarseVals[i][j][k][bj] + bsraw[bi][bj][2][1][1] * coarseVals[i - 1][j][k][bj]);
+                            fineVals[bi][i2][j2][k2 - 1] += (bsraw[bi][bj][1][1][0] * coarseVals[bj][i][j][k] + bsraw[bi][bj][1][1][2] * coarseVals[bj][i][j][k - 1]);
+                            fineVals[bi][i2][j2 - 1][k2] += (bsraw[bi][bj][1][0][1] * coarseVals[bj][i][j][k] + bsraw[bi][bj][1][2][1] * coarseVals[bj][i][j - 1][k]);
+                            fineVals[bi][i2 - 1][j2][k2] += (bsraw[bi][bj][0][1][1] * coarseVals[bj][i][j][k] + bsraw[bi][bj][2][1][1] * coarseVals[bj][i - 1][j][k]);
 
-                            fineVals[i2][j2 - 1][k2 - 1][bi] +=
-                                (bsraw[bi][bj][1][0][0] * coarseVals[i][j][k][bj] + bsraw[bi][bj][1][0][2] * coarseVals[i][j][k - 1][bj] + bsraw[bi][bj][1][2][0] * coarseVals[i][j - 1][k][bj] + bsraw[bi][bj][1][2][2] * coarseVals[i][j - 1][k - 1][bj]);
-                            fineVals[i2 - 1][j2][k2 - 1][bi] +=
-                                (bsraw[bi][bj][0][1][0] * coarseVals[i][j][k][bj] + bsraw[bi][bj][0][1][2] * coarseVals[i][j][k - 1][bj] + bsraw[bi][bj][2][1][0] * coarseVals[i - 1][j][k][bj] + bsraw[bi][bj][2][1][2] * coarseVals[i - 1][j][k - 1][bj]);
-                            fineVals[i2 - 1][j2 - 1][k2][bi] +=
-                                (bsraw[bi][bj][0][0][1] * coarseVals[i][j][k][bj] + bsraw[bi][bj][0][2][1] * coarseVals[i][j - 1][k][bj] + bsraw[bi][bj][2][0][1] * coarseVals[i - 1][j][k][bj] + bsraw[bi][bj][2][2][1] * coarseVals[i - 1][j - 1][k][bj]);
+                            fineVals[bi][i2][j2 - 1][k2 - 1] +=
+                                (bsraw[bi][bj][1][0][0] * coarseVals[bj][i][j][k] + bsraw[bi][bj][1][0][2] * coarseVals[bj][i][j][k - 1] + bsraw[bi][bj][1][2][0] * coarseVals[bj][i][j - 1][k] + bsraw[bi][bj][1][2][2] * coarseVals[bj][i][j - 1][k - 1]);
+                            fineVals[bi][i2 - 1][j2][k2 - 1] +=
+                                (bsraw[bi][bj][0][1][0] * coarseVals[bj][i][j][k] + bsraw[bi][bj][0][1][2] * coarseVals[bj][i][j][k - 1] + bsraw[bi][bj][2][1][0] * coarseVals[bj][i - 1][j][k] + bsraw[bi][bj][2][1][2] * coarseVals[bj][i - 1][j][k - 1]);
+                            fineVals[bi][i2 - 1][j2 - 1][k2] +=
+                                (bsraw[bi][bj][0][0][1] * coarseVals[bj][i][j][k] + bsraw[bi][bj][0][2][1] * coarseVals[bj][i][j - 1][k] + bsraw[bi][bj][2][0][1] * coarseVals[bj][i - 1][j][k] + bsraw[bi][bj][2][2][1] * coarseVals[bj][i - 1][j - 1][k]);
 
-                            fineVals[i2 - 1][j2 - 1][k2 - 1][bi] +=
-                                (bsraw[bi][bj][0][0][0] * coarseVals[i][j][k][bj] + bsraw[bi][bj][0][0][2] * coarseVals[i][j][k - 1][bj] + bsraw[bi][bj][0][2][0] * coarseVals[i][j - 1][k][bj] + bsraw[bi][bj][0][2][2] * coarseVals[i][j - 1][k - 1][bj] +
-                                 bsraw[bi][bj][2][0][0] * coarseVals[i - 1][j][k][bj] + bsraw[bi][bj][2][0][2] * coarseVals[i - 1][j][k - 1][bj] + bsraw[bi][bj][2][2][0] * coarseVals[i - 1][j - 1][k][bj] +
-                                 bsraw[bi][bj][2][2][2] * coarseVals[i - 1][j - 1][k - 1][bj]);
+                            fineVals[bi][i2 - 1][j2 - 1][k2 - 1] +=
+                                (bsraw[bi][bj][0][0][0] * coarseVals[bj][i][j][k] + bsraw[bi][bj][0][0][2] * coarseVals[bj][i][j][k - 1] + bsraw[bi][bj][0][2][0] * coarseVals[bj][i][j - 1][k] + bsraw[bi][bj][0][2][2] * coarseVals[bj][i][j - 1][k - 1] +
+                                 bsraw[bi][bj][2][0][0] * coarseVals[bj][i - 1][j][k] + bsraw[bi][bj][2][0][2] * coarseVals[bj][i - 1][j][k - 1] + bsraw[bi][bj][2][2][0] * coarseVals[bj][i - 1][j - 1][k] +
+                                 bsraw[bi][bj][2][2][2] * coarseVals[bj][i - 1][j - 1][k - 1]);
                         }
                     }
                 }

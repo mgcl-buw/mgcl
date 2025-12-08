@@ -227,6 +227,8 @@ __kernel void update_ghosts_cuboidbs_periodic_blockstencil(
     int ngh = n + 2 * ghn;
     int ogh = o + 2 * gho;
 
+    int gridsize = mgh * ngh * ogh;
+
     if ((i < ghm || j < ghn || k < gho ||
          i >= ghm + m || j >= ghn + n || k >= gho + o) &&
         (i < mgh && j < ngh && k < ogh))
@@ -239,12 +241,12 @@ __kernel void update_ghosts_cuboidbs_periodic_blockstencil(
         int kreal = ((k - gho) % o + o) % o + gho;
 
         // 1d indices
-        int idx_gh_cell = i * ngh * ogh * BLOCKSIZE + j * ogh * BLOCKSIZE + k * BLOCKSIZE;
-        int idx_real_cell = ireal * ngh * ogh * BLOCKSIZE + jreal * ogh * BLOCKSIZE + kreal * BLOCKSIZE;
+        int idx_gh_cell = i * ngh * ogh + j * ogh + k;
+        int idx_real_cell = ireal * ngh * ogh + jreal * ogh + kreal;
 
         // update ghost cell
         for (int b = 0; b < BLOCKSIZE; b++)
-            c[idx_gh_cell + b] = c[idx_real_cell + b];
+            c[idx_gh_cell + b * gridsize] = c[idx_real_cell + b * gridsize];
     }
 }
 
@@ -326,14 +328,15 @@ __kernel void correct_error_blockstencil(
     int i = get_global_id(0) + ghosts;
     int j = get_global_id(1) + ghosts;
     int k = get_global_id(2) + ghosts;
-    int idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE;
+    int idx = (i * ngh * ogh + j * ogh + k);
+    int gridsize = mgh * ngh * ogh;
 
     // only for real cells
     if (i >= ghosts && j >= ghosts && k >= ghosts && i < mgh - ghosts && j < ngh - ghosts && k < ogh - ghosts)
     {
 
         for (size_t b = 0; b < BLOCKSIZE; b++)
-            v[idx + b] += e[idx + b];
+            v[idx + b * gridsize] += e[idx + b * gridsize];
     }
 }
 
@@ -696,15 +699,13 @@ __kernel void residual_27point_fixed_stencil(
     }
 }
 
-/* Calculates residual using a blockstencil.
- * Layout: [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
- *
- * One wi per grid point.
+/* Calculates residual without dinv.
+ * Layout: [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
  *
  * svGridSize = sv_mgh * sv_ngh * sv_ogh
  * svGridSizeCoeffs = 27 * svGridSize
  */
-__kernel void residual_27point_blockstencil_block_first_v_gp_first(
+__kernel void residual_27point_blockstencil_block_first_v_block_first(
     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
     __global double* restrict f,
     __global double* restrict r,
@@ -734,76 +735,62 @@ __kernel void residual_27point_blockstencil_block_first_v_gp_first(
     // calculate residual only for relevant cells (off = 0: only real cells)
     if (i >= istart_v && j >= jstart_v && k >= kstart_v && i < iend_v && j < jend_v && k < kend_v)
     {
-        int ioff = BLOCKSIZE * ngh * ogh;
-        int joff = BLOCKSIZE * ogh;
-        int koff = BLOCKSIZE;
-        int index = i * ioff + j * joff + k * koff;
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
+        int index = i * ioff + j * ogh + k;
         int gridsize = mgh * ngh * ogh;
 
         int svno = svngh * svogh;
         // offset inside one coefficient grid that points to the coefficient for the current grid point. Must consider different amount of ghosts for v and sv.
         int index_sv_gp = (i - ghosts + ghosts_sv) * svno + (j - ghosts + ghosts_sv) * svogh + (k - ghosts + ghosts_sv);
 
-        // if (i == 2 && j == 2 && k == 2)
-        // {
-        //     printf("i,j,k,mgh,ngh,ogh,gh,gh_sv,index_sv_gp,gridsize: %d,%d,%d,%d,%d,%d,%d,%d,%d,%d\ngh", i, j, k, mgh, ngh, ogh, ghosts, ghosts_sv, index_sv_gp, gridsize);
-        // }
-
-        // Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
+        // Layout: [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
         int idx_block = 0;
         for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
             double stencilsum = 0;
-
             for (int bj = 0; bj < BLOCKSIZE; bj++)
             {
                 // A*v
                 // clang-format off
-                stencilsum += stencilValues[index_sv_gp + (9 + 3 + 1) * svGridSize + idx_block] * v_in[index + bj]
-                    + stencilValues[index_sv_gp + (9 + 3) * svGridSize + idx_block]      * v_in[index - koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 3 + 2) * svGridSize + idx_block]  * v_in[index + koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 1) * svGridSize + idx_block]      * v_in[index - joff + bj]
-                    + stencilValues[index_sv_gp + (9 + 6 + 1) * svGridSize + idx_block]  * v_in[index + joff + bj]
-                    + stencilValues[index_sv_gp + (3 + 1) * svGridSize + idx_block]      * v_in[index - ioff + bj]
-                    + stencilValues[index_sv_gp + (18 + 3 + 1) * svGridSize + idx_block] * v_in[index + ioff + bj]
+                stencilsum += stencilValues[index_sv_gp + (9 + 3 + 1) * svGridSize + idx_block] * v_in[index + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 3) * svGridSize + idx_block]      * v_in[index - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 3 + 2) * svGridSize + idx_block]  * v_in[index + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 1) * svGridSize + idx_block]      * v_in[index - joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 6 + 1) * svGridSize + idx_block]  * v_in[index + joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (3 + 1) * svGridSize + idx_block]      * v_in[index - ioff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 3 + 1) * svGridSize + idx_block] * v_in[index + ioff + bj * gridsize]
                     
-                    + stencilValues[index_sv_gp + (9) * svGridSize + idx_block]          * v_in[index - joff - koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 2) * svGridSize + idx_block]      * v_in[index - joff + koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 6) * svGridSize + idx_block]      * v_in[index + joff - koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 6 + 2) * svGridSize + idx_block]  * v_in[index + joff + koff + bj]
-                    + stencilValues[index_sv_gp + svGridSize * 3 + idx_block]            * v_in[index - ioff - koff + bj]
-                    + stencilValues[index_sv_gp + (3 + 2) * svGridSize + idx_block]      * v_in[index - ioff + koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 3) * svGridSize + idx_block]     * v_in[index + ioff - koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 3 + 2) * svGridSize + idx_block] * v_in[index + ioff + koff + bj]
-                    + stencilValues[index_sv_gp + svGridSize + idx_block]                * v_in[index - ioff - joff + bj]
-                    + stencilValues[index_sv_gp + (6 + 1) * svGridSize + idx_block]      * v_in[index - ioff + joff + bj]
-                    + stencilValues[index_sv_gp + (18 + 1) * svGridSize + idx_block]     * v_in[index + ioff - joff + bj]
-                    + stencilValues[index_sv_gp + (18 + 6 + 1) * svGridSize + idx_block] * v_in[index + ioff + joff + bj]
+                    + stencilValues[index_sv_gp + (9) * svGridSize + idx_block]          * v_in[index - joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 2) * svGridSize + idx_block]      * v_in[index - joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 6) * svGridSize + idx_block]      * v_in[index + joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 6 + 2) * svGridSize + idx_block]  * v_in[index + joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + svGridSize * 3 + idx_block]            * v_in[index - ioff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (3 + 2) * svGridSize + idx_block]      * v_in[index - ioff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 3) * svGridSize + idx_block]     * v_in[index + ioff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 3 + 2) * svGridSize + idx_block] * v_in[index + ioff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + svGridSize + idx_block]                * v_in[index - ioff - joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (6 + 1) * svGridSize + idx_block]      * v_in[index - ioff + joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 1) * svGridSize + idx_block]     * v_in[index + ioff - joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 6 + 1) * svGridSize + idx_block] * v_in[index + ioff + joff + bj * gridsize]
 
-                    + stencilValues[index_sv_gp + idx_block]                                  * v_in[index - ioff - joff - koff + bj]
-                    + stencilValues[index_sv_gp + svGridSize * 2 + idx_block]            * v_in[index - ioff - joff + koff + bj]
-                    + stencilValues[index_sv_gp + (6) * svGridSize + idx_block]          * v_in[index - ioff + joff - koff + bj]
-                    + stencilValues[index_sv_gp + (6 + 2) * svGridSize + idx_block]      * v_in[index - ioff + joff + koff + bj]
-                    + stencilValues[index_sv_gp + (18) * svGridSize + idx_block]         * v_in[index + ioff - joff - koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 2) * svGridSize + idx_block]     * v_in[index + ioff - joff + koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 6) * svGridSize + idx_block]     * v_in[index + ioff + joff - koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 6 + 2) * svGridSize + idx_block] * v_in[index + ioff + joff + koff + bj];
+                    + stencilValues[index_sv_gp + idx_block]                                  * v_in[index - ioff - joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + svGridSize * 2 + idx_block]            * v_in[index - ioff - joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (6) * svGridSize + idx_block]          * v_in[index - ioff + joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (6 + 2) * svGridSize + idx_block]      * v_in[index - ioff + joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18) * svGridSize + idx_block]         * v_in[index + ioff - joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 2) * svGridSize + idx_block]     * v_in[index + ioff - joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 6) * svGridSize + idx_block]     * v_in[index + ioff + joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 6 + 2) * svGridSize + idx_block] * v_in[index + ioff + joff + koff + bj * gridsize];
                 // clang-format on
 
-                idx_block += svGridSizeCoeffs; // increase by gridsize to get to next matrix entry
+                idx_block += svGridSizeCoeffs; // increase by gridsize * 27 to get to next matrix entry for same grid point
             }
 
             // r = f - A*v
-            // printf("id, stencilsum, f[index + bi]: %i, %lf, %lf\n", idx, stencilsum, f[index + bi]);
-            r[index + bi] = f[index + bi] - stencilsum;
-            // printf("id, r: %i, %lf\n", idx, r[index + bi]);
+            r[index + bi * gridsize] = f[index + bi * gridsize] - stencilsum;
         }
-
-        // if (i == 2 && j == 2 && k == 2)
-        // {
-        //     printf("ocl stencilsum = %e\n", stencilsum);
-        //     print27point_sv(v_in, index, ioff, joff, koff, stencilValues, index_sv_gp);
-        // }
     }
 }
 
@@ -851,16 +838,22 @@ __kernel void residual_squared_blockstencil(
     int j = (idx - i * no) / o;
     int k = idx % o;
 
+    int mgh = m + 2 * ghosts;
+    int ngh = n + 2 * ghosts;
+    int ogh = o + 2 * ghosts;
+    int gridsize = mgh * ngh * ogh;
+    int gridsize_real = m * n * o;
+
     // account for padding
     if (i < m && j < n && k < o)
     {
-        int index = (i * (n + 2 * ghosts) * (o + 2 * ghosts) + j * (o + 2 * ghosts) + k) * BLOCKSIZE;
-        int index_sq = (i * n * o + j * o + k) * BLOCKSIZE;
+        int index = (i * ngh * ogh + j * ogh + k);
+        int index_sq = (i * n * o + j * o + k);
 
         for (size_t b = 0; b < BLOCKSIZE; b++)
         {
-            double ridx = r[index + b];
-            rsquares[index_sq + b] = ridx * ridx;
+            double ridx = r[index + b * gridsize];
+            rsquares[index_sq + b * gridsize_real] = ridx * ridx;
         }
     }
 }
@@ -1785,7 +1778,7 @@ __kernel void jacobi_iter_27point_fixed_stencil_1d_boundary(
  *   Jacobi with multiple iterations without ghost cell update in-between. I.e. when
  *   stepsPerIter = 1: idx_start = ghosts.
  *
- * Layout: [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
+ * Layout: [mx][my][cx][cy][cz][gpx][gpy][gpz] for coeffs, [m][gpx][gpy][gpz] for v, f, r
  *
  * svGridSize = sv_mgh * sv_ngh * sv_ogh
  * svGridSizeCoeffs = 27 * svGridSize
@@ -1813,9 +1806,9 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacob
     // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
     if (i >= idx_start && j >= idx_start && k >= idx_start && i < mgh - idx_start && j < ngh - idx_start && k < ogh - idx_start)
     {
-        int ioff = BLOCKSIZE * ngh * ogh;
-        int joff = BLOCKSIZE * ogh;
-        int koff = BLOCKSIZE;
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
         int index = i * ioff + j * joff + k * koff;
         int gridsize = mgh * ngh * ogh;
 
@@ -1835,45 +1828,45 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacob
             {
                 // A*v
                 // clang-format off
-                stencilsum += stencilValues[index_sv_gp + (9 + 3 + 1) * svGridSize + idx_block] * v_in[index + bj]
-                    + stencilValues[index_sv_gp + (9 + 3) * svGridSize + idx_block]      * v_in[index - koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 3 + 2) * svGridSize + idx_block]  * v_in[index + koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 1) * svGridSize + idx_block]      * v_in[index - joff + bj]
-                    + stencilValues[index_sv_gp + (9 + 6 + 1) * svGridSize + idx_block]  * v_in[index + joff + bj]
-                    + stencilValues[index_sv_gp + (3 + 1) * svGridSize + idx_block]      * v_in[index - ioff + bj]
-                    + stencilValues[index_sv_gp + (18 + 3 + 1) * svGridSize + idx_block] * v_in[index + ioff + bj]
+                stencilsum += stencilValues[index_sv_gp + (9 + 3 + 1) * svGridSize + idx_block] * v_in[index + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 3) * svGridSize + idx_block]      * v_in[index - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 3 + 2) * svGridSize + idx_block]  * v_in[index + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 1) * svGridSize + idx_block]      * v_in[index - joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 6 + 1) * svGridSize + idx_block]  * v_in[index + joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (3 + 1) * svGridSize + idx_block]      * v_in[index - ioff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 3 + 1) * svGridSize + idx_block] * v_in[index + ioff + bj * gridsize]
+                    
+                    + stencilValues[index_sv_gp + (9) * svGridSize + idx_block]          * v_in[index - joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 2) * svGridSize + idx_block]      * v_in[index - joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 6) * svGridSize + idx_block]      * v_in[index + joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 6 + 2) * svGridSize + idx_block]  * v_in[index + joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + svGridSize * 3 + idx_block]            * v_in[index - ioff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (3 + 2) * svGridSize + idx_block]      * v_in[index - ioff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 3) * svGridSize + idx_block]     * v_in[index + ioff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 3 + 2) * svGridSize + idx_block] * v_in[index + ioff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + svGridSize + idx_block]                * v_in[index - ioff - joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (6 + 1) * svGridSize + idx_block]      * v_in[index - ioff + joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 1) * svGridSize + idx_block]     * v_in[index + ioff - joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 6 + 1) * svGridSize + idx_block] * v_in[index + ioff + joff + bj * gridsize]
 
-                    + stencilValues[index_sv_gp + (9) * svGridSize + idx_block]          * v_in[index - joff - koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 2) * svGridSize + idx_block]      * v_in[index - joff + koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 6) * svGridSize + idx_block]      * v_in[index + joff - koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 6 + 2) * svGridSize + idx_block]  * v_in[index + joff + koff + bj]
-                    + stencilValues[index_sv_gp + svGridSize * 3 + idx_block]            * v_in[index - ioff - koff + bj]
-                    + stencilValues[index_sv_gp + (3 + 2) * svGridSize + idx_block]      * v_in[index - ioff + koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 3) * svGridSize + idx_block]     * v_in[index + ioff - koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 3 + 2) * svGridSize + idx_block] * v_in[index + ioff + koff + bj]
-                    + stencilValues[index_sv_gp + svGridSize + idx_block]                * v_in[index - ioff - joff + bj]
-                    + stencilValues[index_sv_gp + (6 + 1) * svGridSize + idx_block]      * v_in[index - ioff + joff + bj]
-                    + stencilValues[index_sv_gp + (18 + 1) * svGridSize + idx_block]     * v_in[index + ioff - joff + bj]
-                    + stencilValues[index_sv_gp + (18 + 6 + 1) * svGridSize + idx_block] * v_in[index + ioff + joff + bj]
-
-                    + stencilValues[index_sv_gp + idx_block]                                  * v_in[index - ioff - joff - koff + bj]
-                    + stencilValues[index_sv_gp + svGridSize * 2 + idx_block]            * v_in[index - ioff - joff + koff + bj]
-                    + stencilValues[index_sv_gp + (6) * svGridSize + idx_block]          * v_in[index - ioff + joff - koff + bj]
-                    + stencilValues[index_sv_gp + (6 + 2) * svGridSize + idx_block]      * v_in[index - ioff + joff + koff + bj]
-                    + stencilValues[index_sv_gp + (18) * svGridSize + idx_block]         * v_in[index + ioff - joff - koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 2) * svGridSize + idx_block]     * v_in[index + ioff - joff + koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 6) * svGridSize + idx_block]     * v_in[index + ioff + joff - koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 6 + 2) * svGridSize + idx_block] * v_in[index + ioff + joff + koff + bj];
+                    + stencilValues[index_sv_gp + idx_block]                                  * v_in[index - ioff - joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + svGridSize * 2 + idx_block]            * v_in[index - ioff - joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (6) * svGridSize + idx_block]          * v_in[index - ioff + joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (6 + 2) * svGridSize + idx_block]      * v_in[index - ioff + joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18) * svGridSize + idx_block]         * v_in[index + ioff - joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 2) * svGridSize + idx_block]     * v_in[index + ioff - joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 6) * svGridSize + idx_block]     * v_in[index + ioff + joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 6 + 2) * svGridSize + idx_block] * v_in[index + ioff + joff + koff + bj * gridsize];
                 // clang-format on
 
                 idx_block += svGridSizeCoeffs; // increase by gridsize to get to next matrix entry
             }
 
             // r = f - A*v
-            res[bi] = f[index + bi] - stencilsum;
+            res[bi] = f[index + bi * gridsize] - stencilsum;
 
             if (store_residual)
-                r[index + bi] = res[bi];
+                r[index + bi * gridsize] = res[bi];
         }
 
         // TODO fuse loops?
@@ -1896,7 +1889,7 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacob
             }
 
             // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
-            v_out[index + bi] = v_in[index + bi] + omega * sum;
+            v_out[index + bi * gridsize] = v_in[index + bi * gridsize] + omega * sum;
         }
     }
 }
@@ -1943,9 +1936,9 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_scalarjaco
     // calculate residual for real cells plus some ghost cells if stepsPerIter > 1.
     if (i >= idx_start && j >= idx_start && k >= idx_start && i < mgh - idx_start && j < ngh - idx_start && k < ogh - idx_start)
     {
-        int ioff = BLOCKSIZE * ngh * ogh;
-        int joff = BLOCKSIZE * ogh;
-        int koff = BLOCKSIZE;
+        int ioff = ngh * ogh;
+        int joff = ogh;
+        int koff = 1;
         int index = i * ioff + j * joff + k * koff;
         int gridsize = mgh * ngh * ogh;
 
@@ -1957,7 +1950,7 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_scalarjaco
         int n = ngh - 2 * ghosts;
         int o = ogh - 2 * ghosts;
         // Assumption for index of bs_inv: Same ghosts as blockstencil
-        int idx_bs_inv = index_sv_gp * BLOCKSIZE;
+        int idx_bs_inv = index_sv_gp;
 
         // Layout: [cx][cy][cz][mx][my][gpx][gpy][gpz] for coeffs, [gpx][gpy][gpz][m] for v, f, r
         int idx_block = 0;
@@ -1969,48 +1962,48 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_scalarjaco
             {
                 // A*v
                 // clang-format off
-                stencilsum += stencilValues[index_sv_gp + (9 + 3 + 1) * svGridSize + idx_block] * v_in[index + bj]
-                    + stencilValues[index_sv_gp + (9 + 3) * svGridSize + idx_block]      * v_in[index - koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 3 + 2) * svGridSize + idx_block]  * v_in[index + koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 1) * svGridSize + idx_block]      * v_in[index - joff + bj]
-                    + stencilValues[index_sv_gp + (9 + 6 + 1) * svGridSize + idx_block]  * v_in[index + joff + bj]
-                    + stencilValues[index_sv_gp + (3 + 1) * svGridSize + idx_block]      * v_in[index - ioff + bj]
-                    + stencilValues[index_sv_gp + (18 + 3 + 1) * svGridSize + idx_block] * v_in[index + ioff + bj]
+                stencilsum += stencilValues[index_sv_gp + (9 + 3 + 1) * svGridSize + idx_block] * v_in[index + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 3) * svGridSize + idx_block]      * v_in[index - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 3 + 2) * svGridSize + idx_block]  * v_in[index + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 1) * svGridSize + idx_block]      * v_in[index - joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 6 + 1) * svGridSize + idx_block]  * v_in[index + joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (3 + 1) * svGridSize + idx_block]      * v_in[index - ioff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 3 + 1) * svGridSize + idx_block] * v_in[index + ioff + bj * gridsize]
+                    
+                    + stencilValues[index_sv_gp + (9) * svGridSize + idx_block]          * v_in[index - joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 2) * svGridSize + idx_block]      * v_in[index - joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 6) * svGridSize + idx_block]      * v_in[index + joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (9 + 6 + 2) * svGridSize + idx_block]  * v_in[index + joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + svGridSize * 3 + idx_block]            * v_in[index - ioff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (3 + 2) * svGridSize + idx_block]      * v_in[index - ioff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 3) * svGridSize + idx_block]     * v_in[index + ioff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 3 + 2) * svGridSize + idx_block] * v_in[index + ioff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + svGridSize + idx_block]                * v_in[index - ioff - joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (6 + 1) * svGridSize + idx_block]      * v_in[index - ioff + joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 1) * svGridSize + idx_block]     * v_in[index + ioff - joff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 6 + 1) * svGridSize + idx_block] * v_in[index + ioff + joff + bj * gridsize]
 
-                    + stencilValues[index_sv_gp + (9) * svGridSize + idx_block]          * v_in[index - joff - koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 2) * svGridSize + idx_block]      * v_in[index - joff + koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 6) * svGridSize + idx_block]      * v_in[index + joff - koff + bj]
-                    + stencilValues[index_sv_gp + (9 + 6 + 2) * svGridSize + idx_block]  * v_in[index + joff + koff + bj]
-                    + stencilValues[index_sv_gp + svGridSize * 3 + idx_block]            * v_in[index - ioff - koff + bj]
-                    + stencilValues[index_sv_gp + (3 + 2) * svGridSize + idx_block]      * v_in[index - ioff + koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 3) * svGridSize + idx_block]     * v_in[index + ioff - koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 3 + 2) * svGridSize + idx_block] * v_in[index + ioff + koff + bj]
-                    + stencilValues[index_sv_gp + svGridSize + idx_block]                * v_in[index - ioff - joff + bj]
-                    + stencilValues[index_sv_gp + (6 + 1) * svGridSize + idx_block]      * v_in[index - ioff + joff + bj]
-                    + stencilValues[index_sv_gp + (18 + 1) * svGridSize + idx_block]     * v_in[index + ioff - joff + bj]
-                    + stencilValues[index_sv_gp + (18 + 6 + 1) * svGridSize + idx_block] * v_in[index + ioff + joff + bj]
-
-                    + stencilValues[index_sv_gp + idx_block]                                  * v_in[index - ioff - joff - koff + bj]
-                    + stencilValues[index_sv_gp + svGridSize * 2 + idx_block]            * v_in[index - ioff - joff + koff + bj]
-                    + stencilValues[index_sv_gp + (6) * svGridSize + idx_block]          * v_in[index - ioff + joff - koff + bj]
-                    + stencilValues[index_sv_gp + (6 + 2) * svGridSize + idx_block]      * v_in[index - ioff + joff + koff + bj]
-                    + stencilValues[index_sv_gp + (18) * svGridSize + idx_block]         * v_in[index + ioff - joff - koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 2) * svGridSize + idx_block]     * v_in[index + ioff - joff + koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 6) * svGridSize + idx_block]     * v_in[index + ioff + joff - koff + bj]
-                    + stencilValues[index_sv_gp + (18 + 6 + 2) * svGridSize + idx_block] * v_in[index + ioff + joff + koff + bj];
+                    + stencilValues[index_sv_gp + idx_block]                                  * v_in[index - ioff - joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + svGridSize * 2 + idx_block]            * v_in[index - ioff - joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (6) * svGridSize + idx_block]          * v_in[index - ioff + joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (6 + 2) * svGridSize + idx_block]      * v_in[index - ioff + joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18) * svGridSize + idx_block]         * v_in[index + ioff - joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 2) * svGridSize + idx_block]     * v_in[index + ioff - joff + koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 6) * svGridSize + idx_block]     * v_in[index + ioff + joff - koff + bj * gridsize]
+                    + stencilValues[index_sv_gp + (18 + 6 + 2) * svGridSize + idx_block] * v_in[index + ioff + joff + koff + bj * gridsize];
                 // clang-format on
 
                 idx_block += svGridSizeCoeffs; // increase by gridsize to get to next matrix entry
             }
 
             // r = f - A*v
-            double res = f[index + bi] - stencilsum;
+            double res = f[index + bi * gridsize] - stencilsum;
 
             // u_(m+1) = u_(m) + omega * (D^-1) * r_(m)
-            v_out[index + bi] = v_in[index + bi] + omega * bs_inv[idx_bs_inv + bi] * res;
+            v_out[index + bi * gridsize] = v_in[index + bi * gridsize] + omega * bs_inv[idx_bs_inv + bi * gridsize] * res;
 
             if (store_residual)
-                r[index + bi] = res;
+                r[index + bi * gridsize] = res;
         }
     }
 }
@@ -2095,15 +2088,21 @@ __kernel void restrict_to_coarse_blockstencil(
     int k = get_global_id(2);
     int g2 = 2 * ghosts;
 
+    const int mf = (m - g2) * 2 + g2;
+    const int nf = (n - g2) * 2 + g2;
+    const int of = (o - g2) * 2 + g2;
+
+    int gridsize_c = m * n * o;
+    int gridsize_f = mf * nf * of;
+
     if (i < m && j < n && k < o)
     {
-        const int idx_c = (i + ghosts) * ngh_vals_coarse * ogh_vals_coarse * BLOCKSIZE + (j + ghosts) * ogh_vals_coarse * BLOCKSIZE + (k + ghosts) * BLOCKSIZE;
-        const int nf = (n - g2) * 2 + g2, of = (o - g2) * 2 + g2;
+        const int idx_c = (i + ghosts) * ngh_vals_coarse * ogh_vals_coarse + (j + ghosts) * ogh_vals_coarse + (k + ghosts);
         const int i2 = i * 2 + ghosts + 1, j2 = j * 2 + ghosts + 1, k2 = k * 2 + ghosts + 1;
-        const int idx_f_self = i2 * nf * of * BLOCKSIZE + j2 * of * BLOCKSIZE + k2 * BLOCKSIZE;
-        const int ioff_f = nf * of * BLOCKSIZE;
-        const int joff_f = of * BLOCKSIZE;
-        const int koff_f = BLOCKSIZE;
+        const int idx_f_self = i2 * nf * of + j2 * of + k2;
+        const int ioff_f = nf * of;
+        const int joff_f = of;
+        const int koff_f = 1;
 
         for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
@@ -2113,41 +2112,41 @@ __kernel void restrict_to_coarse_blockstencil(
             {
                 int fbs_idx_self = bi * BLOCKSIZE * 27 + bj * 27 + 1 * 9 + 1 * 3 + 1;
                 sum +=
-                    // 0.125 * fine[idx_f_self + bj] // self
-                    fbs[fbs_idx_self] * fine[idx_f_self + bj] + // self
+                    // 0.125 * fine[idx_f_self + bj * gridsize] // self
+                    fbs[fbs_idx_self] * fine[idx_f_self + bj * gridsize_f] + // self
                     // direct neighbours
-                    fbs[fbs_idx_self - 9] * fine[idx_f_self - ioff_f + bj] +
-                    fbs[fbs_idx_self + 9] * fine[idx_f_self + ioff_f + bj] +
-                    fbs[fbs_idx_self - 3] * fine[idx_f_self - joff_f + bj] +
-                    fbs[fbs_idx_self + 3] * fine[idx_f_self + joff_f + bj] +
-                    fbs[fbs_idx_self - 1] * fine[idx_f_self - koff_f + bj] +
-                    fbs[fbs_idx_self + 1] * fine[idx_f_self + koff_f + bj] +
+                    fbs[fbs_idx_self - 9] * fine[idx_f_self - ioff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self + 9] * fine[idx_f_self + ioff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self - 3] * fine[idx_f_self - joff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self + 3] * fine[idx_f_self + joff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self - 1] * fine[idx_f_self - koff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self + 1] * fine[idx_f_self + koff_f + bj * gridsize_f] +
                     // edge midpoints xy-plane
-                    fbs[fbs_idx_self - 9 - 3] * fine[idx_f_self - ioff_f - joff_f + bj] +
-                    fbs[fbs_idx_self - 9 + 3] * fine[idx_f_self - ioff_f + joff_f + bj] +
-                    fbs[fbs_idx_self + 9 - 3] * fine[idx_f_self + ioff_f - joff_f + bj] +
-                    fbs[fbs_idx_self + 9 + 3] * fine[idx_f_self + ioff_f + joff_f + bj] +
+                    fbs[fbs_idx_self - 9 - 3] * fine[idx_f_self - ioff_f - joff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self - 9 + 3] * fine[idx_f_self - ioff_f + joff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self + 9 - 3] * fine[idx_f_self + ioff_f - joff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self + 9 + 3] * fine[idx_f_self + ioff_f + joff_f + bj * gridsize_f] +
                     // edge midpoints xz-plane
-                    fbs[fbs_idx_self - 9 - 1] * fine[idx_f_self - ioff_f - koff_f + bj] +
-                    fbs[fbs_idx_self - 9 + 1] * fine[idx_f_self - ioff_f + koff_f + bj] +
-                    fbs[fbs_idx_self + 9 - 1] * fine[idx_f_self + ioff_f - koff_f + bj] +
-                    fbs[fbs_idx_self + 9 + 1] * fine[idx_f_self + ioff_f + koff_f + bj] +
+                    fbs[fbs_idx_self - 9 - 1] * fine[idx_f_self - ioff_f - koff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self - 9 + 1] * fine[idx_f_self - ioff_f + koff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self + 9 - 1] * fine[idx_f_self + ioff_f - koff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self + 9 + 1] * fine[idx_f_self + ioff_f + koff_f + bj * gridsize_f] +
                     // edge midpoints yz-plane
-                    fbs[fbs_idx_self - 3 - 1] * fine[idx_f_self - joff_f - koff_f + bj] +
-                    fbs[fbs_idx_self - 3 + 1] * fine[idx_f_self - joff_f + koff_f + bj] +
-                    fbs[fbs_idx_self + 3 - 1] * fine[idx_f_self + joff_f - koff_f + bj] +
-                    fbs[fbs_idx_self + 3 + 1] * fine[idx_f_self + joff_f + koff_f + bj] +
+                    fbs[fbs_idx_self - 3 - 1] * fine[idx_f_self - joff_f - koff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self - 3 + 1] * fine[idx_f_self - joff_f + koff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self + 3 - 1] * fine[idx_f_self + joff_f - koff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self + 3 + 1] * fine[idx_f_self + joff_f + koff_f + bj * gridsize_f] +
                     // corners
-                    fbs[fbs_idx_self - 9 - 3 - 1] * fine[idx_f_self - ioff_f - joff_f - koff_f + bj] +
-                    fbs[fbs_idx_self - 9 - 3 + 1] * fine[idx_f_self - ioff_f - joff_f + koff_f + bj] +
-                    fbs[fbs_idx_self - 9 + 3 - 1] * fine[idx_f_self - ioff_f + joff_f - koff_f + bj] +
-                    fbs[fbs_idx_self - 9 + 3 + 1] * fine[idx_f_self - ioff_f + joff_f + koff_f + bj] +
-                    fbs[fbs_idx_self + 9 - 3 - 1] * fine[idx_f_self + ioff_f - joff_f - koff_f + bj] +
-                    fbs[fbs_idx_self + 9 - 3 + 1] * fine[idx_f_self + ioff_f - joff_f + koff_f + bj] +
-                    fbs[fbs_idx_self + 9 + 3 - 1] * fine[idx_f_self + ioff_f + joff_f - koff_f + bj] +
-                    fbs[fbs_idx_self + 9 + 3 + 1] * fine[idx_f_self + ioff_f + joff_f + koff_f + bj];
+                    fbs[fbs_idx_self - 9 - 3 - 1] * fine[idx_f_self - ioff_f - joff_f - koff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self - 9 - 3 + 1] * fine[idx_f_self - ioff_f - joff_f + koff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self - 9 + 3 - 1] * fine[idx_f_self - ioff_f + joff_f - koff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self - 9 + 3 + 1] * fine[idx_f_self - ioff_f + joff_f + koff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self + 9 - 3 - 1] * fine[idx_f_self + ioff_f - joff_f - koff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self + 9 - 3 + 1] * fine[idx_f_self + ioff_f - joff_f + koff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self + 9 + 3 - 1] * fine[idx_f_self + ioff_f + joff_f - koff_f + bj * gridsize_f] +
+                    fbs[fbs_idx_self + 9 + 3 + 1] * fine[idx_f_self + ioff_f + joff_f + koff_f + bj * gridsize_f];
             }
-            coarse[idx_c + bi] = sum;
+            coarse[idx_c + bi * gridsize_c] = sum;
         }
     }
 }
@@ -2222,17 +2221,20 @@ __kernel void prolongate_to_fine_blockstencil(
     const int nc = (nf - g2) / 2 + g2;
     const int oc = (of - g2) / 2 + g2;
 
+    int gridsize_f = mf * nf * of;
+    int gridsize_c = mc * nc * oc;
+
     if (i > ghosts - 1 && i < mc - ghosts && j > ghosts - 1 && j < nc - ghosts && k > ghosts - 1 && k < oc - ghosts)
     {
-        const int index_coarse = (i * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k) * BLOCKSIZE;
+        const int index_coarse = (i * ngh_vals_coarse * ogh_vals_coarse + j * ogh_vals_coarse + k);
         const int i2 = i * 2 - (ghosts - 1), j2 = j * 2 - (ghosts - 1), k2 = k * 2 - (ghosts - 1);
 
-        const int ioff_f = nf * of * BLOCKSIZE;
-        const int joff_f = of * BLOCKSIZE;
-        const int koff_f = BLOCKSIZE;
-        const int ioff_c = nc * oc * BLOCKSIZE;
-        const int joff_c = oc * BLOCKSIZE;
-        const int koff_c = BLOCKSIZE;
+        const int ioff_f = nf * of;
+        const int joff_f = of;
+        const int koff_f = 1;
+        const int ioff_c = nc * oc;
+        const int joff_c = oc;
+        const int koff_c = 1;
         const int index_fine_self = i2 * ioff_f + j2 * joff_f + k2 * koff_f;
 
         for (int bi = 0; bi < BLOCKSIZE; bi++)
@@ -2242,37 +2244,37 @@ __kernel void prolongate_to_fine_blockstencil(
             {
                 int fbs_idx_self = bi * BLOCKSIZE * 27 + bj * 27 + 1 * 9 + 1 * 3 + 1;
 
-                sums[0] += fbs[fbs_idx_self] * coarse[index_coarse + bj];
+                sums[0] += fbs[fbs_idx_self] * coarse[index_coarse + bj * gridsize_c];
 
-                sums[1] += fbs[fbs_idx_self - 1] * coarse[index_coarse + bj] + fbs[fbs_idx_self + 1] * coarse[index_coarse - koff_c + bj];
+                sums[1] += fbs[fbs_idx_self - 1] * coarse[index_coarse + bj * gridsize_c] + fbs[fbs_idx_self + 1] * coarse[index_coarse - koff_c + bj * gridsize_c];
 
-                sums[2] += fbs[fbs_idx_self - 3] * coarse[index_coarse + bj] + fbs[fbs_idx_self + 3] * coarse[index_coarse - joff_c + bj];
+                sums[2] += fbs[fbs_idx_self - 3] * coarse[index_coarse + bj * gridsize_c] + fbs[fbs_idx_self + 3] * coarse[index_coarse - joff_c + bj * gridsize_c];
 
-                sums[3] += fbs[fbs_idx_self - 9] * coarse[index_coarse + bj] + fbs[fbs_idx_self + 9] * coarse[index_coarse - ioff_c + bj];
+                sums[3] += fbs[fbs_idx_self - 9] * coarse[index_coarse + bj * gridsize_c] + fbs[fbs_idx_self + 9] * coarse[index_coarse - ioff_c + bj * gridsize_c];
 
-                sums[4] += fbs[fbs_idx_self - 3 - 1] * coarse[index_coarse + bj] + fbs[fbs_idx_self - 3 + 1] * coarse[index_coarse - koff_c + bj] + fbs[fbs_idx_self + 3 - 1] * coarse[index_coarse - joff_c + bj] + fbs[fbs_idx_self + 3 + 1] * coarse[index_coarse - joff_c - koff_c + bj];
+                sums[4] += fbs[fbs_idx_self - 3 - 1] * coarse[index_coarse + bj * gridsize_c] + fbs[fbs_idx_self - 3 + 1] * coarse[index_coarse - koff_c + bj * gridsize_c] + fbs[fbs_idx_self + 3 - 1] * coarse[index_coarse - joff_c + bj * gridsize_c] + fbs[fbs_idx_self + 3 + 1] * coarse[index_coarse - joff_c - koff_c + bj * gridsize_c];
 
-                sums[5] += fbs[fbs_idx_self - 9 - 1] * coarse[index_coarse + bj] + fbs[fbs_idx_self - 9 + 1] * coarse[index_coarse - koff_c + bj] + fbs[fbs_idx_self + 9 - 1] * coarse[index_coarse - ioff_c + bj] + fbs[fbs_idx_self + 9 + 1] * coarse[index_coarse - ioff_c - koff_c + bj];
+                sums[5] += fbs[fbs_idx_self - 9 - 1] * coarse[index_coarse + bj * gridsize_c] + fbs[fbs_idx_self - 9 + 1] * coarse[index_coarse - koff_c + bj * gridsize_c] + fbs[fbs_idx_self + 9 - 1] * coarse[index_coarse - ioff_c + bj * gridsize_c] + fbs[fbs_idx_self + 9 + 1] * coarse[index_coarse - ioff_c - koff_c + bj * gridsize_c];
 
-                sums[6] += fbs[fbs_idx_self - 9 - 3] * coarse[index_coarse + bj] + fbs[fbs_idx_self - 9 + 3] * coarse[index_coarse - joff_c + bj] + fbs[fbs_idx_self + 9 - 3] * coarse[index_coarse - ioff_c + bj] + fbs[fbs_idx_self + 9 + 3] * coarse[index_coarse - ioff_c - joff_c + bj];
+                sums[6] += fbs[fbs_idx_self - 9 - 3] * coarse[index_coarse + bj * gridsize_c] + fbs[fbs_idx_self - 9 + 3] * coarse[index_coarse - joff_c + bj * gridsize_c] + fbs[fbs_idx_self + 9 - 3] * coarse[index_coarse - ioff_c + bj * gridsize_c] + fbs[fbs_idx_self + 9 + 3] * coarse[index_coarse - ioff_c - joff_c + bj * gridsize_c];
 
-                sums[7] += fbs[fbs_idx_self - 9 - 3 - 1] * coarse[index_coarse + bj] +
-                           fbs[fbs_idx_self - 9 - 3 + 1] * coarse[index_coarse - koff_c + bj] +
-                           fbs[fbs_idx_self - 9 + 3 - 1] * coarse[index_coarse - joff_c + bj] +
-                           fbs[fbs_idx_self - 9 + 3 + 1] * coarse[index_coarse - joff_c - koff_c + bj] +
-                           fbs[fbs_idx_self + 9 - 3 - 1] * coarse[index_coarse - ioff_c + bj] +
-                           fbs[fbs_idx_self + 9 - 3 + 1] * coarse[index_coarse - ioff_c - koff_c + bj] +
-                           fbs[fbs_idx_self + 9 + 3 - 1] * coarse[index_coarse - ioff_c - joff_c + bj] +
-                           fbs[fbs_idx_self + 9 + 3 + 1] * coarse[index_coarse - ioff_c - joff_c - koff_c + bj];
+                sums[7] += fbs[fbs_idx_self - 9 - 3 - 1] * coarse[index_coarse + bj * gridsize_c] +
+                           fbs[fbs_idx_self - 9 - 3 + 1] * coarse[index_coarse - koff_c + bj * gridsize_c] +
+                           fbs[fbs_idx_self - 9 + 3 - 1] * coarse[index_coarse - joff_c + bj * gridsize_c] +
+                           fbs[fbs_idx_self - 9 + 3 + 1] * coarse[index_coarse - joff_c - koff_c + bj * gridsize_c] +
+                           fbs[fbs_idx_self + 9 - 3 - 1] * coarse[index_coarse - ioff_c + bj * gridsize_c] +
+                           fbs[fbs_idx_self + 9 - 3 + 1] * coarse[index_coarse - ioff_c - koff_c + bj * gridsize_c] +
+                           fbs[fbs_idx_self + 9 + 3 - 1] * coarse[index_coarse - ioff_c - joff_c + bj * gridsize_c] +
+                           fbs[fbs_idx_self + 9 + 3 + 1] * coarse[index_coarse - ioff_c - joff_c - koff_c + bj * gridsize_c];
             }
-            fine[index_fine_self + bi] = sums[0];
-            fine[index_fine_self - koff_f + bi] = sums[1];
-            fine[index_fine_self - joff_f + bi] = sums[2];
-            fine[index_fine_self - ioff_f + bi] = sums[3];
-            fine[index_fine_self - joff_f - koff_f + bi] = sums[4];
-            fine[index_fine_self - ioff_f - koff_f + bi] = sums[5];
-            fine[index_fine_self - ioff_f - joff_f + bi] = sums[6];
-            fine[index_fine_self - ioff_f - joff_f - koff_f + bi] = sums[7];
+            fine[index_fine_self + bi * gridsize_f] = sums[0];
+            fine[index_fine_self - koff_f + bi * gridsize_f] = sums[1];
+            fine[index_fine_self - joff_f + bi * gridsize_f] = sums[2];
+            fine[index_fine_self - ioff_f + bi * gridsize_f] = sums[3];
+            fine[index_fine_self - joff_f - koff_f + bi * gridsize_f] = sums[4];
+            fine[index_fine_self - ioff_f - koff_f + bi * gridsize_f] = sums[5];
+            fine[index_fine_self - ioff_f - joff_f + bi * gridsize_f] = sums[6];
+            fine[index_fine_self - ioff_f - joff_f - koff_f + bi * gridsize_f] = sums[7];
         }
     }
 }
@@ -4008,6 +4010,7 @@ __kernel void extract_border_planes_cuboidbs(
     int yz = ngh * ogh;
     int xz = mgh * ogh;
     int xy = mgh * ngh;
+    int gridsize = mgh * ngh * ogh;
 
     // Get buf_cuboid's 1d index for the first matrix entry
     int idx = get_global_id(0);
@@ -4018,10 +4021,10 @@ __kernel void extract_border_planes_cuboidbs(
         int i = idx / yz + ghosts_m;
         int j = (idx - (i - ghosts_m) * yz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k); // gp base index in source cuboid
         for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_res[idx * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi]; // store block entries for each grid point consecutively
+            buf_res[idx * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi * gridsize]; // store block entries for each grid point consecutively
         }
     }
     // Back planes
@@ -4031,10 +4034,10 @@ __kernel void extract_border_planes_cuboidbs(
         int i = idx / yz + m;
         int j = (idx - (i - m) * yz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k); // gp base index in source cuboid
         for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_res[(idx + ghosts_m * yz) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi];
+            buf_res[(idx + ghosts_m * yz) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi * gridsize];
         }
     }
     // Top planes
@@ -4044,10 +4047,10 @@ __kernel void extract_border_planes_cuboidbs(
         int j = idx / xz + ghosts_n;
         int i = (idx - (j - ghosts_n) * xz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k); // gp base index in source cuboid
         for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_res[(idx + 2 * ghosts_m * yz) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi];
+            buf_res[(idx + 2 * ghosts_m * yz) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi * gridsize];
         }
     }
     // Bottom planes
@@ -4057,10 +4060,10 @@ __kernel void extract_border_planes_cuboidbs(
         int j = idx / xz + n;
         int i = (idx - (j - n) * xz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k); // gp base index in source cuboid
         for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_res[(idx + 2 * ghosts_m * yz + ghosts_n * xz) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi];
+            buf_res[(idx + 2 * ghosts_m * yz + ghosts_n * xz) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi * gridsize];
         }
     }
     // Left planes
@@ -4070,10 +4073,10 @@ __kernel void extract_border_planes_cuboidbs(
         int k = idx / xy + ghosts_o;
         int i = (idx - (k - ghosts_o) * xy) / ngh;
         int j = idx % ngh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k); // gp base index in source cuboid
         for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_res[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi];
+            buf_res[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi * gridsize];
         }
     }
     // Right planes
@@ -4083,10 +4086,10 @@ __kernel void extract_border_planes_cuboidbs(
         int k = idx / xy + o;
         int i = (idx - (k - o) * xy) / ngh;
         int j = idx % ngh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k); // gp base index in source cuboid
         for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_res[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi];
+            buf_res[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * BLOCKSIZE + bi] = buf_cuboid[gp_base_idx + bi * gridsize];
         }
     }
 }
@@ -4125,6 +4128,7 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
     int yz = ngh * ogh;
     int xz = mgh * ogh;
     int xy = mgh * ngh;
+    int gridsize = mgh * ngh * ogh;
 
     // Get buf_cuboid's 1d and 3d indices
     int idx = get_global_id(0);
@@ -4135,14 +4139,14 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
         int i = idx / yz + m + ghosts_m;
         int j = (idx - (i - (m + ghosts_m)) * yz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k); // gp base index in source cuboid
 
         // No corners or edges, only ghosts directly adjacent to real back face
         if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
         {
             for (int bi = 0; bi < BLOCKSIZE; bi++)
             {
-                buf_cuboid[gp_base_idx + bi] = buf_planes[idx * BLOCKSIZE + bi];
+                buf_cuboid[gp_base_idx + bi * gridsize] = buf_planes[idx * BLOCKSIZE + bi];
             }
         }
     }
@@ -4153,14 +4157,14 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
         int i = idx / yz;
         int j = (idx - i * yz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k); // gp base index in source cuboid
 
         // No corners or edges, only ghosts directly adjacent to real front face
         if (j >= ghosts_n && j < n + ghosts_n && k >= ghosts_o && k < o + ghosts_o)
         {
             for (int bi = 0; bi < BLOCKSIZE; bi++)
             {
-                buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + ghosts_m * yz) * BLOCKSIZE + bi];
+                buf_cuboid[gp_base_idx + bi * gridsize] = buf_planes[(idx + ghosts_m * yz) * BLOCKSIZE + bi];
             }
         }
     }
@@ -4171,14 +4175,14 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
         int j = idx / xz + n + ghosts_n;
         int i = (idx - (j - (n + ghosts_n)) * xz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k); // gp base index in source cuboid
 
         // Ignore left and right ghost cells, but include front and back ghosts
         if (k >= ghosts_o && k < o + ghosts_o)
         {
             for (int bi = 0; bi < BLOCKSIZE; bi++)
             {
-                buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz) * BLOCKSIZE + bi];
+                buf_cuboid[gp_base_idx + bi * gridsize] = buf_planes[(idx + 2 * ghosts_m * yz) * BLOCKSIZE + bi];
             }
         }
     }
@@ -4189,14 +4193,14 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
         int j = idx / xz;
         int i = (idx - j * xz) / ogh;
         int k = idx % ogh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k); // gp base index in source cuboid
 
         // Ignore left and right ghost cells, but include front and back ghosts
         if (k >= ghosts_o && k < o + ghosts_o)
         {
             for (int bi = 0; bi < BLOCKSIZE; bi++)
             {
-                buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz + ghosts_n * xz) * BLOCKSIZE + bi];
+                buf_cuboid[gp_base_idx + bi * gridsize] = buf_planes[(idx + 2 * ghosts_m * yz + ghosts_n * xz) * BLOCKSIZE + bi];
             }
         }
     }
@@ -4207,11 +4211,11 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
         int k = idx / xy + o + ghosts_o;
         int i = (idx - (k - (o + ghosts_o)) * xy) / ngh;
         int j = idx % ngh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k); // gp base index in source cuboid
 
         for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz) * BLOCKSIZE + bi];
+            buf_cuboid[gp_base_idx + bi * gridsize] = buf_planes[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz) * BLOCKSIZE + bi];
         }
     }
     // Right planes (left ghosts)
@@ -4221,11 +4225,11 @@ __kernel void paste_ghosts_from_border_planes_cuboidbs(
         int k = idx / xy;
         int i = (idx - k * xy) / ngh;
         int j = idx % ngh;
-        int gp_base_idx = (i * ngh * ogh + j * ogh + k) * BLOCKSIZE; // gp base index in source cuboid
+        int gp_base_idx = (i * ngh * ogh + j * ogh + k); // gp base index in source cuboid
 
         for (int bi = 0; bi < BLOCKSIZE; bi++)
         {
-            buf_cuboid[gp_base_idx + bi] = buf_planes[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * BLOCKSIZE + bi];
+            buf_cuboid[gp_base_idx + bi * gridsize] = buf_planes[(idx + 2 * ghosts_m * yz + 2 * ghosts_n * xz + ghosts_o * xy) * BLOCKSIZE + bi];
         }
     }
 }

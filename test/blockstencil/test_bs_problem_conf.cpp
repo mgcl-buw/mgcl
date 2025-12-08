@@ -179,8 +179,8 @@ TEST_CASE("Problem::initBlockstencil")
                 for (int k = 0; k < o; k++)
                     for (size_t b = 0; b < blocksize; b++)
                     {
-                        REQUIRE((*v)[i][j][k][b] == p.getLevelAt(0).getVBS()[i + 1][j + 1][k + 1][b]);
-                        REQUIRE((*f)[i][j][k][b] == p.getLevelAt(0).getFBS()[i + 1][j + 1][k + 1][b]);
+                        REQUIRE((*v)[b][i][j][k] == p.getLevelAt(0).getVBS()[b][i + 1][j + 1][k + 1]);
+                        REQUIRE((*f)[b][i][j][k] == p.getLevelAt(0).getFBS()[b][i + 1][j + 1][k + 1]);
                     }
 
         for (int lv = 0; lv <= p.getMaxlevel(); lv++)
@@ -268,8 +268,8 @@ TEST_CASE("Problem::initBlockstencil")
                 for (int k = 0; k < o; k++)
                     for (size_t b = 0; b < blocksize; b++)
                     {
-                        REQUIRE((*v2)[i + ghosts_in][j + ghosts_in][k + ghosts_in][b] == p2.getLevelAt(0).getVBS()[i + 1][j + 1][k + 1][b]);
-                        REQUIRE((*f2)[i + ghosts_in][j + ghosts_in][k + ghosts_in][b] == p2.getLevelAt(0).getFBS()[i + 1][j + 1][k + 1][b]);
+                        REQUIRE((*v2)[b][i + ghosts_in][j + ghosts_in][k + ghosts_in] == p2.getLevelAt(0).getVBS()[b][i + 1][j + 1][k + 1]);
+                        REQUIRE((*f2)[b][i + ghosts_in][j + ghosts_in][k + ghosts_in] == p2.getLevelAt(0).getFBS()[b][i + 1][j + 1][k + 1]);
                     }
 
         for (int lv = 0; lv <= p2.getMaxlevel(); lv++)
@@ -321,8 +321,8 @@ TEST_CASE("Problem::initBlockstencil")
                 for (int k = 0; k < o; k++)
                     for (size_t b = 0; b < blocksize; b++)
                     {
-                        REQUIRE((*v)[i][j][k][b] == p.getLevelAt(0).getVBS()[i + ghosts][j + ghosts][k + ghosts][b]);
-                        REQUIRE((*f)[i][j][k][b] == p.getLevelAt(0).getFBS()[i + ghosts][j + ghosts][k + ghosts][b]);
+                        REQUIRE((*v)[b][i][j][k] == p.getLevelAt(0).getVBS()[b][i + ghosts][j + ghosts][k + ghosts]);
+                        REQUIRE((*f)[b][i][j][k] == p.getLevelAt(0).getFBS()[b][i + ghosts][j + ghosts][k + ghosts]);
                     }
 
         for (int lv = 0; lv <= p.getMaxlevel(); lv++)
@@ -565,8 +565,8 @@ TEST_CASE("Problem::init_oclBlockstencil")
                 for (int k = 0; k < o; k++)
                     for (size_t b = 0; b < blocksize; b++)
                     {
-                        REQUIRE((*v)[i][j][k][b] == p.getLevelAt(0).getVBS()[i + 1][j + 1][k + 1][b]);
-                        REQUIRE((*f)[i][j][k][b] == p.getLevelAt(0).getFBS()[i + 1][j + 1][k + 1][b]);
+                        REQUIRE((*v)[b][i][j][k] == p.getLevelAt(0).getVBS()[b][i + 1][j + 1][k + 1]);
+                        REQUIRE((*f)[b][i][j][k] == p.getLevelAt(0).getFBS()[b][i + 1][j + 1][k + 1]);
                     }
 
         for (int lv = 0; lv <= p.getMaxlevel(); lv++)
@@ -846,7 +846,7 @@ TEST_CASE("Problem::readResultsBlockstencil")
                 for (int k = 0; k < v->getO(); k++)
                     for (size_t b = 0; b < blocksize; b++)
                     {
-                        CHECK((*v)[i + v->getGhostsM()][j + v->getGhostsN()][k + v->getGhostsO()][b] == 1);
+                        CHECK((*v)[b][i + v->getGhostsM()][j + v->getGhostsN()][k + v->getGhostsO()] == 1);
                     }
     }
 }

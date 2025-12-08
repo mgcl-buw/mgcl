@@ -110,14 +110,14 @@ TEST_CASE("mgcl_test::copyCuboidToCuboidBS")
             for (int j = dst_exp.getGhostsN(), j2 = src.getGhostsN(); j < dst_exp.getN() + dst_exp.getGhostsN(); j++, j2 += scale)
                 for (int k = dst_exp.getGhostsO(), k2 = src.getGhostsO(); k < dst_exp.getO() + dst_exp.getGhostsO(); k++, k2 += scale)
                 {
-                    dst_exp[i][j][k][0] = src[i2][j2][k2];
-                    dst_exp[i][j][k][1] = src[i2][j2][k2 + 1];
-                    dst_exp[i][j][k][2] = src[i2][j2 + 1][k2];
-                    dst_exp[i][j][k][3] = src[i2][j2 + 1][k2 + 1];
-                    dst_exp[i][j][k][4] = src[i2 + 1][j2][k2];
-                    dst_exp[i][j][k][5] = src[i2 + 1][j2][k2 + 1];
-                    dst_exp[i][j][k][6] = src[i2 + 1][j2 + 1][k2];
-                    dst_exp[i][j][k][7] = src[i2 + 1][j2 + 1][k2 + 1];
+                    dst_exp[0][i][j][k] = src[i2][j2][k2];
+                    dst_exp[1][i][j][k] = src[i2][j2][k2 + 1];
+                    dst_exp[2][i][j][k] = src[i2][j2 + 1][k2];
+                    dst_exp[3][i][j][k] = src[i2][j2 + 1][k2 + 1];
+                    dst_exp[4][i][j][k] = src[i2 + 1][j2][k2];
+                    dst_exp[5][i][j][k] = src[i2 + 1][j2][k2 + 1];
+                    dst_exp[6][i][j][k] = src[i2 + 1][j2 + 1][k2];
+                    dst_exp[7][i][j][k] = src[i2 + 1][j2 + 1][k2 + 1];
                 }
 
         mgcl_test::copyCuboidToCuboidBS(src, dst_act, scale, scale, scale);
@@ -135,7 +135,7 @@ TEST_CASE("mgcl_test::copyCuboidToCuboidBS")
             for (int j = dst_exp.getGhostsN(), j2 = src.getGhostsN(); j < dst_exp.getN() + dst_exp.getGhostsN(); j++, j2 += scale)
                 for (int k = dst_exp.getGhostsO(), k2 = src.getGhostsO(); k < dst_exp.getO() + dst_exp.getGhostsO(); k++, k2 += scale)
                 {
-                    dst_exp[i][j][k][0] = src[i2][j2][k2];
+                    dst_exp[0][i][j][k] = src[i2][j2][k2];
                 }
 
         mgcl_test::copyCuboidToCuboidBS(src, dst_act, scale, scale, scale);
@@ -154,76 +154,76 @@ TEST_CASE("mgcl_test::copyCuboidToCuboidBS")
         mgcl::CuboidBS dst_exp(m / scalem, n / scalen, o / scaleo, scalem * scalen * scaleo);
 
         dst_exp[0][0][0][0] = 0;
-        dst_exp[0][0][0][1] = 1;
-        dst_exp[0][0][0][2] = 2;
-        dst_exp[0][0][0][3] = 3;
-        dst_exp[0][0][0][4] = 16;
-        dst_exp[0][0][0][5] = 17;
-        dst_exp[0][0][0][6] = 18;
-        dst_exp[0][0][0][7] = 19;
+        dst_exp[1][0][0][0] = 1;
+        dst_exp[2][0][0][0] = 2;
+        dst_exp[3][0][0][0] = 3;
+        dst_exp[4][0][0][0] = 16;
+        dst_exp[5][0][0][0] = 17;
+        dst_exp[6][0][0][0] = 18;
+        dst_exp[7][0][0][0] = 19;
 
-        dst_exp[0][1][0][0] = 4;
-        dst_exp[0][1][0][1] = 5;
-        dst_exp[0][1][0][2] = 6;
-        dst_exp[0][1][0][3] = 7;
-        dst_exp[0][1][0][4] = 20;
-        dst_exp[0][1][0][5] = 21;
-        dst_exp[0][1][0][6] = 22;
-        dst_exp[0][1][0][7] = 23;
+        dst_exp[0][0][1][0] = 4;
+        dst_exp[1][0][1][0] = 5;
+        dst_exp[2][0][1][0] = 6;
+        dst_exp[3][0][1][0] = 7;
+        dst_exp[4][0][1][0] = 20;
+        dst_exp[5][0][1][0] = 21;
+        dst_exp[6][0][1][0] = 22;
+        dst_exp[7][0][1][0] = 23;
 
-        dst_exp[0][2][0][0] = 8;
-        dst_exp[0][2][0][1] = 9;
-        dst_exp[0][2][0][2] = 10;
-        dst_exp[0][2][0][3] = 11;
-        dst_exp[0][2][0][4] = 24;
-        dst_exp[0][2][0][5] = 25;
-        dst_exp[0][2][0][6] = 26;
-        dst_exp[0][2][0][7] = 27;
+        dst_exp[0][0][2][0] = 8;
+        dst_exp[1][0][2][0] = 9;
+        dst_exp[2][0][2][0] = 10;
+        dst_exp[3][0][2][0] = 11;
+        dst_exp[4][0][2][0] = 24;
+        dst_exp[5][0][2][0] = 25;
+        dst_exp[6][0][2][0] = 26;
+        dst_exp[7][0][2][0] = 27;
 
-        dst_exp[0][3][0][0] = 12;
-        dst_exp[0][3][0][1] = 13;
-        dst_exp[0][3][0][2] = 14;
-        dst_exp[0][3][0][3] = 15;
-        dst_exp[0][3][0][4] = 28;
-        dst_exp[0][3][0][5] = 29;
-        dst_exp[0][3][0][6] = 30;
-        dst_exp[0][3][0][7] = 31;
+        dst_exp[0][0][3][0] = 12;
+        dst_exp[1][0][3][0] = 13;
+        dst_exp[2][0][3][0] = 14;
+        dst_exp[3][0][3][0] = 15;
+        dst_exp[4][0][3][0] = 28;
+        dst_exp[5][0][3][0] = 29;
+        dst_exp[6][0][3][0] = 30;
+        dst_exp[7][0][3][0] = 31;
 
-        dst_exp[1][0][0][0] = 32;
-        dst_exp[1][0][0][1] = 33;
-        dst_exp[1][0][0][2] = 34;
-        dst_exp[1][0][0][3] = 35;
-        dst_exp[1][0][0][4] = 48;
-        dst_exp[1][0][0][5] = 49;
-        dst_exp[1][0][0][6] = 50;
-        dst_exp[1][0][0][7] = 51;
+        dst_exp[0][1][0][0] = 32;
+        dst_exp[1][1][0][0] = 33;
+        dst_exp[2][1][0][0] = 34;
+        dst_exp[3][1][0][0] = 35;
+        dst_exp[4][1][0][0] = 48;
+        dst_exp[5][1][0][0] = 49;
+        dst_exp[6][1][0][0] = 50;
+        dst_exp[7][1][0][0] = 51;
 
-        dst_exp[1][1][0][0] = 36;
-        dst_exp[1][1][0][1] = 37;
-        dst_exp[1][1][0][2] = 38;
-        dst_exp[1][1][0][3] = 39;
-        dst_exp[1][1][0][4] = 52;
-        dst_exp[1][1][0][5] = 53;
-        dst_exp[1][1][0][6] = 54;
-        dst_exp[1][1][0][7] = 55;
+        dst_exp[0][1][1][0] = 36;
+        dst_exp[1][1][1][0] = 37;
+        dst_exp[2][1][1][0] = 38;
+        dst_exp[3][1][1][0] = 39;
+        dst_exp[4][1][1][0] = 52;
+        dst_exp[5][1][1][0] = 53;
+        dst_exp[6][1][1][0] = 54;
+        dst_exp[7][1][1][0] = 55;
 
-        dst_exp[1][2][0][0] = 40;
-        dst_exp[1][2][0][1] = 41;
-        dst_exp[1][2][0][2] = 42;
-        dst_exp[1][2][0][3] = 43;
-        dst_exp[1][2][0][4] = 56;
-        dst_exp[1][2][0][5] = 57;
-        dst_exp[1][2][0][6] = 58;
-        dst_exp[1][2][0][7] = 59;
+        dst_exp[0][1][2][0] = 40;
+        dst_exp[1][1][2][0] = 41;
+        dst_exp[2][1][2][0] = 42;
+        dst_exp[3][1][2][0] = 43;
+        dst_exp[4][1][2][0] = 56;
+        dst_exp[5][1][2][0] = 57;
+        dst_exp[6][1][2][0] = 58;
+        dst_exp[7][1][2][0] = 59;
 
-        dst_exp[1][3][0][0] = 44;
-        dst_exp[1][3][0][1] = 45;
-        dst_exp[1][3][0][2] = 46;
-        dst_exp[1][3][0][3] = 47;
-        dst_exp[1][3][0][4] = 60;
-        dst_exp[1][3][0][5] = 61;
-        dst_exp[1][3][0][6] = 62;
-        dst_exp[1][3][0][7] = 63;
+        dst_exp[0][1][3][0] = 44;
+        dst_exp[1][1][3][0] = 45;
+        dst_exp[2][1][3][0] = 46;
+        dst_exp[3][1][3][0] = 47;
+        dst_exp[4][1][3][0] = 60;
+        dst_exp[5][1][3][0] = 61;
+        dst_exp[6][1][3][0] = 62;
+        dst_exp[7][1][3][0] = 63;
 
         mgcl_test::copyCuboidToCuboidBS(src, dst_act, scalem, scalen, scaleo);
 

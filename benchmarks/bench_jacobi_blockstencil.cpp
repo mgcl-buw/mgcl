@@ -264,18 +264,11 @@ namespace mgcl_bench_jacobi_blockstencil
             }
         }
 
-        if (store_res)
-        {
-            // TODO check for mpi
-            args.r.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);
-            // err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
-            //                                     level.isCalculatedLocally());
-            // mgclCheckError(err, "Updating ghosts of dR");
-        }
-
         // copy result into dVIn if needed
         if (args.maxiter % 2 == 1)
-            args.v_out.copyTo(args.queue, args.v_in);
+        {
+            mgcl::CuboidBSGpu::swap(args.v_in, args.v_out);
+        }
 
         // Update ghosts of dVIn
         args.v_in.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);

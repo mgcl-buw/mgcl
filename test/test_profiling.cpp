@@ -208,7 +208,7 @@ TEST_CASE("profiling_kernels")
         size_t n1 = static_cast<size_t>(lv1.getN());
         size_t o1 = static_cast<size_t>(lv1.getO());
         mgcl::MultigridEngine::prolongate(lv0, lv1, lv0.getDVIn(), lv1.getDR());
-        checkResult(p, "prolongate_to_fine", {m1, n1, o1});
+        checkResult(p, "prolongate_to_fine", {m1 * 2, n1 * 2, o1 * 2}); // 8 instead of 4 due to padding
     }
 
     SECTION("stencil_update_ghosts")

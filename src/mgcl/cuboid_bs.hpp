@@ -10,8 +10,7 @@ namespace mgcl
 {
     /**
      * @brief Class for storing vector valued cuboids, i.e. each grid point has a vector.
-     * Layout was chosen to be grid points first, i.e. [gpx][gpy][gpz][b], due to benchmark results, especially
-     * for residual.
+     * Layout is block first, i.e. [b][gpx][gpy][gpz].
      *
      */
     class CuboidBS

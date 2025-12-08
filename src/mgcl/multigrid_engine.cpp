@@ -247,7 +247,7 @@ namespace mgcl
             for (int j = problem.ghosts; j < level.n + problem.ghosts; j++)
                 for (int k = problem.ghosts; k < level.o + problem.ghosts; k++)
                     for (size_t b = 0; b < level.getVBS().getBlocksize(); b++)
-                        level.getVBS()[i][j][k][b] += level.getRBS()[i][j][k][b];
+                        level.getVBS()[b][i][j][k] += level.getRBS()[b][i][j][k];
 
         // relax nu2 times
         args::JacobiBSSeqArgs jacobi_args2{

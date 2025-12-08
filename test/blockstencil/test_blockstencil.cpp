@@ -899,7 +899,7 @@ TEST_CASE("Blockstencil::invertDiagonal")
                     for (size_t b = 0; b < blocksize; b++)
                     {
                         CAPTURE(i, j, k, b);
-                        REQUIRE_THAT((*s2)[i][j][k][b], Catch::Matchers::WithinAbs(1.0 / s[b][b][width / 2][width / 2][width / 2][i][j][k], 1e-4));
+                        REQUIRE_THAT((*s2)[b][i][j][k], Catch::Matchers::WithinAbs(1.0 / s[b][b][width / 2][width / 2][width / 2][i][j][k], 1e-4));
                     }
     }
 

@@ -50,7 +50,7 @@ TEST_CASE("correct_error_bs")
         for (int j = ghosts_n; j < n + ghosts_n; j++)
             for (int k = ghosts_o; k < o + ghosts_o; k++)
                 for (size_t b = 0; b < blocksize; b++)
-                    h_v[i][j][k][b] += h_e[i][j][k][b];
+                    h_v[b][i][j][k] += h_e[b][i][j][k];
 
     auto v_act = v.read(p.getCommands(), nullptr, true);
 

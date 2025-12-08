@@ -202,10 +202,10 @@ namespace mgcl
                         for (int k = 0; k < problem->getVBS().getO(); k++)
                             for (size_t b = 0; b < problem->getBlocksize(); b++)
                             {
-                                getVBS()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts][b] =
-                                    problem->getVBS()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in][b];
-                                getFBS()[i + problem->ghosts][j + problem->ghosts][k + problem->ghosts][b] =
-                                    problem->getFBS()[i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in][b];
+                                getVBS()[b][i + problem->ghosts][j + problem->ghosts][k + problem->ghosts] =
+                                    problem->getVBS()[b][i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
+                                getFBS()[b][i + problem->ghosts][j + problem->ghosts][k + problem->ghosts] =
+                                    problem->getFBS()[b][i + problem->ghosts_in][j + problem->ghosts_in][k + problem->ghosts_in];
                             }
 
                 // If mgcl is run with multiple processes, but already level 0 shall be calculated on only one process
