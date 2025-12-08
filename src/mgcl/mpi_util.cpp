@@ -189,9 +189,9 @@ namespace mgcl::mpi_util
         MPI_Datatype subarraySend;
         if (rank != 0)
         {
-            int sizes[4] = {mlocgh, nlocgh, olocgh, blocksize};
-            int subsizes[4] = {mloc, nloc, oloc, blocksize};
-            int starts[4] = {locsizes[3], locsizes[4], locsizes[5], 0};
+            int sizes[4] = {blocksize, mlocgh, nlocgh, olocgh};
+            int subsizes[4] = {blocksize, mloc, nloc, oloc};
+            int starts[4] = {0, locsizes[3], locsizes[4], locsizes[5]};
             err = MPI_Type_create_subarray(4, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &subarraySend);
             mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
             err = MPI_Type_commit(&subarraySend);
@@ -203,9 +203,9 @@ namespace mgcl::mpi_util
         MPI_Datatype subarrayRecvResized;
         if (rank == 0)
         {
-            int sizes[4] = {mglobgh, nglobgh, oglobgh, blocksize};
-            int subsizes[4] = {mloc, nloc, oloc, blocksize};
-            int starts[4] = {c.getGhostsM(), c.getGhostsN(), c.getGhostsO(), 0};
+            int sizes[4] = {blocksize, mglobgh, nglobgh, oglobgh};
+            int subsizes[4] = {blocksize, mloc, nloc, oloc};
+            int starts[4] = {0, c.getGhostsM(), c.getGhostsN(), c.getGhostsO()};
             // int starts[3] = {0, 0, 0};
             err = MPI_Type_create_subarray(4, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &subarrayRecv);
             mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
@@ -230,8 +230,8 @@ namespace mgcl::mpi_util
                 err = MPI_Cart_coords(comm, i, 3, coords);
                 mgclCheckMpiError(comm, err, "MPI_Cart_coords");
 
-                counts[i] = 1;
-                displ[i] = (coords[0] * mloc * nglobgh * oglobgh + coords[1] * nloc * oglobgh + coords[2] * oloc) * blocksize;
+                counts[i] = blocksize;
+                displ[i] = (coords[0] * mloc * nglobgh * oglobgh + coords[1] * nloc * oglobgh + coords[2] * oloc);
             }
 
         // MPI_Gatherv signature:
@@ -970,8 +970,8 @@ namespace mgcl::mpi_util
         MPI_Datatype subarrayRecv;
         if (rank > 0)
         {
-            int sizes[4] = {mlocgh, nlocgh, olocgh, blocksize};
-            int subsizes[4] = {mlocgh, nlocgh, olocgh, blocksize};
+            int sizes[4] = {blocksize, mlocgh, nlocgh, olocgh};
+            int subsizes[4] = {blocksize, mlocgh, nlocgh, olocgh};
             int starts[4] = {0, 0, 0, 0};
             err = MPI_Type_create_subarray(4, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &subarrayRecv);
             mgclCheckMpiError(comm, err, "MPI_Type_create_subarray");
@@ -984,8 +984,8 @@ namespace mgcl::mpi_util
         MPI_Datatype subarraySendResized;
         if (rank == 0)
         {
-            int sizes[4] = {mglobgh, nglobgh, oglobgh, blocksize};
-            int subsizes[4] = {mlocgh, nlocgh, olocgh, blocksize};
+            int sizes[4] = {blocksize, mglobgh, nglobgh, oglobgh};
+            int subsizes[4] = {blocksize, mlocgh, nlocgh, olocgh};
             int starts[4] = {0, 0, 0, 0};
             // int starts[4] = {0, 0, 0};
             err = MPI_Type_create_subarray(4, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &subarraySend);
@@ -1012,7 +1012,7 @@ namespace mgcl::mpi_util
                 mgclCheckMpiError(comm, err, "MPI_Cart_coords");
 
                 counts[i] = 1;
-                displ[i] = (coords[0] * mloc * nglobgh * oglobgh + coords[1] * nloc * oglobgh + coords[2] * oloc) * blocksize;
+                displ[i] = (coords[0] * mloc * nglobgh * oglobgh + coords[1] * nloc * oglobgh + coords[2] * oloc);
             }
 
         if (rank == 0)

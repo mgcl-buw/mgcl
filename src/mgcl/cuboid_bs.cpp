@@ -641,7 +641,7 @@ namespace mgcl
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ogh; k++)
                         for (int b = 0; b < blocksize; b++)
-                            cbuf[i][j][k][b] = rbuf[i][j][k][b];
+                            cbuf[b][i][j][k] = rbuf[b][i][j][k];
 
         /* Sending data downwards */
         sbuf_ptr = sliceIncGhosts(0, mgh - 1, ghostsM, 2 * ghostsN - 1, 0, ogh - 1); // TODO max when gh > m
@@ -659,7 +659,7 @@ namespace mgcl
                 for (j = 0; j < ghostsN; j++)
                     for (k = 0; k < ogh; k++)
                         for (int b = 0; b < blocksize; b++)
-                            cbuf[i][ngh - ghostsN + j][k][b] = rbuf[i][j][k][b];
+                            cbuf[b][i][ngh - ghostsN + j][k] = rbuf[b][i][j][k];
 
         /* Sending data upwards */
         sbuf_ptr = sliceIncGhosts(0, mgh - 1, n, n + ghostsN - 1, 0, ogh - 1); // TODO max when gh > m
@@ -677,7 +677,7 @@ namespace mgcl
                 for (j = 0; j < ghostsN; j++)
                     for (k = 0; k < ogh; k++)
                         for (int b = 0; b < blocksize; b++)
-                            cbuf[i][j][k][b] = rbuf[i][j][k][b];
+                            cbuf[b][i][j][k] = rbuf[b][i][j][k];
 
         /* Sending data to the left */
         sbuf_ptr = sliceIncGhosts(0, mgh - 1, 0, ngh - 1, ghostsO, 2 * ghostsO - 1); // TODO max when gh > m
@@ -699,7 +699,7 @@ namespace mgcl
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ghostsO; k++)
                         for (int b = 0; b < blocksize; b++)
-                            cbuf[i][j][ogh - ghostsO + k][b] = rbuf[i][j][k][b];
+                            cbuf[b][i][j][ogh - ghostsO + k] = rbuf[b][i][j][k];
 
         /* Sending data to the right */
         sbuf_ptr = sliceIncGhosts(0, mgh - 1, 0, ngh - 1, o, o + ghostsO - 1); // TODO max when gh > m
@@ -717,6 +717,6 @@ namespace mgcl
                 for (j = 0; j < ngh; j++)
                     for (k = 0; k < ghostsO; k++)
                         for (int b = 0; b < blocksize; b++)
-                            cbuf[i][j][k][b] = rbuf[i][j][k][b];
+                            cbuf[b][i][j][k] = rbuf[b][i][j][k];
     }
 }

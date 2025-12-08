@@ -289,7 +289,7 @@ namespace mgcl
                                     // calculate bs_inv * r first
                                     for (int bj = 0; bj < args.v.getBlocksize(); bj++)
                                     {
-                                        sum += bs_inv[bi][bj][0][0][0][isv][jsv][ksv] * args.r[ir][jr][kr][bj];
+                                        sum += bs_inv[bi][bj][0][0][0][isv][jsv][ksv] * args.r[bj][ir][jr][kr];
 
                                         // if (iv == 1 && jv == 1 && kv == 1)
                                         // {

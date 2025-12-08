@@ -622,14 +622,14 @@ TEST_CASE("MPI-updateGhostsSeq-CuboidBS_(n_processes)")
                     for (int b = 0; b < blocksize; b++)
                     {
                         if (mpi_coords[0] > 0) // not the first process
-                            REQUIRE(cl[i][j][k][b] == cg[m_start + i][j + n_start][k + o_start][b]);
+                            REQUIRE(cl[b][i][j][k] == cg[b][m_start + i][j + n_start][k + o_start]);
                         else
-                            REQUIRE(cl[i][j][k][b] == cg[i + m][j + n_start][k + o_start][b]);
+                            REQUIRE(cl[b][i][j][k] == cg[b][i + m][j + n_start][k + o_start]);
 
                         if (mpi_coords[0] < mpi_dims[0]) // not the last process
-                            REQUIRE(cl[i + gh + ml][j][k][b] == cg[m_end + gh + 1 + i][j + n_start][k + o_start][b]);
+                            REQUIRE(cl[b][i + gh + ml][j][k] == cg[b][m_end + gh + 1 + i][j + n_start][k + o_start]);
                         else
-                            REQUIRE(cl[i + gh + ml][j][k][b] == cg[i + gh][j + n_start][k + o_start][b]);
+                            REQUIRE(cl[b][i + gh + ml][j][k] == cg[b][i + gh][j + n_start][k + o_start]);
                     }
 
         // check in y-direction
@@ -639,14 +639,14 @@ TEST_CASE("MPI-updateGhostsSeq-CuboidBS_(n_processes)")
                     for (int b = 0; b < blocksize; b++)
                     {
                         if (mpi_coords[1] > 0) // not the first process
-                            REQUIRE(cl[i][j][k][b] == cg[i + m_start][n_start + j][k + o_start][b]);
+                            REQUIRE(cl[b][i][j][k] == cg[b][i + m_start][n_start + j][k + o_start]);
                         else
-                            REQUIRE(cl[i][j][k][b] == cg[i + m_start][j + n][k + o_start][b]);
+                            REQUIRE(cl[b][i][j][k] == cg[b][i + m_start][j + n][k + o_start]);
 
                         if (mpi_coords[1] < mpi_dims[1]) // not the last process
-                            REQUIRE(cl[i][j + gh + nl][k][b] == cg[i + m_start][n_end + gh + 1 + j][k + o_start][b]);
+                            REQUIRE(cl[b][i][j + gh + nl][k] == cg[b][i + m_start][n_end + gh + 1 + j][k + o_start]);
                         else
-                            REQUIRE(cl[i][j + gh + nl][k][b] == cg[i + m_start][j + gh][k + o_start][b]);
+                            REQUIRE(cl[b][i][j + gh + nl][k] == cg[b][i + m_start][j + gh][k + o_start]);
                     }
 
         // check in x-direction
@@ -656,14 +656,14 @@ TEST_CASE("MPI-updateGhostsSeq-CuboidBS_(n_processes)")
                     for (int b = 0; b < blocksize; b++)
                     {
                         if (mpi_coords[2] > 0) // not the first process
-                            REQUIRE(cl[i][j][k][b] == cg[i + m_start][j + n_start][o_start + k][b]);
+                            REQUIRE(cl[b][i][j][k] == cg[b][i + m_start][j + n_start][o_start + k]);
                         else
-                            REQUIRE(cl[i][j][k][b] == cg[i + m_start][j + n_start][k + o][b]);
+                            REQUIRE(cl[b][i][j][k] == cg[b][i + m_start][j + n_start][k + o]);
 
                         if (mpi_coords[2] < mpi_dims[2]) // not the last process
-                            REQUIRE(cl[i][j][k + gh + ol][b] == cg[i + m_start][j + n_start][o_end + gh + 1 + k][b]);
+                            REQUIRE(cl[b][i][j][k + gh + ol] == cg[b][i + m_start][j + n_start][o_end + gh + 1 + k]);
                         else
-                            REQUIRE(cl[i][j][k + gh + ol][b] == cg[i + m_start][j + n_start][k + gh][b]);
+                            REQUIRE(cl[b][i][j][k + gh + ol] == cg[b][i + m_start][j + n_start][k + gh]);
                     }
         // }
     }
@@ -796,7 +796,7 @@ TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
     //         for (int k = gh; k < o + gh; k++)
     //             for (int b = 0; b < blocksize; b++)
     //             {
-    //                 cg[i][j][k][b] = cnt / 2.0;
+    //                 cg[b][i][j][k] = cnt / 2.0;
     //                 cnt++;
     //             }
 
@@ -845,14 +845,14 @@ TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
                 {
                     CAPTURE(i, j, k, b, mpi_rank);
                     if (mpi_coords[0] > 0) // not the first process
-                        REQUIRE(cl_res[i][j][k][b] == cg[m_start + i][j + n_start][k + o_start][b]);
+                        REQUIRE(cl_res[b][i][j][k] == cg[b][m_start + i][j + n_start][k + o_start]);
                     else
-                        REQUIRE(cl_res[i][j][k][b] == cg[i + m][j + n_start][k + o_start][b]);
+                        REQUIRE(cl_res[b][i][j][k] == cg[b][i + m][j + n_start][k + o_start]);
 
                     if (mpi_coords[0] < mpi_dims[0]) // not the last process
-                        REQUIRE(cl_res[i + gh + ml][j][k][b] == cg[m_end + gh + 1 + i][j + n_start][k + o_start][b]);
+                        REQUIRE(cl_res[b][i + gh + ml][j][k] == cg[b][m_end + gh + 1 + i][j + n_start][k + o_start]);
                     else
-                        REQUIRE(cl_res[i + gh + ml][j][k][b] == cg[i + gh][j + n_start][k + o_start][b]);
+                        REQUIRE(cl_res[b][i + gh + ml][j][k] == cg[b][i + gh][j + n_start][k + o_start]);
                 }
 
     // check in y-direction
@@ -862,14 +862,14 @@ TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
                 for (int b = 0; b < blocksize; b++)
                 {
                     if (mpi_coords[1] > 0) // not the first process
-                        REQUIRE(cl_res[i][j][k][b] == cg[i + m_start][n_start + j][k + o_start][b]);
+                        REQUIRE(cl_res[b][i][j][k] == cg[b][i + m_start][n_start + j][k + o_start]);
                     else
-                        REQUIRE(cl_res[i][j][k][b] == cg[i + m_start][j + n][k + o_start][b]);
+                        REQUIRE(cl_res[b][i][j][k] == cg[b][i + m_start][j + n][k + o_start]);
 
                     if (mpi_coords[1] < mpi_dims[1]) // not the last process
-                        REQUIRE(cl_res[i][j + gh + nl][k][b] == cg[i + m_start][n_end + gh + 1 + j][k + o_start][b]);
+                        REQUIRE(cl_res[b][i][j + gh + nl][k] == cg[b][i + m_start][n_end + gh + 1 + j][k + o_start]);
                     else
-                        REQUIRE(cl_res[i][j + gh + nl][k][b] == cg[i + m_start][j + gh][k + o_start][b]);
+                        REQUIRE(cl_res[b][i][j + gh + nl][k] == cg[b][i + m_start][j + gh][k + o_start]);
                 }
 
     // check in x-direction
@@ -879,14 +879,14 @@ TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
                 for (int b = 0; b < blocksize; b++)
                 {
                     if (mpi_coords[2] > 0) // not the first process
-                        REQUIRE(cl_res[i][j][k][b] == cg[i + m_start][j + n_start][o_start + k][b]);
+                        REQUIRE(cl_res[b][i][j][k] == cg[b][i + m_start][j + n_start][o_start + k]);
                     else
-                        REQUIRE(cl_res[i][j][k][b] == cg[i + m_start][j + n_start][k + o][b]);
+                        REQUIRE(cl_res[b][i][j][k] == cg[b][i + m_start][j + n_start][k + o]);
 
                     if (mpi_coords[2] < mpi_dims[2]) // not the last process
-                        REQUIRE(cl_res[i][j][k + gh + ol][b] == cg[i + m_start][j + n_start][o_end + gh + 1 + k][b]);
+                        REQUIRE(cl_res[b][i][j][k + gh + ol] == cg[b][i + m_start][j + n_start][o_end + gh + 1 + k]);
                     else
-                        REQUIRE(cl_res[i][j][k + gh + ol][b] == cg[i + m_start][j + n_start][k + gh][b]);
+                        REQUIRE(cl_res[b][i][j][k + gh + ol] == cg[b][i + m_start][j + n_start][k + gh]);
                 }
 }
 
