@@ -1783,7 +1783,7 @@ __kernel void jacobi_iter_27point_fixed_stencil_1d_boundary(
  * svGridSize = sv_mgh * sv_ngh * sv_ogh
  * svGridSizeCoeffs = 27 * svGridSize
  */
-__kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacobi(
+__kernel void jacobi_iter_27point_blockstencil_block_first_v_block_first_blockjacobi(
     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
     __global double* restrict v_out,
     __global double* restrict f,
@@ -1913,7 +1913,7 @@ __kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacob
  * svGridSize = sv_mgh * sv_ngh * sv_ogh
  * svGridSizeCoeffs = 27 * svGridSize
  */
-__kernel void jacobi_iter_27point_blockstencil_block_first_v_gp_first_scalarjacobi(
+__kernel void jacobi_iter_27point_blockstencil_block_first_v_block_first_scalarjacobi(
     __global double* restrict v_in, // needed s.t. every work-item can read surrounding cell values
     __global double* restrict v_out,
     __global double* restrict f,
