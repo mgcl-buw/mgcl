@@ -512,6 +512,7 @@ namespace mgcl_bench_jacobi_blockstencil
                         gridsTBT.push_back({m, n, o});
 
         std::vector<bench_util::ResultJacobiBlockstencil> results;
+        std::stringstream profilingStream;
 
         int ghosts_in = 1;
         bool returnResidualNorm = false;
@@ -558,6 +559,9 @@ namespace mgcl_bench_jacobi_blockstencil
 
                 p.init();
 
+                if (CLI_ARGS::enableKernelProfiling)
+                    p.getProfilingData()->getMeasurements().clear();
+
                 auto& lv0 = p.getLevelAt(0);
 
                 ankerl::nanobench::Bench bench;
@@ -602,6 +606,12 @@ namespace mgcl_bench_jacobi_blockstencil
                         res.blocksize = 1;
                         results.push_back(res);
                     }
+
+                if (CLI_ARGS::enableKernelProfiling)
+                {
+                    profilingStream << "jacobi_scalarproblem_pointwiseJacobi" << std::endl;
+                    p.getProfilingData()->printBestTimingsPerKernelAsCsv(profilingStream);
+                }
             }
 
             int ghosts = 1;
@@ -622,9 +632,12 @@ namespace mgcl_bench_jacobi_blockstencil
                 p.setUseOpencl(true);
                 p.setSilent(true);
                 p.setDeviceType(CL_DEVICE_TYPE_GPU);
-                p.setProfilingEnabled(true);
+                p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
                 p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
                 p.init();
+
+                if (CLI_ARGS::enableKernelProfiling)
+                    p.getProfilingData()->getMeasurements().clear();
 
                 auto v_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
                 auto f_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
@@ -711,6 +724,11 @@ namespace mgcl_bench_jacobi_blockstencil
                         res.blocksize = blocksize;
                         results.push_back(res);
                     }
+                if (CLI_ARGS::enableKernelProfiling)
+                {
+                    profilingStream << "jacobi_vectorproblem8_pointwiseJacobi" << std::endl;
+                    p.getProfilingData()->printBestTimingsPerKernelAsCsv(profilingStream);
+                }
             }
 
             // vector-valued Problem, blocksize 2^3, block Jacobi
@@ -727,9 +745,12 @@ namespace mgcl_bench_jacobi_blockstencil
                 p.setUseOpencl(true);
                 p.setSilent(true);
                 p.setDeviceType(CL_DEVICE_TYPE_GPU);
-                p.setProfilingEnabled(true);
+                p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
                 p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
                 p.init();
+
+                if (CLI_ARGS::enableKernelProfiling)
+                    p.getProfilingData()->getMeasurements().clear();
 
                 auto v_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
                 auto f_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
@@ -816,6 +837,11 @@ namespace mgcl_bench_jacobi_blockstencil
                         res.blocksize = blocksize;
                         results.push_back(res);
                     }
+                if (CLI_ARGS::enableKernelProfiling)
+                {
+                    profilingStream << "jacobi_vectorproblem8_blockJacobi" << std::endl;
+                    p.getProfilingData()->printBestTimingsPerKernelAsCsv(profilingStream);
+                }
             }
             // vector-valued Problem, blocksize 4^3, point-wise Jacobi
             {
@@ -831,9 +857,12 @@ namespace mgcl_bench_jacobi_blockstencil
                 p.setUseOpencl(true);
                 p.setSilent(true);
                 p.setDeviceType(CL_DEVICE_TYPE_GPU);
-                p.setProfilingEnabled(true);
+                p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
                 p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
                 p.init();
+
+                if (CLI_ARGS::enableKernelProfiling)
+                    p.getProfilingData()->getMeasurements().clear();
 
                 auto v_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
                 auto f_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
@@ -920,6 +949,11 @@ namespace mgcl_bench_jacobi_blockstencil
                         res.blocksize = blocksize;
                         results.push_back(res);
                     }
+                if (CLI_ARGS::enableKernelProfiling)
+                {
+                    profilingStream << "jacobi_vectorproblem64_pointwiseJacobi" << std::endl;
+                    p.getProfilingData()->printBestTimingsPerKernelAsCsv(profilingStream);
+                }
             }
 
             // vector-valued Problem, blocksize 4^3, block Jacobi
@@ -936,9 +970,12 @@ namespace mgcl_bench_jacobi_blockstencil
                 p.setUseOpencl(true);
                 p.setSilent(true);
                 p.setDeviceType(CL_DEVICE_TYPE_GPU);
-                p.setProfilingEnabled(true);
+                p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
                 p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
                 p.init();
+
+                if (CLI_ARGS::enableKernelProfiling)
+                    p.getProfilingData()->getMeasurements().clear();
 
                 auto v_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
                 auto f_in = std::make_shared<mgcl::CuboidBS>(mbs, nbs, obs, ghosts_in, ghosts_in, ghosts_in, blocksize);
@@ -1025,9 +1062,17 @@ namespace mgcl_bench_jacobi_blockstencil
                         res.blocksize = blocksize;
                         results.push_back(res);
                     }
+
+                if (CLI_ARGS::enableKernelProfiling)
+                {
+                    profilingStream << "jacobi_vectorproblem64_blockJacobi" << std::endl;
+                    p.getProfilingData()->printBestTimingsPerKernelAsCsv(profilingStream);
+                }
             }
         }
         bench_util::printCsvFormat(results);
+
+        std::cout << profilingStream.str() << std::endl;
     }
 
     // Benchs Jacobi scalar vs vector-valued problem
