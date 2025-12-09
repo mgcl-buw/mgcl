@@ -119,7 +119,7 @@ namespace mgcl_bench_jacobi_blockstencil
             error("bs_inv must be a shared_ptr to either CuboidBSGpu or BlockstencilGpu!");
         }
 
-        std::string kernelName = "jacobi_iter_27point_blockstencil_block_first_v_gp_first_scalarjacobi";
+        std::string kernelName = "jacobi_iter_27point_blockstencil_block_first_v_block_first_scalarjacobi";
         if (auto bs_inv_ptr = std::get_if<std::shared_ptr<mgcl::BlockstencilGpu>>(&args.bs_inv))
         {
             auto& bs_inv = *bs_inv_ptr->get();
@@ -127,7 +127,7 @@ namespace mgcl_bench_jacobi_blockstencil
             {
                 error("width of bs_inv must be 1!");
             }
-            kernelName = "jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacobi";
+            kernelName = "jacobi_iter_27point_blockstencil_block_first_v_block_first_blockjacobi";
         }
 
         cl_event ev;
