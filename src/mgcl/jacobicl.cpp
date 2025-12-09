@@ -5,6 +5,7 @@
 #include "level.hpp"     // for Level
 #include "mgcl.hpp"      // for mgcl_debug, MGCL_LAPLACE_19POINT
 #include "mpi_level_data.hpp"
+#include "mpi_util.hpp"
 #include "multigrid_engine.hpp" // for Problem, VaryingStencil3x3x3, Multig...
 #include "opencl_helper.hpp"
 #include "problem.hpp" // for Problem
@@ -912,6 +913,65 @@ namespace mgcl
         return res;
     }
 
+    /**
+     * @brief Runs Jacobi inner parallel to start of data transfer for ghost update.
+     */
+    void MultigridEngine::jacobi_overlapped_helpers::jacobiOverlappedCore(mgcl::Problem& problem, mgcl::Level& level,
+                                                                          cl_mem dVInBuf, CuboidGpu& dVOut, int store_res,
+                                                                          cl_command_queue queue2,
+                                                                          cl_kernel innerKernel, std::string kernelNameInner,
+                                                                          size_t globalInner[3], size_t localInner[3])
+    {
+        if (problem.getDPlanesBufPtr() == nullptr)
+            error("MultigridEngine::updateGhostsOclMpi: dPlanesBufPtr is null");
+
+        // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
+        // TODO maybe disable check in UNSAFE mode
+        int yz = dVOut.getNgh() * dVOut.getOgh();
+        int xz = dVOut.getMgh() * dVOut.getOgh();
+        int xy = dVOut.getMgh() * dVOut.getNgh();
+        int ressize = 2 * yz * dVOut.getGhostsM() + 2 * xz * dVOut.getGhostsN() + 2 * xy * dVOut.getGhostsO();
+
+        auto dPlanesBuf = problem.getDPlanesBufPtr();
+        if (dPlanesBuf->getSize() < ressize)
+            error("MultigridEngine::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf->getSize()));
+
+        auto hPlanesBufSend = problem.getHPlanesBufSendPtr();
+        auto hPlanesBufRecv = problem.getHPlanesBufRecvPtr();
+        if (hPlanesBufSend->size() < ressize || hPlanesBufRecv->size() < ressize)
+            throw "MultigridEngine::updateGhostsOclMpi: hPlanesBufSend or hPlanesBufRecv is too small. Need at least " +
+                std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend->size()) +
+                " (send) and " + std::to_string(hPlanesBufRecv->size()) + " (recv)";
+
+        // Extract border planes from the buffer
+        // dVOut.extractBorderPlanes(problem.getCommands(), problem.getProgram(),
+        //                           dPlanesBuf, hPlanesBufSend,
+        //                           &problem.getKernelConfig(), problem.getProfilingData());
+        dVOut.extractBorderPlanes(problem.getCommands(), problem.getProgram(),
+                                  dPlanesBuf, nullptr,
+                                  &problem.getKernelConfig(), problem.getProfilingData(), false);
+        auto& sbuf = *hPlanesBufSend;
+        auto& rbuf = *hPlanesBufRecv;
+
+        // if we wait here, inner Jacobi and memcpy will be executed in parallel
+        problem.finish();
+
+        jacobi_overlapped_helpers::jacobiInner(problem, level, dVInBuf, dVOut.getBuffer(), store_res, queue2, innerKernel, globalInner, localInner, kernelNameInner);
+
+        dPlanesBuf->read(problem.getCommands(), hPlanesBufSend->data(), true, ressize, nullptr);
+
+        // Send our planes to neighbours and receive their planes
+        mgcl::mpi_util::sendBorderPlanes(dVOut.getMgh(), dVOut.getNgh(), dVOut.getOgh(),
+                                         dVOut.getGhostsM(), dVOut.getGhostsN(), dVOut.getGhostsO(), 1,
+                                         sbuf, rbuf, *level.getMpiDataPtr());
+
+        // Paste planes back into the buffer.
+        dPlanesBuf->write(problem.getCommands(), rbuf, false, ressize, problem.getProfilingData());
+        dVOut.pasteGhostsFromBorderPlanes(problem.getContext(), problem.getCommands(), problem.getProgram(),
+                                          dPlanesBuf, nullptr,
+                                          &problem.getKernelConfig(), problem.getProfilingData());
+    }
+
     /* Runs jacobi method using OpenCL.
      * Doesn't creates ocl buffers and doesn't copy data from host to device and vice versa
      * v, f and r must be of size [m][n][o] for periodic boundary condition. Ghosts of v and f must be updated.
@@ -1053,12 +1113,24 @@ namespace mgcl
 
                 // calculate boundary points and inner points in separate queues concurrently
                 jacobi_overlapped_helpers::jacobiBoundary(problem, level, dVIn, dVOut, store_res, problem.getCommands(), boundaryKernel, global, local, kernelNameBoundary);
-                jacobi_overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2, innerKernel, global, local, kernelNameInner);
+                // jacobi_overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2, innerKernel, global, local, kernelNameInner);
 
-                // No need for waiting for the boundary kernel to finish, because extractBorderPlanes is in same in-order queue
-                err = mgcl::MultigridEngine::updateGhosts(problem, *ptr_dvout_wrapper,
-                                                          level.getMpiDataPtr(), level.isCalculatedLocally());
-                mgcl::mgclCheckError(err, "Updating ghosts");
+                // // No need for waiting for the boundary kernel to finish, because extractBorderPlanes is in same in-order queue
+                // err = mgcl::MultigridEngine::updateGhosts(problem, *ptr_dvout_wrapper,
+                //                                           level.getMpiDataPtr(), level.isCalculatedLocally());
+                // mgcl::mgclCheckError(err, "Updating ghosts");
+
+                if (!level.isCalculatedLocally())
+                {
+                    jacobi_overlapped_helpers::jacobiOverlappedCore(problem, level, dVIn, *ptr_dvout_wrapper, store_res, queue2, innerKernel, kernelNameInner, global, local);
+                }
+                else
+                {
+                    jacobi_overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2, innerKernel, global, local, kernelNameInner);
+                    err = mgcl::MultigridEngine::updateGhosts(problem, *ptr_dvout_wrapper,
+                                                              level.getMpiDataPtr(), level.isCalculatedLocally());
+                    mgcl::mgclCheckError(err, "Updating ghosts");
+                }
 
                 // Wait for inner kernel and ghost update to finish
                 mgcl::mgclCheckError(clFinish(problem.getCommands()), "clFinish queue1");

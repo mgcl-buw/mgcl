@@ -202,7 +202,6 @@ namespace mgcl
          * `benchJacobiOverlappedGhostUpdate`.
          * Defaults to -1, i.e. use standard Jacobi and ghost update on each level.
          * Not yet available for Blockstencils. */
-
         int overlappedJacobiGhostUpdateMaxLevel = -1;
 
         void checkGlobalDimensions();

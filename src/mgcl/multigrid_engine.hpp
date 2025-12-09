@@ -293,6 +293,12 @@ namespace mgcl
                                       cl_command_queue queue, cl_kernel kernel,
                                       size_t global[3], size_t local[3],
                                       std::string kernelName);
+
+            static void jacobiOverlappedCore(mgcl::Problem& problem, mgcl::Level& level,
+                                             cl_mem dVInBuf, CuboidGpu& dVOut, int store_res,
+                                             cl_command_queue queue2,
+                                             cl_kernel innerKernel, std::string kernelNameInner,
+                                             size_t globalInner[3], size_t localInner[3]);
         };
 
         static std::unique_ptr<VaryingStencil> galerkinOptimized(VaryingStencil& a_h, int gh_a2h,
