@@ -288,9 +288,9 @@ void mgcl_test::create4hOrderPeriodicProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, m
         throw "Dimensions must match!";
 
     double h = 1.0 / (double)v.getM();
-    for (int i = 0, i_v = v.getGhostsM(), i_f = f.getGhostsM(), i_s = solution.getGhostsM(); i_v < v.getM(); i++, i_v++, i_f++, i_s++)
-        for (int j = 0, j_v = v.getGhostsN(), j_f = f.getGhostsN(), j_s = solution.getGhostsN(); j_v < v.getN(); j++, j_v++, j_f++, j_s++)
-            for (int k = 0, k_v = v.getGhostsO(), k_f = f.getGhostsO(), k_s = solution.getGhostsO(); k_v < v.getO(); k++, k_v++, k_f++, k_s++)
+    for (int i = 0, i_v = v.getGhostsM(), i_f = f.getGhostsM(), i_s = solution.getGhostsM(); i_v < v.getM() + v.getGhostsM(); i++, i_v++, i_f++, i_s++)
+        for (int j = 0, j_v = v.getGhostsN(), j_f = f.getGhostsN(), j_s = solution.getGhostsN(); j_v < v.getN() + v.getGhostsN(); j++, j_v++, j_f++, j_s++)
+            for (int k = 0, k_v = v.getGhostsO(), k_f = f.getGhostsO(), k_s = solution.getGhostsO(); k_v < v.getO() + v.getGhostsO(); k++, k_v++, k_f++, k_s++)
             {
                 double zs = i * h;
                 double ys = j * h;
