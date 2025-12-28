@@ -1269,7 +1269,7 @@ TEST_CASE("MPI_vcycle_threshold_eq_2_Varying27p")
     int m = 16;
     int n = 16;
     int o = 16;
-    int periodic = 0; // GENERATE(1,0);
+    int periodic = GENERATE(1, 0);
     auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
     int gh = 1;
 
@@ -1414,24 +1414,24 @@ TEST_CASE("MPI_vcycle_threshold_eq_2_Varying27p")
 
         // Running this with 1 proc yields
         // periodic:
-        // ||e||_2 = 2.79451354429798363e-03
-        // e_max = 2.89860791352128345e-03
+        // ||e||_2 = 3.39781336529798106e-03
+        //   e_max = 3.49891025057036701e-03
         // Dirichlet:
-        // ||e||_2 = 1.55620172073226413e-03
-        //   e_max = 8.53020967345560766e-03
+        // ||e||_2 = 1.95350845505491526e-03
+        //   e_max = 9.27930289440778711e-03
         // which should be equal to the global result when run with multiple processors.
 
         REQUIRE(errNorm < 1e-2);
         REQUIRE(errMax < 1e-2);
         if (periodic)
         {
-            REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(2.79451354429798363e-03));
-            REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(2.89860791352128345e-03));
+            REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(3.39781336529798106e-03));
+            REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(3.49891025057036701e-03));
         }
         else
         {
-            REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(1.55620172073226413e-03));
-            REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(8.53020967345560766e-03));
+            REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(1.95350845505491526e-03));
+            REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(9.27930289440778711e-03));
         }
     }
 }
@@ -1619,7 +1619,8 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
     int m = 16;
     int n = 16;
     int o = 16;
-    int periodic = 1;
+    int periodic = GENERATE(1, 0);
+    auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
     int gh = 1;
 
     // Problem parameters
@@ -1692,7 +1693,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
     REQUIRE(ol <= o);
 
     // Set up 4th order periodic problem
-    int ghin = 0; // TODO check with ghin > 0
+    int ghin = 1; // TODO check with ghin > 0
     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
     auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
     auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
@@ -1717,6 +1718,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
     p.setGhostsIn(ghin);
     p.setMpiLevelThreshold(2);
     p.setMpiComm(mpi_comm);
+    p.setBc(bc);
 
     p.setStencilType(mgcl::MGCL_VARYING);
     auto& sv = *p.getStencilValues();
@@ -1765,14 +1767,26 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
         // Running this with 1 proc yields
+        // periodic:
         // ||e||_2 = 2.79451354429819309e-03
-        // e_max = 2.89860791352150159e-03
+        //   e_max = 2.89860791352150159e-03
+        // Dirichlet:
+        //  ||e||_2 = 1.82375499519192856e-04
+        //   e_max = 1.21344213213218921e-03
         // which should be equal to the global result when run with multiple processors.
 
         REQUIRE(errNorm < 1e-2);
         REQUIRE(errMax < 1e-2);
-        REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(2.79451354429819309e-03, 1e-10));
-        REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(2.89860791352150159e-03, 1e-10));
+        if (periodic)
+        {
+            REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(2.79451354429819309e-03));
+            REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(2.89860791352150159e-03));
+        }
+        else
+        {
+            REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(1.82375499519192856e-04));
+            REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(1.21344213213218921e-03));
+        }
     }
 }
 

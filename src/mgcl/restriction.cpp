@@ -129,7 +129,6 @@ namespace mgcl
         mgclCheckError(err, "Updating fine ghosts");
         err = clEnqueueNDRangeKernel(problem->openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing restriction kernel");
-        std::cout << "coarse.isCalculatedLocally()" << coarse.isCalculatedLocally() << std::endl;
         err = MultigridEngine::updateGhosts(*problem, d_coarse_values, coarse.getMpiDataPtr(),
                                             coarse.isCalculatedLocally());
         mgclCheckError(err, "Updating coarse ghosts");

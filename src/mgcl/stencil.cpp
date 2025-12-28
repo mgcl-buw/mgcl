@@ -756,7 +756,7 @@ namespace mgcl
         BufferGpu* d_planes_buf,
         std::vector<double>* sbuf, std::vector<double>* rbuf,
         cl_program program, cl_command_queue queue, cl_context context,
-        MPILevelData* mpiData, bool forceLocal,
+        MPILevelData* mpiData, bool forceLocal, bool periodic,
         conf::KernelConfig* conf, ProfilingData* pd)
     {
         int err;
@@ -845,7 +845,7 @@ namespace mgcl
                 if (rbuf->size() < static_cast<size_t>((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()))
                     error("Not enough memory for recv buffer. Need " + std::to_string((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()) + " bytes, but only " + std::to_string(rbuf->size()) + " bytes available.");
 
-                updateGhostsStencilOclMpi(queue, program, c, *d_planes_buf, *sbuf, *rbuf, mpiData, forceLocal, conf, pd);
+                updateGhostsStencilOclMpi(queue, program, c, *d_planes_buf, *sbuf, *rbuf, mpiData, forceLocal, periodic, conf, pd);
             }
             else
             {
@@ -879,7 +879,7 @@ namespace mgcl
         BufferGpu* d_planes_buf,
         std::vector<double>* sbuf, std::vector<double>* rbuf,
         cl_program program, cl_command_queue queue, cl_context context,
-        MPILevelData* mpiData, bool forceLocal,
+        MPILevelData* mpiData, bool forceLocal, bool periodic,
         conf::KernelConfig* conf, ProfilingData* pd)
     {
         int err;
@@ -964,7 +964,7 @@ namespace mgcl
                 if (rbuf->size() < static_cast<size_t>((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()))
                     error("Not enough memory for recv buffer. Need " + std::to_string((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()) + " bytes, but only " + std::to_string(rbuf->size()) + " bytes available.");
 
-                updateGhostsStencilOclMpi(queue, program, c, *d_planes_buf, *sbuf, *rbuf, mpiData, forceLocal, conf, pd);
+                updateGhostsStencilOclMpi(queue, program, c, *d_planes_buf, *sbuf, *rbuf, mpiData, forceLocal, periodic, conf, pd);
             }
             else
             {
@@ -1398,7 +1398,7 @@ namespace mgcl
                                                 BufferGpu* d_planes_buf,
                                                 std::vector<double>* sbuf, std::vector<double>* rbuf,
                                                 cl_program program, cl_command_queue queue, cl_context context,
-                                                MPILevelData* mpiData, bool forceLocal,
+                                                MPILevelData* mpiData, bool forceLocal, bool periodic,
                                                 conf::KernelConfig* conf, ProfilingData* pd)
     {
         int err;
@@ -1491,7 +1491,7 @@ namespace mgcl
                 if (rbuf->size() < static_cast<size_t>((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()))
                     error("Not enough memory for recv buffer. Need " + std::to_string((yz + xz + xy) * 2 * c.getGh() * c.getWidth() * c.getWidth() * c.getWidth()) + " bytes, but only " + std::to_string(rbuf->size()) + " bytes available.");
 
-                updateGhostsStencilOclMpi(queue, program, c, *d_planes_buf, *sbuf, *rbuf, mpiData, forceLocal, conf, pd);
+                updateGhostsStencilOclMpi(queue, program, c, *d_planes_buf, *sbuf, *rbuf, mpiData, forceLocal, periodic, conf, pd);
             }
             else
             {

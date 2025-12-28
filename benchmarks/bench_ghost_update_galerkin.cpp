@@ -97,6 +97,7 @@ TEST_CASE("bench_ghost_update_mpi_ocl_galerkin")
         double hm = 1.0 / (double)mglob;
         double hn = 1.0 / (double)nglob;
         double ho = 1.0 / (double)oglob;
+        bool periodic = true;
 
         mgcl::MGCL_RESIDUAL_NORM resnorm = mgcl::MGCL_L2;
         mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_LAPLACE_7POINT;
@@ -211,7 +212,7 @@ TEST_CASE("bench_ghost_update_mpi_ocl_galerkin")
 
                     updateGhostsStencilOclMpi(p->getCommands(), p->getProgram(), sv,
                                               p->getDPlanesBuf(), p->getHPlanesBufSend(), p->getHPlanesBufRecv(),
-                                              mpiData, false,
+                                              mpiData, false, periodic,
                                               nullptr, nullptr);
                     p->finish();
 

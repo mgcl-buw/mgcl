@@ -105,28 +105,8 @@ namespace mgcl
                                 for (int kk = 0; kk < s.getWidth(); kk++)
                                     s[ii][jj][kk][i][j][k] = rbuf[ii][jj][kk][i][j][k];
 
-        /* Sending data downwards */
-        sbuf_ptr = s.sliceIncGhosts(0, mgh - 1, ghosts_m, 2 * ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
-        sbuf = sbuf_ptr->getData();
-        rbuf_ptr = sbuf_ptr->copyShallow();
-        rbuf = rbuf_ptr->getData();
-
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->down[0], 0,
-                           static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->up[0], 0,
-                           mpiData->comm, MPI_STATUS_IGNORE);
-        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
-
-        if (MPI_PROC_NULL != mpiData->up[0])
-            for (i = 0; i < mgh; i++)
-                for (j = 0; j < ghosts_n; j++)
-                    for (k = 0; k < ogh; k++)
-                        for (int ii = 0; ii < s.getWidth(); ii++)
-                            for (int jj = 0; jj < s.getWidth(); jj++)
-                                for (int kk = 0; kk < s.getWidth(); kk++)
-                                    s[ii][jj][kk][i][ngh - ghosts_n + j][k] = rbuf[ii][jj][kk][i][j][k];
-
         /* Sending data upwards */
-        sbuf_ptr = s.sliceIncGhosts(0, mgh - 1, n, n + ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
+        sbuf_ptr = s.sliceIncGhosts(0, mgh - 1, ghosts_m, 2 * ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
         sbuf = sbuf_ptr->getData();
         rbuf_ptr = sbuf_ptr->copyShallow();
         rbuf = rbuf_ptr->getData();
@@ -137,6 +117,26 @@ namespace mgcl
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
         if (MPI_PROC_NULL != mpiData->down[0])
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ghosts_n; j++)
+                    for (k = 0; k < ogh; k++)
+                        for (int ii = 0; ii < s.getWidth(); ii++)
+                            for (int jj = 0; jj < s.getWidth(); jj++)
+                                for (int kk = 0; kk < s.getWidth(); kk++)
+                                    s[ii][jj][kk][i][ngh - ghosts_n + j][k] = rbuf[ii][jj][kk][i][j][k];
+
+        /* Sending data downwards */
+        sbuf_ptr = s.sliceIncGhosts(0, mgh - 1, n, n + ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
+        sbuf = sbuf_ptr->getData();
+        rbuf_ptr = sbuf_ptr->copyShallow();
+        rbuf = rbuf_ptr->getData();
+
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->down[0], 0,
+                           static_cast<void*>(rbuf[0][0][0][0][0]), mgh * ghosts_n * ogh * ssize, MPI_DOUBLE, mpiData->up[0], 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
+        if (MPI_PROC_NULL != mpiData->up[0])
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ghosts_n; j++)
                     for (k = 0; k < ogh; k++)

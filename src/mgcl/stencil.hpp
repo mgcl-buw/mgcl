@@ -135,7 +135,7 @@ namespace mgcl
             BufferGpu* d_planes_buf,
             std::vector<double>* sbuf, std::vector<double>* rbuf,
             cl_program program, cl_command_queue queue, cl_context context,
-            MPILevelData* mpiData, bool forceLocal,
+            MPILevelData* mpiData, bool forceLocal, bool periodic,
             conf::KernelConfig* conf, ProfilingData* pd);
 
         VaryingStencilGpu multiply(
@@ -143,7 +143,7 @@ namespace mgcl
             BufferGpu* d_planes_buf,
             std::vector<double>* sbuf, std::vector<double>* rbuf,
             cl_program program, cl_command_queue queue, cl_context context,
-            MPILevelData* mpiData, bool forceLocal,
+            MPILevelData* mpiData, bool forceLocal, bool periodic,
             conf::KernelConfig* conf, ProfilingData* pd);
 
         VaryingStencilGpu cutFromW7ToW3(
@@ -198,7 +198,7 @@ namespace mgcl
                                    BufferGpu* d_planes_buf,
                                    std::vector<double>* sbuf, std::vector<double>* rbuf,
                                    cl_program program, cl_command_queue queue, cl_context context,
-                                   MPILevelData* mpiData, bool forceLocal,
+                                   MPILevelData* mpiData, bool forceLocal, bool periodic,
                                    conf::KernelConfig* conf, ProfilingData* pd);
 
         int getWidth() const;

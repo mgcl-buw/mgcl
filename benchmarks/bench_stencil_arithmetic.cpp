@@ -18,6 +18,7 @@ TEST_CASE("stencil_arithmetic")
     int m = N;
     int n = N;
     int o = N;
+    bool periodic = true;
 
     ankerl::nanobench::Bench b;
     b.timeUnit(1ms, "ms")
@@ -97,7 +98,7 @@ TEST_CASE("stencil_arithmetic")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true, nullptr, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true, periodic,nullptr, nullptr)); 
                     tu->finish(); });
         }
 
@@ -119,7 +120,7 @@ TEST_CASE("stencil_arithmetic")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true, nullptr, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true,periodic, nullptr, nullptr)); 
                     tu->finish(); });
         }
 
@@ -141,7 +142,7 @@ TEST_CASE("stencil_arithmetic")
 
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true, nullptr, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true,periodic, nullptr, nullptr)); 
                     tu->finish(); });
         }
     }
@@ -167,6 +168,7 @@ TEST_CASE("stencil_arithmetic_ocl_only")
         int m = gr[0];
         int n = gr[1];
         int o = gr[2];
+        bool periodic = true;
 
         ankerl::nanobench::Bench b;
         b.timeUnit(1ms, "ms")
@@ -205,7 +207,7 @@ TEST_CASE("stencil_arithmetic_ocl_only")
             std::string name = std::string("gpu var*var_").append(name_grid);
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true, nullptr, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true,periodic, nullptr, nullptr)); 
                     tu->finish(); });
         }
 
@@ -224,7 +226,7 @@ TEST_CASE("stencil_arithmetic_ocl_only")
             std::string name = std::string("gpu fix*var_").append(name_grid);
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true, nullptr, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true,periodic, nullptr, nullptr)); 
                     tu->finish(); });
         }
 
@@ -243,7 +245,7 @@ TEST_CASE("stencil_arithmetic_ocl_only")
             std::string name = std::string("gpu var*fix_").append(name_grid);
             b.run(std::string(name).c_str(), [&]
                   { 
-                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true, nullptr, nullptr)); 
+                    ankerl::nanobench::doNotOptimizeAway(vd.multiply(fd, 0,nullptr,nullptr,nullptr, tu->getProgram(), tu->getCommands(), tu->getContext(), nullptr,  true,periodic, nullptr, nullptr)); 
                     tu->finish(); });
         }
     }

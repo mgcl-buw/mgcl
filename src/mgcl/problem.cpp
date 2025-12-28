@@ -601,7 +601,7 @@ namespace mgcl
                                     else
                                         updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvCoarse.getStencilValuesGpu(),
                                                                   getDPlanesBuf(), getHPlanesBufSend(), getHPlanesBufRecv(),
-                                                                  lvCoarse.getMpiDataPtr(), false,
+                                                                  lvCoarse.getMpiDataPtr(), false, isPeriodic(),
                                                                   &getKernelConfig(), getProfilingData());
                                 }
                             }
