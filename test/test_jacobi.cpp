@@ -638,6 +638,8 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
     int n = N;
     int o = N;
 
+    auto bc = mgcl::BC::PERIODIC;
+
     // gpu implementation currently only supports one ghost cell amount for all fields and directions
     // int gh = std::max(4, stepsPerIter);
     int gh = stepsPerIter;
@@ -669,7 +671,7 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
 
     // Fill with 4th order periodic Problem
     mgcl::Cuboid solution(m, n, o);
-    mgcl_test::create4hOrderPeriodicProblem(v_exp, f_exp, solution);
+    mgcl_test::create4hOrderPeriodicProblem(v_exp, f_exp, solution, bc);
 
     // v_exp.fillRandom(-10, 10, true);
     // f_exp.fillRandom(-10, 10, true);

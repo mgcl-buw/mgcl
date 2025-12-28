@@ -206,14 +206,14 @@ namespace mgcl_bench_jacobi_blockstencil
             // Update ghosts of current input v
             if (globalIter % 2 == 1)
             {
-                args.v_out.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);
+                args.v_out.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.periodic, args.conf, args.pd);
                 // err = MultigridEngine::updateGhosts(problem, level.getDVOut(),
                 //                                     level.getMpiDataPtr(), level.isCalculatedLocally());
                 // mgclCheckError(err, "Updating ghosts");
             }
             else
             {
-                args.v_in.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);
+                args.v_in.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.periodic, args.conf, args.pd);
                 // err = MultigridEngine::updateGhosts(problem, level.getDVIn(),
                 //                                     level.getMpiDataPtr(), level.isCalculatedLocally());
                 // mgclCheckError(err, "Updating ghosts");
@@ -271,7 +271,7 @@ namespace mgcl_bench_jacobi_blockstencil
         }
 
         // Update ghosts of dVIn
-        args.v_in.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);
+        args.v_in.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.periodic, args.conf, args.pd);
         // err = MultigridEngine::updateGhosts(problem, level.getDVIn(),
         //                                     level.getMpiDataPtr(), level.isCalculatedLocally());
         // mgclCheckError(err, "Updating ghosts");
@@ -358,8 +358,7 @@ namespace mgcl_bench_jacobi_blockstencil
         for (int iter = 0; iter < args.maxiter; iter += stepsPerIter)
         {
             // update ghost cells for periodic boundary condition
-            if (args.periodic)
-                args.v.updateGhosts(args.mpiData, args.updateGhostsLocally);
+            args.v.updateGhosts(args.mpiData, args.updateGhostsLocally, args.periodic);
             // TODO else update only neighboring processes if using mpi
 
             // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
@@ -454,8 +453,7 @@ namespace mgcl_bench_jacobi_blockstencil
             }
         }
 
-        if (args.periodic)
-            args.v.updateGhosts(args.mpiData, args.updateGhostsLocally);
+        args.v.updateGhosts(args.mpiData, args.updateGhostsLocally, args.periodic);
 
         if (args.returnResidualNorm)
         {

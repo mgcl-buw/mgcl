@@ -554,9 +554,16 @@ namespace mgcl
                         if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
                         {
                             if (updateGhostsLocally)
-                                lvCoarse.getStencilValues()->updateGhosts();
+                            {
+                                if (isPeriodic())
+                                {
+                                    lvCoarse.getStencilValues()->updateGhosts();
+                                }
+                            }
                             else
+                            {
                                 updateGhostsStencilMpi(*lvCoarse.getStencilValues(), lvCoarse.getMpiDataPtr(), isPeriodic(), false);
+                            }
                         }
                     }
                     else
@@ -585,7 +592,12 @@ namespace mgcl
                                 if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
                                 {
                                     if (updateGhostsLocally)
-                                        lvCoarse.getStencilValuesGpu()->updateGhosts(getProgram(), getCommands(), &getKernelConfig(), getProfilingData());
+                                    {
+                                        if (isPeriodic())
+                                        {
+                                            lvCoarse.getStencilValuesGpu()->updateGhosts(getProgram(), getCommands(), &getKernelConfig(), getProfilingData());
+                                        }
+                                    }
                                     else
                                         updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvCoarse.getStencilValuesGpu(),
                                                                   getDPlanesBuf(), getHPlanesBufSend(), getHPlanesBufRecv(),
@@ -608,7 +620,12 @@ namespace mgcl
                                 if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
                                 {
                                     if (updateGhostsLocally)
-                                        lvCoarse.getStencilValues()->updateGhosts();
+                                    {
+                                        if (isPeriodic())
+                                        {
+                                            lvCoarse.getStencilValues()->updateGhosts();
+                                        }
+                                    }
                                     else
                                         updateGhostsStencilMpi(*lvCoarse.getStencilValues(), lvCoarse.getMpiDataPtr(), isPeriodic(), false);
                                 }
@@ -655,9 +672,12 @@ namespace mgcl
                         if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
                         {
                             if (updateGhostsLocally)
-                                lvCoarse.getBlockstencil()->updateGhostsLocally();
+                            {
+                                if (isPeriodic())
+                                    lvCoarse.getBlockstencil()->updateGhostsLocally();
+                            }
                             else
-                                lvCoarse.getBlockstencil()->updateGhosts(lvCoarse.getMpiDataPtr(), false);
+                                lvCoarse.getBlockstencil()->updateGhosts(lvCoarse.getMpiDataPtr(), false, isPeriodic());
 
                             // lvCoarse.getBlockstencil()->dumpToFile("bs_level_" + std::to_string(lvCoarse.getNum()) + ".txt");
                             lvCoarse.createInverseOfBlockstencilSeq();
@@ -690,12 +710,15 @@ namespace mgcl
                         if (!useMpi() || mpiRank() == 0 || (mpiRank() > 0 && lvCoarse.getNum() < getMpiLevelThreshold()))
                         {
                             if (updateGhostsLocally)
-                                lvCoarse.getBlockstencilGpu()->updateGhostsLocally(getProgram(), getCommands(), &getKernelConfig(), getProfilingData());
+                            {
+                                if (isPeriodic())
+                                    lvCoarse.getBlockstencilGpu()->updateGhostsLocally(getProgram(), getCommands(), &getKernelConfig(), getProfilingData());
+                            }
                             else
                                 lvCoarse.getBlockstencilGpu()->updateGhostsOclMpi(
                                     getProgram(), getCommands(),
                                     getDPlanesBuf(), getHPlanesBufSend(), getHPlanesBufRecv(),
-                                    lvCoarse.getMpiData(), false,
+                                    lvCoarse.getMpiData(), false, isPeriodic(),
                                     &getKernelConfig(), getProfilingData());
 
                             lvCoarse.createInverseOfBlockstencilGpu();
@@ -1008,6 +1031,8 @@ namespace mgcl
      */
     void Problem::solveSeq(bool skipInit)
     {
+        assert(!getUseOpencl() && "solveSeq called, but Problem::useOpencl is true");
+
         // set up data for each level
         if (!skipInit && !init())
             error(std::runtime_error("Failed to initialize mgcl data structures."));
@@ -1021,9 +1046,8 @@ namespace mgcl
             if (getVPtr())
             {
                 // calculate initial residual
-                if (isPeriodic())
-                    MultigridEngine::updateGhostsSeq(lv0.getV(), lv0.getMpiDataPtr(), isPeriodic(),
-                                                     levels[0]->isCalculatedLocally());
+                MultigridEngine::updateGhostsSeq(lv0.getV(), lv0.getMpiDataPtr(), isPeriodic(),
+                                                 levels[0]->isCalculatedLocally());
 
                 initres = MultigridEngine::residualSeq(lv0.getF(), lv0.getV(), lv0.getR(),
                                                        residual_norm, stencilType, lv0.stencilFactor,
@@ -1036,10 +1060,7 @@ namespace mgcl
             else
             {
                 // calculate initial residual
-                if (isPeriodic())
-                {
-                    lv0.getVBS().updateGhosts(lv0.getMpiDataPtr(), lv0.isCalculatedLocally());
-                }
+                lv0.getVBS().updateGhosts(lv0.getMpiDataPtr(), lv0.isCalculatedLocally(), isPeriodic());
 
                 args::ResidualBSSeqArgs residual_args{
                     lv0.getFBS(), lv0.getVBS(), lv0.getRBS(),
@@ -1791,6 +1812,9 @@ namespace mgcl
             error("MpiLevelThreshold cannot be negative");
         if (mpiLevelThreshold_ > maxlevel)
             error("MpiLevelThreshold cannot be larger than maxlevel (" + std::to_string(maxlevel) + ")");
+        int maxLocalLevel = std::log2(util::seq::min3(m, n, o));
+        if (mpiLevelThreshold_ > maxLocalLevel)
+            error("MpiLevelThreshold cannot be larger than maxLocalLevel (" + std::to_string(maxLocalLevel) + ")");
         mpiLevelThreshold = mpiLevelThreshold_;
 
         // update mpiMinGridPoints

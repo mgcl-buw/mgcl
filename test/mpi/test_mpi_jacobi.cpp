@@ -27,6 +27,7 @@ TEST_CASE("MPI_jacobiSeq_Laplace_n_processes", "[mpiN]")
     int n = 16;
     int o = 16;
     int periodic = 1;
+    auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     // check if mpi is initialized
     int isInitialized = 0;
@@ -104,7 +105,7 @@ TEST_CASE("MPI_jacobiSeq_Laplace_n_processes", "[mpiN]")
 
     // Fill with 4th order periodic Problem
     mgcl::Cuboid solution(m, n, o);
-    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution);
+    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution, bc);
 
     // Create local slices of global data
     std::shared_ptr<mgcl::Cuboid> vlptr = v_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
@@ -169,6 +170,7 @@ TEST_CASE("MPI_jacobiSeq_VaryingStencil_n_processes", "[mpiN]")
     int n = 16;
     int o = 16;
     int periodic = 1;
+    auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     // check if mpi is initialized
     int isInitialized = 0;
@@ -249,7 +251,7 @@ TEST_CASE("MPI_jacobiSeq_VaryingStencil_n_processes", "[mpiN]")
 
     // Fill with 4th order periodic Problem
     mgcl::Cuboid solution(m, n, o);
-    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution);
+    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution, bc);
 
     // Create local slices of global data
     std::shared_ptr<mgcl::Cuboid> vlptr = v_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
@@ -333,6 +335,7 @@ TEST_CASE("MPI_jacobi_ocl_Laplace_n_processes", "[mpiN]")
     int n = 16;
     int o = 16;
     int periodic = 1;
+    auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     int stepsPerIter = GENERATE(1, 2);
     // int stepsPerIter = 1;
@@ -419,7 +422,7 @@ TEST_CASE("MPI_jacobi_ocl_Laplace_n_processes", "[mpiN]")
 
     // Fill with 4th order periodic Problem
     mgcl::Cuboid solution(m, n, o);
-    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution);
+    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution, bc);
 
     // Create local slices of global data
     std::shared_ptr<mgcl::Cuboid> vlptr = v_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
@@ -526,6 +529,7 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_n_processes", "[mpiN]")
     int n = 16;
     int o = 16;
     int periodic = 1;
+    auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     int stepsPerIter = GENERATE(1, 2);
     CAPTURE(stepsPerIter);
@@ -609,7 +613,7 @@ TEST_CASE("MPI_jacobi_ocl_VaryingStencil_n_processes", "[mpiN]")
 
     // Fill with 4th order periodic Problem
     mgcl::Cuboid solution(m, n, o);
-    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution);
+    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution, bc);
 
     // Create local slices of global data
     std::shared_ptr<mgcl::Cuboid> vlptr = v_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
@@ -743,6 +747,7 @@ TEST_CASE("MPI_jacobiOverlapped_ocl_VaryingStencil_n_processes")
     int n = 16;
     int o = 16;
     int periodic = 1;
+    auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     int stepsPerIter = 1; // GENERATE(1, 2);
     CAPTURE(stepsPerIter);
@@ -825,7 +830,7 @@ TEST_CASE("MPI_jacobiOverlapped_ocl_VaryingStencil_n_processes")
 
     // Fill with 4th order periodic Problem
     mgcl::Cuboid solution(m, n, o);
-    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution);
+    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution, bc);
 
     // fill v with non-zero value, but not random as different procs would have different values
     v_glob.fill1dIndex(false);
@@ -962,6 +967,7 @@ TEST_CASE("MPI_jacobiOverlapped_ocl_LaplaceStencils_n_processes")
     int n = 16;
     int o = 16;
     int periodic = 1;
+    auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     int stepsPerIter = GENERATE(1, 2);
     CAPTURE(stepsPerIter);
@@ -1051,7 +1057,7 @@ TEST_CASE("MPI_jacobiOverlapped_ocl_LaplaceStencils_n_processes")
 
     // Fill with 4th order periodic Problem
     mgcl::Cuboid solution(m, n, o);
-    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution);
+    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution, bc);
 
     // fill v with non-zero value
     v_glob.fill1dIndex(false);

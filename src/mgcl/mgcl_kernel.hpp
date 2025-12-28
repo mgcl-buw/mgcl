@@ -2025,11 +2025,17 @@ __kernel void restrict_to_coarse(
     int k = get_global_id(2);
     int g2 = 2 * ghosts;
 
-    if (i < m && j < n && k < o)
+    if (i < m - ghosts && j < n - ghosts && k < o - ghosts)
     {
         const int index = (i + ghosts) * ngh_vals_coarse * ogh_vals_coarse + (j + ghosts) * ogh_vals_coarse + (k + ghosts);
         const int nf = (n - g2) * 2 + g2, of = (o - g2) * 2 + g2;
         const int i2 = i * 2 + ghosts + 1, j2 = j * 2 + ghosts + 1, k2 = k * 2 + ghosts + 1;
+
+        // if (i == 1 && j == 0 && k == 0)
+        // {
+        //     printf("i,j,k,index: %d,%d,%d,%d\n", i, j, k, index);
+        // }
+
         coarse[index] =
             0.125 * fine[i2 * nf * of + j2 * of + k2] // self
             // direct neighbours

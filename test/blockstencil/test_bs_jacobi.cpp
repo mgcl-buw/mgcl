@@ -163,7 +163,7 @@ TEST_CASE("bs_jacobi_independent_quantities")
                 f2[i][j][k] = f[1][i][j][k];
             }
 
-    v.updateGhosts(nullptr, true);
+    v.updateGhosts(nullptr, true, periodic);
     mgcl::MultigridEngine::updateGhostsSeq(v1, nullptr, true, false);
     mgcl::MultigridEngine::updateGhostsSeq(v2, nullptr, true, false);
 
@@ -338,9 +338,9 @@ TEST_CASE("bs_jacobi_combined_scalars")
     mgcl_test::copyCuboidToCuboidBS(v1, v, 2, 2, 2);
     mgcl_test::copyCuboidToCuboidBS(f1, f, 2, 2, 2);
 
-    v.updateGhosts(nullptr, true);
+    v.updateGhosts(nullptr, true, periodic);
     mgcl::MultigridEngine::updateGhostsSeq(v1, nullptr, true, false);
-    f.updateGhosts(nullptr, true);
+    f.updateGhosts(nullptr, true, periodic);
     mgcl::MultigridEngine::updateGhostsSeq(f1, nullptr, true, false);
 
     // v.dumpToFile("v.txt");

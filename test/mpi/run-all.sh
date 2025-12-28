@@ -161,14 +161,14 @@ if [ "$TEST_GHOSTS" = true ] || [ "$TEST_ALL" = true ] ; then
     echo "Run Tests from test_mpi_ghosts.cpp ..."
     echo "#######################"
 
-    run_test -n 1 "$exe" "MPI updateGhostsSeq (1 process)"
-    run_test --oversubscribe -n 8 "$exe" "MPI updateGhostsSeq (n processes)"
-    run_test --oversubscribe -n 8 "$exe" "MPI-updateGhostsSeq-CuboidBS_(n_processes)"
-    run_test --oversubscribe -n 8 "$exe" "MPI-updateGhostsSeq-Blockstencil_(n_processes)"
+    run_test -n 1 "$exe" "MPIupdateGhostsSeq1process"
+    run_test --oversubscribe -n 64 "$exe" "MPIupdateGhostsSeqNProcesses"
+    run_test --oversubscribe -n 64 "$exe" "MPIupdateGhostsSeqCuboidBSNprocesses"
+    run_test --oversubscribe -n 64 "$exe" "MPIupdateGhostsSeqBlockstencilNprocesses"
     if [ "$NO_OCL" = false ] ; then
-        run_test --oversubscribe -n 8 "$exe" "MPI updateGhosts ocl (n processes)" --deviceTypes "$OCL_DEVICE_TYPES"
-        run_test --oversubscribe -n 8 "$exe" "MPI_updateGhosts_ocl_CuboidBS_(n_processes)" --deviceTypes "$OCL_DEVICE_TYPES"
-        run_test --oversubscribe -n 8 "$exe" "MPI_updateGhosts_ocl_Blockstencil_(n_processes)" --deviceTypes "$OCL_DEVICE_TYPES"
+        run_test --oversubscribe -n 64 "$exe" "MPIupdateGhostsOclNprocesses" --deviceTypes "$OCL_DEVICE_TYPES"
+        run_test --oversubscribe -n 64 "$exe" "MPIupdateGhostsOclCuboidBSNprocesses" --deviceTypes "$OCL_DEVICE_TYPES"
+        run_test --oversubscribe -n 64 "$exe" "MPIupdateGhostsOclBlockstencilNprocesses" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
 fi
 
@@ -252,7 +252,8 @@ if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
 
     run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_immediate_gather_scatter_Laplace7p"
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_immediate_gather_scatter_Laplace7p"
-    run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_threshold_gt_0_Laplace7p"
+    run_test --oversubscribe -n 16 "$exe" "MPI_vcycle_threshold_gt_0_Laplace7p"
+    run_test --oversubscribe -n 16 "$exe" "MPI_vcycle_threshold_gt_0_Laplace7p_Dirichlet"
     run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_immediate_gather_scatter_Varying27p"
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_immediate_gather_scatter_Varying27p"
     run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_threshold_eq_1_Varying27p"

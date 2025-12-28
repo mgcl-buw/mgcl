@@ -29,10 +29,15 @@ namespace mgcl
      * The VaryingStencil must have the same sizes for each process. However this is not checked here. */
     void updateGhostsStencilMpi(VaryingStencil& s, MPILevelData* mpiData, bool periodic, bool forceLocal)
     {
+        // do nothing if single-gpu and Dirichlet bc's
+        if (!periodic && (mpiData == nullptr || mpiData->mpiSize() == 1 || forceLocal))
+            return;
+
         // TODO adjust for ghosts > 1
         if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
         {
-            s.updateGhosts();
+            if (periodic)
+                s.updateGhosts();
             return;
         }
 
@@ -200,12 +205,18 @@ namespace mgcl
         VaryingStencilGpu& s,
         BufferGpu& d_planes_buf,
         std::vector<double>& sbuf, std::vector<double>& rbuf,
-        MPILevelData* mpiData, bool forceLocal,
+        MPILevelData* mpiData, bool forceLocal, bool periodic,
         conf::KernelConfig* conf, ProfilingData* pd)
     {
+        // do nothing if single-gpu and Dirichlet bc's
+        if (!periodic && (mpiData == nullptr || mpiData->mpiSize() == 1 || forceLocal))
+            return;
+
+        // TODO adjust for ghosts > 1
         if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
         {
-            s.updateGhosts(program, commands, conf, pd);
+            if (periodic)
+                s.updateGhosts(program, commands, conf, pd);
             return;
         }
 

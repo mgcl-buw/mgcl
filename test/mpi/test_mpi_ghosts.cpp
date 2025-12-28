@@ -24,10 +24,11 @@
 // Checks ghost update for 1 process which is actually done locally without MPI calls.
 // Run with: mpiexec -n 1 tests_mpi [mpi1]
 // TODO differentiate for gh>m and non-periodic
-TEST_CASE("MPI updateGhostsSeq (1 process)", "[mpi1]")
+TEST_CASE("MPIupdateGhostsSeq1process", "[mpi1]")
 {
     int N = 4;
-    int periodic = 1;
+    int periodic = GENERATE(1, 0);
+    mgcl::BC bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     // check if mpi is initialized
     int isInitialized = 0;
@@ -54,15 +55,16 @@ TEST_CASE("MPI updateGhostsSeq (1 process)", "[mpi1]")
     MPI_Comm_rank(mpi_comm, &mpi_rank);
     MPI_Cart_coords(mpi_comm, mpi_rank, 3, mpi_coords);
 
+    int gh = 1;
+
     // Init some random data
-    auto v = std::make_shared<mgcl::Cuboid>(N, N, N);
-    auto f = std::make_shared<mgcl::Cuboid>(N, N, N);
+    auto v = std::make_shared<mgcl::Cuboid>(N, N, N, gh, gh, gh);
+    auto f = std::make_shared<mgcl::Cuboid>(N, N, N, gh, gh, gh);
     v->fillRandom();
     f->fillRandom();
 
     SECTION("gh = 1 < m,n,o")
     {
-        int gh = 1;
         int m = N;
         int n = N;
         int o = N;
@@ -71,6 +73,8 @@ TEST_CASE("MPI updateGhostsSeq (1 process)", "[mpi1]")
         mgcl::Problem p(N, N, N, v, f);
         p.setGhosts(1);
         p.setMpiComm(mpi_comm);
+        p.setBc(bc);
+        p.setGhostsIn(gh);
         p.init();
 
         // Check on level 0
@@ -81,42 +85,73 @@ TEST_CASE("MPI updateGhostsSeq (1 process)", "[mpi1]")
         c.fillRandom(-10, 10, true);
 
         // Update ghosts of test data
-        mgcl::MultigridEngine::updateGhostsSeq(c, nullptr, true, false);
+        mgcl::MultigridEngine::updateGhostsSeq(c, nullptr, periodic, false);
 
-        // Check result
-        // check in z-direction
-        for (int i = 0; i < gh; i++)
-            for (int j = 0; j < n + 2 * gh; j++)
-                for (int k = 0; k < o + 2 * gh; k++)
-                {
-                    REQUIRE(c[i][j][k] == c[i + m][j][k]);
-                    REQUIRE(c[i + gh][j][k] == c[i + gh + m][j][k]);
-                }
+        if (periodic)
+        { // Check result
+            // check in z-direction
+            for (int i = 0; i < gh; i++)
+                for (int j = 0; j < n + 2 * gh; j++)
+                    for (int k = 0; k < o + 2 * gh; k++)
+                    {
+                        REQUIRE(c[i][j][k] == c[i + m][j][k]);
+                        REQUIRE(c[i + gh][j][k] == c[i + gh + m][j][k]);
+                    }
 
-        // check in y-direction
-        for (int i = 0; i < m + 2 * gh; i++)
-            for (int j = 0; j < gh; j++)
-                for (int k = 0; k < o + 2 * gh; k++)
-                {
-                    REQUIRE(c[i][j][k] == c[i][j + n][k]);
-                    REQUIRE(c[i][j + gh][k] == c[i][j + gh + n][k]);
-                }
+            // check in y-direction
+            for (int i = 0; i < m + 2 * gh; i++)
+                for (int j = 0; j < gh; j++)
+                    for (int k = 0; k < o + 2 * gh; k++)
+                    {
+                        REQUIRE(c[i][j][k] == c[i][j + n][k]);
+                        REQUIRE(c[i][j + gh][k] == c[i][j + gh + n][k]);
+                    }
 
-        // check in x-direction
-        for (int i = 0; i < m + 2 * gh; i++)
-            for (int j = 0; j < n + 2 * gh; j++)
-                for (int k = 0; k < gh; k++)
-                {
-                    REQUIRE(c[i][j][k] == c[i][j][k + o]);
-                    REQUIRE(c[i][j][k + gh] == c[i][j][k + gh + o]);
-                }
+            // check in x-direction
+            for (int i = 0; i < m + 2 * gh; i++)
+                for (int j = 0; j < n + 2 * gh; j++)
+                    for (int k = 0; k < gh; k++)
+                    {
+                        REQUIRE(c[i][j][k] == c[i][j][k + o]);
+                        REQUIRE(c[i][j][k + gh] == c[i][j][k + gh + o]);
+                    }
+        }
+        else
+        {
+            // check in z-direction
+            for (int i = 0; i < gh; i++)
+                for (int j = 0; j < n + 2 * gh; j++)
+                    for (int k = 0; k < o + 2 * gh; k++)
+                    {
+                        REQUIRE(c[i][j][k] == 0);
+                        REQUIRE(c[i + gh + m][j][k] == 0);
+                    }
+
+            // check in y-direction
+            for (int i = 0; i < m + 2 * gh; i++)
+                for (int j = 0; j < gh; j++)
+                    for (int k = 0; k < o + 2 * gh; k++)
+                    {
+                        REQUIRE(c[i][j][k] == 0);
+                        REQUIRE(c[i][j + gh + n][k] == 0);
+                    }
+
+            // check in x-direction
+            for (int i = 0; i < m + 2 * gh; i++)
+                for (int j = 0; j < n + 2 * gh; j++)
+                    for (int k = 0; k < gh; k++)
+                    {
+                        REQUIRE(c[i][j][k] == 0);
+                        REQUIRE(c[i][j][k + gh + o] == 0);
+                    }
+        }
     }
 }
 
 // Checks ghost update for any number of processes that is allowed by mgcl, e.g. 1, 2, 4, 8, 24.
 // Run with: mpiexec -n 8 tests_mpi [mpiN]
 // TODO differentiate for gh>m and non-periodic
-TEST_CASE("MPI updateGhostsSeq (n processes)", "[mpiN]")
+TEST_CASE("MPIupdateGhostsSeqNProcesses")
 {
     using std::min;
 
@@ -124,7 +159,8 @@ TEST_CASE("MPI updateGhostsSeq (n processes)", "[mpiN]")
     int m = 16;
     int n = 16;
     int o = 16;
-    int periodic = 1;
+    int periodic = GENERATE(1, 0);
+    mgcl::BC bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     // check if mpi is initialized
     int isInitialized = 0;
@@ -163,10 +199,9 @@ TEST_CASE("MPI updateGhostsSeq (n processes)", "[mpiN]")
     int nl = (n_end - n_start) + 1;
     int ol = (o_end - o_start) + 1;
 
-    // print coords and boundaries per rank
+    // // print coords and boundaries per rank
     // if (mpi_rank == 0)
     //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
-
     // for (int i = 0; i < mpi_size; i++)
     // {
     //     MPI_Barrier(mpi_comm);
@@ -179,41 +214,46 @@ TEST_CASE("MPI updateGhostsSeq (n processes)", "[mpiN]")
     //     }
     // }
 
-    REQUIRE(ml > 0);
+    REQUIRE(ml > 1);
     REQUIRE(ml <= m);
-    REQUIRE(nl > 0);
+    REQUIRE(nl > 1);
     REQUIRE(nl <= n);
-    REQUIRE(ol > 0);
+    REQUIRE(ol > 1);
     REQUIRE(ol <= o);
 
+    int gh = 1;
+
     // Init some random data (will be unused)
-    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
-    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol, gh, gh, gh);
+    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol, gh, gh, gh);
     v->fillRandom();
     f->fillRandom();
 
     SECTION("gh = 1 < m,n,o")
     {
-        int gh = 1;
 
         // Init Problem to create all needed structures
         mgcl::Problem p(ml, nl, ol, f, v, m, n, o);
         p.setGhosts(1);
         p.setMpiComm(mpi_comm);
+        p.setBc(bc);
+        p.setGhostsIn(gh);
         p.init();
 
         // Check on level 0
         auto& lv = p.getLevelAt(0);
         auto mpiData = lv.getMpiDataPtr();
 
-        // print neighbours per rank
+        REQUIRE((mpi_size == 1 || !lv.isCalculatedLocally()));
+
+        // // print neighbours per rank
         // for (int i = 0; i < mpi_size; i++)
         // {
         //     MPI_Barrier(mpi_comm);
         //     if (i == mpi_rank)
-        //         std::cout << mpi_rank << ": " << mpiData->left << "," << mpiData->right << ","
-        //                   << mpiData->up << "," << mpiData->down << ","
-        //                   << mpiData->back << "," << mpiData->front << std::endl;
+        //         std::cout << mpi_rank << ": " << mpiData->left[0] << "," << mpiData->right[0] << ","
+        //                   << mpiData->up[0] << "," << mpiData->down[0] << ","
+        //                   << mpiData->back[0] << "," << mpiData->front[0] << std::endl;
         // }
 
         // Create global test data. No random data so values will be the same for all processes. Fill with 1d index.
@@ -227,14 +267,14 @@ TEST_CASE("MPI updateGhostsSeq (n processes)", "[mpiN]")
                 }
 
         // Update ghosts of expected result locally, i.e. not using MPI routines.
-        mgcl::MultigridEngine::updateGhostsSeq(cg, nullptr, true, false);
+        mgcl::MultigridEngine::updateGhostsSeq(cg, nullptr, periodic, true);
 
         // Create local slice of global data
         auto clptr = cg.slice(m_start, m_end, n_start, n_end, o_start, o_end);
         auto& cl = *clptr;
 
         // Update ghosts of test data
-        mgcl::MultigridEngine::updateGhostsSeq(cl, mpiData, true, false);
+        mgcl::MultigridEngine::updateGhostsSeq(cl, mpiData, periodic, false);
 
         // cl.dumpToFile("cl" + std::to_string(mpi_rank) + ".txt");
 
@@ -248,14 +288,15 @@ TEST_CASE("MPI updateGhostsSeq (n processes)", "[mpiN]")
             for (int j = 0; j < nl + 2 * gh; j++)
                 for (int k = 0; k < ol + 2 * gh; k++)
                 {
+                    CAPTURE(i, j, k, mpi_rank);
                     if (mpi_coords[0] > 0) // not the first process
                         REQUIRE(cl[i][j][k] == cg[m_start + i][j + n_start][k + o_start]);
-                    else
+                    else if (periodic)
                         REQUIRE(cl[i][j][k] == cg[i + m][j + n_start][k + o_start]);
 
                     if (mpi_coords[0] < mpi_dims[0]) // not the last process
                         REQUIRE(cl[i + gh + ml][j][k] == cg[m_end + gh + 1 + i][j + n_start][k + o_start]);
-                    else
+                    else if (periodic)
                         REQUIRE(cl[i + gh + ml][j][k] == cg[i + gh][j + n_start][k + o_start]);
                 }
 
@@ -266,12 +307,12 @@ TEST_CASE("MPI updateGhostsSeq (n processes)", "[mpiN]")
                 {
                     if (mpi_coords[1] > 0) // not the first process
                         REQUIRE(cl[i][j][k] == cg[i + m_start][n_start + j][k + o_start]);
-                    else
+                    else if (periodic)
                         REQUIRE(cl[i][j][k] == cg[i + m_start][j + n][k + o_start]);
 
                     if (mpi_coords[1] < mpi_dims[1]) // not the last process
                         REQUIRE(cl[i][j + gh + nl][k] == cg[i + m_start][n_end + gh + 1 + j][k + o_start]);
-                    else
+                    else if (periodic)
                         REQUIRE(cl[i][j + gh + nl][k] == cg[i + m_start][j + gh][k + o_start]);
                 }
 
@@ -282,12 +323,12 @@ TEST_CASE("MPI updateGhostsSeq (n processes)", "[mpiN]")
                 {
                     if (mpi_coords[2] > 0) // not the first process
                         REQUIRE(cl[i][j][k] == cg[i + m_start][j + n_start][o_start + k]);
-                    else
+                    else if (periodic)
                         REQUIRE(cl[i][j][k] == cg[i + m_start][j + n_start][k + o]);
 
                     if (mpi_coords[2] < mpi_dims[2]) // not the last process
                         REQUIRE(cl[i][j][k + gh + ol] == cg[i + m_start][j + n_start][o_end + gh + 1 + k]);
-                    else
+                    else if (periodic)
                         REQUIRE(cl[i][j][k + gh + ol] == cg[i + m_start][j + n_start][k + gh]);
                 }
         // }
@@ -297,17 +338,18 @@ TEST_CASE("MPI updateGhostsSeq (n processes)", "[mpiN]")
 // Checks ghost update for any number of processes that is allowed by mgcl, e.g. 1, 2, 4, 8, 24.
 // Run with: mpiexec -n 8 tests_mpi "MPI updateGhosts ocl (n processes)"
 // TODO differentiate for gh>m and non-periodic
-TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
+TEST_CASE("MPIupdateGhostsOclNprocesses")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
     using std::min;
 
     // global grid sizes
-    int m = 16;
-    int n = 16;
-    int o = 16;
-    int periodic = 1;
+    int m = 8;
+    int n = 8;
+    int o = 8;
+    int periodic = GENERATE(1, 0);
+    mgcl::BC bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     // yz front: 0..323
     // yz back: 324..647
@@ -353,10 +395,8 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
     int nl = (n_end - n_start) + 1;
     int ol = (o_end - o_start) + 1;
 
-    // print coords and boundaries per rank
-    // if (mpi_rank == 0)
-    //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
-
+    // // print coords and boundaries per rank if (mpi_rank == 0)
+    // std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
     // for (int i = 0; i < mpi_size; i++)
     // {
     //     MPI_Barrier(mpi_comm);
@@ -369,20 +409,20 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
     //     }
     // }
 
-    REQUIRE(ml > 0);
+    REQUIRE(ml > 1);
     REQUIRE(ml <= m);
-    REQUIRE(nl > 0);
+    REQUIRE(nl > 1);
     REQUIRE(nl <= n);
-    REQUIRE(ol > 0);
+    REQUIRE(ol > 1);
     REQUIRE(ol <= o);
 
+    int gh = 1;
+
     // Init some random data (will be unused)
-    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
-    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol, gh, gh, gh);
+    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol, gh, gh, gh);
     v->fillRandom();
     f->fillRandom();
-
-    int gh = 1;
 
     // Init Problem to create all needed structures
     auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, f, v, m, n, o);
@@ -391,20 +431,25 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
     p.setMpiComm(mpi_comm);
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
+    p.setBc(bc);
+    p.setGhostsIn(gh);
+    p.setMpiMinGridPoints(2);
     p.init();
 
     // Check on level 0
     auto& lv = p.getLevelAt(0);
     auto mpiData = lv.getMpiDataPtr();
 
-    // print neighbours per rank
+    REQUIRE((mpi_size == 1 || !lv.isCalculatedLocally()));
+
+    // // print neighbours per rank
     // for (int i = 0; i < mpi_size; i++)
     // {
     //     MPI_Barrier(mpi_comm);
     //     if (i == mpi_rank)
-    //         std::cout << mpi_rank << ": " << mpiData->left << "," << mpiData->right << ","
-    //                   << mpiData->up << "," << mpiData->down << ","
-    //                   << mpiData->back << "," << mpiData->front << std::endl;
+    //         std::cout << mpi_rank << ": " << mpiData->left[0] << "," << mpiData->right[0] << ","
+    //                   << mpiData->up[0] << "," << mpiData->down[0] << ","
+    //                   << mpiData->back[0] << "," << mpiData->front[0] << std::endl;
     // }
 
     // Create global test data. No random data so values will be the same for all processes. Fill with 1d index.
@@ -418,7 +463,7 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
             }
 
     // Update ghosts of expected result locally, i.e. not using MPI routines.
-    mgcl::MultigridEngine::updateGhostsSeq(cg, nullptr, true, false);
+    mgcl::MultigridEngine::updateGhostsSeq(cg, nullptr, periodic, true);
 
     // Create local slice of global data
     auto clptr = cg.slice(m_start, m_end, n_start, n_end, o_start, o_end);
@@ -446,14 +491,15 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
         for (int j = 0; j < nl + 2 * gh; j++)
             for (int k = 0; k < ol + 2 * gh; k++)
             {
+                CAPTURE(i, j, k, mpi_rank);
                 if (mpi_coords[0] > 0) // not the first process
                     REQUIRE(cl_res[i][j][k] == cg[m_start + i][j + n_start][k + o_start]);
-                else
+                else if (periodic)
                     REQUIRE(cl_res[i][j][k] == cg[i + m][j + n_start][k + o_start]);
 
                 if (mpi_coords[0] < mpi_dims[0]) // not the last process
                     REQUIRE(cl_res[i + gh + ml][j][k] == cg[m_end + gh + 1 + i][j + n_start][k + o_start]);
-                else
+                else if (periodic)
                     REQUIRE(cl_res[i + gh + ml][j][k] == cg[i + gh][j + n_start][k + o_start]);
             }
 
@@ -464,12 +510,12 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
             {
                 if (mpi_coords[1] > 0) // not the first process
                     REQUIRE(cl_res[i][j][k] == cg[i + m_start][n_start + j][k + o_start]);
-                else
+                else if (periodic)
                     REQUIRE(cl_res[i][j][k] == cg[i + m_start][j + n][k + o_start]);
 
                 if (mpi_coords[1] < mpi_dims[1]) // not the last process
                     REQUIRE(cl_res[i][j + gh + nl][k] == cg[i + m_start][n_end + gh + 1 + j][k + o_start]);
-                else
+                else if (periodic)
                     REQUIRE(cl_res[i][j + gh + nl][k] == cg[i + m_start][j + gh][k + o_start]);
             }
 
@@ -480,12 +526,12 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
             {
                 if (mpi_coords[2] > 0) // not the first process
                     REQUIRE(cl_res[i][j][k] == cg[i + m_start][j + n_start][o_start + k]);
-                else
+                else if (periodic)
                     REQUIRE(cl_res[i][j][k] == cg[i + m_start][j + n_start][k + o]);
 
                 if (mpi_coords[2] < mpi_dims[2]) // not the last process
                     REQUIRE(cl_res[i][j][k + gh + ol] == cg[i + m_start][j + n_start][o_end + gh + 1 + k]);
-                else
+                else if (periodic)
                     REQUIRE(cl_res[i][j][k + gh + ol] == cg[i + m_start][j + n_start][k + gh]);
             }
 }
@@ -493,7 +539,7 @@ TEST_CASE("MPI updateGhosts ocl (n processes)", "[mpiN]")
 // Checks ghost update for any number of processes that is allowed by mgcl, e.g. 1, 2, 4, 8, 24.
 // Run with: mpiexec -n 8 tests_mpi [mpiN]
 // TODO differentiate for gh>m and non-periodic
-TEST_CASE("MPI-updateGhostsSeq-CuboidBS_(n_processes)")
+TEST_CASE("MPIupdateGhostsSeqCuboidBSNprocesses")
 {
     using std::min;
 
@@ -501,8 +547,9 @@ TEST_CASE("MPI-updateGhostsSeq-CuboidBS_(n_processes)")
     int m = 16;
     int n = 16;
     int o = 16;
-    int periodic = 1;
     int blocksize = 2;
+    int periodic = GENERATE(1, 0);
+    mgcl::BC bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     // check if mpi is initialized
     int isInitialized = 0;
@@ -557,32 +604,37 @@ TEST_CASE("MPI-updateGhostsSeq-CuboidBS_(n_processes)")
     //     }
     // }
 
-    REQUIRE(ml > 0);
+    REQUIRE(ml > 1);
     REQUIRE(ml <= m);
-    REQUIRE(nl > 0);
+    REQUIRE(nl > 1);
     REQUIRE(nl <= n);
-    REQUIRE(ol > 0);
+    REQUIRE(ol > 1);
     REQUIRE(ol <= o);
 
+    int gh = 1;
+
     // Init some random data (will be unused)
-    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
-    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol, gh, gh, gh);
+    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol, gh, gh, gh);
     v->fillRandom();
     f->fillRandom();
 
     SECTION("gh = 1 < m,n,o")
     {
-        int gh = 1;
 
         // Init Problem to create all needed structures
         mgcl::Problem p(ml, nl, ol, f, v, m, n, o);
         p.setGhosts(1);
         p.setMpiComm(mpi_comm);
+        p.setBc(bc);
+        p.setGhostsIn(gh);
         p.init();
 
         // Check on level 0
         auto& lv = p.getLevelAt(0);
         auto mpiData = lv.getMpiDataPtr();
+
+        REQUIRE((mpi_size == 1 || !lv.isCalculatedLocally()));
 
         // print neighbours per rank
         // for (int i = 0; i < mpi_size; i++)
@@ -599,14 +651,14 @@ TEST_CASE("MPI-updateGhostsSeq-CuboidBS_(n_processes)")
         cg.fill1dIndex(true);
 
         // Update ghosts of expected result locally, i.e. not using MPI routines.
-        cg.updateGhosts(nullptr, true);
+        cg.updateGhosts(nullptr, true, periodic);
 
         // Create local slice of global data
         auto clptr = cg.slice(m_start, m_end, n_start, n_end, o_start, o_end);
         auto& cl = *clptr;
 
         // Update ghosts of test data
-        cl.updateGhosts(mpiData, false);
+        cl.updateGhosts(mpiData, false, periodic);
 
         // cl.dumpToFile("cl" + std::to_string(mpi_rank) + ".txt");
 
@@ -623,12 +675,12 @@ TEST_CASE("MPI-updateGhostsSeq-CuboidBS_(n_processes)")
                     {
                         if (mpi_coords[0] > 0) // not the first process
                             REQUIRE(cl[b][i][j][k] == cg[b][m_start + i][j + n_start][k + o_start]);
-                        else
+                        else if (periodic)
                             REQUIRE(cl[b][i][j][k] == cg[b][i + m][j + n_start][k + o_start]);
 
                         if (mpi_coords[0] < mpi_dims[0]) // not the last process
                             REQUIRE(cl[b][i + gh + ml][j][k] == cg[b][m_end + gh + 1 + i][j + n_start][k + o_start]);
-                        else
+                        else if (periodic)
                             REQUIRE(cl[b][i + gh + ml][j][k] == cg[b][i + gh][j + n_start][k + o_start]);
                     }
 
@@ -640,12 +692,12 @@ TEST_CASE("MPI-updateGhostsSeq-CuboidBS_(n_processes)")
                     {
                         if (mpi_coords[1] > 0) // not the first process
                             REQUIRE(cl[b][i][j][k] == cg[b][i + m_start][n_start + j][k + o_start]);
-                        else
+                        else if (periodic)
                             REQUIRE(cl[b][i][j][k] == cg[b][i + m_start][j + n][k + o_start]);
 
                         if (mpi_coords[1] < mpi_dims[1]) // not the last process
                             REQUIRE(cl[b][i][j + gh + nl][k] == cg[b][i + m_start][n_end + gh + 1 + j][k + o_start]);
-                        else
+                        else if (periodic)
                             REQUIRE(cl[b][i][j + gh + nl][k] == cg[b][i + m_start][j + gh][k + o_start]);
                     }
 
@@ -657,12 +709,12 @@ TEST_CASE("MPI-updateGhostsSeq-CuboidBS_(n_processes)")
                     {
                         if (mpi_coords[2] > 0) // not the first process
                             REQUIRE(cl[b][i][j][k] == cg[b][i + m_start][j + n_start][o_start + k]);
-                        else
+                        else if (periodic)
                             REQUIRE(cl[b][i][j][k] == cg[b][i + m_start][j + n_start][k + o]);
 
                         if (mpi_coords[2] < mpi_dims[2]) // not the last process
                             REQUIRE(cl[b][i][j][k + gh + ol] == cg[b][i + m_start][j + n_start][o_end + gh + 1 + k]);
-                        else
+                        else if (periodic)
                             REQUIRE(cl[b][i][j][k + gh + ol] == cg[b][i + m_start][j + n_start][k + gh]);
                     }
         // }
@@ -672,7 +724,7 @@ TEST_CASE("MPI-updateGhostsSeq-CuboidBS_(n_processes)")
 // Checks ghost update for any number of processes that is allowed by mgcl, e.g. 1, 2, 4, 8, 24.
 // Run with: mpiexec -n 8 tests_mpi "MPI_updateGhosts_ocl_CuboidBS_(n_processes)"
 // TODO differentiate for gh>m and non-periodic
-TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
+TEST_CASE("MPIupdateGhostsOclCuboidBSNprocesses")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
@@ -683,8 +735,9 @@ TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
     int m = 8;
     int n = 8;
     int o = 8;
-    int periodic = 1;
     int blocksize = 2;
+    int periodic = GENERATE(1, 0);
+    mgcl::BC bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     // yz front: 0..647
     // yz back: 648..1295
@@ -746,20 +799,20 @@ TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
     //     }
     // }
 
-    REQUIRE(ml > 0);
+    REQUIRE(ml > 1);
     REQUIRE(ml <= m);
-    REQUIRE(nl > 0);
+    REQUIRE(nl > 1);
     REQUIRE(nl <= n);
-    REQUIRE(ol > 0);
+    REQUIRE(ol > 1);
     REQUIRE(ol <= o);
 
+    int gh = 1;
+
     // Init some random data (will be unused)
-    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
-    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol, gh, gh, gh);
+    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol, gh, gh, gh);
     v->fillRandom();
     f->fillRandom();
-
-    int gh = 1;
 
     // Init Problem to create all needed structures
     auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, f, v, m, n, o);
@@ -769,11 +822,16 @@ TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
     p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
+    p.setGhostsIn(gh);
+    p.setBc(bc);
+    p.setMpiMinGridPoints(2);
     p.init();
 
     // Check on level 0
     auto& lv = p.getLevelAt(0);
     auto mpiData = lv.getMpiDataPtr();
+
+    REQUIRE((mpi_size == 1 || !lv.isCalculatedLocally()));
 
     // print neighbours per rank
     // for (int i = 0; i < mpi_size; i++)
@@ -801,7 +859,7 @@ TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
     //             }
 
     // Update ghosts of expected result locally, i.e. not using MPI routines.
-    cg.updateGhosts(nullptr, true);
+    cg.updateGhosts(nullptr, true, periodic);
 
     // Create local slice of global data
     auto clptr = cg.slice(m_start, m_end, n_start, n_end, o_start, o_end);
@@ -822,7 +880,7 @@ TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
     // Update ghosts of test data using MPI
     d_cl->updateGhostsOclMpi(p.getProgram(), p.getCommands(),
                              &dPlanesBuf, hPlanesBufSend.get(), hPlanesBufRecv.get(),
-                             mpiData, false,
+                             mpiData, false, periodic,
                              &p.getKernelConfig(), p.getProfilingData());
     p.finish();
 
@@ -846,12 +904,12 @@ TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
                     CAPTURE(i, j, k, b, mpi_rank);
                     if (mpi_coords[0] > 0) // not the first process
                         REQUIRE(cl_res[b][i][j][k] == cg[b][m_start + i][j + n_start][k + o_start]);
-                    else
+                    else if (periodic)
                         REQUIRE(cl_res[b][i][j][k] == cg[b][i + m][j + n_start][k + o_start]);
 
                     if (mpi_coords[0] < mpi_dims[0]) // not the last process
                         REQUIRE(cl_res[b][i + gh + ml][j][k] == cg[b][m_end + gh + 1 + i][j + n_start][k + o_start]);
-                    else
+                    else if (periodic)
                         REQUIRE(cl_res[b][i + gh + ml][j][k] == cg[b][i + gh][j + n_start][k + o_start]);
                 }
 
@@ -863,12 +921,12 @@ TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
                 {
                     if (mpi_coords[1] > 0) // not the first process
                         REQUIRE(cl_res[b][i][j][k] == cg[b][i + m_start][n_start + j][k + o_start]);
-                    else
+                    else if (periodic)
                         REQUIRE(cl_res[b][i][j][k] == cg[b][i + m_start][j + n][k + o_start]);
 
                     if (mpi_coords[1] < mpi_dims[1]) // not the last process
                         REQUIRE(cl_res[b][i][j + gh + nl][k] == cg[b][i + m_start][n_end + gh + 1 + j][k + o_start]);
-                    else
+                    else if (periodic)
                         REQUIRE(cl_res[b][i][j + gh + nl][k] == cg[b][i + m_start][j + gh][k + o_start]);
                 }
 
@@ -880,30 +938,31 @@ TEST_CASE("MPI_updateGhosts_ocl_CuboidBS_(n_processes)", "[mpiN]")
                 {
                     if (mpi_coords[2] > 0) // not the first process
                         REQUIRE(cl_res[b][i][j][k] == cg[b][i + m_start][j + n_start][o_start + k]);
-                    else
+                    else if (periodic)
                         REQUIRE(cl_res[b][i][j][k] == cg[b][i + m_start][j + n_start][k + o]);
 
                     if (mpi_coords[2] < mpi_dims[2]) // not the last process
                         REQUIRE(cl_res[b][i][j][k + gh + ol] == cg[b][i + m_start][j + n_start][o_end + gh + 1 + k]);
-                    else
+                    else if (periodic)
                         REQUIRE(cl_res[b][i][j][k + gh + ol] == cg[b][i + m_start][j + n_start][k + gh]);
                 }
 }
 
 // Checks ghost update for any number of processes that is allowed by mgcl, e.g. 1, 2, 4, 8, 24.
-// Run with: mpiexec -n 8 tests_mpi "MPI-updateGhostsSeq-Blockstencil_(n_processes)"
+// Run with: mpiexec -n 8 tests_mpi "MPIupdateGhostsSeqBlockstencilNprocesses"
 // TODO differentiate for gh>m and non-periodic
-TEST_CASE("MPI-updateGhostsSeq-Blockstencil_(n_processes)")
+TEST_CASE("MPIupdateGhostsSeqBlockstencilNprocesses")
 {
     using std::min;
 
     // global grid sizes. Don't go lower than mpiLevelThreshold allows!
-    int m = 4;
-    int n = 4;
-    int o = 4;
-    int periodic = 1;
+    int m = 8;
+    int n = 8;
+    int o = 8;
     int blocksize = 2;
     int width = 3;
+    int periodic = GENERATE(1, 0);
+    mgcl::BC bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     // check if mpi is initialized
     int isInitialized = 0;
@@ -944,10 +1003,9 @@ TEST_CASE("MPI-updateGhostsSeq-Blockstencil_(n_processes)")
     int nl = (n_end - n_start) + 1;
     int ol = (o_end - o_start) + 1;
 
-    // print coords and boundaries per rank
+    // // print coords and boundaries per rank
     // if (mpi_rank == 0)
     //     std::cout << "rank;coords[0];coords[1];coords[2];ms;me;ns;ne;os;oe" << std::endl;
-
     // for (int i = 0; i < mpi_size; i++)
     // {
     //     MPI_Barrier(mpi_comm);
@@ -960,33 +1018,38 @@ TEST_CASE("MPI-updateGhostsSeq-Blockstencil_(n_processes)")
     //     }
     // }
 
-    REQUIRE(ml > 0);
+    REQUIRE(ml > 1);
     REQUIRE(ml <= m);
-    REQUIRE(nl > 0);
+    REQUIRE(nl > 1);
     REQUIRE(nl <= n);
-    REQUIRE(ol > 0);
+    REQUIRE(ol > 1);
     REQUIRE(ol <= o);
 
+    int gh = 1;
+
     // Init some random data (will be unused)
-    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
-    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol, gh, gh, gh);
+    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol, gh, gh, gh);
     v->fillRandom();
     f->fillRandom();
 
     SECTION("gh = 1 < m,n,o")
     {
-        int gh = 1;
 
         // Init Problem to create all needed structures
         mgcl::Problem p(ml, nl, ol, f, v, m, n, o);
         p.setGhosts(1);
         p.setMpiComm(mpi_comm);
         p.setMpiMinGridPoints(2);
+        p.setGhostsIn(gh);
+        p.setBc(bc);
         p.init();
 
         // Check on level 0
         auto& lv = p.getLevelAt(0);
         auto mpiData = lv.getMpiDataPtr();
+
+        REQUIRE((mpi_size == 1 || !lv.isCalculatedLocally()));
 
         // print neighbours per rank
         // for (int i = 0; i < mpi_size; i++)
@@ -1003,14 +1066,14 @@ TEST_CASE("MPI-updateGhostsSeq-Blockstencil_(n_processes)")
         cg.fill1dIndex(true);
 
         // Update ghosts of expected result locally, i.e. not using MPI routines.
-        cg.updateGhosts(nullptr, true);
+        cg.updateGhosts(nullptr, true, periodic);
 
         // Create local slice of global data
         auto clptr = cg.slice(m_start, m_end, n_start, n_end, o_start, o_end);
         auto& cl = *clptr;
 
         // Update ghosts of test data
-        cl.updateGhosts(mpiData, false);
+        cl.updateGhosts(mpiData, false, periodic);
 
         // cl.dumpToFile("cl" + std::to_string(mpi_rank) + ".txt");
 
@@ -1032,12 +1095,12 @@ TEST_CASE("MPI-updateGhostsSeq-Blockstencil_(n_processes)")
                                         CAPTURE(i, j, k, ii, jj, kk, bi, bj, mpi_rank);
                                         if (mpi_coords[0] > 0) // not the first process
                                             REQUIRE(cl[bi][bj][ii][jj][kk][i][j][k] == cg[bi][bj][ii][jj][kk][m_start + i][j + n_start][k + o_start]);
-                                        else
+                                        else if (periodic)
                                             REQUIRE(cl[bi][bj][ii][jj][kk][i][j][k] == cg[bi][bj][ii][jj][kk][i + m][j + n_start][k + o_start]);
 
                                         if (mpi_coords[0] < mpi_dims[0]) // not the last process
                                             REQUIRE(cl[bi][bj][ii][jj][kk][i + gh + ml][j][k] == cg[bi][bj][ii][jj][kk][m_end + gh + 1 + i][j + n_start][k + o_start]);
-                                        else
+                                        else if (periodic)
                                             REQUIRE(cl[bi][bj][ii][jj][kk][i + gh + ml][j][k] == cg[bi][bj][ii][jj][kk][i + gh][j + n_start][k + o_start]);
                                     }
 
@@ -1054,12 +1117,12 @@ TEST_CASE("MPI-updateGhostsSeq-Blockstencil_(n_processes)")
                                         CAPTURE(i, j, k, ii, jj, kk, bi, bj, mpi_rank);
                                         if (mpi_coords[1] > 0) // not the first process
                                             REQUIRE(cl[bi][bj][ii][jj][kk][i][j][k] == cg[bi][bj][ii][jj][kk][i + m_start][n_start + j][k + o_start]);
-                                        else
+                                        else if (periodic)
                                             REQUIRE(cl[bi][bj][ii][jj][kk][i][j][k] == cg[bi][bj][ii][jj][kk][i + m_start][j + n][k + o_start]);
 
                                         if (mpi_coords[1] < mpi_dims[1]) // not the last process
                                             REQUIRE(cl[bi][bj][ii][jj][kk][i][j + gh + nl][k] == cg[bi][bj][ii][jj][kk][i + m_start][n_end + gh + 1 + j][k + o_start]);
-                                        else
+                                        else if (periodic)
                                             REQUIRE(cl[bi][bj][ii][jj][kk][i][j + gh + nl][k] == cg[bi][bj][ii][jj][kk][i + m_start][j + gh][k + o_start]);
                                     }
 
@@ -1076,21 +1139,21 @@ TEST_CASE("MPI-updateGhostsSeq-Blockstencil_(n_processes)")
                                         CAPTURE(i, j, k, ii, jj, kk, bi, bj, mpi_rank);
                                         if (mpi_coords[2] > 0) // not the first process
                                             REQUIRE(cl[bi][bj][ii][jj][kk][i][j][k] == cg[bi][bj][ii][jj][kk][i + m_start][j + n_start][o_start + k]);
-                                        else
+                                        else if (periodic)
                                             REQUIRE(cl[bi][bj][ii][jj][kk][i][j][k] == cg[bi][bj][ii][jj][kk][i + m_start][j + n_start][k + o]);
 
                                         if (mpi_coords[2] < mpi_dims[2]) // not the last process
                                             REQUIRE(cl[bi][bj][ii][jj][kk][i][j][k + gh + ol] == cg[bi][bj][ii][jj][kk][i + m_start][j + n_start][o_end + gh + 1 + k]);
-                                        else
+                                        else if (periodic)
                                             REQUIRE(cl[bi][bj][ii][jj][kk][i][j][k + gh + ol] == cg[bi][bj][ii][jj][kk][i + m_start][j + n_start][k + gh]);
                                     }
     }
 }
 
 // Checks ghost update for any number of processes that is allowed by mgcl, e.g. 1, 2, 4, 8, 24.
-// Run with: mpiexec -n 8 tests_mpi "MPI_updateGhosts_ocl_Blockstencil_(n_processes)"
+// Run with: mpiexec -n 8 tests_mpi "MPIupdateGhostsOclBlockstencilNprocesses"
 // TODO differentiate for gh>m and non-periodic
-TEST_CASE("MPI_updateGhosts_ocl_Blockstencil_(n_processes)")
+TEST_CASE("MPIupdateGhostsOclBlockstencilNprocesses")
 {
     auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
@@ -1100,11 +1163,12 @@ TEST_CASE("MPI_updateGhosts_ocl_Blockstencil_(n_processes)")
     int m = 8;
     int n = 8;
     int o = 8;
-    int periodic = 1;
     int blocksize = 2;
     int blocksize2 = blocksize * blocksize;
     int width = 3;
     int stencilSize = width * width * width;
+    int periodic = GENERATE(1, 0);
+    mgcl::BC bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     // yz front: 0..647
     // yz back: 648..1295
@@ -1166,20 +1230,20 @@ TEST_CASE("MPI_updateGhosts_ocl_Blockstencil_(n_processes)")
     //     }
     // }
 
-    REQUIRE(ml > 0);
+    REQUIRE(ml > 1);
     REQUIRE(ml <= m);
-    REQUIRE(nl > 0);
+    REQUIRE(nl > 1);
     REQUIRE(nl <= n);
-    REQUIRE(ol > 0);
+    REQUIRE(ol > 1);
     REQUIRE(ol <= o);
 
+    int gh = 1;
+
     // Init some random data (will be unused)
-    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
-    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol, gh, gh, gh);
+    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol, gh, gh, gh);
     v->fillRandom();
     f->fillRandom();
-
-    int gh = 1;
 
     // Init Problem to create all needed structures
     auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, f, v, m, n, o);
@@ -1189,11 +1253,16 @@ TEST_CASE("MPI_updateGhosts_ocl_Blockstencil_(n_processes)")
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
     p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
+    p.setBc(bc);
+    p.setGhostsIn(gh);
+    p.setMpiMinGridPoints(2);
     p.init();
 
     // Check on level 0
     auto& lv = p.getLevelAt(0);
     auto mpiData = lv.getMpiDataPtr();
+
+    REQUIRE((mpi_size == 1 || !lv.isCalculatedLocally()));
 
     // print neighbours per rank
     // for (int i = 0; i < mpi_size; i++)
@@ -1221,7 +1290,8 @@ TEST_CASE("MPI_updateGhosts_ocl_Blockstencil_(n_processes)")
     //             }
 
     // Update ghosts of expected result locally, i.e. not using MPI routines.
-    cg.updateGhostsLocally();
+    if (periodic)
+        cg.updateGhostsLocally();
 
     // Create local slice of global data
     auto clptr = cg.slice(m_start, m_end, n_start, n_end, o_start, o_end);
@@ -1283,7 +1353,7 @@ TEST_CASE("MPI_updateGhosts_ocl_Blockstencil_(n_processes)")
     // Update ghosts of test data using MPI
     d_cl->updateGhostsOclMpi(p.getProgram(), p.getCommands(),
                              dPlanesBuf, *hPlanesBufSend, *hPlanesBufRecv,
-                             *mpiData, false,
+                             *mpiData, false, periodic,
                              &p.getKernelConfig(), p.getProfilingData());
     p.finish();
 
@@ -1311,12 +1381,12 @@ TEST_CASE("MPI_updateGhosts_ocl_Blockstencil_(n_processes)")
                                     CAPTURE(i, j, k, ii, jj, kk, bi, bj, mpi_rank);
                                     if (mpi_coords[0] > 0) // not the first process
                                         REQUIRE(cl_res[bi][bj][ii][jj][kk][i][j][k] == cg[bi][bj][ii][jj][kk][m_start + i][j + n_start][k + o_start]);
-                                    else
+                                    else if (periodic)
                                         REQUIRE(cl_res[bi][bj][ii][jj][kk][i][j][k] == cg[bi][bj][ii][jj][kk][i + m][j + n_start][k + o_start]);
 
                                     if (mpi_coords[0] < mpi_dims[0]) // not the last process
                                         REQUIRE(cl_res[bi][bj][ii][jj][kk][i + gh + ml][j][k] == cg[bi][bj][ii][jj][kk][m_end + gh + 1 + i][j + n_start][k + o_start]);
-                                    else
+                                    else if (periodic)
                                         REQUIRE(cl_res[bi][bj][ii][jj][kk][i + gh + ml][j][k] == cg[bi][bj][ii][jj][kk][i + gh][j + n_start][k + o_start]);
                                 }
 
@@ -1333,12 +1403,12 @@ TEST_CASE("MPI_updateGhosts_ocl_Blockstencil_(n_processes)")
                                     CAPTURE(i, j, k, ii, jj, kk, bi, bj, mpi_rank);
                                     if (mpi_coords[1] > 0) // not the first process
                                         REQUIRE(cl_res[bi][bj][ii][jj][kk][i][j][k] == cg[bi][bj][ii][jj][kk][i + m_start][n_start + j][k + o_start]);
-                                    else
+                                    else if (periodic)
                                         REQUIRE(cl_res[bi][bj][ii][jj][kk][i][j][k] == cg[bi][bj][ii][jj][kk][i + m_start][j + n][k + o_start]);
 
                                     if (mpi_coords[1] < mpi_dims[1]) // not the last process
                                         REQUIRE(cl_res[bi][bj][ii][jj][kk][i][j + gh + nl][k] == cg[bi][bj][ii][jj][kk][i + m_start][n_end + gh + 1 + j][k + o_start]);
-                                    else
+                                    else if (periodic)
                                         REQUIRE(cl_res[bi][bj][ii][jj][kk][i][j + gh + nl][k] == cg[bi][bj][ii][jj][kk][i + m_start][j + gh][k + o_start]);
                                 }
 
@@ -1355,12 +1425,12 @@ TEST_CASE("MPI_updateGhosts_ocl_Blockstencil_(n_processes)")
                                     CAPTURE(i, j, k, ii, jj, kk, bi, bj, mpi_rank);
                                     if (mpi_coords[2] > 0) // not the first process
                                         REQUIRE(cl_res[bi][bj][ii][jj][kk][i][j][k] == cg[bi][bj][ii][jj][kk][i + m_start][j + n_start][o_start + k]);
-                                    else
+                                    else if (periodic)
                                         REQUIRE(cl_res[bi][bj][ii][jj][kk][i][j][k] == cg[bi][bj][ii][jj][kk][i + m_start][j + n_start][k + o]);
 
                                     if (mpi_coords[2] < mpi_dims[2]) // not the last process
                                         REQUIRE(cl_res[bi][bj][ii][jj][kk][i][j][k + gh + ol] == cg[bi][bj][ii][jj][kk][i + m_start][j + n_start][o_end + gh + 1 + k]);
-                                    else
+                                    else if (periodic)
                                         REQUIRE(cl_res[bi][bj][ii][jj][kk][i][j][k + gh + ol] == cg[bi][bj][ii][jj][kk][i + m_start][j + n_start][k + gh]);
                                 }
 }

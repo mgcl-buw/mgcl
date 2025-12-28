@@ -95,8 +95,12 @@ namespace mgcl
         // clang-format on
     }
 
-    void Blockstencil::updateGhosts(MPILevelData* mpiData, bool forceLocal)
+    void Blockstencil::updateGhosts(MPILevelData* mpiData, bool forceLocal, bool periodic)
     {
+        // do nothing if single-gpu and Dirichlet bc's
+        if (!periodic && (mpiData == nullptr || mpiData->mpiSize() == 1))
+            return;
+
         // TODO adjust for ghosts > 1
         if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
         {
@@ -176,18 +180,18 @@ namespace mgcl
                                             cbuf[bi][bj][ii][jj][kk][i][j][k] = rbuf[bi][bj][ii][jj][kk][i][j][k];
         }
 
-        /* Sending data downwards */
-        sbuf_ptr = sliceIncGhosts(0, mgh - 1, ghostsM, 2 * ghostsN - 1, 0, ogh - 1); // TODO max when gh > m
+        /* Sending data upwards */
+        sbuf_ptr = sliceIncGhosts(0, mgh - 1, ghostsN, 2 * ghostsN - 1, 0, ogh - 1); // TODO max when gh > m
         sbuf = sbuf_ptr->getData();
         rbuf_ptr = sbuf_ptr->copyShallow();
         rbuf = rbuf_ptr->getData();
 
-        err = MPI_Sendrecv(static_cast<void*>(sbuf_ptr->field1d().data()), mgh * ghostsN * ogh * blocksize2 * stencilSize, MPI_DOUBLE, mpiData->down[0], 0,
-                           static_cast<void*>(rbuf_ptr->field1d().data()), mgh * ghostsN * ogh * blocksize2 * stencilSize, MPI_DOUBLE, mpiData->up[0], 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf_ptr->field1d().data()), mgh * ghostsN * ogh * blocksize2 * stencilSize, MPI_DOUBLE, mpiData->up[0], 0,
+                           static_cast<void*>(rbuf_ptr->field1d().data()), mgh * ghostsN * ogh * blocksize2 * stencilSize, MPI_DOUBLE, mpiData->down[0], 0,
                            mpiData->comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
-        if (MPI_PROC_NULL != mpiData->up[0])
+        if (MPI_PROC_NULL != mpiData->down[0])
         {
             for (int bi = 0; bi < blocksize; bi++)
                 for (int bj = 0; bj < blocksize; bj++)
@@ -200,18 +204,18 @@ namespace mgcl
                                             cbuf[bi][bj][ii][jj][kk][i][ngh - ghostsN + j][k] = rbuf[bi][bj][ii][jj][kk][i][j][k];
         }
 
-        /* Sending data upwards */
+        /* Sending data downwards */
         sbuf_ptr = sliceIncGhosts(0, mgh - 1, n, n + ghostsN - 1, 0, ogh - 1); // TODO max when gh > m
         sbuf = sbuf_ptr->getData();
         rbuf_ptr = sbuf_ptr->copyShallow();
         rbuf = rbuf_ptr->getData();
 
-        err = MPI_Sendrecv(static_cast<void*>(sbuf_ptr->field1d().data()), mgh * ghostsN * ogh * blocksize2 * stencilSize, MPI_DOUBLE, mpiData->up[0], 0,
-                           static_cast<void*>(rbuf_ptr->field1d().data()), mgh * ghostsN * ogh * blocksize2 * stencilSize, MPI_DOUBLE, mpiData->down[0], 0,
+        err = MPI_Sendrecv(static_cast<void*>(sbuf_ptr->field1d().data()), mgh * ghostsN * ogh * blocksize2 * stencilSize, MPI_DOUBLE, mpiData->down[0], 0,
+                           static_cast<void*>(rbuf_ptr->field1d().data()), mgh * ghostsN * ogh * blocksize2 * stencilSize, MPI_DOUBLE, mpiData->up[0], 0,
                            mpiData->comm, MPI_STATUS_IGNORE);
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
-        if (MPI_PROC_NULL != mpiData->down[0])
+        if (MPI_PROC_NULL != mpiData->up[0])
         {
             for (int bi = 0; bi < blocksize; bi++)
                 for (int bj = 0; bj < blocksize; bj++)

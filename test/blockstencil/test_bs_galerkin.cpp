@@ -28,6 +28,7 @@ TEST_CASE("bs_galerkin_independent_quantities")
     int gh_ah = 1;
     int gh_a2h = 1;
     int blocksize = 2;
+    bool periodic = true;
 
     double tol = 1e-12;
 
@@ -54,7 +55,7 @@ TEST_CASE("bs_galerkin_independent_quantities")
                             a_h_bs[1][1][ii][jj][kk][i][j][k] = a_h2[ii][jj][kk][i][j][k];
                         }
 
-    a_h_bs.updateGhosts(nullptr, true);
+    a_h_bs.updateGhosts(nullptr, true, periodic);
     a_h1.updateGhosts();
     a_h2.updateGhosts();
 
@@ -126,6 +127,7 @@ TEST_CASE("bs_galerkin_combined_scalars")
     int gh_ah = 1;
     int gh_a2h = 1;
     int blocksize = 8;
+    bool periodic = true;
 
     double tol = 1e-12;
 
@@ -142,7 +144,7 @@ TEST_CASE("bs_galerkin_combined_scalars")
     mgcl_test::fillBlockstencilFromFixedStencil(a_h_bs, fs);
     mgcl_test::fillVaryingStencilFromFixedStencil(a_h_sc, fs);
 
-    a_h_bs.updateGhosts(nullptr, true);
+    a_h_bs.updateGhosts(nullptr, true, periodic);
     a_h_sc.updateGhosts();
 
     std::unique_ptr<mgcl::Blockstencil> a_2h_bs;

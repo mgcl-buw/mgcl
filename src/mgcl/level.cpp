@@ -42,7 +42,7 @@ namespace mgcl
           mgh(m + 2 * problem->getGhosts()),
           ngh(n + 2 * problem->getGhosts()),
           ogh(o + 2 * problem->getGhosts()),
-          h(1.0 / static_cast<double>(problem->getMGlobal() >> num_)), // TODO differentiate for non-cube-like domains
+          h(1.0 / static_cast<double>(problem_->isPeriodic() ? (problem->getMGlobal() >> num_) : (problem->getMGlobal() >> num_) + 1)), // TODO differentiate for non-cube-like domains
           stencilType(problem_->stencilType),
           useOpencl(problem_->use_opencl && (problem_->maxLevelUsingOcl < 0 || num_ <= problem_->maxLevelUsingOcl))
     {
@@ -126,8 +126,7 @@ namespace mgcl
                     // TODO what to do when reuse_opencl_buffers?
                 }
 
-                if (problem->isPeriodic())
-                    MultigridEngine::updateGhostsSeq(getF(), mpiData.get(), problem->isPeriodic(), isCalculatedLocally());
+                MultigridEngine::updateGhostsSeq(getF(), mpiData.get(), problem->isPeriodic(), isCalculatedLocally());
             }
 
             // r on host is only needed if opencl should not be used
@@ -185,7 +184,7 @@ namespace mgcl
             blockstencil = problem->blockstencil;
 
             // TODO refactor updateGhosts local?
-            blockstencil->updateGhosts(mpiData.get(), isCalculatedLocally());
+            blockstencil->updateGhosts(mpiData.get(), isCalculatedLocally(), problem->isPeriodic());
 
             // Create inverse for level 0. Coarser levels' inverse will be created after galerkin
             createInverseOfBlockstencilSeq();
@@ -217,10 +216,7 @@ namespace mgcl
                     // TODO what to do when reuse_opencl_buffers?
                 }
 
-                if (problem->isPeriodic())
-                {
-                    getFBS().updateGhosts(mpiData.get(), isCalculatedLocally());
-                }
+                getFBS().updateGhosts(mpiData.get(), isCalculatedLocally(), problem->isPeriodic());
             }
 
             // r on host is only needed if opencl should not be used
@@ -438,7 +434,7 @@ namespace mgcl
         dF_bs->updateGhostsOclMpi(
             problem->getProgram(), problem->getCommands(),
             problem->getDPlanesBufPtr(), problem->getHPlanesBufSendPtr(), problem->getHPlanesBufRecvPtr(),
-            mpiData.get(), isCalculatedLocally(),
+            mpiData.get(), isCalculatedLocally(), problem->isPeriodic(),
             &problem->getKernelConfig(), problem->getProfilingData());
 
         return CL_SUCCESS;
@@ -1092,11 +1088,11 @@ namespace mgcl
 
         if (auto bsi = std::get_if<std::shared_ptr<Blockstencil>>(&blockstencilInv))
         {
-            bsi->get()->updateGhosts(mpiData.get(), isCalculatedLocally());
+            bsi->get()->updateGhosts(mpiData.get(), isCalculatedLocally(), problem->isPeriodic());
         }
         else if (auto bsi = std::get_if<std::shared_ptr<CuboidBS>>(&blockstencilInv))
         {
-            bsi->get()->updateGhosts(mpiData.get(), isCalculatedLocally());
+            bsi->get()->updateGhosts(mpiData.get(), isCalculatedLocally(), problem->isPeriodic());
         }
         // else if (auto bsi = std::get_if<std::shared_ptr<BlockstencilGpu>>(&blockstencilInv))
         // {

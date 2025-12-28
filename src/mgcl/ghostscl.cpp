@@ -92,10 +92,23 @@ namespace mgcl
      *   This is used e.g. for levels above the mpiLevelThreshold. */
     void MultigridEngine::updateGhostsSeq(Cuboid& c, MPILevelData* mpiData, bool periodic, bool forceLocal)
     {
+        // cases:
+        // - single gpu, periodic: local ghost update
+        // - single gpu, dirichlet: no ghost update
+        // - multi gpu, periodic, forceLocal: local ghost update
+        // - multi gpu, Dirichlet, forceLocal: no ghost update
+        // - multi gpu, periodic, !forceLocal: MPI ghost update
+        // - multi gpu, Dirichlet, !forceLocal: MPI ghost update
+
+        // do nothing if single-gpu and Dirichlet bc's
+        if (!periodic && (mpiData == nullptr || mpiData->mpiSize() == 1 || forceLocal))
+            return;
+
         // TODO adjust for ghosts > 1
         if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
         {
-            updateGhostsSeqLocally(c, periodic);
+            if (periodic)
+                updateGhostsSeqLocally(c, periodic);
             return;
         }
 
@@ -231,25 +244,8 @@ namespace mgcl
                     for (k = 0; k < ogh; k++)
                         cbuf[i][j][k] = rbuf[i][j][k];
 
-        /* Sending data downwards */
-        sbuf_ptr = c.sliceIncGhosts(0, mgh - 1, ghosts_m, 2 * ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
-        sbuf = sbuf_ptr->getData();
-        rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
-        rbuf = rbuf_ptr->getData();
-
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down[0], 0,
-                           static_cast<void*>(rbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up[0], 0,
-                           mpiData->comm, MPI_STATUS_IGNORE);
-        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
-
-        if (MPI_PROC_NULL != mpiData->up[0])
-            for (i = 0; i < mgh; i++)
-                for (j = 0; j < ghosts_n; j++)
-                    for (k = 0; k < ogh; k++)
-                        cbuf[i][ngh - ghosts_n + j][k] = rbuf[i][j][k];
-
         /* Sending data upwards */
-        sbuf_ptr = c.sliceIncGhosts(0, mgh - 1, n, n + ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
+        sbuf_ptr = c.sliceIncGhosts(0, mgh - 1, ghosts_n, 2 * ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
         sbuf = sbuf_ptr->getData();
         rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
         rbuf = rbuf_ptr->getData();
@@ -263,6 +259,23 @@ namespace mgcl
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ghosts_n; j++)
                     for (k = 0; k < ogh; k++)
+                        cbuf[i][ngh - ghosts_n + j][k] = rbuf[i][j][k];
+
+        /* Sending data downwards */
+        sbuf_ptr = c.sliceIncGhosts(0, mgh - 1, n, n + ghosts_n - 1, 0, ogh - 1); // TODO max when gh > m
+        sbuf = sbuf_ptr->getData();
+        rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
+        rbuf = rbuf_ptr->getData();
+
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->down[0], 0,
+                           static_cast<void*>(rbuf[0][0]), mgh * ghosts_n * ogh, MPI_DOUBLE, mpiData->up[0], 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
+        if (MPI_PROC_NULL != mpiData->up[0])
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ghosts_n; j++)
+                    for (k = 0; k < ogh; k++)
                         cbuf[i][j][k] = rbuf[i][j][k];
 
         /* Sending data to the left */
@@ -270,10 +283,6 @@ namespace mgcl
         sbuf = sbuf_ptr->getData();
         rbuf_ptr = std::make_unique<Cuboid>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0);
         rbuf = rbuf_ptr->getData();
-
-        // std::cout << myid << "," << mpiData->left[0] << std::endl;
-        // MPI_Barrier(comm);
-        // sbuf_ptr->dumpToFile("sbuf_ptr_left" + std::to_string(myid) + ".txt");
 
         err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->left[0], 0,
                            static_cast<void*>(rbuf[0][0]), mgh * ngh * ghosts_o, MPI_DOUBLE, mpiData->right[0], 0,
@@ -321,16 +330,28 @@ namespace mgcl
         int ghosts_n = dBuffer.getGhostsN();
         int ghosts_o = dBuffer.getGhostsO();
 
+        // cases:
+        // - single gpu, periodic: local ghost update
+        // - single gpu, dirichlet: no ghost update
+        // - multi gpu, periodic, forceLocal: local ghost update
+        // - multi gpu, Dirichlet, forceLocal: no ghost update
+        // - multi gpu, periodic, !forceLocal: MPI ghost update
+        // - multi gpu, Dirichlet, !forceLocal: MPI ghost update
+
+        // do nothing if single-gpu and Dirichlet bc's
+        if (!problem.isPeriodic() && (mpiData == nullptr || mpiData->mpiSize() == 1 || forceLocal))
+            return CL_SUCCESS;
+
+        if (problem.useMpi() && !mpiData)
+            error("Problem uses MPI but mpiData is null!");
+
         if (!forceLocal && problem.useMpi() && mpiData)
         {
             updateGhostsOclMpi(problem, dBuffer, *mpiData, problem.isPeriodic(), forceLocal);
             return CL_SUCCESS;
         }
 
-        if (problem.useMpi() && !mpiData)
-            error("Problem uses MPI but mpiData is null!");
-
-        if (!problem.isPeriodic())
+        if (!problem.isPeriodic() && !problem.useMpi())
             return CL_SUCCESS;
 
         int err;
@@ -411,9 +432,23 @@ namespace mgcl
         // MultigridEngine::updateGhostsSeq(*tmp, &mpiData, periodic, forceLocal);
         // d_buf.write(commands, *tmp, true);
 
-        if (forceLocal)
+        // cases:
+        // - single gpu, periodic: local ghost update
+        // - single gpu, dirichlet: no ghost update
+        // - multi gpu, periodic, forceLocal: local ghost update
+        // - multi gpu, Dirichlet, forceLocal: no ghost update
+        // - multi gpu, periodic, !forceLocal: MPI ghost update
+        // - multi gpu, Dirichlet, !forceLocal: MPI ghost update
+
+        // do nothing if single-gpu and Dirichlet bc's
+        if (!periodic && (mpiData.mpiSize() == 1))
+            return;
+
+        // TODO adjust for ghosts > 1
+        if (forceLocal || mpiData.mpiSize() == 1)
         {
-            MultigridEngine::updateGhosts(p, d_buf, nullptr, true);
+            if (periodic)
+                MultigridEngine::updateGhosts(p, d_buf, nullptr, true);
             return;
         }
 

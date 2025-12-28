@@ -469,6 +469,8 @@ TEST_CASE("solve_dirichlet")
 
         SECTION("Laplace_27p")
         {
+            v->dumpToFile("vin.txt");
+            f->dumpToFile("fin.txt");
             p.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
             p.solveSeq();
 
@@ -480,6 +482,8 @@ TEST_CASE("solve_dirichlet")
             auto err = mgcl_test::calculateError(solution, *v);
             auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
             auto errMax = mgcl_test::calculateMaxError(*err);
+
+            v->dumpToFile("v.txt");
 
             // solution.dumpToFile("out_solution.txt");
             // (*v).dumpToFile("out_v.txt");

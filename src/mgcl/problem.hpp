@@ -247,6 +247,7 @@ namespace mgcl
         int getLevelsSize() const;
 
         inline bool isPeriodic() const { return bc == BC::PERIODIC; }
+        inline bool needsGhostUpdate() { return isPeriodic() || useMpi(); } // ghost update needed in periodic case or Dirichlet bc's in multi-gpu case
 
         int mpiSize();
 

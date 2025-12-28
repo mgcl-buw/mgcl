@@ -41,7 +41,7 @@ namespace mgcl
         inline int getWidth() const { return dim3; }
         inline int getBlocksize() const { return dim1; }
         void updateGhostsLocally();
-        void updateGhosts(MPILevelData* mpiData, bool forceLocal);
+        void updateGhosts(MPILevelData* mpiData, bool forceLocal, bool periodic);
         Blockstencil multiply(Blockstencil& b, int ghc,
                               MPILevelData* mpiData, bool periodic, bool forceLocal) const;
         Blockstencil& operator*(double factor);

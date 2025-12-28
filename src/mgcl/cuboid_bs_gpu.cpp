@@ -688,10 +688,14 @@ namespace mgcl
     void CuboidBSGpu::updateGhostsOclMpi(cl_program program, cl_command_queue commands,
                                          BufferGpu* dPlanesBuf,
                                          std::vector<double>* hPlanesBufSend, std::vector<double>* hPlanesBufRecv,
-                                         MPILevelData* mpiData, bool forceLocal,
+                                         MPILevelData* mpiData, bool forceLocal, bool periodic,
                                          conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
-        if (forceLocal || mpiData == nullptr)
+        // do nothing if single-gpu and Dirichlet bc's
+        if (!periodic && (mpiData == nullptr || mpiData->mpiSize() == 1 || forceLocal))
+            return;
+
+        if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
         {
             updateGhostsLocally(program, commands, conf, pd);
             return;

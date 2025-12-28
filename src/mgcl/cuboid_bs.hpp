@@ -62,7 +62,7 @@ namespace mgcl
                                                  int o_start, int o_end);
         std::unique_ptr<CuboidBS> copyShallow();
 
-        void updateGhosts(MPILevelData* mpiData, bool forceLocal);
+        void updateGhosts(MPILevelData* mpiData, bool forceLocal, bool periodic);
 
         inline double*** operator[](int index) { return field_4d[index]; }
 

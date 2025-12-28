@@ -54,7 +54,7 @@ namespace mgcl_test
         mgcl::Problem& getProblem();
     };
 
-    void create4hOrderPeriodicProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl::Cuboid& solution);
+    void create4hOrderPeriodicProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl::Cuboid& solution, mgcl::BC bc);
     void fill7pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCenter);
     void fill19pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCenter);
     void fill27pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCenter);

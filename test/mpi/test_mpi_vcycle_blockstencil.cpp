@@ -36,6 +36,7 @@ TEST_CASE("MPI_vcycle_seq_immediate_gather_scatter_blockstencil_size1")
     int n = 16;
     int o = 16;
     int periodic = 1;
+    auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
     int gh = 1;
     int blocksize = 1;
     double h = 1.0 / (double)m;
@@ -116,7 +117,7 @@ TEST_CASE("MPI_vcycle_seq_immediate_gather_scatter_blockstencil_size1")
     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
     auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
     auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
-    mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+    mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution, bc);
 
     // Create local slices
     std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
@@ -215,6 +216,7 @@ TEST_CASE("MPI_vcycle_GPU_immediate_gather_scatter_blockstencil_size1")
     int n = 16;
     int o = 16;
     int periodic = 1;
+    auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
     int gh = 1;
     int blocksize = 1;
     double h = 1.0 / (double)m;
@@ -295,7 +297,7 @@ TEST_CASE("MPI_vcycle_GPU_immediate_gather_scatter_blockstencil_size1")
     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
     auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
     auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
-    mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+    mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution, bc);
 
     // Create local slices
     std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
@@ -401,6 +403,7 @@ TEST_CASE("MPI_vcycle_seq_treshold_gt_0_blockstencil_size1")
     int n = 16;
     int o = 16;
     int periodic = 1;
+    auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
     int gh = 1;
     int blocksize = 1;
     double h = 1.0 / (double)m;
@@ -481,7 +484,7 @@ TEST_CASE("MPI_vcycle_seq_treshold_gt_0_blockstencil_size1")
     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
     auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
     auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
-    mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+    mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution, bc);
 
     // Create local slices
     std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
@@ -587,6 +590,7 @@ TEST_CASE("MPI_vcycle_GPU_treshold_gt_0_blockstencil_size1")
     int n = 16;
     int o = 16;
     int periodic = 1;
+    auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
     int gh = 1;
     int blocksize = 1;
     double h = 1.0 / (double)m;
@@ -667,7 +671,7 @@ TEST_CASE("MPI_vcycle_GPU_treshold_gt_0_blockstencil_size1")
     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
     auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
     auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
-    mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution);
+    mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution, bc);
 
     // Create local slices
     std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));

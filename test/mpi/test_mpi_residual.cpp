@@ -26,6 +26,7 @@ TEST_CASE("MPI_residual_seq_VaryingStencil_n_processes", "[mpiN]")
     int n = 16;
     int o = 16;
     int periodic = 1;
+    auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     // check if mpi is initialized
     int isInitialized = 0;
@@ -106,7 +107,7 @@ TEST_CASE("MPI_residual_seq_VaryingStencil_n_processes", "[mpiN]")
 
     // Fill with 4th order periodic Problem
     mgcl::Cuboid solution(m, n, o);
-    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution);
+    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution, bc);
 
     // Create local slices of global data
     std::shared_ptr<mgcl::Cuboid> vlptr = v_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
@@ -193,6 +194,7 @@ TEST_CASE("MPI_residual_ocl_VaryingStencil_n_processes", "[mpiN]")
     int n = 16;
     int o = 16;
     int periodic = 1;
+    auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     // check if mpi is initialized
     int isInitialized = 0;
@@ -273,7 +275,7 @@ TEST_CASE("MPI_residual_ocl_VaryingStencil_n_processes", "[mpiN]")
 
     // Fill with 4th order periodic Problem
     mgcl::Cuboid solution(m, n, o);
-    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution);
+    mgcl_test::create4hOrderPeriodicProblem(v_glob, f_glob, solution, bc);
 
     // Create local slices of global data
     std::shared_ptr<mgcl::Cuboid> vlptr = v_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);

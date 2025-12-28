@@ -18,6 +18,7 @@
 #include <iostream>
 #include <math.h> // for fabs, sqrt, ceil
 #include <memory>
+#include <string>
 #include <variant>
 
 #ifdef __APPLE__
@@ -89,9 +90,18 @@ namespace mgcl
         for (int iter = 0; iter < maxiter; iter += stepsPerIter)
         {
             // update ghost cells for periodic boundary condition
-            if (periodic)
-                MultigridEngine::updateGhostsSeq(v, mpiData, periodic, updateGhostsLocally);
+            MultigridEngine::updateGhostsSeq(v, mpiData, periodic, updateGhostsLocally);
             // TODO else update only neighboring processes if using mpi
+
+            // if (iter == 1)
+            // {
+            //     f.dumpToFile(std::to_string(mpiData ? mpiData->rank : 0) + "fSeq.txt");
+            //     v.dumpToFile(std::to_string(mpiData ? mpiData->rank : 0) + "vSeq.txt");
+            //     r.dumpToFile(std::to_string(mpiData ? mpiData->rank : 0) + "rSeq.txt");
+            //     if (mpiData)
+            //         MPI_Barrier(mpiData->comm);
+            //     exit(0);
+            // }
 
             // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
             for (int innerIter = 0; innerIter < stepsPerIter && iter + innerIter < maxiter; innerIter++)
@@ -116,8 +126,6 @@ namespace mgcl
                 res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, fixedStencil,
                                   false, periodic,
                                   updateGhostsLocally, -off, -off, -off, mpiData);
-
-                // r.dumpToFile("r_scalar.txt");
 
                 if (stencilType == MGCL_LAPLACE_7POINT || stencilType == MGCL_LAPLACE_19POINT || stencilType == MGCL_LAPLACE_27POINT)
                 {
@@ -177,8 +185,7 @@ namespace mgcl
             }
         }
 
-        if (periodic)
-            MultigridEngine::updateGhostsSeq(v, mpiData, periodic, updateGhostsLocally);
+        MultigridEngine::updateGhostsSeq(v, mpiData, periodic, updateGhostsLocally);
 
         if (returnResidualNorm)
             res = residualSeq(f, v, r, resnorm, stencilType, stencilFactor, stencilValues, fixedStencil,
@@ -236,8 +243,7 @@ namespace mgcl
         for (int iter = 0; iter < args.maxiter; iter += stepsPerIter)
         {
             // update ghost cells for periodic boundary condition
-            if (args.periodic)
-                args.v.updateGhosts(args.mpiData, args.updateGhostsLocally);
+            args.v.updateGhosts(args.mpiData, args.updateGhostsLocally, args.periodic);
             // TODO else update only neighboring processes if using mpi
 
             // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
@@ -273,8 +279,6 @@ namespace mgcl
                     off, off, off,
                     args.mpiData};
                 res = residualSeq(residualArgs);
-
-                // args.r.dumpToFile("r_vectorial.txt");
 
                 // smoother type is Jacobi_Block: bs_inv is a matrix
                 if (auto bs_inv_ptr = std::get_if<std::shared_ptr<Blockstencil>>(&args.bs_inv))
@@ -332,8 +336,7 @@ namespace mgcl
             }
         }
 
-        if (args.periodic)
-            args.v.updateGhosts(args.mpiData, args.updateGhostsLocally);
+        args.v.updateGhosts(args.mpiData, args.updateGhostsLocally, args.periodic);
 
         if (args.returnResidualNorm)
         {
@@ -390,7 +393,8 @@ namespace mgcl
 
         cl_event ev;
 
-        double h2 = 1.0 / static_cast<double>((problem.getMGlobal() >> level.num) * (problem.getMGlobal() >> level.num));
+        // double h2 = 1.0 / static_cast<double>((problem.getMGlobal() >> level.num) * (problem.getMGlobal() >> level.num));
+        double h2 = level.getH() * level.getH();
         double dinv = h2 / 6.0;
         double h2inv = level.stencilFactor; // divisor of the stencil, inverted to use * instead of / in kernel
         // TODO refactor stencilFactor
@@ -561,6 +565,16 @@ namespace mgcl
                                                     level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
             }
+
+            // if (globalIter == 1)
+            // {
+            //     level.getDF().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "fOcl.txt");
+            //     level.getDVOut().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "vOcl.txt");
+            //     level.getDR().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "rOcl.txt");
+            //     if (level.getMpiDataPtr())
+            //         MPI_Barrier(level.getMpiDataPtr()->comm);
+            //     exit(0);
+            // }
 
             // if stepsPerIter > 1, multiple iterations can be done without updating ghosts in-between
             for (int innerIter = 0; innerIter < stepsPerIter && globalIter < maxiter; innerIter++, globalIter++)
@@ -1201,7 +1215,7 @@ namespace mgcl
             error("bs_inv must be a shared_ptr to either CuboidBSGpu or BlockstencilGpu!");
         }
 
-        std::string kernelName = "jacobi_iter_27point_blockstencil_block_first_v_gp_first_scalarjacobi";
+        std::string kernelName = "jacobi_iter_27point_blockstencil_block_first_v_block_first_scalarjacobi";
         if (auto bs_inv_ptr = std::get_if<std::shared_ptr<BlockstencilGpu>>(&args.bs_inv))
         {
             auto& bs_inv = *bs_inv_ptr->get();
@@ -1209,7 +1223,7 @@ namespace mgcl
             {
                 error("width of bs_inv must be 1!");
             }
-            kernelName = "jacobi_iter_27point_blockstencil_block_first_v_gp_first_blockjacobi";
+            kernelName = "jacobi_iter_27point_blockstencil_block_first_v_block_first_blockjacobi";
         }
 
         cl_event ev;
@@ -1288,14 +1302,14 @@ namespace mgcl
             // Update ghosts of current input v
             if (globalIter % 2 == 1)
             {
-                args.v_out.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);
+                args.v_out.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.periodic, args.conf, args.pd);
                 // err = MultigridEngine::updateGhosts(problem, level.getDVOut(),
                 //                                     level.getMpiDataPtr(), level.isCalculatedLocally());
                 // mgclCheckError(err, "Updating ghosts");
             }
             else
             {
-                args.v_in.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);
+                args.v_in.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.periodic, args.conf, args.pd);
                 // err = MultigridEngine::updateGhosts(problem, level.getDVIn(),
                 //                                     level.getMpiDataPtr(), level.isCalculatedLocally());
                 // mgclCheckError(err, "Updating ghosts");
@@ -1349,7 +1363,7 @@ namespace mgcl
         if (store_res)
         {
             // TODO check for mpi
-            args.r.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);
+            args.r.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.periodic, args.conf, args.pd);
             // err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
             //                                     level.isCalculatedLocally());
             // mgclCheckError(err, "Updating ghosts of dR");
@@ -1360,7 +1374,7 @@ namespace mgcl
             args.v_out.copyTo(args.queue, args.v_in);
 
         // Update ghosts of dVIn
-        args.v_in.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);
+        args.v_in.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.periodic, args.conf, args.pd);
         // err = MultigridEngine::updateGhosts(problem, level.getDVIn(),
         //                                     level.getMpiDataPtr(), level.isCalculatedLocally());
         // mgclCheckError(err, "Updating ghosts");
@@ -1421,7 +1435,7 @@ namespace mgcl
         int ogh = level.ogh;
         double res = 0.0;
 
-        double h2 = 1.0 / static_cast<double>((problem.getMGlobal() >> level.num) * (problem.getMGlobal() >> level.num));
+        double h2 = level.getH() * level.getH();
         double h2inv = 1.0 / h2; // divisor of the stencil, inverted to use * instead of / in kernel
 
         // check if off is too small (i.e. start < 0)
@@ -1586,12 +1600,17 @@ namespace mgcl
         }
         mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
-        if (problem.isPeriodic())
-        {
-            err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
-                                                level.isCalculatedLocally());
-            mgclCheckError(err, "Updating ghosts of r");
-        }
+        err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
+                                            level.isCalculatedLocally());
+        mgclCheckError(err, "Updating ghosts of r");
+        problem.finish();
+
+        // level.getDF().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "fOcl.txt");
+        // level.getDVIn().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "vOcl.txt");
+        // level.getDR().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "rOcl.txt");
+        // if (level.getMpiDataPtr())
+        //     MPI_Barrier(level.getMpiDataPtr()->comm);
+        // exit(0);
 
         // calculate residual's 2-norm. Square elements on device and sum up on host
         if (return_residual)
@@ -1757,11 +1776,7 @@ namespace mgcl
         }
         mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
-        if (args.periodic)
-        {
-            // TODO args
-            r.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.conf, args.pd);
-        }
+        r.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.periodic, args.conf, args.pd);
 
         // calculate residual's 2-norm. Square elements on device and sum up on host
         if (args.returnResidualNorm)
@@ -2043,8 +2058,14 @@ namespace mgcl
                     }
                 }
 
-        if (periodic)
-            MultigridEngine::updateGhostsSeq(r, mpiData, periodic, updateGhostsLocally);
+        MultigridEngine::updateGhostsSeq(r, mpiData, periodic, updateGhostsLocally);
+
+        // f.dumpToFile(std::to_string(mpiData ? mpiData->rank : 0) + "fSeq.txt");
+        // v.dumpToFile(std::to_string(mpiData ? mpiData->rank : 0) + "vSeq.txt");
+        // r.dumpToFile(std::to_string(mpiData ? mpiData->rank : 0) + "rSeq.txt");
+        // if (mpiData)
+        //     MPI_Barrier(mpiData->comm);
+        // exit(0);
 
         return (returnResidualNorm && resnorm == MGCL_L2) ? sqrt(res) : res;
     }
@@ -2158,10 +2179,7 @@ namespace mgcl
                     }
                 }
 
-        if (args.periodic)
-        {
-            r.updateGhosts(args.mpiData, args.updateGhostsLocally);
-        }
+        r.updateGhosts(args.mpiData, args.updateGhostsLocally, args.periodic);
 
         return (args.returnResidualNorm && args.resnorm == MGCL_L2) ? sqrt(res) : res;
     }

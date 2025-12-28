@@ -588,12 +588,25 @@ namespace mgcl
         // clang-format on
     }
 
-    void CuboidBS::updateGhosts(MPILevelData* mpiData, bool forceLocal)
+    void CuboidBS::updateGhosts(MPILevelData* mpiData, bool forceLocal, bool periodic)
     {
+        // cases:
+        // - single gpu, periodic: local ghost update
+        // - single gpu, dirichlet: no ghost update
+        // - multi gpu, periodic, forceLocal: local ghost update
+        // - multi gpu, Dirichlet, forceLocal: no ghost update
+        // - multi gpu, periodic, !forceLocal: MPI ghost update
+        // - multi gpu, Dirichlet, !forceLocal: MPI ghost update
+
+        // do nothing if single-gpu and Dirichlet bc's
+        if (!periodic && (mpiData == nullptr || mpiData->mpiSize() == 1 || forceLocal))
+            return;
+
         // TODO adjust for ghosts > 1
         if (forceLocal || mpiData == nullptr || mpiData->mpiSize() == 1)
         {
-            updateGhostsLocally();
+            if (periodic)
+                updateGhostsLocally();
             return;
         }
 
@@ -643,26 +656,8 @@ namespace mgcl
                         for (int b = 0; b < blocksize; b++)
                             cbuf[b][i][j][k] = rbuf[b][i][j][k];
 
-        /* Sending data downwards */
-        sbuf_ptr = sliceIncGhosts(0, mgh - 1, ghostsM, 2 * ghostsN - 1, 0, ogh - 1); // TODO max when gh > m
-        sbuf = sbuf_ptr->getData();
-        rbuf_ptr = std::make_unique<CuboidBS>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0, blocksize);
-        rbuf = rbuf_ptr->getData();
-
-        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0]), mgh * ghostsN * ogh * blocksize, MPI_DOUBLE, mpiData->down[0], 0,
-                           static_cast<void*>(rbuf[0][0][0]), mgh * ghostsN * ogh * blocksize, MPI_DOUBLE, mpiData->up[0], 0,
-                           mpiData->comm, MPI_STATUS_IGNORE);
-        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
-
-        if (MPI_PROC_NULL != mpiData->up[0])
-            for (i = 0; i < mgh; i++)
-                for (j = 0; j < ghostsN; j++)
-                    for (k = 0; k < ogh; k++)
-                        for (int b = 0; b < blocksize; b++)
-                            cbuf[b][i][ngh - ghostsN + j][k] = rbuf[b][i][j][k];
-
         /* Sending data upwards */
-        sbuf_ptr = sliceIncGhosts(0, mgh - 1, n, n + ghostsN - 1, 0, ogh - 1); // TODO max when gh > m
+        sbuf_ptr = sliceIncGhosts(0, mgh - 1, ghostsN, 2 * ghostsN - 1, 0, ogh - 1); // TODO max when gh > m
         sbuf = sbuf_ptr->getData();
         rbuf_ptr = std::make_unique<CuboidBS>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0, blocksize);
         rbuf = rbuf_ptr->getData();
@@ -673,6 +668,24 @@ namespace mgcl
         mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
 
         if (MPI_PROC_NULL != mpiData->down[0])
+            for (i = 0; i < mgh; i++)
+                for (j = 0; j < ghostsN; j++)
+                    for (k = 0; k < ogh; k++)
+                        for (int b = 0; b < blocksize; b++)
+                            cbuf[b][i][ngh - ghostsN + j][k] = rbuf[b][i][j][k];
+
+        /* Sending data downwards */
+        sbuf_ptr = sliceIncGhosts(0, mgh - 1, n, n + ghostsN - 1, 0, ogh - 1); // TODO max when gh > m
+        sbuf = sbuf_ptr->getData();
+        rbuf_ptr = std::make_unique<CuboidBS>(sbuf_ptr->getM(), sbuf_ptr->getN(), sbuf_ptr->getO(), 0, 0, 0, blocksize);
+        rbuf = rbuf_ptr->getData();
+
+        err = MPI_Sendrecv(static_cast<void*>(sbuf[0][0][0]), mgh * ghostsN * ogh * blocksize, MPI_DOUBLE, mpiData->down[0], 0,
+                           static_cast<void*>(rbuf[0][0][0]), mgh * ghostsN * ogh * blocksize, MPI_DOUBLE, mpiData->up[0], 0,
+                           mpiData->comm, MPI_STATUS_IGNORE);
+        mgcl::mpi_util::mgclCheckMpiError(mpiData->comm, err, "MPI_Sendrecv");
+
+        if (MPI_PROC_NULL != mpiData->up[0])
             for (i = 0; i < mgh; i++)
                 for (j = 0; j < ghostsN; j++)
                     for (k = 0; k < ogh; k++)

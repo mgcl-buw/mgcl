@@ -377,7 +377,7 @@ TEST_CASE("updateGhostsLocally gh < m")
     mgcl::CuboidBS c1(m, n, o, ghosts_m, ghosts_n, ghosts_o, blocksize);
     c1.fillRandom();
 
-    c1.updateGhosts(nullptr, true);
+    c1.updateGhosts(nullptr, true, true);
 
     // check in z-direction
     for (int i = 0; i < ghosts_m; i++)
@@ -426,7 +426,7 @@ TEST_CASE("updateGhostsLocally gh > m")
     mgcl::CuboidBS c1(m, n, o, ghosts_m, ghosts_n, ghosts_o, blocksize);
     c1.fillRandom();
 
-    c1.updateGhosts(nullptr, true);
+    c1.updateGhosts(nullptr, true, true);
 
     // check in z-direction
     for (int i = 0; i < ghosts_m; i++)

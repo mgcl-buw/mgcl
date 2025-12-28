@@ -859,7 +859,7 @@ TEST_CASE("mpi_util::sendBorderPlanes_cuboidbs")
     mgcl::mpi_util::sendBorderPlanesCuboidBS(mgh, ngh, ogh, ghosts_m, ghosts_n, ghosts_o, blocksize,
                                              sbuf, rbuf, mpiData);
 
-    c.updateGhosts(nullptr, true);
+    c.updateGhosts(nullptr, true, periodic);
 
     // Check against cuboid with updated ghosts
     // Edges in send buffers for top and down after sending to front and back

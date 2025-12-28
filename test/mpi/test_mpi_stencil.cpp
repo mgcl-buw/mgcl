@@ -313,7 +313,8 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     int m = 16;
     int n = 16;
     int o = 16;
-    int periodic = 1;
+    int periodic = 1; // GENERATE(1,0);
+    auto bc = periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET;
 
     // check if mpi is initialized
     int isInitialized = 0;
@@ -375,23 +376,24 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     REQUIRE(ol > 0);
     REQUIRE(ol <= o);
 
+    int gh = 1;
+
     // Init some random data (will be unused)
-    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
-    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol, gh, gh, gh);
+    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol, gh, gh, gh);
     v->fillRandom();
     f->fillRandom();
-
-    int gh = 1;
 
     // Init Problem to create all needed structures
     auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, f, v, m, n, o);
     auto& p = *pptr;
-    p.setGhosts(1);
+    p.setGhosts(gh);
     p.setMpiComm(mpi_comm);
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
     p.setStencilType(mgcl::MGCL_VARYING);
     p.getStencilValues()->fill1dIndex(true);
+    p.setBc(bc);
     p.init();
 
     // Check on level 0
@@ -434,7 +436,7 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     // Update ghosts of test data
     mgcl::updateGhostsStencilOclMpi(tu.getCommands(), tu.getProgram(), sgpuLocal,
                                     p.getDPlanesBuf(), p.getHPlanesBufSend(), p.getHPlanesBufRecv(),
-                                    mpiData, false, nullptr, nullptr);
+                                    mpiData, false, periodic, nullptr, nullptr);
 
     // Read results
     auto cg = sgpu.read(tu.getCommands(), true);

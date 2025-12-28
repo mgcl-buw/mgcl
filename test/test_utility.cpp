@@ -281,50 +281,94 @@ cl_device_id mgcl_test::TestUtility::getDeviceId()
  * @param f
  * @param solution
  */
-void mgcl_test::create4hOrderPeriodicProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl::Cuboid& solution)
+void mgcl_test::create4hOrderPeriodicProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl::Cuboid& solution, mgcl::BC bc)
 {
     if (v.getM() != f.getM() || v.getN() != f.getN() || v.getO() != f.getO() ||
         v.getM() != solution.getM() || v.getN() != solution.getN() || v.getO() != solution.getO())
         throw "Dimensions must match!";
 
-    double h = 1.0 / (double)v.getM();
-    for (int i = 0, i_v = v.getGhostsM(), i_f = f.getGhostsM(), i_s = solution.getGhostsM(); i_v < v.getM() + v.getGhostsM(); i++, i_v++, i_f++, i_s++)
-        for (int j = 0, j_v = v.getGhostsN(), j_f = f.getGhostsN(), j_s = solution.getGhostsN(); j_v < v.getN() + v.getGhostsN(); j++, j_v++, j_f++, j_s++)
-            for (int k = 0, k_v = v.getGhostsO(), k_f = f.getGhostsO(), k_s = solution.getGhostsO(); k_v < v.getO() + v.getGhostsO(); k++, k_v++, k_f++, k_s++)
-            {
-                double zs = i * h;
-                double ys = j * h;
-                double xs = k * h;
-                double xs2 = xs * xs;
-                double ys2 = ys * ys;
-                double zs2 = zs * zs;
-                double xsm1_2 = (xs - 1) * (xs - 1);
-                double ysm1_2 = (ys - 1) * (ys - 1);
-                double zsm1_2 = (zs - 1) * (zs - 1);
-                double xs3 = xs * xs * xs;
-                double ys3 = ys * ys * ys;
-                double zs3 = zs * zs * zs;
-                double xsm1_3 = (xs - 1) * (xs - 1) * (xs - 1);
-                double ysm1_3 = (ys - 1) * (ys - 1) * (ys - 1);
-                double zsm1_3 = (zs - 1) * (zs - 1) * (zs - 1);
-                double xs4 = xs * xs * xs * xs;
-                double ys4 = ys * ys * ys * ys;
-                double zs4 = zs * zs * zs * zs;
-                double xsm1_4 = (xs - 1) * (xs - 1) * (xs - 1) * (xs - 1);
-                double ysm1_4 = (ys - 1) * (ys - 1) * (ys - 1) * (ys - 1);
-                double zsm1_4 = (zs - 1) * (zs - 1) * (zs - 1) * (zs - 1);
-                v[i_v][j_v][k_v] = 0;
-                solution[i_s][j_s][k_s] = 1000000 * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) *
-                                          (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) *
-                                          (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1));
-                f[i_f][j_f][k_f] =
-                    -1000000 *
-                    (12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_2 + 12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_2 * zsm1_4 +
-                     12 * xs4 * ys4 * zs4 * xsm1_2 * ysm1_4 * zsm1_4 + 32 * xs4 * ys4 * zs3 * xsm1_4 * ysm1_4 * zsm1_3 +
-                     12 * xs4 * ys4 * zs2 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs4 * ys3 * zs4 * xsm1_4 * ysm1_3 * zsm1_4 +
-                     12 * xs4 * ys2 * zs4 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs3 * ys4 * zs4 * xsm1_3 * ysm1_4 * zsm1_4 +
-                     12 * xs2 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_4);
-            }
+    if (bc == mgcl::BC::PERIODIC)
+    {
+        double h = 1.0 / (double)v.getM();
+        for (int i = 0, i_v = v.getGhostsM(), i_f = f.getGhostsM(), i_s = solution.getGhostsM(); i_v < v.getM() + v.getGhostsM(); i++, i_v++, i_f++, i_s++)
+            for (int j = 0, j_v = v.getGhostsN(), j_f = f.getGhostsN(), j_s = solution.getGhostsN(); j_v < v.getN() + v.getGhostsN(); j++, j_v++, j_f++, j_s++)
+                for (int k = 0, k_v = v.getGhostsO(), k_f = f.getGhostsO(), k_s = solution.getGhostsO(); k_v < v.getO() + v.getGhostsO(); k++, k_v++, k_f++, k_s++)
+                {
+                    double zs = i * h;
+                    double ys = j * h;
+                    double xs = k * h;
+                    double xs2 = xs * xs;
+                    double ys2 = ys * ys;
+                    double zs2 = zs * zs;
+                    double xsm1_2 = (xs - 1) * (xs - 1);
+                    double ysm1_2 = (ys - 1) * (ys - 1);
+                    double zsm1_2 = (zs - 1) * (zs - 1);
+                    double xs3 = xs * xs * xs;
+                    double ys3 = ys * ys * ys;
+                    double zs3 = zs * zs * zs;
+                    double xsm1_3 = (xs - 1) * (xs - 1) * (xs - 1);
+                    double ysm1_3 = (ys - 1) * (ys - 1) * (ys - 1);
+                    double zsm1_3 = (zs - 1) * (zs - 1) * (zs - 1);
+                    double xs4 = xs * xs * xs * xs;
+                    double ys4 = ys * ys * ys * ys;
+                    double zs4 = zs * zs * zs * zs;
+                    double xsm1_4 = (xs - 1) * (xs - 1) * (xs - 1) * (xs - 1);
+                    double ysm1_4 = (ys - 1) * (ys - 1) * (ys - 1) * (ys - 1);
+                    double zsm1_4 = (zs - 1) * (zs - 1) * (zs - 1) * (zs - 1);
+                    v[i_v][j_v][k_v] = 0;
+                    solution[i_s][j_s][k_s] = 1000000 * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) *
+                                              (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) *
+                                              (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1));
+                    f[i_f][j_f][k_f] =
+                        -1000000 *
+                        (12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_2 + 12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_2 * zsm1_4 +
+                         12 * xs4 * ys4 * zs4 * xsm1_2 * ysm1_4 * zsm1_4 + 32 * xs4 * ys4 * zs3 * xsm1_4 * ysm1_4 * zsm1_3 +
+                         12 * xs4 * ys4 * zs2 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs4 * ys3 * zs4 * xsm1_4 * ysm1_3 * zsm1_4 +
+                         12 * xs4 * ys2 * zs4 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs3 * ys4 * zs4 * xsm1_3 * ysm1_4 * zsm1_4 +
+                         12 * xs2 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_4);
+                }
+    }
+    else
+    {
+        double h = 1.0 / ((double)v.getM() + 1);
+        for (int i = v.getGhostsM(), i_v = v.getGhostsM(), i_f = f.getGhostsM(), i_s = solution.getGhostsM(); i_v < v.getM() + v.getGhostsM(); i++, i_v++, i_f++, i_s++)
+            for (int j = v.getGhostsM(), j_v = v.getGhostsN(), j_f = f.getGhostsN(), j_s = solution.getGhostsN(); j_v < v.getN() + v.getGhostsN(); j++, j_v++, j_f++, j_s++)
+                for (int k = v.getGhostsM(), k_v = v.getGhostsO(), k_f = f.getGhostsO(), k_s = solution.getGhostsO(); k_v < v.getO() + v.getGhostsO(); k++, k_v++, k_f++, k_s++)
+                {
+                    double zs = i * h;
+                    double ys = j * h;
+                    double xs = k * h;
+                    double xs2 = xs * xs;
+                    double ys2 = ys * ys;
+                    double zs2 = zs * zs;
+                    double xsm1_2 = (xs - 1) * (xs - 1);
+                    double ysm1_2 = (ys - 1) * (ys - 1);
+                    double zsm1_2 = (zs - 1) * (zs - 1);
+                    double xs3 = xs * xs * xs;
+                    double ys3 = ys * ys * ys;
+                    double zs3 = zs * zs * zs;
+                    double xsm1_3 = (xs - 1) * (xs - 1) * (xs - 1);
+                    double ysm1_3 = (ys - 1) * (ys - 1) * (ys - 1);
+                    double zsm1_3 = (zs - 1) * (zs - 1) * (zs - 1);
+                    double xs4 = xs * xs * xs * xs;
+                    double ys4 = ys * ys * ys * ys;
+                    double zs4 = zs * zs * zs * zs;
+                    double xsm1_4 = (xs - 1) * (xs - 1) * (xs - 1) * (xs - 1);
+                    double ysm1_4 = (ys - 1) * (ys - 1) * (ys - 1) * (ys - 1);
+                    double zsm1_4 = (zs - 1) * (zs - 1) * (zs - 1) * (zs - 1);
+                    v[i_v][j_v][k_v] = 0;
+                    solution[i_s][j_s][k_s] = 1000000 * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) * (xs * (xs - 1)) *
+                                              (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) * (ys * (ys - 1)) *
+                                              (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1)) * (zs * (zs - 1));
+                    f[i_f][j_f][k_f] =
+                        -1000000 *
+                        (12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_2 + 12 * xs4 * ys4 * zs4 * xsm1_4 * ysm1_2 * zsm1_4 +
+                         12 * xs4 * ys4 * zs4 * xsm1_2 * ysm1_4 * zsm1_4 + 32 * xs4 * ys4 * zs3 * xsm1_4 * ysm1_4 * zsm1_3 +
+                         12 * xs4 * ys4 * zs2 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs4 * ys3 * zs4 * xsm1_4 * ysm1_3 * zsm1_4 +
+                         12 * xs4 * ys2 * zs4 * xsm1_4 * ysm1_4 * zsm1_4 + 32 * xs3 * ys4 * zs4 * xsm1_3 * ysm1_4 * zsm1_4 +
+                         12 * xs2 * ys4 * zs4 * xsm1_4 * ysm1_4 * zsm1_4);
+                }
+    }
 }
 
 void mgcl_test::fill7pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCenter)

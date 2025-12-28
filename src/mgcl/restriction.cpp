@@ -28,9 +28,8 @@ namespace mgcl
         int n = fine.n >> 1;
         int o = fine.o >> 1;
 
-        if (fine.problem->isPeriodic())
-            MultigridEngine::updateGhostsSeq(fine_vals, fine.getMpiDataPtr(), fine.problem->isPeriodic(),
-                                             fine.isCalculatedLocally());
+        MultigridEngine::updateGhostsSeq(fine_vals, fine.getMpiDataPtr(), fine.problem->isPeriodic(),
+                                         fine.isCalculatedLocally());
 
         int ioff = 1;
         for (int i = ghosts; i < m + ghosts; i++, ioff++)
@@ -72,9 +71,8 @@ namespace mgcl
             }
         }
 
-        if (coarse.problem->isPeriodic())
-            MultigridEngine::updateGhostsSeq(coarse_vals, coarse.getMpiDataPtr(), coarse.problem->isPeriodic(),
-                                             coarse.isCalculatedLocally());
+        MultigridEngine::updateGhostsSeq(coarse_vals, coarse.getMpiDataPtr(), coarse.problem->isPeriodic(),
+                                         coarse.isCalculatedLocally());
     }
 
     void MultigridEngine::restrict(Level& fine, Level& coarse, CuboidGpu& d_fine_values, CuboidGpu& d_coarse_values)
@@ -131,6 +129,7 @@ namespace mgcl
         mgclCheckError(err, "Updating fine ghosts");
         err = clEnqueueNDRangeKernel(problem->openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing restriction kernel");
+        std::cout << "coarse.isCalculatedLocally()" << coarse.isCalculatedLocally() << std::endl;
         err = MultigridEngine::updateGhosts(*problem, d_coarse_values, coarse.getMpiDataPtr(),
                                             coarse.isCalculatedLocally());
         mgclCheckError(err, "Updating coarse ghosts");
@@ -161,10 +160,7 @@ namespace mgcl
         auto fraw = args.fine.getData();
         auto bsraw = args.rbs.getData();
 
-        if (args.periodic)
-        {
-            args.fine.updateGhosts(args.mpiDataFine, args.updateFineGhostsLocally);
-        }
+        args.fine.updateGhosts(args.mpiDataFine, args.updateFineGhostsLocally, args.periodic);
 
         int ioff = 1;
         for (int i = ghosts; i < m + ghosts; i++, ioff++)
@@ -223,10 +219,7 @@ namespace mgcl
             }
         }
 
-        if (args.periodic)
-        {
-            args.coarse.updateGhosts(args.mpiDataCoarse, args.updateCoarseGhostsLocally);
-        }
+        args.coarse.updateGhosts(args.mpiDataCoarse, args.updateCoarseGhostsLocally, args.periodic);
     }
 
     void MultigridEngine::restrictBlockstencil(args::RestrictionBSOclArgs& args)
@@ -290,18 +283,12 @@ namespace mgcl
 
         cl_event ev;
 
-        if (args.periodic)
-        {
-            args.fine.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiDataFine, args.updateFineGhostsLocally, args.conf, args.pd);
-        }
+        args.fine.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiDataFine, args.updateFineGhostsLocally, args.periodic, args.conf, args.pd);
 
         err = clEnqueueNDRangeKernel(args.queue, kernel, 3, NULL, global, local, 0, NULL, &ev);
         mgclCheckError(err, "Enqueueing restriction kernel");
 
-        if (args.periodic)
-        {
-            args.coarse.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiDataCoarse, args.updateCoarseGhostsLocally, args.conf, args.pd);
-        }
+        args.coarse.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiDataCoarse, args.updateCoarseGhostsLocally, args.periodic, args.conf, args.pd);
 
         if (args.pd)
         {
