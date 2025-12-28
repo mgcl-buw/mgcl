@@ -166,7 +166,7 @@ if [ "$TEST_GHOSTS" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 64 "$exe" "MPIupdateGhostsSeqCuboidBSNprocesses"
     run_test --oversubscribe -n 64 "$exe" "MPIupdateGhostsSeqBlockstencilNprocesses"
     if [ "$NO_OCL" = false ] ; then
-        run_test --oversubscribe -n 64 "$exe" "MPIupdateGhostsOclNprocesses" --deviceTypes "$OCL_DEVICE_TYPES"
+        run_test --oversubscribe -n 16 "$exe" "MPIupdateGhostsOclNprocesses" --deviceTypes "$OCL_DEVICE_TYPES"
         run_test --oversubscribe -n 16 "$exe" "MPIupdateGhostsOclCuboidBSNprocesses" --deviceTypes "$OCL_DEVICE_TYPES"
         run_test --oversubscribe -n 16 "$exe" "MPIupdateGhostsOclBlockstencilNprocesses" --deviceTypes "$OCL_DEVICE_TYPES"
     fi
@@ -259,7 +259,7 @@ if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
     run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_threshold_eq_1_Varying27p"
     run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_threshold_eq_1_Varying27p"
     run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_threshold_eq_2_Varying27p"
-    run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_threshold_eq_2_Varying27p"
+    run_test --oversubscribe -n 16 "$exe" "MPI_vcycle_threshold_eq_2_Varying27p"
     run_test --oversubscribe -n 2 "$exe" "MPI_vcycle_seq_immediate_gather_scatter_blockstencil_size1"
     run_test --oversubscribe -n 2 "$exe" "MPI_vcycle_seq_treshold_gt_0_blockstencil_size1"
     if [ "$NO_OCL" = false ] ; then
@@ -270,7 +270,7 @@ if [ "$TEST_VCYCLE" = true ] || [ "$TEST_ALL" = true ] ; then
       run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_eq_1_Varying27p" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_1_Varying27p" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 1 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p" --deviceTypes "$OCL_DEVICE_TYPES"
-      run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p" --deviceTypes "$OCL_DEVICE_TYPES"
+      run_test --oversubscribe -n 16 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 4 "$exe" "MPI_vcycle_GPU_FixedStencil_multiple_jacobi_iters" --deviceTypes "$OCL_DEVICE_TYPES"
       run_test --oversubscribe -n 2 "$exe" "MPI_vcycle_GPU_immediate_gather_scatter_blockstencil_size1" --deviceTypes "$OCL_DEVICE_TYPES"

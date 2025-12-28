@@ -1603,14 +1603,6 @@ namespace mgcl
         err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
                                             level.isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts of r");
-        problem.finish();
-
-        // level.getDF().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "fOcl.txt");
-        // level.getDVIn().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "vOcl.txt");
-        // level.getDR().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "rOcl.txt");
-        // if (level.getMpiDataPtr())
-        //     MPI_Barrier(level.getMpiDataPtr()->comm);
-        // exit(0);
 
         // calculate residual's 2-norm. Square elements on device and sum up on host
         if (return_residual)

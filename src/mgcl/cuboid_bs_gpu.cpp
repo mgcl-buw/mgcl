@@ -721,6 +721,9 @@ namespace mgcl
                 std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend->size()) +
                 " (send) and " + std::to_string(hPlanesBufRecv->size()) + " (recv)";
 
+        std::fill(hPlanesBufSend->begin(), hPlanesBufSend->end(), 0);
+        std::fill(hPlanesBufRecv->begin(), hPlanesBufRecv->end(), 0);
+
         // Extract border planes from the buffer
         extractBorderPlanes(commands, program,
                             dPlanesBuf, hPlanesBufSend,

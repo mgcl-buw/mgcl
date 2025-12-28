@@ -241,6 +241,9 @@ namespace mgcl
                 std::to_string(ressize) + ", but is " + std::to_string(sbuf.size()) +
                 " (send) and " + std::to_string(rbuf.size()) + " (recv)";
 
+        std::fill(sbuf.begin(), sbuf.end(), 0.0);
+        std::fill(rbuf.begin(), rbuf.end(), 0.0);
+
         // Extract border planes from the buffer
         s.extractBorderPlanes(commands, program,
                               d_planes_buf, sbuf,

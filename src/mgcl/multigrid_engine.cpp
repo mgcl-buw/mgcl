@@ -53,66 +53,8 @@ namespace mgcl
                     level.stencilFactor, level.stencilValues.get(), level.fixedStencil.get(), false, problem.isPeriodic(),
                     level.isCalculatedLocally(), 0, 0, 0, level.getMpiDataPtr());
 
-        // if (level.num == 2)
-        // {
-        //     if (!level.getMpiDataPtr() || level.getMpiDataPtr()->mpiSize() == 1)
-        //     {
-        //         // level.getF().sliceIncGhosts(0, 9, 0, 9, 0, 17)->dumpToFile("fglob0Seq.txt");
-        //         // level.getF().sliceIncGhosts(0, 9, 8, 17, 0, 17)->dumpToFile("fglob1Seq.txt");
-        //         // level.getF().sliceIncGhosts(8, 17, 0, 9, 0, 17)->dumpToFile("fglob2Seq.txt");
-        //         // level.getF().sliceIncGhosts(8, 17, 8, 17, 0, 17)->dumpToFile("fglob3Seq.txt");
-        //         // level.getR().sliceIncGhosts(0, 9, 0, 9, 0, 17)->dumpToFile("rglob0Seq.txt");
-        //         // level.getR().sliceIncGhosts(0, 9, 8, 17, 0, 17)->dumpToFile("rglob1Seq.txt");
-        //         // level.getR().sliceIncGhosts(8, 17, 0, 9, 0, 17)->dumpToFile("rglob2Seq.txt");
-        //         // level.getR().sliceIncGhosts(8, 17, 8, 17, 0, 17)->dumpToFile("rglob3Seq.txt");
-        //         // level.getV().sliceIncGhosts(0, 9, 0, 9, 0, 17)->dumpToFile("vglob0Seq.txt");
-        //         // level.getV().sliceIncGhosts(0, 9, 8, 17, 0, 17)->dumpToFile("vglob1Seq.txt");
-        //         // level.getV().sliceIncGhosts(8, 17, 0, 9, 0, 17)->dumpToFile("vglob2Seq.txt");
-        //         // level.getV().sliceIncGhosts(8, 17, 8, 17, 0, 17)->dumpToFile("vglob3Seq.txt");
-        //         // level.getF().sliceIncGhosts(0, 5, 0, 5, 0, 9)->dumpToFile("fglob0Seq.txt");
-        //         // level.getF().sliceIncGhosts(0, 5, 4, 9, 0, 9)->dumpToFile("fglob1Seq.txt");
-        //         // level.getF().sliceIncGhosts(4, 9, 0, 5, 0, 9)->dumpToFile("fglob2Seq.txt");
-        //         // level.getF().sliceIncGhosts(4, 9, 4, 9, 0, 9)->dumpToFile("fglob3Seq.txt");
-        //         // level.getR().sliceIncGhosts(0, 5, 0, 5, 0, 9)->dumpToFile("rglob0Seq.txt");
-        //         // level.getR().sliceIncGhosts(0, 5, 4, 9, 0, 9)->dumpToFile("rglob1Seq.txt");
-        //         // level.getR().sliceIncGhosts(4, 9, 0, 5, 0, 9)->dumpToFile("rglob2Seq.txt");
-        //         // level.getR().sliceIncGhosts(4, 9, 4, 9, 0, 9)->dumpToFile("rglob3Seq.txt");
-        //         // level.getV().sliceIncGhosts(0, 5, 0, 5, 0, 9)->dumpToFile("vglob0Seq.txt");
-        //         // level.getV().sliceIncGhosts(0, 5, 4, 9, 0, 9)->dumpToFile("vglob1Seq.txt");
-        //         // level.getV().sliceIncGhosts(4, 9, 0, 5, 0, 9)->dumpToFile("vglob2Seq.txt");
-        //         // level.getV().sliceIncGhosts(4, 9, 4, 9, 0, 9)->dumpToFile("vglob3Seq.txt");
-        //         level.getF().dumpToFile("fglob0Seq.txt");
-        //         level.getV().dumpToFile("vglob0Seq.txt");
-        //         level.getR().dumpToFile("rglob0Seq.txt");
-        //         level.getStencilValues()->dumpToFile("svglob0Seq.txt");
-        //     }
-        //     if (level.getMpiDataPtr() && level.getMpiDataPtr()->mpiSize() == 4)
-        //     {
-        //         std::cout << "level m,n,o: " << level.m << "," << level.n << "," << level.o << std::endl;
-        //         level.getF().dumpToFile(std::to_string(level.getMpiDataPtr() ? level.getMpiDataPtr()->rank : 0) + "fSeq.txt");
-        //         level.getV().dumpToFile(std::to_string(level.getMpiDataPtr() ? level.getMpiDataPtr()->rank : 0) + "vSeq.txt");
-        //         level.getR().dumpToFile(std::to_string(level.getMpiDataPtr() ? level.getMpiDataPtr()->rank : 0) + "rSeq.txt");
-        //         level.getStencilValues()->dumpToFile(std::to_string(level.getMpiDataPtr() ? level.getMpiDataPtr()->rank : 0) + "svSeq.txt");
-        //     }
-        //     if (level.getMpiDataPtr() && !level.isCalculatedLocally())
-        //         MPI_Barrier(level.getMpiDataPtr()->comm);
-        //     exit(0);
-        // }
-
-        // level.getV().dumpToFile("v_" + std::to_string(level.getNum()) + ".txt");
-        // level.getR().dumpToFile("r_" + std::to_string(level.getNum()) + ".txt");
-
         // restrict residual as right hand side on coarser grid
-        // TODO do not update ghosts of coarse grid before gather (size too small)
         MultigridEngine::restrictSeq(level, levelAbove, level.getR(), levelAbove.getF());
-
-        // levelAbove.getF().dumpToFile(std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "fSeq.txt");
-        // level.getR().dumpToFile(std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "rSeq.txt");
-        // if (level.getMpiDataPtr() && !level.isCalculatedLocally())
-        //     MPI_Barrier(level.getMpiDataPtr()->comm);
-        // exit(0);
-
-        // levelAbove.getF().dumpToFile("f_" + std::to_string(levelAbove.getNum()) + ".txt");
 
         // If MPI is in use but minGridPoints is reached, gather rhs data to process 0 and perform calculations
         // locally only, until we're reaching the threshold level moving downwards again.
@@ -125,47 +67,6 @@ namespace mgcl
                 MultigridEngine::updateGhostsSeq(levelAbove.getF(), levelAbove.getMpiDataPtr(), problem.isPeriodic(),
                                                  levelAbove.isCalculatedLocally());
         }
-
-        // if (level.num == 1)
-        // {
-        //     if (!level.getMpiDataPtr() || level.getMpiDataPtr()->mpiSize() == 1)
-        //     {
-        //         // level.getF().sliceIncGhosts(0, 9, 0, 9, 0, 17)->dumpToFile("fglob0Seq.txt");
-        //         // level.getF().sliceIncGhosts(0, 9, 8, 17, 0, 17)->dumpToFile("fglob1Seq.txt");
-        //         // level.getF().sliceIncGhosts(8, 17, 0, 9, 0, 17)->dumpToFile("fglob2Seq.txt");
-        //         // level.getF().sliceIncGhosts(8, 17, 8, 17, 0, 17)->dumpToFile("fglob3Seq.txt");
-        //         // level.getR().sliceIncGhosts(0, 9, 0, 9, 0, 17)->dumpToFile("rglob0Seq.txt");
-        //         // level.getR().sliceIncGhosts(0, 9, 8, 17, 0, 17)->dumpToFile("rglob1Seq.txt");
-        //         // level.getR().sliceIncGhosts(8, 17, 0, 9, 0, 17)->dumpToFile("rglob2Seq.txt");
-        //         // level.getR().sliceIncGhosts(8, 17, 8, 17, 0, 17)->dumpToFile("rglob3Seq.txt");
-        //         // level.getV().sliceIncGhosts(0, 9, 0, 9, 0, 17)->dumpToFile("vglob0Seq.txt");
-        //         // level.getV().sliceIncGhosts(0, 9, 8, 17, 0, 17)->dumpToFile("vglob1Seq.txt");
-        //         // level.getV().sliceIncGhosts(8, 17, 0, 9, 0, 17)->dumpToFile("vglob2Seq.txt");
-        //         // level.getV().sliceIncGhosts(8, 17, 8, 17, 0, 17)->dumpToFile("vglob3Seq.txt");
-        //         // level.getF().sliceIncGhosts(0, 5, 0, 5, 0, 9)->dumpToFile("fglob0Seq.txt");
-        //         // level.getF().sliceIncGhosts(0, 5, 4, 9, 0, 9)->dumpToFile("fglob1Seq.txt");
-        //         // level.getF().sliceIncGhosts(4, 9, 0, 5, 0, 9)->dumpToFile("fglob2Seq.txt");
-        //         // level.getF().sliceIncGhosts(4, 9, 4, 9, 0, 9)->dumpToFile("fglob3Seq.txt");
-        //         // level.getR().sliceIncGhosts(0, 5, 0, 5, 0, 9)->dumpToFile("rglob0Seq.txt");
-        //         // level.getR().sliceIncGhosts(0, 5, 4, 9, 0, 9)->dumpToFile("rglob1Seq.txt");
-        //         // level.getR().sliceIncGhosts(4, 9, 0, 5, 0, 9)->dumpToFile("rglob2Seq.txt");
-        //         // level.getR().sliceIncGhosts(4, 9, 4, 9, 0, 9)->dumpToFile("rglob3Seq.txt");
-        //         // level.getV().sliceIncGhosts(0, 5, 0, 5, 0, 9)->dumpToFile("vglob0Seq.txt");
-        //         // level.getV().sliceIncGhosts(0, 5, 4, 9, 0, 9)->dumpToFile("vglob1Seq.txt");
-        //         // level.getV().sliceIncGhosts(4, 9, 0, 5, 0, 9)->dumpToFile("vglob2Seq.txt");
-        //         // level.getV().sliceIncGhosts(4, 9, 4, 9, 0, 9)->dumpToFile("vglob3Seq.txt");
-        //         levelAbove.getF().dumpToFile("fglob0Seq.txt");
-        //     }
-        //     if (level.getMpiDataPtr() && level.getMpiDataPtr()->mpiSize() == 4)
-        //     {
-        //         levelAbove.getF().dumpToFile(std::to_string(levelAbove.getMpiDataPtr() ? levelAbove.getMpiDataPtr()->rank : 0) + "fSeq.txt");
-        //         // level.getV().dumpToFile(std::to_string(level.getMpiDataPtr() ? level.getMpiDataPtr()->rank : 0) + "vSeq.txt");
-        //         // level.getR().dumpToFile(std::to_string(level.getMpiDataPtr() ? level.getMpiDataPtr()->rank : 0) + "rSeq.txt");
-        //     }
-        //     if (level.getMpiDataPtr() && !level.isCalculatedLocally())
-        //         MPI_Barrier(level.getMpiDataPtr()->comm);
-        //     exit(0);
-        // }
 
         // TODO update ghosts of levelABove.F here when using gh > 1
 
@@ -391,16 +292,6 @@ namespace mgcl
         residual(problem, level, false);
         // printf("res on level.getNum() %d, upwards: %e\n", level.getNum(), res);
 
-        // if (level.num == 1)
-        // {
-        //     level.getDF().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "fOcl.txt");
-        //     level.getDVIn().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "vOcl.txt");
-        //     level.getDR().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "rOcl.txt");
-        //     if (level.getMpiDataPtr() && !level.isCalculatedLocally())
-        //         MPI_Barrier(level.getMpiDataPtr()->comm);
-        //     exit(0);
-        // }
-
         // level.getDF().dumpToFile(problem.getCommands(), "dfsc_" + std::to_string(level.getNum()) + ".txt");
 
         // restrict to coarser grid
@@ -415,16 +306,6 @@ namespace mgcl
             restrict(level, levelAbove, level.getDR(), tmp_df);
             tmp_df.read(problem.getCommands(), levelAbove.getFPtr().get(), true);
         }
-
-        // levelAbove.getDF().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "fOcl.txt");
-        // level.getDR().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + "rOcl.txt");
-        // if (level.getMpiDataPtr() && !level.isCalculatedLocally())
-        //     MPI_Barrier(level.getMpiDataPtr()->comm);
-        // exit(0);
-
-        // levelAbove.getDF().dumpToFile(problem.getCommands(), "dfsc_" + std::to_string(levelAbove.getNum()) + ".txt");
-        // level.getDVIn().dumpToFile(problem.getCommands(), "dvsc_" + std::to_string(level.getNum()) + ".txt");
-        // level.getDR().dumpToFile(problem.getCommands(), "drsc_" + std::to_string(level.getNum()) + ".txt");
 
         // If MPI is in use but minGridPoints is reached, gather rhs data to process 0 and perform calculations
         // locally only, until we're reaching the threshold level moving downwards again.

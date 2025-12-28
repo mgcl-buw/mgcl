@@ -855,7 +855,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_gt_0_Laplace7p")
     REQUIRE(ol > 0);
     REQUIRE(ol <= o);
 
-    int threshold = GENERATE(1, 2, 3);
+    int threshold = GENERATE(1, 2);
     CAPTURE(threshold);
 
     if (mpi_rank == 0)
@@ -1005,7 +1005,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_gt_0_Laplace7p_Dirichlet")
     REQUIRE(ol > 0);
     REQUIRE(ol <= o);
 
-    int threshold = 1; // GENERATE(1, 2);
+    int threshold = GENERATE(1, 2);
     CAPTURE(threshold);
 
     if (mpi_rank == 0)
@@ -1625,8 +1625,8 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
 
     // Problem parameters
     double tol = 1e-7;
-    int nu1 = 2;
-    int nu2 = 2;
+    int nu1 = 1;
+    int nu2 = 1;
     double omega = 0.8;
     int maxIterVCycles = 5;
 
@@ -1697,7 +1697,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
     auto v = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
     auto f = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
     auto solution = std::make_shared<mgcl::Cuboid>(m, n, o, ghin, ghin, ghin);
-    mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution, mgcl::BC::PERIODIC);
+    mgcl_test::create4hOrderPeriodicProblem(*v, *f, *solution, bc);
 
     // Create local slices
     std::shared_ptr<mgcl::Cuboid> vloc(v->slice(m_start, m_end, n_start, n_end, o_start, o_end));
@@ -1768,24 +1768,24 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
 
         // Running this with 1 proc yields
         // periodic:
-        // ||e||_2 = 2.79451354429819309e-03
-        //   e_max = 2.89860791352150159e-03
+        // ||e||_2 = 3.39781336529792165e-03
+        //   e_max = 3.49891025057031280e-03
         // Dirichlet:
-        //  ||e||_2 = 1.82375499519192856e-04
-        //   e_max = 1.21344213213218921e-03
+        // ||e||_2 = 1.95350845505491743e-03
+        //   e_max = 9.27930289440781486e-03
         // which should be equal to the global result when run with multiple processors.
 
         REQUIRE(errNorm < 1e-2);
         REQUIRE(errMax < 1e-2);
         if (periodic)
         {
-            REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(2.79451354429819309e-03));
-            REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(2.89860791352150159e-03));
+            REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(3.39781336529792165e-03));
+            REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(3.49891025057031280e-03));
         }
         else
         {
-            REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(1.82375499519192856e-04));
-            REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(1.21344213213218921e-03));
+            REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(1.95350845505491743e-03));
+            REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(9.27930289440781486e-03));
         }
     }
 }

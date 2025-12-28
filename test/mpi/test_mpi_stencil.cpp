@@ -388,6 +388,7 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     auto pptr = std::make_shared<mgcl::Problem>(ml, nl, ol, f, v, m, n, o);
     auto& p = *pptr;
     p.setGhosts(gh);
+    p.setGhostsIn(gh);
     p.setMpiComm(mpi_comm);
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
