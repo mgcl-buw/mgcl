@@ -735,7 +735,7 @@ namespace mgcl
                                            *hPlanesBufSend, *hPlanesBufRecv, *mpiData);
 
         // Paste planes back into the buffer.
-        dPlanesBuf->write(commands, *hPlanesBufRecv, false, ressize);
+        dPlanesBuf->write(commands, *hPlanesBufRecv, true, ressize);
         pasteGhostsFromBorderPlanes(context, commands, program,
                                     dPlanesBuf, nullptr,
                                     conf, pd);

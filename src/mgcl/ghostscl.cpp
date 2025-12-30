@@ -488,8 +488,8 @@ namespace mgcl
                                    d_buf.getGhostsM(), d_buf.getGhostsN(), d_buf.getGhostsO(), 1,
                                    sbuf, rbuf, mpiData);
 
-        // Paste planes back into the buffer.
-        dPlanesBuf->write(p.getCommands(), rbuf, false, ressize, p.getProfilingData());
+        // Paste planes back into the buffer. Blocking write to avoid race condition!!!
+        dPlanesBuf->write(p.getCommands(), rbuf, true, ressize, p.getProfilingData());
         d_buf.pasteGhostsFromBorderPlanes(p.getContext(), p.getCommands(), p.getProgram(),
                                           dPlanesBuf, nullptr,
                                           &p.getKernelConfig(), p.getProfilingData());

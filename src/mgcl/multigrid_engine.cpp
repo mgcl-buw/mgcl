@@ -53,6 +53,10 @@ namespace mgcl
                     level.stencilFactor, level.stencilValues.get(), level.fixedStencil.get(), false, problem.isPeriodic(),
                     level.isCalculatedLocally(), 0, 0, 0, level.getMpiDataPtr());
 
+        // level.getF().dumpToFile(std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + std::to_string(level.num) + "fseq.txt");
+        // level.getV().dumpToFile(std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + std::to_string(level.num) + "vseq.txt");
+        // level.getR().dumpToFile(std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + std::to_string(level.num) + "rseq.txt");
+
         // restrict residual as right hand side on coarser grid
         MultigridEngine::restrictSeq(level, levelAbove, level.getR(), levelAbove.getF());
 
@@ -292,7 +296,20 @@ namespace mgcl
         residual(problem, level, false);
         // printf("res on level.getNum() %d, upwards: %e\n", level.getNum(), res);
 
+        // level.getDF().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + std::to_string(level.num) + "focl.txt");
+        // level.getDVIn().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + std::to_string(level.num) + "vocl.txt");
+        // level.getDR().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + std::to_string(level.num) + "rocl.txt");
+
         // level.getDF().dumpToFile(problem.getCommands(), "dfsc_" + std::to_string(level.getNum()) + ".txt");
+
+        // auto vtmp = level.getDVIn().read(problem.getCommands(), nullptr, true);
+        // for (int i = 0; i < vtmp->getGhostsM(); i++)
+        //     for (int j = 0; j < vtmp->getGhostsN(); j++)
+        //         for (int k = 0; k < vtmp->getGhostsO(); k++)
+        //         {
+        //             if ((*vtmp)[i][j][k] != 0.0)
+        //                 std::cout << (level.getMpiDataPtr() ? level.getMpiData().rank : 0) << ": v != 0 at lv " << level.getNum() << ", i,j,k: " << i << "," << j << "," << k << std::endl;
+        //         }
 
         // restrict to coarser grid
         if (levelAbove.getUseOpencl())
