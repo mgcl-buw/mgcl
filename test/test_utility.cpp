@@ -371,6 +371,65 @@ void mgcl_test::create4hOrderPeriodicProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, m
     }
 }
 
+void mgcl_test::createAnisotropicProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl::Cuboid& solution, mgcl::VaryingStencil& s, int mpi_coords[3])
+{
+    if (v.getM() != f.getM() || v.getN() != f.getN() || v.getO() != f.getO())
+        throw "Dimensions must match!";
+
+    if (v.getM() != solution.getM() || v.getN() != solution.getN() || v.getO() != solution.getO())
+        throw "Dimensions must match!";
+
+    const double PI = 3.1415926535897932384626433832795;
+    const double PI2 = PI * PI;
+
+    auto epsilon = [&](int i, int j, int k, double hm, double hn, double ho)
+    {
+        return 0.5 * (2 + sin(2 * PI * i * hm) * sin(2 * PI * j * hn) * sin(2 * PI * k * ho));
+    };
+
+    // local real grid size
+    int m = v.getM();
+    int n = v.getN();
+    int o = v.getO();
+    double hm = 1.0 / (double)(m + 1);
+    double hn = 1.0 / (double)(n + 1);
+    double ho = 1.0 / (double)(o + 1);
+
+    int mstart = mpi_coords[0] * m;
+    int nstart = mpi_coords[1] * n;
+    int ostart = mpi_coords[2] * o;
+
+    v.fill(0, false); // same for periodic and Dirichlet
+    for (int i = mstart, i_v = v.getGhostsM(), i_f = f.getGhostsM(), i_s = solution.getGhostsM(); i_v < v.getM(); i++, i_v++, i_f++, i_s++)
+        for (int j = nstart, j_v = v.getGhostsN(), j_f = f.getGhostsN(), j_s = solution.getGhostsN(); j_v < v.getN(); j++, j_v++, j_f++, j_s++)
+            for (int k = ostart, k_v = v.getGhostsO(), k_f = f.getGhostsO(), k_s = solution.getGhostsO(); k_v < v.getO(); k++, k_v++, k_f++, k_s++)
+            {
+                v[i_v][j_v][k_v] = 0;
+                solution[i_s][j_s][k_s] = sin(PI * i * hm) * sin(PI * j * hn) * sin(PI * k * ho);
+                double eps = epsilon(i, j, k, hm, hn, ho);
+                f[i_f][j_f][k_f] = PI2 * (eps + 2) * sin(PI * i * hm) * sin(PI * j * hn) * sin(PI * k * ho);
+            }
+
+    double factor = 1.0 / (hm * hm); // TODO use actual hs
+    // if (negativeCenter)
+    //     factor *= -1.0;
+
+    for (int i = s.getGhostsM(); i < s.getM() + s.getGhostsM(); i++)
+        for (int j = s.getGhostsN(); j < s.getN() + s.getGhostsN(); j++)
+            for (int k = s.getGhostsO(); k < s.getO() + s.getGhostsO(); k++)
+            {
+                s[0][1][1][i][j][k] = -factor; // front center center
+                s[2][1][1][i][j][k] = -factor; // back center center
+                s[1][0][1][i][j][k] = -factor; // center top center
+                s[1][2][1][i][j][k] = -factor; // center bottom center
+
+                double eps = epsilon(i + mstart, j + nstart, k + ostart, hm, hn, ho);
+                s[1][1][0][i][j][k] = -factor * eps;           // center center left
+                s[1][1][2][i][j][k] = -factor * eps;           // center center right
+                s[1][1][1][i][j][k] = -factor * 2 * (2 + eps); // center center center
+            }
+}
+
 void mgcl_test::fill7pLaplace(mgcl::VaryingStencil& v, double h, bool negativeCenter)
 {
     double f = negativeCenter ? -1.0 : 1.0;
