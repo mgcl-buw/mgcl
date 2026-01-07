@@ -395,14 +395,14 @@ void mgcl_test::createAnisotropicProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl:
     double hn = 1.0 / (double)(n + 1);
     double ho = 1.0 / (double)(o + 1);
 
-    int mstart = mpi_coords[0] * m;
-    int nstart = mpi_coords[1] * n;
-    int ostart = mpi_coords[2] * o;
+    int mstart = mpi_coords[0] * m + 1;
+    int nstart = mpi_coords[1] * n + 1;
+    int ostart = mpi_coords[2] * o + 1;
 
     v.fill(0, false); // same for periodic and Dirichlet
-    for (int i = mstart, i_v = v.getGhostsM(), i_f = f.getGhostsM(), i_s = solution.getGhostsM(); i_v < v.getM(); i++, i_v++, i_f++, i_s++)
-        for (int j = nstart, j_v = v.getGhostsN(), j_f = f.getGhostsN(), j_s = solution.getGhostsN(); j_v < v.getN(); j++, j_v++, j_f++, j_s++)
-            for (int k = ostart, k_v = v.getGhostsO(), k_f = f.getGhostsO(), k_s = solution.getGhostsO(); k_v < v.getO(); k++, k_v++, k_f++, k_s++)
+    for (int i = mstart, i_v = v.getGhostsM(), i_f = f.getGhostsM(), i_s = solution.getGhostsM(); i_v < v.getM() + v.getGhostsM(); i++, i_v++, i_f++, i_s++)
+        for (int j = nstart, j_v = v.getGhostsN(), j_f = f.getGhostsN(), j_s = solution.getGhostsN(); j_v < v.getN() + v.getGhostsN(); j++, j_v++, j_f++, j_s++)
+            for (int k = ostart, k_v = v.getGhostsO(), k_f = f.getGhostsO(), k_s = solution.getGhostsO(); k_v < v.getO() + v.getGhostsO(); k++, k_v++, k_f++, k_s++)
             {
                 v[i_v][j_v][k_v] = 0;
                 solution[i_s][j_s][k_s] = sin(PI * i * hm) * sin(PI * j * hn) * sin(PI * k * ho);
@@ -424,9 +424,9 @@ void mgcl_test::createAnisotropicProblem(mgcl::Cuboid& v, mgcl::Cuboid& f, mgcl:
                 s[1][2][1][i][j][k] = -factor; // center bottom center
 
                 double eps = epsilon(i + mstart, j + nstart, k + ostart, hm, hn, ho);
-                s[1][1][0][i][j][k] = -factor * eps;           // center center left
-                s[1][1][2][i][j][k] = -factor * eps;           // center center right
-                s[1][1][1][i][j][k] = -factor * 2 * (2 + eps); // center center center
+                s[1][1][0][i][j][k] = -factor * eps;          // center center left
+                s[1][1][2][i][j][k] = -factor * eps;          // center center right
+                s[1][1][1][i][j][k] = factor * 2 * (2 + eps); // center center center
             }
 }
 

@@ -2971,8 +2971,8 @@ TEST_CASE("MPI_vcycle_threshold_eq_2_Varying27p_anisotropic")
 
     // Problem parameters
     double tol = 1e-7;
-    int nu1 = 1;
-    int nu2 = 1;
+    int nu1 = 5;
+    int nu2 = 5;
     double omega = 0.8;
     int maxIterVCycles = 5;
 
@@ -3124,14 +3124,14 @@ TEST_CASE("MPI_vcycle_threshold_eq_2_Varying27p_anisotropic")
             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
         // Running this with 1 proc yields
-        //   ||e||_2 = 3.46337920063311377e-01
-        //     e_max = 9.95968639538936329e-01
+        // ||e||_2 = 4.25988480989275466e-03
+        //   e_max = 1.97808733901179146e-02
         // which should be equal to the global result when run with multiple processors.
 
         // REQUIRE(errNorm < 1e-2);
         // REQUIRE(errMax < 1e-2);
-        REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(3.46337920063311377e-01));
-        REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(9.95968639538936329e-01));
+        REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(4.25988480989275466e-03));
+        REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(1.97808733901179146e-02));
     }
 }
 
@@ -3153,8 +3153,8 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_anisotropic")
 
     // Problem parameters
     double tol = 1e-7;
-    int nu1 = 1;
-    int nu2 = 1;
+    int nu1 = 5;
+    int nu2 = 5;
     double omega = 0.8;
     int maxIterVCycles = 5;
 
@@ -3306,14 +3306,14 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_anisotropic")
             << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
         // Running this with 1 proc yields
-        //   ||e||_2 = 3.46337920063311377e-01
-        //     e_max = 9.95968639538936329e-01
+        // ||e||_2 = 4.25988480989275466e-03
+        //   e_max = 1.97808733901179146e-02
         // which should be equal to the global result when run with multiple processors.
 
         // REQUIRE(errNorm < 1e-2);
         // REQUIRE(errMax < 1e-2);
-        REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(3.46337920063311377e-01));
-        REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(9.95968639538936329e-01));
+        REQUIRE_THAT(errNorm, Catch::Matchers::WithinRel(4.25988480989275466e-03));
+        REQUIRE_THAT(errMax, Catch::Matchers::WithinRel(1.97808733901179146e-02));
     }
 }
 
