@@ -3,6 +3,7 @@
 #include <catch2/generators/catch_generators.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
@@ -1041,4 +1042,58 @@ TEST_CASE("CuboidGpu::fill1dIndex")
     auto c_d_ret = c_d.read(p.getCommands(), nullptr, true);
 
     REQUIRE(c_h.isEqualAllCells(*c_d_ret, realCellsOnly));
+}
+
+TEST_CASE("CuboidGpu::l2norm")
+{
+    auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+    auto deviceName = GENERATE(mgcl_test::deviceNames(CLI_ARGS::deviceNames));
+    int m = 3;
+    int n = 5;
+    int o = 7;
+    int ghosts_m = 1;
+    int ghosts_n = 1;
+    int ghosts_o = 1;
+
+    // create dummy problem
+    auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+    mgcl::Problem p(1, 1, 1, f, v);
+    p.setUseOpencl(true);
+    p.setDeviceType(deviceType);
+    p.setDeviceName(deviceName);
+    p.setSilent(true);
+    p.init();
+
+    mgcl::Cuboid c_h(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+    mgcl::CuboidGpu c_d(p.getContext(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, c_h);
+
+    c_h.fill1dIndex(false);
+    c_d.fill1dIndex(p.getProgram(), p.getCommands(), true, false, &p.getKernelConfig(), p.getProfilingData());
+
+    double res_h = 0;
+    for (int i = 0; i < c_h.getM(); i++)
+        for (int j = 0; j < c_h.getN(); j++)
+            for (int k = 0; k < c_h.getO(); k++)
+            {
+                res_h += c_h[i + ghosts_m][j + ghosts_n][k + ghosts_o] * c_h[i + ghosts_m][j + ghosts_n][k + ghosts_o];
+            }
+    res_h = sqrt(res_h);
+
+    // creating a tmp buffer inside the function
+    {
+        double res_d = c_d.l2norm(p.getProgram(), p.getCommands(), nullptr, &p.getKernelConfig(), p.getProfilingData());
+        auto c_d_ret = c_d.read(p.getCommands(), nullptr, true);
+
+        REQUIRE(c_h.isEqualAllCells(*c_d_ret, true));
+    }
+
+    // Reusing a buffer
+    {
+        auto tmp = c_d.copyShallow();
+        double res_d = c_d.l2norm(p.getProgram(), p.getCommands(), tmp.get(), &p.getKernelConfig(), p.getProfilingData());
+        auto c_d_ret = c_d.read(p.getCommands(), nullptr, true);
+
+        REQUIRE(c_h.isEqualAllCells(*c_d_ret, true));
+    }
 }

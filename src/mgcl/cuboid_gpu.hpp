@@ -76,6 +76,10 @@ namespace mgcl
 
         void dumpToFile(cl_command_queue commands, const std::string& path, bool realCellsOnly = false) const;
 
+        double l2norm(cl_program program, cl_command_queue commands,
+                      CuboidGpu* tmpSquared,
+                      mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
+
         cl_mem getBuffer() const;
         cl_mem_flags getFlags() const { return flags; }
         int getM() const;

@@ -6,8 +6,15 @@
 #include "profiling_data.hpp"
 
 #include "mgcl.hpp"
+#include "util.hpp"
 
-#include <CL/cl.h>
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
+#include <CL/cl.h> // for cl_mem, _cl_mem, cl_command_queue, cl_c...
+#endif
+
+#include <cmath>
 #include <fstream>
 #include <iomanip>
 #include <memory>
@@ -742,6 +749,80 @@ namespace mgcl
 
         if (createdDTmp)
             delete d_tmp;
+    }
+
+    /**
+     * @brief Calculates and returns the L2-norm. If tmpSquared is null, temporary copy of this Cuboid for holding the
+     * squared values is created.
+     * @return double
+     */
+    double CuboidGpu::l2norm(cl_program program, cl_command_queue commands,
+                             CuboidGpu* tmpSquared,
+                             mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
+    {
+        int err;
+
+        if (ghosts_m != ghosts_n || ghosts_m != ghosts_o)
+            error("CuboidGpu::l2norm: Only for cuboids with equal ghost sizes for now");
+
+        // create tmp copy of this cuboid
+        std::unique_ptr<CuboidGpu> squared;
+        if (!tmpSquared)
+        {
+            squared = copyShallow();
+            tmpSquared = squared.get();
+        }
+        else
+        {
+            if (tmpSquared->getM() != m || tmpSquared->getN() != n || tmpSquared->getO() != o ||
+                tmpSquared->getGhostsM() != ghosts_m || tmpSquared->getGhostsN() != ghosts_n ||
+                tmpSquared->getGhostsO() != ghosts_o)
+                error("CuboidGpu::l2norm: tmpSquared CuboidGpu has wrong dimensions");
+        }
+        auto sqbuf = tmpSquared->getBuffer();
+
+        // Create the compute kernel from the program
+        const char* kernelName = "residual_squared";
+        cl_kernel kernel_square = clCreateKernel(program, kernelName, &err);
+        mgclCheckError(err, "Creating residual squared kernel");
+
+        int pos = 0;
+        err = clSetKernelArg(kernel_square, pos, sizeof(cl_mem), &buffer);
+        err |= clSetKernelArg(kernel_square, ++pos, sizeof(cl_mem), &sqbuf);
+        err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &ghosts_m);
+        mgclCheckError(err, "Setting residual squared kernel arguments");
+
+        size_t global = size;
+        size_t local_sq = 64;
+        if (conf)
+        {
+            const auto& c_sq = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, global);
+            local_sq = c_sq[0];
+        }
+
+        if (global % local_sq != 0)
+            global += local_sq - (global % local_sq);
+
+        cl_event ev;
+        err = clEnqueueNDRangeKernel(commands, kernel_square, 1, NULL, &global, &local_sq, 0, NULL, &ev);
+        mgclCheckError(err, "Enqueueing residual squared kernel");
+
+        if (pd)
+        {
+            pd->addMeasurement(commands, ev, kernelName,
+                               {global, 0, 0},
+                               {local_sq, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        // sum up squares
+        double res = sqrt(util::sum(*tmpSquared, program, commands, true, util::DEFAULT_REDUCTION_MAX_WG_SIZE, conf, pd));
+
+        clReleaseKernel(kernel_square);
+        return res;
     }
 
 } // namespace mgcl
