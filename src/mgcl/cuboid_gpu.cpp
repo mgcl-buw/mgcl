@@ -762,6 +762,12 @@ namespace mgcl
     {
         int err;
 
+        if (m == 1 || n == 1 || o == 1)
+        {
+            auto ret = read(commands, nullptr, true);
+            return (*ret)[ghosts_m][ghosts_n][ghosts_o];
+        }
+
         if (ghosts_m != ghosts_n || ghosts_m != ghosts_o)
             error("CuboidGpu::l2norm: Only for cuboids with equal ghost sizes for now");
 
