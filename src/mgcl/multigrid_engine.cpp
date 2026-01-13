@@ -16,6 +16,7 @@
 #include <CL/cl.h>
 #include <cassert>
 #include <cstddef> // for size_t, NULL
+#include <ios>
 #include <iostream>
 #include <memory> // for __shared_ptr_access, shared_ptr
 
@@ -296,9 +297,12 @@ namespace mgcl
         residual(problem, level, false);
         // printf("res on level.getNum() %d, upwards: %e\n", level.getNum(), res);
 
-        // level.getDF().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + std::to_string(level.num) + "focl.txt");
-        // level.getDVIn().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + std::to_string(level.num) + "vocl.txt");
-        // level.getDR().dumpToFile(problem.getCommands(), std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + std::to_string(level.num) + "rocl.txt");
+        // std::string suffix = ".i" + std::to_string(problem.elapsedIterations - 1) + ".l" + std::to_string(level.num) + "." + std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0);
+        // level.getDF().dumpToFile(problem.getCommands(), "focldown" + suffix, true);
+        // level.getDVIn().dumpToFile(problem.getCommands(), "vocldown" + suffix, true);
+        // level.getDR().dumpToFile(problem.getCommands(), "rocldown" + suffix, true);
+
+        // std::cout << "lv " << std::to_string(level.num) << "v0,0,0 up: " << (*level.getDVIn().read1d(problem.getCommands(), 1, nullptr, true))[0][0][0] << std::endl;
 
         // level.getDF().dumpToFile(problem.getCommands(), "dfsc_" + std::to_string(level.getNum()) + ".txt");
 
@@ -379,6 +383,10 @@ namespace mgcl
                     {
                         jacobi(problem, levelAbove, problem.nu1 + problem.nu2, false, problem.getJacobiIterationsPerKernel());
                     }
+                    // std::cout << "lv" << levelAbove.getNum() << " ||v||_2: " << std::scientific << levelAbove.getDVIn().l2norm(problem.getProgram(), problem.getCommands(), nullptr, &problem.getKernelConfig(), problem.getProfilingData()) << std::endl;
+                    // levelAbove.getDF().dumpToFile(problem.getCommands(), "foclbottom" + suffix, true);
+                    // levelAbove.getDVIn().dumpToFile(problem.getCommands(), "voclbottom" + suffix, true);
+                    // levelAbove.getDR().dumpToFile(problem.getCommands(), "roclbottom" + suffix, true);
                 }
                 else
                 {
@@ -429,6 +437,8 @@ namespace mgcl
         // correct error
         correctError(level);
 
+        // std::cout << "lv" << level.getNum() << " ||v||_2: " << std::scientific << level.getDVIn().l2norm(problem.getProgram(), problem.getCommands(), nullptr, &problem.getKernelConfig(), problem.getProfilingData()) << std::endl;
+
         // level.getDVIn().dumpToFile(problem.getCommands(), "dvsc_" + std::to_string(level.getNum()) + ".txt");
 
         // relax nu2 times
@@ -441,6 +451,12 @@ namespace mgcl
         {
             res = jacobi(problem, level, problem.nu2, !problem.ignoreTol, problem.getJacobiIterationsPerKernel());
         }
+
+        // level.getDF().dumpToFile(problem.getCommands(), "foclup" + suffix, true);
+        // level.getDVIn().dumpToFile(problem.getCommands(), "voclup" + suffix, true);
+        // level.getDR().dumpToFile(problem.getCommands(), "roclup" + suffix, true);
+
+        // std::cout << "lv " << std::to_string(level.num) << "v0,0,0 down: " << (*level.getDVIn().read1d(problem.getCommands(), 1, nullptr, true))[0][0][0] << std::endl;
 
         // calculate residual again for the norm TODO in jacobi
         // res = residual(problem, level, 1);
