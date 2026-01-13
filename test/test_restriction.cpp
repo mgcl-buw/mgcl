@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <memory>
 
 #include "../src/mgcl/cuboid.hpp"
 #include "../src/mgcl/level.hpp"
@@ -65,6 +66,120 @@ TEST_CASE("restriction")
 
         REQUIRE(c_fine_out->isEqual(*c_expected_fine));
         REQUIRE(c_coarse_out->isEqual(*c_expected_coarse));
+    }
+}
+
+TEST_CASE("restriction1gpDirichlet")
+{
+    int m = 2;
+    int n = 2;
+    int o = 2;
+    int mc = m / 2;
+    int nc = n / 2;
+    int oc = o / 2;
+    int ghosts_m = 1;
+    int ghosts_n = 1;
+    int ghosts_o = 1;
+    int mgh = m + 2 * ghosts_m;
+    int ngh = n + 2 * ghosts_n;
+    int ogh = o + 2 * ghosts_o;
+
+    auto c_fine = std::make_shared<mgcl::Cuboid>(m, n, o, ghosts_m, ghosts_n, ghosts_o);
+    auto c_coarse = std::make_shared<mgcl::Cuboid>(mc, nc, oc, ghosts_m, ghosts_n, ghosts_o);
+    c_fine->fill(0);
+
+    (*c_fine)[ghosts_m + 1][ghosts_n + 1][ghosts_o + 1] = 1; // self
+    // direct neighbors
+    (*c_fine)[ghosts_m + 1][ghosts_n + 1][ghosts_o + 1 - 1] = 1;
+    (*c_fine)[ghosts_m + 1][ghosts_n + 1][ghosts_o + 1 + 1] = 2;
+    (*c_fine)[ghosts_m + 1][ghosts_n + 1 - 1][ghosts_o + 1] = 3;
+    (*c_fine)[ghosts_m + 1][ghosts_n + 1 + 1][ghosts_o + 1] = 4;
+    (*c_fine)[ghosts_m + 1 - 1][ghosts_n + 1][ghosts_o + 1] = 5;
+    (*c_fine)[ghosts_m + 1 + 1][ghosts_n + 1][ghosts_o + 1] = 6;
+    // edge midpoints xy-plane
+    (*c_fine)[ghosts_m + 1 - 1][ghosts_n + 1 + 1][ghosts_o + 1] = 7;
+    (*c_fine)[ghosts_m + 1 - 1][ghosts_n + 1 - 1][ghosts_o + 1] = 8;
+    (*c_fine)[ghosts_m + 1 + 1][ghosts_n + 1 + 1][ghosts_o + 1] = 9;
+    (*c_fine)[ghosts_m + 1 + 1][ghosts_n + 1 - 1][ghosts_o + 1] = 10;
+    // edge midpoints xz-plane
+    (*c_fine)[ghosts_m + 1 - 1][ghosts_n + 1][ghosts_o + 1 + 1] = 11;
+    (*c_fine)[ghosts_m + 1 - 1][ghosts_n + 1][ghosts_o + 1 - 1] = 12;
+    (*c_fine)[ghosts_m + 1 + 1][ghosts_n + 1][ghosts_o + 1 + 1] = 13;
+    (*c_fine)[ghosts_m + 1 + 1][ghosts_n + 1][ghosts_o + 1 - 1] = 14;
+    // edge midpoints yz-plane
+    (*c_fine)[ghosts_m + 1][ghosts_n + 1 - 1][ghosts_o + 1 + 1] = 15;
+    (*c_fine)[ghosts_m + 1][ghosts_n + 1 - 1][ghosts_o + 1 - 1] = 16;
+    (*c_fine)[ghosts_m + 1][ghosts_n + 1 + 1][ghosts_o + 1 + 1] = 17;
+    (*c_fine)[ghosts_m + 1][ghosts_n + 1 + 1][ghosts_o + 1 - 1] = 18;
+    // corners
+    (*c_fine)[ghosts_m + 1 - 1][ghosts_n + 1 - 1][ghosts_o + 1 - 1] = 19;
+    (*c_fine)[ghosts_m + 1 - 1][ghosts_n + 1 - 1][ghosts_o + 1 + 1] = 20;
+    (*c_fine)[ghosts_m + 1 - 1][ghosts_n + 1 + 1][ghosts_o + 1 - 1] = 21;
+    (*c_fine)[ghosts_m + 1 - 1][ghosts_n + 1 + 1][ghosts_o + 1 + 1] = 22;
+    (*c_fine)[ghosts_m + 1 + 1][ghosts_n + 1 - 1][ghosts_o + 1 - 1] = 23;
+    (*c_fine)[ghosts_m + 1 + 1][ghosts_n + 1 - 1][ghosts_o + 1 + 1] = 24;
+    (*c_fine)[ghosts_m + 1 + 1][ghosts_n + 1 + 1][ghosts_o + 1 - 1] = 25;
+    (*c_fine)[ghosts_m + 1 + 1][ghosts_n + 1 + 1][ghosts_o + 1 + 1] = 26;
+    c_fine->dumpToFile("cfine", false);
+
+    // clang-format off
+    double expected = 0.125 * 1
+    + 0.0625 * 1
+    + 0.0625 * 2
+    + 0.0625 * 3
+    + 0.0625 * 4
+    + 0.0625 * 5
+    + 0.0625 * 6
+    + 0.03125 * 7
+    + 0.03125 * 8
+    + 0.03125 * 9
+    + 0.03125 * 10
+    + 0.03125 * 11
+    + 0.03125 * 12
+    + 0.03125 * 13
+    + 0.03125 * 14
+    + 0.03125 * 15
+    + 0.03125 * 16
+    + 0.03125 * 17
+    + 0.03125 * 18
+    + 0.015625 * 19
+    + 0.015625 * 20
+    + 0.015625 * 21
+    + 0.015625 * 22
+    + 0.015625 * 23
+    + 0.015625 * 24
+    + 0.015625 * 25
+    + 0.015625 * 26;
+    // clang-format on
+
+    auto p = std::make_shared<mgcl::Problem>(m, n, o);
+    p->setBc(mgcl::BC::DIRICHLET);
+    mgcl::Level lv_fine(p.get(), 0);
+    mgcl::Level lv_coarse(p.get(), 1);
+
+    SECTION("restrictSeq")
+    {
+        mgcl::MultigridEngine::restrictSeq(lv_fine, lv_coarse, *c_fine, *c_coarse);
+
+        REQUIRE((*c_coarse)[ghosts_m][ghosts_n][ghosts_o] == expected);
+    }
+
+    SECTION("restrict OpenCL")
+    {
+        auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
+
+        p->setDeviceType(deviceType);
+
+        mgcl_test::TestUtility tu(p);
+        mgcl::CuboidGpu d_c_fine(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_fine);
+        mgcl::CuboidGpu d_c_coarse(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, *c_coarse);
+
+        mgcl::MultigridEngine::restrict(lv_fine, lv_coarse, d_c_fine, d_c_coarse);
+        tu.finish();
+
+        auto c_coarse_out = d_c_coarse.read(tu.getCommands(), nullptr, true);
+
+        REQUIRE((*c_coarse_out)[ghosts_m][ghosts_n][ghosts_o] == expected);
     }
 }
 
