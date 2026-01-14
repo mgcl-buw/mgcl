@@ -1688,47 +1688,10 @@ namespace mgcl
         {
             if (problem.residual_norm == MGCL_L2)
             {
-                // calculate 2-Norm
                 auto& dRsquares = level.getDRsq();
                 dRsquares.fill(problem.getProgram(), problem.getCommands(), 0.0, false, &problem.getKernelConfig(), problem.getProfilingData()); // reset to zero
-
-                // Create the compute kernel from the program
-                const char* kernelName = "residual_squared";
-                cl_kernel kernel_square = clCreateKernel(problem.openCLHelper.getProgram(), kernelName, &err);
-                mgclCheckError(err, "Creating residual squared kernel");
-
-                pos = 0;
-                err = clSetKernelArg(kernel_square, pos, sizeof(cl_mem), &dR);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(cl_mem), &dRsquares);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &level.m);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &level.n);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &level.o);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &problem.ghosts);
-                mgclCheckError(err, "Setting residual squared kernel arguments");
-
-                size_t global = level.getM() * level.getN() * level.getO();
-                const auto& c_sq = conf::getWorkGroupSizeForKernelAndWiCount(problem.getKernelConfig(), kernelName, global);
-                size_t local_sq = c_sq[0];
-
-                if (global % local_sq != 0)
-                    global += local_sq - (global % local_sq);
-
-                cl_event ev;
-                err = clEnqueueNDRangeKernel(problem.getOpenCLHelper().getCommands(), kernel_square, 1, NULL, &global, &local_sq, 0, NULL, &ev);
-                mgclCheckError(err, "Enqueueing residual squared kernel");
-
-                if (problem.isProfilingEnabled())
-                {
-                    problem.getProfilingData()->addMeasurement(problem.getCommands(), ev, kernelName,
-                                                               {global, 0, 0},
-                                                               {local_sq, 1, 1});
-                }
-                mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
-
-                // sum up residual squares
-                res = sqrt(util::sum(dRsquares, problem.getProgram(), problem.getCommands(), true, util::DEFAULT_REDUCTION_MAX_WG_SIZE, &problem.getKernelConfig(), problem.getProfilingData()));
-
-                clReleaseKernel(kernel_square);
+                res = level.getDR().l2norm(problem.getProgram(), problem.getCommands(), &dRsquares,
+                                           &problem.getKernelConfig(), problem.getProfilingData());
             }
             else
             {

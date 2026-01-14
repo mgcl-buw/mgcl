@@ -780,10 +780,10 @@ namespace mgcl
         }
         else
         {
-            if (tmpSquared->getM() != m || tmpSquared->getN() != n || tmpSquared->getO() != o ||
-                tmpSquared->getGhostsM() != ghosts_m || tmpSquared->getGhostsN() != ghosts_n ||
-                tmpSquared->getGhostsO() != ghosts_o)
-                error("CuboidGpu::l2norm: tmpSquared CuboidGpu has wrong dimensions");
+            if (tmpSquared->getM() < m || tmpSquared->getN() < n || tmpSquared->getO() < o)
+                error("CuboidGpu::l2norm: tmpSquared CuboidGpu is too small: is " + std::to_string(tmpSquared->getM()) + "x" + std::to_string(tmpSquared->getN()) + "x" +
+                      std::to_string(tmpSquared->getO()) + ", but need at least " + std::to_string(m) + "x" + std::to_string(n) + "x" +
+                      std::to_string(o));
         }
         auto sqbuf = tmpSquared->getBuffer();
 
@@ -801,7 +801,7 @@ namespace mgcl
         err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &ghosts_m);
         mgclCheckError(err, "Setting residual squared kernel arguments");
 
-        size_t global = size;
+        size_t global = m * n * o;
         size_t local_sq = 64;
         if (conf)
         {

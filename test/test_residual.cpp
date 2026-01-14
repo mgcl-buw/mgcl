@@ -926,7 +926,7 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
         auto d_f_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, f_exp);
         auto d_v_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, v_exp);
         auto d_r_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, r_exp);
-        auto d_rsq_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_READ_ONLY, m, n, o, 0, 0, 0);
+        auto d_rsq_exp = std::make_shared<mgcl::CuboidGpu>(tu_exp.getContext(), CL_MEM_READ_ONLY, r_exp.getM(), r_exp.getN(), r_exp.getO(), 0, 0, 0);
 
         mgcl::Level level_exp(p_exp.get(), 0);
         level_exp.setDF(d_f_exp);
