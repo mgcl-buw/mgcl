@@ -754,10 +754,14 @@ namespace mgcl
     /**
      * @brief Calculates and returns the L2-norm. If tmpSquared is null, temporary copy of this Cuboid for holding the
      * squared values is created.
-     * @return double
+     * @param program OpenCL program
+     * @param commands OpenCL command queue
+     * @param tmpSquared temporary device buffer for holding the squared residual. Real size must be at least real size of this CuboidGpu
+     * @param mpi_comm MPI communicator. If set, the global L2-norm is calculated, else local L2-norm.
+     * @return double L2-norm
      */
     double CuboidGpu::l2norm(cl_program program, cl_command_queue commands,
-                             CuboidGpu* tmpSquared,
+                             CuboidGpu* tmpSquared, MPI_Comm mpi_comm,
                              mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
     {
         int err;
@@ -824,10 +828,16 @@ namespace mgcl
         }
         mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
-        // sum up squares
-        double res = sqrt(util::sum(*tmpSquared, program, commands, true, util::DEFAULT_REDUCTION_MAX_WG_SIZE, conf, pd));
+        mgclCheckError(clReleaseKernel(kernel_square), "clReleaseKernel");
 
-        clReleaseKernel(kernel_square);
+        // sum up squares
+        double sum = util::sum(*tmpSquared, program, commands, true, util::DEFAULT_REDUCTION_MAX_WG_SIZE, conf, pd);
+        if (mpi_comm)
+        {
+            MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_DOUBLE, MPI_SUM, mpi_comm);
+        }
+        double res = sqrt(sum);
+
         return res;
     }
 

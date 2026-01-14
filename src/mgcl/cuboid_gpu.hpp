@@ -3,6 +3,9 @@
 
 #include "buffer_gpu.hpp"
 #include "profiling_data.hpp"
+
+#include <mpi.h>
+
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
@@ -77,7 +80,7 @@ namespace mgcl
         void dumpToFile(cl_command_queue commands, const std::string& path, bool realCellsOnly = false) const;
 
         double l2norm(cl_program program, cl_command_queue commands,
-                      CuboidGpu* tmpSquared,
+                      CuboidGpu* tmpSquared, MPI_Comm mpi_comm,
                       mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
         cl_mem getBuffer() const;

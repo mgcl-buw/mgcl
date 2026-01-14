@@ -1082,7 +1082,7 @@ TEST_CASE("CuboidGpu::l2norm")
 
     // creating a tmp buffer inside the function
     {
-        double res_d = c_d.l2norm(p.getProgram(), p.getCommands(), nullptr, &p.getKernelConfig(), p.getProfilingData());
+        double res_d = c_d.l2norm(p.getProgram(), p.getCommands(), nullptr, nullptr, &p.getKernelConfig(), p.getProfilingData());
         auto c_d_ret = c_d.read(p.getCommands(), nullptr, true);
 
         REQUIRE(c_h.isEqualAllCells(*c_d_ret, true));
@@ -1091,7 +1091,7 @@ TEST_CASE("CuboidGpu::l2norm")
     // Reusing a buffer
     {
         auto tmp = c_d.copyShallow();
-        double res_d = c_d.l2norm(p.getProgram(), p.getCommands(), tmp.get(), &p.getKernelConfig(), p.getProfilingData());
+        double res_d = c_d.l2norm(p.getProgram(), p.getCommands(), tmp.get(), nullptr, &p.getKernelConfig(), p.getProfilingData());
         auto c_d_ret = c_d.read(p.getCommands(), nullptr, true);
 
         REQUIRE(c_h.isEqualAllCells(*c_d_ret, true));

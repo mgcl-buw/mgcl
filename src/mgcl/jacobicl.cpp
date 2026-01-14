@@ -1690,7 +1690,7 @@ namespace mgcl
             {
                 auto& dRsquares = level.getDRsq();
                 dRsquares.fill(problem.getProgram(), problem.getCommands(), 0.0, false, &problem.getKernelConfig(), problem.getProfilingData()); // reset to zero
-                res = level.getDR().l2norm(problem.getProgram(), problem.getCommands(), &dRsquares,
+                res = level.getDR().l2norm(problem.getProgram(), problem.getCommands(), &dRsquares, level.isCalculatedLocally() ? nullptr : problem.getMpiComm(),
                                            &problem.getKernelConfig(), problem.getProfilingData());
             }
             else
