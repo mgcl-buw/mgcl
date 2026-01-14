@@ -1,3 +1,4 @@
+#include <CL/cl.h>
 #include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -1090,8 +1091,8 @@ TEST_CASE("CuboidGpu::l2norm")
 
     // Reusing a buffer
     {
-        auto tmp = c_d.copyShallow();
-        double res_d = c_d.l2norm(p.getProgram(), p.getCommands(), tmp.get(), nullptr, &p.getKernelConfig(), p.getProfilingData());
+        auto tmp = mgcl::CuboidGpu(p.getContext(), CL_MEM_READ_WRITE, m, n, o, 0, 0, 0);
+        double res_d = c_d.l2norm(p.getProgram(), p.getCommands(), &tmp, nullptr, &p.getKernelConfig(), p.getProfilingData());
         auto c_d_ret = c_d.read(p.getCommands(), nullptr, true);
 
         REQUIRE(c_h.isEqualAllCells(*c_d_ret, true));

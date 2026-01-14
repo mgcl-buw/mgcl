@@ -1697,6 +1697,12 @@ namespace mgcl
             {
                 // calculate Infinity-Norm
                 res = util::max_abs(level.getDR(), problem.getProgram(), problem.getCommands(), true, util::DEFAULT_REDUCTION_MAX_WG_SIZE, &problem.getKernelConfig(), problem.getProfilingData());
+                if (!level.isCalculatedLocally() && problem.useMpi())
+                {
+                    double globalMax = 0;
+                    MPI_Allreduce(&res, &globalMax, 1, MPI_DOUBLE, MPI_MAX, problem.getMpiComm());
+                    res = globalMax;
+                }
             }
         }
 
@@ -1830,6 +1836,12 @@ namespace mgcl
             {
                 // calculate Infinity-Norm
                 res = util::max_abs(r.getBuffer(), r.getSize(), args.program, args.queue, args.context, true, util::DEFAULT_REDUCTION_MAX_WG_SIZE, args.conf, args.pd);
+                if (!args.updateGhostsLocally && args.mpiData)
+                {
+                    double globalMax = 0;
+                    MPI_Allreduce(&res, &globalMax, 1, MPI_DOUBLE, MPI_MAX, args.mpiData->comm);
+                    res = globalMax;
+                }
             }
         }
 
@@ -2054,10 +2066,10 @@ namespace mgcl
         //     MPI_Barrier(mpiData->comm);
         // exit(0);
 
-        if (!updateGhostsLocally)
+        if (!updateGhostsLocally && mpiData && returnResidualNorm)
         {
             double globalSum = 0;
-            MPI_Allreduce(&res, &globalSum, 1, MPI_DOUBLE, MPI_SUM, mpiData->comm);
+            MPI_Allreduce(&res, &globalSum, 1, MPI_DOUBLE, resnorm == MGCL_L2 ? MPI_SUM : MPI_MAX, mpiData->comm);
             res = globalSum;
         }
 
@@ -2175,10 +2187,10 @@ namespace mgcl
 
         r.updateGhosts(args.mpiData, args.updateGhostsLocally, args.periodic);
 
-        if (!args.updateGhostsLocally)
+        if (!args.updateGhostsLocally && args.returnResidualNorm && args.mpiData)
         {
             double globalSum = 0;
-            MPI_Allreduce(&res, &globalSum, 1, MPI_DOUBLE, MPI_SUM, args.mpiData->comm);
+            MPI_Allreduce(&res, &globalSum, 1, MPI_DOUBLE, args.resnorm == MGCL_L2 ? MPI_SUM : MPI_MAX, args.mpiData->comm);
             res = globalSum;
         }
 

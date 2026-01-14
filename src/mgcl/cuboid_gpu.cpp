@@ -772,9 +772,6 @@ namespace mgcl
             return (*ret)[ghosts_m][ghosts_n][ghosts_o];
         }
 
-        if (tmpSquared->getGhostsM() != 0 && tmpSquared->getGhostsN() != 0 && tmpSquared->getGhostsO() != 0)
-            error("dRsq bs must not have ghost cells");
-
         if (ghosts_m != ghosts_n || ghosts_m != ghosts_o)
             error("CuboidGpu::l2norm: Only for cuboids with equal ghost sizes for now");
 
@@ -787,6 +784,9 @@ namespace mgcl
         }
         else
         {
+            if (tmpSquared->getGhostsM() != 0 && tmpSquared->getGhostsN() != 0 && tmpSquared->getGhostsO() != 0)
+                error("dRsq bs must not have ghost cells");
+
             if (tmpSquared->getM() < m || tmpSquared->getN() < n || tmpSquared->getO() < o)
                 error("CuboidGpu::l2norm: tmpSquared CuboidGpu is too small: is " + std::to_string(tmpSquared->getM()) + "x" + std::to_string(tmpSquared->getN()) + "x" +
                       std::to_string(tmpSquared->getO()) + ", but need at least " + std::to_string(m) + "x" + std::to_string(n) + "x" +
