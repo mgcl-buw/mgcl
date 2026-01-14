@@ -2054,6 +2054,13 @@ namespace mgcl
         //     MPI_Barrier(mpiData->comm);
         // exit(0);
 
+        if (!updateGhostsLocally)
+        {
+            double globalSum = 0;
+            MPI_Allreduce(&res, &globalSum, 1, MPI_DOUBLE, MPI_SUM, mpiData->comm);
+            res = globalSum;
+        }
+
         return (returnResidualNorm && resnorm == MGCL_L2) ? sqrt(res) : res;
     }
 
@@ -2167,6 +2174,13 @@ namespace mgcl
                 }
 
         r.updateGhosts(args.mpiData, args.updateGhostsLocally, args.periodic);
+
+        if (!args.updateGhostsLocally)
+        {
+            double globalSum = 0;
+            MPI_Allreduce(&res, &globalSum, 1, MPI_DOUBLE, MPI_SUM, args.mpiData->comm);
+            res = globalSum;
+        }
 
         return (args.returnResidualNorm && args.resnorm == MGCL_L2) ? sqrt(res) : res;
     }

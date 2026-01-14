@@ -1095,19 +1095,19 @@ namespace mgcl
                     relres = initres == 0 ? 0 : res / initres;
 
                     // If mpi is in use, calculate global relres first
-                    if (useMpi() && getMpiLevelThreshold() > 0)
-                    {
-                        if (residual_norm == MGCL_RESIDUAL_NORM::MGCL_L2)
-                        {
-                            relres = relres * relres;
-                            MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                            relres = sqrt(relres);
-                        }
-                        else
-                        {
-                            MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                        }
-                    }
+                    // if (useMpi() && getMpiLevelThreshold() > 0)
+                    // {
+                    //     if (residual_norm == MGCL_RESIDUAL_NORM::MGCL_L2)
+                    //     {
+                    //         relres = relres * relres;
+                    //         MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    //         relres = sqrt(relres);
+                    //     }
+                    //     else
+                    //     {
+                    //         MPI_Allreduce(&relres, &relres, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    //     }
+                    // }
 
                     residuals.push_back(res);
                 }
