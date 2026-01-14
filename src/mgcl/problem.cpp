@@ -918,7 +918,7 @@ namespace mgcl
                 initres = MultigridEngine::residual(residual_args);
             }
 
-            if (!silent && !ignoreTol)
+            if (!silent && !ignoreTol && (!useMpi() || mpiRank() == 0))
                 printf("Starting mgcl with initres = %e\n", initres);
 
             // run vcycle maxiter_vcycles times
@@ -960,7 +960,7 @@ namespace mgcl
                     residuals.push_back(relres);
                 }
 
-                if (!silent)
+                if (!silent && (!useMpi() || mpiRank() == 0))
                 {
                     if (ignoreTol)
                         printf("iter = %d, elapsed time = %ld ms\n", i, tend);
@@ -1073,7 +1073,7 @@ namespace mgcl
                 initres = MultigridEngine::residualSeq(residual_args);
             }
 
-            if (!silent && !ignoreTol)
+            if (!silent && !ignoreTol && (!useMpi() || mpiRank() == 0))
                 printf("Starting mgcl with initres = %e\n", initres);
 
             // run vcycle maxiter_vcycles times
@@ -1112,7 +1112,7 @@ namespace mgcl
                     residuals.push_back(res);
                 }
 
-                if (!silent)
+                if (!silent && (!useMpi() || mpiRank() == 0))
                 {
                     if (ignoreTol)
                         printf("iter = %d, elapsed time = %ld ms\n", i, tend);
