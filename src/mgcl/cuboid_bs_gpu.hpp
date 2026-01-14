@@ -78,6 +78,10 @@ namespace mgcl
                                          BufferGpu* d_source, std::vector<double>* h_source,
                                          mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
 
+        double l2norm(cl_program program, cl_command_queue commands,
+                      CuboidBSGpu* tmpSquared, MPI_Comm mpi_comm,
+                      mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd);
+
         void dumpToFile(cl_command_queue commands, const std::string& path, bool realCellsOnly = false) const;
 
         inline cl_mem getBuffer() const { return buffer; }

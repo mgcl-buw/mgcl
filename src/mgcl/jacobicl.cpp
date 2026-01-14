@@ -1822,56 +1822,9 @@ namespace mgcl
                     error("dRsq is null.");
                 }
 
-                assert(args.dRsq->getGhostsM() == 0 && args.dRsq->getGhostsN() == 0 && args.dRsq->getGhostsO() == 0 && "dRsq bs must not have ghost cells");
-
                 // calculate 2-Norm
-                auto dRsquares = args.dRsq->getBuffer();
                 args.dRsq->fill(args.program, args.queue, 0.0, false, args.conf, args.pd); // reset to zero
-
-                // Create the compute kernel from the program
-                const char* kernelName = "residual_squared_blockstencil";
-                cl_kernel kernel_square = clCreateKernel(args.program, kernelName, &err);
-                mgclCheckError(err, "Creating residual_squared_blockstencil kernel");
-
-                int m = r.getM();
-                int n = r.getN();
-                int o = r.getO();
-                pos = 0;
-                err = clSetKernelArg(kernel_square, pos, sizeof(cl_mem), &dR);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(cl_mem), &dRsquares);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &m);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &n);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &o);
-                err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &ghosts);
-                mgclCheckError(err, "Setting residual_squared_blockstencil kernel arguments");
-
-                size_t global = m * n * o;
-                size_t local_sq = 64;
-                if (args.pd)
-                {
-                    const auto& c_sq = conf::getWorkGroupSizeForKernelAndWiCount(*args.conf, kernelName, global);
-                    local_sq = c_sq[0];
-                }
-
-                if (global % local_sq != 0)
-                    global += local_sq - (global % local_sq);
-
-                cl_event ev;
-                err = clEnqueueNDRangeKernel(args.queue, kernel_square, 1, NULL, &global, &local_sq, 0, NULL, &ev);
-                mgclCheckError(err, "Enqueueing residual_squared_blockstencil kernel");
-
-                if (args.pd)
-                {
-                    args.pd->addMeasurement(args.queue, ev, kernelName,
-                                            {global, 0, 0},
-                                            {local_sq, 1, 1});
-                }
-                mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
-
-                // sum up residual squares
-                res = sqrt(util::sum(dRsquares, args.dRsq->getSize(), args.program, args.queue, args.context, true, util::DEFAULT_REDUCTION_MAX_WG_SIZE, args.conf, args.pd));
-
-                clReleaseKernel(kernel_square);
+                res = r.l2norm(args.program, args.queue, args.dRsq, args.updateGhostsLocally ? nullptr : args.mpiData->comm, args.conf, args.pd);
             }
             else
             {

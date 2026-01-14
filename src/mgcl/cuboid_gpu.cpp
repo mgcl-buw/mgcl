@@ -772,6 +772,9 @@ namespace mgcl
             return (*ret)[ghosts_m][ghosts_n][ghosts_o];
         }
 
+        if (tmpSquared->getGhostsM() != 0 && tmpSquared->getGhostsN() != 0 && tmpSquared->getGhostsO() != 0)
+            error("dRsq bs must not have ghost cells");
+
         if (ghosts_m != ghosts_n || ghosts_m != ghosts_o)
             error("CuboidGpu::l2norm: Only for cuboids with equal ghost sizes for now");
 

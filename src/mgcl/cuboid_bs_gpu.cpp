@@ -7,9 +7,11 @@
 #include "profiling_data.hpp"
 
 #include "mgcl.hpp"
+#include "util.hpp"
 
 #include <CL/cl.h>
 #include <cassert>
+#include <cmath>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -739,6 +741,99 @@ namespace mgcl
         pasteGhostsFromBorderPlanes(context, commands, program,
                                     dPlanesBuf, nullptr,
                                     conf, pd);
+    }
+
+    double CuboidBSGpu::l2norm(cl_program program, cl_command_queue commands,
+                               CuboidBSGpu* tmpSquared, MPI_Comm mpi_comm,
+                               mgcl::conf::KernelConfig* conf, mgcl::ProfilingData* pd)
+    {
+        if (tmpSquared == nullptr)
+        {
+            error("dRsq is null.");
+        }
+
+        if (m == 1 || n == 1 || o == 1)
+        {
+            auto ret = read(commands, nullptr, true);
+            double sum = 0;
+            for (size_t b = 0; b < blocksize; b++)
+            {
+                sum += (*ret)[b][ghosts_m][ghosts_n][ghosts_o];
+            }
+            return sum;
+        }
+
+        assert(tmpSquared->getGhostsM() == 0 && tmpSquared->getGhostsN() == 0 && tmpSquared->getGhostsO() == 0 && "dRsq bs must not have ghost cells");
+
+        if (ghosts_m != ghosts_n || ghosts_m != ghosts_o)
+            error("CuboidGpu::l2norm: Only for cuboids with equal ghost sizes for now");
+
+        // create tmp copy of this cuboid
+        std::unique_ptr<CuboidBSGpu> squared;
+        if (!tmpSquared)
+        {
+            squared = copyShallow();
+            tmpSquared = squared.get();
+        }
+        else
+        {
+            if (tmpSquared->getM() < m || tmpSquared->getN() < n || tmpSquared->getO() < o)
+                error("CuboidGpu::l2norm: tmpSquared CuboidGpu is too small: is " + std::to_string(tmpSquared->getM()) + "x" + std::to_string(tmpSquared->getN()) + "x" +
+                      std::to_string(tmpSquared->getO()) + ", but need at least " + std::to_string(m) + "x" + std::to_string(n) + "x" +
+                      std::to_string(o));
+        }
+        auto sqbuf = tmpSquared->getBuffer();
+
+        int err;
+
+        // Create the compute kernel from the program
+        const char* kernelName = "residual_squared_blockstencil";
+        cl_kernel kernel_square = clCreateKernel(program, kernelName, &err);
+        mgclCheckError(err, "Creating residual_squared_blockstencil kernel");
+
+        int pos = 0;
+        err = clSetKernelArg(kernel_square, pos, sizeof(cl_mem), &buffer);
+        err |= clSetKernelArg(kernel_square, ++pos, sizeof(cl_mem), &sqbuf);
+        err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &m);
+        err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &n);
+        err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &o);
+        err |= clSetKernelArg(kernel_square, ++pos, sizeof(int), &ghosts_m);
+        mgclCheckError(err, "Setting residual_squared_blockstencil kernel arguments");
+
+        size_t global = m * n * o;
+        size_t local_sq = 64;
+        if (pd)
+        {
+            const auto& c_sq = conf::getWorkGroupSizeForKernelAndWiCount(*conf, kernelName, global);
+            local_sq = c_sq[0];
+        }
+
+        if (global % local_sq != 0)
+            global += local_sq - (global % local_sq);
+
+        cl_event ev;
+        err = clEnqueueNDRangeKernel(commands, kernel_square, 1, NULL, &global, &local_sq, 0, NULL, &ev);
+        mgclCheckError(err, "Enqueuing residual_squared_blockstencil kernel");
+
+        if (pd)
+        {
+            pd->addMeasurement(commands, ev, kernelName,
+                               {global, 0, 0},
+                               {local_sq, 1, 1});
+        }
+        mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
+
+        mgclCheckError(clReleaseKernel(kernel_square), "clReleaseKernel");
+
+        // sum up squares
+        double sum = util::sum(tmpSquared->getBuffer(), tmpSquared->getSize(), program, commands, context, true, util::DEFAULT_REDUCTION_MAX_WG_SIZE, conf, pd);
+        if (mpi_comm)
+        {
+            MPI_Allreduce(MPI_IN_PLACE, &sum, 1, MPI_DOUBLE, MPI_SUM, mpi_comm);
+        }
+        double res = sqrt(sum);
+
+        return res;
     }
 
 } // namespace mgcl

@@ -66,6 +66,7 @@ namespace mgcl
 
         inline double*** operator[](int index) { return field_4d[index]; }
 
+        // TODO this is wrong isnt it? block first
         inline size_t to1dIndex(int i, int j, int k, int b) { return i * blocksize * ngh * ogh + j * blocksize * ogh + k * blocksize + b; }
 
         inline std::vector<double>& field1d() { return field_1d; };
