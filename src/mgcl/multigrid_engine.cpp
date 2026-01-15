@@ -54,9 +54,12 @@ namespace mgcl
                     level.stencilFactor, level.stencilValues.get(), level.fixedStencil.get(), false, problem.isPeriodic(),
                     level.isCalculatedLocally(), 0, 0, 0, level.getMpiDataPtr());
 
-        // level.getF().dumpToFile(std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + std::to_string(level.num) + "fseq.txt");
-        // level.getV().dumpToFile(std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + std::to_string(level.num) + "vseq.txt");
-        // level.getR().dumpToFile(std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0) + std::to_string(level.num) + "rseq.txt");
+        // std::string suffix = ".i" + std::to_string(problem.elapsedIterations - 1) + ".l" + std::to_string(level.num) + "." + std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0);
+        // level.getF().dumpToFile("fseqdown" + suffix, false);
+        // level.getV().dumpToFile("vseqdown" + suffix, false);
+        // level.getR().dumpToFile("rseqdown" + suffix, false);
+        // if (level.stencilValues)
+        //     level.getStencilValues()->dumpToFile("svseqdown" + suffix, false);
 
         // restrict residual as right hand side on coarser grid
         MultigridEngine::restrictSeq(level, levelAbove, level.getR(), levelAbove.getF());

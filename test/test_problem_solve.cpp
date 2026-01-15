@@ -331,12 +331,12 @@ TEST_CASE("solve_periodic")
 TEST_CASE("solve_dirichlet")
 {
     int N = 64;
-    double h = 1.0 / (double)N;
+    double h = 1.0 / ((double)N + 1.0);
 
     // Problem parameters
     double tol = 1e-7;
-    int nu1 = 10;
-    int nu2 = 10;
+    int nu1 = 1;
+    int nu2 = 1;
     double omega = 0.8;
     int maxIterVCycles = 10;
     int maxlevel = 10;
@@ -439,10 +439,66 @@ TEST_CASE("solve_dirichlet")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
-            double h2inv = N * N; // h = 1/N -> 1/h = N
+            double h2inv = (N + 1) * (N + 1); // h = 1/N -> 1/h = N
 
-            double h = 1.0 / static_cast<double>(N);
+            double h = 1.0 / static_cast<double>(N + 1);
             mgcl_test::fill7pLaplace(s, h, false);
+
+            // Set boundaries of stencil to 0.
+            int ghsv = s.getGhostsM();
+            for (int ii = 0; ii < 3; ii++)
+                for (int jj = 0; jj < 3; jj++)
+                    for (int kk = 0; kk < 3; kk++)
+                    {
+                        // front i = gh..2*gh
+                        if (ii == 0)
+                            for (int i = ghsv; i < 2 * ghsv; i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // back i = m+gh..m+2*gh
+                        if (ii == 2)
+                            for (int i = s.getM(); i < s.getM() + ghsv; i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // top j = gh..2*gh
+                        if (jj == 0)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = ghsv; j < 2 * ghsv; j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // bottom j = n+gh..n+2*gh
+                        if (jj == 2)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = s.getN(); j < s.getN() + ghsv; j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // left k = gh..2*gh
+                        if (kk == 0)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = ghsv; k < 2 * ghsv; k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // right k = o+gh..o+2*gh
+                        if (kk == 2)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = s.getO(); k < s.getO() + ghsv; k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                    }
 
             p.solveSeq();
 
@@ -501,10 +557,66 @@ TEST_CASE("solve_dirichlet")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
-            double h2inv = N * N; // h = 1/N -> 1/h = N
+            double h2inv = (N + 1) * (N + 1); // h = 1/N -> 1/h = N
 
-            double h = 1.0 / static_cast<double>(N);
+            double h = 1.0 / static_cast<double>(N + 1);
             mgcl_test::fill27pLaplace(s, h, false);
+
+            // Set boundaries of stencil to 0.
+            int ghsv = s.getGhostsM();
+            for (int ii = 0; ii < 3; ii++)
+                for (int jj = 0; jj < 3; jj++)
+                    for (int kk = 0; kk < 3; kk++)
+                    {
+                        // front i = gh..2*gh
+                        if (ii == 0)
+                            for (int i = ghsv; i < 2 * ghsv; i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // back i = m+gh..m+2*gh
+                        if (ii == 2)
+                            for (int i = s.getM(); i < s.getM() + ghsv; i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // top j = gh..2*gh
+                        if (jj == 0)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = ghsv; j < 2 * ghsv; j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // bottom j = n+gh..n+2*gh
+                        if (jj == 2)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = s.getN(); j < s.getN() + ghsv; j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // left k = gh..2*gh
+                        if (kk == 0)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = ghsv; k < 2 * ghsv; k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // right k = o+gh..o+2*gh
+                        if (kk == 2)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = s.getO(); k < s.getO() + ghsv; k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                    }
 
             p.solveSeq();
 
@@ -564,10 +676,66 @@ TEST_CASE("solve_dirichlet")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
-            double h2inv = N * N; // h = 1/N -> 1/h = N
+            double h2inv = (N + 1) * (N + 1); // h = 1/N -> 1/h = N
 
-            double h = 1.0 / static_cast<double>(N);
+            double h = 1.0 / static_cast<double>(N + 1);
             mgcl_test::fill7pLaplace(s, h, false);
+
+            // Set boundaries of stencil to 0.
+            int ghsv = s.getGhostsM();
+            for (int ii = 0; ii < 3; ii++)
+                for (int jj = 0; jj < 3; jj++)
+                    for (int kk = 0; kk < 3; kk++)
+                    {
+                        // front i = gh..2*gh
+                        if (ii == 0)
+                            for (int i = ghsv; i < 2 * ghsv; i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // back i = m+gh..m+2*gh
+                        if (ii == 2)
+                            for (int i = s.getM(); i < s.getM() + ghsv; i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // top j = gh..2*gh
+                        if (jj == 0)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = ghsv; j < 2 * ghsv; j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // bottom j = n+gh..n+2*gh
+                        if (jj == 2)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = s.getN(); j < s.getN() + ghsv; j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // left k = gh..2*gh
+                        if (kk == 0)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = ghsv; k < 2 * ghsv; k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // right k = o+gh..o+2*gh
+                        if (kk == 2)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = s.getO(); k < s.getO() + ghsv; k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                    }
 
             p.solve();
 
@@ -611,10 +779,66 @@ TEST_CASE("solve_dirichlet")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
             auto& s = *p.getStencilValues();
-            double h2inv = N * N; // h = 1/N -> 1/h = N
+            double h2inv = (N + 1) * (N + 1); // h = 1/N -> 1/h = N
 
-            double h = 1.0 / static_cast<double>(N);
+            double h = 1.0 / static_cast<double>(N + 1);
             mgcl_test::fill27pLaplace(s, h, false);
+
+            // Set boundaries of stencil to 0.
+            int ghsv = s.getGhostsM();
+            for (int ii = 0; ii < 3; ii++)
+                for (int jj = 0; jj < 3; jj++)
+                    for (int kk = 0; kk < 3; kk++)
+                    {
+                        // front i = gh..2*gh
+                        if (ii == 0)
+                            for (int i = ghsv; i < 2 * ghsv; i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // back i = m+gh..m+2*gh
+                        if (ii == 2)
+                            for (int i = s.getM(); i < s.getM() + ghsv; i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // top j = gh..2*gh
+                        if (jj == 0)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = ghsv; j < 2 * ghsv; j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // bottom j = n+gh..n+2*gh
+                        if (jj == 2)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = s.getN(); j < s.getN() + ghsv; j++)
+                                    for (int k = 0; k < s.getOgh(); k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // left k = gh..2*gh
+                        if (kk == 0)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = ghsv; k < 2 * ghsv; k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                        // right k = o+gh..o+2*gh
+                        if (kk == 2)
+                            for (int i = 0; i < s.getMgh(); i++)
+                                for (int j = 0; j < s.getNgh(); j++)
+                                    for (int k = s.getO(); k < s.getO() + ghsv; k++)
+                                    {
+                                        s[ii][jj][kk][i][j][k] = 0.0;
+                                    }
+                    }
 
             p.solve();
 
