@@ -330,15 +330,15 @@ TEST_CASE("solve_periodic")
 
 TEST_CASE("solve_dirichlet")
 {
-    int N = 16;
+    int N = 64;
     double h = 1.0 / (double)N;
 
     // Problem parameters
     double tol = 1e-7;
-    int nu1 = 2;
-    int nu2 = 2;
+    int nu1 = 10;
+    int nu2 = 10;
     double omega = 0.8;
-    int maxIterVCycles = 20;
+    int maxIterVCycles = 10;
     int maxlevel = 10;
 
     mgcl::BC bc = mgcl::BC::DIRICHLET;
