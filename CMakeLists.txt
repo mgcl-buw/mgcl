@@ -15,6 +15,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # enable link time optimization (LTO) if supported for Release build type TODO
 # do this via tools.cmake?
 if(CMAKE_BUILD_TYPE MATCHES Release OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
+  if(POLICY CMP0138)
+    cmake_policy(SET CMP0138 NEW) # Propagate linker flags to IPO test
+  endif()
+
   include(CheckIPOSupported)
   check_ipo_supported(RESULT supported OUTPUT error)
 
