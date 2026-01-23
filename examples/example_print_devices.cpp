@@ -30,7 +30,7 @@ int main(int argc, char** argv)
     MPI_Dims_create(mpi_size, 3, mpi_dims);
 
     std::string deviceName = "";
-    cl_device_type deviceType = CL_DEVICE_TYPE_DEFAULT;
+    cl_device_type deviceType = CL_DEVICE_TYPE_ALL;
     std::string deviceTypeStr = "default";
 
     mgcl::OCL_DEVICE_STRATEGY deviceStrategy = mgcl::OCL_DEVICE_STRATEGY::ALWAYS_FIRST;

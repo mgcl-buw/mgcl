@@ -316,6 +316,11 @@ namespace mgcl
         cl_uint numDevices;
         cl_device_id selected_id = nullptr;
 
+        if (deviceType == CL_DEVICE_TYPE_DEFAULT && mpi_rank == 0)
+        {
+            std::cout << "mgcl WARNING: using CL_DEVICE_TYPE_DEFAULT, which might make only one device visible!" << std::endl;
+        }
+
         // Find number of devices for a platform
         err = clGetDeviceIDs(platform_id, deviceType, 0, nullptr, &numDevices);
         if (err == CL_DEVICE_NOT_FOUND)
