@@ -55,7 +55,7 @@ namespace mgcl
             }
 
             // Get all platforms
-            cl_platform_id platforms[numPlatforms];
+            cl_platform_id* platforms = new cl_platform_id[numPlatforms];
             err = clGetPlatformIDs(numPlatforms, platforms, nullptr);
             mgclCheckError(err, "Getting platforms");
 
@@ -68,6 +68,7 @@ namespace mgcl
                 if (deviceId != nullptr)
                     break;
             }
+            delete[] platforms;
 
             if (deviceId == nullptr)
                 mgclCheckError(-1, "Finding a device");
@@ -1065,7 +1066,7 @@ namespace mgcl
         std::stringstream ss;
 
         // Get all platforms
-        cl_platform_id platforms[numPlatforms];
+        cl_platform_id* platforms = new cl_platform_id[numPlatforms];
         err = clGetPlatformIDs(numPlatforms, platforms, nullptr);
         mgclCheckError(err, "Getting platforms");
 
@@ -1149,6 +1150,7 @@ namespace mgcl
 
             delete[] device_ids;
         }
+        delete[] platforms;
 
         return ss.str();
     }
