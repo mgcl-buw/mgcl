@@ -32,14 +32,14 @@ namespace mgcl
         Problem* problem;
 
         std::string kernelFile = "./mgcl.cl";
-        std::string deviceName = "";                        /* Use first found device if not set */
-        cl_device_type deviceType = CL_DEVICE_TYPE_DEFAULT; /* Defaults to CL_DEVICE_TYPE_DEFAULT */
-        cl_device_id deviceId = nullptr;                    /* must be set if a specific device should be reused */
-        cl_context context = nullptr;                       /* must be set if a specific context/device/buffers should be reused */
-        cl_command_queue commands = nullptr;                /* must be set if a specific context/device/buffers should be reused */
-        cl_command_queue commands2 = nullptr;               /* If overlapped Jacobi shall be used, this will be set. */
-        cl_program program = nullptr;                       /* compute program, only for internal purposes */
-        cl_platform_id platformId = nullptr;                /* Cannot be set from outside, just to print platform name */
+        std::string deviceName = "";                    /* Use first found device if not set */
+        cl_device_type deviceType = CL_DEVICE_TYPE_ALL; /* Defaults to CL_DEVICE_TYPE_DEFAULT */
+        cl_device_id deviceId = nullptr;                /* must be set if a specific device should be reused */
+        cl_context context = nullptr;                   /* must be set if a specific context/device/buffers should be reused */
+        cl_command_queue commands = nullptr;            /* must be set if a specific context/device/buffers should be reused */
+        cl_command_queue commands2 = nullptr;           /* If overlapped Jacobi shall be used, this will be set. */
+        cl_program program = nullptr;                   /* compute program, only for internal purposes */
+        cl_platform_id platformId = nullptr;            /* Cannot be set from outside, just to print platform name */
         std::string binaryFile = "";
         std::map<std::string, std::string> preprocessorConstants;
 
