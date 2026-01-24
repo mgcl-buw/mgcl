@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
     bool sequential = false;
     std::string deviceName = "";
     std::string deviceTypeStr = "default";
-    cl_device_type deviceType = CL_DEVICE_TYPE_DEFAULT;
+    cl_device_type deviceType = CL_DEVICE_TYPE_ALL;
     mgcl::MGCL_STENCIL stencilType = mgcl::MGCL_VARYING;
     std::string stencilTypeStr = "var";
 
@@ -152,14 +152,21 @@ int main(int argc, char* argv[])
 
     MPI_Barrier(mpi_comm);
 
-    std::cout << "  " << mpi_rank << ";"
-              << m_start << ";" << m_end << ";"
-              << n_start << ";" << n_end << ";"
-              << o_start << ";" << o_end << ";"
-              << ml << ";" << nl << ";" << ol
-              << std::endl
-              << std::endl;
+    for (int i = 0; i < mpi_size; i++)
+    {
+        MPI_Barrier(mpi_comm);
+        if (i == mpi_rank)
+        {
+            std::cout << "  " << mpi_rank << ";"
+                      << m_start << ";" << m_end << ";"
+                      << n_start << ";" << n_end << ";"
+                      << o_start << ";" << o_end << ";"
+                      << ml << ";" << nl << ";" << ol
+                      << std::endl;
+        }
+    }
 
+    MPI_Barrier(mpi_comm);
     std::cout << "Generating random data..." << std::endl;
 
     // Init some random data
