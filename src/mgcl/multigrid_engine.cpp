@@ -446,13 +446,14 @@ namespace mgcl
 
         // relax nu2 times
 
+        bool returnRes = !problem.ignoreTol && level.getNum() == 0;
         if (level.getNum() <= problem.getOverlappedJacobiGhostUpdateMaxLevel())
         {
-            res = jacobiOverlapped(problem, level, problem.nu2, !problem.ignoreTol, problem.getJacobiIterationsPerKernel(), problem.getCommands2());
+            res = jacobiOverlapped(problem, level, problem.nu2, returnRes, problem.getJacobiIterationsPerKernel(), problem.getCommands2());
         }
         else
         {
-            res = jacobi(problem, level, problem.nu2, !problem.ignoreTol, problem.getJacobiIterationsPerKernel());
+            res = jacobi(problem, level, problem.nu2, returnRes, problem.getJacobiIterationsPerKernel());
         }
 
         // level.getDF().dumpToFile(problem.getCommands(), "foclup" + suffix, true);

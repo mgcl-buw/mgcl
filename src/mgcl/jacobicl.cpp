@@ -1679,9 +1679,9 @@ namespace mgcl
         }
         mgclCheckError(clReleaseEvent(ev), "clReleaseEvent");
 
-        err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
-                                            level.isCalculatedLocally());
-        mgclCheckError(err, "Updating ghosts of r");
+        // err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
+        //                                     level.isCalculatedLocally());
+        // mgclCheckError(err, "Updating ghosts of r");
 
         // calculate residual's 2-norm. Square elements on device and sum up on host
         if (return_residual)
