@@ -1749,6 +1749,10 @@ namespace mgcl
         {
             error("Problem::setFixedStencil: stencilType is not MGCL_FIXED. Use Problem::setStencilType(MGCL_FIXED) first.");
         }
+        if (sv->getWidth() != 3)
+        {
+            error("Problem::setFixedStencil: Only width 3 fixed stencils are supported at the moment.");
+        }
         fixedStencil = sv;
     }
 
