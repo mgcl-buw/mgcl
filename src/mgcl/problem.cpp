@@ -1743,6 +1743,15 @@ namespace mgcl
         }
     }
 
+    void Problem::setFixedStencil(std::shared_ptr<FixedStencil>& sv)
+    {
+        if (stencilType != MGCL_FIXED)
+        {
+            error("Problem::setFixedStencil: stencilType is not MGCL_FIXED. Use Problem::setStencilType(MGCL_FIXED) first.");
+        }
+        fixedStencil = sv;
+    }
+
     std::shared_ptr<FixedStencil>& Problem::getFixedStencil()
     {
         if (stencilType != MGCL_FIXED)
