@@ -322,6 +322,14 @@ namespace mgcl
         if (levelAbove.getUseOpencl())
         {
             restrict(level, levelAbove, level.getDR(), levelAbove.getDF());
+            if (problem.getJacobiIterationsPerKernel() > 1)
+            {
+                // need to update ghosts of f if ghosts are used in Jacobi update
+                mgclCheckError(MultigridEngine::updateGhosts(
+                                   problem, levelAbove.getDF(), levelAbove.getMpiDataPtr(),
+                                   levelAbove.isCalculatedLocally()),
+                               "Updating coarse ghosts");
+            }
         }
         else
         {
