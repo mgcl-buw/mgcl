@@ -338,7 +338,7 @@ TEST_CASE("jacobi GPU varying stencil")
         p_seq->setBc(bc);
 
         p_seq->setStencilType(stencilType);
-        auto& sv = p_seq->getStencilValues();
+        auto& sv = p_seq->createStencilValues();
         sv->fillRandomInt();
 
         p_seq->init();
@@ -356,12 +356,13 @@ TEST_CASE("jacobi GPU varying stencil")
         p_gpu->setBc(bc);
 
         p_gpu->setStencilType(stencilType);
-        auto& sv_gpu = p_gpu->getStencilValues();
+        p_gpu->setStencilValues(sv);
+        auto& sv_gpu = sv;
 
-        // copy stencil values
-        REQUIRE(sv->field1d().size() == sv_gpu->field1d().size());
-        for (int i = 0; i < sv->field1d().size(); i++)
-            sv_gpu->field1d()[i] = sv->field1d()[i];
+        // // copy stencil values
+        // REQUIRE(sv->field1d().size() == sv_gpu->field1d().size());
+        // for (int i = 0; i < sv->field1d().size(); i++)
+        //     sv_gpu->field1d()[i] = sv->field1d()[i];
 
         p_gpu->init();
         auto& level0_gpu = p_gpu->getLevelAt(0);
@@ -846,12 +847,12 @@ TEST_CASE("jacobi gpu gh > 1 multiple iters")
             tu_act.finish();
             tu_exp.finish();
 
-            auto sv_exp = p_exp->getStencilValues();
+            auto sv_exp = p_exp->createStencilValues();
             sv_exp->fill1dIndex(true);
             sv_exp->updateGhosts();
 
             // copy stencil values
-            auto sv_act = p_act->getStencilValues();
+            auto sv_act = p_act->createStencilValues();
             sv_act->copyRealFrom(*sv_exp);
             sv_act->updateGhosts();
 
@@ -926,7 +927,7 @@ TEST_CASE("jacobi_seq_fixed")
     pfixed.setJacobiIterationsPerKernel(stepsPerIter);
     pfixed.setStencilType(mgcl::MGCL_FIXED);
 
-    auto& fixedStencil = pfixed.getFixedStencil();
+    auto& fixedStencil = pfixed.createFixedStencil();
     fixedStencil->fillRandom();
     (*fixedStencil)[1][1][1] = 1.0; // make sure the stencil does not produce nan
 
@@ -948,7 +949,7 @@ TEST_CASE("jacobi_seq_fixed")
     pvarying.setJacobiIterationsPerKernel(stepsPerIter);
     pvarying.setStencilType(mgcl::MGCL_VARYING);
 
-    auto& sv = pvarying.getStencilValues();
+    auto& sv = pvarying.createStencilValues();
     // copy from fixed into varying
     // clang-format off
     for (int i = 0; i < sv->getMgh(); i++)
@@ -1011,7 +1012,7 @@ TEST_CASE("jacobi_ocl_fixed")
     pfixed.setJacobiIterationsPerKernel(stepsPerIter);
     pfixed.setStencilType(mgcl::MGCL_FIXED);
 
-    auto& fixedStencil = pfixed.getFixedStencil();
+    auto& fixedStencil = pfixed.createFixedStencil();
     fixedStencil->fillRandom();
     (*fixedStencil)[1][1][1] = 1.0; // make sure the stencil does not produce nan
 
@@ -1032,7 +1033,7 @@ TEST_CASE("jacobi_ocl_fixed")
     pvarying.setJacobiIterationsPerKernel(stepsPerIter);
     pvarying.setStencilType(mgcl::MGCL_VARYING);
 
-    auto& sv = pvarying.getStencilValues();
+    auto& sv = pvarying.createStencilValues();
     // copy from fixed into varying
     // clang-format off
     for (int i = 0; i < sv->getMgh(); i++)

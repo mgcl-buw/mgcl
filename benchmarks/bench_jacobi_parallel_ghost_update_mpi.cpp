@@ -1213,7 +1213,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
             p.setDeviceType(CL_DEVICE_TYPE_GPU);
             p.setDeviceStrategy(mgcl::OCL_DEVICE_STRATEGY::DISTRIBUTE_EVENLY);
             p.setProfilingEnabled(CLI_ARGS::enableKernelProfiling);
-            auto sv = p.getStencilValues();
+            auto sv = p.createStencilValues();
             mgcl_test::fill27pLaplace(*sv, 1.0 / static_cast<double>(mglob), false);
             p.setMpiComm(mpi_comm);
 

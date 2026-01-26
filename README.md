@@ -81,7 +81,7 @@ mgcl::Problem p(N, N, N, f, v);
 // First three dimensions match grid size + ghost size, last three
 // dimensions are 3.
 p.setStencilType(mgcl::MGCL_VARYING);
-auto &s = *p.getStencilValues();
+auto &s = *p.createStencilValues();
 
 double h2inv = N * N;
 

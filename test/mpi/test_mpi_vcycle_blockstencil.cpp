@@ -148,7 +148,7 @@ TEST_CASE("MPI_vcycle_seq_immediate_gather_scatter_blockstencil_size1")
     p.setMpiComm(mpi_comm);
     p.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
 
-    auto bs = p.getBlockstencil();
+    auto bs = p.createBlockstencil();
     mgcl_test::fill7pLaplace(*bs, h, false);
     // bs->dumpToFile("bs.txt");
     auto restr = p.getRestrictionBlockstencil();
@@ -337,7 +337,7 @@ TEST_CASE("MPI_vcycle_GPU_immediate_gather_scatter_blockstencil_size1")
     p.setMpiComm(mpi_comm);
     p.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
 
-    auto bs = p.getBlockstencil();
+    auto bs = p.createBlockstencil();
     mgcl_test::fill7pLaplace(*bs, h, false);
     // bs->dumpToFile("bs.txt");
     auto restr = p.getRestrictionBlockstencil();
@@ -522,7 +522,7 @@ TEST_CASE("MPI_vcycle_seq_treshold_gt_0_blockstencil_size1")
     p.setMpiComm(mpi_comm);
     p.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
 
-    auto bs = p.getBlockstencil();
+    auto bs = p.createBlockstencil();
     mgcl_test::fill7pLaplace(*bs, h, false);
     // bs->dumpToFile("bs.txt");
     auto restr = p.getRestrictionBlockstencil();
@@ -718,7 +718,7 @@ TEST_CASE("MPI_vcycle_GPU_treshold_gt_0_blockstencil_size1")
     p.setMpiComm(mpi_comm);
     p.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
 
-    auto bs = p.getBlockstencil();
+    auto bs = p.createBlockstencil();
     mgcl_test::fill7pLaplace(*bs, h, false);
     // bs->dumpToFile("bs.txt");
     auto restr = p.getRestrictionBlockstencil();
@@ -881,7 +881,7 @@ TEST_CASE("MPI_vcycle_GPU_treshold_gt_0_blockstencil_size1")
 //     p.setMpiComm(mpi_comm);
 
 //     p.setStencilType(mgcl::MGCL_VARYING);
-//     auto& sv = *p.getStencilValues();
+//     auto& sv = *p.createStencilValues();
 
 //     if (mpi_rank == 0)
 //     {
@@ -1043,7 +1043,7 @@ TEST_CASE("MPI_vcycle_GPU_treshold_gt_0_blockstencil_size1")
 //     p.setMpiComm(mpi_comm);
 
 //     p.setStencilType(mgcl::MGCL_VARYING);
-//     auto& sv = *p.getStencilValues();
+//     auto& sv = *p.createStencilValues();
 
 //     if (mpi_rank == 0)
 //     {
@@ -1222,7 +1222,7 @@ TEST_CASE("MPI_vcycle_GPU_treshold_gt_0_blockstencil_size1")
 //     p.setMpiComm(mpi_comm);
 
 //     p.setStencilType(mgcl::MGCL_VARYING);
-//     auto& sv = *p.getStencilValues();
+//     auto& sv = *p.createStencilValues();
 
 //     if (mpi_rank == 0)
 //     {
@@ -1391,7 +1391,7 @@ TEST_CASE("MPI_vcycle_GPU_treshold_gt_0_blockstencil_size1")
 //     p.setMpiComm(mpi_comm);
 
 //     p.setStencilType(mgcl::MGCL_VARYING);
-//     auto& sv = *p.getStencilValues();
+//     auto& sv = *p.createStencilValues();
 
 //     if (mpi_rank == 0)
 //     {
@@ -1561,7 +1561,7 @@ TEST_CASE("MPI_vcycle_GPU_treshold_gt_0_blockstencil_size1")
 //     p.setMpiComm(mpi_comm);
 
 //     p.setStencilType(mgcl::MGCL_VARYING);
-//     auto& sv = *p.getStencilValues();
+//     auto& sv = *p.createStencilValues();
 
 //     if (mpi_rank == 0)
 //     {
@@ -1735,7 +1735,7 @@ TEST_CASE("MPI_vcycle_GPU_treshold_gt_0_blockstencil_size1")
 //     p.setJacobiIterationsPerKernel(jacobiItersPerKernel);
 
 //     p.setStencilType(mgcl::MGCL_VARYING);
-//     auto& sv = *p.getStencilValues();
+//     auto& sv = *p.createStencilValues();
 
 //     if (mpi_rank == 0)
 //     {

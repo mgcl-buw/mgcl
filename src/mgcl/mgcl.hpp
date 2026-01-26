@@ -22,6 +22,7 @@ namespace mgcl
 #endif
 
 #define warning(msg) printf("mgcl warning: %s\n", msg);
+#define info(msg) printf("mgcl info: %s\n", msg);
 
     template <
         class result_t = std::chrono::milliseconds,

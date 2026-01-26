@@ -186,7 +186,7 @@ TEST_CASE("mgcl_steps_galerkin_vs_solve")
         p.setSilent(true);
         p.setStencilType(mgcl::MGCL_VARYING);
 
-        auto& sv = p.getStencilValues();
+        auto& sv = p.createStencilValues();
         sv->fill1dIndex(true);
 
         p.init();
@@ -584,7 +584,7 @@ TEST_CASE("benchStepsProfile")
         p.setSilent(true);
         p.setProfilingEnabled(true);
         p.setStencilType(mgcl::MGCL_VARYING);
-        p.getStencilValues()->fillRandom();
+        p.createStencilValues()->fillRandom();
         p.init();
 
         // Clear measurements from init
@@ -705,7 +705,7 @@ TEST_CASE("benchStepsProfileMpi")
         p.setSilent(true);
         p.setProfilingEnabled(true);
         p.setStencilType(mgcl::MGCL_VARYING);
-        p.getStencilValues()->fillRandom();
+        p.createStencilValues()->fillRandom();
         p.setMpiComm(mpi_comm);
         p.init();
 

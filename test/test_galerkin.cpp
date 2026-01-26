@@ -312,9 +312,9 @@ TEST_CASE("galerkin_different_jacobi_iters_per_kernel")
     REQUIRE(p1.getMaxlevel() == p2.getMaxlevel());
     REQUIRE(p1.getMaxlevel() == p3.getMaxlevel());
 
-    auto sv1 = p1.getStencilValues();
-    auto sv2 = p2.getStencilValues();
-    auto sv3 = p3.getStencilValues();
+    auto sv1 = p1.createStencilValues();
+    auto sv2 = p2.createStencilValues();
+    auto sv3 = p3.createStencilValues();
     sv1->fill1dIndex(false);
     sv2->copyRealFrom(*sv1);
     sv3->copyRealFrom(*sv1);

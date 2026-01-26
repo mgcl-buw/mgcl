@@ -85,7 +85,7 @@ TEST_CASE("solve_bs_periodic_blocksize1")
             psc.setMaxlevel(maxlevel);
 
             psc.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *psc.getStencilValues();
+            auto& s = *psc.createStencilValues();
             mgcl_test::fill27pLaplace(s, h, false);
 
             psc.solveSeq();
@@ -135,7 +135,7 @@ TEST_CASE("solve_bs_periodic_blocksize1")
             pbs.setMaxlevel(maxlevel);
             pbs.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
 
-            auto bs = pbs.getBlockstencil();
+            auto bs = pbs.createBlockstencil();
             mgcl_test::fill27pLaplace(*bs, h, false);
             // bs->dumpToFile("bs.txt");
             auto r = pbs.getRestrictionBlockstencil();
@@ -224,7 +224,7 @@ TEST_CASE("solve_bs_periodic_blocksize1")
             // p.setDeviceName("Quadro");
 
             psc.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *psc.getStencilValues();
+            auto& s = *psc.createStencilValues();
             mgcl_test::fill27pLaplace(s, h, false);
 
             psc.solve();
@@ -277,7 +277,7 @@ TEST_CASE("solve_bs_periodic_blocksize1")
             pbs.setDeviceType(deviceType);
             // pbs.setDeviceName("Quadro");
 
-            auto bs = pbs.getBlockstencil();
+            auto bs = pbs.createBlockstencil();
             mgcl_test::fill27pLaplace(*bs, h, false);
             // bs->dumpToFile("bs.txt");
             auto r = pbs.getRestrictionBlockstencil();
@@ -442,7 +442,7 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
             pbs.setMaxlevel(maxlevel);
             pbs.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
 
-            auto bs = pbs.getBlockstencil();
+            auto bs = pbs.createBlockstencil();
             mgcl_test::fill27pLaplace(*bs, h, false);
             // bs->dumpToFile("bs.txt");
             auto r = pbs.getRestrictionBlockstencil();
@@ -452,7 +452,7 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
 
             // *** setup of scalar problem ***
             psc.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *psc.getStencilValues();
+            auto& s = *psc.createStencilValues();
 
             double h = 1.0 / static_cast<double>(N);
             mgcl_test::fill27pLaplace(s, h, false);
@@ -555,7 +555,7 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
             psc.setDeviceType(deviceType);
             // p.setDeviceName("Quadro");
 
-            auto bs = pbs.getBlockstencil();
+            auto bs = pbs.createBlockstencil();
             mgcl_test::fill27pLaplace(*bs, h, false);
             // bs->dumpToFile("bs.txt");
             auto r = pbs.getRestrictionBlockstencil();
@@ -565,7 +565,7 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
 
             // *** setup of scalar problem ***
             psc.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *psc.getStencilValues();
+            auto& s = *psc.createStencilValues();
 
             double h = 1.0 / static_cast<double>(N);
             mgcl_test::fill27pLaplace(s, h, false);
@@ -730,7 +730,7 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
 //         SECTION("Galerkin_7p")
 //         {
 //             p.setStencilType(mgcl::MGCL_VARYING);
-//             auto& s = *p.getStencilValues();
+//             auto& s = *p.createStencilValues();
 //             double h2inv = N * N; // h = 1/N -> 1/h = N
 
 //             double h = 1.0 / static_cast<double>(N);
@@ -788,7 +788,7 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
 //         SECTION("Galerkin_27p")
 //         {
 //             p.setStencilType(mgcl::MGCL_VARYING);
-//             auto& s = *p.getStencilValues();
+//             auto& s = *p.createStencilValues();
 //             double h2inv = N * N; // h = 1/N -> 1/h = N
 
 //             double h = 1.0 / static_cast<double>(N);
@@ -851,7 +851,7 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
 //         SECTION("Galerkin_7p")
 //         {
 //             p.setStencilType(mgcl::MGCL_VARYING);
-//             auto& s = *p.getStencilValues();
+//             auto& s = *p.createStencilValues();
 //             double h2inv = N * N; // h = 1/N -> 1/h = N
 
 //             double h = 1.0 / static_cast<double>(N);
@@ -898,7 +898,7 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
 //         SECTION("Galerkin_27p")
 //         {
 //             p.setStencilType(mgcl::MGCL_VARYING);
-//             auto& s = *p.getStencilValues();
+//             auto& s = *p.createStencilValues();
 //             double h2inv = N * N; // h = 1/N -> 1/h = N
 
 //             double h = 1.0 / static_cast<double>(N);
@@ -1041,7 +1041,7 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
 //         SECTION("Galerkin")
 //         {
 //             p.setStencilType(mgcl::MGCL_VARYING);
-//             auto& s = *p.getStencilValues();
+//             auto& s = *p.createStencilValues();
 //             double h2inv = N * N; // h = 1/N -> 1/h = N
 
 //             double h = 1.0 / static_cast<double>(N);
@@ -1113,7 +1113,7 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
 //         SECTION("Galerkin")
 //         {
 //             p.setStencilType(mgcl::MGCL_VARYING);
-//             auto& s = *p.getStencilValues();
+//             auto& s = *p.createStencilValues();
 //             double h2inv = N * N; // h = 1/N -> 1/h = N
 
 //             double h = 1.0 / static_cast<double>(N);
@@ -1325,7 +1325,7 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
 //     p_fixed.setMaxlevel(maxlevel);
 
 //     p_fixed.setStencilType(mgcl::MGCL_FIXED);
-//     auto& fixedStencil = p_fixed.getFixedStencil();
+//     auto& fixedStencil = p_fixed.createFixedStencil();
 //     fixedStencil->fillRandom();
 //     (*fixedStencil)[1][1][1] = 1.0; // make sure the stencil does not produce nan
 
@@ -1338,7 +1338,7 @@ TEST_CASE("solve_bs_periodic_independent_quantities")
 //     p_varying.setMaxlevel(maxlevel);
 
 //     p_varying.setStencilType(mgcl::MGCL_VARYING);
-//     auto& sv = p_varying.getStencilValues();
+//     auto& sv = p_varying.createStencilValues();
 //     // copy from fixed into varying
 //     // clang-format off
 //     for (int i = 0; i < sv->getMgh(); i++)

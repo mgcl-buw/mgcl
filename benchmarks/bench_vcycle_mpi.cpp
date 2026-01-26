@@ -139,7 +139,7 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_only_galerkin")
         pseq.setResidualNorm(resnorm);
         pseq.setMpiComm(mpi_comm);
 
-        auto& sv = pseq.getStencilValues();
+        auto& sv = pseq.createStencilValues();
         sv->fill1dIndex(true);
 
         ankerl::nanobench::Bench bench;
@@ -315,7 +315,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_only_galerkin")
         p.setMpiComm(mpi_comm);
         // p.setProfilingEnabled(true);
 
-        auto& sv = p.getStencilValues();
+        auto& sv = p.createStencilValues();
         sv->fill1dIndex(true);
 
         ankerl::nanobench::Bench bench;
@@ -473,7 +473,7 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_vs_OCL_galerkin")
         pseq.setResidualNorm(resnorm);
         pseq.setMpiComm(mpi_comm);
 
-        auto& sv = pseq.getStencilValues();
+        auto& sv = pseq.createStencilValues();
         sv->fill1dIndex(true);
 
         ankerl::nanobench::Bench bench;
@@ -509,7 +509,7 @@ TEST_CASE("benchmark_vcycle_MPI_Seq_vs_OCL_galerkin")
         pocl.setUseOpencl(true);
         pocl.setDeviceType(CL_DEVICE_TYPE_GPU);
 
-        sv = pocl.getStencilValues();
+        sv = pocl.createStencilValues();
         sv->fill1dIndex(true);
 
         name = std::string("oclN").append(std::to_string(N));
@@ -617,7 +617,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_galerkin_thresholds")
             pocl.setDeviceType(CL_DEVICE_TYPE_GPU);
             pocl.setReadResults(true);
 
-            auto& sv = pocl.getStencilValues();
+            auto& sv = pocl.createStencilValues();
             sv->fill1dIndex(true);
 
             std::string name = std::string("oclN")
@@ -732,7 +732,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_galerkin_jacobi_iters")
                 pocl.setDeviceType(CL_DEVICE_TYPE_GPU);
                 pocl.setReadResults(true);
 
-                auto& sv = pocl.getStencilValues();
+                auto& sv = pocl.createStencilValues();
                 sv->fill1dIndex(true);
 
                 std::string name = std::string("oclN")
@@ -848,7 +848,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_fixed_vs_varying")
             pocl.setDeviceType(CL_DEVICE_TYPE_GPU);
             pocl.setReadResults(true);
 
-            auto& sv = pocl.getStencilValues();
+            auto& sv = pocl.createStencilValues();
             sv->fill1dIndex(true);
 
             std::string name = std::string("ocl_varying_N_")
@@ -903,7 +903,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_fixed_vs_varying")
             pocl.setDeviceType(CL_DEVICE_TYPE_GPU);
             pocl.setReadResults(true);
 
-            auto& sv = pocl.getFixedStencil();
+            auto& sv = pocl.createFixedStencil();
             sv->fill1dIndex(true);
 
             std::string name = std::string("ocl_fixed_N_")
@@ -1061,7 +1061,7 @@ TEST_CASE("benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl")
             p.setMpiComm(mpi_comm);
             // p.setProfilingEnabled(true);
 
-            auto& sv = p.getStencilValues();
+            auto& sv = p.createStencilValues();
             sv->fill1dIndex(true);
 
             ankerl::nanobench::Bench bench;
@@ -1260,7 +1260,7 @@ TEST_CASE("benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl_mpiLevelThreshold")
                 p.setMpiLevelThreshold(mpiLevelThreshold);
                 // p.setProfilingEnabled(true);
 
-                auto& sv = p.getStencilValues();
+                auto& sv = p.createStencilValues();
                 sv->fill1dIndex(true);
 
                 ankerl::nanobench::Bench bench;

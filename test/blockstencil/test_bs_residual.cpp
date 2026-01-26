@@ -326,8 +326,8 @@ TEST_CASE("ocl_bs_residual_independent_quantities")
     p2.setGhostsIn(gh);
     p2.setStencilType(mgcl::MGCL_VARYING);
 
-    auto& sv1_ptr = p1.getStencilValues();
-    auto& sv2_ptr = p2.getStencilValues();
+    auto& sv1_ptr = p1.createStencilValues();
+    auto& sv2_ptr = p2.createStencilValues();
     auto& sv1 = *sv1_ptr;
     auto& sv2 = *sv2_ptr;
 

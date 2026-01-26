@@ -30,7 +30,7 @@ namespace mgcl_test
             : device_types(_device_types)
         {
             if (device_types.empty())
-                device_types.push_back(CL_DEVICE_TYPE_DEFAULT);
+                device_types.push_back(CL_DEVICE_TYPE_ALL);
         }
 
         cl_device_type const& get() const override;

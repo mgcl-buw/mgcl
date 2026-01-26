@@ -345,7 +345,7 @@ TEST_CASE("MPI_seq_galerkinOptimized_nprocs")
     p.setMpiComm(mpi_comm);
 
     // p.setStencilType(mgcl::MGCL_VARYING);
-    // auto& s = *p.getStencilValues();
+    // auto& s = *p.createStencilValues();
     // s.fill1dIndex(true);
 
     // Initialize Problem partially, without calculating the Galerkin operator.
@@ -539,7 +539,7 @@ TEST_CASE("MPI_GPU_galerkinOptimized_nprocs")
     p->setMpiComm(mpi_comm);
 
     // p.setStencilType(mgcl::MGCL_VARYING);
-    // auto& s = *p.getStencilValues();
+    // auto& s = *p.createStencilValues();
     // s.fill1dIndex(true);
 
     // Initialize Problem partially, without calculating the Galerkin operator.
@@ -736,7 +736,7 @@ TEST_CASE("MPI_seq_galerkin_different_thresholds")
     p_th0.setMpiLevelThreshold(0);
 
     p_th0.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv0 = p_th0.getStencilValues();
+    auto& sv0 = p_th0.createStencilValues();
     sv0->fill1dIndex(false);
 
     p_th0.init();
@@ -748,7 +748,7 @@ TEST_CASE("MPI_seq_galerkin_different_thresholds")
     p_th1.setMpiLevelThreshold(0);
 
     p_th1.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = p_th1.getStencilValues();
+    auto& sv = p_th1.createStencilValues();
     sv->fill1dIndex(false);
 
     p_th1.init();
@@ -760,7 +760,7 @@ TEST_CASE("MPI_seq_galerkin_different_thresholds")
     p_th2.setMpiLevelThreshold(0);
 
     p_th2.setStencilType(mgcl::MGCL_VARYING);
-    sv = p_th2.getStencilValues();
+    sv = p_th2.createStencilValues();
     // copy data manually since for threshold 2 stencil values has local size.
     for (int i = 0; i < sv->getMgh(); i++)
         for (int j = 0; j < sv->getNgh(); j++)

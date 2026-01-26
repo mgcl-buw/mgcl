@@ -107,7 +107,7 @@ int main(int argc, char** argv)
         p.setOmega(omega);
 
         p.setStencilType(mgcl::MGCL_VARYING);
-        auto& s = *p.getStencilValues();
+        auto& s = *p.createStencilValues();
 
         // fill with 7-point Laplace
         double h2inv = m * m;
@@ -146,7 +146,7 @@ int main(int argc, char** argv)
         p.setOmega(omega);
 
         p.setStencilType(mgcl::MGCL_VARYING);
-        auto& s = *p.getStencilValues();
+        auto& s = *p.createStencilValues();
 
         // fill with 7-point Laplace
         double h2inv = m * m;

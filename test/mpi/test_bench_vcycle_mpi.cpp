@@ -107,7 +107,7 @@ TEST_CASE("benchmark_vcycle_MPI_OCL_galerkin_thresholds")
             pocl.setDeviceType(deviceType);
             pocl.setReadResults(true);
 
-            auto& sv = pocl.getStencilValues();
+            auto& sv = pocl.createStencilValues();
             sv->fill1dIndex(true);
 
             pocl.solve();

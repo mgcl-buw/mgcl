@@ -232,7 +232,7 @@ namespace mgcl_bench_residual_varying
             }
             p.setDeviceType(CL_DEVICE_TYPE_GPU);
 
-            auto& sv = p.getStencilValues();
+            auto& sv = p.createStencilValues();
             sv->fill1dIndex(false);
 
             p.init();

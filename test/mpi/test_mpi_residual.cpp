@@ -129,7 +129,7 @@ TEST_CASE("MPI_residual_seq_VaryingStencil_n_processes", "[mpiN]")
     p.setMpiComm(mpi_comm);
     p.setStencilType(stencilType);
 
-    auto svptr = p.getStencilValues();
+    auto svptr = p.createStencilValues();
     auto& sv = *svptr;
 
     // check that dimensions of sliced stencilValues matches with the one from the problem
@@ -298,7 +298,7 @@ TEST_CASE("MPI_residual_ocl_VaryingStencil_n_processes", "[mpiN]")
     p_glob.setResidualNorm(resnorm);
     p_glob.setIgnoreMpi(true);
 
-    auto svptr_glob = p_glob.getStencilValues();
+    auto svptr_glob = p_glob.createStencilValues();
     auto& sv_glob = *svptr_glob;
     // mgcl_test::fill7pLaplace(sv, h, false);
     for (int i = 0; i < sv_glob.field1d().size(); i++)
@@ -322,7 +322,7 @@ TEST_CASE("MPI_residual_ocl_VaryingStencil_n_processes", "[mpiN]")
     std::shared_ptr<mgcl::VaryingStencil> svptr_loc_slice = sv_glob.slice(m_start, m_end, n_start, n_end, o_start, o_end);
     auto& sv_loc_slice = *svptr_loc_slice;
 
-    auto svptr = p.getStencilValues();
+    auto svptr = p.createStencilValues();
     auto& sv = *svptr;
 
     // check that dimensions of sliced stencilValues matches with the one from the problem

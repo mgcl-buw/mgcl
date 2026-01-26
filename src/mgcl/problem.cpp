@@ -206,6 +206,14 @@ namespace mgcl
             warning("stencilType is set to MGCL_BLOCKSTENCIL but restrictionBlockstencil or prolongationBlockstencil do not seem to be set!");
         }
 
+        if (stencilType == MGCL_VARYING)
+        {
+            if ((!stencilValues && !use_opencl) || (use_opencl && !stencilValuesGpu && !stencilValues))
+            {
+                error("stencilType is set to MGCL_VARYING but neither stencilValues nor stencilValuesGpu are set!");
+            }
+        }
+
         // TODO Is this test needed?
         // if (blockstencil && (blockstencil->getGhostsM() < ghosts ||
         //                      blockstencil->getGhostsN() < ghosts ||
@@ -480,9 +488,11 @@ namespace mgcl
                 int xz = mgh * ogh;
                 int xy = mgh * ngh;
                 int ressize = (2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts);
+
                 if (stencilType == MGCL_VARYING)
                 {
-                    ressize *= stencilValues->getWidth() * stencilValues->getWidth() * stencilValues->getWidth();
+                    int width = stencilValues ? stencilValues->getWidth() : stencilValuesGpu->getWidth();
+                    ressize *= width * width * width;
                 }
                 else if (stencilType == MGCL_BLOCKSTENCIL)
                 {
@@ -524,7 +534,8 @@ namespace mgcl
             // Apply Galerkin operator if we're not on level 0, depending on stencil type.
             if (levels.back()->getM() > 0 && levels.back()->getN() > 0 && levels.back()->getO() > 0)
             {
-                int gh_sv = stencilValues ? stencilValues->getGhostsM() : 0;
+                int gh_sv = stencilValues ? stencilValues->getGhostsM() : 1;
+                gh_sv = stencilValuesGpu ? stencilValuesGpu->getGh() : gh_sv;
                 if (level >= 1 && getStencilType() == MGCL_VARYING)
                 {
                     auto& lvFine = *levels[level - 1];
@@ -1604,12 +1615,6 @@ namespace mgcl
             blockstencil = nullptr;
             prolongationBlockstencil = nullptr;
             restrictionBlockstencil = nullptr;
-            calculateAndSetMpiLevelThreshold();
-            int gh = std::max(1, jacobi_iterations_per_kernel);
-            if (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) // TODO check
-                stencilValues = std::make_shared<VaryingStencil>(mGlobal, nGlobal, oGlobal, 3, gh, gh, gh);
-            else
-                stencilValues = std::make_shared<VaryingStencil>(m, n, o, 3, gh, gh, gh);
         }
         else if (stencilType == MGCL_FIXED)
         {
@@ -1618,29 +1623,19 @@ namespace mgcl
             blockstencil = nullptr;
             prolongationBlockstencil = nullptr;
             restrictionBlockstencil = nullptr;
-            fixedStencil = std::make_shared<FixedStencil>(3);
         }
         else if (stencilType == MGCL_BLOCKSTENCIL)
         {
             fixedStencil = nullptr;
             stencilValues = nullptr;
-            calculateAndSetMpiLevelThreshold();
-            int gh = std::max(1, jacobi_iterations_per_kernel);
-            if (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) // TODO check
-            {
-                blockstencil = std::make_shared<Blockstencil>(mGlobal, nGlobal, oGlobal, 3, blocksize, gh, gh, gh);
-            }
-            else
-            {
-                blockstencil = std::make_shared<Blockstencil>(m, n, o, 3, blocksize, gh, gh, gh);
-            }
-            restrictionBlockstencil = std::make_shared<FixedBlockstencil>(3, blocksize);
-            prolongationBlockstencil = std::make_shared<FixedBlockstencil>(3, blocksize);
         }
         else
         {
             stencilValues = nullptr;
             fixedStencil = nullptr;
+            blockstencil = nullptr;
+            prolongationBlockstencil = nullptr;
+            restrictionBlockstencil = nullptr;
         }
     }
 
@@ -1648,25 +1643,156 @@ namespace mgcl
     {
         if (stencilType != MGCL_VARYING)
         {
-            error("Problem::getStencilValues: stencilType is not MGCL_VARYING. Use Problem::setStencilType(MGCL_VARYING) first.");
+            warning("Problem::getStencilValues: stencilType is not MGCL_VARYING. Use Problem::setStencilType(MGCL_VARYING) first.");
         }
         return stencilValues;
+    }
+
+    std::shared_ptr<VaryingStencil>& Problem::createStencilValues()
+    {
+        if (stencilType != MGCL_VARYING)
+        {
+            error("Problem::getStencilValues: stencilType is not MGCL_VARYING. Use Problem::setStencilType(MGCL_VARYING) first.");
+        }
+        info("Creating new varying stencil object...");
+
+        calculateAndSetMpiLevelThreshold();
+        int gh = std::max(1, jacobi_iterations_per_kernel);
+        if (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) // TODO check
+        {
+            stencilValues = std::make_shared<VaryingStencil>(mGlobal, nGlobal, oGlobal, 3, gh, gh, gh);
+        }
+        else
+        {
+            stencilValues = std::make_shared<VaryingStencil>(m, n, o, 3, gh, gh, gh);
+        }
+
+        return stencilValues;
+    }
+
+    /**
+     * @brief Allows the user to set coefficients for a varying stencil, without the need of re-allocating the buffer.
+     * Dimensions and ghosts must match.
+     *
+     * @param sv
+     */
+    void Problem::setStencilValues(std::shared_ptr<VaryingStencil>& sv)
+    {
+        if (stencilType != MGCL_VARYING)
+        {
+            error("Problem::getStencilValues: stencilType is not MGCL_VARYING. Use Problem::setStencilType(MGCL_VARYING) first.");
+        }
+
+        calculateAndSetMpiLevelThreshold();
+        int gh = std::max(1, jacobi_iterations_per_kernel);
+        int width = 3;
+        if (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) // TODO check
+        {
+            if (sv->getM() != mGlobal || sv->getN() != nGlobal || sv->getO() != oGlobal || sv->getGhostsM() != gh || sv->getGhostsN() != gh || sv->getGhostsO() != gh || sv->getWidth() != width)
+            {
+                error("Problem::setStencilValues: dimensions and ghosts must match. Is: m,n,o,ghm,ghn,gho,width: " + std::to_string(sv->getM()) + "," + std::to_string(sv->getN()) + "," + std::to_string(sv->getO()) + "," + std::to_string(sv->getGhostsM()) + "," + std::to_string(sv->getGhostsN()) + "," + std::to_string(sv->getGhostsO()) + "," + std::to_string(sv->getWidth()) + ". Should be: " + std::to_string(mGlobal) + "," + std::to_string(nGlobal) + "," + std::to_string(oGlobal) + "," + std::to_string(gh) + "," + std::to_string(gh) + "," + std::to_string(gh) + "," + std::to_string(width));
+            }
+            stencilValues = sv;
+        }
+        else
+        {
+            if (sv->getM() != m || sv->getN() != n || sv->getO() != o || sv->getGhostsM() != gh || sv->getGhostsN() != gh || sv->getGhostsO() != gh || sv->getWidth() != width)
+            {
+                error("Problem::setStencilValues: dimensions and ghosts must match. Is: m,n,o,ghm,ghn,gho,width: " + std::to_string(sv->getM()) + "," + std::to_string(sv->getN()) + "," + std::to_string(sv->getO()) + "," + std::to_string(sv->getGhostsM()) + "," + std::to_string(sv->getGhostsN()) + "," + std::to_string(sv->getGhostsO()) + "," + std::to_string(sv->getWidth()) + ". Should be: " + std::to_string(m) + "," + std::to_string(n) + "," + std::to_string(o) + "," + std::to_string(gh) + "," + std::to_string(gh) + "," + std::to_string(gh) + "," + std::to_string(width));
+            }
+            stencilValues = sv;
+        }
+    }
+
+    /**
+     * @brief Allows the user to set coefficients for a varying stencil, without the need of re-allocating the buffer.
+     * Dimensions and ghosts must match.
+     *
+     * @param sv
+     */
+    void Problem::setStencilValuesGpu(std::shared_ptr<VaryingStencilGpu>& sv)
+    {
+        if (stencilType != MGCL_VARYING)
+        {
+            error("Problem::getStencilValuesGpu: stencilType is not MGCL_VARYING. Use Problem::setStencilType(MGCL_VARYING) first.");
+        }
+
+        if (stencilValues)
+        {
+            std::cout << "mgcl warning: you've set both stencilValues and stencilValuesGpu. Only the latter will be considered when using OpenCL." << std::endl;
+        }
+
+        calculateAndSetMpiLevelThreshold();
+        int gh = std::max(1, jacobi_iterations_per_kernel);
+        int width = 3;
+        if (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) // TODO check
+        {
+            if (sv->getM() != mGlobal || sv->getN() != nGlobal || sv->getO() != oGlobal || sv->getGh() != gh || sv->getWidth() != width)
+            {
+                error("Problem::setStencilValuesGpu: dimensions and ghosts must match. Is: m,n,o,gh,width: " + std::to_string(sv->getM()) + "," + std::to_string(sv->getN()) + "," + std::to_string(sv->getO()) + "," + std::to_string(sv->getGh()) + "," + std::to_string(sv->getWidth()) + ". Should be: " + std::to_string(mGlobal) + "," + std::to_string(nGlobal) + "," + std::to_string(oGlobal) + "," + std::to_string(gh) + "," + std::to_string(width));
+            }
+            stencilValuesGpu = sv;
+        }
+        else
+        {
+            if (sv->getM() != m || sv->getN() != n || sv->getO() != o || sv->getGh() != gh || sv->getWidth() != width)
+            {
+                error("Problem::setStencilValuesGpu: dimensions and ghosts must match. Is: m,n,o,gh,width: " + std::to_string(sv->getM()) + "," + std::to_string(sv->getN()) + "," + std::to_string(sv->getO()) + "," + std::to_string(sv->getGh()) + "," + std::to_string(sv->getWidth()) + ". Should be: " + std::to_string(m) + "," + std::to_string(n) + "," + std::to_string(o) + "," + std::to_string(gh) + "," + std::to_string(width));
+            }
+            stencilValuesGpu = sv;
+        }
     }
 
     std::shared_ptr<FixedStencil>& Problem::getFixedStencil()
     {
         if (stencilType != MGCL_FIXED)
         {
-            error("Problem::getFixedStencil: stencilType is not MGCL_FIXED. Use Problem::setStencilType(MGCL_FIXED) first.");
+            warning("Problem::getFixedStencil: stencilType is not MGCL_FIXED. Use Problem::setStencilType(MGCL_FIXED) first.");
         }
         return fixedStencil;
+    }
+
+    std::shared_ptr<FixedStencil>& Problem::createFixedStencil()
+    {
+        if (stencilType != MGCL_FIXED)
+        {
+            error("Problem::getFixedStencil: stencilType is not MGCL_FIXED. Use Problem::setStencilType(MGCL_FIXED) first.");
+        }
+        info("Creating new fixed stencil object...");
+        fixedStencil = std::make_shared<FixedStencil>(3);
+        return fixedStencil;
+    }
+
+    std::shared_ptr<Blockstencil>& Problem::createBlockstencil()
+    {
+        if (stencilType != MGCL_BLOCKSTENCIL)
+        {
+            error("Problem::getBlockstencil: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
+        }
+
+        info("Creating new blocsktencil, restrictionBlockstencil and prolongationBlockstencil objects...");
+
+        calculateAndSetMpiLevelThreshold();
+        int gh = std::max(1, jacobi_iterations_per_kernel);
+        if (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) // TODO check
+        {
+            blockstencil = std::make_shared<Blockstencil>(mGlobal, nGlobal, oGlobal, 3, blocksize, gh, gh, gh);
+        }
+        else
+        {
+            blockstencil = std::make_shared<Blockstencil>(m, n, o, 3, blocksize, gh, gh, gh);
+        }
+        restrictionBlockstencil = std::make_shared<FixedBlockstencil>(3, blocksize);
+        prolongationBlockstencil = std::make_shared<FixedBlockstencil>(3, blocksize);
+
+        return blockstencil;
     }
 
     std::shared_ptr<Blockstencil>& Problem::getBlockstencil()
     {
         if (stencilType != MGCL_BLOCKSTENCIL)
         {
-            error("Problem::getBlockstencil: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
+            warning("Problem::getBlockstencil: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
         }
         return blockstencil;
     }
@@ -1677,6 +1803,10 @@ namespace mgcl
         {
             error("Problem::getRestrictionBlockstencil: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
         }
+        if (!restrictionBlockstencil)
+        {
+            error("Problem::getRestrictionBlockstencil: restrictionBlockstencil is null. Use Problem::createBlockstencil() first.");
+        }
         restrictionBlockstencilAccessed = true;
         return restrictionBlockstencil;
     }
@@ -1686,6 +1816,10 @@ namespace mgcl
         if (stencilType != MGCL_BLOCKSTENCIL)
         {
             error("Problem::getProlongationBlockstencil: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
+        }
+        if (!prolongationBlockstencil)
+        {
+            error("Problem::getProlongationBlockstencil: prolongationBlockstencil is null. Use Problem::createBlockstencil() first.");
         }
         prolongationBlockstencilAccessed = true;
         return prolongationBlockstencil;

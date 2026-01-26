@@ -119,7 +119,7 @@ TEST_CASE("solve_periodic")
         SECTION("Galerkin_7p")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *p.getStencilValues();
+            auto& s = *p.createStencilValues();
 
             double h = 1.0 / static_cast<double>(N);
             mgcl_test::fill7pLaplace(s, h, false);
@@ -185,7 +185,7 @@ TEST_CASE("solve_periodic")
         SECTION("Galerkin_27p")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *p.getStencilValues();
+            auto& s = *p.createStencilValues();
 
             double h = 1.0 / static_cast<double>(N);
             mgcl_test::fill27pLaplace(s, h, false);
@@ -256,7 +256,7 @@ TEST_CASE("solve_periodic")
         SECTION("Galerkin_7p")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *p.getStencilValues();
+            auto& s = *p.createStencilValues();
 
             double h = 1.0 / static_cast<double>(N);
             mgcl_test::fill7pLaplace(s, h, false);
@@ -302,7 +302,7 @@ TEST_CASE("solve_periodic")
         SECTION("Galerkin_27p")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *p.getStencilValues();
+            auto& s = *p.createStencilValues();
 
             double h = 1.0 / static_cast<double>(N);
             mgcl_test::fill27pLaplace(s, h, false);
@@ -438,7 +438,7 @@ TEST_CASE("solve_dirichlet")
         SECTION("Galerkin_7p")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *p.getStencilValues();
+            auto& s = *p.createStencilValues();
             double h2inv = (N + 1) * (N + 1); // h = 1/N -> 1/h = N
 
             double h = 1.0 / static_cast<double>(N + 1);
@@ -556,7 +556,7 @@ TEST_CASE("solve_dirichlet")
         SECTION("Galerkin_27p")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *p.getStencilValues();
+            auto& s = *p.createStencilValues();
             double h2inv = (N + 1) * (N + 1); // h = 1/N -> 1/h = N
 
             double h = 1.0 / static_cast<double>(N + 1);
@@ -675,7 +675,7 @@ TEST_CASE("solve_dirichlet")
         SECTION("Galerkin_7p")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *p.getStencilValues();
+            auto& s = *p.createStencilValues();
             double h2inv = (N + 1) * (N + 1); // h = 1/N -> 1/h = N
 
             double h = 1.0 / static_cast<double>(N + 1);
@@ -778,7 +778,7 @@ TEST_CASE("solve_dirichlet")
         SECTION("Galerkin_27p")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *p.getStencilValues();
+            auto& s = *p.createStencilValues();
             double h2inv = (N + 1) * (N + 1); // h = 1/N -> 1/h = N
 
             double h = 1.0 / static_cast<double>(N + 1);
@@ -976,7 +976,7 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
         SECTION("Galerkin")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *p.getStencilValues();
+            auto& s = *p.createStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
             double h = 1.0 / static_cast<double>(N);
@@ -1048,7 +1048,7 @@ TEST_CASE("Problem_solving:_periodic_4th_order_Jacobi_iters")
         SECTION("Galerkin")
         {
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *p.getStencilValues();
+            auto& s = *p.createStencilValues();
             double h2inv = N * N; // h = 1/N -> 1/h = N
 
             double h = 1.0 / static_cast<double>(N);
@@ -1260,7 +1260,7 @@ TEST_CASE("solve_fixed_vs_varying_stencil")
     p_fixed.setMaxlevel(maxlevel);
 
     p_fixed.setStencilType(mgcl::MGCL_FIXED);
-    auto& fixedStencil = p_fixed.getFixedStencil();
+    auto& fixedStencil = p_fixed.createFixedStencil();
     fixedStencil->fillRandom();
     (*fixedStencil)[1][1][1] = 1.0; // make sure the stencil does not produce nan
 
@@ -1273,7 +1273,7 @@ TEST_CASE("solve_fixed_vs_varying_stencil")
     p_varying.setMaxlevel(maxlevel);
 
     p_varying.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = p_varying.getStencilValues();
+    auto& sv = p_varying.createStencilValues();
     // copy from fixed into varying
     // clang-format off
     for (int i = 0; i < sv->getMgh(); i++)
@@ -1388,7 +1388,7 @@ TEST_CASE("solve_maxLevelUsingOcl")
     pAllLevelsUsingOcl.setMaxlevel(maxlevel);
 
     pAllLevelsUsingOcl.setStencilType(mgcl::MGCL_FIXED);
-    auto& fixedStencil = pAllLevelsUsingOcl.getFixedStencil();
+    auto& fixedStencil = pAllLevelsUsingOcl.createFixedStencil();
     fixedStencil->fillRandom();
     (*fixedStencil)[1][1][1] = 1.0; // make sure the stencil does not produce nan
 
@@ -1402,7 +1402,7 @@ TEST_CASE("solve_maxLevelUsingOcl")
     pUsingOclLevelThreshold.setMaxLevelUsingOcl(maxLevelUsingOcl);
 
     pUsingOclLevelThreshold.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = pUsingOclLevelThreshold.getStencilValues();
+    auto& sv = pUsingOclLevelThreshold.createStencilValues();
     // copy from fixed into varying
     // clang-format off
     for (int i = 0; i < sv->getMgh(); i++)

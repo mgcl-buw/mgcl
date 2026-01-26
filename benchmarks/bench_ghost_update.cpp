@@ -124,7 +124,7 @@ TEST_CASE("bench_ghost_update_mpi_ocl")
             p->setDeviceType(CL_DEVICE_TYPE_GPU);
             p->setSilent(true);
             if (p->getStencilType() == mgcl::MGCL_VARYING)
-                p->getStencilValues()->fillRandom();
+                p->createStencilValues()->fillRandom();
             p->init();
 
             auto& buf = p->getLevelAt(0).getDVIn();
@@ -596,7 +596,7 @@ TEST_CASE("benchGhostUpdateMpiOclWholeVsInterleaved")
             p->setDeviceType(CL_DEVICE_TYPE_GPU);
             p->setSilent(true);
             if (p->getStencilType() == mgcl::MGCL_VARYING)
-                p->getStencilValues()->fillRandom();
+                p->createStencilValues()->fillRandom();
             p->init();
 
             auto& buf = p->getLevelAt(0).getDVIn();
@@ -826,7 +826,7 @@ TEST_CASE("bench_ghost_update_mpi_seq")
             p->setDeviceType(CL_DEVICE_TYPE_GPU);
             p->setSilent(true);
             if (p->getStencilType() == mgcl::MGCL_VARYING)
-                p->getStencilValues()->fillRandom();
+                p->createStencilValues()->fillRandom();
             p->init();
 
             auto& buf = p->getLevelAt(0).getV();

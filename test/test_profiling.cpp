@@ -90,7 +90,7 @@ TEST_CASE("profiling_kernels")
     p.setDeviceType(deviceType);
     p.setProfilingEnabled(true);
     p.setStencilType(mgcl::MGCL_VARYING);
-    auto sv = p.getStencilValues();
+    auto sv = p.createStencilValues();
     mgcl_test::fill7pLaplace(*sv, h, false);
     p.init();
     auto& lv0 = p.getLevelAt(0);

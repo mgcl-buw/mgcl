@@ -552,7 +552,7 @@ namespace mgcl_bench_jacobi_blockstencil
                 }
                 p.setDeviceType(CL_DEVICE_TYPE_GPU);
 
-                auto& sv = p.getStencilValues();
+                auto& sv = p.createStencilValues();
                 sv->fill1dIndex(false);
 
                 p.init();
@@ -1143,7 +1143,7 @@ namespace mgcl_bench_jacobi_blockstencil
                 p.setSmootherType(mgcl::MGCL_JACOBI_SCALAR);
                 p.setJacobiIterationsPerKernel(1);
 
-                auto& sv = p.getStencilValues();
+                auto& sv = p.createStencilValues();
                 sv->fill1dIndex(false);
 
                 p.init();

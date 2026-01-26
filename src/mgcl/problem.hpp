@@ -118,6 +118,7 @@ namespace mgcl
         /* Stencil that will be used in Jacobi's method */
         MGCL_STENCIL stencilType = MGCL_LAPLACE_7POINT;
         std::shared_ptr<VaryingStencil> stencilValues = nullptr;
+        std::shared_ptr<VaryingStencilGpu> stencilValuesGpu = nullptr;
         std::shared_ptr<Blockstencil> blockstencil = nullptr;
         std::shared_ptr<FixedStencil> fixedStencil = nullptr;
 
@@ -394,7 +395,12 @@ namespace mgcl
         void setStencilType(const MGCL_STENCIL& stencilType_);
 
         std::shared_ptr<VaryingStencil>& getStencilValues();
+        std::shared_ptr<VaryingStencil>& createStencilValues();
+        void setStencilValues(std::shared_ptr<VaryingStencil>& sv);
+        void setStencilValuesGpu(std::shared_ptr<VaryingStencilGpu>& sv);
+        std::shared_ptr<FixedStencil>& createFixedStencil();
         std::shared_ptr<FixedStencil>& getFixedStencil();
+        std::shared_ptr<Blockstencil>& createBlockstencil();
         std::shared_ptr<Blockstencil>& getBlockstencil();
 
         std::shared_ptr<FixedBlockstencil>& getRestrictionBlockstencil();

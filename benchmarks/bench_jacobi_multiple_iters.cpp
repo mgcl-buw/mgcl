@@ -313,7 +313,7 @@ TEST_CASE("bench_jacobi_mpi_ocl_multiple_iters")
                 p->setSilent(true);
                 p->setStencilType(mgcl::MGCL_VARYING);
                 if (p->getStencilType() == mgcl::MGCL_VARYING)
-                    p->getStencilValues()->fillRandom();
+                    p->createStencilValues()->fillRandom();
                 p->init();
                 auto& level = p->getLevelAt(0);
 
@@ -528,7 +528,7 @@ TEST_CASE("bench_jacobi_mpi_ocl_vs_seq_multiple_iters")
                 p->setStencilType(stencilType);
                 p->setSilent(true);
                 if (p->getStencilType() == mgcl::MGCL_VARYING)
-                    p->getStencilValues()->fillRandom();
+                    p->createStencilValues()->fillRandom();
                 p->init();
                 auto& level = p->getLevelAt(0);
 
@@ -596,7 +596,7 @@ TEST_CASE("bench_jacobi_mpi_ocl_vs_seq_multiple_iters")
                            .append(std::to_string(iters));
                 bench.run(std::string(name).c_str(), [&] { //
                     mgcl::MultigridEngine::jacobiSeq(*v, *f, *r, omega, hm * hm, iters, resnorm, stencilType, 0,
-                                                     p->getStencilValues().get(), nullptr, false, true, spi);
+                                                     p->createStencilValues().get(), nullptr, false, true, spi);
                 });
 
                 MPI_Barrier(mpi_comm);

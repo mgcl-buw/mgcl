@@ -24,7 +24,7 @@ TEST_CASE("Level::initBlockstencil")
     auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
     p->setGhostsIn(1);
     p->setStencilType(mgcl::MGCL_BLOCKSTENCIL);
-    p->getBlockstencil()->fillRandom();
+    p->createBlockstencil()->fillRandom();
     p->getRestrictionBlockstencil()->fillRandom();
     p->getProlongationBlockstencil()->fillRandom();
     // REQUIRE(p->init());
@@ -77,7 +77,7 @@ TEST_CASE("Level::initOpenCLBuffersBlockstencil")
     p->setGhostsIn(1);
     p->setStencilType(mgcl::MGCL_BLOCKSTENCIL);
     p->setUseOpencl(true);
-    p->getBlockstencil()->fillRandom();
+    p->createBlockstencil()->fillRandom();
     p->getRestrictionBlockstencil()->fillRandom();
     p->getProlongationBlockstencil()->fillRandom();
     p->setSmootherType(mgcl::MGCL_JACOBI_SCALAR);

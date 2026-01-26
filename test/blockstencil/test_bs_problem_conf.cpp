@@ -44,7 +44,7 @@ TEST_CASE("Problem conf Blockstencil")
         REQUIRE(p.getStencilType() == mgcl::MGCL_BLOCKSTENCIL);
 
         REQUIRE(!p.getOpenCLHelper().isInitialized());
-        REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
+        REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_ALL);
         REQUIRE(p.getKernelFile() == "./mgcl.cl");
         REQUIRE(p.getDeviceName() == "");
         REQUIRE(p.getDVPtr() == nullptr);
@@ -131,6 +131,15 @@ TEST_CASE("Problem::initBlockstencil")
     v->fillRandom();
     f->fillRandom();
 
+    auto& s = *p.createBlockstencil();
+    REQUIRE(s.getM() == m);
+    REQUIRE(s.getN() == n);
+    REQUIRE(s.getO() == o);
+    REQUIRE(s.getWidth() == 3);
+    REQUIRE(s.getBlocksize() == blocksize);
+
+    mgcl_test::fill7pLaplace(s, 1.0 / (double)m, false);
+
     auto r_fs_tmp = mgcl::create3dFullWeightRestrictionStencil();
     auto p_fs_tmp = mgcl::create3dBilinearProlongationStencil();
     auto& rbs = *p.getRestrictionBlockstencil();
@@ -143,15 +152,6 @@ TEST_CASE("Problem::initBlockstencil")
                     rbs[bi][bi][ii][jj][kk] = r_fs_tmp[ii][jj][kk];
                     pbs[bi][bi][ii][jj][kk] = p_fs_tmp[ii][jj][kk];
                 }
-
-    auto& s = *p.getBlockstencil();
-    REQUIRE(s.getM() == m);
-    REQUIRE(s.getN() == n);
-    REQUIRE(s.getO() == o);
-    REQUIRE(s.getWidth() == 3);
-    REQUIRE(s.getBlocksize() == blocksize);
-
-    mgcl_test::fill7pLaplace(s, 1.0 / (double)m, false);
 
     SECTION("default conf, v and f nullptr")
     {
@@ -245,7 +245,7 @@ TEST_CASE("Problem::initBlockstencil")
         mgcl::Problem p2(m, n, o, v2, f2);
 
         p2.setGhostsIn(ghosts_in);
-        auto& s2 = *p2.getBlockstencil();
+        auto& s2 = *p2.createBlockstencil();
 
         auto& rbs2 = *p2.getRestrictionBlockstencil();
         auto& pbs2 = *p2.getProlongationBlockstencil();
@@ -299,7 +299,7 @@ TEST_CASE("Problem::initBlockstencil")
 
         p.setGhosts(ghosts);
         p.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
-        auto& s = *p.getBlockstencil();
+        auto& s = *p.createBlockstencil();
         mgcl_test::fill7pLaplace(s, 1.0 / (double)m, false);
 
         auto& rbs = *p.getRestrictionBlockstencil();
@@ -529,7 +529,7 @@ TEST_CASE("Problem::init_oclBlockstencil")
     p.setUseOpencl(true);
     p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
 
-    auto& s = *p.getBlockstencil();
+    auto& s = *p.createBlockstencil();
 
     REQUIRE(s.getM() == m);
     REQUIRE(s.getN() == n);
@@ -813,7 +813,7 @@ TEST_CASE("Problem::readResultsBlockstencil")
     p.setDeviceType(deviceType);
     p.getOpenCLHelper().setPreprocessorConstant("BLOCKSIZE", std::to_string(blocksize));
 
-    auto& s = *p.getBlockstencil();
+    auto& s = *p.createBlockstencil();
 
     auto r_fs_tmp = mgcl::create3dFullWeightRestrictionStencil();
     auto p_fs_tmp = mgcl::create3dBilinearProlongationStencil();
@@ -859,29 +859,29 @@ TEST_CASE("Problem::setStencilTypeBlockstencil")
 {
     int blocksize = 2;
     mgcl::Problem p(2, 2, 2);
-    REQUIRE_THROWS(p.getStencilValues());
-    REQUIRE_THROWS(p.getFixedStencil());
-    REQUIRE_THROWS(p.getBlockstencil());
+    REQUIRE(!p.getStencilValues());
+    REQUIRE(!p.getFixedStencil());
+    REQUIRE(!p.getBlockstencil());
 
     p.setStencilType(mgcl::MGCL_LAPLACE_19POINT);
-    REQUIRE_THROWS(p.getStencilValues());
-    REQUIRE_THROWS(p.getFixedStencil());
-    REQUIRE_THROWS(p.getBlockstencil());
+    REQUIRE(!p.getStencilValues());
+    REQUIRE(!p.getFixedStencil());
+    REQUIRE(!p.getBlockstencil());
 
     p.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
-    REQUIRE_THROWS(p.getStencilValues());
-    REQUIRE_THROWS(p.getFixedStencil());
-    REQUIRE_THROWS(p.getBlockstencil());
+    REQUIRE(!p.getStencilValues());
+    REQUIRE(!p.getFixedStencil());
+    REQUIRE(!p.getBlockstencil());
 
     p.setStencilType(mgcl::MGCL_LAPLACE_7POINT);
-    REQUIRE_THROWS(p.getStencilValues());
-    REQUIRE_THROWS(p.getFixedStencil());
-    REQUIRE_THROWS(p.getBlockstencil());
+    REQUIRE(!p.getStencilValues());
+    REQUIRE(!p.getFixedStencil());
+    REQUIRE(!p.getBlockstencil());
 
     p.setStencilType(mgcl::MGCL_VARYING);
-    REQUIRE(p.getStencilValues() != nullptr);
-    REQUIRE_THROWS(p.getFixedStencil());
-    REQUIRE_THROWS(p.getBlockstencil());
+    REQUIRE(p.createStencilValues() != nullptr);
+    REQUIRE(!p.getFixedStencil());
+    REQUIRE(!p.getBlockstencil());
     CHECK(p.getStencilValues()->getM() == p.getM());
     CHECK(p.getStencilValues()->getN() == p.getN());
     CHECK(p.getStencilValues()->getO() == p.getO());
@@ -890,9 +890,9 @@ TEST_CASE("Problem::setStencilTypeBlockstencil")
     CHECK(p.getStencilValues()->getOgh() == p.getO() + 2);
 
     p.setStencilType(mgcl::MGCL_FIXED);
-    REQUIRE(p.getFixedStencil() != nullptr);
-    REQUIRE_THROWS(p.getStencilValues());
-    REQUIRE_THROWS(p.getBlockstencil());
+    REQUIRE(p.createFixedStencil() != nullptr);
+    REQUIRE(!p.getStencilValues());
+    REQUIRE(!p.getBlockstencil());
 
     // p.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
     // REQUIRE(p.getBlockstencil());

@@ -1,3 +1,4 @@
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
@@ -214,7 +215,7 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
     p_seq->setBc(bc);
 
     p_seq->setStencilType(stencilType);
-    auto& sv = p_seq->getStencilValues();
+    auto& sv = p_seq->createStencilValues();
     sv->fillRandomInt();
 
     p_seq->init();
@@ -231,7 +232,8 @@ TEST_CASE("residual periodic varying stencil seq vs ocl")
     p_gpu->setBc(bc);
 
     p_gpu->setStencilType(stencilType);
-    auto& sv_gpu = p_gpu->getStencilValues();
+    p_gpu->setStencilValues(sv);
+    auto& sv_gpu = sv;
 
     // copy stencil values
     REQUIRE(sv->field1d().size() == sv_gpu->field1d().size());
@@ -373,7 +375,7 @@ TEST_CASE("residual periodic_laplace_vs_galerkin")
             p.setStencilType(mgcl::MGCL_VARYING);
             p.setGhostsIn(1);
 
-            auto& sv = p.getStencilValues();
+            auto& sv = p.createStencilValues();
             if (stencilType == mgcl::MGCL_LAPLACE_7POINT)
                 mgcl_test::fill7pLaplace(*sv, h, false);
             else if (stencilType == mgcl::MGCL_LAPLACE_19POINT)
@@ -631,7 +633,7 @@ TEST_CASE("residual gpu gh > 1")
             p->setStencilType(mgcl::MGCL_VARYING);
             pgh->setStencilType(mgcl::MGCL_VARYING);
 
-            auto sv = p->getStencilValues();
+            auto sv = p->createStencilValues();
             sv->fillRandom();
             sv->updateGhosts();
 
@@ -1022,12 +1024,12 @@ TEST_CASE("residual gpu moff, noff, koff < 0")
             p_exp->setStencilType(mgcl::MGCL_VARYING);
             p_act->setStencilType(mgcl::MGCL_VARYING);
 
-            auto sv_exp = p_exp->getStencilValues();
+            auto sv_exp = p_exp->createStencilValues();
             sv_exp->fillRandom();
             sv_exp->updateGhosts();
 
             // copy stencil values
-            auto sv_act = p_act->getStencilValues();
+            auto sv_act = p_act->createStencilValues();
             for (int i = 0; i < sv_exp->field1d().size(); i++)
                 sv_act->field1d()[i] = sv_exp->field1d()[i];
 
@@ -1082,10 +1084,32 @@ TEST_CASE("residual_seq_fixed_stencil")
     pfixed.setStencilType(mgcl::MGCL_FIXED);
     pfixed.setGhostsIn(gh);
 
-    auto& fixedStencil = pfixed.getFixedStencil();
+    auto& fixedStencil = pfixed.createFixedStencil();
     fixedStencil->fillRandom();
 
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            for (int k = 0; k < 3; k++)
+            {
+                if ((*fixedStencil)[i][j][k] == 0)
+                {
+                    CAPTURE(i, j, k);
+                    FAIL("fixedStencil 0 beofre");
+                }
+            }
+
     pfixed.init();
+
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            for (int k = 0; k < 3; k++)
+            {
+                if ((*fixedStencil)[i][j][k] == 0)
+                {
+                    CAPTURE(i, j, k);
+                    FAIL("fixedStencil 0 after");
+                }
+            }
 
     auto& lv0_fixed = pfixed.getLevelAt(0);
     auto& r_fixed = lv0_fixed.getR();
@@ -1098,7 +1122,7 @@ TEST_CASE("residual_seq_fixed_stencil")
     pvarying.setStencilType(mgcl::MGCL_VARYING);
     pvarying.setGhostsIn(gh);
 
-    auto& sv = pvarying.getStencilValues();
+    auto& sv = pvarying.createStencilValues();
     // copy from fixed into varying
     // clang-format off
     for (int i = 0; i < sv->getMgh(); i++)
@@ -1108,6 +1132,10 @@ TEST_CASE("residual_seq_fixed_stencil")
         for (int jj = 0; jj < 3; jj++)
         for (int kk = 0; kk < 3; kk++)
         {
+                            if ((*fixedStencil)[ii][jj][kk] == 0){
+                                CAPTURE(i,j,k,ii,jj,kk);        
+                                FAIL("fixedStencil 0");
+                            }
             (*sv)[ii][jj][kk][i][j][k] = (*fixedStencil)[ii][jj][kk];
         }
     // clang-format on
@@ -1145,7 +1173,7 @@ TEST_CASE("residual_ocl_fixed_stencil")
     pfixed.setStencilType(mgcl::MGCL_FIXED);
     pfixed.setGhostsIn(gh);
 
-    auto& fixedStencil = pfixed.getFixedStencil();
+    auto& fixedStencil = pfixed.createFixedStencil();
     fixedStencil->fillRandom();
 
     pfixed.init();
@@ -1161,7 +1189,7 @@ TEST_CASE("residual_ocl_fixed_stencil")
     pvarying.setStencilType(mgcl::MGCL_VARYING);
     pvarying.setGhostsIn(gh);
 
-    auto& sv = pvarying.getStencilValues();
+    auto& sv = pvarying.createStencilValues();
     // copy from fixed into varying
     // clang-format off
     for (int i = 0; i < sv->getMgh(); i++)

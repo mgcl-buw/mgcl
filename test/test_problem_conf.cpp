@@ -42,7 +42,7 @@ TEST_CASE("Problem conf")
         REQUIRE(p.getStencilType() == mgcl::MGCL_LAPLACE_7POINT);
 
         REQUIRE(!p.getOpenCLHelper().isInitialized());
-        REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
+        REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_ALL);
         REQUIRE(p.getKernelFile() == "./mgcl.cl");
         REQUIRE(p.getDeviceName() == "");
         REQUIRE(p.getDVPtr() == nullptr);
@@ -245,7 +245,7 @@ TEST_CASE("set OpenCLHelper values")
         REQUIRE(p.getCommands() == nullptr);
         REQUIRE(p.getContext() == nullptr);
         REQUIRE(p.getDeviceId() == nullptr);
-        REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_DEFAULT);
+        REQUIRE(p.getDeviceType() == CL_DEVICE_TYPE_ALL);
         REQUIRE(p.getKernelFile() == "./mgcl.cl");
         REQUIRE(p.getDeviceName() == "");
     }
@@ -577,7 +577,7 @@ TEST_CASE("Problem::init")
         // is done in an own galerkin test.
 
         p.setStencilType(mgcl::MGCL_VARYING);
-        auto& s = *p.getStencilValues();
+        auto& s = *p.createStencilValues();
 
         REQUIRE(s.getM() == m);
         REQUIRE(s.getN() == n);
@@ -653,34 +653,37 @@ TEST_CASE("Problem::readResults")
 TEST_CASE("Problem::setStencilType")
 {
     mgcl::Problem p(2, 2, 2);
-    REQUIRE_THROWS(p.getStencilValues() == nullptr);
-    REQUIRE_THROWS(p.getFixedStencil() == nullptr);
+    REQUIRE(p.getStencilValues() == nullptr);
+    REQUIRE(p.getFixedStencil() == nullptr);
 
     p.setStencilType(mgcl::MGCL_LAPLACE_19POINT);
-    REQUIRE_THROWS(p.getStencilValues() == nullptr);
-    REQUIRE_THROWS(p.getFixedStencil() == nullptr);
+    REQUIRE(p.getStencilValues() == nullptr);
+    REQUIRE(p.getFixedStencil() == nullptr);
 
     p.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
-    REQUIRE_THROWS(p.getStencilValues() == nullptr);
-    REQUIRE_THROWS(p.getFixedStencil() == nullptr);
+    REQUIRE(p.getStencilValues() == nullptr);
+    REQUIRE(p.getFixedStencil() == nullptr);
 
     p.setStencilType(mgcl::MGCL_LAPLACE_7POINT);
-    REQUIRE_THROWS(p.getStencilValues() == nullptr);
-    REQUIRE_THROWS(p.getFixedStencil() == nullptr);
+    REQUIRE(p.getStencilValues() == nullptr);
+    REQUIRE(p.getFixedStencil() == nullptr);
 
     p.setStencilType(mgcl::MGCL_VARYING);
-    REQUIRE(p.getStencilValues() != nullptr);
-    REQUIRE_THROWS(p.getFixedStencil() == nullptr);
-    CHECK(p.getStencilValues()->getM() == p.getM());
-    CHECK(p.getStencilValues()->getN() == p.getN());
-    CHECK(p.getStencilValues()->getO() == p.getO());
-    CHECK(p.getStencilValues()->getMgh() == p.getM() + 2);
-    CHECK(p.getStencilValues()->getNgh() == p.getN() + 2);
-    CHECK(p.getStencilValues()->getOgh() == p.getO() + 2);
+    auto& sv = p.createStencilValues();
+    REQUIRE(sv != nullptr);
+    auto& sv2 = p.createStencilValues();
+    REQUIRE(sv == sv2);
+    REQUIRE(p.getFixedStencil() == nullptr);
+    CHECK(sv->getM() == p.getM());
+    CHECK(sv->getN() == p.getN());
+    CHECK(sv->getO() == p.getO());
+    CHECK(sv->getMgh() == p.getM() + 2);
+    CHECK(sv->getNgh() == p.getN() + 2);
+    CHECK(sv->getOgh() == p.getO() + 2);
 
     p.setStencilType(mgcl::MGCL_FIXED);
-    REQUIRE(p.getFixedStencil() != nullptr);
-    REQUIRE_THROWS(p.getStencilValues() == nullptr);
+    REQUIRE(p.createFixedStencil() != nullptr);
+    REQUIRE(p.getStencilValues() == nullptr);
 }
 
 /**
@@ -715,4 +718,46 @@ TEST_CASE("Problem::setMpiLevelThreshold")
         REQUIRE(p.getMpiLevelThreshold() == 2);
         REQUIRE(p.getMpiMinGridPoints() == 4);
     }
+}
+
+TEST_CASE("Problem::setStencilValues")
+{
+    auto v = std::make_shared<mgcl::Cuboid>(2, 2, 2);
+    auto f = std::make_shared<mgcl::Cuboid>(2, 2, 2);
+    mgcl::Problem p(2, 2, 2, f, v);
+    p.setStencilType(mgcl::MGCL_VARYING);
+    auto sv = std::make_shared<mgcl::VaryingStencil>(2, 2, 2, 3, 1, 1, 1);
+    mgcl_test::fill7pLaplace(*sv, 0.5, false);
+    (*sv)[1][1][1][1][1][1] = 123;
+    p.setStencilValues(sv);
+
+    p.init();
+    auto& lv0 = p.getLevelAt(0);
+
+    REQUIRE(lv0.getStencilValues().get() == sv.get());
+    CHECK(sv->getM() == p.getM());
+    CHECK(sv->getN() == p.getN());
+    CHECK(sv->getO() == p.getO());
+    CHECK(sv->getMgh() == p.getM() + 2);
+    CHECK(sv->getNgh() == p.getN() + 2);
+    CHECK(sv->getOgh() == p.getO() + 2);
+    REQUIRE((*lv0.getStencilValues())[1][1][1][1][1][1] == 123);
+}
+
+TEST_CASE("Problem::setStencilValuesGpu")
+{
+    auto v = std::make_shared<mgcl::Cuboid>(2, 2, 2);
+    auto f = std::make_shared<mgcl::Cuboid>(2, 2, 2);
+    mgcl::Problem p(2, 2, 2, f, v);
+    p.setUseOpencl(true);
+    p.getOpenCLHelper().init();
+    // p.reuseOpenCL(p.getContext(), p.getCommands(), p.getDeviceId());
+    p.setStencilType(mgcl::MGCL_VARYING);
+    auto sv = std::make_shared<mgcl::VaryingStencil>(2, 2, 2, 3, 1, 1, 1);
+    mgcl_test::fill7pLaplace(*sv, 0.5, false);
+    auto svgpu = std::make_shared<mgcl::VaryingStencilGpu>(*sv, p.getContext(), p.getCommands(), p.getProgram());
+    p.setStencilValuesGpu(svgpu);
+
+    p.init();
+    REQUIRE(p.getLevelAt(0).getStencilValuesGpu().get() == svgpu.get());
 }

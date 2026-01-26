@@ -89,9 +89,11 @@ namespace mgcl
             {
                 stencilValues = problem->stencilValues;
 
-                // TODO refactor updateGhosts local?
-                updateGhostsStencilMpi(*stencilValues, mpiData.get(), problem->isPeriodic(),
-                                       isCalculatedLocally()); // TODO test
+                if (stencilValues)
+                {
+                    updateGhostsStencilMpi(*stencilValues, mpiData.get(), problem->isPeriodic(),
+                                           isCalculatedLocally());
+                }
             }
 
             // copy fixedStencil pointer from Problem to first Level
@@ -271,23 +273,47 @@ namespace mgcl
             // create gpu buffer for varying stencil if needed
             if (stencilType == MGCL_VARYING)
             {
-                // If level threshold is 0, stencilValues must have global sizes.
-                if (problem->getMpiLevelThreshold() == 0 && problem->mpiRank() == 0)
+                if (problem->stencilValues)
                 {
-                    stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
-                        problem->mGlobal, problem->nGlobal, problem->oGlobal, 3,
-                        std::max(1, problem->getJacobiIterationsPerKernel()),
-                        problem->getContext(), problem->getCommands(), problem->getProgram());
+                    // If level threshold is 0, stencilValues must have global sizes.
+                    if (problem->getMpiLevelThreshold() == 0 && problem->mpiRank() == 0)
+                    {
+                        stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
+                            problem->mGlobal, problem->nGlobal, problem->oGlobal, 3,
+                            std::max(1, problem->getJacobiIterationsPerKernel()),
+                            problem->getContext(), problem->getCommands(), problem->getProgram());
+                    }
+                    else
+                    {
+                        stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
+                            m, n, o, 3, std::max(1, problem->getJacobiIterationsPerKernel()),
+                            problem->getContext(), problem->getCommands(), problem->getProgram());
+                    }
+
+                    // Fill stencil values on gpu on level 0 from input stencil
+                    stencilValuesGpu->fill(*stencilValues, problem->getCommands(), true);
+                }
+                else if (problem->stencilValuesGpu)
+                {
+                    stencilValuesGpu = problem->stencilValuesGpu;
+                    if (problem->useMpi())
+                    {
+                        updateGhostsStencilOclMpi(
+                            problem->getCommands(), problem->getProgram(), *stencilValuesGpu,
+                            problem->getDPlanesBuf(), problem->getHPlanesBufSend(), problem->getHPlanesBufRecv(),
+                            mpiData.get(), isCalculatedLocally(), problem->isPeriodic(),
+                            &problem->getKernelConfig(), problem->getProfilingData());
+                    }
+                    else
+                    {
+                        stencilValuesGpu->updateGhosts(problem->getProgram(), problem->getCommands(),
+                                                       &problem->getKernelConfig(), problem->getProfilingData());
+                    }
                 }
                 else
                 {
-                    stencilValuesGpu = std::make_shared<VaryingStencilGpu>(
-                        m, n, o, 3, std::max(1, problem->getJacobiIterationsPerKernel()),
-                        problem->getContext(), problem->getCommands(), problem->getProgram());
+                    error("Level::initOpenCLBuffers(): Neither stencilValues nor stencilValuesGpu set!");
                 }
-
-                // Fill stencil values on gpu on level 0 from input stencil
-                stencilValuesGpu->fill(*stencilValues, problem->getCommands(), true);
             }
 
             if (problem->getReuseOpenclBuffers())

@@ -153,7 +153,7 @@ TEST_CASE("Level::initOpenCLBuffers")
         p->setDeviceType(deviceType);
 
         p->setStencilType(mgcl::MGCL_VARYING);
-        auto& sv = p->getStencilValues();
+        auto& sv = p->createStencilValues();
         sv->fillRandomInt();
 
         REQUIRE(p->init());
@@ -179,7 +179,7 @@ TEST_CASE("Level::init")
     auto p = std::make_shared<mgcl::Problem>(4, 4, 4, f, v);
     p->setGhostsIn(1);
     p->setStencilType(mgcl::MGCL_VARYING);
-    p->getStencilValues()->fillRandom();
+    p->createStencilValues()->fillRandom();
     // REQUIRE(p->init());
 
     for (int levelNum = 0; levelNum < 3; levelNum++)
@@ -225,7 +225,7 @@ TEST_CASE("Level::init_maxLevelUsingOcl")
     p->setMaxlevel(maxLevel);
     p->setMaxLevelUsingOcl(maxLevelUsingOcl);
     p->setStencilType(mgcl::MGCL_VARYING);
-    p->getStencilValues()->fillRandom();
+    p->createStencilValues()->fillRandom();
 
     p->init();
 

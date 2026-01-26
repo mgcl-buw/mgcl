@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
     // Set device types
     if (inputDeviceTypes.empty())
     {
-        CLI_ARGS::deviceTypes.push_back(CL_DEVICE_TYPE_DEFAULT);
+        CLI_ARGS::deviceTypes.push_back(CL_DEVICE_TYPE_ALL);
     }
 
     if (inputDeviceTypes.find("gpu") != std::string::npos)

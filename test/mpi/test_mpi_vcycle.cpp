@@ -429,7 +429,7 @@ TEST_CASE("MPI_vcycle_immediate_gather_scatter_Varying27p")
     p.setMpiComm(mpi_comm);
 
     p.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = *p.getStencilValues();
+    auto& sv = *p.createStencilValues();
 
     if (mpi_rank == 0)
     {
@@ -1188,7 +1188,7 @@ TEST_CASE("MPI_vcycle_threshold_eq_1_Varying27p")
     p.setMpiComm(mpi_comm);
 
     p.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = *p.getStencilValues();
+    auto& sv = *p.createStencilValues();
 
     if (mpi_rank == 0)
     {
@@ -1369,7 +1369,7 @@ TEST_CASE("MPI_vcycle_threshold_eq_2_Varying27p")
     p.setBc(bc);
 
     p.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = *p.getStencilValues();
+    auto& sv = *p.createStencilValues();
 
     if (mpi_rank == 0)
     {
@@ -1550,7 +1550,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_1_Varying27p")
     p.setMpiComm(mpi_comm);
 
     p.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = *p.getStencilValues();
+    auto& sv = *p.createStencilValues();
 
     if (mpi_rank == 0)
     {
@@ -1722,7 +1722,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p")
     p.setBc(bc);
 
     p.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = *p.getStencilValues();
+    auto& sv = *p.createStencilValues();
 
     if (mpi_rank == 0)
     {
@@ -1814,7 +1814,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters")
     int nu2 = 2;
     double omega = 0.8;
     int maxIterVCycles = 5;
-    int jacobiItersPerKernel = 3;
+    int jacobiItersPerKernel = 2;
     int gh = jacobiItersPerKernel;
 
     // check if mpi is initialized
@@ -1908,7 +1908,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters")
     p.setJacobiIterationsPerKernel(jacobiItersPerKernel);
 
     p.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = *p.getStencilValues();
+    auto& sv = *p.createStencilValues();
 
     if (mpi_rank == 0)
     {
@@ -1946,7 +1946,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_multiple_jacobi_iters")
         auto errNorm = calculateErrorNorm(1.0 / (double)m, *err);
         auto errMax = calculateMaxError(*err);
 
-        std::cout << "seq MPI Varying27p" << std::endl;
+        std::cout << "ocl MPI Varying27p" << std::endl;
         std::cout << "rank 0: " << std::endl;
         std::cout
             << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
@@ -2082,7 +2082,7 @@ TEST_CASE("MPI_vcycle_GPU_overlapped_Jacobi_threshold_eq_2_Varying27p_multiple_j
     p.setOverlappedJacobiGhostUpdateMaxLevel(0); // use overlapped Jacobi ghost update for level 0
 
     p.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = *p.getStencilValues();
+    auto& sv = *p.createStencilValues();
 
     if (mpi_rank == 0)
     {
@@ -2254,7 +2254,7 @@ TEST_CASE("MPI_vcycle_GPU_FixedStencil_multiple_jacobi_iters")
     p.setJacobiIterationsPerKernel(jacobiItersPerKernel);
 
     p.setStencilType(mgcl::MGCL_FIXED);
-    auto& sv = *p.getFixedStencil();
+    auto& sv = *p.createFixedStencil();
 
     double h = 1.0 / static_cast<double>(m);
     mgcl_test::fill7pLaplace(sv, h, false);
@@ -2720,7 +2720,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_1_Varying27p_maxLevelUsingOcl")
     p.setMpiComm(mpi_comm);
 
     p.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = *p.getStencilValues();
+    auto& sv = *p.createStencilValues();
 
     if (mpi_rank == 0)
     {
@@ -2896,7 +2896,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_maxLevelUsingOcl")
     p.setMpiComm(mpi_comm);
 
     p.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = *p.getStencilValues();
+    auto& sv = *p.createStencilValues();
 
     if (mpi_rank == 0)
     {
@@ -3067,7 +3067,7 @@ TEST_CASE("MPI_vcycle_threshold_eq_2_Varying27p_anisotropic")
     p.setBc(bc);
 
     p.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = *p.getStencilValues();
+    auto& sv = *p.createStencilValues();
 
     if (mpi_rank == 0)
     {
@@ -3251,7 +3251,7 @@ TEST_CASE("MPI_vcycle_GPU_threshold_eq_2_Varying27p_anisotropic")
     p.setReadResults(true);
 
     p.setStencilType(mgcl::MGCL_VARYING);
-    auto& sv = *p.getStencilValues();
+    auto& sv = *p.createStencilValues();
 
     if (mpi_rank == 0)
     {

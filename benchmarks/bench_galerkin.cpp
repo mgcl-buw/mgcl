@@ -118,7 +118,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][all]")
                 p->setSilent(true);
                 p->setMaxiterVcycles(vcycleIters);
                 p->setStencilType(mgcl::MGCL_VARYING);
-                auto& s = *p->getStencilValues();
+                auto& s = *p->createStencilValues();
 
                 double h = 1.0 / static_cast<double>(m);
                 mgcl_test::fill7pLaplace(s, h, true);
@@ -219,7 +219,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][all]")
                 p->setUseOpencl(true);
                 p->setMaxiterVcycles(vcycleIters);
                 p->setStencilType(mgcl::MGCL_VARYING);
-                auto& s = *p->getStencilValues();
+                auto& s = *p->createStencilValues();
 
                 double h = 1.0 / static_cast<double>(m);
                 mgcl_test::fill7pLaplace(s, h, true);
@@ -441,7 +441,7 @@ TEST_CASE("galerkin init vs solve", "[galerkinInitVsSolve][oclOnly]")
                 p->setUseOpencl(true);
                 p->setMaxiterVcycles(vcycleIters);
                 p->setStencilType(mgcl::MGCL_VARYING);
-                auto& s = *p->getStencilValues();
+                auto& s = *p->createStencilValues();
 
                 double h = 1.0 / static_cast<double>(m);
                 mgcl_test::fill7pLaplace(s, h, true);

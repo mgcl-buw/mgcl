@@ -88,7 +88,7 @@ int main(int argc, char** argv)
         p.setSilent(true);
 
         // Fill random coefficients
-        auto svptr = p.getStencilValues();
+        auto svptr = p.createStencilValues();
         auto& sv = *svptr;
         sv.fillRandom();
 

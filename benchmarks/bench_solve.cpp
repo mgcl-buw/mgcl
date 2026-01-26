@@ -163,7 +163,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
                 p.setReadResults(true);
 
                 if (stencil == mgcl::MGCL_VARYING)
-                    p.getStencilValues()->fillRandomInt();
+                    p.createStencilValues()->fillRandomInt();
                 // p.init();
 
                 b.run(std::string("sequential random values, N = ").append(std::to_string(N)).append(", ").append(stencilName).c_str(), [&]
@@ -187,7 +187,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][allSt
                 p.setReadResults(true);
 
                 if (stencil == mgcl::MGCL_VARYING)
-                    p.getStencilValues()->fillRandomInt();
+                    p.createStencilValues()->fillRandomInt();
 
                 if (mgcl_test::TestUtility::deviceAvailable("Quadro", p.getDeviceType()))
                     p.setDeviceName("Quadro");
@@ -277,7 +277,7 @@ TEST_CASE("mgcl bench: solve, all stencils", "[!benchmark][solve][console][varyi
             p.setReadResults(true);
 
             if (stencil == mgcl::MGCL_VARYING)
-                p.getStencilValues()->fillRandomInt();
+                p.createStencilValues()->fillRandomInt();
 
             if (mgcl_test::TestUtility::deviceAvailable("Quadro", p.getDeviceType()))
                 p.setDeviceName("Quadro");

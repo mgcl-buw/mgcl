@@ -122,7 +122,7 @@ TEST_CASE("benchIgnoreTol")
         p.setMaxiterVcycles(maxIterVCycles);
         p.setTol(tol);
 
-        auto svptr = p.getStencilValues();
+        auto svptr = p.createStencilValues();
         auto& s = *svptr;
         for (int i = 0; i < s.getMgh(); i++)
             for (int j = 0; j < s.getNgh(); j++)

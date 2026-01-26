@@ -140,7 +140,7 @@ TEST_CASE("mgcl benchmarks console: init", "[!benchmark][init][console]")
             mgcl::Problem p(m, n, o, f, v);
             p.setSilent(true);
             p.setStencilType(mgcl::MGCL_VARYING);
-            auto& s = *p.getStencilValues();
+            auto& s = *p.createStencilValues();
 
             double h = 1.0 / static_cast<double>(m);
             mgcl_test::fill7pLaplace(s, h, true);

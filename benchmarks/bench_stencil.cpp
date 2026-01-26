@@ -243,7 +243,7 @@
 
 //     {
 //         mgcl::StencilVarying7p *stencil = new mgcl::StencilVarying7p(m, n, o);
-//         stencil->getStencilValues()->fillRandom();
+//         stencil->createStencilValues()->fillRandom();
 
 //         b.run(std::string("Varying 7p, N = ").append(std::to_string(N)).c_str(),
 //               [&]
@@ -261,7 +261,7 @@
 
 //     {
 //         mgcl::StencilVarying19p *stencil = new mgcl::StencilVarying19p(m, n, o);
-//         stencil->getStencilValues()->fillRandom();
+//         stencil->createStencilValues()->fillRandom();
 
 //         b.run(std::string("Varying 19p, N = ").append(std::to_string(N)).c_str(),
 //               [&]
@@ -279,7 +279,7 @@
 
 //     {
 //         mgcl::StencilVarying27p *stencil = new mgcl::StencilVarying27p(m, n, o);
-//         stencil->getStencilValues()->fillRandom();
+//         stencil->createStencilValues()->fillRandom();
 
 //         b.run(std::string("Varying 27p, N = ").append(std::to_string(N)).c_str(),
 //               [&]

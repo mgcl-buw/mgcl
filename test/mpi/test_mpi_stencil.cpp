@@ -67,7 +67,7 @@ TEST_CASE("MPI-stencil-updateGhostsSeq-1proc")
         p.setMpiComm(mpi_comm);
 
         // p.setStencilType(mgcl::MGCL_VARYING);
-        // auto& s = *p.getStencilValues();
+        // auto& s = *p.createStencilValues();
         // s.fill1dIndex(true);
 
         p.init();
@@ -393,7 +393,7 @@ TEST_CASE("MPI-updateGhostsStencilOclMpi-nprocs")
     p.setUseOpencl(true);
     p.setDeviceType(deviceType);
     p.setStencilType(mgcl::MGCL_VARYING);
-    p.getStencilValues()->fill1dIndex(true);
+    p.createStencilValues()->fill1dIndex(true);
     p.setBc(bc);
     p.init();
 

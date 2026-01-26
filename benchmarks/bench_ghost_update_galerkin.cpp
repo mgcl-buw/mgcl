@@ -129,7 +129,7 @@ TEST_CASE("bench_ghost_update_mpi_ocl_galerkin")
             p->setSilent(true);
             p->setStencilType(mgcl::MGCL_VARYING);
             if (p->getStencilType() == mgcl::MGCL_VARYING)
-                p->getStencilValues()->fillRandom();
+                p->createStencilValues()->fillRandom();
             p->init();
 
             if (!printedGpu)

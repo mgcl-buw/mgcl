@@ -814,7 +814,7 @@ __kernel void residual_squared(
     // account for padding
     if (i < m && j < n && k < o)
     {
-        int index = i * (n + 2 * ghosts) * (o + 2 * ghosts) + j * (o + 2 * ghosts) + k;
+        int index = (i + ghosts) * (n + 2 * ghosts) * (o + 2 * ghosts) + (j + ghosts) * (o + 2 * ghosts) + k + ghosts;
         int index_sq = i * n * o + j * o + k;
         double ridx = r[index];
         rsquares[index_sq] = ridx * ridx;
@@ -847,7 +847,7 @@ __kernel void residual_squared_blockstencil(
     // account for padding
     if (i < m && j < n && k < o)
     {
-        int index = (i * ngh * ogh + j * ogh + k);
+        int index = ((i + ghosts) * ngh * ogh + (j + ghosts) * ogh + k + ghosts);
         int index_sq = (i * n * o + j * o + k);
 
         for (size_t b = 0; b < BLOCKSIZE; b++)
