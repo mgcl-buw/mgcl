@@ -107,6 +107,8 @@ namespace mgcl
         /* tolerance */
         double tol = 1e-7;
 
+        double initres = 0;
+
         /* If true, tolerance will be ignored, thus maxiter_vcycles v-cycle iterations will be done for sure.
          * Defaults to false.
          * Set this to true if you are using OpenCL and don't need to know the relative residual each v-cycle iteration. */

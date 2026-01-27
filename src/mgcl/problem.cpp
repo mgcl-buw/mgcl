@@ -904,33 +904,33 @@ namespace mgcl
         {
             residuals.clear();
 
-            double initres;
+            // double initres;
             auto& lv0 = *levels[0];
 
-            // calculate initial residual
-            if (getVPtr())
-            {
-                initres = MultigridEngine::residual(*this, lv0, !ignoreTol);
-            }
-            else
-            {
-                args::ResidualBSOclArgs residual_args{
-                    lv0.getDFBS(), lv0.getDVBSIn(), lv0.getDRBS(),
-                    residual_norm,
-                    *lv0.blockstencilGpu,
-                    lv0.getDRsqBSPtr().get(),
-                    true, isPeriodic(),
-                    lv0.isCalculatedLocally(),
-                    getDPlanesBufPtr(), getHPlanesBufSendPtr(), getHPlanesBufRecvPtr(),
-                    getProgram(), getCommands(), getContext(),
-                    0, 0, 0,
-                    lv0.getMpiDataPtr(),
-                    &getKernelConfig(), getProfilingData()};
-                initres = MultigridEngine::residual(residual_args);
-            }
+            // // calculate initial residual
+            // if (getVPtr())
+            // {
+            //     initres = MultigridEngine::residual(*this, lv0, !ignoreTol);
+            // }
+            // else
+            // {
+            //     args::ResidualBSOclArgs residual_args{
+            //         lv0.getDFBS(), lv0.getDVBSIn(), lv0.getDRBS(),
+            //         residual_norm,
+            //         *lv0.blockstencilGpu,
+            //         lv0.getDRsqBSPtr().get(),
+            //         true, isPeriodic(),
+            //         lv0.isCalculatedLocally(),
+            //         getDPlanesBufPtr(), getHPlanesBufSendPtr(), getHPlanesBufRecvPtr(),
+            //         getProgram(), getCommands(), getContext(),
+            //         0, 0, 0,
+            //         lv0.getMpiDataPtr(),
+            //         &getKernelConfig(), getProfilingData()};
+            //     initres = MultigridEngine::residual(residual_args);
+            // }
 
-            if (!silent && !ignoreTol && (!useMpi() || mpiRank() == 0))
-                printf("Starting mgcl with initres = %e\n", initres);
+            // if (!silent && !ignoreTol && (!useMpi() || mpiRank() == 0))
+            //     printf("Starting mgcl with initres = %e\n", initres);
 
             // run vcycle maxiter_vcycles times
             double res, relres;

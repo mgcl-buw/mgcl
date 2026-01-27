@@ -271,7 +271,7 @@ namespace mgcl
         auto& levelAbove = problem.getLevelAt(level.num + 1);
         // printf("level.getNum() = %d, m = %3.d\n", level.getNum(), level.m-2);
         // problem.maxlevel = 3;
-        double res;
+        // double res;
 
         if (level.getNum() < problem.maxlevel) // if not at highest level
         {
@@ -297,7 +297,19 @@ namespace mgcl
         }
 
         // update residual before restriction
-        residual(problem, level, false);
+        double res = 0;
+        if (level.getNum() == 0)
+        {
+            res = residual(problem, level, true);
+            if (problem.elapsedIterations == 1)
+                problem.initres = res;
+            else if (res / problem.initres < problem.getTol())
+                return res;
+        }
+        else
+        {
+            residual(problem, level, false);
+        }
         // printf("res on level.getNum() %d, upwards: %e\n", level.getNum(), res);
 
         // std::string suffix = ".i" + std::to_string(problem.elapsedIterations - 1) + ".l" + std::to_string(level.num) + "." + std::to_string(level.getMpiDataPtr() ? level.getMpiData().rank : 0);
@@ -454,14 +466,14 @@ namespace mgcl
 
         // relax nu2 times
 
-        bool returnRes = !problem.ignoreTol && level.getNum() == 0;
+        bool returnRes = false;
         if (level.getNum() <= problem.getOverlappedJacobiGhostUpdateMaxLevel())
         {
-            res = jacobiOverlapped(problem, level, problem.nu2, returnRes, problem.getJacobiIterationsPerKernel(), problem.getCommands2());
+            jacobiOverlapped(problem, level, problem.nu2, returnRes, problem.getJacobiIterationsPerKernel(), problem.getCommands2());
         }
         else
         {
-            res = jacobi(problem, level, problem.nu2, returnRes, problem.getJacobiIterationsPerKernel());
+            jacobi(problem, level, problem.nu2, returnRes, problem.getJacobiIterationsPerKernel());
         }
 
         // level.getDF().dumpToFile(problem.getCommands(), "foclup" + suffix, true);
