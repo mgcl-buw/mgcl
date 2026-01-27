@@ -207,6 +207,7 @@ int main(int argc, char* argv[])
     }
     p.setNu1(2);
     p.setNu2(2);
+    p.setMaxiterVcycles(1);
 
     // Optional: Edit the kernel configuration, i.e. set work-group sizes for each kernel. Below are the default values,
     // taken from kernel_config.cpp. Just fill in the desired work-group sizes. Make sure to not change the kernel names
