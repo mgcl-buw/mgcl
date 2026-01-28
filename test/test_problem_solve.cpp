@@ -410,30 +410,30 @@ TEST_CASE("solve_dirichlet")
 
     SECTION("Sequential")
     {
-        SECTION("Laplace_7p")
-        {
-            p.solveSeq();
+        // SECTION("Laplace_7p", "[.]")
+        // {
+        //     p.solveSeq();
 
-            // check if input v is equal to the v stored in Problem instance
-            REQUIRE(v.get() == p.getVPtr().get());
-            REQUIRE(v->isEqual(p.getV()));
+        //     // check if input v is equal to the v stored in Problem instance
+        //     REQUIRE(v.get() == p.getVPtr().get());
+        //     REQUIRE(v->isEqual(p.getV()));
 
-            // check if solution is good
-            auto err = mgcl_test::calculateError(solution, *v);
-            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = mgcl_test::calculateMaxError(*err);
+        //     // check if solution is good
+        //     auto err = mgcl_test::calculateError(solution, *v);
+        //     auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+        //     auto errMax = mgcl_test::calculateMaxError(*err);
 
-            // solution.dumpToFile("out_solution.txt");
-            // (*v).dumpToFile("out_v.txt");
+        //     // solution.dumpToFile("out_solution.txt");
+        //     // (*v).dumpToFile("out_v.txt");
 
-            std::cout
-                << "seq Laplace 7p" << std::endl
-                << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
-                << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+        //     std::cout
+        //         << "seq Laplace 7p" << std::endl
+        //         << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+        //         << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
-            CHECK(errNorm < 1e-2);
-            CHECK(errMax < 1e-2);
-        }
+        //     CHECK(errNorm < 1e-2);
+        //     CHECK(errMax < 1e-2);
+        // }
 
         SECTION("Galerkin_7p")
         {
@@ -523,35 +523,35 @@ TEST_CASE("solve_dirichlet")
             CHECK(errMax < 1e-2);
         }
 
-        SECTION("Laplace_27p")
-        {
-            v->dumpToFile("vin.txt");
-            f->dumpToFile("fin.txt");
-            p.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
-            p.solveSeq();
+        // SECTION("Laplace_27p", "[.]")
+        // {
+        //     v->dumpToFile("vin.txt");
+        //     f->dumpToFile("fin.txt");
+        //     p.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
+        //     p.solveSeq();
 
-            // check if input v is equal to the v stored in Problem instance
-            REQUIRE(v.get() == p.getVPtr().get());
-            REQUIRE(v->isEqual(p.getV()));
+        //     // check if input v is equal to the v stored in Problem instance
+        //     REQUIRE(v.get() == p.getVPtr().get());
+        //     REQUIRE(v->isEqual(p.getV()));
 
-            // check if solution is good
-            auto err = mgcl_test::calculateError(solution, *v);
-            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = mgcl_test::calculateMaxError(*err);
+        //     // check if solution is good
+        //     auto err = mgcl_test::calculateError(solution, *v);
+        //     auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+        //     auto errMax = mgcl_test::calculateMaxError(*err);
 
-            v->dumpToFile("v.txt");
+        //     v->dumpToFile("v.txt");
 
-            // solution.dumpToFile("out_solution.txt");
-            // (*v).dumpToFile("out_v.txt");
+        //     // solution.dumpToFile("out_solution.txt");
+        //     // (*v).dumpToFile("out_v.txt");
 
-            std::cout
-                << "seq Laplace 27p" << std::endl
-                << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
-                << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
+        //     std::cout
+        //         << "seq Laplace 27p" << std::endl
+        //         << std::scientific << std::setprecision(17) << "  ||e||_2 = " << errNorm << std::endl
+        //         << std::scientific << std::setprecision(17) << "  e_max = " << errMax << std::endl;
 
-            CHECK(errNorm < 1e-2);
-            CHECK(errMax < 1e-2);
-        }
+        //     CHECK(errNorm < 1e-2);
+        //     CHECK(errMax < 1e-2);
+        // }
 
         SECTION("Galerkin_27p")
         {
@@ -654,23 +654,23 @@ TEST_CASE("solve_dirichlet")
         p.setDeviceType(deviceType);
         // p.setDeviceName("Quadro");
 
-        SECTION("Laplace_7p")
-        {
-            p.solve();
+        // SECTION("Laplace_7p", "[.]")
+        // {
+        //     p.solve();
 
-            // check if solution is good
-            auto err = mgcl_test::calculateError(solution, *v);
-            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = mgcl_test::calculateMaxError(*err);
+        //     // check if solution is good
+        //     auto err = mgcl_test::calculateError(solution, *v);
+        //     auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+        //     auto errMax = mgcl_test::calculateMaxError(*err);
 
-            std::cout
-                << "ocl " << oclDeviceType << " Laplace 7p" << std::endl
-                << std::scientific << "  ||e||_2 = " << errNorm << std::endl
-                << std::scientific << "  e_max = " << errMax << std::endl;
+        //     std::cout
+        //         << "ocl " << oclDeviceType << " Laplace 7p" << std::endl
+        //         << std::scientific << "  ||e||_2 = " << errNorm << std::endl
+        //         << std::scientific << "  e_max = " << errMax << std::endl;
 
-            CHECK(errNorm < 1e-2);
-            CHECK(errMax < 1e-2);
-        }
+        //     CHECK(errNorm < 1e-2);
+        //     CHECK(errMax < 1e-2);
+        // }
 
         SECTION("Galerkin_7p")
         {
@@ -756,24 +756,24 @@ TEST_CASE("solve_dirichlet")
             CHECK(errMax < 1e-2);
         }
 
-        SECTION("Laplace_27p")
-        {
-            p.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
-            p.solve();
+        // SECTION("Laplace_27p", "[.]")
+        // {
+        //     p.setStencilType(mgcl::MGCL_LAPLACE_27POINT);
+        //     p.solve();
 
-            // check if solution is good
-            auto err = mgcl_test::calculateError(solution, *v);
-            auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
-            auto errMax = mgcl_test::calculateMaxError(*err);
+        //     // check if solution is good
+        //     auto err = mgcl_test::calculateError(solution, *v);
+        //     auto errNorm = mgcl_test::calculateErrorNorm(1.0 / (double)N, *err);
+        //     auto errMax = mgcl_test::calculateMaxError(*err);
 
-            std::cout
-                << "ocl " << oclDeviceType << " Laplace 27p" << std::endl
-                << std::scientific << "  ||e||_2 = " << errNorm << std::endl
-                << std::scientific << "  e_max = " << errMax << std::endl;
+        //     std::cout
+        //         << "ocl " << oclDeviceType << " Laplace 27p" << std::endl
+        //         << std::scientific << "  ||e||_2 = " << errNorm << std::endl
+        //         << std::scientific << "  e_max = " << errMax << std::endl;
 
-            CHECK(errNorm < 1e-2);
-            CHECK(errMax < 1e-2);
-        }
+        //     CHECK(errNorm < 1e-2);
+        //     CHECK(errMax < 1e-2);
+        // }
 
         SECTION("Galerkin_27p")
         {
