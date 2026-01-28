@@ -256,7 +256,7 @@ namespace mgcl
                                    sbuf, rbuf, *mpiData);
 
         // Paste planes back into the buffer.
-        d_planes_buf.write(commands, rbuf, true);
+        d_planes_buf.write(commands, rbuf, true, ressize, pd);
         s.pasteGhostsFromBorderPlanes(commands, program,
                                       d_planes_buf,
                                       conf, pd);

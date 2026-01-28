@@ -1160,7 +1160,8 @@ namespace mgcl
         mgcl::mgclCheckError(err, "Releasing extract_border_planes_varying_stencil kernel");
 
         // Read into h_target
-        d_target.read(commands, h_target.data(), false);
+        // d_target.read(commands, h_target.data(), false);
+        d_target.read(commands, h_target.data(), false, ressize, pd);
     }
 
     /**
