@@ -930,7 +930,14 @@ namespace mgcl
             // }
 
             bool globalSum = useMpi() && getMpiLevelThreshold() > 0;
-            initres = getLevelAt(0).getDF().l2norm(getProgram(), getCommands(), getLevelAt(0).dRsq.get(), globalSum ? getMpiComm() : nullptr, &kernelConfig, profilingData.get());
+            if (getLevelAt(0).getDFPtr())
+            {
+                initres = getLevelAt(0).getDF().l2norm(getProgram(), getCommands(), getLevelAt(0).dRsq.get(), globalSum ? getMpiComm() : nullptr, &kernelConfig, profilingData.get());
+            }
+            else
+            {
+                initres = getLevelAt(0).getDFBS().l2norm(getProgram(), getCommands(), getLevelAt(0).dRsq_bs.get(), globalSum ? getMpiComm() : nullptr, &kernelConfig, profilingData.get());
+            }
             if (!silent && !ignoreTol && (!useMpi() || mpiRank() == 0))
                 printf("Starting mgcl with initres ||f||_2 = %e\n", initres);
 
