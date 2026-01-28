@@ -929,8 +929,9 @@ namespace mgcl
             //     initres = MultigridEngine::residual(residual_args);
             // }
 
-            // if (!silent && !ignoreTol && (!useMpi() || mpiRank() == 0))
-            //     printf("Starting mgcl with initres = %e\n", initres);
+            initres = getLevelAt(0).getDF().l2norm(getProgram(), getCommands(), getLevelAt(0).dRsq.get(), getMpiComm(), &kernelConfig, profilingData.get());
+            if (!silent && !ignoreTol && (!useMpi() || mpiRank() == 0))
+                printf("Starting mgcl with initres ||f||_2 = %e\n", initres);
 
             // run vcycle maxiter_vcycles times
             double res, relres;

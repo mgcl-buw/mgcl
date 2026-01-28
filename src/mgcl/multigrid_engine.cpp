@@ -298,12 +298,10 @@ namespace mgcl
 
         // update residual before restriction
         double res = 0;
-        if (level.getNum() == 0)
+        if (level.getNum() == 0 && !problem.ignoreTol)
         {
             res = residual(problem, level, true);
-            if (problem.elapsedIterations == 1)
-                problem.initres = res;
-            else if (res / problem.initres < problem.getTol())
+            if (problem.elapsedIterations > 1 && res / problem.initres < problem.getTol())
                 return res;
         }
         else
