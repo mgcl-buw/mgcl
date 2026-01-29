@@ -351,13 +351,13 @@ namespace mgcl_bench_residual_varying
 
                         bench.run(std::string(name).c_str(), [&] { //
                             // Update ghosts before and after to match globmem jacobi more closely
-                            int err = mgcl::MultigridEngine::updateGhosts(p, args.c_dVIn,
+                            int err = mgcl::MultigridEngine::updateGhosts(p, lv0, args.c_dVIn,
                                                                           nullptr, true);
                             mgcl::mgclCheckError(err, "Updating ghosts");
 
                             jacobi_ocl_tb_2iters(args);
 
-                            err = mgcl::MultigridEngine::updateGhosts(p, args.c_dVOut,
+                            err = mgcl::MultigridEngine::updateGhosts(p, lv0, args.c_dVOut,
                                                                       nullptr, true);
                             mgcl::mgclCheckError(err, "Updating ghosts");
                             p.finish();

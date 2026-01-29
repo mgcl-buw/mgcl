@@ -60,13 +60,19 @@ TEST_CASE("updateGhosts gh < m")
     {
         auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
-        mgcl_test::TestUtility tu(deviceType);
-        auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
+        // dummy problem
+        auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        mgcl::Problem p(1, 1, 1, f, v);
+        p.setUseOpencl(true);
+        p.setDeviceType(deviceType);
+        p.init();
+        auto d_c1 = std::make_shared<mgcl::CuboidGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
 
-        mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, nullptr, true);
-        tu.finish();
+        mgcl::MultigridEngine::updateGhosts(p, p.getLevelAt(0), *d_c1, nullptr, true);
+        p.finish();
 
-        auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
+        auto c2 = d_c1->read(p.getCommands(), nullptr, true);
 
         double tol = 1e-7;
         for (int i = 0; i < ghosts_m; i++)
@@ -130,13 +136,18 @@ TEST_CASE("updateGhosts gh > m")
     {
         auto deviceType = GENERATE(mgcl_test::deviceTypes(CLI_ARGS::deviceTypes));
 
-        mgcl_test::TestUtility tu(deviceType);
-        auto d_c1 = std::make_shared<mgcl::CuboidGpu>(tu.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
+        auto f = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        auto v = std::make_shared<mgcl::Cuboid>(1, 1, 1);
+        mgcl::Problem p(1, 1, 1, f, v);
+        p.setUseOpencl(true);
+        p.setDeviceType(deviceType);
+        p.init();
+        auto d_c1 = std::make_shared<mgcl::CuboidGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, c1);
 
-        mgcl::MultigridEngine::updateGhosts(tu.getProblem(), *d_c1, nullptr, true);
-        tu.finish();
+        mgcl::MultigridEngine::updateGhosts(p, p.getLevelAt(0), *d_c1, nullptr, true);
+        p.finish();
 
-        auto c2 = d_c1->read(tu.getCommands(), nullptr, true);
+        auto c2 = d_c1->read(p.getCommands(), nullptr, true);
 
         double tol = 1e-7;
         for (int i = 0; i < ghosts_m; i++)

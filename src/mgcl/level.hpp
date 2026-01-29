@@ -55,6 +55,13 @@ namespace mgcl
         std::shared_ptr<BlockstencilGpu> blockstencilGpu = nullptr;
         TBlockstencilInv blockstencilInv;
 
+        // Buffers for ocl MPI ghost update
+        std::shared_ptr<BufferGpu> dPlanesBuf = nullptr;
+        std::shared_ptr<std::vector<double>> hPlanesBufSend = nullptr;
+        std::shared_ptr<std::vector<double>> hPlanesBufRecv = nullptr;
+        std::shared_ptr<std::vector<double>> hPlanesBufSendStencil = nullptr;
+        std::shared_ptr<std::vector<double>> hPlanesBufRecvStencil = nullptr;
+
         /* grid dimensions of local real grid */
         int m;
         int n;
@@ -249,6 +256,22 @@ namespace mgcl
 
         bool getUseOpencl() const { return useOpencl; }
         void setUseOpencl(bool useOpencl_) { useOpencl = useOpencl_; }
+
+        BufferGpu& getDPlanesBuf() const;
+        BufferGpu* getDPlanesBufPtr() const;
+        void setDPlanesBuf(const std::shared_ptr<BufferGpu> dPlanesBuf_);
+        std::vector<double>& getHPlanesBufSend() const;
+        std::vector<double>* getHPlanesBufSendPtr() const;
+        void setHPlanesBufSend(std::shared_ptr<std::vector<double>> hPlanesBuf_);
+        std::vector<double>& getHPlanesBufRecv() const;
+        std::vector<double>* getHPlanesBufRecvPtr() const;
+        void setHPlanesBufRecv(const std::shared_ptr<std::vector<double>> hPlanesBuf_);
+        std::vector<double>& getHPlanesBufSendStencil() const;
+        std::vector<double>* getHPlanesBufSendPtrStencil() const;
+        void setHPlanesBufSendStencil(std::shared_ptr<std::vector<double>> hPlanesBuf_);
+        std::vector<double>& getHPlanesBufRecvStencil() const;
+        std::vector<double>* getHPlanesBufRecvPtrStencil() const;
+        void setHPlanesBufRecvStencil(const std::shared_ptr<std::vector<double>> hPlanesBuf_);
 
         friend std::ostream& operator<<(std::ostream& os, const Level& lv);
     };

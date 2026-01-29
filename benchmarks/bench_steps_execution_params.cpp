@@ -306,9 +306,13 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
             cl_command_queue commands = oclh.getCommands();
             cl_program program = oclh.getProgram();
 
-            mgcl::CuboidGpu dVIn_cuboid(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *v);
-            mgcl::CuboidGpu dF_cuboid(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *f);
-            mgcl::CuboidGpu dR_cuboid(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *r);
+            problem.init();
+            auto& lv0 = problem.getLevelAt(0);
+
+            mgcl::CuboidGpu& dVIn_cuboid = lv0.getDVIn();
+            mgcl::CuboidGpu& dVOut_cuboid = lv0.getDVOut();
+            mgcl::CuboidGpu& dF_cuboid = lv0.getDF();
+            mgcl::CuboidGpu& dR_cuboid = lv0.getDR();
             mgcl::VaryingStencilGpu dsv = mgcl::VaryingStencilGpu(m, n, o, 3, 2, context, commands, program);
             dsv.fill(sv, commands, true);
 
@@ -411,7 +415,7 @@ void runResidualBench(std::vector<std::vector<int>> gridsTBT, std::vector<std::v
 
                       if (problem.isPeriodic())
                       {
-                          err = mgcl::MultigridEngine::updateGhosts(problem, dR_cuboid, nullptr, true);
+                          err = mgcl::MultigridEngine::updateGhosts(problem, lv0, dR_cuboid, nullptr, true);
                           mgcl::mgclCheckError(err, "Updating ghosts of r");
                       }
 
@@ -532,10 +536,13 @@ std::shared_ptr<mgcl::Cuboid> runJacobiBench(std::vector<std::vector<int>> grids
             cl_command_queue commands = oclh.getCommands();
             cl_program program = oclh.getProgram();
 
-            mgcl::CuboidGpu dVIn_cuboid(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *v);
-            mgcl::CuboidGpu dVOut_cuboid(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *v);
-            mgcl::CuboidGpu dF_cuboid(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *f);
-            mgcl::CuboidGpu dR_cuboid(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, *r);
+            problem.init();
+            auto& lv0 = problem.getLevelAt(0);
+
+            mgcl::CuboidGpu& dVIn_cuboid = lv0.getDVIn();
+            mgcl::CuboidGpu& dVOut_cuboid = lv0.getDVOut();
+            mgcl::CuboidGpu& dF_cuboid = lv0.getDF();
+            mgcl::CuboidGpu& dR_cuboid = lv0.getDR();
             mgcl::VaryingStencilGpu dsv = mgcl::VaryingStencilGpu(m, n, o, 3, 2, context, commands, program);
             dsv.fill(sv, commands, true);
 
@@ -652,13 +659,13 @@ std::shared_ptr<mgcl::Cuboid> runJacobiBench(std::vector<std::vector<int>> grids
                           // Update ghosts of current input v
                           if (globalIter % 2 == 1)
                           {
-                              err = mgcl::MultigridEngine::updateGhosts(problem, dVOut_cuboid,
+                              err = mgcl::MultigridEngine::updateGhosts(problem, lv0, dVOut_cuboid,
                                                                         nullptr, true);
                               mgcl::mgclCheckError(err, "Updating ghosts");
                           }
                           else
                           {
-                              err = mgcl::MultigridEngine::updateGhosts(problem, dVIn_cuboid,
+                              err = mgcl::MultigridEngine::updateGhosts(problem, lv0, dVIn_cuboid,
                                                                         nullptr, true);
                               mgcl::mgclCheckError(err, "Updating ghosts");
                           }
@@ -715,7 +722,7 @@ std::shared_ptr<mgcl::Cuboid> runJacobiBench(std::vector<std::vector<int>> grids
                           dVOut_cuboid.copyTo(problem.getOpenCLHelper().getCommands(), dVIn_cuboid);
 
                       // Update ghosts of dVIn
-                      err = mgcl::MultigridEngine::updateGhosts(problem, dVIn_cuboid, nullptr, true);
+                      err = mgcl::MultigridEngine::updateGhosts(problem, lv0, dVIn_cuboid, nullptr, true);
                       mgcl::mgclCheckError(err, "Updating ghosts");
 
                       // calculate residual and its norm

@@ -473,7 +473,7 @@ TEST_CASE("MPIupdateGhostsOclNprocesses")
     auto d_cl = std::make_shared<mgcl::CuboidGpu>(p.getContext(), CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, cl);
 
     // Update ghosts of test data
-    mgcl::MultigridEngine::updateGhosts(p, *d_cl, mpiData, false);
+    mgcl::MultigridEngine::updateGhosts(p, lv, *d_cl, mpiData, false);
     p.getOpenCLHelper().finish();
 
     auto cl_res_ptr = d_cl->read(p.getCommands(), nullptr, true);

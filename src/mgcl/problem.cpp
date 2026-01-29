@@ -476,36 +476,6 @@ namespace mgcl
             initOpenCL();
             checkGpuSizes();
 
-            // If using MPI and OCL, create temporary planes buffer for ghost updates once and reuse on each level
-            // TODO change ghosts to ghosts_m etc?
-            if (useMpi() && mpiSize() > 1)
-            {
-                int mgh = m + 2 * ghosts;
-                int ngh = n + 2 * ghosts;
-                int ogh = o + 2 * ghosts;
-
-                int yz = ngh * ogh;
-                int xz = mgh * ogh;
-                int xy = mgh * ngh;
-                int ressize = (2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts);
-
-                if (stencilType == MGCL_VARYING)
-                {
-                    int width = stencilValues ? stencilValues->getWidth() : stencilValuesGpu->getWidth();
-                    ressize *= width * width * width;
-                }
-                else if (stencilType == MGCL_BLOCKSTENCIL)
-                {
-                    ressize *= blockstencil->getWidth() * blockstencil->getWidth() * blockstencil->getWidth() * blocksize * blocksize;
-                }
-
-                dPlanesBuf = std::make_shared<BufferGpu>(getContext(), CL_MEM_READ_WRITE, ressize);
-
-                // TODO not needing this much memory for these?
-                hPlanesBufSend = std::make_shared<std::vector<double>>(ressize);
-                hPlanesBufRecv = std::make_shared<std::vector<double>>(ressize);
-            }
-
             if (stencilType == MGCL_BLOCKSTENCIL)
             {
                 restrictionBlockstencilGpu = std::make_shared<FixedBlockstencilGpu>(*restrictionBlockstencil, getContext(), getCommands());
@@ -611,7 +581,7 @@ namespace mgcl
                                     }
                                     else
                                         updateGhostsStencilOclMpi(getCommands(), getProgram(), *lvCoarse.getStencilValuesGpu(),
-                                                                  getDPlanesBuf(), getHPlanesBufSend(), getHPlanesBufRecv(),
+                                                                  lvCoarse.getDPlanesBuf(), lvCoarse.getHPlanesBufSendStencil(), lvCoarse.getHPlanesBufRecvStencil(),
                                                                   lvCoarse.getMpiDataPtr(), false, isPeriodic(),
                                                                   &getKernelConfig(), getProfilingData());
                                 }
@@ -728,7 +698,7 @@ namespace mgcl
                             else
                                 lvCoarse.getBlockstencilGpu()->updateGhostsOclMpi(
                                     getProgram(), getCommands(),
-                                    getDPlanesBuf(), getHPlanesBufSend(), getHPlanesBufRecv(),
+                                    lvCoarse.getDPlanesBuf(), lvCoarse.getHPlanesBufSendStencil(), lvCoarse.getHPlanesBufRecvStencil(),
                                     lvCoarse.getMpiData(), false, isPeriodic(),
                                     &getKernelConfig(), getProfilingData());
 
@@ -1227,57 +1197,6 @@ namespace mgcl
     void Problem::setF(std::shared_ptr<Cuboid> f_)
     {
         f = f_;
-    }
-
-    BufferGpu& Problem::getDPlanesBuf() const
-    {
-        if (!dPlanesBuf)
-            error("dPlanesBuf is null.");
-        return *dPlanesBuf;
-    }
-
-    BufferGpu* Problem::getDPlanesBufPtr() const
-    {
-        return dPlanesBuf.get();
-    }
-
-    void Problem::setDPlanesBuf(const std::shared_ptr<BufferGpu> dPlanesBuf_)
-    {
-        dPlanesBuf = dPlanesBuf_;
-    }
-
-    std::vector<double>& Problem::getHPlanesBufSend() const
-    {
-        if (!hPlanesBufSend)
-            error("hPlanesBuf is null.");
-        return *hPlanesBufSend;
-    }
-
-    std::vector<double>* Problem::getHPlanesBufSendPtr() const
-    {
-        return hPlanesBufSend.get();
-    }
-
-    void Problem::setHPlanesBufSend(std::shared_ptr<std::vector<double>> hPlanesBuf_)
-    {
-        hPlanesBufSend = hPlanesBuf_;
-    }
-
-    std::vector<double>& Problem::getHPlanesBufRecv() const
-    {
-        if (!hPlanesBufRecv)
-            error("hPlanesBuf is null.");
-        return *hPlanesBufRecv;
-    }
-
-    std::vector<double>* Problem::getHPlanesBufRecvPtr() const
-    {
-        return hPlanesBufRecv.get();
-    }
-
-    void Problem::setHPlanesBufRecv(const std::shared_ptr<std::vector<double>> hPlanesBuf_)
-    {
-        hPlanesBufRecv = hPlanesBuf_;
     }
 
     int Problem::getO() const

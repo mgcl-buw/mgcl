@@ -132,6 +132,8 @@ TEST_CASE("bench_ghost_update_mpi_ocl_galerkin")
                 p->createStencilValues()->fillRandom();
             p->init();
 
+            auto& lv0 = p->getLevelAt(0);
+
             if (!printedGpu)
             {
                 for (int i = 0; i < mpi_size; i++)
@@ -211,7 +213,7 @@ TEST_CASE("bench_ghost_update_mpi_ocl_galerkin")
                     MPI_Barrier(mpi_comm);
 
                     updateGhostsStencilOclMpi(p->getCommands(), p->getProgram(), sv,
-                                              p->getDPlanesBuf(), p->getHPlanesBufSend(), p->getHPlanesBufRecv(),
+                                              lv0.getDPlanesBuf(), lv0.getHPlanesBufSendStencil(), lv0.getHPlanesBufRecvStencil(),
                                               mpiData, false, periodic,
                                               nullptr, nullptr);
                     p->finish();

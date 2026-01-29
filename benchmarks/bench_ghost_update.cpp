@@ -130,6 +130,7 @@ TEST_CASE("bench_ghost_update_mpi_ocl")
             auto& buf = p->getLevelAt(0).getDVIn();
             auto h_buf = buf.read(p->getCommands(), nullptr, true);
             auto mpiLevelData = p->getLevelAt(0).getMpiDataPtr();
+            auto& lv0 = p->getLevelAt(0);
 
             if (!printedGpu)
             {
@@ -156,7 +157,7 @@ TEST_CASE("bench_ghost_update_mpi_ocl")
                                        .append(std::to_string(ghosts));
                 bench.run(std::string(name).c_str(), [&] { //
                     MPI_Barrier(mpi_comm);
-                    mgcl::MultigridEngine::updateGhosts(*p, buf, mpiLevelData, false);
+                    mgcl::MultigridEngine::updateGhosts(*p, lv0, buf, mpiLevelData, false);
                     p->getOpenCLHelper().finish();
                     MPI_Barrier(mpi_comm);
                 });
@@ -602,6 +603,7 @@ TEST_CASE("benchGhostUpdateMpiOclWholeVsInterleaved")
             auto& buf = p->getLevelAt(0).getDVIn();
             auto h_buf = buf.read(p->getCommands(), nullptr, true);
             auto mpiLevelData = p->getLevelAt(0).getMpiDataPtr();
+            auto& lv0 = p->getLevelAt(0);
 
             if (!printedGpu)
             {
@@ -628,7 +630,7 @@ TEST_CASE("benchGhostUpdateMpiOclWholeVsInterleaved")
                                        .append(std::to_string(ghosts));
                 bench.run(std::string(name).c_str(), [&] { //
                     MPI_Barrier(mpi_comm);
-                    mgcl::MultigridEngine::updateGhosts(*p, buf, mpiLevelData, false);
+                    mgcl::MultigridEngine::updateGhosts(*p, lv0, buf, mpiLevelData, false);
                     p->getOpenCLHelper().finish();
                     MPI_Barrier(mpi_comm);
                 });
@@ -671,9 +673,9 @@ TEST_CASE("benchGhostUpdateMpiOclWholeVsInterleaved")
                 // };
                 mgclBenchGhostUpdateSplitFused::Args args{
                     buf,
-                    p->getDPlanesBuf(),
-                    p->getHPlanesBufSend(),
-                    p->getHPlanesBufRecv(),
+                    lv0.getDPlanesBuf(),
+                    lv0.getHPlanesBufSend(),
+                    lv0.getHPlanesBufRecv(),
                     p->getProgram(),
                     p->getCommands(),
                     p->getContext(),
@@ -1093,6 +1095,7 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
         p.setSilent(true);
         p.setMpiComm(mpi_comm);
         p.init();
+        auto& lv0 = p.getLevelAt(0);
 
         auto& mpiData = p.getLevelAt(0).getMpiData();
 
@@ -1121,7 +1124,7 @@ TEST_CASE("bench_ghostupdate_mpi_ocl_steps")
         int xz = c_d.getMgh() * c_d.getOgh();
         int xy = c_d.getMgh() * c_d.getNgh();
         int ressize = 2 * yz * c_d.getGhostsM() + 2 * xz * c_d.getGhostsN() + 2 * xy * c_d.getGhostsO();
-        auto& d_planesbuf = p.getDPlanesBuf();
+        auto& d_planesbuf = lv0.getDPlanesBuf();
 
         ankerl::nanobench::Bench bench;
         bench.timeUnit(1ms, "ms")
@@ -2111,7 +2114,7 @@ namespace mgcl_bench_ghost_update_wgsizes
             auto& conf = p.getKernelConfig();
             // Jacobi kernels
             conf["update_ghosts_periodic"] = mgcl::conf::KernelWorkgroupSizes{{1, {4, 4, 8}}};
-            mgcl::MultigridEngine::updateGhosts(p, lv0.getDVIn(), nullptr, true);
+            mgcl::MultigridEngine::updateGhosts(p, lv0, lv0.getDVIn(), nullptr, true);
 
             if (CLI_ARGS::enableKernelProfiling)
             {

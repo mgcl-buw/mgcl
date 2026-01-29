@@ -267,6 +267,37 @@ namespace mgcl
         auto context = problem->getOpenCLHelper().getContext();
         auto deviceType = problem->getOpenCLHelper().getDeviceType();
 
+        // allocate planes buffer and send/recv buffers for ghost update via MPI
+        if (problem->useMpi() && problem->mpiSize() > 1)
+        {
+            int ghosts = problem->ghosts;
+
+            int mgh = m + 2 * ghosts;
+            int ngh = n + 2 * ghosts;
+            int ogh = o + 2 * ghosts;
+
+            int yz = ngh * ogh;
+            int xz = mgh * ogh;
+            int xy = mgh * ngh;
+            int ressize = (2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts);
+            int ressizeStencil = (2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts);
+
+            if (stencilType == MGCL_VARYING)
+            {
+                int width = problem->stencilValues ? problem->stencilValues->getWidth() : problem->stencilValuesGpu->getWidth();
+                ressizeStencil *= width * width * width;
+            }
+
+            dPlanesBuf = std::make_shared<BufferGpu>(problem->getContext(), CL_MEM_READ_WRITE, ressizeStencil);
+            dPlanesBuf->fill(problem->getProgram(), problem->getCommands(), 0.0, false, &problem->getKernelConfig(), problem->getProfilingData());
+
+            // TODO not needing this much memory for these?
+            hPlanesBufSend = std::make_shared<std::vector<double>>(ressize, 0.0);
+            hPlanesBufRecv = std::make_shared<std::vector<double>>(ressize, 0.0);
+            hPlanesBufSendStencil = std::make_shared<std::vector<double>>(ressizeStencil, 0.0);
+            hPlanesBufRecvStencil = std::make_shared<std::vector<double>>(ressizeStencil, 0.0);
+        }
+
         // create d_v_in and d_f buffers on level zero and copy data to it only if buffers should not be reused
         if (num == 0)
         {
@@ -300,7 +331,7 @@ namespace mgcl
                     {
                         updateGhostsStencilOclMpi(
                             problem->getCommands(), problem->getProgram(), *stencilValuesGpu,
-                            problem->getDPlanesBuf(), problem->getHPlanesBufSend(), problem->getHPlanesBufRecv(),
+                            getDPlanesBuf(), getHPlanesBufSendStencil(), getHPlanesBufRecvStencil(),
                             mpiData.get(), isCalculatedLocally(), problem->isPeriodic(),
                             &problem->getKernelConfig(), problem->getProfilingData());
                     }
@@ -361,7 +392,7 @@ namespace mgcl
         dR->fill(problem->getProgram(), problem->getCommands(), 0.0, false, &problem->getKernelConfig(), problem->getProfilingData());
         dRsq->fill(problem->getProgram(), problem->getCommands(), 0.0, false, &problem->getKernelConfig(), problem->getProfilingData());
 
-        err = MultigridEngine::updateGhosts(*problem, *dF, mpiData.get(), isCalculatedLocally());
+        err = MultigridEngine::updateGhosts(*problem, *this, *dF, mpiData.get(), isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts of d_f");
 
         return CL_SUCCESS;
@@ -381,6 +412,30 @@ namespace mgcl
 
         auto context = problem->getOpenCLHelper().getContext();
         auto deviceType = problem->getOpenCLHelper().getDeviceType();
+
+        if (problem->useMpi() && problem->mpiSize() > 1)
+        {
+            int ghosts = problem->ghosts;
+
+            int mgh = m + 2 * ghosts;
+            int ngh = n + 2 * ghosts;
+            int ogh = o + 2 * ghosts;
+
+            int yz = ngh * ogh;
+            int xz = mgh * ogh;
+            int xy = mgh * ngh;
+            int ressize = (2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts);
+            int ressizeStencil = ressize * problem->blockstencil->getWidth() * problem->blockstencil->getWidth() * problem->blockstencil->getWidth() * problem->blocksize * problem->blocksize;
+
+            dPlanesBuf = std::make_shared<BufferGpu>(problem->getContext(), CL_MEM_READ_WRITE, ressizeStencil);
+            dPlanesBuf->fill(problem->getProgram(), problem->getCommands(), 0.0, false, &problem->getKernelConfig(), problem->getProfilingData());
+
+            // TODO not needing this much memory for these?
+            hPlanesBufSend = std::make_shared<std::vector<double>>(ressize, 0.0);
+            hPlanesBufRecv = std::make_shared<std::vector<double>>(ressize, 0.0);
+            hPlanesBufSendStencil = std::make_shared<std::vector<double>>(ressizeStencil, 0.0);
+            hPlanesBufRecvStencil = std::make_shared<std::vector<double>>(ressizeStencil, 0.0);
+        }
 
         // create d_v_in and d_f buffers on level zero and copy data to it only if buffers should not be reused
         if (num == 0)
@@ -459,7 +514,7 @@ namespace mgcl
 
         dF_bs->updateGhostsOclMpi(
             problem->getProgram(), problem->getCommands(),
-            problem->getDPlanesBufPtr(), problem->getHPlanesBufSendPtr(), problem->getHPlanesBufRecvPtr(),
+            getDPlanesBufPtr(), getHPlanesBufSendPtr(), getHPlanesBufRecvPtr(),
             mpiData.get(), isCalculatedLocally(), problem->isPeriodic(),
             &problem->getKernelConfig(), problem->getProfilingData());
 
@@ -1157,4 +1212,90 @@ namespace mgcl
             blockstencilInv = blockstencilGpu->invertCenterMatrices(problem->getContext(), problem->getCommands(), problem->getProgram());
         }
     }
+
+    BufferGpu& Level::getDPlanesBuf() const
+    {
+        if (!dPlanesBuf)
+            error("dPlanesBuf is null.");
+        return *dPlanesBuf;
+    }
+
+    BufferGpu* Level::getDPlanesBufPtr() const
+    {
+        return dPlanesBuf.get();
+    }
+
+    void Level::setDPlanesBuf(const std::shared_ptr<BufferGpu> dPlanesBuf_)
+    {
+        dPlanesBuf = dPlanesBuf_;
+    }
+
+    std::vector<double>& Level::getHPlanesBufSend() const
+    {
+        if (!hPlanesBufSend)
+            error("hPlanesBuf is null.");
+        return *hPlanesBufSend;
+    }
+
+    std::vector<double>* Level::getHPlanesBufSendPtr() const
+    {
+        return hPlanesBufSend.get();
+    }
+
+    void Level::setHPlanesBufSend(std::shared_ptr<std::vector<double>> hPlanesBuf_)
+    {
+        hPlanesBufSend = hPlanesBuf_;
+    }
+
+    std::vector<double>& Level::getHPlanesBufRecv() const
+    {
+        if (!hPlanesBufRecv)
+            error("hPlanesBuf is null.");
+        return *hPlanesBufRecv;
+    }
+
+    std::vector<double>* Level::getHPlanesBufRecvPtr() const
+    {
+        return hPlanesBufRecv.get();
+    }
+
+    void Level::setHPlanesBufRecv(const std::shared_ptr<std::vector<double>> hPlanesBuf_)
+    {
+        hPlanesBufRecv = hPlanesBuf_;
+    }
+
+    std::vector<double>& Level::getHPlanesBufSendStencil() const
+    {
+        if (!hPlanesBufSendStencil)
+            error("hPlanesBuf is null.");
+        return *hPlanesBufSendStencil;
+    }
+
+    std::vector<double>* Level::getHPlanesBufSendPtrStencil() const
+    {
+        return hPlanesBufSendStencil.get();
+    }
+
+    void Level::setHPlanesBufSendStencil(std::shared_ptr<std::vector<double>> hPlanesBuf_)
+    {
+        hPlanesBufSendStencil = hPlanesBuf_;
+    }
+
+    std::vector<double>& Level::getHPlanesBufRecvStencil() const
+    {
+        if (!hPlanesBufRecvStencil)
+            error("hPlanesBuf is null.");
+        return *hPlanesBufRecvStencil;
+    }
+
+    std::vector<double>* Level::getHPlanesBufRecvPtrStencil() const
+    {
+        return hPlanesBufRecvStencil.get();
+    }
+
+    void Level::setHPlanesBufRecvStencil(const std::shared_ptr<std::vector<double>> hPlanesBuf_)
+    {
+        hPlanesBufRecvStencil = hPlanesBuf_;
+    }
+
 }

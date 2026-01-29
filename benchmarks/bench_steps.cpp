@@ -123,7 +123,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][stepvs
         b.run(std::string("ocl gpu updateGhosts, N = ").append(std::to_string(N)).c_str(),
               [&]
               {
-                  mgcl::MultigridEngine::updateGhosts(p, v0d, nullptr, false);
+                  mgcl::MultigridEngine::updateGhosts(p, fine, v0d, nullptr, false);
                   clFinish(p.getCommands());
               });
 
@@ -216,7 +216,7 @@ TEST_CASE("mgcl_steps_galerkin_vs_solve")
         b.run(std::string("gpu_updateGhostsN").append(std::to_string(N)).c_str(),
               [&]
               {
-                  mgcl::MultigridEngine::updateGhosts(p, v0d, nullptr, false);
+                  mgcl::MultigridEngine::updateGhosts(p, fine, v0d, nullptr, false);
                   clFinish(p.getCommands());
               });
 
@@ -420,7 +420,7 @@ TEST_CASE("mgcl benchmarks console: steps", "[!benchmark][steps][console][seqvso
             b.run(std::string("ocl gpu updateGhosts, N = ").append(std::to_string(N)).c_str(),
                   [&]
                   {
-                      mgcl::MultigridEngine::updateGhosts(p, v0d, nullptr, false);
+                      mgcl::MultigridEngine::updateGhosts(p, fine, v0d, nullptr, false);
                       clFinish(p.getCommands());
                   });
         }
@@ -600,7 +600,7 @@ TEST_CASE("benchStepsProfile")
         {
             mgcl::MultigridEngine::jacobi(p, fine, maxiter, false);
             mgcl::MultigridEngine::residual(p, fine, true);
-            mgcl::MultigridEngine::updateGhosts(p, v0d, nullptr, false);
+            mgcl::MultigridEngine::updateGhosts(p, fine, v0d, nullptr, false);
             mgcl::MultigridEngine::restrict(fine, coarse, fine.getDR(), coarse.getDF());
             mgcl::MultigridEngine::prolongate(fine, coarse, fine.getDR(), coarse.getDVIn());
         }
@@ -738,7 +738,7 @@ TEST_CASE("benchStepsProfileMpi")
             MPI_Barrier(mpi_comm);
             mgcl::MultigridEngine::jacobi(p, fine, maxiter, false);
             mgcl::MultigridEngine::residual(p, fine, true);
-            mgcl::MultigridEngine::updateGhosts(p, v0d, &mpiData, false);
+            mgcl::MultigridEngine::updateGhosts(p, fine, v0d, &mpiData, false);
             mgcl::MultigridEngine::restrict(fine, coarse, fine.getDR(), coarse.getDF());
             mgcl::MultigridEngine::prolongate(fine, coarse, fine.getDR(), coarse.getDVIn());
         }

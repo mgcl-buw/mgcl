@@ -236,13 +236,13 @@ namespace mgcl_bench_jacobi_split_vs_fused
             // Update ghosts of current input v
             if (globalIter % 2 == 1)
             {
-                err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVOut(),
+                err = mgcl::MultigridEngine::updateGhosts(problem, level, level.getDVOut(),
                                                           level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgcl::mgclCheckError(err, "Updating ghosts");
             }
             else
             {
-                err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVIn(),
+                err = mgcl::MultigridEngine::updateGhosts(problem, level, level.getDVIn(),
                                                           level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgcl::mgclCheckError(err, "Updating ghosts");
             }
@@ -300,7 +300,7 @@ namespace mgcl_bench_jacobi_split_vs_fused
         }
 
         // Update ghosts of dVIn
-        err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVIn(),
+        err = mgcl::MultigridEngine::updateGhosts(problem, level, level.getDVIn(),
                                                   level.getMpiDataPtr(), level.isCalculatedLocally());
         mgcl::mgclCheckError(err, "Updating ghosts");
 
@@ -619,7 +619,7 @@ namespace mgcl_bench_jacobi_split_vs_fused
         while (globalIter < maxiter)
         {
             // Update ghosts of current input v
-            err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVIn(),
+            err = mgcl::MultigridEngine::updateGhosts(problem, level, level.getDVIn(),
                                                       level.getMpiDataPtr(), level.isCalculatedLocally());
             mgcl::mgclCheckError(err, "Updating ghosts");
 
@@ -661,7 +661,7 @@ namespace mgcl_bench_jacobi_split_vs_fused
         // }
 
         // Update ghosts of dVIn
-        err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVIn(),
+        err = mgcl::MultigridEngine::updateGhosts(problem, level, level.getDVIn(),
                                                   level.getMpiDataPtr(), level.isCalculatedLocally());
         mgcl::mgclCheckError(err, "Updating ghosts");
 

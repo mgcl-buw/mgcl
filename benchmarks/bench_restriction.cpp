@@ -448,7 +448,7 @@ namespace mgcl_bench_restriction
                 {
                     coarse.fill(p.getProgram(), p.getCommands(), 0, false, nullptr, nullptr);
                     fine.fill1dIndex(p.getProgram(), p.getCommands(), true, false, nullptr, nullptr);
-                    mgcl::MultigridEngine::updateGhosts(p, fine, nullptr, true);
+                    mgcl::MultigridEngine::updateGhosts(p, lv0, fine, nullptr, true);
 
                     std::string name = std::string("prolongate_1wi_per_gp_")
                                            .append(std::to_string(mglob))
@@ -486,7 +486,7 @@ namespace mgcl_bench_restriction
 
                     if (CLI_ARGS::checkResults)
                     {
-                        mgcl::MultigridEngine::updateGhosts(p, coarse, nullptr, true);
+                        mgcl::MultigridEngine::updateGhosts(p, lv1, coarse, nullptr, true);
                         coarse_3d_1wi_per_gp = std::make_unique<mgcl::Cuboid>(ml / 2, nl / 2, ol / 2, ghosts, ghosts, ghosts);
                         coarse.read(p.getCommands(), coarse_3d_1wi_per_gp.get(), true);
                     }
@@ -543,7 +543,7 @@ namespace mgcl_bench_restriction
             {
                 coarse.fill(p.getProgram(), p.getCommands(), 0, false, nullptr, nullptr);
                 fine.fill1dIndex(p.getProgram(), p.getCommands(), true, false, nullptr, nullptr);
-                mgcl::MultigridEngine::updateGhosts(p, fine, nullptr, true);
+                mgcl::MultigridEngine::updateGhosts(p, lv0, fine, nullptr, true);
 
                 std::string name = std::string("prolongate_4wi_per_gp_")
                                        .append(std::to_string(mglob))
@@ -581,7 +581,7 @@ namespace mgcl_bench_restriction
 
                 if (CLI_ARGS::checkResults)
                 {
-                    mgcl::MultigridEngine::updateGhosts(p, coarse, nullptr, true);
+                    mgcl::MultigridEngine::updateGhosts(p, lv1, coarse, nullptr, true);
                     fine_3d_4wi_per_gp = std::make_unique<mgcl::Cuboid>(ml / 2, nl / 2, ol / 2, ghosts, ghosts, ghosts);
                     coarse.read(p.getCommands(), fine_3d_4wi_per_gp.get(), true);
                 }
@@ -591,7 +591,7 @@ namespace mgcl_bench_restriction
             {
                 coarse.fill(p.getProgram(), p.getCommands(), 0, false, nullptr, nullptr);
                 fine.fill1dIndex(p.getProgram(), p.getCommands(), true, false, nullptr, nullptr);
-                mgcl::MultigridEngine::updateGhosts(p, fine, nullptr, true);
+                mgcl::MultigridEngine::updateGhosts(p, lv0, fine, nullptr, true);
 
                 std::string name = std::string("prolongate_2wi_per_gp_")
                                        .append(std::to_string(mglob))
@@ -629,7 +629,7 @@ namespace mgcl_bench_restriction
 
                 if (CLI_ARGS::checkResults)
                 {
-                    mgcl::MultigridEngine::updateGhosts(p, coarse, nullptr, true);
+                    mgcl::MultigridEngine::updateGhosts(p, lv1, coarse, nullptr, true);
                     fine_3d_2wi_per_gp = std::make_unique<mgcl::Cuboid>(ml / 2, nl / 2, ol / 2, ghosts, ghosts, ghosts);
                     coarse.read(p.getCommands(), fine_3d_2wi_per_gp.get(), true);
                 }

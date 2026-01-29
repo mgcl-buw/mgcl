@@ -645,13 +645,13 @@ namespace mgcl
             // Update ghosts of current input v
             if (globalIter % 2 == 1)
             {
-                err = MultigridEngine::updateGhosts(problem, level.getDVOut(),
+                err = MultigridEngine::updateGhosts(problem, level, level.getDVOut(),
                                                     level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
             }
             else
             {
-                err = MultigridEngine::updateGhosts(problem, level.getDVIn(),
+                err = MultigridEngine::updateGhosts(problem, level, level.getDVIn(),
                                                     level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgclCheckError(err, "Updating ghosts");
             }
@@ -699,7 +699,7 @@ namespace mgcl
         }
 
         // Update ghosts of dVIn
-        err = MultigridEngine::updateGhosts(problem, level.getDVIn(),
+        err = MultigridEngine::updateGhosts(problem, level, level.getDVIn(),
                                             level.getMpiDataPtr(), level.isCalculatedLocally());
         mgclCheckError(err, "Updating ghosts");
 
@@ -1015,7 +1015,7 @@ namespace mgcl
                                                                           cl_kernel innerKernel, std::string kernelNameInner,
                                                                           size_t globalInner[3], size_t localInner[3])
     {
-        if (problem.getDPlanesBufPtr() == nullptr)
+        if (level.getDPlanesBufPtr() == nullptr)
             error("MultigridEngine::updateGhostsOclMpi: dPlanesBufPtr is null");
 
         // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
@@ -1025,12 +1025,12 @@ namespace mgcl
         int xy = dVOut.getMgh() * dVOut.getNgh();
         int ressize = 2 * yz * dVOut.getGhostsM() + 2 * xz * dVOut.getGhostsN() + 2 * xy * dVOut.getGhostsO();
 
-        auto dPlanesBuf = problem.getDPlanesBufPtr();
+        auto dPlanesBuf = level.getDPlanesBufPtr();
         if (dPlanesBuf->getSize() < ressize)
             error("MultigridEngine::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf->getSize()));
 
-        auto hPlanesBufSend = problem.getHPlanesBufSendPtr();
-        auto hPlanesBufRecv = problem.getHPlanesBufRecvPtr();
+        auto hPlanesBufSend = level.getHPlanesBufSendPtr();
+        auto hPlanesBufRecv = level.getHPlanesBufRecvPtr();
         if (hPlanesBufSend->size() < ressize || hPlanesBufRecv->size() < ressize)
             throw "MultigridEngine::updateGhostsOclMpi: hPlanesBufSend or hPlanesBufRecv is too small. Need at least " +
                 std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend->size()) +
@@ -1190,7 +1190,7 @@ namespace mgcl
         auto tmp = ptr_dvin_wrapper;
 
         // No need for waiting for the boundary kernel to finish, because extractBorderPlanes is in same in-order queue
-        err = mgcl::MultigridEngine::updateGhosts(problem, *ptr_dvin_wrapper,
+        err = mgcl::MultigridEngine::updateGhosts(problem, level, *ptr_dvin_wrapper,
                                                   level.getMpiDataPtr(), level.isCalculatedLocally());
         mgcl::mgclCheckError(err, "Updating ghosts");
 
@@ -1220,7 +1220,7 @@ namespace mgcl
                 else
                 {
                     jacobi_overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2, innerKernel, global, local, kernelNameInner);
-                    err = mgcl::MultigridEngine::updateGhosts(problem, *ptr_dvout_wrapper,
+                    err = mgcl::MultigridEngine::updateGhosts(problem, level, *ptr_dvout_wrapper,
                                                               level.getMpiDataPtr(), level.isCalculatedLocally());
                     mgcl::mgclCheckError(err, "Updating ghosts");
                 }
@@ -1242,7 +1242,7 @@ namespace mgcl
         if (store_res)
         {
             // TODO check for mpi
-            err = mgcl::MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
+            err = mgcl::MultigridEngine::updateGhosts(problem, level, level.getDR(), level.getMpiDataPtr(),
                                                       level.isCalculatedLocally());
             mgcl::mgclCheckError(err, "Updating ghosts of dR");
         }

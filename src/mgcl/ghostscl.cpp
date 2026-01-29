@@ -316,7 +316,7 @@ namespace mgcl
     /* updates ghost cells on opencl device.
      * m,n,o must be size of ghosted grid.
      * Only enqueues the kernel. Neither waits for kernel to finish nor reads back results */
-    int MultigridEngine::updateGhosts(Problem& problem, CuboidGpu& dBuffer,
+    int MultigridEngine::updateGhosts(Problem& problem, Level& lv, CuboidGpu& dBuffer,
                                       MPILevelData* mpiData, bool forceLocal)
     {
         // TODO actually request these as arguments
@@ -347,7 +347,7 @@ namespace mgcl
 
         if (!forceLocal && problem.useMpi() && mpiData)
         {
-            updateGhostsOclMpi(problem, dBuffer, *mpiData, problem.isPeriodic(), forceLocal);
+            updateGhostsOclMpi(problem, lv, dBuffer, *mpiData, problem.isPeriodic(), forceLocal);
             return CL_SUCCESS;
         }
 
@@ -424,7 +424,7 @@ namespace mgcl
      * @param periodic
      * @param forceLocal
      */
-    void MultigridEngine::updateGhostsOclMpi(Problem& p, CuboidGpu& d_buf, MPILevelData& mpiData,
+    void MultigridEngine::updateGhostsOclMpi(Problem& p, Level& lv, CuboidGpu& d_buf, MPILevelData& mpiData,
                                              bool periodic, bool forceLocal)
     {
         // Read back from GPU and update ghosts on host in order to update neighbouring nodes, too.
@@ -448,11 +448,11 @@ namespace mgcl
         if (forceLocal || mpiData.mpiSize() == 1)
         {
             if (periodic)
-                MultigridEngine::updateGhosts(p, d_buf, nullptr, true);
+                MultigridEngine::updateGhosts(p, lv, d_buf, nullptr, true);
             return;
         }
 
-        if (p.getDPlanesBufPtr() == nullptr)
+        if (lv.getDPlanesBufPtr() == nullptr)
             error("MultigridEngine::updateGhostsOclMpi: dPlanesBufPtr is null");
 
         // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
@@ -462,19 +462,19 @@ namespace mgcl
         int xy = d_buf.getMgh() * d_buf.getNgh();
         int ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
 
-        auto dPlanesBuf = p.getDPlanesBufPtr();
+        auto dPlanesBuf = lv.getDPlanesBufPtr();
         if (dPlanesBuf->getSize() < ressize)
             error("MultigridEngine::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf->getSize()));
 
-        auto hPlanesBufSend = p.getHPlanesBufSendPtr();
-        auto hPlanesBufRecv = p.getHPlanesBufRecvPtr();
+        auto hPlanesBufSend = lv.getHPlanesBufSendPtr();
+        auto hPlanesBufRecv = lv.getHPlanesBufRecvPtr();
         if (hPlanesBufSend->size() < ressize || hPlanesBufRecv->size() < ressize)
             throw "MultigridEngine::updateGhostsOclMpi: hPlanesBufSend or hPlanesBufRecv is too small. Need at least " +
                 std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend->size()) +
                 " (send) and " + std::to_string(hPlanesBufRecv->size()) + " (recv)";
 
-        std::fill(hPlanesBufSend->begin(), hPlanesBufSend->end(), 0.0);
-        std::fill(hPlanesBufRecv->begin(), hPlanesBufRecv->end(), 0.0);
+        // std::fill(hPlanesBufSend->begin(), hPlanesBufSend->end(), 0.0);
+        // std::fill(hPlanesBufRecv->begin(), hPlanesBufRecv->end(), 0.0);
 
         // Extract border planes from the buffer
         d_buf.extractBorderPlanes(p.getCommands(), p.getProgram(),

@@ -288,13 +288,13 @@ namespace mgcl_bench_jacobi_varying_overlapped
             // Update ghosts of current input v
             if (globalIter % 2 == 1)
             {
-                err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVOut(),
+                err = mgcl::MultigridEngine::updateGhosts(problem, level, level.getDVOut(),
                                                           level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgcl::mgclCheckError(err, "Updating ghosts");
             }
             else
             {
-                err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVIn(),
+                err = mgcl::MultigridEngine::updateGhosts(problem, level, level.getDVIn(),
                                                           level.getMpiDataPtr(), level.isCalculatedLocally());
                 mgcl::mgclCheckError(err, "Updating ghosts");
             }
@@ -350,7 +350,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
             mgcl::CuboidGpu::swap(level.getDVIn(), level.getDVOut());
 
         // Update ghosts of dVIn
-        err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVIn(),
+        err = mgcl::MultigridEngine::updateGhosts(problem, level, level.getDVIn(),
                                                   level.getMpiDataPtr(), level.isCalculatedLocally());
         mgcl::mgclCheckError(err, "Updating ghosts");
 
@@ -785,7 +785,7 @@ namespace mgcl_bench_jacobi_varying_overlapped
             }
 
         // Update ghosts use the default command queue of the problem instance
-        err = mgcl::MultigridEngine::updateGhosts(problem, level.getDVIn(),
+        err = mgcl::MultigridEngine::updateGhosts(problem, level, level.getDVIn(),
                                                   level.getMpiDataPtr(), level.isCalculatedLocally());
         mgcl::mgclCheckError(err, "Updating ghosts");
 
@@ -811,14 +811,14 @@ namespace mgcl_bench_jacobi_varying_overlapped
                     overlapped_helpers::jacobiInner(problem, level, dVIn, dVOut, store_res, queue2, innerKernel, global, local, kernelNameInner);
 
                     // No need for waiting for the boundary kernel to finish, because extractBorderPlanes is in same in-order queue
-                    err = mgcl::MultigridEngine::updateGhosts(problem, *ptr_dvout_wrapper,
+                    err = mgcl::MultigridEngine::updateGhosts(problem, level, *ptr_dvout_wrapper,
                                                               level.getMpiDataPtr(), level.isCalculatedLocally());
                     mgcl::mgclCheckError(err, "Updating ghosts");
                 }
                 else
                 {
                     auto& d_buf = *ptr_dvout_wrapper;
-                    if (problem.getDPlanesBufPtr() == nullptr)
+                    if (level.getDPlanesBufPtr() == nullptr)
                         error("MultigridEngine::updateGhostsOclMpi: dPlanesBufPtr is null");
 
                     // Use temporary buffer for extracting and pasting planes. Check if it's large enough beforehand.
@@ -828,12 +828,12 @@ namespace mgcl_bench_jacobi_varying_overlapped
                     int xy = d_buf.getMgh() * d_buf.getNgh();
                     int ressize = 2 * yz * d_buf.getGhostsM() + 2 * xz * d_buf.getGhostsN() + 2 * xy * d_buf.getGhostsO();
 
-                    auto dPlanesBuf = problem.getDPlanesBufPtr();
+                    auto dPlanesBuf = level.getDPlanesBufPtr();
                     if (dPlanesBuf->getSize() < ressize)
                         error("MultigridEngine::updateGhostsOclMpi: dPlanesBuf is too small. Need at least " + std::to_string(ressize) + ", but is " + std::to_string(dPlanesBuf->getSize()));
 
-                    auto hPlanesBufSend = problem.getHPlanesBufSendPtr();
-                    auto hPlanesBufRecv = problem.getHPlanesBufRecvPtr();
+                    auto hPlanesBufSend = level.getHPlanesBufSendPtr();
+                    auto hPlanesBufRecv = level.getHPlanesBufRecvPtr();
                     if (hPlanesBufSend->size() < ressize || hPlanesBufRecv->size() < ressize)
                         throw "MultigridEngine::updateGhostsOclMpi: hPlanesBufSend or hPlanesBufRecv is too small. Need at least " +
                             std::to_string(ressize) + ", but is " + std::to_string(hPlanesBufSend->size()) +

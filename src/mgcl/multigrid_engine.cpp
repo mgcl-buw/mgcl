@@ -336,7 +336,7 @@ namespace mgcl
             {
                 // need to update ghosts of f if ghosts are used in Jacobi update
                 mgclCheckError(MultigridEngine::updateGhosts(
-                                   problem, levelAbove.getDF(), levelAbove.getMpiDataPtr(),
+                                   problem, levelAbove, levelAbove.getDF(), levelAbove.getMpiDataPtr(),
                                    levelAbove.isCalculatedLocally()),
                                "Updating coarse ghosts");
             }
@@ -359,7 +359,7 @@ namespace mgcl
 
                 // Update ghosts of gathered
                 if (problem.mpiRank() == 0)
-                    MultigridEngine::updateGhosts(problem, levelAbove.getDF(),
+                    MultigridEngine::updateGhosts(problem, levelAbove, levelAbove.getDF(),
                                                   levelAbove.getMpiDataPtr(), levelAbove.isCalculatedLocally());
             }
             else
@@ -510,7 +510,7 @@ namespace mgcl
             level.isCalculatedLocally(),
             problem.nu1, problem.jacobi_iterations_per_kernel,
             problem.omega,
-            problem.getDPlanesBufPtr(), problem.getHPlanesBufSendPtr(), problem.getHPlanesBufRecvPtr(),
+            level.getDPlanesBufPtr(), level.getHPlanesBufSendPtr(), level.getHPlanesBufRecvPtr(),
             problem.getProgram(), problem.getCommands(), problem.getContext(),
             0, 0, 0,
             level.getMpiDataPtr(),
@@ -526,7 +526,7 @@ namespace mgcl
             level.getDRsqBSPtr().get(),
             false, problem.isPeriodic(),
             level.isCalculatedLocally(),
-            problem.getDPlanesBufPtr(), problem.getHPlanesBufSendPtr(), problem.getHPlanesBufRecvPtr(),
+            level.getDPlanesBufPtr(), level.getHPlanesBufSendPtr(), level.getHPlanesBufRecvPtr(),
             problem.getProgram(), problem.getCommands(), problem.getContext(),
             0, 0, 0,
             level.getMpiDataPtr(),
@@ -541,7 +541,7 @@ namespace mgcl
             problem.isPeriodic(),
             level.isCalculatedLocally(),
             levelAbove.isCalculatedLocally(),
-            problem.getDPlanesBufPtr(), problem.getHPlanesBufSendPtr(), problem.getHPlanesBufRecvPtr(),
+            level.getDPlanesBufPtr(), level.getHPlanesBufSendPtr(), level.getHPlanesBufRecvPtr(),
             problem.getProgram(), problem.getCommands(), problem.getContext(),
             level.getMpiDataPtr(), levelAbove.getMpiDataPtr(),
             &problem.getKernelConfig(), problem.getProfilingData()};
@@ -560,7 +560,7 @@ namespace mgcl
             // Update ghosts of gathered
             if (problem.mpiRank() == 0)
                 levelAbove.getDFBS().updateGhostsOclMpi(problem.getProgram(), problem.getCommands(),
-                                                        problem.getDPlanesBufPtr(), problem.getHPlanesBufSendPtr(), problem.getHPlanesBufRecvPtr(),
+                                                        levelAbove.getDPlanesBufPtr(), levelAbove.getHPlanesBufSendPtr(), levelAbove.getHPlanesBufRecvPtr(),
                                                         levelAbove.getMpiDataPtr(), levelAbove.isCalculatedLocally(), problem.isPeriodic(),
                                                         &problem.getKernelConfig(), problem.getProfilingData());
         }
@@ -587,7 +587,7 @@ namespace mgcl
                     levelAbove.isCalculatedLocally(),
                     problem.nu1 + problem.nu2, problem.jacobi_iterations_per_kernel,
                     problem.omega,
-                    problem.getDPlanesBufPtr(), problem.getHPlanesBufSendPtr(), problem.getHPlanesBufRecvPtr(),
+                    levelAbove.getDPlanesBufPtr(), levelAbove.getHPlanesBufSendPtr(), levelAbove.getHPlanesBufRecvPtr(),
                     problem.getProgram(), problem.getCommands(), problem.getContext(),
                     0, 0, 0,
                     levelAbove.getMpiDataPtr(),
@@ -617,7 +617,7 @@ namespace mgcl
             problem.isPeriodic(),
             level.isCalculatedLocally(),
             levelAbove.isCalculatedLocally(),
-            problem.getDPlanesBufPtr(), problem.getHPlanesBufSendPtr(), problem.getHPlanesBufRecvPtr(),
+            level.getDPlanesBufPtr(), level.getHPlanesBufSendPtr(), level.getHPlanesBufRecvPtr(),
             problem.getProgram(), problem.getCommands(), problem.getContext(),
             level.getMpiDataPtr(), levelAbove.getMpiDataPtr(),
             &problem.getKernelConfig(), problem.getProfilingData()};
@@ -644,7 +644,7 @@ namespace mgcl
             level.isCalculatedLocally(),
             problem.nu2, problem.jacobi_iterations_per_kernel,
             problem.omega,
-            problem.getDPlanesBufPtr(), problem.getHPlanesBufSendPtr(), problem.getHPlanesBufRecvPtr(),
+            level.getDPlanesBufPtr(), level.getHPlanesBufSendPtr(), level.getHPlanesBufRecvPtr(),
             problem.getProgram(), problem.getCommands(), problem.getContext(),
             0, 0, 0,
             level.getMpiDataPtr(),

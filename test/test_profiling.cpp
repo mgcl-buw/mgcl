@@ -127,7 +127,7 @@ TEST_CASE("profiling_kernels")
     SECTION("update_ghosts_cuboid")
     {
         auto& dbuf = lv0.getDVIn();
-        mgcl::MultigridEngine::updateGhosts(p, dbuf, nullptr, true);
+        mgcl::MultigridEngine::updateGhosts(p, lv0, dbuf, nullptr, true);
 
         checkResult(p, "update_ghosts_periodic", {mgh, ngh, ogh});
     }
@@ -224,7 +224,7 @@ TEST_CASE("profiling_kernels")
     SECTION("mult_stencils_var_var")
     {
         auto svgpu = lv0.getStencilValuesGpu();
-        svgpu->multiply(*svgpu, 0, p.getDPlanesBufPtr(), p.getHPlanesBufSendPtr(), p.getHPlanesBufRecvPtr(), p.getProgram(), p.getCommands(), p.getContext(), nullptr,
+        svgpu->multiply(*svgpu, 0, lv0.getDPlanesBufPtr(), lv0.getHPlanesBufSendPtrStencil(), lv0.getHPlanesBufRecvPtrStencil(), p.getProgram(), p.getCommands(), p.getContext(), nullptr,
                         false, true, &conf, p.getProfilingData());
 
         checkResult(p, "mult_stencils_var_var", {m, n, o});
@@ -234,7 +234,7 @@ TEST_CASE("profiling_kernels")
     {
         auto svgpu = lv0.getStencilValuesGpu();
         mgcl::FixedStencilGpu f(3, p.getContext(), p.getCommands(), p.getProgram());
-        svgpu->multiply(f, 0, p.getDPlanesBufPtr(), p.getHPlanesBufSendPtr(), p.getHPlanesBufRecvPtr(), p.getProgram(), p.getCommands(), p.getContext(), nullptr,
+        svgpu->multiply(f, 0, lv0.getDPlanesBufPtr(), lv0.getHPlanesBufSendPtrStencil(), lv0.getHPlanesBufRecvPtrStencil(), p.getProgram(), p.getCommands(), p.getContext(), nullptr,
                         false, true, &conf, p.getProfilingData());
 
         checkResult(p, "mult_stencils_var_fix", {m, n, o * 5 * 5 * 5});
@@ -244,7 +244,7 @@ TEST_CASE("profiling_kernels")
     {
         auto svgpu = lv0.getStencilValuesGpu();
         mgcl::FixedStencilGpu f(3, p.getContext(), p.getCommands(), p.getProgram());
-        f.multiply(*svgpu, 0, p.getDPlanesBufPtr(), p.getHPlanesBufSendPtr(), p.getHPlanesBufRecvPtr(), p.getProgram(), p.getCommands(), p.getContext(), nullptr,
+        f.multiply(*svgpu, 0, lv0.getDPlanesBufPtr(), lv0.getHPlanesBufSendPtrStencil(), lv0.getHPlanesBufRecvPtrStencil(), p.getProgram(), p.getCommands(), p.getContext(), nullptr,
                    false, true, &conf, p.getProfilingData());
 
         checkResult(p, "mult_stencils_fix_var", {m, n, o * 5 * 5 * 5});

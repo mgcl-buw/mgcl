@@ -124,7 +124,7 @@ namespace mgcl
 
         cl_event ev;
 
-        err = MultigridEngine::updateGhosts(*problem, d_fine_values, fine.getMpiDataPtr(),
+        err = MultigridEngine::updateGhosts(*problem, fine, d_fine_values, fine.getMpiDataPtr(),
                                             fine.isCalculatedLocally());
         mgclCheckError(err, "Updating fine ghosts");
         err = clEnqueueNDRangeKernel(problem->openCLHelper.getCommands(), kernel, 3, NULL, global, local, 0, NULL, &ev);
