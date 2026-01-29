@@ -170,8 +170,9 @@ int main(int argc, char* argv[])
     std::cout << "Generating random data..." << std::endl;
 
     // Init some random data
-    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
-    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol);
+    int ghin = 1;
+    auto v = std::make_shared<mgcl::Cuboid>(ml, nl, ol, ghin, ghin, ghin);
+    auto f = std::make_shared<mgcl::Cuboid>(ml, nl, ol, ghin, ghin, ghin);
     v->fillRandom();
     f->fillRandom();
 
@@ -184,6 +185,8 @@ int main(int argc, char* argv[])
         p.setDeviceName(deviceName);
         p.setDeviceType(deviceType);
     }
+    p.setGhostsIn(ghin);
+    p.setBc(periodic ? mgcl::BC::PERIODIC : mgcl::BC::DIRICHLET);
     p.setStencilType(stencilType);
     if (stencilType == mgcl::MGCL_VARYING)
     {
@@ -205,9 +208,9 @@ int main(int argc, char* argv[])
                     s[2][1][1][i][j][k] = -h2inv;
                 }
     }
-    p.setNu1(2);
-    p.setNu2(2);
-    p.setMaxiterVcycles(5);
+    p.setNu1(1);
+    p.setNu2(1);
+    p.setMaxiterVcycles(1);
 
     // Optional: Edit the kernel configuration, i.e. set work-group sizes for each kernel. Below are the default values,
     // taken from kernel_config.cpp. Just fill in the desired work-group sizes. Make sure to not change the kernel names
