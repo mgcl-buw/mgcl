@@ -396,9 +396,12 @@ namespace mgcl
         void setFixedStencil(std::shared_ptr<FixedStencil>& sv);
         std::shared_ptr<FixedStencil>& createFixedStencil();
         std::shared_ptr<FixedStencil>& getFixedStencil();
+        void setBlockstencil(std::shared_ptr<Blockstencil>& sv);
         std::shared_ptr<Blockstencil>& createBlockstencil();
         std::shared_ptr<Blockstencil>& getBlockstencil();
 
+        void setRestrictionBlockstencil(std::shared_ptr<FixedBlockstencil>& sv);
+        void setProlongationBlockstencil(std::shared_ptr<FixedBlockstencil>& sv);
         std::shared_ptr<FixedBlockstencil>& getRestrictionBlockstencil();
         std::shared_ptr<FixedBlockstencil>& getProlongationBlockstencil();
         std::shared_ptr<FixedBlockstencilGpu>& getRestrictionBlockstencilGpu();

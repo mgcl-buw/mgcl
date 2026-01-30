@@ -1158,7 +1158,7 @@ namespace mgcl
 
     Level& Problem::getLevelAt(int index) const
     {
-        return *levels[index];
+        return *levels.at(index);
     }
 
     int Problem::getLevelsSize() const
@@ -1738,6 +1738,26 @@ namespace mgcl
         return blockstencil;
     }
 
+    void Problem::setBlockstencil(std::shared_ptr<Blockstencil>& blockstencil_)
+    {
+        if (stencilType != MGCL_BLOCKSTENCIL)
+        {
+            error("Problem::setBlockstencil: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
+        }
+
+        calculateAndSetMpiLevelThreshold();
+        int gh = std::max(1, jacobi_iterations_per_kernel);
+        int width = 3;
+        int _m = (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) ? mGlobal : m;
+        int _n = (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) ? nGlobal : n;
+        int _o = (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) ? oGlobal : o;
+        if (blockstencil_->getM() != _m || blockstencil_->getN() != _n || blockstencil_->getO() != _o || blockstencil_->getWidth() != width || blockstencil_->getGhostsM() != gh || blockstencil_->getGhostsN() != gh || blockstencil_->getGhostsO() != gh) // TODO check
+        {
+            error("blockstencil must have m,n,o,gh,width: " + std::to_string(_m) + "," + std::to_string(_n) + "," + std::to_string(_o) + "," + std::to_string(gh) + "," + std::to_string(width));
+        }
+        blockstencil = blockstencil_;
+    }
+
     std::shared_ptr<FixedBlockstencil>& Problem::getRestrictionBlockstencil()
     {
         if (stencilType != MGCL_BLOCKSTENCIL)
@@ -1764,6 +1784,34 @@ namespace mgcl
         }
         prolongationBlockstencilAccessed = true;
         return prolongationBlockstencil;
+    }
+
+    void Problem::setRestrictionBlockstencil(std::shared_ptr<FixedBlockstencil>& restrictionBlockstencil_)
+    {
+        if (stencilType != MGCL_BLOCKSTENCIL)
+        {
+            error("Problem::setRestrictionBlockstencil: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
+        }
+        if (restrictionBlockstencil_->getWidth() != 3)
+        {
+            error("restrictionBlockstencil must have width 3");
+        }
+        restrictionBlockstencilAccessed = true;
+        restrictionBlockstencil = restrictionBlockstencil_;
+    }
+
+    void Problem::setProlongationBlockstencil(std::shared_ptr<FixedBlockstencil>& prolongationBlockstencil_)
+    {
+        if (stencilType != MGCL_BLOCKSTENCIL)
+        {
+            error("Problem::setProlongationBlockstencil: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
+        }
+        if (prolongationBlockstencil_->getWidth() != 3)
+        {
+            error("prolongationBlockstencil must have width 3");
+        }
+        prolongationBlockstencilAccessed = true;
+        prolongationBlockstencil = prolongationBlockstencil_;
     }
 
     std::shared_ptr<FixedBlockstencilGpu>& Problem::getRestrictionBlockstencilGpu()

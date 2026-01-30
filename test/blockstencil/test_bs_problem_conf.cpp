@@ -906,3 +906,50 @@ TEST_CASE("Problem::setStencilTypeBlockstencil")
     // CHECK(p.getBlockstencil()->getOgh() == p.getO() + 2);
     // CHECK(p.getBlockstencil()->getBlocksize() == blocksize);
 }
+
+/**
+ * @brief Tests if setBlockstencil checks that dimensions of user's blockstencil are ok and if if is
+ * correctly propagated into Problem and Level. Also tests restr. and prol. blockstencils.
+ *
+ */
+TEST_CASE("Problem::setBlockstencil")
+{
+    int blocksize = 2;
+    auto v = std::make_shared<mgcl::CuboidBS>(2, 2, 2, blocksize);
+    auto f = std::make_shared<mgcl::CuboidBS>(2, 2, 2, blocksize);
+    mgcl::Problem p1(2, 2, 2, f, v);
+
+    p1.setStencilType(mgcl::MGCL_BLOCKSTENCIL);
+    auto bs1 = p1.createBlockstencil();
+    auto rbs1 = p1.getRestrictionBlockstencil();
+    auto pbs1 = p1.getProlongationBlockstencil();
+    REQUIRE(bs1);
+    REQUIRE(rbs1);
+    REQUIRE(pbs1);
+    REQUIRE(p1.getBlockstencil().get() == bs1.get()); // check same object
+    CHECK(p1.getBlockstencil()->getM() == p1.getM());
+    CHECK(p1.getBlockstencil()->getN() == p1.getN());
+    CHECK(p1.getBlockstencil()->getO() == p1.getO());
+    CHECK(p1.getBlockstencil()->getMgh() == p1.getM() + 2);
+    CHECK(p1.getBlockstencil()->getNgh() == p1.getN() + 2);
+    CHECK(p1.getBlockstencil()->getOgh() == p1.getO() + 2);
+    CHECK(p1.getBlockstencil()->getBlocksize() == blocksize);
+
+    mgcl_test::fill3dBilinearProlongationBlockstencil(*pbs1);
+    mgcl_test::fill3dFullWeightRestrictionBlockstencil(*rbs1);
+    mgcl_test::fill7pLaplace(*bs1, 1, false);
+    p1.init();
+    auto& lv0_1 = p1.getLevelAt(0);
+    REQUIRE(lv0_1.getBlockstencil().get() == bs1.get());
+
+    mgcl::Problem p2(2, 2, 2, f, v);
+    p2.setBlockstencil(bs1);
+    p2.setRestrictionBlockstencil(rbs1);
+    p2.setProlongationBlockstencil(pbs1);
+    REQUIRE(p2.getBlockstencil().get() == bs1.get());
+    REQUIRE(p2.getRestrictionBlockstencil().get() == rbs1.get());
+    REQUIRE(p2.getProlongationBlockstencil().get() == pbs1.get());
+    p2.init();
+    auto& lv0_2 = p2.getLevelAt(0);
+    REQUIRE(lv0_2.getBlockstencil().get() == bs1.get());
+}
