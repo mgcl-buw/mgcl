@@ -206,6 +206,14 @@ namespace mgcl
             warning("stencilType is set to MGCL_BLOCKSTENCIL but restrictionBlockstencil or prolongationBlockstencil do not seem to be set!");
         }
 
+        if (stencilType == MGCL_BLOCKSTENCIL)
+        {
+            if (!blockstencil || !restrictionBlockstencil || !prolongationBlockstencil)
+            {
+                error("stencilType is set to MGCL_BLOCKSTENCIL but blockstencil, restrictionBlockstencil or prolongationBlockstencil do not seem to be set!");
+            }
+        }
+
         if (stencilType == MGCL_VARYING)
         {
             if ((!stencilValues && !use_opencl) || (use_opencl && !stencilValuesGpu && !stencilValues))
@@ -1744,16 +1752,22 @@ namespace mgcl
         {
             error("Problem::setBlockstencil: stencilType is not MGCL_BLOCKSTENCIL. Use Problem::setStencilType(MGCL_BLOCKSTENCIL) first.");
         }
-
-        calculateAndSetMpiLevelThreshold();
-        int gh = std::max(1, jacobi_iterations_per_kernel);
-        int width = 3;
-        int _m = (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) ? mGlobal : m;
-        int _n = (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) ? nGlobal : n;
-        int _o = (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) ? oGlobal : o;
-        if (blockstencil_->getM() != _m || blockstencil_->getN() != _n || blockstencil_->getO() != _o || blockstencil_->getWidth() != width || blockstencil_->getGhostsM() != gh || blockstencil_->getGhostsN() != gh || blockstencil_->getGhostsO() != gh) // TODO check
+        if (!blockstencil_)
         {
-            error("blockstencil must have m,n,o,gh,width: " + std::to_string(_m) + "," + std::to_string(_n) + "," + std::to_string(_o) + "," + std::to_string(gh) + "," + std::to_string(width));
+            warning("Problem::setBlockstencil: You've just set blockstencil to null.");
+        }
+        else
+        {
+            calculateAndSetMpiLevelThreshold();
+            int gh = std::max(1, jacobi_iterations_per_kernel);
+            int width = 3;
+            int _m = (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) ? mGlobal : m;
+            int _n = (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) ? nGlobal : n;
+            int _o = (useMpi() && getMpiLevelThreshold() == 0 && mpiRank() == 0) ? oGlobal : o;
+            if (blockstencil_->getM() != _m || blockstencil_->getN() != _n || blockstencil_->getO() != _o || blockstencil_->getWidth() != width || blockstencil_->getGhostsM() != gh || blockstencil_->getGhostsN() != gh || blockstencil_->getGhostsO() != gh) // TODO check
+            {
+                error("blockstencil must have m,n,o,gh,width: " + std::to_string(_m) + "," + std::to_string(_n) + "," + std::to_string(_o) + "," + std::to_string(gh) + "," + std::to_string(width));
+            }
         }
         blockstencil = blockstencil_;
     }
@@ -1796,7 +1810,15 @@ namespace mgcl
         {
             error("restrictionBlockstencil must have width 3");
         }
-        restrictionBlockstencilAccessed = true;
+        if (!restrictionBlockstencil_)
+        {
+            warning("Problem::setRestrictionBlockstencil: You've just set restrictionBlockstencil to null.");
+            restrictionBlockstencilAccessed = false;
+        }
+        else
+        {
+            restrictionBlockstencilAccessed = true;
+        }
         restrictionBlockstencil = restrictionBlockstencil_;
     }
 
@@ -1810,7 +1832,15 @@ namespace mgcl
         {
             error("prolongationBlockstencil must have width 3");
         }
-        prolongationBlockstencilAccessed = true;
+        if (!prolongationBlockstencil_)
+        {
+            warning("Problem::setRestrictionBlockstencil: You've just set restrictionBlockstencil to null.");
+            prolongationBlockstencilAccessed = false;
+        }
+        else
+        {
+            prolongationBlockstencilAccessed = true;
+        }
         prolongationBlockstencil = prolongationBlockstencil_;
     }
 

@@ -108,9 +108,16 @@ TEST_CASE("Problem::checkParametersBlockstencil")
         REQUIRE_THROWS(pm2.checkParameters());
     }
 
+    SECTION("blockstencil or restriction or prolongation stencils not set")
+    {
+        mgcl::Problem pm(8, 8, 8, v, f);
+        REQUIRE_THROWS(pm.checkParameters());
+    }
+
     SECTION("all good")
     {
         mgcl::Problem pm(8, 8, 8, v, f);
+        pm.createBlockstencil();
         REQUIRE_NOTHROW(pm.checkParameters() == true);
     }
 }
@@ -952,4 +959,28 @@ TEST_CASE("Problem::setBlockstencil")
     p2.init();
     auto& lv0_2 = p2.getLevelAt(0);
     REQUIRE(lv0_2.getBlockstencil().get() == bs1.get());
+
+    // check errors
+    int gh = 1;
+    {
+        auto bsf = std::make_shared<mgcl::Blockstencil>(3, 3, 3, 3, blocksize, gh, gh, gh);
+        REQUIRE_THROWS(p1.setBlockstencil(bsf));
+    }
+    {
+        auto bsf = std::make_shared<mgcl::Blockstencil>(2, 2, 2, 5, blocksize, gh, gh, gh);
+        REQUIRE_THROWS(p1.setBlockstencil(bsf));
+    }
+    {
+        auto bsf = std::make_shared<mgcl::Blockstencil>(2, 2, 2, 3, blocksize, 0, gh, gh);
+        REQUIRE_THROWS(p1.setBlockstencil(bsf));
+    }
+    {
+        auto rbsf = std::make_shared<mgcl::FixedBlockstencil>(5, blocksize);
+        REQUIRE_THROWS(p1.setRestrictionBlockstencil(rbsf));
+    }
+
+    {
+        auto pbsf = std::make_shared<mgcl::FixedBlockstencil>(5, blocksize);
+        REQUIRE_THROWS(p1.setProlongationBlockstencil(pbsf));
+    }
 }
