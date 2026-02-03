@@ -302,7 +302,9 @@ namespace mgcl
         {
             res = residual(problem, level, true);
             if (problem.elapsedIterations > 1 && res / problem.initres < problem.getTol())
+            {
                 return res;
+            }
         }
         else
         {
@@ -492,7 +494,6 @@ namespace mgcl
         auto& levelAbove = problem.getLevelAt(level.num + 1);
         // printf("level.getNum() = %d, m = %3.d\n", level.getNum(), level.m-2);
         // problem.maxlevel = 3;
-        double res;
 
         if (level.getNum() < problem.maxlevel) // if not at highest level
         {
@@ -518,7 +519,6 @@ namespace mgcl
         MultigridEngine::jacobi(jacobi_args1);
 
         // update residual before restriction
-        // relax nu1 times
         args::ResidualBSOclArgs residual_args{
             level.getDFBS(), level.getDVBSIn(), level.getDRBS(),
             problem.residual_norm,
@@ -531,7 +531,23 @@ namespace mgcl
             0, 0, 0,
             level.getMpiDataPtr(),
             &problem.getKernelConfig(), problem.getProfilingData()};
-        residual(residual_args);
+        // residual(residual_args);
+
+        double res = 0;
+        if (level.getNum() == 0 && !problem.ignoreTol)
+        {
+            residual_args.returnResidualNorm = true;
+            res = residual(residual_args);
+            if (problem.elapsedIterations > 1 && res / problem.initres < problem.getTol())
+            {
+                return res;
+            }
+        }
+        else
+        {
+            residual_args.returnResidualNorm = false;
+            residual(residual_args);
+        }
         // printf("res on level.getNum() %d, upwards: %e\n", level.getNum(), res);
 
         // restrict to coarser grid
@@ -640,7 +656,7 @@ namespace mgcl
             problem.residual_norm,
             *level.blockstencilGpu, level.getBlockstencilInvVariant(),
             level.getDRsqBSPtr().get(),
-            true, problem.isPeriodic(),
+            false, problem.isPeriodic(),
             level.isCalculatedLocally(),
             problem.nu2, problem.jacobi_iterations_per_kernel,
             problem.omega,
@@ -649,7 +665,7 @@ namespace mgcl
             0, 0, 0,
             level.getMpiDataPtr(),
             &problem.getKernelConfig(), problem.getProfilingData()};
-        res = MultigridEngine::jacobi(jacobi_args2);
+        MultigridEngine::jacobi(jacobi_args2);
 
         // calculate residual again for the norm TODO in jacobi
         // res = residual(problem, level, 1);
