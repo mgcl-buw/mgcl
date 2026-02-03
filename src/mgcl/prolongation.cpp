@@ -212,6 +212,7 @@ namespace mgcl
         int ocgh = ofgh >> 1;
         int ngh_vals_coarse = args.coarse.getNgh();
         int ogh_vals_coarse = args.coarse.getOgh();
+        int bufgridsize_c = args.coarse.getMgh() * args.coarse.getNgh() * args.coarse.getOgh();
 
         // assign kernel arguments
         int pos = 0;
@@ -226,6 +227,7 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh_vals_coarse);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh_vals_coarse);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &bufgridsize_c);
         mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes

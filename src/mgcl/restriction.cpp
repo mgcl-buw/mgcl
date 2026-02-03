@@ -244,6 +244,7 @@ namespace mgcl
         int ocgh = oreal + 2 * args.coarse.getGhostsO();
         int ngh_vals_coarse = args.coarse.getNgh();
         int ogh_vals_coarse = args.coarse.getOgh();
+        int bufgridsize_c = args.coarse.getMgh() * args.coarse.getNgh() * args.coarse.getOgh();
 
         // assign kernel arguments
         int pos = 0;
@@ -258,6 +259,7 @@ namespace mgcl
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &gh);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ngh_vals_coarse);
         err |= clSetKernelArg(kernel, ++pos, sizeof(int), &ogh_vals_coarse);
+        err |= clSetKernelArg(kernel, ++pos, sizeof(int), &bufgridsize_c);
         mgclCheckError(err, "Setting kernel arguments");
 
         // one work-item per cell (excluding ghost cells). Pad global sizes to fit to local sizes
@@ -273,8 +275,8 @@ namespace mgcl
         }
 
         local[0] = static_cast<size_t>(mreal > local[0] ? local[0] : mreal);
-        local[0] = static_cast<size_t>(nreal > local[1] ? local[1] : nreal);
-        local[0] = static_cast<size_t>(oreal > local[2] ? local[2] : oreal);
+        local[1] = static_cast<size_t>(nreal > local[1] ? local[1] : nreal);
+        local[2] = static_cast<size_t>(oreal > local[2] ? local[2] : oreal);
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)

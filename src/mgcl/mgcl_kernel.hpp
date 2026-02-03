@@ -2081,13 +2081,16 @@ __kernel void restrict_to_coarse(
  * * gh_vals_coarse must be sizes of coarse grid's cuboids. Most of the time its equal to m,n,o but for
  *   the threshold-level when using MPI, the cuboid is bigger than the actual level would be.
  * * fbs: Fixed restriction blockstencil
+ * * bufgridsize_c: grid size of coarse grid buffer. Might be bigger on rank 0 on threshold level, since it is
+ *     gathered into after restriction.
  */
 __kernel void restrict_to_coarse_blockstencil(
     __global double* restrict fine,
     __global double* restrict coarse,
     __global double* restrict fbs,
     const int m, const int n, const int o, const int ghosts,
-    const int ngh_vals_coarse, const int ogh_vals_coarse)
+    const int ngh_vals_coarse, const int ogh_vals_coarse,
+    const int bufgridsize_c)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
@@ -2098,7 +2101,7 @@ __kernel void restrict_to_coarse_blockstencil(
     const int nf = (n - g2) * 2 + g2;
     const int of = (o - g2) * 2 + g2;
 
-    int gridsize_c = m * n * o;
+    // int gridsize_c = m * n * o;
     int gridsize_f = mf * nf * of;
 
     if (i < m && j < n && k < o)
@@ -2152,7 +2155,7 @@ __kernel void restrict_to_coarse_blockstencil(
                     fbs[fbs_idx_self + 9 + 3 - 1] * fine[idx_f_self + ioff_f + joff_f - koff_f + bj * gridsize_f] +
                     fbs[fbs_idx_self + 9 + 3 + 1] * fine[idx_f_self + ioff_f + joff_f + koff_f + bj * gridsize_f];
             }
-            coarse[idx_c + bi * gridsize_c] = sum;
+            coarse[idx_c + bi * bufgridsize_c] = sum;
         }
     }
 }
@@ -2216,7 +2219,8 @@ __kernel void prolongate_to_fine_blockstencil(
     __global double* restrict coarse,
     __global double* restrict fbs,
     const int mf, const int nf, const int of, const int ghosts,
-    const int ngh_vals_coarse, const int ogh_vals_coarse)
+    const int ngh_vals_coarse, const int ogh_vals_coarse,
+    const int bufgridsize_c)
 {
     int i = get_global_id(0);
     int j = get_global_id(1);
@@ -2228,7 +2232,7 @@ __kernel void prolongate_to_fine_blockstencil(
     const int oc = (of - g2) / 2 + g2;
 
     int gridsize_f = mf * nf * of;
-    int gridsize_c = mc * nc * oc;
+    // int gridsize_c = mc * nc * oc;
 
     if (i > ghosts - 1 && i < mc - ghosts && j > ghosts - 1 && j < nc - ghosts && k > ghosts - 1 && k < oc - ghosts)
     {
@@ -2250,28 +2254,28 @@ __kernel void prolongate_to_fine_blockstencil(
             {
                 int fbs_idx_self = bi * BLOCKSIZE * 27 + bj * 27 + 1 * 9 + 1 * 3 + 1;
 
-                sums[0] += fbs[fbs_idx_self] * coarse[index_coarse + bj * gridsize_c];
+                sums[0] += fbs[fbs_idx_self] * coarse[index_coarse + bj * bufgridsize_c];
 
-                sums[1] += fbs[fbs_idx_self - 1] * coarse[index_coarse + bj * gridsize_c] + fbs[fbs_idx_self + 1] * coarse[index_coarse - koff_c + bj * gridsize_c];
+                sums[1] += fbs[fbs_idx_self - 1] * coarse[index_coarse + bj * bufgridsize_c] + fbs[fbs_idx_self + 1] * coarse[index_coarse - koff_c + bj * bufgridsize_c];
 
-                sums[2] += fbs[fbs_idx_self - 3] * coarse[index_coarse + bj * gridsize_c] + fbs[fbs_idx_self + 3] * coarse[index_coarse - joff_c + bj * gridsize_c];
+                sums[2] += fbs[fbs_idx_self - 3] * coarse[index_coarse + bj * bufgridsize_c] + fbs[fbs_idx_self + 3] * coarse[index_coarse - joff_c + bj * bufgridsize_c];
 
-                sums[3] += fbs[fbs_idx_self - 9] * coarse[index_coarse + bj * gridsize_c] + fbs[fbs_idx_self + 9] * coarse[index_coarse - ioff_c + bj * gridsize_c];
+                sums[3] += fbs[fbs_idx_self - 9] * coarse[index_coarse + bj * bufgridsize_c] + fbs[fbs_idx_self + 9] * coarse[index_coarse - ioff_c + bj * bufgridsize_c];
 
-                sums[4] += fbs[fbs_idx_self - 3 - 1] * coarse[index_coarse + bj * gridsize_c] + fbs[fbs_idx_self - 3 + 1] * coarse[index_coarse - koff_c + bj * gridsize_c] + fbs[fbs_idx_self + 3 - 1] * coarse[index_coarse - joff_c + bj * gridsize_c] + fbs[fbs_idx_self + 3 + 1] * coarse[index_coarse - joff_c - koff_c + bj * gridsize_c];
+                sums[4] += fbs[fbs_idx_self - 3 - 1] * coarse[index_coarse + bj * bufgridsize_c] + fbs[fbs_idx_self - 3 + 1] * coarse[index_coarse - koff_c + bj * bufgridsize_c] + fbs[fbs_idx_self + 3 - 1] * coarse[index_coarse - joff_c + bj * bufgridsize_c] + fbs[fbs_idx_self + 3 + 1] * coarse[index_coarse - joff_c - koff_c + bj * bufgridsize_c];
 
-                sums[5] += fbs[fbs_idx_self - 9 - 1] * coarse[index_coarse + bj * gridsize_c] + fbs[fbs_idx_self - 9 + 1] * coarse[index_coarse - koff_c + bj * gridsize_c] + fbs[fbs_idx_self + 9 - 1] * coarse[index_coarse - ioff_c + bj * gridsize_c] + fbs[fbs_idx_self + 9 + 1] * coarse[index_coarse - ioff_c - koff_c + bj * gridsize_c];
+                sums[5] += fbs[fbs_idx_self - 9 - 1] * coarse[index_coarse + bj * bufgridsize_c] + fbs[fbs_idx_self - 9 + 1] * coarse[index_coarse - koff_c + bj * bufgridsize_c] + fbs[fbs_idx_self + 9 - 1] * coarse[index_coarse - ioff_c + bj * bufgridsize_c] + fbs[fbs_idx_self + 9 + 1] * coarse[index_coarse - ioff_c - koff_c + bj * bufgridsize_c];
 
-                sums[6] += fbs[fbs_idx_self - 9 - 3] * coarse[index_coarse + bj * gridsize_c] + fbs[fbs_idx_self - 9 + 3] * coarse[index_coarse - joff_c + bj * gridsize_c] + fbs[fbs_idx_self + 9 - 3] * coarse[index_coarse - ioff_c + bj * gridsize_c] + fbs[fbs_idx_self + 9 + 3] * coarse[index_coarse - ioff_c - joff_c + bj * gridsize_c];
+                sums[6] += fbs[fbs_idx_self - 9 - 3] * coarse[index_coarse + bj * bufgridsize_c] + fbs[fbs_idx_self - 9 + 3] * coarse[index_coarse - joff_c + bj * bufgridsize_c] + fbs[fbs_idx_self + 9 - 3] * coarse[index_coarse - ioff_c + bj * bufgridsize_c] + fbs[fbs_idx_self + 9 + 3] * coarse[index_coarse - ioff_c - joff_c + bj * bufgridsize_c];
 
-                sums[7] += fbs[fbs_idx_self - 9 - 3 - 1] * coarse[index_coarse + bj * gridsize_c] +
-                           fbs[fbs_idx_self - 9 - 3 + 1] * coarse[index_coarse - koff_c + bj * gridsize_c] +
-                           fbs[fbs_idx_self - 9 + 3 - 1] * coarse[index_coarse - joff_c + bj * gridsize_c] +
-                           fbs[fbs_idx_self - 9 + 3 + 1] * coarse[index_coarse - joff_c - koff_c + bj * gridsize_c] +
-                           fbs[fbs_idx_self + 9 - 3 - 1] * coarse[index_coarse - ioff_c + bj * gridsize_c] +
-                           fbs[fbs_idx_self + 9 - 3 + 1] * coarse[index_coarse - ioff_c - koff_c + bj * gridsize_c] +
-                           fbs[fbs_idx_self + 9 + 3 - 1] * coarse[index_coarse - ioff_c - joff_c + bj * gridsize_c] +
-                           fbs[fbs_idx_self + 9 + 3 + 1] * coarse[index_coarse - ioff_c - joff_c - koff_c + bj * gridsize_c];
+                sums[7] += fbs[fbs_idx_self - 9 - 3 - 1] * coarse[index_coarse + bj * bufgridsize_c] +
+                           fbs[fbs_idx_self - 9 - 3 + 1] * coarse[index_coarse - koff_c + bj * bufgridsize_c] +
+                           fbs[fbs_idx_self - 9 + 3 - 1] * coarse[index_coarse - joff_c + bj * bufgridsize_c] +
+                           fbs[fbs_idx_self - 9 + 3 + 1] * coarse[index_coarse - joff_c - koff_c + bj * bufgridsize_c] +
+                           fbs[fbs_idx_self + 9 - 3 - 1] * coarse[index_coarse - ioff_c + bj * bufgridsize_c] +
+                           fbs[fbs_idx_self + 9 - 3 + 1] * coarse[index_coarse - ioff_c - koff_c + bj * bufgridsize_c] +
+                           fbs[fbs_idx_self + 9 + 3 - 1] * coarse[index_coarse - ioff_c - joff_c + bj * bufgridsize_c] +
+                           fbs[fbs_idx_self + 9 + 3 + 1] * coarse[index_coarse - ioff_c - joff_c - koff_c + bj * bufgridsize_c];
             }
             fine[index_fine_self + bi * gridsize_f] = sums[0];
             fine[index_fine_self - koff_f + bi * gridsize_f] = sums[1];
