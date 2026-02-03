@@ -1999,6 +1999,11 @@ namespace mgcl
         return mpiGlobalData->mpiRank();
     }
 
+    int Problem::mpiSize() const
+    {
+        return mpiGlobalData->mpiSize();
+    }
+
     /**
      * @brief Returns the communicator size, i.e. number of processes attached to this communicator.
      */

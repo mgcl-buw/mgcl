@@ -422,6 +422,7 @@ namespace mgcl
         void calculateAndSetMpiLevelThreshold();
 
         int mpiRank() const;
+        int mpiSize() const;
 
         int getMGlobal() const;
         int getNGlobal() const;
