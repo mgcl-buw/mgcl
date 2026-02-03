@@ -424,7 +424,7 @@ namespace mgcl
             int yz = ngh * ogh;
             int xz = mgh * ogh;
             int xy = mgh * ngh;
-            int ressize = (2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts);
+            int ressize = (2 * yz * ghosts + 2 * xz * ghosts + 2 * xy * ghosts) * problem->blocksize;
             int ressizeStencil = ressize * problem->blockstencil->getWidth() * problem->blockstencil->getWidth() * problem->blockstencil->getWidth() * problem->blocksize * problem->blocksize;
 
             dPlanesBuf = std::make_shared<BufferGpu>(problem->getContext(), CL_MEM_READ_WRITE, ressizeStencil);
