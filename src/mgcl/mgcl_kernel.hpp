@@ -2242,8 +2242,8 @@ __kernel void prolongate_to_fine_blockstencil(
         const int ioff_f = nf * of;
         const int joff_f = of;
         const int koff_f = 1;
-        const int ioff_c = nc * oc;
-        const int joff_c = oc;
+        const int ioff_c = ngh_vals_coarse * ogh_vals_coarse;
+        const int joff_c = ogh_vals_coarse;
         const int koff_c = 1;
         const int index_fine_self = i2 * ioff_f + j2 * joff_f + k2 * koff_f;
 

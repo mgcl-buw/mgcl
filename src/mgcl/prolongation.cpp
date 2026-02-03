@@ -243,8 +243,8 @@ namespace mgcl
         }
 
         local[0] = static_cast<size_t>(mcgh > local[0] ? local[0] : mcgh);
-        local[0] = static_cast<size_t>(ncgh > local[1] ? local[1] : ncgh);
-        local[0] = static_cast<size_t>(ocgh > local[2] ? local[2] : ocgh);
+        local[1] = static_cast<size_t>(ncgh > local[1] ? local[1] : ncgh);
+        local[2] = static_cast<size_t>(ocgh > local[2] ? local[2] : ocgh);
 
         for (int i = 0; i < 3; i++)
             if (global[i] % local[i] != 0)

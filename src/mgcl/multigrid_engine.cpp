@@ -563,9 +563,39 @@ namespace mgcl
             &problem.getKernelConfig(), problem.getProfilingData()};
         MultigridEngine::restrictBlockstencil(restriction_args);
 
-        // levelAbove.getDFBS().dumpToFile(problem.getCommands(), "dfbs_" + std::to_string(levelAbove.getNum()) + ".txt");
-        // level.getDVBSIn().dumpToFile(problem.getCommands(), "dvbs_" + std::to_string(level.getNum()) + ".txt");
-        // level.getDRBS().dumpToFile(problem.getCommands(), "drbs_" + std::to_string(level.getNum()) + ".txt");
+        // levelAbove.getDFBS().dumpToFile(problem.getCommands(), "dfbs_" + std::to_string(levelAbove.getNum()) + "." + std::to_string(problem.mpiRank()) + ".txt", true);
+        // level.getDVBSIn().dumpToFile(problem.getCommands(), "dvbs_" + std::to_string(level.getNum()) + "." + std::to_string(problem.mpiRank()) + ".txt", true);
+        // level.getDRBS().dumpToFile(problem.getCommands(), "drbs_" + std::to_string(level.getNum()) + "." + std::to_string(problem.mpiRank()) + ".txt", true);
+
+        // auto v = level.getDVBSIn().read(problem.getCommands(), nullptr, true);
+        // auto r = level.getDRBS().read(problem.getCommands(), nullptr, true);
+        // auto f = levelAbove.getDFBS().read(problem.getCommands(), nullptr, true);
+        // for (int i = 0; i < problem.getMPIGlobalData().mpiSize(); i++)
+        // {
+        //     if (!level.isCalculatedLocally())
+        //         MPI_Barrier(problem.getMpiComm());
+        //     if (problem.mpiSize() == 2)
+        //     {
+        //         if (i == problem.mpiRank())
+        //         {
+        //             std::cout << "rank " << i << ", lv " << level.getNum() << ", v0,2,2,2: " << (*v)[0][2][2][2] << ", v1,2,2,2: " << (*v)[1][2][2][2] << ", r0,2,2,2: " << (*r)[0][2][2][2] << ", r1,2,2,2: " << (*r)[1][2][2][2] << ", f0,2,2,2: " << (*f)[0][2][2][2] << ", f1,2,2,2: " << (*f)[1][2][2][2] << std::endl;
+        //             if (levelAbove.isCalculatedLocally())
+        //             {
+        //                 int i1 = v->getM() / 2 + 2;
+        //                 int i1f = f->getM() / 2 + 2;
+        //                 std::cout << "rank " << i << ", lv " << level.getNum() << ", f0,2,2,2: " << (*f)[0][2][2][2] << ", f1,2,2,2: " << (*f)[1][2][2][2] << std::endl;
+        //                 std::cout << "rank " << i << ", lv " << level.getNum() << ", f0,i1,2,2: " << (*f)[0][i1f][2][2] << ", f1,i1,2,2: " << (*f)[1][i1f][2][2] << std::endl;
+        //             }
+        //         }
+        //     }
+        //     else
+        //     {
+        //         int i1 = v->getM() / 2 + 2;
+        //         int i1f = f->getM() / 2 + 2;
+        //         std::cout << "lv " << level.getNum() << ", v0,2,2,2: " << (*v)[0][2][2][2] << ", v1,2,2,2: " << (*v)[1][2][2][2] << ", r0,2,2,2: " << (*r)[0][2][2][2] << ", r1,2,2,2: " << (*r)[1][2][2][2] << ", f0,2,2,2: " << (*f)[0][2][2][2] << ", f1,2,2,2: " << (*f)[1][2][2][2] << std::endl;
+        //         std::cout << "lv " << level.getNum() << ", v0,i1,2,2: " << (*v)[0][i1][2][2] << ", v1,i1,2,2: " << (*v)[1][i1][2][2] << ", r0,i1,2,2: " << (*r)[0][i1][2][2] << ", r1,i1,2,2: " << (*r)[1][i1][2][2] << ", f0,i1,2,2: " << (*f)[0][i1f][2][2] << ", f1,i1,2,2: " << (*f)[1][i1f][2][2] << std::endl;
+        //     }
+        // }
 
         // If MPI is in use but minGridPoints is reached, gather rhs data to process 0 and perform calculations
         // locally only, until we're reaching the threshold level moving downwards again.
@@ -638,6 +668,24 @@ namespace mgcl
             level.getMpiDataPtr(), levelAbove.getMpiDataPtr(),
             &problem.getKernelConfig(), problem.getProfilingData()};
         MultigridEngine::prolongateBlockstencil(prolongation_args);
+
+        // auto r = level.getDRBS().read(problem.getCommands(), nullptr, true);
+        // for (int i = 0; i < problem.getMPIGlobalData().mpiSize(); i++)
+        // {
+        //     if (!level.isCalculatedLocally())
+        //         MPI_Barrier(problem.getMpiComm());
+        //     if (i == problem.mpiRank())
+        //     {
+        //         std::cout << i << ", lv: " << level.getNum() << ", r0,1,1,1: " << (*r)[0][1][1][1] << std::endl;
+        //         // std::cout << i << ", lv: " << level.getNum() << ", r0,3,3,3: " << (*r)[0][3][3][3] << std::endl;
+        //         // if (r->getMgh() >= 6)
+        //         //     std::cout << i << ", lv: " << level.getNum() << ", r0,5,5,5: " << (*r)[0][5][5][5] << std::endl;
+        //     }
+        // }
+
+        // // levelAbove.getDFBS().dumpToFile(problem.getCommands(), "dfbs_" + std::to_string(levelAbove.getNum()) + "." + std::to_string(problem.mpiRank()) + ".txt", true);
+        // levelAbove.getDVBSIn().dumpToFile(problem.getCommands(), "dvbs_" + std::to_string(levelAbove.getNum()) + "." + std::to_string(problem.mpiRank()) + ".txt", true);
+        // level.getDRBS().dumpToFile(problem.getCommands(), "drbs_" + std::to_string(level.getNum()) + "." + std::to_string(problem.mpiRank()) + ".txt", true);
 
         // level.getDRBS().dumpToFile(problem.getCommands(), "drbs_" + std::to_string(level.getNum()) + ".txt");
 

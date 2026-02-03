@@ -1439,14 +1439,14 @@ namespace mgcl
             }
         }
 
-        if (store_res)
-        {
-            // TODO check for mpi
-            args.r.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.periodic, args.conf, args.pd);
-            // err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
-            //                                     level.isCalculatedLocally());
-            // mgclCheckError(err, "Updating ghosts of dR");
-        }
+        // if (store_res)
+        // {
+        //     // TODO check for mpi
+        //     args.r.updateGhostsOclMpi(args.program, args.queue, args.dPlanesBuf, args.sendBuf, args.recvBuf, args.mpiData, args.updateGhostsLocally, args.periodic, args.conf, args.pd);
+        //     // err = MultigridEngine::updateGhosts(problem, level.getDR(), level.getMpiDataPtr(),
+        //     //                                     level.isCalculatedLocally());
+        //     // mgclCheckError(err, "Updating ghosts of dR");
+        // }
 
         // copy result into dVIn if needed
         if (args.maxiter % 2 == 1)
