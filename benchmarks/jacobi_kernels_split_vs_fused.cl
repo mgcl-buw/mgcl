@@ -1050,9 +1050,9 @@ __kernel void update_ghosts_periodic(
     int m, int n, int o,
     int ghm, int ghn, int gho)
 {
-    int i = get_global_id(0);
+    int i = get_global_id(2);
     int j = get_global_id(1);
-    int k = get_global_id(2);
+    int k = get_global_id(0);
 
     int mgh = m + 2 * ghm;
     int ngh = n + 2 * ghn;
@@ -1062,9 +1062,18 @@ __kernel void update_ghosts_periodic(
          i >= ghm + m || j >= ghn + n || k >= gho + o) &&
         (i < mgh && j < ngh && k < ogh))
     {
-        int ireal = i + floor(((double)(ghm - 1 - i)) / m + 1) * m;
-        int jreal = j + floor(((double)(ghn - 1 - j)) / n + 1) * n;
-        int kreal = k + floor(((double)(gho - 1 - k)) / o + 1) * o;
+        // int ireal = i + floor(((float)(ghm - 1 - i)) / m + 1.0f) * m;
+        // int jreal = j + floor(((float)(ghn - 1 - j)) / n + 1.0f) * n;
+        // int kreal = k + floor(((float)(gho - 1 - k)) / o + 1.0f) * o;
+        // int ireal = i + (floor(((float)(ghm - 1 - i)) / m) + 1.0f) * m;
+        // int jreal = j + (floor(((float)(ghn - 1 - j)) / n) + 1.0f) * n;
+        // int kreal = k + (floor(((float)(gho - 1 - k)) / o) + 1.0f) * o;
+        // int ireal = i + floor(((double)(ghm - 1 - i)) / m + 1) * m;
+        // int jreal = j + floor(((double)(ghn - 1 - j)) / n + 1) * n;
+        // int kreal = k + floor(((double)(gho - 1 - k)) / o + 1) * o;
+        int ireal = ((i - ghm) % m + m) % m + ghm;
+        int jreal = ((j - ghn) % n + n) % n + ghn;
+        int kreal = ((k - gho) % o + o) % o + gho;
 
         // 1d indices
         int idx_gh_cell = i * ngh * ogh + j * ogh + k;

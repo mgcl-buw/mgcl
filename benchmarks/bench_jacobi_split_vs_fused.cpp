@@ -266,13 +266,13 @@ namespace mgcl_bench_jacobi_split_vs_fused
                     mgcl::mgclCheckError(err, "Setting kernel arguments");
                 }
 
-                // set flag to store residual in last iteration
-                if (globalIter == maxiter - 1)
-                {
-                    store_res = 1;
-                    err = clSetKernelArg(kernel, pos_storeres, sizeof(int), &store_res);
-                    mgcl::mgclCheckError(err, "Setting kernel arguments");
-                }
+                // // set flag to store residual in last iteration
+                // if (globalIter == maxiter - 1)
+                // {
+                //     store_res = 1;
+                //     err = clSetKernelArg(kernel, pos_storeres, sizeof(int), &store_res);
+                //     mgcl::mgclCheckError(err, "Setting kernel arguments");
+                // }
 
                 // recalculate and set idx_start
                 idx_start = problem.getGhosts() - ((stepsPerIter - innerIter) - 1);
@@ -847,6 +847,7 @@ namespace mgcl_bench_jacobi_split_vs_fused
 
                         bench.run(std::string(name).c_str(), [&] { //
                             jacobiFused(p, lv0, maxiter, return_residual, stepsPerIter);
+                            // mgcl::MultigridEngine::jacobi(p, lv0, maxiter, false, stepsPerIter);
                             p.finish();
                         });
 
