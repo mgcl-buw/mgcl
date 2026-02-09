@@ -219,9 +219,9 @@ __kernel void update_ghosts_cuboidbs_periodic_blockstencil(
     const int m, const int n, const int o,
     const int ghm, const int ghn, const int gho)
 {
-    int i = get_global_id(0);
+    int i = get_global_id(2);
     int j = get_global_id(1);
-    int k = get_global_id(2);
+    int k = get_global_id(0);
 
     int mgh = m + 2 * ghm;
     int ngh = n + 2 * ghn;
@@ -257,9 +257,9 @@ __kernel void copy_input_data(__global double* v_input, __global double* v_in, _
                               __global double* f, const int m, const int n, const int o, const int ghosts_in)
 {
     // index of ghosted mgcl grid
-    int i = get_global_id(0);
+    int i = get_global_id(2);
     int j = get_global_id(1);
-    int k = get_global_id(2);
+    int k = get_global_id(0);
     int index = i * n * o + j * o + k;
 
     // index of input grid cell
@@ -280,9 +280,9 @@ __kernel void copy_output_data(__global double* v_output, __global double* v_in,
                                const int ghosts_in)
 {
     // index of ghosted mgcl grid
-    int i = get_global_id(0);
+    int i = get_global_id(2);
     int j = get_global_id(1);
-    int k = get_global_id(2);
+    int k = get_global_id(0);
     int index = i * n * o + j * o + k;
 
     // index of input grid cell
@@ -2020,9 +2020,9 @@ __kernel void restrict_to_coarse(
     const int m, const int n, const int o, const int ghosts,
     const int ngh_vals_coarse, const int ogh_vals_coarse)
 {
-    int i = get_global_id(0);
+    int i = get_global_id(2);
     int j = get_global_id(1);
-    int k = get_global_id(2);
+    int k = get_global_id(0);
     int g2 = 2 * ghosts;
 
     if (i < m - ghosts && j < n - ghosts && k < o - ghosts)
@@ -2092,9 +2092,9 @@ __kernel void restrict_to_coarse_blockstencil(
     const int ngh_vals_coarse, const int ogh_vals_coarse,
     const int bufgridsize_c)
 {
-    int i = get_global_id(0);
+    int i = get_global_id(2);
     int j = get_global_id(1);
-    int k = get_global_id(2);
+    int k = get_global_id(0);
     int g2 = 2 * ghosts;
 
     const int mf = (m - g2) * 2 + g2;
@@ -2222,9 +2222,9 @@ __kernel void prolongate_to_fine_blockstencil(
     const int ngh_vals_coarse, const int ogh_vals_coarse,
     const int bufgridsize_c)
 {
-    int i = get_global_id(0);
+    int i = get_global_id(2);
     int j = get_global_id(1);
-    int k = get_global_id(2);
+    int k = get_global_id(0);
     int g2 = 2 * ghosts;
 
     const int mc = (mf - g2) / 2 + g2;
@@ -2299,9 +2299,9 @@ __kernel void update_ghosts_varying_stencil(
     int m, int n, int o,
     int width, int gh)
 {
-    int i = get_global_id(0);
+    int i = get_global_id(2);
     int j = get_global_id(1);
-    int k = get_global_id(2);
+    int k = get_global_id(0);
 
     if ((i < gh || j < gh || k < gh ||
          i >= gh + m || j >= gh + n || k >= gh + o) &&
@@ -2335,9 +2335,9 @@ __kernel void update_ghosts_blockstencil(
     const int m, const int n, const int o,
     const int width, const int gh)
 {
-    int i = get_global_id(0);
+    int i = get_global_id(2);
     int j = get_global_id(1);
-    int k = get_global_id(2);
+    int k = get_global_id(0);
 
     if ((i < gh || j < gh || k < gh ||
          i >= gh + m || j >= gh + n || k >= gh + o) &&
@@ -2381,9 +2381,9 @@ __kernel void mult_stencils_var_var(
     int wa, int wb,
     int gha, int ghb, int ghc)
 {
-    int i = get_global_id(0);
+    int i = get_global_id(2);
     int j = get_global_id(1);
-    int k = get_global_id(2);
+    int k = get_global_id(0);
 
     int wa2 = wa >> 1;
     int wc = wa + wb - 1;
