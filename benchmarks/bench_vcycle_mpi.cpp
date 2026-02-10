@@ -1063,6 +1063,7 @@ TEST_CASE("benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl")
 
             auto& sv = p.createStencilValues();
             sv->fill1dIndex(true);
+            p.init();
 
             ankerl::nanobench::Bench bench;
             bench.timeUnit(1ms, "ms")
@@ -1085,7 +1086,7 @@ TEST_CASE("benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl")
                                    .append(std::to_string(maxLevelUsingOcl));
 
             bench.run(std::string(name).c_str(), [&] { //
-                p.solve();
+                p.solve(true);
                 // tu.finish(); //
                 p.getOpenCLHelper().finish();
                 MPI_Barrier(mpi_comm);
@@ -1117,6 +1118,7 @@ TEST_CASE("benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl")
     // print min times
     if (mpi_rank == 0)
     {
+        std::cout << "*** DATASTART ***" << std::endl;
         std::cout << "name;m;n;o;mglob;nglob;oglob;maxLevelUsingOcl;minTimeInMs" << std::endl;
         for (auto r : minTimes)
         {
@@ -1125,6 +1127,7 @@ TEST_CASE("benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl")
                       << r.maxLevelUsingOcl
                       << ";" << std::setprecision(17) << r.minTime << std::endl;
         }
+        std::cout << "*** DATAEND ***" << std::endl;
     }
     MPI_Barrier(mpi_comm);
 }
@@ -1262,6 +1265,7 @@ TEST_CASE("benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl_mpiLevelThreshold")
 
                 auto& sv = p.createStencilValues();
                 sv->fill1dIndex(true);
+                p.init();
 
                 ankerl::nanobench::Bench bench;
                 bench.timeUnit(1ms, "ms")
@@ -1286,7 +1290,7 @@ TEST_CASE("benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl_mpiLevelThreshold")
                                        .append(std::to_string(mpiLevelThreshold));
 
                 bench.run(std::string(name).c_str(), [&] { //
-                    p.solve();
+                    p.solve(true);
                     // tu.finish(); //
                     p.getOpenCLHelper().finish();
                     MPI_Barrier(mpi_comm);
@@ -1320,6 +1324,7 @@ TEST_CASE("benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl_mpiLevelThreshold")
     // print min times
     if (mpi_rank == 0)
     {
+        std::cout << "*** DATASTART ***" << std::endl;
         std::cout << "name;m;n;o;mglob;nglob;oglob;maxLevelUsingOcl;mpiLevelThreshold;minTimeInMs" << std::endl;
         for (auto r : minTimes)
         {
@@ -1328,6 +1333,7 @@ TEST_CASE("benchmark_vcycle_MPI_galerkin_maxLevelUsingOcl_mpiLevelThreshold")
                       << r.maxLevelUsingOcl << ";" << r.mpiLevelThreshold
                       << ";" << std::setprecision(17) << r.minTime << std::endl;
         }
+        std::cout << "*** DATAEND ***" << std::endl;
     }
     MPI_Barrier(mpi_comm);
 }
