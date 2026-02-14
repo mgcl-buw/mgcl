@@ -101,7 +101,7 @@ p.solve();
 ```
 
 ## Using MPI
-To use MPI configure CMake with `-DMGCL_USE_MPI`. A custom communicator with attached topology information must be set using `Problem::setMpiComm`. See exmaples/example_mpi.cpp for more information.
+A custom communicator with attached topology information must be set using `Problem::setMpiComm`. See exmaples/example_mpi.cpp for more information.
 
 There is a threshold that prevents coarse levels to be calculated using MPI. It can be set by using `Problem::setMpiLevelThreshold` but it can only go as high as there are still at least 4 grid points (atm) available on each process for each direction. If the threshold is set to 0, all the data must be available on the root process. Calculations on the other processes are skipped entirely.
 
