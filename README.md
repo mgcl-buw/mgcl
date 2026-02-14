@@ -74,8 +74,8 @@ f.fillRandom();
 mgcl::Problem p(N, N, N, f, v);
 
 // Retrieve a 6d VaryingStencil in which stencil values are stored.
-// First three dimensions match grid size + ghost size, last three
-// dimensions are 3.
+// Last three dimensions match grid size + ghost size, first three
+// dimensions have size 3.
 p.setStencilType(mgcl::MGCL_VARYING);
 auto &s = *p.createStencilValues();
 
