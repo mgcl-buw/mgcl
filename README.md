@@ -2,10 +2,6 @@
 
 A multigrid implementation using OpenCL for solving elliptic PDEs with varying coefficients.
 
-**Important: This library is work in progress and neither feature-complete nor bug-free (probably)!**
-
-Currently only unit cube shaped domains are supported.
-
 ## Basic usage
 ```
 #include "problem.hpp"
